@@ -15,7 +15,6 @@ namespace Cosmos.GraphQL.Service.Controllers
     public class GraphQLController : ControllerBase
     {
 
-        private GraphQLSchema appSchema;
         string JsonData = @"{'serviceName':'cosmos', 'endpointType':'graphQL'}";
 
         private readonly QueryEngine _queryEngine;

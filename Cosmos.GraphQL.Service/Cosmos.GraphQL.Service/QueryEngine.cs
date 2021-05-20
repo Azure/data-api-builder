@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Models;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 
-namespace Cosmos.GraphQL.Service.Controllers
+namespace Cosmos.GraphQL.Service
 {
     public class QueryEngine
     {

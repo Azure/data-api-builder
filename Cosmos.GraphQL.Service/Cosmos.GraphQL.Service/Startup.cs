@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Cosmos.GraphQL.Service.Controllers;
 
 namespace Cosmos.GraphQL.Service
 {
@@ -25,6 +26,9 @@ namespace Cosmos.GraphQL.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+
+            // pass a singleton QueryEngine
+            services.AddSingleton<QueryEngine, QueryEngine>();
 
             services.AddControllers();
         }

@@ -8,7 +8,7 @@ namespace Cosmos.GraphQL.Service.Controllers
 {
     public class QueryEngine
     {
-        private Dictionary<string, GraphQLQueryResolver> resolvers = new Dictionary<string, GraphQLQueryResolver>();
+        private readonly Dictionary<string, GraphQLQueryResolver> resolvers = new Dictionary<string, GraphQLQueryResolver>();
 
         public void registerResolver(GraphQLQueryResolver resolver)
         {
@@ -17,17 +17,13 @@ namespace Cosmos.GraphQL.Service.Controllers
 
         public async Task<string> execute(string graphQLQueryName, Dictionary<string, string> parameters)
         {
-
-            GraphQLQueryResolver resolver = null;
-            // TODO: 
-            resolvers.TryGetValue(graphQLQueryName, out resolver);
-            if (resolver == null)
+            if (!resolvers.TryGetValue(graphQLQueryName, out var resolver))
             {
-                // TODO: throw error
+                throw new NotImplementedException($"{graphQLQueryName} doesn't exist");
             }
             
             // assert resolver != null
-            int result = await CSharpScript.EvaluateAsync<int>("1 + 2");
+            int result = await CSharpScript.EvaluateAsync<int>(resolver.dotNetCodeRequestHandler);
             return result.ToString();
         }
     }

@@ -9,8 +9,8 @@ namespace Cosmos.GraphQL.Service.Models
         public QuerySpec QuerySpec { get; set; }
 
 
-        public string dotNetCodeRequestHandler;
-        public string dotNetCodeResponseHandler;
+        public string dotNetCodeRequestHandler { get; set; }
+        public string dotNetCodeResponseHandler { get; set; }
     }
     
 

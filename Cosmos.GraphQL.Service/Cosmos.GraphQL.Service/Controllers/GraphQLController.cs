@@ -18,12 +18,13 @@ namespace Cosmos.GraphQL.Service.Controllers
         
         string JsonData = @"{'serviceName':'cosmos', 'endpointType':'graphQL'}";
 
-        private QueryEngine _queryEngine = new QueryEngine();
+        private readonly QueryEngine _queryEngine;
         private readonly ILogger<GraphQLController> _logger;
 
-        public GraphQLController(ILogger<GraphQLController> logger)
+        public GraphQLController(ILogger<GraphQLController> logger, QueryEngine queryEngine)
         {
             _logger = logger;
+            _queryEngine = queryEngine;
         }
 
         [HttpGet]
@@ -35,20 +36,18 @@ namespace Cosmos.GraphQL.Service.Controllers
         
         [Route("executeResolver/{graphQLQueryName?}")]
         [HttpPost]
-        public async Task<string> execute()
+        public async Task<string> execute(string graphQLQueryName)
         {
 
-            string result = await _queryEngine.execute("", new Dictionary<string, string>());
+            string result = await _queryEngine.execute(graphQLQueryName, new Dictionary<string, string>());
             return result;
         }
         
-        [Route("addResolver/{graphQLQueryName?}")]
+        [Route("addResolver")]
         [HttpPost]
-        public async Task<string> addResolver()
+        public void addResolver(GraphQLQueryResolver resolver)
         {
-
-            string result = await _queryEngine.execute("", new Dictionary<string, string>());
-            return result;
+           _queryEngine.registerResolver(resolver);
         }
     }
 }

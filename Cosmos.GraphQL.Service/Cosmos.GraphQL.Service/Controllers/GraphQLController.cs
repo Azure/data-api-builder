@@ -2,11 +2,11 @@
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
 using System.Linq;
 using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Models;
 using Newtonsoft.Json.Linq;
+using System.IO;
 
 namespace Cosmos.GraphQL.Service.Controllers
 {
@@ -14,17 +14,19 @@ namespace Cosmos.GraphQL.Service.Controllers
     [Route("[controller]")]
     public class GraphQLController : ControllerBase
     {
-        
-        
+
+        private GraphQLSchema appSchema;
         string JsonData = @"{'serviceName':'cosmos', 'endpointType':'graphQL'}";
 
         private readonly QueryEngine _queryEngine;
         private readonly ILogger<GraphQLController> _logger;
+        private readonly SchemaManager _schemaManager;
 
-        public GraphQLController(ILogger<GraphQLController> logger, QueryEngine queryEngine)
+        public GraphQLController(ILogger<GraphQLController> logger, QueryEngine queryEngine, SchemaManager schemaManager)
         {
             _logger = logger;
             _queryEngine = queryEngine;
+            _schemaManager = schemaManager;
         }
 
         [HttpGet]
@@ -48,6 +50,24 @@ namespace Cosmos.GraphQL.Service.Controllers
         public void addResolver(GraphQLQueryResolver resolver)
         {
            _queryEngine.registerResolver(resolver);
+        }
+
+        [Route("schema")]
+        [HttpPost]
+        public async void Schema(string schema)
+        {
+            string data;
+            using (StreamReader reader = new StreamReader(this.HttpContext.Request.Body))
+            {
+                data = await reader.ReadToEndAsync();
+            }
+            if (!String.IsNullOrEmpty(data))
+            {
+                this._schemaManager.parse(data);
+                return;
+            }
+
+            throw new InvalidDataException();
         }
     }
 }

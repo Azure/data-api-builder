@@ -14,8 +14,6 @@ namespace Cosmos.GraphQL.Service.Controllers
     [Route("[controller]")]
     public class GraphQLController : ControllerBase
     {
-
-        private GraphQLSchema appSchema;
         string JsonData = @"{'serviceName':'cosmos', 'endpointType':'graphQL'}";
 
         private readonly QueryEngine _queryEngine;
@@ -54,7 +52,7 @@ namespace Cosmos.GraphQL.Service.Controllers
 
         [Route("schema")]
         [HttpPost]
-        public async void Schema(string schema)
+        public async void Schema()
         {
             string data;
             using (StreamReader reader = new StreamReader(this.HttpContext.Request.Body))
@@ -63,11 +61,23 @@ namespace Cosmos.GraphQL.Service.Controllers
             }
             if (!String.IsNullOrEmpty(data))
             {
-                this._schemaManager.parse(data);
+                this._schemaManager.parseAsync(data);
                 return;
             }
 
             throw new InvalidDataException();
+        }
+
+        [Route("execute_query")]
+        [HttpPost]
+        public async Task<object> ExecuteQuery()
+        {
+            string data;
+            using (StreamReader reader = new StreamReader(this.HttpContext.Request.Body))
+            {
+                data = await reader.ReadToEndAsync();
+            }
+            return await this._schemaManager.ExecuteAsync(data);
         }
     }
 }

@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="GraphQL" Version="4.5.0" />
+    <PackageReference Include="GraphQL.Server.Ui.GraphiQL" Version="5.0.2" />
     <PackageReference Include="GraphQL.SystemTextJson" Version="4.5.0" />
     <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.18.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="3.10.0-3.final" />

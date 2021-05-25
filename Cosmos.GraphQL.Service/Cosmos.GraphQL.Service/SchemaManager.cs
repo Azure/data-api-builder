@@ -14,8 +14,7 @@ namespace Cosmos.GraphQL.Service
     {
         private Schema _schema;
         private string schemaAsString;
-        protected readonly IDocumentWriter Writer = new DocumentWriter(indent: true);
-
+        private readonly IDocumentWriter _writer = new DocumentWriter(indent: true);
 
         public void parseAsync(String data)
         {
@@ -33,20 +32,17 @@ namespace Cosmos.GraphQL.Service
             return "Hello World!";
         }
 
-        internal async Task<object> ExecuteAsync(string data)
+        internal async Task<object> ExecuteAsync(String requestBody)
         {
-            var executor = new DocumentExecuter();
-
-            JObject jobject = JObject.Parse(data);
-            string query = (string)jobject["query"];
-
-            var ExecutionResult = await _schema.ExecuteAsync(Writer, options =>
+            var request = requestBody.ToInputs();
+            var ExecutionResult = await _schema.ExecuteAsync(_writer, options =>
             {
                 options.Schema = _schema;
-                options.Query = query;
+                options.Query = (string)request["query"];
                 options.Root = new { Hello = GetString() };
 
             });
+            // return await _writer.WriteToStringAsync(ExecutionResult);
             return ExecutionResult;
         }
     }

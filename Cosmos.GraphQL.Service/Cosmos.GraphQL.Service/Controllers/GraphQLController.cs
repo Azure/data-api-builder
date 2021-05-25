@@ -69,16 +69,15 @@ namespace Cosmos.GraphQL.Service.Controllers
             throw new InvalidDataException();
         }
 
-        [Route("execute_query")]
         [HttpPost]
-        public async Task<object> ExecuteQuery()
+        public async Task<object> Post()
         {
-            string data;
+            string requestBody;
             using (StreamReader reader = new StreamReader(this.HttpContext.Request.Body))
             {
-                data = await reader.ReadToEndAsync();
+                requestBody = await reader.ReadToEndAsync();
             }
-            return await this._schemaManager.ExecuteAsync(data);
+            return await this._schemaManager.ExecuteAsync(requestBody);
         }
     }
 }

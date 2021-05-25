@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Models;
 using Newtonsoft.Json.Linq;
 using System.IO;
+using Cosmos.GraphQL.Service.Resolvers;
 
 namespace Cosmos.GraphQL.Service.Controllers
 {
@@ -18,13 +19,16 @@ namespace Cosmos.GraphQL.Service.Controllers
         string JsonData = @"{'serviceName':'cosmos', 'endpointType':'graphQL'}";
 
         private readonly QueryEngine _queryEngine;
+        private readonly MutationEngine _mutationEngine;
+
         private readonly ILogger<GraphQLController> _logger;
         private readonly SchemaManager _schemaManager;
 
-        public GraphQLController(ILogger<GraphQLController> logger, QueryEngine queryEngine, SchemaManager schemaManager)
+        public GraphQLController(ILogger<GraphQLController> logger, QueryEngine queryEngine, MutationEngine mutationEngine, SchemaManager schemaManager)
         {
             _logger = logger;
             _queryEngine = queryEngine;
+            _mutationEngine = mutationEngine;
             _schemaManager = schemaManager;
         }
 
@@ -50,6 +54,27 @@ namespace Cosmos.GraphQL.Service.Controllers
         {
            _queryEngine.registerResolver(resolver);
         }
+        
+        [Route("addMutationResolver")]
+        [HttpPost]
+        public void addMutationResolver(MutationResolver resolver)
+        {
+            _mutationEngine.registerResolver(resolver);
+        }
+
+        
+        [Route("executeMutation")]
+        [HttpPost]
+        public async Task<object> ExecuteMutation()
+        {
+            string data;
+            using (StreamReader reader = new StreamReader(this.HttpContext.Request.Body))
+            {
+                data = await reader.ReadToEndAsync();
+            }
+            return await this._schemaManager.ExecuteAsync(data);
+        }
+        
 
         [Route("schema")]
         [HttpPost]

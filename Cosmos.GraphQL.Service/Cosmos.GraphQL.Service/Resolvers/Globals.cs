@@ -1,3 +1,7 @@
+using System.Configuration;
+using Microsoft.Extensions.Configuration;
+using ConfigurationProvider = Cosmos.GraphQL.Service.configurations.ConfigurationProvider;
+
 namespace Cosmos.GraphQL.Service.Resolvers
 {
     using System;
@@ -17,8 +21,9 @@ namespace Cosmos.GraphQL.Service.Resolvers
         
         internal static void Initialize()
         {
-            Cosmos.Key = Environment.GetEnvironmentVariable("COSMOS_KEY");
-            Cosmos.Endpoint = Environment.GetEnvironmentVariable("COSMOS_ENDPOINT");
+            var cred = ConfigurationProvider.getCosmosCredentials();
+            Cosmos.Endpoint = cred.EndpointUrl;
+            Cosmos.Key = cred.AuthorizationKey;
         }
     }
 }

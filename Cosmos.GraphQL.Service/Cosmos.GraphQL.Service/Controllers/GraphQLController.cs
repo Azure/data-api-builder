@@ -19,9 +19,9 @@ namespace Cosmos.GraphQL.Service.Controllers
 
         private readonly QueryEngine _queryEngine;
         private readonly ILogger<GraphQLController> _logger;
-        private readonly SchemaManager _schemaManager;
+        private readonly GraphQLService _schemaManager;
 
-        public GraphQLController(ILogger<GraphQLController> logger, QueryEngine queryEngine, SchemaManager schemaManager)
+        public GraphQLController(ILogger<GraphQLController> logger, QueryEngine queryEngine, GraphQLService schemaManager)
         {
             _logger = logger;
             _queryEngine = queryEngine;
@@ -49,6 +49,7 @@ namespace Cosmos.GraphQL.Service.Controllers
         public void addResolver(GraphQLQueryResolver resolver)
         {
            _queryEngine.registerResolver(resolver);
+           _schemaManager.attachQueryResolverToSchema(resolver.GraphQLQueryName);
         }
 
         [Route("schema")]
@@ -70,7 +71,7 @@ namespace Cosmos.GraphQL.Service.Controllers
         }
 
         [HttpPost]
-        public async Task<object> Post()
+        public async Task<string> Post()
         {
             string requestBody;
             using (StreamReader reader = new StreamReader(this.HttpContext.Request.Body))

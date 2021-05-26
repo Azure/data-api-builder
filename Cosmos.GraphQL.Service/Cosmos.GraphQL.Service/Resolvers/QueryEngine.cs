@@ -1,14 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Service.Resolvers;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
-namespace Cosmos.GraphQL.Service
+namespace Cosmos.GraphQL.Services
 {
     public class QueryEngine
     {
@@ -24,7 +26,7 @@ namespace Cosmos.GraphQL.Service
             resolvers.Add(resolver.GraphQLQueryName, resolver);
         }
 
-        public async Task<string> execute(string graphQLQueryName, Dictionary<string, string> parameters)
+        public async Task<JsonDocument> execute(string graphQLQueryName, Dictionary<string, string> parameters)
         {
             if (!resolvers.TryGetValue(graphQLQueryName, out var resolver))
             {
@@ -34,13 +36,12 @@ namespace Cosmos.GraphQL.Service
             ScriptState<object> scriptState = await runAndInitializedScript();
             scriptState = await scriptState.ContinueWithAsync(resolver.dotNetCodeRequestHandler);
             scriptState = await scriptState.ContinueWithAsync(resolver.dotNetCodeResponseHandler);
-            return scriptState.ReturnValue.ToString();
+            JsonDocument  jsonDocument = JsonDocument.Parse(scriptState.ReturnValue.ToString());
 
-            // // assert resolver != null
-            // int result = await CSharpScript.EvaluateAsync<int>(resolver.dotNetCodeRequestHandler);
-            // return result.ToString();
+
+            return await Task.FromResult(jsonDocument);
         }
-
+        
         // private async Task<string> execute()
         // {
         //     CosmosCSharpScriptResponse response = await CosmosCSharpScript.ExecuteAsync(this.scriptState, code, this.scriptOptions);
@@ -76,7 +77,6 @@ namespace Cosmos.GraphQL.Service
             Globals.Initialize();
             Globals global = new Globals();
 
-//            string code = "CosmosClient client = new CosmosClient(Cosmos.Endpoint, Cosmos.Key);";
             string code = "CosmosClient client = new CosmosClient(Cosmos.Endpoint, Cosmos.Key);"
                           + "string MyDatabaseName = \"myDB\";"
                           + "string MyContainerName = \"myCol\";"

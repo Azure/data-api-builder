@@ -1,2 +1,3 @@
-bin/*
-obj/*
+Cosmos.GraphQL.Service/Cosmos.GraphQL.Service/bin/*
+Cosmos.GraphQL.Service/Cosmos.GraphQL.Service/obj/*
+Cosmos.GraphQL.Service/Cosmos.GraphQL.Service/.idea/*

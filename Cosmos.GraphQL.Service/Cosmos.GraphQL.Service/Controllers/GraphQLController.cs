@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Models;
 using Newtonsoft.Json.Linq;
 using System.IO;
+using System.Text.Json;
+using Cosmos.GraphQL.Services;
 
 namespace Cosmos.GraphQL.Service.Controllers
 {
@@ -37,10 +39,10 @@ namespace Cosmos.GraphQL.Service.Controllers
         
         [Route("executeResolver/{graphQLQueryName?}")]
         [HttpPost]
-        public async Task<string> execute(string graphQLQueryName)
+        public async Task<JsonDocument> execute(string graphQLQueryName)
         {
 
-            string result = await _queryEngine.execute(graphQLQueryName, new Dictionary<string, string>());
+            var result = await _queryEngine.execute(graphQLQueryName, new Dictionary<string, string>());
             return result;
         }
         

@@ -3,24 +3,51 @@ using GraphQL.Types;
 using GraphQL;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
+using Cosmos.GraphQL.Service;
+using GraphQL.Instrumentation;
 using GraphQL.SystemTextJson;
 using GraphQL.Resolvers;
 using Newtonsoft.Json.Linq;
 
-namespace Cosmos.GraphQL.Service
+namespace Cosmos.GraphQL.Services
 {
     public class GraphQLService
     {
         private Schema _schema;
         private string schemaAsString;
-        private readonly IDocumentWriter _writer = new DocumentWriter(indent: true);
+        private readonly IDocumentWriter _writerPure = new DocumentWriter(indent: true);
+
+        // this is just for debugging. 
+        // TODO remove and replace with DocumentWriter
+        class MyDocumentWriter : IDocumentWriter {
+            private IDocumentWriter internalWriter;
+
+            public MyDocumentWriter(IDocumentWriter internalWriter)
+            {
+                this.internalWriter = internalWriter;
+            }
+
+            public Task WriteAsync<T>(Stream stream, T value, CancellationToken cancellationToken = new CancellationToken())
+            {
+                Console.WriteLine(value);
+                return internalWriter.WriteAsync(stream, value, cancellationToken);
+            }
+        }
+
+        private readonly IDocumentWriter _writer;
+
         private readonly QueryEngine _queryEngine;
 
         public GraphQLService(QueryEngine queryEngine)
         {
             this._queryEngine = queryEngine;
+            this._writer = new MyDocumentWriter(this._writerPure);
         }
 
         public void parseAsync(String data)
@@ -47,6 +74,7 @@ namespace Cosmos.GraphQL.Service
             {
                 string query = (string) request["query"];
                 options.Schema = _schema;
+                
                 options.Query = query;
                 // options.Root = new { query = GetString() };
 
@@ -55,10 +83,44 @@ namespace Cosmos.GraphQL.Service
             return ExecutionResult;
         }
 
+
+        class MyFieldResolver : IFieldResolver
+        {
+            public object Resolve(IResolveFieldContext context)
+            {
+                // TODO: add support for nesting
+                // TODO: add support for non string later
+                // TODO: add support for error case
+                return (((JsonDocument) ((Task<object>) (context.Source)).Result)).RootElement.GetProperty(context.FieldDefinition.Name).GetString();
+            }
+        } 
+        
+        class InstrumentFieldsMiddleware : IFieldMiddleware
+        {
+            public async Task<object> Resolve(
+                IResolveFieldContext context,
+                FieldMiddlewareDelegate next)
+            {
+                // TODO: add support for nesting
+                // TODO: add support for non string later
+                // TODO: add support for error case
+
+                if (context.FieldDefinition.ResolvedType.IsLeafType())
+                {
+                    context.FieldDefinition.Resolver = new MyFieldResolver();
+                    return context.FieldDefinition.Resolver.Resolve(context);
+                }
+
+                return next(context);
+            }
+        }
+
         public void attachQueryResolverToSchema(string queryName)
         {
-            this._schema.Query.GetField(queryName).Resolver =
-              new AsyncFieldResolver<object, string>(async context => { return  await _queryEngine.execute(queryName, new Dictionary<string, string>()); }); 
+            this._schema.Query.GetField(queryName).Resolver = 
+              new AsyncFieldResolver<object, JsonDocument>(async context => { return  await _queryEngine.execute(queryName, new Dictionary<string, string>()); });
+            
+            this._schema.FieldMiddleware.Use(new InstrumentFieldsMiddleware());
         }
 
         public void attachMutationResolverToSchema(string mutationName)

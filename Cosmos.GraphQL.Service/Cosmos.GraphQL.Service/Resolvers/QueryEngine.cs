@@ -41,7 +41,7 @@ namespace Cosmos.GraphQL.Services
             JsonDocument  jsonDocument = JsonDocument.Parse(scriptState.ReturnValue.ToString());
 
 
-            return jsonDocument;
+            return await Task.FromResult(jsonDocument);
         }
         
         // private async Task<string> execute()

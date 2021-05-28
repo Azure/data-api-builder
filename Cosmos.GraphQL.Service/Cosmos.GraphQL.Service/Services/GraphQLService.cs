@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Cosmos.GraphQL.Service;
+using Cosmos.GraphQL.Service.Resolvers;
 using GraphQL.Instrumentation;
 using GraphQL.SystemTextJson;
 using GraphQL.Resolvers;
@@ -43,10 +44,12 @@ namespace Cosmos.GraphQL.Services
         private readonly IDocumentWriter _writer;
 
         private readonly QueryEngine _queryEngine;
+        private readonly MutationEngine _mutationEngine;
 
-        public GraphQLService(QueryEngine queryEngine)
+        public GraphQLService(QueryEngine queryEngine, MutationEngine mutationEngine)
         {
             this._queryEngine = queryEngine;
+            this._mutationEngine = mutationEngine;
             this._writer = new MyDocumentWriter(this._writerPure);
         }
 
@@ -54,6 +57,7 @@ namespace Cosmos.GraphQL.Services
         {
             schemaAsString = data;
             this._schema = Schema.For(data);
+            this._schema.FieldMiddleware.Use(new InstrumentFieldsMiddleware());
             //attachQueryResolverToSchema("hello");
         }
 
@@ -74,7 +78,6 @@ namespace Cosmos.GraphQL.Services
             {
                 string query = (string) request["query"];
                 options.Schema = _schema;
-                
                 options.Query = query;
                 // options.Root = new { query = GetString() };
 
@@ -82,7 +85,6 @@ namespace Cosmos.GraphQL.Services
             // return await _writer.WriteToStringAsync(ExecutionResult);
             return ExecutionResult;
         }
-
 
         class MyFieldResolver : IFieldResolver
         {
@@ -119,13 +121,14 @@ namespace Cosmos.GraphQL.Services
         {
             this._schema.Query.GetField(queryName).Resolver = 
               new AsyncFieldResolver<object, JsonDocument>(async context => { return  await _queryEngine.execute(queryName, new Dictionary<string, string>()); });
-            
-            this._schema.FieldMiddleware.Use(new InstrumentFieldsMiddleware());
         }
 
         public void attachMutationResolverToSchema(string mutationName)
         {
-            this._schema.Mutation.GetField(mutationName).Resolver = new FuncFieldResolver<object, string>(context => { return "Hello world"; });
+            this._schema.Mutation.GetField(mutationName).Resolver = new AsyncFieldResolver<object, JsonDocument>(context =>
+            {
+                return this._mutationEngine.execute(mutationName, context.Arguments);
+            });
         }
 
         public class GenericQuery : ObjectGraphType<object>
@@ -135,7 +138,6 @@ namespace Cosmos.GraphQL.Services
                 this.Name = "Query";
                 this.Field<StringGraphType>(queryName,
                     resolve:  c => GetString());
-
             }
 
             string GetString()

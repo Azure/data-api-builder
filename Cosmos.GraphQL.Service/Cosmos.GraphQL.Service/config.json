@@ -1,0 +1,11 @@
+{
+ "CosmosCredentials" : {
+  "EndPointUrl": "",
+  "AuthorizationKey": ""
+ },
+ 
+ "CosmosContainer" : "",
+ "CosmosDatabase" : ""
+}
+
+

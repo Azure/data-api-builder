@@ -1,3 +1,4 @@
+using Cosmos.GraphQL.Service.Resolvers;
 using Cosmos.GraphQL.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -24,6 +25,7 @@ namespace Cosmos.GraphQL.Service
             // pass a singleton QueryEngine
             services.AddSingleton<QueryEngine, QueryEngine>();
             services.AddSingleton<GraphQLService, GraphQLService>();
+            services.AddSingleton<MutationEngine, MutationEngine>();
 
             services.AddControllers();
         }

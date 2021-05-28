@@ -9,6 +9,8 @@ using Newtonsoft.Json.Linq;
 using System.IO;
 using System.Text.Json;
 using Cosmos.GraphQL.Services;
+using Cosmos.GraphQL.Service.Resolvers;
+
 
 namespace Cosmos.GraphQL.Service.Controllers
 {
@@ -20,13 +22,17 @@ namespace Cosmos.GraphQL.Service.Controllers
         string JsonData = @"{'serviceName':'cosmos', 'endpointType':'graphQL'}";
 
         private readonly QueryEngine _queryEngine;
+        private readonly MutationEngine _mutationEngine;
+
         private readonly ILogger<GraphQLController> _logger;
         private readonly GraphQLService _schemaManager;
 
-        public GraphQLController(ILogger<GraphQLController> logger, QueryEngine queryEngine, GraphQLService schemaManager)
+        public GraphQLController(ILogger<GraphQLController> logger, QueryEngine queryEngine, MutationEngine mutationEngine, GraphQLService schemaManager)
+
         {
             _logger = logger;
             _queryEngine = queryEngine;
+            _mutationEngine = mutationEngine;
             _schemaManager = schemaManager;
         }
 
@@ -53,7 +59,16 @@ namespace Cosmos.GraphQL.Service.Controllers
            _queryEngine.registerResolver(resolver);
            _schemaManager.attachQueryResolverToSchema(resolver.GraphQLQueryName);
         }
+        
+        [Route("addMutationResolver")]
+        [HttpPost]
+        public void addMutationResolver(MutationResolver resolver)
+        {
+            _mutationEngine.registerResolver(resolver);
+            _schemaManager.attachMutationResolverToSchema(resolver.graphQLMutationName);
+        }
 
+        
         [Route("schema")]
         [HttpPost]
         public async void Schema()

@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Cosmos.GraphQL.Service.configurations;
 using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Service.Resolvers;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
@@ -74,7 +76,7 @@ namespace Cosmos.GraphQL.Services
         {
             executeInit();
             
-            Globals.Initialize();
+            Globals.Initialize(ConfigurationProvider.getInstance().cred);
             Globals global = new Globals();
 
             string code = "CosmosClient client = new CosmosClient(Cosmos.Endpoint, Cosmos.Key);"

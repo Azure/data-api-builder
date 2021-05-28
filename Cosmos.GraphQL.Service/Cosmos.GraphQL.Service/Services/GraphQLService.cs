@@ -88,17 +88,66 @@ namespace Cosmos.GraphQL.Services
 
         class MyFieldResolver : IFieldResolver
         {
+            JsonDocument result; 
             public object Resolve(IResolveFieldContext context)
             {
                 // TODO: add support for nesting
                 // TODO: add support for non string later
                 // TODO: add support for error case
-                return (((JsonDocument) ((Task<object>) (context.Source)).Result)).RootElement.GetProperty(context.FieldDefinition.Name).GetString();
+
+                if (result == null || context.Path.Count() <= 2)
+                {
+                    result = (((JsonDocument)((Task<object>)(context.Source)).Result));
+                }
+                return getResolvedValue(result.RootElement, context.FieldDefinition.ResolvedType.Name, context.Path);
+
             }
-        } 
-        
+
+            object getResolvedValue(JsonElement rootElement, String typeName, IEnumerable<object> propertyPath)
+            {
+                JsonElement value = new JsonElement();
+                bool success = false;
+                for ( int i = 1; i < propertyPath.Count(); i++)
+                {
+                    success = rootElement.TryGetProperty((string)propertyPath.ElementAt(i), out value);
+                    if (success)
+                    {
+                        rootElement = value;
+                    } else
+                    {
+                        break;
+                    }
+
+                }
+                //bool success = rootElement.TryGetProperty(definitionName, out JsonElement value);
+                if (!success)
+                {
+                    return null;
+                }
+                switch (typeName)
+                {
+                    case "String":
+                        return value.GetString();
+                    case "Int":
+                        return value.GetInt32();
+                    case "Float":
+                        return value.GetDouble();
+                    case "Boolean":
+                        return value.GetBoolean();
+                    //case "ID":
+                    //    return rootElement.GetProperty(definitionName).GetString();
+                    default:
+                        throw new InvalidDataException();
+
+                }
+            }
+
+        }
+
+
         class InstrumentFieldsMiddleware : IFieldMiddleware
         {
+            MyFieldResolver fieldResolver = new MyFieldResolver();
             public async Task<object> Resolve(
                 IResolveFieldContext context,
                 FieldMiddlewareDelegate next)
@@ -109,7 +158,7 @@ namespace Cosmos.GraphQL.Services
 
                 if (context.FieldDefinition.ResolvedType.IsLeafType())
                 {
-                    context.FieldDefinition.Resolver = new MyFieldResolver();
+                    context.FieldDefinition.Resolver = fieldResolver;
                     return context.FieldDefinition.Resolver.Resolve(context);
                 }
 

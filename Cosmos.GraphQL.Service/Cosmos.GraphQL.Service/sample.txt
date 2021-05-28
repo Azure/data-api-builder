@@ -1,0 +1,50 @@
+https://localhost:5001/graphql/schema
+type Query {
+  myQuery: MyPojo
+}
+
+type MyPojo {
+    myProp : String
+    id : String
+}
+
+type Mutation {
+    addPost(
+        myProp: String!
+        id : String!
+    ): MyPojo
+}
+
+https://localhost:5001/graphql/addResolver
+{
+
+    "GraphQLQueryName" : "myQuery",
+    "dotNetCodeRequestHandler" : "dynamic testItem = new { id = \"MyTestItemId2\", myProp = \"it's working\", status = \"done\" };\r\nawait container.UpsertItemAsync(testItem);",
+    "dotNetCodeResponseHandler" : "JObject toDoActivity = (JObject) await container.ReadItemAsync<JObject>(\"MyTestItemId2\", new PartitionKey(\"MyTestItemId2\"));  toDoActivity"
+}
+
+https://localhost:5001/graphql/
+{
+myQuery {
+    myProp
+  }
+}
+
+https://localhost:5001/graphql/addMutationResolver
+{
+
+    "graphQLMutationName" : "addPost",
+    "Operation" : "Upsert",
+    "dotNetCodeRequestHandler" : "dynamic testItem = new { id = \"MyTestItemId2\", myProp = \"it's working2\", status = \"done\" };\r\nawait container.UpsertItemAsync(testItem);",
+    "dotNetCodeResponseHandler" : "JObject toDoActivity = (JObject) await container.ReadItemAsync<JObject>(\"MyTestItemId2\", new PartitionKey(\"MyTestItemId2\"));  toDoActivity"
+}
+
+https://localhost:5001/graphql/
+mutation addPost {
+  addPost(
+    myProp : "myValue"
+    id : "myId"
+  ) {
+      myProp
+  }
+}

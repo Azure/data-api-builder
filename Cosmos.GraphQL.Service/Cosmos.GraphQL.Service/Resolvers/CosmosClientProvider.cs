@@ -4,7 +4,7 @@ using Microsoft.Azure.Cosmos;
 
 namespace Cosmos.GraphQL.Service.Resolvers
 {
-    public static class CosmosClientProvider
+    public class CosmosClientProvider
     {
         private static CosmosClient _cosmosClient;
         private static readonly object syncLock = new object();
@@ -15,7 +15,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
             _cosmosClient = new CosmosClient(cred.EndpointUrl, cred.AuthorizationKey);
         }
         
-        public static CosmosClient getCosmosClient()
+        public CosmosClient getCosmosClient()
         {
             if (_cosmosClient == null)
             {
@@ -31,7 +31,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
             return _cosmosClient;
         }
 
-        public static Container getCosmosContainer()
+        public Container getCosmosContainer()
         {
             return getCosmosClient().GetDatabase(ConfigurationProvider.getInstance().databaseName)
                 .GetContainer(ConfigurationProvider.getInstance().containerName);

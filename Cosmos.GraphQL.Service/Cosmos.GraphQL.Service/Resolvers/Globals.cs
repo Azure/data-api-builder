@@ -1,5 +1,6 @@
 using System.Configuration;
 using Cosmos.GraphQL.Service.configurations;
+using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Configuration;
 using ConfigurationProvider = Cosmos.GraphQL.Service.configurations.ConfigurationProvider;
 
@@ -15,15 +16,13 @@ namespace Cosmos.GraphQL.Service.Resolvers
     {
         public static class Cosmos
         {
-            public static string Key { get; internal set; }
-
-            public static string Endpoint { get; internal set; }
+            public static Container Container { get; internal set; }
         }
         
-        internal static void Initialize(CosmosCredentials credentials)
+        internal static void Initialize(Container CosmosContainer)
         {
-            Cosmos.Endpoint = credentials.EndpointUrl;
-            Cosmos.Key = credentials.AuthorizationKey;
+            Cosmos.Container = CosmosContainer;
+
         }
     }
 }

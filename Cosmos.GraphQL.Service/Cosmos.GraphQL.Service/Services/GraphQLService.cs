@@ -46,7 +46,7 @@ namespace Cosmos.GraphQL.Services
         private readonly QueryEngine _queryEngine;
         private readonly MutationEngine _mutationEngine;
 
-        public GraphQLService(QueryEngine queryEngine, MutationEngine mutationEngine)
+        public GraphQLService(QueryEngine queryEngine, MutationEngine mutationEngine, CosmosClientProvider clientProvider)
         {
             this._queryEngine = queryEngine;
             this._mutationEngine = mutationEngine;
@@ -97,7 +97,15 @@ namespace Cosmos.GraphQL.Services
 
                 if (result == null || context.Path.Count() <= 2)
                 {
-                    result = (((JsonDocument)((Task<object>)(context.Source)).Result));
+                    var jsonDoc = context.Source as JsonDocument;
+                    if (jsonDoc != null)
+                    {
+                        result = jsonDoc;
+                    }
+                    else
+                    {
+                        result = (((JsonDocument) ((Task<object>) (context.Source)).Result));
+                    }
                 }
                 return getResolvedValue(result.RootElement, context.FieldDefinition.ResolvedType.Name, context.Path);
 

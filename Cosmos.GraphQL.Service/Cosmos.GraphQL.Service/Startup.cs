@@ -24,9 +24,10 @@ namespace Cosmos.GraphQL.Service
 
             // pass a singleton QueryEngine
             services.AddSingleton<QueryEngine, QueryEngine>();
-            services.AddSingleton<GraphQLService, GraphQLService>();
             services.AddSingleton<MutationEngine, MutationEngine>();
-
+            services.AddSingleton<CosmosClientProvider, CosmosClientProvider>();
+            services.AddSingleton<GraphQLService, GraphQLService>();
+            
             services.AddControllers();
         }
 

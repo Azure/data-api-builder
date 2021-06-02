@@ -17,7 +17,14 @@ namespace Cosmos.GraphQL.Services
     public class QueryEngine
     {
         private readonly Dictionary<string, GraphQLQueryResolver> resolvers = new Dictionary<string, GraphQLQueryResolver>();
+        private readonly CosmosClientProvider _clientProvider;
+
         private ScriptOptions scriptOptions;
+
+        public QueryEngine(CosmosClientProvider clientProvider)
+        {
+            this._clientProvider = clientProvider;
+        }
 
         public void registerResolver(GraphQLQueryResolver resolver)
         {
@@ -44,19 +51,6 @@ namespace Cosmos.GraphQL.Services
             return await Task.FromResult(jsonDocument);
         }
         
-        // private async Task<string> execute()
-        // {
-        //     CosmosCSharpScriptResponse response = await CosmosCSharpScript.ExecuteAsync(this.scriptState, code, this.scriptOptions);
-        //     this.scriptState = response.ScriptState;
-        //     this.scriptOptions = response.ScriptOption;
-        //
-        //     object returnValue = this.scriptState?.ReturnValue;
-        //     Dictionary<string, object> mimeBundle = ToRichOutputMIMEBundle(returnValue);
-        //
-        //     result.Data = mimeBundle;
-        // }
-
-
         private async void executeInit()
         {
             Assembly netStandardAssembly = Assembly.Load("netstandard");
@@ -76,16 +70,9 @@ namespace Cosmos.GraphQL.Services
         {
             executeInit();
             
-            Globals.Initialize(ConfigurationProvider.getInstance().cred);
+            Globals.Initialize(_clientProvider.getCosmosContainer());
             Globals global = new Globals();
-
-            string code = "CosmosClient client = new CosmosClient(Cosmos.Endpoint, Cosmos.Key);"
-                          + "string MyDatabaseName = \"myDB\";"
-                          + "string MyContainerName = \"myCol\";"
-                          + "Database database = await client.CreateDatabaseIfNotExistsAsync(MyDatabaseName);"
-                          + "Container container = await database.CreateContainerIfNotExistsAsync(MyContainerName, \"/id\", 400);";
-            //string code = "";
-            return await CSharpScript.RunAsync(code, this.scriptOptions, globals: global);
+            return await CSharpScript.RunAsync("Container container = Cosmos.Container;", this.scriptOptions, globals: global);
         }
     }
 }

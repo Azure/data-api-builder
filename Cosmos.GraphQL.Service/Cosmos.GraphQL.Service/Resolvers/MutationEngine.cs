@@ -19,7 +19,14 @@ namespace Cosmos.GraphQL.Service.Resolvers
    public class MutationEngine
     {
         private readonly Dictionary<string, MutationResolver> resolvers = new Dictionary<string, MutationResolver>();
+        private readonly CosmosClientProvider _clientProvider;
+
         private ScriptOptions scriptOptions;
+
+        public MutationEngine(CosmosClientProvider clientProvider)
+        {
+            this._clientProvider = clientProvider;
+        }
 
         public void registerResolver(MutationResolver resolver)
         {
@@ -39,7 +46,6 @@ namespace Cosmos.GraphQL.Service.Resolvers
                 foreach (var prop in parameters)
                 {
                     jObject.Add(prop.Key, prop.Value.Value.ToString());
-
                 }
             }
             else
@@ -57,7 +63,11 @@ namespace Cosmos.GraphQL.Service.Resolvers
                 throw new NotImplementedException($"{graphQLMutationName} doesn't exist");
             }
 
-            Container container = CosmosClientProvider.getCosmosContainer();
+            Container container = _clientProvider.getCosmosContainer();
+            ScriptState<object> scriptState = await runAndInitializedScript();
+            // scriptState = await scriptState.ContinueWithAsync(resolver.dotNetCodeRequestHandler);
+            // scriptState = await scriptState.ContinueWithAsync(resolver.dotNetCodeResponseHandler);
+            
             JObject jObject = toJObject(parameters);
             string jsonAsString = container.UpsertItemAsync(jObject).Result.Resource.ToString();
             return JsonDocument.Parse(jsonAsString);
@@ -123,17 +133,10 @@ namespace Cosmos.GraphQL.Service.Resolvers
         {
             executeInit();
             
-            Globals.Initialize(ConfigurationProvider.getInstance().cred);
+            Globals.Initialize(_clientProvider.getCosmosContainer());
             Globals global = new Globals();
 
-            string code = "CosmosClient client = new CosmosClient(Cosmos.Endpoint, Cosmos.Key);";
-            // string code = "CosmosClient client = new CosmosClient(Cosmos.Endpoint, Cosmos.Key);"
-            //               + "string MyDatabaseName = \"myDB\";"
-            //               + "string MyContainerName = \"myCol\";"
-            //               + "Database database = await client.CreateDatabaseIfNotExistsAsync(MyDatabaseName);"
-            //               + "Container container = await database.CreateContainerIfNotExistsAsync(MyContainerName, \"/id\", 400);";
-            //string code = "";
-            return await CSharpScript.RunAsync(code, this.scriptOptions, globals: global);
+            return await CSharpScript.RunAsync("Container container = Cosmos.Container;", this.scriptOptions, globals: global);
         }
     }
 }

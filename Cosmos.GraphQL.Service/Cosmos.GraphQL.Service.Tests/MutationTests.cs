@@ -26,9 +26,10 @@ namespace Cosmos.GraphQL.Service.Tests
             QueryEngine queryEngine;
             GraphQLController controller;
             CosmosClientProvider clientProvider = new CosmosClientProvider();
-            queryEngine = new QueryEngine(clientProvider);
-            var mutationEngine = new MutationEngine(clientProvider);
-            graphQLService = new GraphQLService(queryEngine, mutationEngine, clientProvider);
+            MetadataStoreProvider metadataStoreProvider = new CachedMetadataStoreProvider(new DocumentMetadataStoreProvider(clientProvider));
+            queryEngine = new QueryEngine(clientProvider, metadataStoreProvider);
+            var mutationEngine = new MutationEngine(clientProvider, metadataStoreProvider);
+            graphQLService = new GraphQLService(queryEngine, mutationEngine, clientProvider, metadataStoreProvider);
             graphQLService.parseAsync(TestHelper.GraphQLTestSchema);
             controller = new GraphQLController(null, queryEngine, mutationEngine, graphQLService);
             var request = new HttpRequestMessage();

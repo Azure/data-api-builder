@@ -57,7 +57,7 @@ namespace Cosmos.GraphQL.Service.Controllers
         public void addResolver(GraphQLQueryResolver resolver)
         {
            _queryEngine.registerResolver(resolver);
-           _schemaManager.attachQueryResolverToSchema(resolver.GraphQLQueryName);
+           _schemaManager.attachQueryResolverToSchema(resolver.id);
         }
         
         [Route("addMutationResolver")]
@@ -65,7 +65,7 @@ namespace Cosmos.GraphQL.Service.Controllers
         public void addMutationResolver(MutationResolver resolver)
         {
             _mutationEngine.registerResolver(resolver);
-            _schemaManager.attachMutationResolverToSchema(resolver.graphQLMutationName);
+            _schemaManager.attachMutationResolverToSchema(resolver.id);
         }
 
         
@@ -81,6 +81,7 @@ namespace Cosmos.GraphQL.Service.Controllers
             if (!String.IsNullOrEmpty(data))
             {
                 this._schemaManager.parseAsync(data);
+                
                 return;
             }
 

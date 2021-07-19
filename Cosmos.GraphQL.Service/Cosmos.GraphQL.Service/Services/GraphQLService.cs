@@ -45,18 +45,21 @@ namespace Cosmos.GraphQL.Services
 
         private readonly QueryEngine _queryEngine;
         private readonly MutationEngine _mutationEngine;
+        private MetadataStoreProvider _metadataStoreProvider;
 
-        public GraphQLService(QueryEngine queryEngine, MutationEngine mutationEngine, CosmosClientProvider clientProvider)
+        public GraphQLService(QueryEngine queryEngine, MutationEngine mutationEngine, CosmosClientProvider clientProvider, MetadataStoreProvider metadataStoreProvider)
         {
             this._queryEngine = queryEngine;
             this._mutationEngine = mutationEngine;
+            this._metadataStoreProvider = metadataStoreProvider;
             this._writer = new MyDocumentWriter(this._writerPure);
         }
 
         public void parseAsync(String data)
         {
             schemaAsString = data;
-            this._schema = Schema.For(data);
+            _schema = Schema.For(data);
+            this._metadataStoreProvider.StoreGraphQLSchema(data);
             this._schema.FieldMiddleware.Use(new InstrumentFieldsMiddleware());
             //attachQueryResolverToSchema("hello");
         }
@@ -76,6 +79,8 @@ namespace Cosmos.GraphQL.Services
             var request = requestBody.ToInputs();
             var ExecutionResult = await _schema.ExecuteAsync(_writer, options =>
             {
+                
+                
                 string query = (string) request["query"];
                 options.Schema = _schema;
                 options.Query = query;

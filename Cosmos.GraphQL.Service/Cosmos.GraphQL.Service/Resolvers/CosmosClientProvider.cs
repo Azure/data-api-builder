@@ -1,6 +1,7 @@
 using System.Configuration;
 using Cosmos.GraphQL.Service.configurations;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Azure.Cosmos.Fluent;
 
 namespace Cosmos.GraphQL.Service.Resolvers
 {
@@ -12,7 +13,9 @@ namespace Cosmos.GraphQL.Service.Resolvers
         private static void init()
         {
             var cred = ConfigurationProvider.getInstance().cred;
-            _cosmosClient = new CosmosClient(cred.EndpointUrl, cred.AuthorizationKey);
+
+            _cosmosClient = new CosmosClientBuilder(cred.EndpointUrl, cred.AuthorizationKey).WithContentResponseOnWrite(true).Build();
+            // _cosmosClient = new CosmosClient(cred.EndpointUrl, cred.AuthorizationKey).
         }
         
         public CosmosClient getCosmosClient()

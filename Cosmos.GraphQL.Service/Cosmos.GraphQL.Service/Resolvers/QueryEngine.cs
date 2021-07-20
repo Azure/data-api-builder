@@ -50,6 +50,7 @@ namespace Cosmos.GraphQL.Services
             JObject firstItem = null;
 
             var iterator = firstPage.GetEnumerator();
+
             while (iterator.MoveNext() && firstItem == null)
             {
                 firstItem = iterator.Current;

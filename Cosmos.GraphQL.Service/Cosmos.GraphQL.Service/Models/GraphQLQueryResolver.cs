@@ -6,15 +6,12 @@ namespace Cosmos.GraphQL.Service.Models
     public class GraphQLQueryResolver
     {
         public string id { get; set; }
-        public string databaseName{ get; set; }
+        public string databaseName { get; set; }
         public string containerName { get; set; }
         public string parametrizedQuery { get; set; }
         public QuerySpec QuerySpec { get; set; }
-        
-        // public string dotNetCodeRequestHandler { get; set; }
-        // public string dotNetCodeResponseHandler { get; set; }
+        public bool isList { get; set; }
     }
-    
 
     public class QuerySpec
     {

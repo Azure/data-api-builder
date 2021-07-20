@@ -36,29 +36,49 @@ namespace Cosmos.GraphQL.Services
 
         public async Task<JsonDocument> execute(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters)
         {
+            // TODO: add support for nesting
+            // TODO: add support for join query against another container
+            // TODO: add support for TOP and Order-by push-down
+
             var resolver = _metadataStoreProvider.GetQueryResolver(graphQLQueryName);
             var container = this._clientProvider.getCosmosClient().GetDatabase(resolver.databaseName).GetContainer(resolver.containerName);
             var querySpec = new QueryDefinition(resolver.parametrizedQuery);
-            
-            foreach(var parameterEntry in parameters)
+
+            if (parameters != null)
             {
-                querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value.Value);
+                foreach (var parameterEntry in parameters)
+                {
+                    querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value.Value);
+                }
             }
 
             var firstPage = container.GetItemQueryIterator<JObject>(querySpec).ReadNextAsync().Result;
 
             JObject firstItem = null;
-
-            var iterator = firstPage.GetEnumerator();
-
-            while (iterator.MoveNext() && firstItem == null)
-            {
-                firstItem = iterator.Current;
-            }
             
-            JsonDocument  jsonDocument = JsonDocument.Parse(firstItem.ToString());
+            var iterator = firstPage.GetEnumerator();
+            
+            if (resolver.isList)
+            {
+                JArray jArray = new JArray();
+                while (iterator.MoveNext())
+                {
+                    firstItem = iterator.Current;
+                    jArray.Add(firstItem);
+                }
+                JsonDocument  jsonDocument = JsonDocument.Parse(jArray.ToString());
+                return await Task.FromResult(jsonDocument);;
+            }
+            else
+            {
+                while (iterator.MoveNext() && firstItem == null)
+                {
+                    firstItem = iterator.Current;
+                }
+                JsonDocument  jsonDocument = JsonDocument.Parse(firstItem.ToString());
 
-            return await Task.FromResult(jsonDocument);
+                return await Task.FromResult(jsonDocument);
+            }
         }
     }
 }

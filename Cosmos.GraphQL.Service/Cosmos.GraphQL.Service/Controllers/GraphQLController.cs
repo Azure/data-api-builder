@@ -43,15 +43,6 @@ namespace Cosmos.GraphQL.Service.Controllers
             return Enumerable.Repeat(data, 1);
         }
         
-        [Route("executeResolver/{graphQLQueryName?}")]
-        [HttpPost]
-        public async Task<JsonDocument> execute(string graphQLQueryName)
-        {
-
-            var result = await _queryEngine.execute(graphQLQueryName, new Dictionary<string, string>());
-            return result;
-        }
-        
         [Route("addResolver")]
         [HttpPost]
         public void addResolver(GraphQLQueryResolver resolver)

@@ -182,7 +182,11 @@ namespace Cosmos.GraphQL.Services
         public void attachQueryResolverToSchema(string queryName)
         {
             this._schema.Query.GetField(queryName).Resolver = 
-              new AsyncFieldResolver<object, JsonDocument>(async context => { return  await _queryEngine.execute(queryName, new Dictionary<string, string>()); });
+              new AsyncFieldResolver<object, JsonDocument>(async context => { 
+                  
+                  return  await _queryEngine.execute(queryName, 
+                  
+                  context.Arguments); });
         }
 
         public void attachMutationResolverToSchema(string mutationName)

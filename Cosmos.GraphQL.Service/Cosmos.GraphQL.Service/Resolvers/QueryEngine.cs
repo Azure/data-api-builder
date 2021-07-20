@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.configurations;
 using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Service.Resolvers;
+using GraphQL.Execution;
 using Microsoft.Azure.Cosmos;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
@@ -33,21 +34,15 @@ namespace Cosmos.GraphQL.Services
             this._metadataStoreProvider.StoreQueryResolver(resolver);  
         }
 
-        public async Task<JsonDocument> execute(string graphQLQueryName, Dictionary<string, string> parameters)
+        public async Task<JsonDocument> execute(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters)
         {
             var resolver = _metadataStoreProvider.GetQueryResolver(graphQLQueryName);
-
-            // ScriptState<object> scriptState = await runAndInitializedScript();
-            // scriptState = await scriptState.ContinueWithAsync(resolver.dotNetCodeRequestHandler);
-            // scriptState = await scriptState.ContinueWithAsync(resolver.dotNetCodeResponseHandler);
-
             var container = this._clientProvider.getCosmosClient().GetDatabase(resolver.databaseName).GetContainer(resolver.containerName);
-
             var querySpec = new QueryDefinition(resolver.parametrizedQuery);
             
             foreach(var parameterEntry in parameters)
             {
-                querySpec.WithParameter(parameterEntry.Key, parameterEntry.Value);
+                querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value.Value);
             }
 
             var firstPage = container.GetItemQueryIterator<JObject>(querySpec).ReadNextAsync().Result;
@@ -55,7 +50,7 @@ namespace Cosmos.GraphQL.Services
             JObject firstItem = null;
 
             var iterator = firstPage.GetEnumerator();
-            while (iterator.MoveNext()&& firstItem != null)
+            while (iterator.MoveNext() && firstItem == null)
             {
                 firstItem = iterator.Current;
             }
@@ -64,29 +59,5 @@ namespace Cosmos.GraphQL.Services
 
             return await Task.FromResult(jsonDocument);
         }
-        
-        // private async void executeInit()
-        // {
-        //     Assembly netStandardAssembly = Assembly.Load("netstandard");
-        //     this.scriptOptions = ScriptOptions.Default
-        //         .AddReferences(
-        //             Assembly.GetAssembly(typeof(Microsoft.Azure.Cosmos.CosmosClient)),
-        //             Assembly.GetAssembly(typeof(JsonObjectAttribute)),
-        //             Assembly.GetCallingAssembly(),
-        //             netStandardAssembly)
-        //         .WithImports(
-        //             "Microsoft.Azure.Cosmos",
-        //             "Newtonsoft.Json",
-        //             "Newtonsoft.Json.Linq");
-        // }
-        
-        // private async Task<ScriptState<object>> runAndInitializedScript()
-        // {
-        //     executeInit();
-        //     
-        //     Globals.Initialize(_clientProvider.getCosmosContainer());
-        //     Globals global = new Globals();
-        //     return await CSharpScript.RunAsync("Container container = Cosmos.Container;", this.scriptOptions, globals: global);
-        // }
     }
 }

@@ -73,6 +73,10 @@ namespace Cosmos.GraphQL.Services
 
         internal async Task<string> ExecuteAsync(String requestBody)
         {
+            if (this.Schema == null)
+            {
+                return "{\"error\": \"Schema must be defined first\" }";
+            }
             var request = requestBody.ToInputs();
             var ExecutionResult = await _schema.ExecuteAsync(_writer, options =>
             {
@@ -156,7 +160,7 @@ namespace Cosmos.GraphQL.Services
         class InstrumentFieldsMiddleware : IFieldMiddleware
         {
             MyFieldResolver fieldResolver = new MyFieldResolver();
-            public async Task<object> Resolve(
+            public Task<object> Resolve(
                 IResolveFieldContext context,
                 FieldMiddlewareDelegate next)
             {
@@ -166,8 +170,13 @@ namespace Cosmos.GraphQL.Services
 
                 if (context.FieldDefinition.ResolvedType.IsLeafType())
                 {
+                    if (IsIntrospectionPath(context.Path))
+                    {
+                        // We dont want to resolve any fields for the introspection query and let the library take care of it
+                        return next(context);
+                    }
                     context.FieldDefinition.Resolver = fieldResolver;
-                    return context.FieldDefinition.Resolver.Resolve(context);
+                    return Task.FromResult<object>(context.FieldDefinition.Resolver.Resolve(context));
                 }
 
                 return next(context);
@@ -186,6 +195,20 @@ namespace Cosmos.GraphQL.Services
             {
                 return this._mutationEngine.execute(mutationName, context.Arguments);
             });
+        }
+
+        private static bool IsIntrospectionPath(IEnumerable<object> path)
+        {
+            if (path.Any())
+            {
+                var firstPath = path.First() as string;
+                if (firstPath.StartsWith("__", StringComparison.InvariantCulture))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public class GenericQuery : ObjectGraphType<object>

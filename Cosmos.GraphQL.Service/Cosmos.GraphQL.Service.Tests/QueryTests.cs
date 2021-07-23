@@ -12,6 +12,7 @@ using System;
 using System.IO;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Cosmos.GraphQL.Service.Tests
@@ -52,9 +53,8 @@ namespace Cosmos.GraphQL.Service.Tests
                 Request = { Body = stream, ContentLength = stream.Length }
             };
             controller.ControllerContext.HttpContext = httpContext;
-            string response = await controller.Post();
-            Assert.IsFalse(response.Contains("Error"));
-            JObject resultObj = JObject.Parse(response);
+            JsonDocument response = await controller.Post();
+            Assert.IsFalse(response.ToString().Contains("Error"));
         }
 
        /* [ClassInitialize]

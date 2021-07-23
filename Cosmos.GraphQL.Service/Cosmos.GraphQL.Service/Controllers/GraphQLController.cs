@@ -88,14 +88,15 @@ namespace Cosmos.GraphQL.Service.Controllers
         }
 
         [HttpPost]
-        public async Task<string> Post()
+        public async Task<JsonDocument> Post()
         {
             string requestBody;
             using (StreamReader reader = new StreamReader(this.HttpContext.Request.Body))
             {
                 requestBody = await reader.ReadToEndAsync();
             }
-            return await this._schemaManager.ExecuteAsync(requestBody);
+            var resultJson = await this._schemaManager.ExecuteAsync(requestBody);
+            return JsonDocument.Parse(resultJson);
         }
     }
 }

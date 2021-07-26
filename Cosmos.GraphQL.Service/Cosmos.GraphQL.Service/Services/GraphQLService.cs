@@ -23,6 +23,7 @@ namespace Cosmos.GraphQL.Services
         private Schema _schema;
         private string schemaAsString;
         private readonly IDocumentWriter _writerPure = new DocumentWriter(indent: true);
+        private readonly IDocumentExecuter _executor = new DocumentExecuter();
 
         // this is just for debugging. 
         // TODO remove and replace with DocumentWriter
@@ -76,19 +77,26 @@ namespace Cosmos.GraphQL.Services
 
         internal async Task<string> ExecuteAsync(String requestBody)
         {
+            if (this.Schema == null)
+            {
+                return "{\"error\": \"Schema must be defined first\" }";
+            }
+
             var request = requestBody.ToInputs();
-            var ExecutionResult = await _schema.ExecuteAsync(_writer, options =>
+            var result = await _executor.ExecuteAsync(options =>
             {
                 
                 
                 string query = (string) request["query"];
                 options.Schema = _schema;
                 options.Query = query;
+                options.EnableMetrics = true;
                 // options.Root = new { query = GetString() };
 
             });
             // return await _writer.WriteToStringAsync(ExecutionResult);
-            return ExecutionResult;
+            var responseString = await _writer.WriteToStringAsync(result);
+            return responseString;
         }
 
         class MyFieldResolver : IFieldResolver
@@ -96,24 +104,12 @@ namespace Cosmos.GraphQL.Services
             JsonDocument result; 
             public object Resolve(IResolveFieldContext context)
             {
-                // TODO: add support for nesting
-                // TODO: add support for non string later
                 // TODO: add support for error case
 
-                if (result == null || context.Path.Count() <= 2)
-                {
-                    var jsonDoc = context.Source as JsonDocument;
-                    if (jsonDoc != null)
-                    {
-                        result = jsonDoc;
-                    }
-                    else
-                    {
-                        result = (((JsonDocument) ((Task<object>) (context.Source)).Result));
-                    }
-                }
-                return getResolvedValue(result.RootElement, context.FieldDefinition.ResolvedType.Name, context.Path);
+                var jsonDoc = context.Source as JsonDocument;
+                result = jsonDoc;
 
+                return getResolvedValue(result.RootElement, context.FieldDefinition.ResolvedType.Name, context.Path);
             }
 
             object getResolvedValue(JsonElement rootElement, String typeName, IEnumerable<object> propertyPath)
@@ -122,7 +118,12 @@ namespace Cosmos.GraphQL.Services
                 bool success = false;
                 for ( int i = 1; i < propertyPath.Count(); i++)
                 {
-                    success = rootElement.TryGetProperty((string)propertyPath.ElementAt(i), out value);
+                    var currentPathElement = propertyPath.ElementAt(i);
+                    if (currentPathElement is not string)
+                    {
+                        continue;
+                    }
+                    success = rootElement.TryGetProperty((string)currentPathElement, out value);
                     if (success)
                     {
                         rootElement = value;
@@ -161,7 +162,7 @@ namespace Cosmos.GraphQL.Services
         class InstrumentFieldsMiddleware : IFieldMiddleware
         {
             MyFieldResolver fieldResolver = new MyFieldResolver();
-            public async Task<object> Resolve(
+            public Task<object> Resolve(
                 IResolveFieldContext context,
                 FieldMiddlewareDelegate next)
             {
@@ -170,23 +171,39 @@ namespace Cosmos.GraphQL.Services
                 // TODO: add support for error case
 
                 if (context.FieldDefinition.ResolvedType.IsLeafType())
+                     //|| context.FieldDefinition.ResolvedType is ListGraphType)
                 {
+                    if (IsIntrospectionPath(context.Path))
+                    {
+                        return next(context);
+                    }
                     context.FieldDefinition.Resolver = fieldResolver;
-                    return context.FieldDefinition.Resolver.Resolve(context);
+                    return Task.FromResult<object>(context.FieldDefinition.Resolver.Resolve(context));
                 }
 
                 return next(context);
             }
+
         }
 
         public void attachQueryResolverToSchema(string queryName)
         {
-            this._schema.Query.GetField(queryName).Resolver = 
-              new AsyncFieldResolver<object, JsonDocument>(async context => { 
-                  
-                  return  await _queryEngine.execute(queryName, 
-                  
-                  context.Arguments); });
+            if (_queryEngine.isListQuery(queryName))
+            {
+                this._schema.Query.GetField(queryName).Resolver =
+               new FuncFieldResolver<object, IEnumerable<JsonDocument>>(context =>
+               {
+                   return _queryEngine.executeList(queryName, context.Arguments);
+               });
+            }
+            else
+            {
+                this._schema.Query.GetField(queryName).Resolver =
+                new FuncFieldResolver<object, JsonDocument>(context =>
+                {
+                    return _queryEngine.execute(queryName, context.Arguments);
+                });
+            }
         }
 
         public void attachMutationResolverToSchema(string mutationName)
@@ -197,19 +214,19 @@ namespace Cosmos.GraphQL.Services
             });
         }
 
-        public class GenericQuery : ObjectGraphType<object>
+        private static bool IsIntrospectionPath(IEnumerable<object> path)
         {
-            public GenericQuery(string queryName)
+            if (path.Any())
             {
-                this.Name = "Query";
-                this.Field<StringGraphType>(queryName,
-                    resolve:  c => GetString());
+                var firstPath = path.First() as string;
+                if (firstPath.StartsWith("__", StringComparison.InvariantCulture))
+                {
+                    return true;
+                }
             }
 
-            string GetString()
-            {
-                return "Hello World!";
-            }
+            return false;
         }
+
     }
 }

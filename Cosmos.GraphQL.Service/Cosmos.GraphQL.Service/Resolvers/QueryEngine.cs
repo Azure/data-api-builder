@@ -34,7 +34,7 @@ namespace Cosmos.GraphQL.Services
             this._metadataStoreProvider.StoreQueryResolver(resolver);  
         }
 
-        public async Task<JsonDocument> execute(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters)
+        public JsonDocument execute(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters)
         {
             // TODO: add support for nesting
             // TODO: add support for join query against another container
@@ -55,30 +55,55 @@ namespace Cosmos.GraphQL.Services
             var firstPage = container.GetItemQueryIterator<JObject>(querySpec).ReadNextAsync().Result;
 
             JObject firstItem = null;
-            
-            var iterator = firstPage.GetEnumerator();
-            
-            if (resolver.isList)
-            {
-                JArray jArray = new JArray();
-                while (iterator.MoveNext())
-                {
-                    firstItem = iterator.Current;
-                    jArray.Add(firstItem);
-                }
-                JsonDocument  jsonDocument = JsonDocument.Parse(jArray.ToString());
-                return await Task.FromResult(jsonDocument);;
-            }
-            else
-            {
-                while (iterator.MoveNext() && firstItem == null)
-                {
-                    firstItem = iterator.Current;
-                }
-                JsonDocument  jsonDocument = JsonDocument.Parse(firstItem.ToString());
 
-                return await Task.FromResult(jsonDocument);
+            var iterator = firstPage.GetEnumerator();
+
+            while (iterator.MoveNext() && firstItem == null)
+            {
+                firstItem = iterator.Current;
             }
+            JsonDocument jsonDocument = JsonDocument.Parse(firstItem.ToString());
+
+            return jsonDocument;
+        }
+
+        public IEnumerable<JsonDocument> executeList(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters)
+        {
+            // TODO: add support for nesting
+            // TODO: add support for join query against another container
+            // TODO: add support for TOP and Order-by push-down
+
+            var resolver = _metadataStoreProvider.GetQueryResolver(graphQLQueryName);
+            var container = this._clientProvider.getCosmosClient().GetDatabase(resolver.databaseName).GetContainer(resolver.containerName);
+            var querySpec = new QueryDefinition(resolver.parametrizedQuery);
+
+            if (parameters != null)
+            {
+                foreach (var parameterEntry in parameters)
+                {
+                    querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value.Value);
+                }
+            }
+
+            var firstPage = container.GetItemQueryIterator<JObject>(querySpec).ReadNextAsync().Result;
+
+            JObject firstItem = null;
+
+            var iterator = firstPage.GetEnumerator();
+
+            List<JsonDocument> resultsAsList = new List<JsonDocument>();
+            while (iterator.MoveNext())
+            {
+                firstItem = iterator.Current;
+                resultsAsList.Add(JsonDocument.Parse(firstItem.ToString()));
+            }
+
+            return resultsAsList;
+        }
+
+        internal bool isListQuery(string queryName)
+        {
+            return _metadataStoreProvider.GetQueryResolver(queryName).isList;
         }
     }
 }

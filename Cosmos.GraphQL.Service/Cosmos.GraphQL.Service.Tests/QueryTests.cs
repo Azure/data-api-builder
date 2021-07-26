@@ -12,58 +12,38 @@ using System;
 using System.IO;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Cosmos.GraphQL.Service.Tests
 {
     [TestClass]
-    public class QueryTests
+    public class QueryTests : TestBase
     {
 
 
         [TestMethod]
-        public async Task TestQueryRun()
+        public async Task TestSimpleQuery()
         {
-
-            GraphQLService graphQLService;
-            QueryEngine queryEngine;
-            GraphQLController controller;
-            CosmosClientProvider clientProvider = new CosmosClientProvider();
-            string uid = Guid.NewGuid().ToString();
-            dynamic sourceItem = TestHelper.GetItem(uid);
-            await clientProvider.getCosmosContainer().CreateItemAsync(sourceItem, new PartitionKey(uid));
-            
-            MetadataStoreProvider metadataStoreProvider = new CachedMetadataStoreProvider(new DocumentMetadataStoreProvider(clientProvider));
-            queryEngine = new QueryEngine(clientProvider, metadataStoreProvider);
-            var mutationEngine = new MutationEngine(clientProvider, metadataStoreProvider);
-            graphQLService = new GraphQLService(queryEngine, mutationEngine, clientProvider, metadataStoreProvider);
-            graphQLService.parseAsync(TestHelper.GraphQLTestSchema);
-            controller = new GraphQLController(null, queryEngine, mutationEngine, graphQLService);
-            var request = new HttpRequestMessage();
 
             // Add query resolver
-            controller.addResolver(TestHelper.SampleQueryResolver());
+            this.controller.addResolver(TestHelper.SampleQueryResolver());
 
             // Run query
-            var stream = new MemoryStream(Encoding.UTF8.GetBytes(TestHelper.SampleQuery));
-            request.Method = HttpMethod.Post;
-            request.Content = new StringContent(TestHelper.SampleQuery);
-            var httpContext = new DefaultHttpContext()
-            {
-                Request = { Body = stream, ContentLength = stream.Length }
-            };
-            controller.ControllerContext.HttpContext = httpContext;
-            string response = await controller.Post();
-            Assert.IsFalse(response.Contains("Error"));
-            JObject resultObj = JObject.Parse(response);
+            controller.ControllerContext.HttpContext = GetHttpContextWithBody(TestHelper.SampleQuery);
+            JsonDocument response = await controller.Post();
+
+            // Validate results
+            Assert.IsFalse(response.ToString().Contains("Error"));
         }
 
-       /* [ClassInitialize]
-        public void Init()
-        {
 
-        }
-       */
+        /* [ClassInitialize]
+         public void Init()
+         {
+
+         }
+        */
 
     }
 }

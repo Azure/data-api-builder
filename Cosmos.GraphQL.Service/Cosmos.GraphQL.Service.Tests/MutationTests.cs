@@ -9,12 +9,13 @@ using Newtonsoft.Json;
 using System.IO;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Cosmos.GraphQL.Service.Tests
 {
     [TestClass]
-    public class MutationTests
+    public class MutationTests : TestBase
     {
 
 
@@ -22,32 +23,15 @@ namespace Cosmos.GraphQL.Service.Tests
         public async Task TestMutationRun()
         {
 
-            GraphQLService graphQLService;
-            QueryEngine queryEngine;
-            GraphQLController controller;
-            CosmosClientProvider clientProvider = new CosmosClientProvider();
-            MetadataStoreProvider metadataStoreProvider = new CachedMetadataStoreProvider(new DocumentMetadataStoreProvider(clientProvider));
-            queryEngine = new QueryEngine(clientProvider, metadataStoreProvider);
-            var mutationEngine = new MutationEngine(clientProvider, metadataStoreProvider);
-            graphQLService = new GraphQLService(queryEngine, mutationEngine, clientProvider, metadataStoreProvider);
-            graphQLService.parseAsync(TestHelper.GraphQLTestSchema);
-            controller = new GraphQLController(null, queryEngine, mutationEngine, graphQLService);
-            var request = new HttpRequestMessage();
+            // Add mutation resolver
+            this.controller.addMutationResolver(TestHelper.SampleMutationResolver());
 
-            // Add query resolver
-            controller.addMutationResolver(TestHelper.SampleMutationResolver());
+            // Run mutation;
+            controller.ControllerContext.HttpContext = GetHttpContextWithBody(TestHelper.SampleMutation);
+            JsonDocument response = await controller.Post();
 
-            // Run query
-            var stream = new MemoryStream(Encoding.UTF8.GetBytes(TestHelper.SampleMutation));
-            request.Method = HttpMethod.Post;
-            request.Content = new StringContent(TestHelper.SampleMutation);
-            var httpContext = new DefaultHttpContext()
-            {
-                Request = { Body = stream, ContentLength = stream.Length }
-            };
-            controller.ControllerContext.HttpContext = httpContext;
-            string response = await controller.Post();
-            Assert.IsFalse(response.Contains("Error"));
+            // Validate results
+            Assert.IsFalse(response.ToString().Contains("Error"));
         }
 
        /* [ClassInitialize]

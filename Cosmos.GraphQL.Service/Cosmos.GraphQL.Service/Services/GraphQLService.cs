@@ -62,7 +62,6 @@ namespace Cosmos.GraphQL.Services
             _schema = Schema.For(data);
             this._metadataStoreProvider.StoreGraphQLSchema(data);
             this._schema.FieldMiddleware.Use(new InstrumentFieldsMiddleware());
-            //attachQueryResolverToSchema("hello");
         }
 
         public Schema Schema

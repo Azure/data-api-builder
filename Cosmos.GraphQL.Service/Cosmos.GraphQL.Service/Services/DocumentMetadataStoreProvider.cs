@@ -22,10 +22,10 @@ namespace Cosmos.GraphQL.Services
             CreateSystemContainerIfDoesNotExist();
         }
 
-        private void CreateSystemContainerIfDoesNotExist()
+        private async void CreateSystemContainerIfDoesNotExist()
         {
-            this.client.CreateDatabaseIfNotExistsAsync(systemDatabaseName);
-            this.client.GetDatabase(systemDatabaseName).CreateContainerIfNotExistsAsync(systemContainerName, "/id");
+            await this.client.CreateDatabaseIfNotExistsAsync(systemDatabaseName);
+            await this.client.GetDatabase(systemDatabaseName).CreateContainerIfNotExistsAsync(systemContainerName, "/id");
         }
         
         public void StoreGraphQLSchema(string schema)
@@ -36,7 +36,7 @@ namespace Cosmos.GraphQL.Services
                 id = schemaId
             };
 
-            container.CreateItemAsync(item);
+            container.UpsertItemAsync(item);
         }
 
         public string GetGraphQLSchema()

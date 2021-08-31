@@ -23,6 +23,7 @@ namespace Cosmos.GraphQL.Services
         private Schema _schema;
         private string schemaAsString;
         private readonly IDocumentWriter _writerPure = new DocumentWriter(indent: true);
+        private readonly IDocumentExecuter _executor = new DocumentExecuter();
 
         // this is just for debugging. 
         // TODO remove and replace with DocumentWriter
@@ -45,20 +46,22 @@ namespace Cosmos.GraphQL.Services
 
         private readonly QueryEngine _queryEngine;
         private readonly MutationEngine _mutationEngine;
+        private MetadataStoreProvider _metadataStoreProvider;
 
-        public GraphQLService(QueryEngine queryEngine, MutationEngine mutationEngine, CosmosClientProvider clientProvider)
+        public GraphQLService(QueryEngine queryEngine, MutationEngine mutationEngine, CosmosClientProvider clientProvider, MetadataStoreProvider metadataStoreProvider)
         {
             this._queryEngine = queryEngine;
             this._mutationEngine = mutationEngine;
+            this._metadataStoreProvider = metadataStoreProvider;
             this._writer = new MyDocumentWriter(this._writerPure);
         }
 
         public void parseAsync(String data)
         {
             schemaAsString = data;
-            this._schema = Schema.For(data);
+            _schema = Schema.For(data);
+            this._metadataStoreProvider.StoreGraphQLSchema(data);
             this._schema.FieldMiddleware.Use(new InstrumentFieldsMiddleware());
-            //attachQueryResolverToSchema("hello");
         }
 
         public Schema Schema
@@ -77,17 +80,22 @@ namespace Cosmos.GraphQL.Services
             {
                 return "{\"error\": \"Schema must be defined first\" }";
             }
+
             var request = requestBody.ToInputs();
-            var ExecutionResult = await _schema.ExecuteAsync(_writer, options =>
+            var result = await _executor.ExecuteAsync(options =>
             {
+                
+                
                 string query = (string) request["query"];
                 options.Schema = _schema;
                 options.Query = query;
+                options.EnableMetrics = true;
                 // options.Root = new { query = GetString() };
 
             });
             // return await _writer.WriteToStringAsync(ExecutionResult);
-            return ExecutionResult;
+            var responseString = await _writer.WriteToStringAsync(result);
+            return responseString;
         }
 
         class MyFieldResolver : IFieldResolver
@@ -95,24 +103,12 @@ namespace Cosmos.GraphQL.Services
             JsonDocument result; 
             public object Resolve(IResolveFieldContext context)
             {
-                // TODO: add support for nesting
-                // TODO: add support for non string later
                 // TODO: add support for error case
 
-                if (result == null || context.Path.Count() <= 2)
-                {
-                    var jsonDoc = context.Source as JsonDocument;
-                    if (jsonDoc != null)
-                    {
-                        result = jsonDoc;
-                    }
-                    else
-                    {
-                        result = (((JsonDocument) ((Task<object>) (context.Source)).Result));
-                    }
-                }
-                return getResolvedValue(result.RootElement, context.FieldDefinition.ResolvedType.Name, context.Path);
+                var jsonDoc = context.Source as JsonDocument;
+                result = jsonDoc;
 
+                return getResolvedValue(result.RootElement, context.FieldDefinition.ResolvedType.Name, context.Path);
             }
 
             object getResolvedValue(JsonElement rootElement, String typeName, IEnumerable<object> propertyPath)
@@ -121,7 +117,12 @@ namespace Cosmos.GraphQL.Services
                 bool success = false;
                 for ( int i = 1; i < propertyPath.Count(); i++)
                 {
-                    success = rootElement.TryGetProperty((string)propertyPath.ElementAt(i), out value);
+                    var currentPathElement = propertyPath.ElementAt(i);
+                    if (currentPathElement is not string)
+                    {
+                        continue;
+                    }
+                    success = rootElement.TryGetProperty((string)currentPathElement, out value);
                     if (success)
                     {
                         rootElement = value;
@@ -169,10 +170,10 @@ namespace Cosmos.GraphQL.Services
                 // TODO: add support for error case
 
                 if (context.FieldDefinition.ResolvedType.IsLeafType())
+                     //|| context.FieldDefinition.ResolvedType is ListGraphType)
                 {
                     if (IsIntrospectionPath(context.Path))
                     {
-                        // We dont want to resolve any fields for the introspection query and let the library take care of it
                         return next(context);
                     }
                     context.FieldDefinition.Resolver = fieldResolver;
@@ -181,12 +182,27 @@ namespace Cosmos.GraphQL.Services
 
                 return next(context);
             }
+
         }
 
         public void attachQueryResolverToSchema(string queryName)
         {
-            this._schema.Query.GetField(queryName).Resolver = 
-              new AsyncFieldResolver<object, JsonDocument>(async context => { return  await _queryEngine.execute(queryName, new Dictionary<string, string>()); });
+            if (_queryEngine.isListQuery(queryName))
+            {
+                this._schema.Query.GetField(queryName).Resolver =
+               new FuncFieldResolver<object, IEnumerable<JsonDocument>>(context =>
+               {
+                   return _queryEngine.executeList(queryName, context.Arguments);
+               });
+            }
+            else
+            {
+                this._schema.Query.GetField(queryName).Resolver =
+                new FuncFieldResolver<object, JsonDocument>(context =>
+                {
+                    return _queryEngine.execute(queryName, context.Arguments);
+                });
+            }
         }
 
         public void attachMutationResolverToSchema(string mutationName)
@@ -211,19 +227,5 @@ namespace Cosmos.GraphQL.Services
             return false;
         }
 
-        public class GenericQuery : ObjectGraphType<object>
-        {
-            public GenericQuery(string queryName)
-            {
-                this.Name = "Query";
-                this.Field<StringGraphType>(queryName,
-                    resolve:  c => GetString());
-            }
-
-            string GetString()
-            {
-                return "Hello World!";
-            }
-        }
     }
 }

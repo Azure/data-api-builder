@@ -43,21 +43,12 @@ namespace Cosmos.GraphQL.Service.Controllers
             return Enumerable.Repeat(data, 1);
         }
         
-        [Route("executeResolver/{graphQLQueryName?}")]
-        [HttpPost]
-        public async Task<JsonDocument> execute(string graphQLQueryName)
-        {
-
-            var result = await _queryEngine.execute(graphQLQueryName, new Dictionary<string, string>());
-            return result;
-        }
-        
         [Route("addResolver")]
         [HttpPost]
         public void addResolver(GraphQLQueryResolver resolver)
         {
            _queryEngine.registerResolver(resolver);
-           _schemaManager.attachQueryResolverToSchema(resolver.GraphQLQueryName);
+           _schemaManager.attachQueryResolverToSchema(resolver.id);
         }
         
         [Route("addMutationResolver")]
@@ -65,7 +56,7 @@ namespace Cosmos.GraphQL.Service.Controllers
         public void addMutationResolver(MutationResolver resolver)
         {
             _mutationEngine.registerResolver(resolver);
-            _schemaManager.attachMutationResolverToSchema(resolver.graphQLMutationName);
+            _schemaManager.attachMutationResolverToSchema(resolver.id);
         }
 
         
@@ -81,6 +72,7 @@ namespace Cosmos.GraphQL.Service.Controllers
             if (!String.IsNullOrEmpty(data))
             {
                 this._schemaManager.parseAsync(data);
+                
                 return;
             }
 

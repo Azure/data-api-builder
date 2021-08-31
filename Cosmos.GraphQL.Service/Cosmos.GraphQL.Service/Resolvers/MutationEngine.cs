@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.configurations;
 using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Service.Resolvers;
+using Cosmos.GraphQL.Services;
 using GraphQL.Execution;
 using GraphQL.Language.AST;
 using Microsoft.Azure.Cosmos;
@@ -16,28 +17,31 @@ using Newtonsoft.Json.Linq;
 
 namespace Cosmos.GraphQL.Service.Resolvers
 {
-   public class MutationEngine
+    public class MutationEngine
     {
-        private readonly Dictionary<string, MutationResolver> resolvers = new Dictionary<string, MutationResolver>();
         private readonly CosmosClientProvider _clientProvider;
+
+        private readonly MetadataStoreProvider _metadataStoreProvider;
 
         private ScriptOptions scriptOptions;
 
-        public MutationEngine(CosmosClientProvider clientProvider)
+        public MutationEngine(CosmosClientProvider clientProvider, MetadataStoreProvider metadataStoreProvider)
         {
             this._clientProvider = clientProvider;
+            this._metadataStoreProvider = metadataStoreProvider;
+
+            // 
+            // new CachedMetadataStoreProvider(new DocumentMetadataStoreProvider(clientProvider.getCosmosClient()));
         }
 
         public void registerResolver(MutationResolver resolver)
         {
-            if (resolvers.ContainsKey(resolver.graphQLMutationName))
-            {
-                resolvers.Remove(resolver.graphQLMutationName);
-            }
-            resolvers.Add(resolver.graphQLMutationName, resolver);
+            // TODO: add into system container/rp
+
+            this._metadataStoreProvider.StoreMutationResolver(resolver);
         }
 
-        private JObject toJObject(IDictionary<string, ArgumentValue> parameters)
+        private JObject execute(IDictionary<string, ArgumentValue> parameters, MutationResolver resolver)
         {
             JObject jObject = new JObject();
 
@@ -53,24 +57,22 @@ namespace Cosmos.GraphQL.Service.Resolvers
                 jObject.Add("id", Guid.NewGuid().ToString());
             }
 
-            return jObject;
-        }
-        
-        public async Task<JsonDocument> execute(string graphQLMutationName, IDictionary<string, ArgumentValue> parameters)
-        {
-            if (!resolvers.TryGetValue(graphQLMutationName, out var resolver))
-            {
-                throw new NotImplementedException($"{graphQLMutationName} doesn't exist");
-            }
+            var container = _clientProvider.getCosmosClient().GetDatabase(resolver.databaseName)
+                .GetContainer(resolver.containerName);
+            // TODO: check insertion type
 
-            Container container = _clientProvider.getCosmosContainer();
-            ScriptState<object> scriptState = await runAndInitializedScript();
-            // scriptState = await scriptState.ContinueWithAsync(resolver.dotNetCodeRequestHandler);
-            // scriptState = await scriptState.ContinueWithAsync(resolver.dotNetCodeResponseHandler);
+            JObject res = container.UpsertItemAsync(jObject).Result.Resource;
+            return res;
+        }
+
+        public async Task<JsonDocument> execute(string graphQLMutationName,
+            IDictionary<string, ArgumentValue> parameters)
+        {
+
+            var resolver = _metadataStoreProvider.GetMutationResolver(graphQLMutationName);
             
-            JObject jObject = toJObject(parameters);
-            string jsonAsString = container.UpsertItemAsync(jObject).Result.Resource.ToString();
-            return JsonDocument.Parse(jsonAsString);
+            JObject jObject = execute(parameters, resolver);
+            return JsonDocument.Parse(jObject.ToString());
 
             // switch (resolver.Operation)
             // {
@@ -88,7 +90,6 @@ namespace Cosmos.GraphQL.Service.Resolvers
             //         throw new NotImplementedException("not implemented");
             //     }
             // }
-
 
 
             // ScriptState<object> scriptState = await runAndInitializedScript();
@@ -128,15 +129,16 @@ namespace Cosmos.GraphQL.Service.Resolvers
                     "Newtonsoft.Json",
                     "Newtonsoft.Json.Linq");
         }
-        
+
         private async Task<ScriptState<object>> runAndInitializedScript()
         {
             executeInit();
-            
+
             Globals.Initialize(_clientProvider.getCosmosContainer());
             Globals global = new Globals();
 
-            return await CSharpScript.RunAsync("Container container = Cosmos.Container;", this.scriptOptions, globals: global);
+            return await CSharpScript.RunAsync("Container container = Cosmos.Container;", this.scriptOptions,
+                globals: global);
         }
     }
 }

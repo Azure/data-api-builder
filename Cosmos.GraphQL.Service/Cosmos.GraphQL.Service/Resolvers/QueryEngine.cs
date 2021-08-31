@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.configurations;
 using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Service.Resolvers;
+using GraphQL.Execution;
+using Microsoft.Azure.Cosmos;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using Newtonsoft.Json;
@@ -16,63 +18,92 @@ namespace Cosmos.GraphQL.Services
 {
     public class QueryEngine
     {
-        private readonly Dictionary<string, GraphQLQueryResolver> resolvers = new Dictionary<string, GraphQLQueryResolver>();
         private readonly CosmosClientProvider _clientProvider;
 
         private ScriptOptions scriptOptions;
+        private MetadataStoreProvider _metadataStoreProvider;
 
-        public QueryEngine(CosmosClientProvider clientProvider)
+        public QueryEngine(CosmosClientProvider clientProvider, MetadataStoreProvider metadataStoreProvider)
         {
             this._clientProvider = clientProvider;
+            this._metadataStoreProvider = metadataStoreProvider;
         }
 
         public void registerResolver(GraphQLQueryResolver resolver)
         {
-            if (resolvers.ContainsKey(resolver.GraphQLQueryName))
+            this._metadataStoreProvider.StoreQueryResolver(resolver);  
+        }
+
+        public JsonDocument execute(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters)
+        {
+            // TODO: add support for nesting
+            // TODO: add support for join query against another container
+            // TODO: add support for TOP and Order-by push-down
+
+            var resolver = _metadataStoreProvider.GetQueryResolver(graphQLQueryName);
+            var container = this._clientProvider.getCosmosClient().GetDatabase(resolver.databaseName).GetContainer(resolver.containerName);
+            var querySpec = new QueryDefinition(resolver.parametrizedQuery);
+
+            if (parameters != null)
             {
-                resolvers.Remove(resolver.GraphQLQueryName);
+                foreach (var parameterEntry in parameters)
+                {
+                    querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value.Value);
+                }
             }
-            resolvers.Add(resolver.GraphQLQueryName, resolver);
-        }
 
-        public async Task<JsonDocument> execute(string graphQLQueryName, Dictionary<string, string> parameters)
-        {
-            if (!resolvers.TryGetValue(graphQLQueryName, out var resolver))
+            var firstPage = container.GetItemQueryIterator<JObject>(querySpec).ReadNextAsync().Result;
+
+            JObject firstItem = null;
+
+            var iterator = firstPage.GetEnumerator();
+
+            while (iterator.MoveNext() && firstItem == null)
             {
-                throw new NotImplementedException($"{graphQLQueryName} doesn't exist");
+                firstItem = iterator.Current;
+            }
+            JsonDocument jsonDocument = JsonDocument.Parse(firstItem.ToString());
+
+            return jsonDocument;
+        }
+
+        public IEnumerable<JsonDocument> executeList(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters)
+        {
+            // TODO: add support for nesting
+            // TODO: add support for join query against another container
+            // TODO: add support for TOP and Order-by push-down
+
+            var resolver = _metadataStoreProvider.GetQueryResolver(graphQLQueryName);
+            var container = this._clientProvider.getCosmosClient().GetDatabase(resolver.databaseName).GetContainer(resolver.containerName);
+            var querySpec = new QueryDefinition(resolver.parametrizedQuery);
+
+            if (parameters != null)
+            {
+                foreach (var parameterEntry in parameters)
+                {
+                    querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value.Value);
+                }
             }
 
-            ScriptState<object> scriptState = await runAndInitializedScript();
-            scriptState = await scriptState.ContinueWithAsync(resolver.dotNetCodeRequestHandler);
-            scriptState = await scriptState.ContinueWithAsync(resolver.dotNetCodeResponseHandler);
-            JsonDocument  jsonDocument = JsonDocument.Parse(scriptState.ReturnValue.ToString());
+            var firstPage = container.GetItemQueryIterator<JObject>(querySpec).ReadNextAsync().Result;
 
+            JObject firstItem = null;
 
-            return await Task.FromResult<JsonDocument>(jsonDocument);
+            var iterator = firstPage.GetEnumerator();
+
+            List<JsonDocument> resultsAsList = new List<JsonDocument>();
+            while (iterator.MoveNext())
+            {
+                firstItem = iterator.Current;
+                resultsAsList.Add(JsonDocument.Parse(firstItem.ToString()));
+            }
+
+            return resultsAsList;
         }
-        
-        private async void executeInit()
+
+        internal bool isListQuery(string queryName)
         {
-            Assembly netStandardAssembly = Assembly.Load("netstandard");
-            this.scriptOptions = ScriptOptions.Default
-                .AddReferences(
-                    Assembly.GetAssembly(typeof(Microsoft.Azure.Cosmos.CosmosClient)),
-                    Assembly.GetAssembly(typeof(JsonObjectAttribute)),
-                    Assembly.GetCallingAssembly(),
-                    netStandardAssembly)
-                .WithImports(
-                    "Microsoft.Azure.Cosmos",
-                    "Newtonsoft.Json",
-                    "Newtonsoft.Json.Linq");
-        }
-        
-        private async Task<ScriptState<object>> runAndInitializedScript()
-        {
-            executeInit();
-            
-            Globals.Initialize(_clientProvider.getCosmosContainer());
-            Globals global = new Globals();
-            return await CSharpScript.RunAsync("Container container = Cosmos.Container;", this.scriptOptions, globals: global);
+            return _metadataStoreProvider.GetQueryResolver(queryName).isList;
         }
     }
 }

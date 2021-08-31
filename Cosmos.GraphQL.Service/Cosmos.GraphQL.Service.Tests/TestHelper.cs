@@ -10,65 +10,46 @@ namespace Cosmos.GraphQL.Service.Tests
 {
     class TestHelper
     {
+        public static readonly string DB_NAME = "myDB";
+        public static readonly string COL_NAME = "myCol";
         public static readonly string QUERY_NAME = "myQuery";
         public static readonly string MUTATION_NAME = "addPost";
-        public static string GraphQLTestSchema = @" type Query {
-                                              myQuery: MyPojo
+        public static string GraphQLTestSchema = @"
+                                        type Query {
+                                          myQuery: MyPojo
                                         }
 
+                                        type MyPojo {
+                                            myProp : String
+                                            id : String
+                                        }
 
                                         type Mutation {
                                             addPost(
                                                 myProp: String!
                                                 id : String!
                                             ): MyPojo
-                                        }
+                                        }";
 
-                                        type MyPojo {
-                                            id : String,
-                                            myProp : String,
-                                            myIntProp : Int,
-                                            myBooleanProp : Boolean,
-                                            myFloatProp : Float,
-                                            anotherPojo : AnotherPojo
-                                        }
 
-                                        type AnotherPojo {
-                                            anotherProp : String,
-                                            anotherIntProp : Int,
-                                            person: Person
-                                        }
+        public static string SampleQuery = "{\"query\": \"{myQuery { myProp    }}\" } ";
 
-                                        type Person {
-                                            firstName: String,
-                                            lastName: String,
-                                            zipCode: Int
-                                        }
-                                        ";
-
-        public static string SampleQuery = "{ \"query\":\"{"+ QUERY_NAME +"{ myProp myIntProp myBooleanProp anotherPojo { anotherProp person { lastName } } } }\"} ";
-
-        public static string SampleMutation = "{\"query\":\"mutation addPost {\\r\\n  addPost(\\r\\n    myProp : \\\"myValue345\\\"\\r\\n    id : \\\"myId2\\\"\\r\\n  ) {\\r\\n      myProp\\r\\n  }\\r\\n}\"}";
+        public static string SampleMutation = "{\"query\": \"mutation addPost {addPost(myProp : \\\"myValueBM \\\"id : \\\"myIdBM \\\") { myProp}}\"}";
 
         public static GraphQLQueryResolver SampleQueryResolver()
         {
-            return new GraphQLQueryResolver
-            {
-                GraphQLQueryName = QUERY_NAME,
-                dotNetCodeRequestHandler = "",
-                dotNetCodeResponseHandler = "JObject toDoActivity = (JObject)await container.ReadItemAsync<JObject>(\"MyTestItemId2\", new PartitionKey(\"MyTestItemId2\")); toDoActivity",
-            };
+            var raw =
+                "{\r\n    \"id\" : \"myQuery\",\r\n    \"databaseName\": \"" + DB_NAME + "\",\r\n    \"containerName\": \"" + COL_NAME + "\",\r\n    \"parametrizedQuery\": \"SELECT * FROM r\"\r\n}";
+
+            return JsonConvert.DeserializeObject<GraphQLQueryResolver>(raw);
         }
 
         public static MutationResolver SampleMutationResolver()
         {
-            return new MutationResolver
-            {
-                graphQLMutationName = MUTATION_NAME,
-                dotNetCodeRequestHandler = "dynamic testItem = new { id = \"MyTestItemId2\", myProp = \"it's working2\", status = \"done\" };\r\nawait container.UpsertItemAsync(testItem);",
-                dotNetCodeResponseHandler = "JObject toDoActivity = (JObject) await container.ReadItemAsync<JObject>(\"MyTestItemId2\", new PartitionKey(\"MyTestItemId2\"));  toDoActivity"
-            };
-        } 
+            var raw =
+                "{   \"id\": \"addPost\",\r\n    \"databaseName\": \"" + DB_NAME + "\",\r\n    \"containerName\": \"" + COL_NAME + "\",\r\n    \"operationType\": \"UPSERT\"\r\n}";
+            return JsonConvert.DeserializeObject<MutationResolver>(raw);
+        }
 
         public static object GetItem(string id)
         {

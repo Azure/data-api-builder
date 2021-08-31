@@ -23,9 +23,11 @@ namespace Cosmos.GraphQL.Service
         {
 
             // pass a singleton QueryEngine
+            services.AddSingleton<CosmosClientProvider, CosmosClientProvider>();
+            services.AddSingleton<DocumentMetadataStoreProvider, DocumentMetadataStoreProvider>();
+            services.AddSingleton<MetadataStoreProvider, CachedMetadataStoreProvider>();
             services.AddSingleton<QueryEngine, QueryEngine>();
             services.AddSingleton<MutationEngine, MutationEngine>();
-            services.AddSingleton<CosmosClientProvider, CosmosClientProvider>();
             services.AddSingleton<GraphQLService, GraphQLService>();
             
             services.AddControllers();

@@ -129,16 +129,5 @@ namespace Cosmos.GraphQL.Service.Resolvers
                     "Newtonsoft.Json",
                     "Newtonsoft.Json.Linq");
         }
-
-        private async Task<ScriptState<object>> runAndInitializedScript()
-        {
-            executeInit();
-
-            Globals.Initialize(_clientProvider.getCosmosContainer());
-            Globals global = new Globals();
-
-            return await CSharpScript.RunAsync("Container container = Cosmos.Container;", this.scriptOptions,
-                globals: global);
-        }
     }
 }

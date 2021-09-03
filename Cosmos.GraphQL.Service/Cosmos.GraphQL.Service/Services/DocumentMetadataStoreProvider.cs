@@ -7,7 +7,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Cosmos.GraphQL.Services
 {
-    public class DocumentMetadataStoreProvider : MetadataStoreProvider
+    public class DocumentMetadataStoreProvider : IMetadataStoreProvider
     {
         private readonly CosmosClient client;
         private readonly string systemDatabaseName = "_systemGraphQL";

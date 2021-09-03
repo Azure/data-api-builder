@@ -46,9 +46,9 @@ namespace Cosmos.GraphQL.Services
 
         private readonly QueryEngine _queryEngine;
         private readonly MutationEngine _mutationEngine;
-        private MetadataStoreProvider _metadataStoreProvider;
+        private IMetadataStoreProvider _metadataStoreProvider;
 
-        public GraphQLService(QueryEngine queryEngine, MutationEngine mutationEngine, CosmosClientProvider clientProvider, MetadataStoreProvider metadataStoreProvider)
+        public GraphQLService(QueryEngine queryEngine, MutationEngine mutationEngine, CosmosClientProvider clientProvider, IMetadataStoreProvider metadataStoreProvider)
         {
             this._queryEngine = queryEngine;
             this._mutationEngine = mutationEngine;

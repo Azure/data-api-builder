@@ -16,25 +16,35 @@ using Newtonsoft.Json.Linq;
 
 namespace Cosmos.GraphQL.Services
 {
-    public class QueryEngine
+    //<summary>
+    // CosmosQueryEngine to Execute against CosmosDb.
+    //</summary>
+    public class CosmosQueryEngine : IQueryEngine
     {
         private readonly CosmosClientProvider _clientProvider;
-
-        private ScriptOptions scriptOptions;
         private IMetadataStoreProvider _metadataStoreProvider;
 
-        public QueryEngine(CosmosClientProvider clientProvider, IMetadataStoreProvider metadataStoreProvider)
+        // <summary>
+        // Constructor.
+        // </summary>
+        public CosmosQueryEngine(IClientProvider<CosmosClient> clientProvider, IMetadataStoreProvider metadataStoreProvider)
         {
-            this._clientProvider = clientProvider;
+            this._clientProvider = (CosmosClientProvider)clientProvider;
             this._metadataStoreProvider = metadataStoreProvider;
         }
 
-        public void registerResolver(GraphQLQueryResolver resolver)
+        // <summary>
+        // Register the given resolver with this query engine.
+        // </summary>
+        public void RegisterResolver(GraphQLQueryResolver resolver)
         {
-            this._metadataStoreProvider.StoreQueryResolver(resolver);  
+            this._metadataStoreProvider.StoreQueryResolver(resolver);
         }
 
-        public JsonDocument execute(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters)
+        // <summary>
+        // Execute the given named graphql query on the backend.
+        // </summary>
+        public JsonDocument Execute(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters)
         {
             // TODO: add support for nesting
             // TODO: add support for join query against another container
@@ -67,7 +77,7 @@ namespace Cosmos.GraphQL.Services
             return jsonDocument;
         }
 
-        public IEnumerable<JsonDocument> executeList(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters)
+        public IEnumerable<JsonDocument> ExecuteList(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters)
         {
             // TODO: add support for nesting
             // TODO: add support for join query against another container
@@ -101,7 +111,10 @@ namespace Cosmos.GraphQL.Services
             return resultsAsList;
         }
 
-        internal bool isListQuery(string queryName)
+        // <summary>
+        // Returns if the given query is a list query.
+        // </summary>
+        public bool IsListQuery(string queryName)
         {
             return _metadataStoreProvider.GetQueryResolver(queryName).isList;
         }

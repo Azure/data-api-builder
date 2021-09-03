@@ -44,11 +44,11 @@ namespace Cosmos.GraphQL.Services
 
         private readonly IDocumentWriter _writer;
 
-        private readonly QueryEngine _queryEngine;
+        private readonly IQueryEngine _queryEngine;
         private readonly MutationEngine _mutationEngine;
         private IMetadataStoreProvider _metadataStoreProvider;
 
-        public GraphQLService(QueryEngine queryEngine, MutationEngine mutationEngine, CosmosClientProvider clientProvider, IMetadataStoreProvider metadataStoreProvider)
+        public GraphQLService(IQueryEngine queryEngine, MutationEngine mutationEngine, IMetadataStoreProvider metadataStoreProvider)
         {
             this._queryEngine = queryEngine;
             this._mutationEngine = mutationEngine;
@@ -187,12 +187,12 @@ namespace Cosmos.GraphQL.Services
 
         public void attachQueryResolverToSchema(string queryName)
         {
-            if (_queryEngine.isListQuery(queryName))
+            if (_queryEngine.IsListQuery(queryName))
             {
                 this._schema.Query.GetField(queryName).Resolver =
                new FuncFieldResolver<object, IEnumerable<JsonDocument>>(context =>
                {
-                   return _queryEngine.executeList(queryName, context.Arguments);
+                   return _queryEngine.ExecuteList(queryName, context.Arguments);
                });
             }
             else
@@ -200,7 +200,7 @@ namespace Cosmos.GraphQL.Services
                 this._schema.Query.GetField(queryName).Resolver =
                 new FuncFieldResolver<object, JsonDocument>(context =>
                 {
-                    return _queryEngine.execute(queryName, context.Arguments);
+                    return _queryEngine.Execute(queryName, context.Arguments);
                 });
             }
         }

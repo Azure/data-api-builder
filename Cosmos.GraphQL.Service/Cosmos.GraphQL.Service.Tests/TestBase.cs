@@ -21,7 +21,7 @@ namespace Cosmos.GraphQL.Service.Tests
         internal GraphQLService graphQLService;
         internal CosmosClientProvider clientProvider;
         internal IMetadataStoreProvider metadataStoreProvider;
-        internal QueryEngine queryEngine;
+        internal CosmosQueryEngine queryEngine;
         internal MutationEngine mutationEngine;
         internal GraphQLController controller;
 
@@ -39,9 +39,9 @@ namespace Cosmos.GraphQL.Service.Tests
             //clientProvider.getCosmosContainer().CreateItemAsync(sourceItem, new PartitionKey(uid)); // TODO: Make it sync
             metadataStoreProvider = new CachedMetadataStoreProvider(new DocumentMetadataStoreProvider(clientProvider));
 
-            queryEngine = new QueryEngine(clientProvider, metadataStoreProvider);
+            queryEngine = new CosmosQueryEngine(clientProvider, metadataStoreProvider);
             mutationEngine = new MutationEngine(clientProvider, metadataStoreProvider);
-            graphQLService = new GraphQLService(queryEngine, mutationEngine, clientProvider, metadataStoreProvider);
+            graphQLService = new GraphQLService(queryEngine, mutationEngine, metadataStoreProvider);
             graphQLService.parseAsync(TestHelper.GraphQLTestSchema);
             controller = new GraphQLController(null, queryEngine, mutationEngine, graphQLService);
         }

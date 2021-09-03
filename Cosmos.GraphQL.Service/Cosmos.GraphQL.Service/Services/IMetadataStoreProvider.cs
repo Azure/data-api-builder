@@ -19,7 +19,7 @@ using Newtonsoft.Json.Linq;
 namespace Cosmos.GraphQL.Services
 {
     
-    public interface MetadataStoreProvider
+    public interface IMetadataStoreProvider
     {
         void StoreGraphQLSchema(string schema);
         string GetGraphQLSchema();

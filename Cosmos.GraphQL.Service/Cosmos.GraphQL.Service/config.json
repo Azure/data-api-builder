@@ -1,0 +1,18 @@
+{
+  "GraphQLSchema": "{ \r\n    type Query { \r\n      bookById (id: @id): Book \r\n    } \r\n\r\n    type Book { \r\n        id : ID!, \r\n        title : String!, \r\n        numberOfPages: Int, \r\n        author: Author\r\n    } \r\n\r\n    type Author { \r\n        id: ID!, \r\n        firstName: String, \r\n        lastName: String, \r\n        address: String, \r\n    } \r\n\r\n    type Mutation { \r\n         addBook( \r\n            id : ID!, \r\n            title: String!, \r\n            numberOfPages: Int, \r\n            author : { \r\n                id: ID!, \r\n                firstName: String, \r\n                lastName: String \r\n                address: String \r\n            } \r\n         ): Book \r\n    } \r\n} ",
+  "Resolvers": [
+    {
+      "engine": "SQL",
+      "name": "bookById",
+      "database": "",
+      "container": "",
+      "parametrizedQuery": "SELECT * from r WHERE r.id = @arg.id",
+      "operationType": "READ_ITEM"
+    },
+    {
+      "name": "authorById"
+    }
+  ]
+}
+
+

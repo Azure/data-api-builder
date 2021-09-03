@@ -20,7 +20,7 @@ namespace Cosmos.GraphQL.Service.Tests
     {
         internal GraphQLService graphQLService;
         internal CosmosClientProvider clientProvider;
-        internal MetadataStoreProvider metadataStoreProvider;
+        internal IMetadataStoreProvider metadataStoreProvider;
         internal QueryEngine queryEngine;
         internal MutationEngine mutationEngine;
         internal GraphQLController controller;

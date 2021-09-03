@@ -18,13 +18,12 @@ namespace Cosmos.GraphQL.Services
         }
     }
 
-    public class CachedMetadataStoreProvider : MetadataStoreProvider
+    public class CachedMetadataStoreProvider : IMetadataStoreProvider
     {
-        private readonly MetadataStoreProvider _storeProvider;
+        private readonly IMetadataStoreProvider _storeProvider;
         private string _schema;
         private ConcurrentDictionary<string, MutationResolver> _mutationResolvers = new ConcurrentDictionary<string, MutationResolver>();
         private ConcurrentDictionary<string, GraphQLQueryResolver> _queryResolvers = new ConcurrentDictionary<string, GraphQLQueryResolver>();
-
 
         public CachedMetadataStoreProvider(DocumentMetadataStoreProvider storeProvider)
         {

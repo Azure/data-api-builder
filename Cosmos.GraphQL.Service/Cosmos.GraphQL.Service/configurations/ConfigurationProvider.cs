@@ -34,7 +34,7 @@ namespace Cosmos.GraphQL.Service.configurations
                 .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                 .AddJsonFile("AppSettings.json").Build();
 
-            var section = config.GetSection("DatabaseConnection");
+            var section = config.GetSection("DatabaseConnection2");
             if (!Enum.TryParse<DatabaseType>(section["DatabaseType"], out DatabaseType dbType))
             {
                 throw new NotSupportedException(String.Format("The configuration file is invalid and does not contain a *valid* DatabaseType key."));

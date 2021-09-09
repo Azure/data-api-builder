@@ -78,7 +78,22 @@ namespace Cosmos.GraphQL.Services
         {
             if (this.Schema == null)
             {
-                return "{\"error\": \"Schema must be defined first\" }";
+                // Attempt to initialize schema from the metadata store provider
+                // This happens in case of SQL as backend.
+                //
+                parseAsync(_metadataStoreProvider.GetGraphQLSchema());
+                // If its still null, return error
+                //
+                if (this.Schema == null)
+                {
+                    return "{\"error\": \"Schema must be defined first\" }";
+                }
+                else
+                {
+                    // Loop through all the queries and attach the resolvers for each query before hand.
+                    //
+                    attachQueryResolverToSchema("characterList");
+                }
             }
 
             var request = requestBody.ToInputs();
@@ -200,7 +215,7 @@ namespace Cosmos.GraphQL.Services
                 this._schema.Query.GetField(queryName).Resolver =
                 new FuncFieldResolver<object, JsonDocument>(context =>
                 {
-                    return _queryEngine.Execute(queryName, context.Arguments);
+                    return _queryEngine.ExecuteAsync(queryName, context.Arguments).Result;
                 });
             }
         }

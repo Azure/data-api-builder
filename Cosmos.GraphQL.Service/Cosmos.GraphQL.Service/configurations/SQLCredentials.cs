@@ -8,5 +8,6 @@ namespace Cosmos.GraphQL.Service.configurations
     public class SQLCredentials : IDatabaseCredentials
     {
         public string ConnectionString { get; set; }
+        public string Server { get; set; }
     }
 }

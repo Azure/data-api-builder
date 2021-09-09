@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Models;
 using GraphQL.Execution;
 
@@ -18,7 +19,7 @@ namespace Cosmos.GraphQL.Services
         // <summary>
         // Executes the given named graphql query on the backend and expecting a single Json back.
         // </summary>
-        public JsonDocument Execute(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters);
+        public Task<JsonDocument> ExecuteAsync(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters);
 
         // <summary>
         // Executes the given named graphql query on the backend and expecting a list of Jsons back.

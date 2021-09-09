@@ -17,7 +17,7 @@ using Newtonsoft.Json.Linq;
 namespace Cosmos.GraphQL.Services
 {
     //<summary>
-    // CosmosQueryEngine to Execute against CosmosDb.
+    // CosmosQueryEngine to ExecuteAsync against CosmosDb.
     //</summary>
     public class CosmosQueryEngine : IQueryEngine
     {
@@ -42,9 +42,9 @@ namespace Cosmos.GraphQL.Services
         }
 
         // <summary>
-        // Execute the given named graphql query on the backend.
+        // ExecuteAsync the given named graphql query on the backend.
         // </summary>
-        public JsonDocument Execute(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters)
+        public async Task<JsonDocument> ExecuteAsync(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters)
         {
             // TODO: add support for nesting
             // TODO: add support for join query against another container

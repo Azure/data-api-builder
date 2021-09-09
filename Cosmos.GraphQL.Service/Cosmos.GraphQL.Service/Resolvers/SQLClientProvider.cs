@@ -1,36 +1,20 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.Data.SqlClient;
-using Cosmos.GraphQL.Service.configurations;
+using Microsoft.Sql.Rest.Utils;
 
 namespace Cosmos.GraphQL.Service.Resolvers
 {
-    public class SQLClientProvider: IClientProvider<SqlConnection>
+    public class SQLClientProvider: IClientProvider<DbConnectionService>
     {
-        private static SqlConnection _sqlConnection;
-        private static readonly object syncLock = new object();
+        private static DbConnectionService _sqlConnectionService;
 
-        private void init()
+        public SQLClientProvider(IDbConnectionService dbConnectionService)
         {
-            _sqlConnection = new SqlConnection(ConfigurationProvider.getInstance().Creds.ConnectionString);
+            _sqlConnectionService = (DbConnectionService)dbConnectionService;
         }
 
-        public SqlConnection getClient()
+        public DbConnectionService getClient()
         {
-            if (_sqlConnection == null)
-            {
-                lock (syncLock)
-                {
-                    if (_sqlConnection == null)
-                    {
-                        init();
-                    }
-                }
-            }
-
-            return _sqlConnection;
+            return _sqlConnectionService;
         }
     }
 }

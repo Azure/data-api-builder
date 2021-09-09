@@ -1,12 +1,15 @@
+using Cosmos.GraphQL.Service.configurations;
 using Cosmos.GraphQL.Service.Resolvers;
 using Cosmos.GraphQL.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Azure.Cosmos;
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Sql.Rest.QueryHandler;
+using Microsoft.Sql.Rest.Utils;
 using System;
 
 namespace Cosmos.GraphQL.Service
@@ -30,33 +33,39 @@ namespace Cosmos.GraphQL.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            if(Configuration.GetValue<string>("DatabaseConnection:DatabaseType") is null)
+            if(Configuration.GetValue<string>("DatabaseConnection2:DatabaseType") is null)
             {
                 throw new NotSupportedException(String.Format("The configuration file is invalid and does not *contain* the DatabaseType key."));
             }
 
-            if (!Enum.TryParse<DatabaseType>(Configuration.GetValue<string>("DatabaseConnection:DatabaseType"), out DatabaseType dbType))
+            if (!Enum.TryParse<DatabaseType>(Configuration.GetValue<string>("DatabaseConnection2:DatabaseType"), out DatabaseType dbType))
             {
                 throw new NotSupportedException(String.Format("The configuration file is invalid and does not contain a *valid* DatabaseType key."));
             }
-            
+
             switch (dbType)
             {
                 case DatabaseType.COSMOS:
                     services.AddSingleton<IClientProvider<CosmosClient>, CosmosClientProvider>();
                     services.AddSingleton<CosmosClientProvider, CosmosClientProvider>();
                     services.AddSingleton<DocumentMetadataStoreProvider, DocumentMetadataStoreProvider>();
+                    services.AddSingleton<IMetadataStoreProvider, CachedMetadataStoreProvider>();
                     services.AddSingleton<IQueryEngine, CosmosQueryEngine>();
                     break;
                 case DatabaseType.SQL:
-                    services.AddSingleton<IClientProvider<SqlConnection>, SQLClientProvider>();
+                    SQLCredentials creds = (SQLCredentials)configurations.ConfigurationProvider.getInstance().Creds;
+                    services.AddSingleton<IDbConnectionService, DbConnectionService>(provider =>
+                        new DbConnectionService(provider.GetService<ILogger>(),
+                            creds.Server));
+                    services.AddSingleton<IClientProvider<DbConnectionService>, SQLClientProvider>();
+                    services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
+                    services.AddSingleton<IQueryExecutor, QueryExecutor>();
                     services.AddSingleton<IQueryEngine, SQLQueryEngine>();
                     break;
                 default:
                     throw new NotSupportedException(String.Format("The provide enum value: {0} is currently not supported. This is likely a bug in this function", dbType));
             }
 
-            services.AddSingleton<IMetadataStoreProvider, CachedMetadataStoreProvider>();
             services.AddSingleton<MutationEngine, MutationEngine>();
             services.AddSingleton<GraphQLService, GraphQLService>();
             services.AddControllers();

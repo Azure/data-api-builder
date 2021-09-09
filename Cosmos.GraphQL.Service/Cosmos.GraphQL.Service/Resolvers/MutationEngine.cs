@@ -14,18 +14,19 @@ using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Microsoft.Sql.Rest.Utils;
 
 namespace Cosmos.GraphQL.Service.Resolvers
 {
     public class MutationEngine
     {
-        private readonly CosmosClientProvider _clientProvider;
+        private readonly IClientProvider<DbConnectionService> _clientProvider;
 
         private readonly IMetadataStoreProvider _metadataStoreProvider;
 
         private ScriptOptions scriptOptions;
 
-        public MutationEngine(CosmosClientProvider clientProvider, IMetadataStoreProvider metadataStoreProvider)
+        public MutationEngine(IClientProvider<DbConnectionService> clientProvider, IMetadataStoreProvider metadataStoreProvider)
         {
             this._clientProvider = clientProvider;
             this._metadataStoreProvider = metadataStoreProvider;
@@ -54,12 +55,12 @@ namespace Cosmos.GraphQL.Service.Resolvers
                 jObject.Add("id", Guid.NewGuid().ToString());
             }
 
-            var container = _clientProvider.getCosmosClient().GetDatabase(resolver.databaseName)
-                .GetContainer(resolver.containerName);
+            //var container = _clientProvider.getClient().GetDatabase(resolver.databaseName)
+            //    .GetContainer(resolver.containerName);
             // TODO: check insertion type
 
-            JObject res = container.UpsertItemAsync(jObject).Result.Resource;
-            return res;
+            // JObject res = container.UpsertItemAsync(jObject).Result.Resource;
+            return jObject;
         }
 
         public async Task<JsonDocument> execute(string graphQLMutationName,

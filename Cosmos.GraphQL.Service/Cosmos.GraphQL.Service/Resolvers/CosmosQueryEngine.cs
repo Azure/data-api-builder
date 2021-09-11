@@ -62,7 +62,7 @@ namespace Cosmos.GraphQL.Services
                 }
             }
 
-            var firstPage = container.GetItemQueryIterator<JObject>(querySpec).ReadNextAsync().Result;
+            var firstPage = await container.GetItemQueryIterator<JObject>(querySpec).ReadNextAsync();
 
             JObject firstItem = null;
 
@@ -77,7 +77,7 @@ namespace Cosmos.GraphQL.Services
             return jsonDocument;
         }
 
-        public IEnumerable<JsonDocument> ExecuteList(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters)
+        public async Task<IEnumerable<JsonDocument>> ExecuteListAsync(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters)
         {
             // TODO: add support for nesting
             // TODO: add support for join query against another container
@@ -95,7 +95,7 @@ namespace Cosmos.GraphQL.Services
                 }
             }
 
-            var firstPage = container.GetItemQueryIterator<JObject>(querySpec).ReadNextAsync().Result;
+            var firstPage = await container.GetItemQueryIterator<JObject>(querySpec).ReadNextAsync();
 
             JObject firstItem = null;
 

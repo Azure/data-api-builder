@@ -24,7 +24,7 @@ namespace Cosmos.GraphQL.Services
         // <summary>
         // Executes the given named graphql query on the backend and expecting a list of Jsons back.
         // </summary>
-        public IEnumerable<JsonDocument> ExecuteList(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters);
+        public Task<IEnumerable<JsonDocument>> ExecuteListAsync(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters);
 
         // <summary>
         // Returns if the given query is a list query.

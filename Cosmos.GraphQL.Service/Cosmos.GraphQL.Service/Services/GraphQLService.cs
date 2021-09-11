@@ -92,7 +92,10 @@ namespace Cosmos.GraphQL.Services
                 {
                     // Loop through all the queries and attach the resolvers for each query before hand.
                     //
-                    attachQueryResolverToSchema("characterList");
+                    foreach (FieldType queryField in Schema.Query.Fields)
+                    {
+                        attachQueryResolverToSchema(queryField.Name);
+                    }
                 }
             }
 
@@ -148,7 +151,7 @@ namespace Cosmos.GraphQL.Services
 
                 }
                 //bool success = rootElement.TryGetProperty(definitionName, out JsonElement value);
-                if (!success)
+                if (!success || value.ValueKind == JsonValueKind.Null)
                 {
                     return null;
                 }
@@ -162,8 +165,8 @@ namespace Cosmos.GraphQL.Services
                         return value.GetDouble();
                     case "Boolean":
                         return value.GetBoolean();
-                    //case "ID":
-                    //    return rootElement.GetProperty(definitionName).GetString();
+                    case "ID":
+                        return value.GetInt32();
                     default:
                         throw new InvalidDataException();
 
@@ -207,7 +210,7 @@ namespace Cosmos.GraphQL.Services
                 this._schema.Query.GetField(queryName).Resolver =
                new FuncFieldResolver<object, IEnumerable<JsonDocument>>(context =>
                {
-                   return _queryEngine.ExecuteList(queryName, context.Arguments);
+                   return _queryEngine.ExecuteListAsync(queryName, context.Arguments).Result;
                });
             }
             else

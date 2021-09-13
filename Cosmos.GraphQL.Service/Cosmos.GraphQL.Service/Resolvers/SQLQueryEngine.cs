@@ -13,6 +13,7 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Data.SqlClient;
 using Microsoft.Sql.Rest.QueryHandler;
 using Newtonsoft.Json.Linq;
+using System.Data;
 
 namespace Cosmos.GraphQL.Services
 {
@@ -61,10 +62,19 @@ namespace Cosmos.GraphQL.Services
                 // Edit query to add FOR JSON PATH
                 //
                 string queryText = resolver.parametrizedQuery + x_ForJsonSuffix + "," + x_WithoutArrayWrapperSuffix + ";";
+                List<IDataParameter> queryParameters = new List<IDataParameter>();
+
+                if (parameters != null)
+                {
+                    foreach (var parameterEntry in parameters)
+                    {
+                        queryParameters.Add(new SqlParameter("@" + parameterEntry.Key, parameterEntry.Value.Value));
+                    }
+                }
 
                 // Open connection and execute query using _queryExecutor
                 //
-                DbDataReader dbDataReader =  await _queryExecutor.ExecuteQueryAsync(queryText, resolver.databaseName);
+                DbDataReader dbDataReader =  await _queryExecutor.ExecuteQueryAsync(queryText, resolver.databaseName, queryParameters);
 
                 // Parse Results into Json and return
                 //
@@ -101,10 +111,19 @@ namespace Cosmos.GraphQL.Services
                 // Edit query to add FOR JSON PATH
                 //
                 string queryText = resolver.parametrizedQuery + x_ForJsonSuffix + ";";
+                List<IDataParameter> queryParameters = new List<IDataParameter>();
+
+                if (parameters != null)
+                {
+                    foreach (var parameterEntry in parameters)
+                    {
+                        queryParameters.Add(new SqlParameter("@" + parameterEntry.Key, parameterEntry.Value.Value));
+                    }
+                }
 
                 // Open connection and execute query using _queryExecutor
                 //
-                DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryText, resolver.databaseName);
+                DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryText, resolver.databaseName, queryParameters);
 
                 // Deserialize results into list of JsonDocuments and return
                 //

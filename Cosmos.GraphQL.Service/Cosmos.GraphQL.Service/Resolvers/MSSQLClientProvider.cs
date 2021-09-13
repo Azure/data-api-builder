@@ -7,8 +7,14 @@ using Cosmos.GraphQL.Service.configurations;
 
 namespace Cosmos.GraphQL.Service.Resolvers
 {
-    public class SQLClientProvider: IClientProvider<SqlConnection>
+    /// <summary>
+    /// Creates, returns, and maintains SqlConnection for all resources the make SQL database calls.
+    /// </summary>
+    public class MSSQLClientProvider: IClientProvider<SqlConnection>
     {
+        /// <summary>
+        /// Connection object shared across engines that require database access.
+        /// </summary>
         private static SqlConnection _sqlConnection;
         private static readonly object syncLock = new object();
 

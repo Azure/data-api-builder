@@ -4,6 +4,10 @@ using Microsoft.Extensions.Configuration;
 
 namespace Cosmos.GraphQL.Service.configurations
 {
+    /// <summary>
+    /// Processes appsettings.json file containing dbtype 
+    /// and database connection credentials/connections strings.
+    /// </summary>
     public class ConfigurationProvider
     {
         private static ConfigurationProvider instance;
@@ -45,8 +49,8 @@ namespace Cosmos.GraphQL.Service.configurations
                 case DatabaseType.COSMOS:
                     Creds = section.Get<CosmosCredentials>();
                     break;
-                case DatabaseType.SQL:
-                    Creds = section.Get<SQLCredentials>();
+                case DatabaseType.MSSQL:
+                    Creds = section.Get<MSSQLCredentials>();
                     break;
                 default:
                     break;

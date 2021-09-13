@@ -9,9 +9,19 @@ using System.Threading.Tasks;
 
 namespace Cosmos.GraphQL.Service
 {
+    /// <summary>
+    /// Reads GraphQL Schema and resolver config from text files to make available to GraphQL service. 
+    /// </summary>
     public class FileMetadataStoreProvider : IMetadataStoreProvider
     {
+        /// <summary>
+        /// String Representation of graphQL schema, non escaped.
+        /// </summary>
         private string _graphQLSchema;
+        
+        /// <summary>
+        /// Stores resolvers contained in configuration file. 
+        /// </summary>
         private IDictionary<string, string> _resolvers; 
 
         public FileMetadataStoreProvider()
@@ -27,7 +37,16 @@ namespace Cosmos.GraphQL.Service
             {
                 JsonElement root = document.RootElement;
                 JsonElement schema = root.GetProperty("GraphQLSchema");
-                _graphQLSchema = schema.GetString();
+                
+                if (String.IsNullOrEmpty(schema.GetString()))
+                {
+                    _graphQLSchema = File.ReadAllText("schema.gql");
+                }
+                else
+                {
+                    _graphQLSchema = schema.GetString();
+                }
+                
                 JsonElement resolversListJson = root.GetProperty("Resolvers");
                 _resolvers = new Dictionary<string,string>();
                 foreach(JsonElement resolver in resolversListJson.EnumerateArray())

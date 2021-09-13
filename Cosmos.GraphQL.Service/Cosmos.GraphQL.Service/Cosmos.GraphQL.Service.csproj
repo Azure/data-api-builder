@@ -5,6 +5,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="schema.gql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="schema.gql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="GraphQL" Version="4.5.0" />
     <PackageReference Include="GraphQL.Server.Ui.GraphiQL" Version="5.0.2" />
     <PackageReference Include="GraphQL.SystemTextJson" Version="4.5.0" />

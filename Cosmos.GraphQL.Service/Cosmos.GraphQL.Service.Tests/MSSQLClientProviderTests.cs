@@ -11,12 +11,12 @@ using System.Threading.Tasks;
 namespace Cosmos.GraphQL.Service.Tests
 {
     [TestClass]
-    public class SqlClientProviderTests
+    public class MSSQLClientProviderTests
     {
         private IClientProvider<SqlConnection> _clientProvider;
-        public SqlClientProviderTests()
+        public MSSQLClientProviderTests()
         {
-            _clientProvider = new SQLClientProvider();
+            _clientProvider = new MSSQLClientProvider();
         }
         /// <summary>
         /// Ensure a connection is successfully opened within the [Database]ClientProvider,

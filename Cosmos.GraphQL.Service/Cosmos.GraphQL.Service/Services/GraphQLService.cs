@@ -54,6 +54,8 @@ namespace Cosmos.GraphQL.Services
             this._mutationEngine = mutationEngine;
             this._metadataStoreProvider = metadataStoreProvider;
             this._writer = new MyDocumentWriter(this._writerPure);
+
+            InitializeSchemaAndResolvers();
         }
 
         public void parseAsync(String data)
@@ -78,25 +80,7 @@ namespace Cosmos.GraphQL.Services
         {
             if (this.Schema == null)
             {
-                // Attempt to initialize schema from the metadata store provider
-                // This happens in case of SQL as backend.
-                //
-                parseAsync(_metadataStoreProvider.GetGraphQLSchema());
-                // If its still null, return error
-                //
-                if (this.Schema == null)
-                {
-                    return "{\"error\": \"Schema must be defined first\" }";
-                }
-                else
-                {
-                    // Loop through all the queries and attach the resolvers for each query before hand.
-                    //
-                    foreach (FieldType queryField in Schema.Query.Fields)
-                    {
-                        attachQueryResolverToSchema(queryField.Name);
-                    }
-                }
+                return "{\"error\": \"Schema must be defined first\" }";
             }
 
             var request = requestBody.ToInputs();
@@ -243,6 +227,32 @@ namespace Cosmos.GraphQL.Services
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// If the metastore provider is able to get the graphql schema,
+        /// this function parses it and attaches resolvers to the various query fields.
+        /// </summary>
+        private void InitializeSchemaAndResolvers()
+        {
+            // Attempt to get schema from the metadata store.
+            //
+            string graphqlSchema = _metadataStoreProvider.GetGraphQLSchema();
+
+            // If the schema is available, parse it and attach resolvers.
+            //
+            if (!string.IsNullOrEmpty(graphqlSchema))
+            {
+                parseAsync(graphqlSchema);
+
+                // Loop through all the query fields and attach the resolvers for
+                // each query before hand.
+                //
+                foreach (FieldType queryField in Schema.Query.Fields)
+                {
+                    attachQueryResolverToSchema(queryField.Name);
+                }
+            }
         }
 
     }

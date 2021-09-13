@@ -1,12 +1,12 @@
 {
-  "GraphQLSchema": "type Query { \r\n      topOneCharacter: characters \r\n  characterList : [characters] \r\n  } \r\n\r\n    type characters { \r\n        id : ID, \r\n        name : String, \r\n        type: String, \r\n        homePlanet: Int, \r\n        primaryFunction: String \r\n}",
+  "GraphQLSchema": "type Query { \r\n      characterById(id : ID!): character \r\n  characterList : [character!]! \r\n  } \r\n\r\n    type character { \r\n        id : ID, \r\n        name : String, \r\n        type: String, \r\n        homePlanet: Int, \r\n        primaryFunction: String \r\n}",
   "Resolvers": [
     {
         "engine": "SQL",
-        "id": "topOneCharacter",
+        "id": "characterById",
         "databaseName": "StarWars",
         "isList": false,
-        "parametrizedQuery": "SELECT TOP 1 [id], [name], [type], [homePlanet], [primaryFunction] FROM characters"
+        "parametrizedQuery": "SELECT [id], [name], [type], [homePlanet], [primaryFunction] FROM characters WHERE [id] = @id"
     },
     {
         "engine": "SQL",

@@ -5,7 +5,9 @@ VisualStudioVersion = 16.0.31205.134
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cosmos.GraphQL.Service", "Cosmos.GraphQL.Service\Cosmos.GraphQL.Service.csproj", "{208FC26C-A21C-4C96-98EE-F10FDAEAC508}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cosmos.GraphQL.Service.Tests", "Cosmos.GraphQL.Service.Tests\Cosmos.GraphQL.Service.Tests.csproj", "{4E50C9B0-818E-4041-B18B-5BB17E4D409F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cosmos.GraphQL.Service.Tests", "Cosmos.GraphQL.Service.Tests\Cosmos.GraphQL.Service.Tests.csproj", "{4E50C9B0-818E-4041-B18B-5BB17E4D409F}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Sql.Rest", "..\Microsoft.Sql.Rest\Microsoft.Sql.Rest.csproj", "{448D66FA-854B-4C42-BCE0-FECD61D52E11}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{4E50C9B0-818E-4041-B18B-5BB17E4D409F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4E50C9B0-818E-4041-B18B-5BB17E4D409F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4E50C9B0-818E-4041-B18B-5BB17E4D409F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{448D66FA-854B-4C42-BCE0-FECD61D52E11}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{448D66FA-854B-4C42-BCE0-FECD61D52E11}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{448D66FA-854B-4C42-BCE0-FECD61D52E11}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{448D66FA-854B-4C42-BCE0-FECD61D52E11}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

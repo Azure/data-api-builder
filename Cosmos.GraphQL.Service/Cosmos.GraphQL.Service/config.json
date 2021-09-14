@@ -1,19 +1,33 @@
 {
-  "GraphQLSchema": "type Query { \r\n      characterById(id : ID!): character \r\n  characterList : [character!]! \r\n  } \r\n\r\n    type character { \r\n        id : ID, \r\n        name : String, \r\n        type: String, \r\n        homePlanet: Int, \r\n        primaryFunction: String \r\n}",
+  "GraphQLSchema": "",
   "Resolvers": [
     {
         "engine": "SQL",
         "id": "characterById",
         "databaseName": "StarWars",
         "isList": false,
-        "parametrizedQuery": "SELECT [id], [name], [type], [homePlanet], [primaryFunction] FROM characters WHERE [id] = @id"
+        "parametrizedQuery": "SELECT [id], [name], [type], [homePlanet], [primaryFunction] FROM character WHERE [id] = @id"
     },
     {
         "engine": "SQL",
         "id": "characterList",
         "databaseName": "StarWars",
         "isList": true,
-        "parametrizedQuery": "SELECT [id], [name], [type], [homePlanet], [primaryFunction] FROM characters"
+        "parametrizedQuery": "SELECT [id], [name], [type], [homePlanet], [primaryFunction] FROM character"
+    },
+    {
+        "engine": "SQL",
+        "id": "planetById",
+        "databaseName": "StarWars",
+        "isList": false,
+        "parametrizedQuery": "SELECT [id], [name] FROM planet WHERE [id] = @id"
+    },
+    {
+        "engine": "SQL",
+        "id": "planetList",
+        "databaseName": "StarWars",
+        "isList": true,
+        "parametrizedQuery": "SELECT [id], [name] FROM planet"
     }
   ]
 }

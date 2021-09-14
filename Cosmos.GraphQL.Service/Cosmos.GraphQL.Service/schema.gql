@@ -1,0 +1,11 @@
+type Query { 
+      characterList: characters 
+    } 
+
+type characters { 
+        id : ID, 
+        name : String, 
+        type: String, 
+        homePlanet: Int, 
+        primaryFunction: String 
+} 

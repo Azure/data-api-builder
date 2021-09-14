@@ -16,7 +16,7 @@ namespace Cosmos.GraphQL.Service
 {
     enum DatabaseType
     {
-        SQL, 
+        MSSQL, 
         COSMOS, 
         POSTGRES,
     }
@@ -33,16 +33,16 @@ namespace Cosmos.GraphQL.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            if(Configuration.GetValue<string>("DatabaseConnection2:DatabaseType") is null)
+            if(Configuration.GetValue<string>("DatabaseConnection:DatabaseType") is null)
             {
                 throw new NotSupportedException(String.Format("The configuration file is invalid and does not *contain* the DatabaseType key."));
             }
 
-            if (!Enum.TryParse<DatabaseType>(Configuration.GetValue<string>("DatabaseConnection2:DatabaseType"), out DatabaseType dbType))
+            if (!Enum.TryParse<DatabaseType>(Configuration.GetValue<string>("DatabaseConnection:DatabaseType"), out DatabaseType dbType))
             {
                 throw new NotSupportedException(String.Format("The configuration file is invalid and does not contain a *valid* DatabaseType key."));
             }
-
+            
             switch (dbType)
             {
                 case DatabaseType.COSMOS:
@@ -52,7 +52,7 @@ namespace Cosmos.GraphQL.Service
                     services.AddSingleton<IMetadataStoreProvider, CachedMetadataStoreProvider>();
                     services.AddSingleton<IQueryEngine, CosmosQueryEngine>();
                     break;
-                case DatabaseType.SQL:
+                case DatabaseType.MSSQL:
                     SQLCredentials creds = (SQLCredentials)configurations.ConfigurationProvider.getInstance().Creds;
                     services.AddSingleton<IDbConnectionService, DbConnectionService>(provider =>
                         new DbConnectionService(provider.GetService<ILogger>(),
@@ -63,7 +63,7 @@ namespace Cosmos.GraphQL.Service
                     services.AddSingleton<IQueryEngine, SQLQueryEngine>();
                     break;
                 default:
-                    throw new NotSupportedException(String.Format("The provide enum value: {0} is currently not supported. This is likely a bug in this function", dbType));
+                    throw new NotSupportedException(String.Format("The provide enum value: {0} is currently not supported. Please check the configuration file.", dbType));
             }
 
             services.AddSingleton<MutationEngine, MutationEngine>();

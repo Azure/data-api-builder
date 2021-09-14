@@ -4,6 +4,10 @@ using Microsoft.Extensions.Configuration;
 
 namespace Cosmos.GraphQL.Service.configurations
 {
+    /// <summary>
+    /// Processes appsettings.json file containing dbtype 
+    /// and database connection credentials/connections strings.
+    /// </summary>
     public class ConfigurationProvider
     {
         private static ConfigurationProvider instance;
@@ -34,7 +38,7 @@ namespace Cosmos.GraphQL.Service.configurations
                 .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                 .AddJsonFile("AppSettings.json").Build();
 
-            var section = config.GetSection("DatabaseConnection2");
+            var section = config.GetSection("DatabaseConnection");
             if (!Enum.TryParse<DatabaseType>(section["DatabaseType"], out DatabaseType dbType))
             {
                 throw new NotSupportedException(String.Format("The configuration file is invalid and does not contain a *valid* DatabaseType key."));
@@ -45,8 +49,8 @@ namespace Cosmos.GraphQL.Service.configurations
                 case DatabaseType.COSMOS:
                     Creds = section.Get<CosmosCredentials>();
                     break;
-                case DatabaseType.SQL:
-                    Creds = section.Get<SQLCredentials>();
+                case DatabaseType.MSSQL:
+                    Creds = section.Get<MSSQLCredentials>();
                     break;
                 default:
                     break;

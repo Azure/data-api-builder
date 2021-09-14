@@ -1,0 +1,89 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1" MembersFormat="NameAndType">
+  <Class Name="Cosmos.GraphQL.Service.configurations.ConfigurationProvider">
+    <Position X="1.5" Y="3.25" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAQAAAAAAAAAABAAAYAAAAAAAAEAAA=</HashCode>
+      <FileName>configurations\ConfigurationProvider.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Creds" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="Cosmos.GraphQL.Service.configurations.SQLCredentials">
+    <Position X="4.5" Y="7" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAA=</HashCode>
+      <FileName>configurations\SQLCredentials.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="Cosmos.GraphQL.Service.Resolvers.SQLClientProvider">
+    <Position X="4.5" Y="3.25" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>gEAAAAAAAAAAAAAAAAAAAAgAAAAAAAIAAAAAAAAAAAA=</HashCode>
+      <FileName>Resolvers\SQLClientProvider.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="Cosmos.GraphQL.Service.FileMetadataStoreProvider">
+    <Position X="17.5" Y="3" Width="3.5" />
+    <TypeIdentifier>
+      <HashCode>CAAAJAAAEAAAAAAAAAAAAkACAAAAAAIAABAAAAAAAAA=</HashCode>
+      <FileName>Services\FileMetadataStoreProvider.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="Cosmos.GraphQL.Services.GraphQLService">
+    <Position X="9.5" Y="0.75" Width="6" />
+    <NestedTypes>
+      <Class Name="Cosmos.GraphQL.Services.GraphQLService.MyDocumentWriter" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Services\GraphQLService.cs</NewMemberFileName>
+        </TypeIdentifier>
+        <Lollipop Position="0.2" />
+      </Class>
+      <Class Name="Cosmos.GraphQL.Services.GraphQLService.MyFieldResolver" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Services\GraphQLService.cs</NewMemberFileName>
+        </TypeIdentifier>
+        <Lollipop Position="0.2" />
+      </Class>
+      <Class Name="Cosmos.GraphQL.Services.GraphQLService.InstrumentFieldsMiddleware" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Services\GraphQLService.cs</NewMemberFileName>
+        </TypeIdentifier>
+        <Lollipop Position="0.2" />
+      </Class>
+    </NestedTypes>
+    <TypeIdentifier>
+      <HashCode>AAAACABAAAAAQAAAAAABBAAEggAARCAAAAAAAIAAgMA=</HashCode>
+      <FileName>Services\GraphQLService.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Field Name="_metadataStoreProvider" />
+    </ShowAsAssociation>
+  </Class>
+  <Interface Name="Cosmos.GraphQL.Service.Resolvers.IClientProvider&lt;T&gt;">
+    <Position X="4.5" Y="1.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Resolvers\IClientProvider.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Cosmos.GraphQL.Service.configurations.IDatabaseCredentials">
+    <Position X="4.5" Y="5.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAA=</HashCode>
+      <FileName>configurations\IDatabaseCredentials.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Cosmos.GraphQL.Services.IMetadataStoreProvider">
+    <Position X="17.5" Y="0.75" Width="3.25" />
+    <TypeIdentifier>
+      <HashCode>CAAABAAAEAAAAAAAAAAAAkAAAAAAAAAAABAAAAAAAAA=</HashCode>
+      <FileName>Services\IMetadataStoreProvider.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

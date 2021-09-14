@@ -5,6 +5,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="schema.gql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="schema.gql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="GraphQL" Version="4.5.0" />
     <PackageReference Include="GraphQL.Server.Ui.GraphiQL" Version="5.0.2" />
     <PackageReference Include="GraphQL.SystemTextJson" Version="4.5.0" />
@@ -16,6 +26,9 @@
     <PackageReference Include="MSTest.TestAdapter" Version="2.2.6" />
     <PackageReference Include="MSTest.TestFramework" Version="2.2.6" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectCapability Include="CSharp;Managed;ClassDesigner" />
   </ItemGroup>
 
   <ItemGroup>

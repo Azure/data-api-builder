@@ -14,5 +14,10 @@ namespace Cosmos.GraphQL.Service.configurations
         /// Fully constructed connection string with user credentials. 
         /// </summary>
         public string ConnectionString { get; set; }
+
+        /// <summary>
+        /// Server name to connect to.
+        /// </summary>
+        public string Server { get; set; }
     }
 }

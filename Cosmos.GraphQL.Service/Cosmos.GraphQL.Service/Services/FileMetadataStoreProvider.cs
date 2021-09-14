@@ -38,7 +38,7 @@ namespace Cosmos.GraphQL.Service
                 JsonElement root = document.RootElement;
                 JsonElement schema = root.GetProperty("GraphQLSchema");
                 
-                if (String.IsNullOrEmpty(schema.GetString()))
+                if (string.IsNullOrEmpty(schema.GetString()))
                 {
                     _graphQLSchema = File.ReadAllText("schema.gql");
                 }

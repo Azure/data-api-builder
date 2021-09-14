@@ -53,7 +53,7 @@ namespace Cosmos.GraphQL.Service
                     services.AddSingleton<IQueryEngine, CosmosQueryEngine>();
                     break;
                 case DatabaseType.MSSQL:
-                    SQLCredentials creds = (SQLCredentials)configurations.ConfigurationProvider.getInstance().Creds;
+                    MSSQLCredentials creds = (MSSQLCredentials)configurations.ConfigurationProvider.getInstance().Creds;
                     services.AddSingleton<IDbConnectionService, DbConnectionService>(provider =>
                         new DbConnectionService(provider.GetService<ILogger>(),
                             creds.Server));

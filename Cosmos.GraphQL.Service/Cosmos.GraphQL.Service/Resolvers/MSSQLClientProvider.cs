@@ -8,7 +8,7 @@ using Cosmos.GraphQL.Service.configurations;
 namespace Cosmos.GraphQL.Service.Resolvers
 {
     /// <summary>
-    /// Creates, returns, and maintains SqlConnection for all resources the make SQL database calls.
+    /// Creates, returns, and maintains SqlConnection for all resources that make SQL database calls.
     /// </summary>
     public class MSSQLClientProvider: IClientProvider<SqlConnection>
     {

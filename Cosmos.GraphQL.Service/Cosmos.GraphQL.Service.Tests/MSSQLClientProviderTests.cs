@@ -22,7 +22,6 @@ namespace Cosmos.GraphQL.Service.Tests
         /// Ensure a connection is successfully opened within the [Database]ClientProvider,
         /// given a valid connection string.
         /// </summary>
-        /// <param name="connectionString"></param>
         [TestMethod]
         public void TestOpenConnection()
         {

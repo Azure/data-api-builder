@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace Cosmos.GraphQL.Service.configurations
 {
     /// <summary>
-    /// Represenation of MSSQL specific credential properties
+    /// Representation of MSSQL specific credential properties
     /// </summary>
     public class MSSQLCredentials : IDatabaseCredentials
     {

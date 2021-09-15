@@ -13,9 +13,9 @@ namespace Cosmos.GraphQL.Service
 {
     enum DatabaseType
     {
-        MSSQL, 
-        COSMOS, 
-        POSTGRES,
+        MsSql, 
+        Cosmos, 
+        Postgres,
     }
 
     public class Startup
@@ -42,12 +42,12 @@ namespace Cosmos.GraphQL.Service
             
             switch (dbType)
             {
-                case DatabaseType.COSMOS:
+                case DatabaseType.Cosmos:
                     services.AddSingleton<IClientProvider<CosmosClient>, CosmosClientProvider>();
                     services.AddSingleton<CosmosClientProvider, CosmosClientProvider>();
                     services.AddSingleton<DocumentMetadataStoreProvider, DocumentMetadataStoreProvider>();
                     break;
-                case DatabaseType.MSSQL:
+                case DatabaseType.MsSql:
                     services.AddSingleton<IClientProvider<SqlConnection>, MSSQLClientProvider>();
                     break;
                 default:

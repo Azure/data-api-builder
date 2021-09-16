@@ -2,15 +2,12 @@
   "GraphQLSchema": "",
   "Resolvers": [
     {
-      "engine": "SQL",
-      "name": "bookById",
+      "engine": "",
+      "name": "",
       "database": "",
       "container": "",
-      "parametrizedQuery": "SELECT * from r WHERE r.id = @arg.id",
-      "operationType": "READ_ITEM"
-    },
-    {
-      "name": "authorById"
+      "parametrizedQuery": "",
+      "operationType": ""
     }
   ]
 }

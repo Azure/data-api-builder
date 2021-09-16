@@ -11,5 +11,6 @@ namespace Cosmos.GraphQL.Service.configurations
         public string EndpointUrl { get; set; }
         public string AuthorizationKey { get; set; }
         public string Container { get; set; }
+        public string Database { get; set; }
     }
 }

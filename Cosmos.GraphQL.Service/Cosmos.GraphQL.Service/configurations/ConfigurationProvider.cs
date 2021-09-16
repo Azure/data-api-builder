@@ -46,10 +46,10 @@ namespace Cosmos.GraphQL.Service.configurations
             section = section.GetSection("Credentials");
             switch (dbType)
             {
-                case DatabaseType.COSMOS:
+                case DatabaseType.Cosmos:
                     Creds = section.Get<CosmosCredentials>();
                     break;
-                case DatabaseType.MSSQL:
+                case DatabaseType.MsSql:
                     Creds = section.Get<MSSQLCredentials>();
                     break;
                 default:

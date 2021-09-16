@@ -1,4 +1,5 @@
-﻿using Cosmos.GraphQL.Service.Controllers;
+﻿using Cosmos.GraphQL.Service.configurations;
+using Cosmos.GraphQL.Service.Controllers;
 using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Service.Resolvers;
 using Cosmos.GraphQL.Services;
@@ -36,7 +37,10 @@ namespace Cosmos.GraphQL.Service.Tests
             clientProvider = new CosmosClientProvider();
             string uid = Guid.NewGuid().ToString();
             dynamic sourceItem = TestHelper.GetItem(uid);
-            //clientProvider.getCosmosContainer().CreateItemAsync(sourceItem, new PartitionKey(uid)); // TODO: Make it sync
+            CosmosCredentials creds = (CosmosCredentials)ConfigurationProvider.getInstance().Creds;
+            string databaseName = creds.Database;
+            string containerId = creds.Container;
+            clientProvider.getClient().GetContainer(databaseName,containerId).CreateItemAsync(sourceItem, new PartitionKey(uid));
             metadataStoreProvider = new CachedMetadataStoreProvider(new DocumentMetadataStoreProvider(clientProvider));
 
             queryEngine = new CosmosQueryEngine(clientProvider, metadataStoreProvider);

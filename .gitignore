@@ -1,12 +1,14 @@
-Cosmos.GraphQL.Service/Cosmos.GraphQL.Service/bin/*
-Cosmos.GraphQL.Service/Cosmos.GraphQL.Service/obj/*
-Cosmos.GraphQL.Service/Cosmos.GraphQL.Service/.idea/*
-Cosmos.GraphQL.Service/Cosmos.GraphQL.Service.Tests/bin/*
-Cosmos.GraphQL.Service/Cosmos.GraphQL.Service.Tests/obj/*
-Cosmos.GraphQL.Service/Cosmos.GraphQL.Service.Tests/.idea/*
+bin/
+obj/
+system-commandline-sentinel-files/
 
-*/.idea/*
 *.cd
 
-# Visual Studio 2015 cache/options directory
+# IDE/editor related directories
 .vs/
+.idea/
+**/.vscode/**/*
+
+# include some basic vscode config files
+!/Cosmos.GraphQL.Service/Cosmos.GraphQL.Service/.vscode/launch.json
+!/Cosmos.GraphQL.Service/Cosmos.GraphQL.Service/.vscode/tasks.json

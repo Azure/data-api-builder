@@ -49,6 +49,8 @@ namespace Cosmos.GraphQL.Service
                     services.AddSingleton<IClientProvider<CosmosClient>, CosmosClientProvider>();
                     services.AddSingleton<CosmosClientProvider, CosmosClientProvider>();
                     services.AddSingleton<DocumentMetadataStoreProvider, DocumentMetadataStoreProvider>();
+                    services.AddSingleton<IMetadataStoreProvider, CachedMetadataStoreProvider>();
+                    services.AddSingleton<IQueryEngine, CosmosQueryEngine>();
                     break;
                 case DatabaseType.MsSql:
                     MSSQLCredentials creds = (MSSQLCredentials)configurations.ConfigurationProvider.getInstance().Creds;
@@ -64,8 +66,6 @@ namespace Cosmos.GraphQL.Service
                     throw new NotSupportedException(String.Format("The provide enum value: {0} is currently not supported. Please check the configuration file.", dbType));
             }
 
-            services.AddSingleton<IMetadataStoreProvider, CachedMetadataStoreProvider>();
-            services.AddSingleton<QueryEngine, QueryEngine>();
             services.AddSingleton<MutationEngine, MutationEngine>();
             services.AddSingleton<GraphQLService, GraphQLService>();
             services.AddControllers();

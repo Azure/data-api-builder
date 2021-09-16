@@ -21,17 +21,14 @@ namespace Cosmos.GraphQL.Service.Resolvers
     {
         private readonly CosmosClientProvider _clientProvider;
 
-        private readonly MetadataStoreProvider _metadataStoreProvider;
+        private readonly IMetadataStoreProvider _metadataStoreProvider;
 
         private ScriptOptions scriptOptions;
 
-        public MutationEngine(CosmosClientProvider clientProvider, MetadataStoreProvider metadataStoreProvider)
+        public MutationEngine(CosmosClientProvider clientProvider, IMetadataStoreProvider metadataStoreProvider)
         {
             this._clientProvider = clientProvider;
             this._metadataStoreProvider = metadataStoreProvider;
-
-            // 
-            // new CachedMetadataStoreProvider(new DocumentMetadataStoreProvider(clientProvider.getCosmosClient()));
         }
 
         public void registerResolver(MutationResolver resolver)
@@ -128,17 +125,6 @@ namespace Cosmos.GraphQL.Service.Resolvers
                     "Microsoft.Azure.Cosmos",
                     "Newtonsoft.Json",
                     "Newtonsoft.Json.Linq");
-        }
-
-        private async Task<ScriptState<object>> runAndInitializedScript()
-        {
-            executeInit();
-
-            Globals.Initialize(_clientProvider.getCosmosContainer());
-            Globals global = new Globals();
-
-            return await CSharpScript.RunAsync("Container container = Cosmos.Container;", this.scriptOptions,
-                globals: global);
         }
     }
 }

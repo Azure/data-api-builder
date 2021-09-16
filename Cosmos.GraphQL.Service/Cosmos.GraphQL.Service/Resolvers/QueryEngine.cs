@@ -21,9 +21,9 @@ namespace Cosmos.GraphQL.Services
         private readonly CosmosClientProvider _clientProvider;
 
         private ScriptOptions scriptOptions;
-        private MetadataStoreProvider _metadataStoreProvider;
+        private IMetadataStoreProvider _metadataStoreProvider;
 
-        public QueryEngine(CosmosClientProvider clientProvider, MetadataStoreProvider metadataStoreProvider)
+        public QueryEngine(CosmosClientProvider clientProvider, IMetadataStoreProvider metadataStoreProvider)
         {
             this._clientProvider = clientProvider;
             this._metadataStoreProvider = metadataStoreProvider;

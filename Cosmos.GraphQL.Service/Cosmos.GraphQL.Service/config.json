@@ -1,11 +1,15 @@
 {
- "CosmosCredentials" : {
-  "EndPointUrl": "",
-  "AuthorizationKey": ""
- },
- 
- "CosmosContainer" : "",
- "CosmosDatabase" : ""
+  "GraphQLSchema": "",
+  "Resolvers": [
+    {
+      "engine": "",
+      "name": "",
+      "database": "",
+      "container": "",
+      "parametrizedQuery": "",
+      "operationType": ""
+    }
+  ]
 }
 
 

@@ -1,4 +1,4 @@
-﻿using System.Data.Common;
+using System.Data.Common;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Cosmos.GraphQL.Service.configurations;
@@ -21,14 +21,6 @@ namespace Cosmos.GraphQL.Service.Resolvers
         public MsSqlClientProvider()
         {
             _sqlCredentials = (MsSqlCredentials)ConfigurationProvider.getInstance().Creds;
-        }
-
-        /// <summary>
-        /// Gets an open connection using the connection string provided in appsettings.json.
-        /// </summary>
-        public DbConnection GetClient()
-        {
-            return GetOpenedConnectionAsync().Result;
         }
 
         /// <summary>

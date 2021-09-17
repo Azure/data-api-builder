@@ -71,7 +71,8 @@ namespace Cosmos.GraphQL.Service.configurations
                 case DatabaseType.MsSql:
                     Creds = section.Get<MsSqlCredentials>();
                     break;
-                default:
+                case DatabaseType.PostgreSql:
+                    Creds = section.Get<PostgresCredentials>();
                     break;
             }
         }

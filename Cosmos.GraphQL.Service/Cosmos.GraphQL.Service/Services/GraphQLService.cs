@@ -44,43 +44,43 @@ namespace Cosmos.GraphQL.Services
             schemaAsString = data;
             ISchema schema = SchemaBuilder.New()
                 .AddDocumentFromString(data)
-                //.Use<MyMiddleware>()
-                .Use((services, next) => new MyMiddleware(next, _queryEngine))
+                .Use((services, next) => new ResolverMiddleWare(next, _queryEngine, _mutationEngine))
                 .Create();
             _schema = schema;
             this._metadataStoreProvider.StoreGraphQLSchema(data);
             //this._schema.FieldMiddleware.Use(new InstrumentFieldsMiddleware());
         }
 
-        public class MyMiddleware
+        public class ResolverMiddleWare
         {
             private readonly FieldDelegate _next;
             private readonly QueryEngine _queryEngine;
+            private readonly MutationEngine _mutationEngine;
 
-            public MyMiddleware(FieldDelegate next, QueryEngine queryEngine)
+            public ResolverMiddleWare(FieldDelegate next, QueryEngine queryEngine, MutationEngine mutationEngine)
             {
                 _next = next;
                 _queryEngine = queryEngine;
+                _mutationEngine = mutationEngine;
             }
 
-            public MyMiddleware(FieldDelegate next)
+            public ResolverMiddleWare(FieldDelegate next)
             {
                 _next = next;
             }
 
             public async Task InvokeAsync(IMiddlewareContext context)
-            {
+            {                
+                if (context.Selection.Field.Coordinate.TypeName.Value == "Mutation")
+                {
+                    IDictionary<string, object> parameters = GetParametersFromContext(context);
+
+                    context.Result = _mutationEngine.execute(context.Selection.Field.Name.Value, parameters).Result;
+                }
+
                 if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
                 {
-                    IReadOnlyList<ArgumentNode> arguments = context.FieldSelection.Arguments;
-                    IDictionary<string, object> parameters = new Dictionary<string, object>();
-                    IEnumerator<ArgumentNode> enumerator = arguments.GetEnumerator();
-                    while (enumerator.MoveNext())
-                    {
-                        ArgumentNode current = enumerator.Current;
-                        parameters.Add(current.Name.Value, current.Value.Value);
-
-                    }
+                    IDictionary<string, object> parameters = GetParametersFromContext(context);
 
                     if (context.Selection.Type.IsListType())
                     {
@@ -98,6 +98,20 @@ namespace Cosmos.GraphQL.Services
                 }
               
                 await _next(context);
+            }
+
+            private IDictionary<string, object> GetParametersFromContext(IMiddlewareContext context)
+            {
+                IReadOnlyList<ArgumentNode> arguments = context.FieldSelection.Arguments;
+                IDictionary<string, object> parameters = new Dictionary<string, object>();
+                IEnumerator<ArgumentNode> enumerator = arguments.GetEnumerator();
+                while (enumerator.MoveNext())
+                {
+                    ArgumentNode current = enumerator.Current;
+                    parameters.Add(current.Name.Value, current.Value.Value);
+
+                }
+                return parameters;
             }
 
         }

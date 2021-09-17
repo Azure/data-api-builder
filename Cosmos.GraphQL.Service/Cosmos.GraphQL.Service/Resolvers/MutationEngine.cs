@@ -35,20 +35,18 @@ namespace Cosmos.GraphQL.Service.Resolvers
             this._metadataStoreProvider.StoreMutationResolver(resolver);
         }
 
-        private JObject execute(IDictionary<string, string> parameters, MutationResolver resolver)
+        private JObject execute(IDictionary<string, object> parameters, MutationResolver resolver)
         {
-            JObject jObject = new JObject();
+            JObject jObject;
 
             if (parameters != null)
             {
-                foreach (var prop in parameters)
-                {
-                    //jObject.Add(prop.Key, prop.Value.Value.ToString());
-                }
+                var json = JsonConvert.SerializeObject(parameters);
+                jObject = JObject.Parse(json);
             }
             else
             {
-                jObject.Add("id", Guid.NewGuid().ToString());
+                jObject = JObject.Parse(String.Format("\"id\": {0}", Guid.NewGuid().ToString()));
             }
 
             var container = _clientProvider.getCosmosClient().GetDatabase(resolver.databaseName)
@@ -60,7 +58,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
         }
 
         public async Task<JsonDocument> execute(string graphQLMutationName,
-            IDictionary<string, string> parameters)
+            IDictionary<string, object> parameters)
         {
 
             var resolver = _metadataStoreProvider.GetMutationResolver(graphQLMutationName);

@@ -2,6 +2,14 @@ bin/
 obj/
 system-commandline-sentinel-files/
 
+# only include appsettings for a few default environments
+appsettings.*.json
+!appsettings.Development.json
+!appsettings.PostgreSql.json
+!appsettings.MsSql.json
+!appsettings.Cosmos.json
+!appsettings.Test.json
+
 *.cd
 
 # IDE/editor related directories

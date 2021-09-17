@@ -1,0 +1,25 @@
+{
+  "GraphQLSchema": "",
+  "Resolvers": [
+    {
+      "id": "characterById",
+      "databaseName": "mscorpion",
+      "parametrizedQuery": "SELECT id, name, type, homePlanet, primaryFunction FROM character WHERE id = @id"
+    },
+    {
+      "id": "characterList",
+      "databaseName": "mscorpion",
+      "parametrizedQuery": "SELECT id, name, type, homePlanet, primaryFunction FROM character"
+    },
+    {
+      "id": "planetById",
+      "databaseName": "mscorpion",
+      "parametrizedQuery": "SELECT id, name FROM planet WHERE id = @id"
+    },
+    {
+      "id": "planetList",
+      "databaseName": "mscorpion",
+      "parametrizedQuery": "SELECT id, name FROM planet"
+    }
+  ]
+}

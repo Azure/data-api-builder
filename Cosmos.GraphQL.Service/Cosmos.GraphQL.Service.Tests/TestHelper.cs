@@ -1,10 +1,7 @@
-﻿using Cosmos.GraphQL.Service.Models;
+using System.IO;
+using Cosmos.GraphQL.Service.Models;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 
 namespace Cosmos.GraphQL.Service.Tests
 {
@@ -49,6 +46,17 @@ namespace Cosmos.GraphQL.Service.Tests
             var raw =
                 "{   \"id\": \"addPost\",\r\n    \"databaseName\": \"" + DB_NAME + "\",\r\n    \"containerName\": \"" + COL_NAME + "\",\r\n    \"operationType\": \"UPSERT\"\r\n}";
             return JsonConvert.DeserializeObject<MutationResolver>(raw);
+        }
+
+        public static void LoadConfig() {
+            if (configurations.ConfigurationProvider.Initialized()) {
+                return;
+            }
+            var config = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.Test.json")
+                .Build();
+            configurations.ConfigurationProvider.init(config);
         }
 
         public static object GetItem(string id)

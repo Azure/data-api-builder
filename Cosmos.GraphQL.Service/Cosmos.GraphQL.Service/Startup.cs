@@ -76,7 +76,7 @@ namespace Cosmos.GraphQL.Service
             app.UseAuthorization();
 
             // use graphiql at default url /ui/graphiql
-            app.UseGraphQLGraphiQL();
+            //app.UseGraphQLGraphiQL();
 
             app.UseEndpoints(endpoints =>
             {

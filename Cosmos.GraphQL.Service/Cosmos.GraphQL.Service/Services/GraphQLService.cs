@@ -1,6 +1,4 @@
 ﻿using Cosmos.GraphQL.Service.Models;
-using GraphQL.Types;
-using GraphQL;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,38 +9,21 @@ using System.Threading;
 using System.Threading.Tasks;
 using Cosmos.GraphQL.Service;
 using Cosmos.GraphQL.Service.Resolvers;
-using GraphQL.Instrumentation;
-using GraphQL.SystemTextJson;
-using GraphQL.Resolvers;
 using Newtonsoft.Json.Linq;
+using HotChocolate;
+using HotChocolate.Execution;
+using HotChocolate.Resolvers;
 
 namespace Cosmos.GraphQL.Services
 {
     public class GraphQLService
     {
-        private Schema _schema;
+        private ISchema _schema;
         private string schemaAsString;
-        private readonly IDocumentWriter _writerPure = new DocumentWriter(indent: true);
-        private readonly IDocumentExecuter _executor = new DocumentExecuter();
+        //private readonly IDocumentWriter _writerPure = new DocumentWriter(indent: true);
+        //private readonly IDocumentExecuter _executor = new DocumentExecuter();
 
-        // this is just for debugging. 
-        // TODO remove and replace with DocumentWriter
-        class MyDocumentWriter : IDocumentWriter {
-            private IDocumentWriter internalWriter;
-
-            public MyDocumentWriter(IDocumentWriter internalWriter)
-            {
-                this.internalWriter = internalWriter;
-            }
-
-            public Task WriteAsync<T>(Stream stream, T value, CancellationToken cancellationToken = new CancellationToken())
-            {
-                Console.WriteLine(value);
-                return internalWriter.WriteAsync(stream, value, cancellationToken);
-            }
-        }
-
-        private readonly IDocumentWriter _writer;
+        //private readonly IDocumentWriter _writer;
 
         private readonly QueryEngine _queryEngine;
         private readonly MutationEngine _mutationEngine;
@@ -53,25 +34,48 @@ namespace Cosmos.GraphQL.Services
             this._queryEngine = queryEngine;
             this._mutationEngine = mutationEngine;
             this._metadataStoreProvider = metadataStoreProvider;
-            this._writer = new MyDocumentWriter(this._writerPure);
+            //this._writer = new MyDocumentWriter(this._writerPure);
         }
 
         public void parseAsync(String data)
         {
             schemaAsString = data;
-            _schema = Schema.For(data);
+            ISchema schema = SchemaBuilder.New()
+                .AddDocumentFromString(data)
+                .Use<MyMiddleware>()
+                .Create();
+            _schema = schema;
             this._metadataStoreProvider.StoreGraphQLSchema(data);
-            this._schema.FieldMiddleware.Use(new InstrumentFieldsMiddleware());
+            //this._schema.FieldMiddleware.Use(new InstrumentFieldsMiddleware());
         }
 
-        public Schema Schema
+        public class MyMiddleware
+        {
+            private readonly FieldDelegate _next;
+            //private readonly IMySingletonService _singletonService;
+
+            //public MyMiddleware(FieldDelegate next, IMySingletonService singletonService)
+            //{
+            //    _next = next;
+            //    _singletonService = singletonService;
+            //}
+
+            public MyMiddleware(FieldDelegate next)
+            {
+                _next = next;
+            }
+
+            public async Task InvokeAsync(IMiddlewareContext context)
+            {
+                // the middleware logic
+
+                await _next(context);
+            }
+        }
+
+        public ISchema Schema
         {
             get { return _schema; }
-        }
-
-        public string GetString()
-        {
-            return "Hello World!";
         }
 
         internal async Task<string> ExecuteAsync(String requestBody)
@@ -80,8 +84,17 @@ namespace Cosmos.GraphQL.Services
             {
                 return "{\"error\": \"Schema must be defined first\" }";
             }
+            JsonDocument req = JsonDocument.Parse(requestBody);
+            IQueryRequest queryRequest = QueryRequestBuilder.New()
+                .SetQuery(req.RootElement.GetProperty("query").GetString())
+                .Create();
 
-            var request = requestBody.ToInputs();
+            //var request = requestBody.ToInputs();
+            IRequestExecutor executor = Schema.MakeExecutable();
+            IExecutionResult result =
+                await executor.ExecuteAsync(queryRequest);
+
+            /*
             var result = await _executor.ExecuteAsync(options =>
             {
                 
@@ -94,10 +107,14 @@ namespace Cosmos.GraphQL.Services
 
             });
             // return await _writer.WriteToStringAsync(ExecutionResult);
-            var responseString = await _writer.WriteToStringAsync(result);
-            return responseString;
+            */
+            //var responseString = await _writer.WriteToStringAsync(result);
+            // return responseString;
+
+            return "{ \"val\": \"hard coded for test\"}";
         }
 
+        /*
         class MyFieldResolver : IFieldResolver
         {
             JsonDocument result; 
@@ -184,9 +201,11 @@ namespace Cosmos.GraphQL.Services
             }
 
         }
+        */
 
         public void attachQueryResolverToSchema(string queryName)
         {
+            /*
             if (_queryEngine.isListQuery(queryName))
             {
                 this._schema.Query.GetField(queryName).Resolver =
@@ -203,14 +222,17 @@ namespace Cosmos.GraphQL.Services
                     return _queryEngine.execute(queryName, context.Arguments);
                 });
             }
+            */
         }
 
         public void attachMutationResolverToSchema(string mutationName)
         {
+            /*
             this._schema.Mutation.GetField(mutationName).Resolver = new AsyncFieldResolver<object, JsonDocument>(context =>
             {
                 return this._mutationEngine.execute(mutationName, context.Arguments);
             });
+            */
         }
 
         private static bool IsIntrospectionPath(IEnumerable<object> path)

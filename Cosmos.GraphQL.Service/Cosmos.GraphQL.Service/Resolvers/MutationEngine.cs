@@ -7,10 +7,7 @@ using Cosmos.GraphQL.Service.configurations;
 using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Service.Resolvers;
 using Cosmos.GraphQL.Services;
-using GraphQL.Execution;
-using GraphQL.Language.AST;
 using Microsoft.Azure.Cosmos;
-using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -38,7 +35,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
             this._metadataStoreProvider.StoreMutationResolver(resolver);
         }
 
-        private JObject execute(IDictionary<string, ArgumentValue> parameters, MutationResolver resolver)
+        private JObject execute(IDictionary<string, string> parameters, MutationResolver resolver)
         {
             JObject jObject = new JObject();
 
@@ -46,7 +43,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
             {
                 foreach (var prop in parameters)
                 {
-                    jObject.Add(prop.Key, prop.Value.Value.ToString());
+                    //jObject.Add(prop.Key, prop.Value.Value.ToString());
                 }
             }
             else
@@ -63,7 +60,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
         }
 
         public async Task<JsonDocument> execute(string graphQLMutationName,
-            IDictionary<string, ArgumentValue> parameters)
+            IDictionary<string, string> parameters)
         {
 
             var resolver = _metadataStoreProvider.GetMutationResolver(graphQLMutationName);

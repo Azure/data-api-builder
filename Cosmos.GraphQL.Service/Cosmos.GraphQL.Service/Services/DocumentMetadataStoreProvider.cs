@@ -1,9 +1,7 @@
 using System;
 using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Service.Resolvers;
-using GraphQL.Types;
 using Microsoft.Azure.Cosmos;
-using Newtonsoft.Json.Linq;
 
 namespace Cosmos.GraphQL.Services
 {

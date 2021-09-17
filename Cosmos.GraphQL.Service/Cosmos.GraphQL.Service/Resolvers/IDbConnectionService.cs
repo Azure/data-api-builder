@@ -6,7 +6,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
     /// <summary>
     /// Interface representing services for managing the database connection.
     /// </summary>
-    public interface IDbConnectionService : IClientProvider<DbConnection>
+    public interface IDbConnectionService
     {
         /// <summary>
         /// Gets an open connection to the given database.

@@ -8,6 +8,8 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Data.SqlClient;
+using Npgsql;
 
 namespace Cosmos.GraphQL.Service
 {
@@ -23,7 +25,7 @@ namespace Cosmos.GraphQL.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            if(Configuration.GetValue<string>("DatabaseConnection:DatabaseType") is null)
+            if (Configuration.GetValue<string>("DatabaseConnection:DatabaseType") is null)
             {
                 throw new NotSupportedException(String.Format("The configuration file is invalid and does not *contain* the DatabaseType key."));
             }
@@ -44,7 +46,16 @@ namespace Cosmos.GraphQL.Service
                     services.AddSingleton<IDbConnectionService, MsSqlClientProvider>();
                     services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
                     services.AddSingleton<IQueryExecutor, QueryExecutor>();
-                    services.AddSingleton<IQueryEngine, SqlQueryEngine>();
+                    services.AddSingleton<IQueryBuilder, MsSqlQueryBuilder>();
+                    services.AddSingleton<IQueryEngine, SqlQueryEngine<SqlParameter>>();
+                    services.AddSingleton<IMutationEngine, SqlMutationEngine>();
+                    break;
+                case DatabaseType.PostgreSql:
+                    services.AddSingleton<IDbConnectionService, PostgresClientProvider>();
+                    services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
+                    services.AddSingleton<IQueryExecutor, QueryExecutor>();
+                    services.AddSingleton<IQueryBuilder, PostgresQueryBuilder>();
+                    services.AddSingleton<IQueryEngine, SqlQueryEngine<NpgsqlParameter>>();
                     services.AddSingleton<IMutationEngine, SqlMutationEngine>();
                     break;
                 default:

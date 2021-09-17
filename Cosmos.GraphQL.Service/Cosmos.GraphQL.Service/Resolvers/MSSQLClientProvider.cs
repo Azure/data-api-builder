@@ -24,14 +24,6 @@ namespace Cosmos.GraphQL.Service.Resolvers
         }
 
         /// <summary>
-        /// Gets an open connection using the connection string provided in appsettings.json.
-        /// </summary>
-        public DbConnection GetClient()
-        {
-            return GetOpenedConnection().Result;
-        }
-
-        /// <summary>
         /// Gets a connection to a database. The caller should close this connection.
         /// </summary>
         /// <param name="databaseName">Database name, optional. If not provided, the connection string

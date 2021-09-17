@@ -20,42 +20,41 @@ namespace Cosmos.GraphQL.Service.configurations
     public class ConfigurationProvider
     {
         private static ConfigurationProvider instance;
-        private static readonly object lockObject = new object();
         public IDatabaseCredentials Creds { get; private set; }
 
         /// <summary>
         /// Determines the type of Db this app targets.
         /// </summary>
-        public DatabaseType DbType { get; set; }
+        public DatabaseType DbType { get; private set; }
+
+        /// <summary>
+        /// Determines the filename of the resolver config.
+        /// </summary>
+        public string ResolverConfigFile { get; private set; }
 
         public static ConfigurationProvider getInstance()
         {
             if (instance == null)
             {
-                lock (lockObject)
-                {
-                    if (instance == null)
-                    {
-                        var myInstance = new ConfigurationProvider();
-                        myInstance.init();
-                        instance = myInstance;
-                    }
-                }
+                throw new Exception("Configuration has not been initialized yet");
             }
 
             return instance;
         }
-        
-        private void init()
+
+        public static void init(IConfiguration config)
         {
-            var config = new ConfigurationBuilder()
-                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-                .AddJsonFile("AppSettings.json").Build();
+            if (instance != null)
+            {
+                throw new Exception("Configuration provider can only be initialized once");
+            }
+
+            instance = new ConfigurationProvider();
 
             var section = config.GetSection("DatabaseConnection");
             if (Enum.TryParse<DatabaseType>(section["DatabaseType"], out DatabaseType dbType))
             {
-                DbType = dbType;
+                instance.DbType = dbType;
             }
             else
             {
@@ -63,18 +62,20 @@ namespace Cosmos.GraphQL.Service.configurations
             }
 
             section = section.GetSection("Credentials");
-            switch (DbType)
+            switch (instance.DbType)
             {
                 case DatabaseType.Cosmos:
-                    Creds = section.Get<CosmosCredentials>();
+                    instance.Creds = section.Get<CosmosCredentials>();
                     break;
                 case DatabaseType.MsSql:
-                    Creds = section.Get<MsSqlCredentials>();
+                    instance.Creds = section.Get<MsSqlCredentials>();
                     break;
                 case DatabaseType.PostgreSql:
-                    Creds = section.Get<PostgresCredentials>();
+                    instance.Creds = section.Get<PostgresCredentials>();
                     break;
             }
+
+            instance.ResolverConfigFile = config.GetValue("ResolverConfigFile", "config.json");
         }
     }
 }

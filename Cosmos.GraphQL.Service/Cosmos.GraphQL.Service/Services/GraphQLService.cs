@@ -13,6 +13,8 @@ using Newtonsoft.Json.Linq;
 using HotChocolate;
 using HotChocolate.Execution;
 using HotChocolate.Resolvers;
+using HotChocolate.Types;
+using HotChocolate.Language;
 
 namespace Cosmos.GraphQL.Services
 {
@@ -42,7 +44,8 @@ namespace Cosmos.GraphQL.Services
             schemaAsString = data;
             ISchema schema = SchemaBuilder.New()
                 .AddDocumentFromString(data)
-                .Use<MyMiddleware>()
+                //.Use<MyMiddleware>()
+                .Use((services, next) => new MyMiddleware(next, _queryEngine))
                 .Create();
             _schema = schema;
             this._metadataStoreProvider.StoreGraphQLSchema(data);
@@ -52,13 +55,13 @@ namespace Cosmos.GraphQL.Services
         public class MyMiddleware
         {
             private readonly FieldDelegate _next;
-            //private readonly IMySingletonService _singletonService;
+            private readonly QueryEngine _queryEngine;
 
-            //public MyMiddleware(FieldDelegate next, IMySingletonService singletonService)
-            //{
-            //    _next = next;
-            //    _singletonService = singletonService;
-            //}
+            public MyMiddleware(FieldDelegate next, QueryEngine queryEngine)
+            {
+                _next = next;
+                _queryEngine = queryEngine;
+            }
 
             public MyMiddleware(FieldDelegate next)
             {
@@ -67,10 +70,36 @@ namespace Cosmos.GraphQL.Services
 
             public async Task InvokeAsync(IMiddlewareContext context)
             {
-                // the middleware logic
+                if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
+                {
+                    IReadOnlyList<ArgumentNode> arguments = context.FieldSelection.Arguments;
+                    IDictionary<string, object> parameters = new Dictionary<string, object>();
+                    IEnumerator<ArgumentNode> enumerator = arguments.GetEnumerator();
+                    while (enumerator.MoveNext())
+                    {
+                        ArgumentNode current = enumerator.Current;
+                        parameters.Add(current.Name.Value, current.Value.Value);
 
+                    }
+
+                    if (context.Selection.Type.IsListType())
+                    {
+                        context.Result = _queryEngine.executeList(context.Selection.Field.Name.Value, parameters);
+                    } else
+                    {
+                        context.Result = _queryEngine.execute(context.Selection.Field.Name.Value, parameters);
+                    }
+                }
+
+                if (context.Selection.Field.Type.IsLeafType())
+                {
+                    JsonDocument result = context.Parent<JsonDocument>();
+                    context.Result = result.RootElement.GetProperty(context.Selection.Field.Name.Value).ToString();
+                }
+              
                 await _next(context);
             }
+
         }
 
         public ISchema Schema
@@ -111,7 +140,7 @@ namespace Cosmos.GraphQL.Services
             //var responseString = await _writer.WriteToStringAsync(result);
             // return responseString;
 
-            return "{ \"val\": \"hard coded for test\"}";
+            return result.ToJson();
         }
 
         /*

@@ -33,7 +33,7 @@ namespace Cosmos.GraphQL.Services
             this._metadataStoreProvider.StoreQueryResolver(resolver);  
         }
 
-        public JsonDocument execute(string graphQLQueryName, IDictionary<string, string> parameters)
+        public JsonDocument execute(string graphQLQueryName, IDictionary<string, object> parameters)
         {
             // TODO: add support for nesting
             // TODO: add support for join query against another container
@@ -47,7 +47,7 @@ namespace Cosmos.GraphQL.Services
             {
                 foreach (var parameterEntry in parameters)
                 {
-                    //querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value.Value);
+                    querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
                 }
             }
 
@@ -66,7 +66,7 @@ namespace Cosmos.GraphQL.Services
             return jsonDocument;
         }
 
-        public IEnumerable<JsonDocument> executeList(string graphQLQueryName, IDictionary<string, string> parameters)
+        public IEnumerable<JsonDocument> executeList(string graphQLQueryName, IDictionary<string, object> parameters)
         {
             // TODO: add support for nesting
             // TODO: add support for join query against another container
@@ -80,7 +80,7 @@ namespace Cosmos.GraphQL.Services
             {
                 foreach (var parameterEntry in parameters)
                 {
-                    //querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value.Value);
+                    querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
                 }
             }
 

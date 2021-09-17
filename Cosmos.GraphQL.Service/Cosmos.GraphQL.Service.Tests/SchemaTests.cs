@@ -18,6 +18,7 @@ namespace Cosmos.GraphQL.Service.Tests
         [TestMethod]
         public async Task TestAddSchemaAsync()
         {
+            TestHelper.LoadConfig();
             CosmosClientProvider clientProvider = new CosmosClientProvider();
             IMetadataStoreProvider metadataStoreProvider = new CachedMetadataStoreProvider(new DocumentMetadataStoreProvider(clientProvider));
             CosmosQueryEngine queryEngine = new CosmosQueryEngine(clientProvider, metadataStoreProvider);

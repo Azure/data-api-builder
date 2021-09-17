@@ -1,5 +1,6 @@
 ﻿using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Services;
+using Cosmos.GraphQL.Service.configurations;
 using System;
 using System.IO;
 using System.Text.Json;
@@ -31,7 +32,8 @@ namespace Cosmos.GraphQL.Service
 
         private void init()
         {
-            string jsonString = File.ReadAllText(@"config.json");
+            string jsonString = File.ReadAllText(
+                    ConfigurationProvider.getInstance().ResolverConfigFile);
 
             using (JsonDocument document = JsonDocument.Parse(jsonString))
             {

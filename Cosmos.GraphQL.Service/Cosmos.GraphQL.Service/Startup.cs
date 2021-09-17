@@ -25,10 +25,7 @@ namespace Cosmos.GraphQL.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            if (Configuration.GetValue<string>("DatabaseConnection:DatabaseType") is null)
-            {
-                throw new NotSupportedException(String.Format("The configuration file is invalid and does not *contain* the DatabaseType key."));
-            }
+            configurations.ConfigurationProvider.init(Configuration);
 
             DatabaseType dbType = configurations.ConfigurationProvider.getInstance().DbType;
 

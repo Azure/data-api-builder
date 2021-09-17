@@ -7,7 +7,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
     /// Interface representing services for managing the database connection for Sql like databases
     /// e.g. MsSql, PostgredSql
     /// </summary>
-    public interface IDbConnectionService : IClientProvider<DbConnection>
+    public interface IDbConnectionService
     {
         /// <summary>
         /// Gets an open connection to the given database.

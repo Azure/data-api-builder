@@ -1,33 +1,33 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Models;
-using Cosmos.GraphQL.Service.Resolvers;
 using Microsoft.Data.SqlClient;
 using System.Data;
+using Cosmos.GraphQL.Services;
 
-namespace Cosmos.GraphQL.Services
+namespace Cosmos.GraphQL.Service.Resolvers
 {
     //<summary>
     // SqlQueryEngine to ExecuteAsync against Sql Db.
     //</summary>
-    public class SqlQueryEngine : IQueryEngine
+    public class SqlQueryEngine<ParameterT> : IQueryEngine
+        where ParameterT: IDataParameter, new()
     {
         private IMetadataStoreProvider _metadataStoreProvider;
         private readonly IQueryExecutor _queryExecutor;
-
-        private const string x_ForJsonSuffix = " FOR JSON PATH, INCLUDE_NULL_VALUES";
-        private const string x_WithoutArrayWrapperSuffix = "WITHOUT_ARRAY_WRAPPER";
+        private readonly IQueryBuilder _queryBuilder;
 
         // <summary>
         // Constructor.
         // </summary>
-        public SqlQueryEngine(IMetadataStoreProvider metadataStoreProvider, IQueryExecutor queryExecutor)
+        public SqlQueryEngine(IMetadataStoreProvider metadataStoreProvider, IQueryExecutor queryExecutor, IQueryBuilder queryBuilder)
         {
             _metadataStoreProvider = metadataStoreProvider;
             _queryExecutor = queryExecutor;
+            _queryBuilder = queryBuilder;
         }
 
         // <summary>
@@ -50,39 +50,34 @@ namespace Cosmos.GraphQL.Services
 
             GraphQLQueryResolver resolver = _metadataStoreProvider.GetQueryResolver(graphQLQueryName);
             JsonDocument jsonDocument = JsonDocument.Parse("{ }");
-            try
+
+            string queryText = _queryBuilder.Build(resolver.parametrizedQuery, false);
+            List<IDataParameter> queryParameters = new List<IDataParameter>();
+
+            if (parameters != null)
             {
-                // Edit query to add FOR JSON PATH
-                //
-                string queryText = resolver.parametrizedQuery + x_ForJsonSuffix + "," + x_WithoutArrayWrapperSuffix + ";";
-                List<IDataParameter> queryParameters = new List<IDataParameter>();
-
-                if (parameters != null)
+                foreach (var parameterEntry in parameters)
                 {
-                    foreach (var parameterEntry in parameters)
-                    {
-                        queryParameters.Add(new SqlParameter("@" + parameterEntry.Key, parameterEntry.Value));
-                    }
-                }
-
-                // Open connection and execute query using _queryExecutor
-                //
-                DbDataReader dbDataReader =  await _queryExecutor.ExecuteQueryAsync(queryText, resolver.databaseName, queryParameters);
-
-                // Parse Results into Json and return
-                //
-                if (await dbDataReader.ReadAsync())
-                {
-                    jsonDocument = JsonDocument.Parse(dbDataReader.GetString(0));
-                }
-                else
-                {
-                    Console.WriteLine("Did not return enough rows in the JSON result.");
+                    var parameter = new ParameterT();
+                    parameter.ParameterName = "@" + parameterEntry.Key;
+                    parameter.Value = parameterEntry.Value;
+                    queryParameters.Add(parameter);
                 }
             }
-            catch (SystemException ex)
+
+            // Open connection and execute query using _queryExecutor
+            //
+            DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryText, resolver.databaseName, queryParameters);
+
+            // Parse Results into Json and return
+            //
+            if (await dbDataReader.ReadAsync())
             {
-                Console.WriteLine("Caught an exception: " + ex.Message);
+                jsonDocument = JsonDocument.Parse(dbDataReader.GetString(0));
+            }
+            else
+            {
+                Console.WriteLine("Did not return enough rows in the JSON result.");
             }
 
             return jsonDocument;
@@ -99,39 +94,35 @@ namespace Cosmos.GraphQL.Services
 
             GraphQLQueryResolver resolver = _metadataStoreProvider.GetQueryResolver(graphQLQueryName);
             List<JsonDocument> resultsAsList = new List<JsonDocument>();
-            try
+            // Edit query to add FOR JSON PATH
+            //
+            string queryText = _queryBuilder.Build(resolver.parametrizedQuery, true);
+            List<IDataParameter> queryParameters = new List<IDataParameter>();
+
+            if (parameters != null)
             {
-                // Edit query to add FOR JSON PATH
-                //
-                string queryText = resolver.parametrizedQuery + x_ForJsonSuffix + ";";
-                List<IDataParameter> queryParameters = new List<IDataParameter>();
-
-                if (parameters != null)
+                foreach (var parameterEntry in parameters)
                 {
-                    foreach (var parameterEntry in parameters)
-                    {
-                        queryParameters.Add(new SqlParameter("@" + parameterEntry.Key, parameterEntry.Value));
-                    }
-                }
-
-                // Open connection and execute query using _queryExecutor
-                //
-                DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryText, resolver.databaseName, queryParameters);
-
-                // Deserialize results into list of JsonDocuments and return
-                //
-                if (await dbDataReader.ReadAsync())
-                {
-                    resultsAsList = JsonSerializer.Deserialize<List<JsonDocument>>(dbDataReader.GetString(0));
-                }
-                else
-                {
-                    Console.WriteLine("Did not return enough rows in the JSON result.");
+                    var parameter = new ParameterT();
+                    parameter.ParameterName = "@" + parameterEntry.Key;
+                    parameter.Value = parameterEntry.Value;
+                    queryParameters.Add(parameter);
                 }
             }
-            catch (SystemException ex)
+
+            // Open connection and execute query using _queryExecutor
+            //
+            DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryText, resolver.databaseName, queryParameters);
+
+            // Deserialize results into list of JsonDocuments and return
+            //
+            if (await dbDataReader.ReadAsync())
             {
-                Console.WriteLine("Caught an exception: " + ex.Message);
+                resultsAsList = JsonSerializer.Deserialize<List<JsonDocument>>(dbDataReader.GetString(0));
+            }
+            else
+            {
+                Console.WriteLine("Did not return enough rows in the JSON result.");
             }
 
             return resultsAsList;

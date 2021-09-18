@@ -1,3 +1,5 @@
+using System;
+using Cosmos.GraphQL.Service.configurations;
 using Cosmos.GraphQL.Service.Resolvers;
 using Cosmos.GraphQL.Services;
 using Microsoft.AspNetCore.Builder;
@@ -6,17 +8,9 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using System;
 
 namespace Cosmos.GraphQL.Service
 {
-    enum DatabaseType
-    {
-        MsSql, 
-        Cosmos, 
-        Postgres,
-    }
-
     public class Startup
     {
         public Startup(IConfiguration configuration)
@@ -34,11 +28,8 @@ namespace Cosmos.GraphQL.Service
                 throw new NotSupportedException(String.Format("The configuration file is invalid and does not *contain* the DatabaseType key."));
             }
 
-            if (!Enum.TryParse<DatabaseType>(Configuration.GetValue<string>("DatabaseConnection:DatabaseType"), out DatabaseType dbType))
-            {
-                throw new NotSupportedException(String.Format("The configuration file is invalid and does not contain a *valid* DatabaseType key."));
-            }
-            
+            DatabaseType dbType = configurations.ConfigurationProvider.getInstance().DbType;
+
             switch (dbType)
             {
                 case DatabaseType.Cosmos:
@@ -55,7 +46,8 @@ namespace Cosmos.GraphQL.Service
                     services.AddSingleton<IQueryEngine, SqlQueryEngine>();
                     break;
                 default:
-                    throw new NotSupportedException(String.Format("The provide enum value: {0} is currently not supported. Please check the configuration file.", dbType));
+                    throw new NotSupportedException(String.Format("The provided DatabaseType value: {0} is currently not supported." +
+                        "Please check the configuration file.", dbType));
             }
 
             services.AddSingleton<MutationEngine, MutationEngine>();

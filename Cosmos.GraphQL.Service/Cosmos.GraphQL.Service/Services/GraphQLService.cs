@@ -1,20 +1,17 @@
-﻿using Cosmos.GraphQL.Service.Models;
-using GraphQL.Types;
+﻿using GraphQL.Types;
 using GraphQL;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Cosmos.GraphQL.Service;
+using Cosmos.GraphQL.Service.configurations;
 using Cosmos.GraphQL.Service.Resolvers;
 using GraphQL.Instrumentation;
 using GraphQL.SystemTextJson;
 using GraphQL.Resolvers;
-using Newtonsoft.Json.Linq;
 
 namespace Cosmos.GraphQL.Services
 {
@@ -55,7 +52,10 @@ namespace Cosmos.GraphQL.Services
             this._metadataStoreProvider = metadataStoreProvider;
             this._writer = new MyDocumentWriter(this._writerPure);
 
-            InitializeSchemaAndResolvers();
+            if (ConfigurationProvider.getInstance().DbType != DatabaseType.Cosmos)
+            {
+                InitializeSchemaAndResolvers();
+            }
         }
 
         public void parseAsync(String data)

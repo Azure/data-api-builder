@@ -40,11 +40,11 @@ namespace Cosmos.GraphQL.Service.Tests
             CosmosCredentials creds = (CosmosCredentials)ConfigurationProvider.getInstance().Creds;
             string databaseName = creds.Database;
             string containerId = creds.Container;
-            clientProvider.getClient().GetContainer(databaseName,containerId).CreateItemAsync(sourceItem, new PartitionKey(uid));
+            clientProvider.GetClient().GetContainer(databaseName,containerId).CreateItemAsync(sourceItem, new PartitionKey(uid));
             metadataStoreProvider = new CachedMetadataStoreProvider(new DocumentMetadataStoreProvider(clientProvider));
 
             queryEngine = new CosmosQueryEngine(clientProvider, metadataStoreProvider);
-            mutationEngine = new MutationEngine(clientProvider, metadataStoreProvider);
+            mutationEngine = new MutationEngine(metadataStoreProvider);
             graphQLService = new GraphQLService(queryEngine, mutationEngine, metadataStoreProvider);
             graphQLService.parseAsync(TestHelper.GraphQLTestSchema);
             controller = new GraphQLController(null, queryEngine, mutationEngine, graphQLService);

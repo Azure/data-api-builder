@@ -1,4 +1,3 @@
-using Cosmos.GraphQL.Service.configurations;
 using Cosmos.GraphQL.Service.Resolvers;
 using Cosmos.GraphQL.Services;
 using Microsoft.AspNetCore.Builder;
@@ -7,9 +6,6 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Sql.Rest.QueryHandler;
-using Microsoft.Sql.Rest.Utils;
 using System;
 
 namespace Cosmos.GraphQL.Service
@@ -53,14 +49,10 @@ namespace Cosmos.GraphQL.Service
                     services.AddSingleton<IQueryEngine, CosmosQueryEngine>();
                     break;
                 case DatabaseType.MsSql:
-                    MSSQLCredentials creds = (MSSQLCredentials)configurations.ConfigurationProvider.getInstance().Creds;
-                    services.AddSingleton<IDbConnectionService, DbConnectionService>(provider =>
-                        new DbConnectionService(provider.GetService<ILogger>(),
-                            creds.Server));
-                    services.AddSingleton<IClientProvider<DbConnectionService>, SQLClientProvider>();
+                    services.AddSingleton<IDbConnectionService, MsSqlClientProvider>();
                     services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
                     services.AddSingleton<IQueryExecutor, QueryExecutor>();
-                    services.AddSingleton<IQueryEngine, SQLQueryEngine>();
+                    services.AddSingleton<IQueryEngine, SqlQueryEngine>();
                     break;
                 default:
                     throw new NotSupportedException(String.Format("The provide enum value: {0} is currently not supported. Please check the configuration file.", dbType));

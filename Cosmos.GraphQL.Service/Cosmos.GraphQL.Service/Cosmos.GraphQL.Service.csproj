@@ -30,8 +30,5 @@
   <ItemGroup>
     <ProjectCapability Include="CSharp;Managed;ClassDesigner" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\Microsoft.Sql.Rest\Microsoft.Sql.Rest.csproj" />
-  </ItemGroup>
 
 </Project>

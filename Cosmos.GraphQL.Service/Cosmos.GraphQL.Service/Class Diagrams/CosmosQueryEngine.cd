@@ -1,7 +1,18 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ClassDiagram MajorVersion="1" MinorVersion="1" MembersFormat="NameAndType">
+  <Class Name="Cosmos.GraphQL.Service.Resolvers.CosmosClientProvider" BaseTypeListCollapsed="true">
+    <Position X="14.25" Y="8.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAQAAAAAAAAAAAAAAAAgQAAAAAAIAAAAAAABAAAA=</HashCode>
+      <FileName>Resolvers\CosmosClientProvider.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Field Name="_cosmosClient" />
+    </ShowAsAssociation>
+    <Lollipop Position="0.2" />
+  </Class>
   <Class Name="Cosmos.GraphQL.Service.configurations.ConfigurationProvider">
-    <Position X="1.5" Y="3.25" Width="2.25" />
+    <Position X="7.75" Y="9" Width="2.25" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAQAAAAAAAAAABAAAYAAAAAAAAEAAA=</HashCode>
       <FileName>configurations\ConfigurationProvider.cs</FileName>
@@ -10,32 +21,23 @@
       <Property Name="Creds" />
     </ShowAsAssociation>
   </Class>
-  <Class Name="Cosmos.GraphQL.Service.configurations.SQLCredentials">
-    <Position X="4.5" Y="7" Width="2.5" />
+  <Class Name="Cosmos.GraphQL.Services.DocumentMetadataStoreProvider">
+    <Position X="9.5" Y="5" Width="2.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAA=</HashCode>
-      <FileName>configurations\SQLCredentials.cs</FileName>
+      <HashCode>DAAABAAAEAAACAAAAAAAAkAAAAAgAAAAABAABACAAAA=</HashCode>
+      <FileName>Services\DocumentMetadataStoreProvider.cs</FileName>
     </TypeIdentifier>
+    <ShowAsAssociation>
+      <Field Name="client" />
+    </ShowAsAssociation>
     <Lollipop Position="0.2" />
   </Class>
-  <Class Name="Cosmos.GraphQL.Service.Resolvers.SQLClientProvider">
-    <Position X="4.5" Y="3.25" Width="2.5" />
-    <TypeIdentifier>
-      <HashCode>gEAAAAAAAAAAAAAAAAAAAAgAAAAAAAIAAAAAAAAAAAA=</HashCode>
-      <FileName>Resolvers\SQLClientProvider.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" />
-  </Class>
-  <Class Name="Cosmos.GraphQL.Service.FileMetadataStoreProvider">
-    <Position X="17.5" Y="3" Width="3.5" />
-    <TypeIdentifier>
-      <HashCode>CAAAJAAAEAAAAAAAAAAAAkACAAAAAAIAABAAAAAAAAA=</HashCode>
-      <FileName>Services\FileMetadataStoreProvider.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" />
+  <Class Name="Microsoft.Azure.Cosmos.CosmosClient" Collapsed="true">
+    <Position X="13.75" Y="7.25" Width="3.5" />
+    <TypeIdentifier />
   </Class>
   <Class Name="Cosmos.GraphQL.Services.GraphQLService">
-    <Position X="9.5" Y="0.75" Width="6" />
+    <Position X="13.5" Y="2" Width="4.25" />
     <NestedTypes>
       <Class Name="Cosmos.GraphQL.Services.GraphQLService.MyDocumentWriter" Collapsed="true">
         <TypeIdentifier>
@@ -62,27 +64,47 @@
     </TypeIdentifier>
     <ShowAsAssociation>
       <Field Name="_metadataStoreProvider" />
+      <Field Name="_queryEngine" />
     </ShowAsAssociation>
   </Class>
-  <Interface Name="Cosmos.GraphQL.Service.Resolvers.IClientProvider&lt;T&gt;">
-    <Position X="4.5" Y="1.5" Width="2.25" />
+  <Class Name="Cosmos.GraphQL.Services.CosmosQueryEngine">
+    <Position X="18.75" Y="4.25" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <HashCode>AAAIAAAAAAAAABQAAAAAAAAAEAAABAAAAAAAAAAAAEA=</HashCode>
+      <FileName>Resolvers\CosmosQueryEngine.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Field Name="_clientProvider" />
+      <Field Name="_metadataStoreProvider" />
+    </ShowAsAssociation>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Interface Name="Cosmos.GraphQL.Service.Resolvers.IClientProvider&lt;T&gt;">
+    <Position X="14.25" Y="10.75" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAA=</HashCode>
       <FileName>Resolvers\IClientProvider.cs</FileName>
     </TypeIdentifier>
   </Interface>
+  <Interface Name="Cosmos.GraphQL.Services.IMetadataStoreProvider">
+    <Position X="9.5" Y="2.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>CAAABAAAEAAAAAAAAAAAAkAAAAAAAAAAABAAAAAAAAA=</HashCode>
+      <FileName>Services\IMetadataStoreProvider.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
   <Interface Name="Cosmos.GraphQL.Service.configurations.IDatabaseCredentials">
-    <Position X="4.5" Y="5.5" Width="2" />
+    <Position X="10.75" Y="9.25" Width="2" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAA=</HashCode>
       <FileName>configurations\IDatabaseCredentials.cs</FileName>
     </TypeIdentifier>
   </Interface>
-  <Interface Name="Cosmos.GraphQL.Services.IMetadataStoreProvider">
-    <Position X="17.5" Y="0.75" Width="3.25" />
+  <Interface Name="Cosmos.GraphQL.Services.IQueryEngine">
+    <Position X="18.75" Y="2.25" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>CAAABAAAEAAAAAAAAAAAAkAAAAAAAAAAABAAAAAAAAA=</HashCode>
-      <FileName>Services\IMetadataStoreProvider.cs</FileName>
+      <HashCode>AAAIAAAAAAAAABQAAAAAAAAAAAAAAAAAAAAAAAAAAEA=</HashCode>
+      <FileName>Resolvers\IQueryEngine.cs</FileName>
     </TypeIdentifier>
   </Interface>
   <Font Name="Segoe UI" Size="9" />

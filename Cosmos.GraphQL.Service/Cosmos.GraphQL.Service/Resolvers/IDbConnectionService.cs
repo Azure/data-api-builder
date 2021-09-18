@@ -14,6 +14,6 @@ namespace Cosmos.GraphQL.Service.Resolvers
         /// </summary>
         /// <param name="databaseName">Database name.</param>
         /// <returns>Opened sql connection.</returns>
-        public Task<DbConnection> GetOpenedConnection(string databaseName);
+        public Task<DbConnection> GetOpenedConnection(string databaseName = "");
     }
 }

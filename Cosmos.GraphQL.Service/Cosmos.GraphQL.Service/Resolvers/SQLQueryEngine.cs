@@ -1,26 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Common;
-using System.Configuration;
-using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Cosmos.GraphQL.Service.configurations;
 using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Service.Resolvers;
 using GraphQL.Execution;
-using Microsoft.Azure.Cosmos;
 using Microsoft.Data.SqlClient;
-using Microsoft.Sql.Rest.QueryHandler;
-using Newtonsoft.Json.Linq;
 using System.Data;
 
 namespace Cosmos.GraphQL.Services
 {
     //<summary>
-    // SQLQueryEngine to ExecuteAsync against SQL Db.
+    // SqlQueryEngine to ExecuteAsync against Sql Db.
     //</summary>
-    public class SQLQueryEngine : IQueryEngine
+    public class SqlQueryEngine : IQueryEngine
     {
         private IMetadataStoreProvider _metadataStoreProvider;
         private readonly IQueryExecutor _queryExecutor;
@@ -31,7 +25,7 @@ namespace Cosmos.GraphQL.Services
         // <summary>
         // Constructor.
         // </summary>
-        public SQLQueryEngine(IMetadataStoreProvider metadataStoreProvider, IQueryExecutor queryExecutor)
+        public SqlQueryEngine(IMetadataStoreProvider metadataStoreProvider, IQueryExecutor queryExecutor)
         {
             _metadataStoreProvider = metadataStoreProvider;
             _queryExecutor = queryExecutor;

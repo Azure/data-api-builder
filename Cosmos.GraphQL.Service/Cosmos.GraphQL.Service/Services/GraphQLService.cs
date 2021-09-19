@@ -192,17 +192,17 @@ namespace Cosmos.GraphQL.Services
             if (_queryEngine.IsListQuery(queryName))
             {
                 this._schema.Query.GetField(queryName).Resolver =
-               new FuncFieldResolver<object, IEnumerable<JsonDocument>>(context =>
+               new AsyncFieldResolver<object, IEnumerable<JsonDocument>>(context =>
                {
-                   return _queryEngine.ExecuteListAsync(queryName, context.Arguments).Result;
+                   return _queryEngine.ExecuteListAsync(queryName, context.Arguments);
                });
             }
             else
             {
                 this._schema.Query.GetField(queryName).Resolver =
-                new FuncFieldResolver<object, JsonDocument>(context =>
+                new AsyncFieldResolver<object, JsonDocument>(context =>
                 {
-                    return _queryEngine.ExecuteAsync(queryName, context.Arguments).Result;
+                    return _queryEngine.ExecuteAsync(queryName, context.Arguments);
                 });
             }
         }

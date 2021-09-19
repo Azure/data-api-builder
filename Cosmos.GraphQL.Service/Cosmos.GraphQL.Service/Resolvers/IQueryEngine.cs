@@ -7,7 +7,7 @@ using GraphQL.Execution;
 namespace Cosmos.GraphQL.Services
 {
     // <summary>
-    // Interface for execution against the backend data source for different queries.
+    // Interface for execution of GraphQL queries against a database.
     // </summary>
     public interface IQueryEngine
     {

@@ -8,6 +8,7 @@ Cosmos.GraphQL.Service/Cosmos.GraphQL.Service.Tests/.idea/*
 */.idea/*
 */bin/*
 */obj/*
+*.cd
 
 # Visual Studio 2015 cache/options directory
 .vs/

@@ -38,13 +38,14 @@ namespace Cosmos.GraphQL.Service
                     services.AddSingleton<DocumentMetadataStoreProvider, DocumentMetadataStoreProvider>();
                     services.AddSingleton<IMetadataStoreProvider, CachedMetadataStoreProvider>();
                     services.AddSingleton<IQueryEngine, CosmosQueryEngine>();
-                    services.AddSingleton<MutationEngine, MutationEngine>();
+                    services.AddSingleton<IMutationEngine, CosmosMutationEngine>();
                     break;
                 case DatabaseType.MsSql:
                     services.AddSingleton<IDbConnectionService, MsSqlClientProvider>();
                     services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
                     services.AddSingleton<IQueryExecutor, QueryExecutor>();
                     services.AddSingleton<IQueryEngine, SqlQueryEngine>();
+                    services.AddSingleton<IMutationEngine, SqlMutationEngine>();
                     break;
                 default:
                     throw new NotSupportedException(String.Format("The provided DatabaseType value: {0} is currently not supported." +

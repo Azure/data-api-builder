@@ -1,33 +1,26 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Cosmos.GraphQL.Service.configurations;
 using Cosmos.GraphQL.Service.Models;
-using Cosmos.GraphQL.Service.Resolvers;
 using Cosmos.GraphQL.Services;
 using GraphQL.Execution;
-using GraphQL.Language.AST;
-using Microsoft.Azure.Cosmos;
-using Microsoft.CodeAnalysis.CSharp.Scripting;
-using Microsoft.CodeAnalysis.Scripting;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Microsoft.Sql.Rest.Utils;
 
 namespace Cosmos.GraphQL.Service.Resolvers
 {
-    public class MsSqlMutationEngine : IMutationEngine
+    public class SqlMutationEngine : IMutationEngine
     {
         private readonly IDbConnectionService _clientProvider;
 
         private readonly IMetadataStoreProvider _metadataStoreProvider;
 
-        public MsSqlMutationEngine(IDbConnectionService clientProvider, IMetadataStoreProvider metadataStoreProvider)
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        public SqlMutationEngine(IDbConnectionService clientProvider, IMetadataStoreProvider metadataStoreProvider)
         {
-            this._clientProvider = clientProvider;
-            this._metadataStoreProvider = metadataStoreProvider;
+            _clientProvider = clientProvider;
+            _metadataStoreProvider = metadataStoreProvider;
         }
 
         /// <summary>
@@ -49,7 +42,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
         public async Task<JsonDocument> Execute(string graphQLMutationName,
             IDictionary<string, ArgumentValue> parameters)
         {
-            throw new NotImplementedException("Mutations against a Microsoft Sql Db are not yet supported.");
+            throw new NotImplementedException("Mutations against Sql Db are not yet supported.");
         }
     }
 }

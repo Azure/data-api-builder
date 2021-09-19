@@ -15,13 +15,16 @@ namespace Cosmos.GraphQL.Service.Resolvers
 {
     public class MutationEngine
     {
+        private readonly IClientProvider<CosmosClient> _clientProvider;
+
         private readonly IMetadataStoreProvider _metadataStoreProvider;
 
         private ScriptOptions scriptOptions;
 
-        public MutationEngine(IMetadataStoreProvider metadataStoreProvider)
+        public MutationEngine(IClientProvider<CosmosClient> clientProvider, IMetadataStoreProvider metadataStoreProvider)
         {
-            this._metadataStoreProvider = metadataStoreProvider;
+            _clientProvider = clientProvider;
+            _metadataStoreProvider = metadataStoreProvider;
         }
 
         public void registerResolver(MutationResolver resolver)
@@ -47,12 +50,12 @@ namespace Cosmos.GraphQL.Service.Resolvers
                 jObject.Add("id", Guid.NewGuid().ToString());
             }
 
-            //var container = _clientProvider.GetClient().GetDatabase(resolver.databaseName)
-            //    .GetContainer(resolver.containerName);
+            var container = _clientProvider.GetClient().GetDatabase(resolver.databaseName)
+                .GetContainer(resolver.containerName);
             // TODO: check insertion type
 
-            // JObject res = container.UpsertItemAsync(jObject).Result.Resource;
-            return jObject;
+            JObject res = container.UpsertItemAsync(jObject).Result.Resource;
+            return res;
         }
 
         public async Task<JsonDocument> execute(string graphQLMutationName,

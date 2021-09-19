@@ -42,10 +42,10 @@ namespace Cosmos.GraphQL.Services
         private readonly IDocumentWriter _writer;
 
         private readonly IQueryEngine _queryEngine;
-        private readonly MutationEngine _mutationEngine;
+        private readonly IMutationEngine _mutationEngine;
         private IMetadataStoreProvider _metadataStoreProvider;
 
-        public GraphQLService(IQueryEngine queryEngine, MutationEngine mutationEngine, IMetadataStoreProvider metadataStoreProvider)
+        public GraphQLService(IQueryEngine queryEngine, IMutationEngine mutationEngine, IMetadataStoreProvider metadataStoreProvider)
         {
             this._queryEngine = queryEngine;
             this._mutationEngine = mutationEngine;

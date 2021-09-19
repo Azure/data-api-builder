@@ -13,21 +13,24 @@ using Newtonsoft.Json.Linq;
 
 namespace Cosmos.GraphQL.Service.Resolvers
 {
-    public class MutationEngine
+    public class CosmosMutationEngine : IMutationEngine
     {
         private readonly IClientProvider<CosmosClient> _clientProvider;
 
         private readonly IMetadataStoreProvider _metadataStoreProvider;
 
-        private ScriptOptions scriptOptions;
-
-        public MutationEngine(IClientProvider<CosmosClient> clientProvider, IMetadataStoreProvider metadataStoreProvider)
+        public CosmosMutationEngine(IClientProvider<CosmosClient> clientProvider, IMetadataStoreProvider metadataStoreProvider)
         {
             _clientProvider = clientProvider;
             _metadataStoreProvider = metadataStoreProvider;
         }
 
-        public void registerResolver(MutationResolver resolver)
+        /// <summary>
+        /// Persists resolver configuration. When resolver config,
+        /// is received from REST endpoint and not configuration file.
+        /// </summary>
+        /// <param name="resolver">The given mutation resolver.</param>
+        public void RegisterResolver(MutationResolver resolver)
         {
             // TODO: add into system container/rp
 
@@ -58,7 +61,13 @@ namespace Cosmos.GraphQL.Service.Resolvers
             return res;
         }
 
-        public async Task<JsonDocument> execute(string graphQLMutationName,
+        /// <summary>
+        /// Executes the mutation query and return result as JSON object asynchronously.
+        /// </summary>
+        /// <param name="graphQLMutationName">name of the GraphQL mutation query.</param>
+        /// <param name="parameters">parameters in the mutation query.</param>
+        /// <returns>JSON object result</returns>
+        public async Task<JsonDocument> Execute(string graphQLMutationName,
             IDictionary<string, ArgumentValue> parameters)
         {
 

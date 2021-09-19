@@ -22,12 +22,12 @@ namespace Cosmos.GraphQL.Service.Controllers
         string JsonData = @"{'serviceName':'datagateway', 'endpointType':'graphQL'}";
 
         private readonly IQueryEngine _queryEngine;
-        private readonly MutationEngine _mutationEngine;
+        private readonly IMutationEngine _mutationEngine;
 
         private readonly ILogger<GraphQLController> _logger;
         private readonly GraphQLService _schemaManager;
 
-        public GraphQLController(ILogger<GraphQLController> logger, IQueryEngine queryEngine, MutationEngine mutationEngine, GraphQLService schemaManager)
+        public GraphQLController(ILogger<GraphQLController> logger, IQueryEngine queryEngine, IMutationEngine mutationEngine, GraphQLService schemaManager)
 
         {
             _logger = logger;
@@ -55,7 +55,7 @@ namespace Cosmos.GraphQL.Service.Controllers
         [HttpPost]
         public void addMutationResolver(MutationResolver resolver)
         {
-            _mutationEngine.registerResolver(resolver);
+            _mutationEngine.RegisterResolver(resolver);
             _schemaManager.attachMutationResolverToSchema(resolver.id);
         }
 

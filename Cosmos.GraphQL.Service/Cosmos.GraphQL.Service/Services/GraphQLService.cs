@@ -211,7 +211,7 @@ namespace Cosmos.GraphQL.Services
         {
             this._schema.Mutation.GetField(mutationName).Resolver = new AsyncFieldResolver<object, JsonDocument>(context =>
             {
-                return this._mutationEngine.execute(mutationName, context.Arguments);
+                return this._mutationEngine.Execute(mutationName, context.Arguments);
             });
         }
 

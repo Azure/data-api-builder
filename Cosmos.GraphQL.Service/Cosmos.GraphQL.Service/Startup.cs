@@ -38,6 +38,7 @@ namespace Cosmos.GraphQL.Service
                     services.AddSingleton<DocumentMetadataStoreProvider, DocumentMetadataStoreProvider>();
                     services.AddSingleton<IMetadataStoreProvider, CachedMetadataStoreProvider>();
                     services.AddSingleton<IQueryEngine, CosmosQueryEngine>();
+                    services.AddSingleton<MutationEngine, MutationEngine>();
                     break;
                 case DatabaseType.MsSql:
                     services.AddSingleton<IDbConnectionService, MsSqlClientProvider>();
@@ -50,7 +51,6 @@ namespace Cosmos.GraphQL.Service
                         "Please check the configuration file.", dbType));
             }
 
-            services.AddSingleton<MutationEngine, MutationEngine>();
             services.AddSingleton<GraphQLService, GraphQLService>();
             services.AddControllers();
         }

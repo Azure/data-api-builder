@@ -44,7 +44,7 @@ namespace Cosmos.GraphQL.Service.Tests
             metadataStoreProvider = new CachedMetadataStoreProvider(new DocumentMetadataStoreProvider(clientProvider));
 
             queryEngine = new CosmosQueryEngine(clientProvider, metadataStoreProvider);
-            mutationEngine = new MutationEngine(metadataStoreProvider);
+            mutationEngine = new MutationEngine(clientProvider, metadataStoreProvider);
             graphQLService = new GraphQLService(queryEngine, mutationEngine, metadataStoreProvider);
             graphQLService.parseAsync(TestHelper.GraphQLTestSchema);
             controller = new GraphQLController(null, queryEngine, mutationEngine, graphQLService);

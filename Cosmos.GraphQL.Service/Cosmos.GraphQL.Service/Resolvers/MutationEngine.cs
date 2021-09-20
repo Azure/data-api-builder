@@ -105,21 +105,5 @@ namespace Cosmos.GraphQL.Service.Resolvers
         //
         //     result.Data = mimeBundle;
         // }
-
-
-        private async void executeInit()
-        {
-            Assembly netStandardAssembly = Assembly.Load("netstandard");
-            this.scriptOptions = ScriptOptions.Default
-                .AddReferences(
-                    Assembly.GetAssembly(typeof(Microsoft.Azure.Cosmos.CosmosClient)),
-                    Assembly.GetAssembly(typeof(JsonObjectAttribute)),
-                    Assembly.GetCallingAssembly(),
-                    netStandardAssembly)
-                .WithImports(
-                    "Microsoft.Azure.Cosmos",
-                    "Newtonsoft.Json",
-                    "Newtonsoft.Json.Linq");
-        }
     }
 }

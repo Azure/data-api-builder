@@ -21,12 +21,6 @@ namespace Cosmos.GraphQL.Services
     public class GraphQLService
     {
         private ISchema _schema;
-        private string schemaAsString;
-        //private readonly IDocumentWriter _writerPure = new DocumentWriter(indent: true);
-        //private readonly IDocumentExecuter _executor = new DocumentExecuter();
-
-        //private readonly IDocumentWriter _writer;
-
         private readonly QueryEngine _queryEngine;
         private readonly MutationEngine _mutationEngine;
         private IMetadataStoreProvider _metadataStoreProvider;
@@ -36,19 +30,16 @@ namespace Cosmos.GraphQL.Services
             this._queryEngine = queryEngine;
             this._mutationEngine = mutationEngine;
             this._metadataStoreProvider = metadataStoreProvider;
-            //this._writer = new MyDocumentWriter(this._writerPure);
         }
 
         public void parseAsync(String data)
         {
-            schemaAsString = data;
             ISchema schema = SchemaBuilder.New()
                 .AddDocumentFromString(data)
                 .Use((services, next) => new ResolverMiddleWare(next, _queryEngine, _mutationEngine))
                 .Create();
             _schema = schema;
             this._metadataStoreProvider.StoreGraphQLSchema(data);
-            //this._schema.FieldMiddleware.Use(new InstrumentFieldsMiddleware());
         }
 
         public class ResolverMiddleWare

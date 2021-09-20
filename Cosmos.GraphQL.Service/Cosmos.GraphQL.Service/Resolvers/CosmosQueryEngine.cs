@@ -19,9 +19,9 @@ namespace Cosmos.GraphQL.Services
         // <summary>
         // Constructor.
         // </summary>
-        public CosmosQueryEngine(IClientProvider<CosmosClient> clientProvider, IMetadataStoreProvider metadataStoreProvider)
+        public CosmosQueryEngine(CosmosClientProvider clientProvider, IMetadataStoreProvider metadataStoreProvider)
         {
-            this._clientProvider = (CosmosClientProvider)clientProvider;
+            this._clientProvider = clientProvider;
             this._metadataStoreProvider = metadataStoreProvider;
         }
 

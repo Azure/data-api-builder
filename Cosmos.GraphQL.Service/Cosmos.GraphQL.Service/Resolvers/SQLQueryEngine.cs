@@ -4,8 +4,6 @@ using System.Data.Common;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Models;
-using Microsoft.Data.SqlClient;
-using System.Data;
 using Cosmos.GraphQL.Services;
 
 namespace Cosmos.GraphQL.Service.Resolvers
@@ -13,8 +11,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
     //<summary>
     // SqlQueryEngine to ExecuteAsync against Sql Db.
     //</summary>
-    public class SqlQueryEngine<ParameterT> : IQueryEngine
-        where ParameterT: IDataParameter, new()
+    public class SqlQueryEngine: IQueryEngine
     {
         private IMetadataStoreProvider _metadataStoreProvider;
         private readonly IQueryExecutor _queryExecutor;
@@ -52,22 +49,10 @@ namespace Cosmos.GraphQL.Service.Resolvers
             JsonDocument jsonDocument = JsonDocument.Parse("{ }");
 
             string queryText = _queryBuilder.Build(resolver.parametrizedQuery, false);
-            List<IDataParameter> queryParameters = new List<IDataParameter>();
-
-            if (parameters != null)
-            {
-                foreach (var parameterEntry in parameters)
-                {
-                    var parameter = new ParameterT();
-                    parameter.ParameterName = "@" + parameterEntry.Key;
-                    parameter.Value = parameterEntry.Value;
-                    queryParameters.Add(parameter);
-                }
-            }
 
             // Open connection and execute query using _queryExecutor
             //
-            DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryText, resolver.databaseName, queryParameters);
+            DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryText, parameters);
 
             // Parse Results into Json and return
             //
@@ -94,25 +79,8 @@ namespace Cosmos.GraphQL.Service.Resolvers
 
             GraphQLQueryResolver resolver = _metadataStoreProvider.GetQueryResolver(graphQLQueryName);
             List<JsonDocument> resultsAsList = new List<JsonDocument>();
-            // Edit query to add FOR JSON PATH
-            //
             string queryText = _queryBuilder.Build(resolver.parametrizedQuery, true);
-            List<IDataParameter> queryParameters = new List<IDataParameter>();
-
-            if (parameters != null)
-            {
-                foreach (var parameterEntry in parameters)
-                {
-                    var parameter = new ParameterT();
-                    parameter.ParameterName = "@" + parameterEntry.Key;
-                    parameter.Value = parameterEntry.Value;
-                    queryParameters.Add(parameter);
-                }
-            }
-
-            // Open connection and execute query using _queryExecutor
-            //
-            DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryText, resolver.databaseName, queryParameters);
+            DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryText, parameters);
 
             // Deserialize results into list of JsonDocuments and return
             //

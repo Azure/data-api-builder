@@ -1,15 +1,4 @@
 using Cosmos.GraphQL.Service.Models;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using Cosmos.GraphQL.Service;
-using Cosmos.GraphQL.Service.Resolvers;
-using Newtonsoft.Json.Linq;
 
 namespace Cosmos.GraphQL.Services
 {

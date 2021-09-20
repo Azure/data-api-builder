@@ -84,17 +84,18 @@ namespace Cosmos.GraphQL.Services
                 }
             }
 
-            var firstPage = container.GetItemQueryIterator<JObject>(querySpec).ReadNextAsync().Result;
-
-            JObject firstItem = null;
-
-            var iterator = firstPage.GetEnumerator();
+            FeedIterator<JObject> resultSetIterator = container.GetItemQueryIterator<JObject>(querySpec);            
 
             List<JsonDocument> resultsAsList = new List<JsonDocument>();
-            while (iterator.MoveNext())
+            while (resultSetIterator.HasMoreResults)                
             {
-                firstItem = iterator.Current;
-                resultsAsList.Add(JsonDocument.Parse(firstItem.ToString()));
+                var nextPage = resultSetIterator.ReadNextAsync().Result;
+                IEnumerator<JObject> enumerator = nextPage.GetEnumerator();
+                while (enumerator.MoveNext())
+                {
+                    JObject item = enumerator.Current;
+                    resultsAsList.Add(JsonDocument.Parse(item.ToString()));
+                }
             }
 
             return resultsAsList;

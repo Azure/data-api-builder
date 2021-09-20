@@ -91,13 +91,42 @@ namespace Cosmos.GraphQL.Services
                     }
                 }
 
+                if (isInnerObject(context))
+                {
+                    JsonDocument result = context.Parent<JsonDocument>();
+
+                    JsonElement jsonElement;
+                    bool hasProperty = result.RootElement.TryGetProperty(context.Selection.Field.Name.Value, out jsonElement);
+                    if (result != null && hasProperty)
+                    {
+                        context.Result = JsonDocument.Parse(jsonElement.ToString());
+                    } else
+                    {
+                        context.Result = null;
+                    }
+                }
+
                 if (context.Selection.Field.Type.IsLeafType())
                 {
                     JsonDocument result = context.Parent<JsonDocument>();
-                    context.Result = result.RootElement.GetProperty(context.Selection.Field.Name.Value).ToString();
+                    JsonElement jsonElement;
+                    bool hasProperty = result.RootElement.TryGetProperty(context.Selection.Field.Name.Value, out jsonElement);
+                    if (result != null && hasProperty)
+                    {
+                        context.Result = jsonElement.ToString();
+                    } else
+                    {
+                        context.Result = null;
+                    }
+                    
                 }
               
                 await _next(context);
+            }
+
+            private bool isInnerObject(IMiddlewareContext context)
+            {
+                return context.Selection.Field.Type.IsObjectType() && context.Parent<JsonDocument>() != default;
             }
 
             private IDictionary<string, object> GetParametersFromContext(IMiddlewareContext context)

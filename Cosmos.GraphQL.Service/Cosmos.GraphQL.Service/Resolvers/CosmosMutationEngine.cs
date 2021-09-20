@@ -1,25 +1,21 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Services;
 using GraphQL.Execution;
-using Microsoft.Azure.Cosmos;
-using Microsoft.CodeAnalysis.Scripting;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Cosmos.GraphQL.Service.Resolvers
 {
     public class CosmosMutationEngine : IMutationEngine
     {
-        private readonly IClientProvider<CosmosClient> _clientProvider;
+        private readonly CosmosClientProvider _clientProvider;
 
         private readonly IMetadataStoreProvider _metadataStoreProvider;
 
-        public CosmosMutationEngine(IClientProvider<CosmosClient> clientProvider, IMetadataStoreProvider metadataStoreProvider)
+        public CosmosMutationEngine(CosmosClientProvider clientProvider, IMetadataStoreProvider metadataStoreProvider)
         {
             _clientProvider = clientProvider;
             _metadataStoreProvider = metadataStoreProvider;

@@ -10,16 +10,13 @@ namespace Cosmos.GraphQL.Service.Resolvers
 {
     public class SqlMutationEngine : IMutationEngine
     {
-        private readonly IDbConnectionService _clientProvider;
-
         private readonly IMetadataStoreProvider _metadataStoreProvider;
 
         /// <summary>
         /// Constructor.
         /// </summary>
-        public SqlMutationEngine(IDbConnectionService clientProvider, IMetadataStoreProvider metadataStoreProvider)
+        public SqlMutationEngine(IMetadataStoreProvider metadataStoreProvider)
         {
-            _clientProvider = clientProvider;
             _metadataStoreProvider = metadataStoreProvider;
         }
 

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Concurrent;
 using Cosmos.GraphQL.Service.Models;
-using GraphQL.Types;
 
 namespace Cosmos.GraphQL.Services
 {

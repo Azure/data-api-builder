@@ -1,7 +1,6 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading.Tasks;
-using GraphQL.Execution;
 
 namespace Cosmos.GraphQL.Service.Resolvers
 {
@@ -17,6 +16,6 @@ namespace Cosmos.GraphQL.Service.Resolvers
         /// <param name="database">Database to execute the SQL text.</param>
         /// <param name="parameters">The parameters used to execute the SQL text.</param>
         /// <returns>DbDataReader object for reading the result set.</returns>
-        public Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, ArgumentValue> parameters);
+        public Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object> parameters);
     }
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -48,7 +48,6 @@ namespace Cosmos.GraphQL.Service.Controllers
         public void addResolver(GraphQLQueryResolver resolver)
         {
            _queryEngine.RegisterResolver(resolver);
-           _schemaManager.attachQueryResolverToSchema(resolver.id);
         }
         
         [Route("addMutationResolver")]
@@ -56,10 +55,8 @@ namespace Cosmos.GraphQL.Service.Controllers
         public void addMutationResolver(MutationResolver resolver)
         {
             _mutationEngine.RegisterResolver(resolver);
-            _schemaManager.attachMutationResolverToSchema(resolver.id);
         }
 
-        
         [Route("schema")]
         [HttpPost]
         public async void Schema()
@@ -72,7 +69,6 @@ namespace Cosmos.GraphQL.Service.Controllers
             if (!String.IsNullOrEmpty(data))
             {
                 this._schemaManager.parseAsync(data);
-                
                 return;
             }
 

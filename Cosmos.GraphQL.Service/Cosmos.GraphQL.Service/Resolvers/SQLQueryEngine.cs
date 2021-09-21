@@ -1,11 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Models;
-using GraphQL.Execution;
-using System.Data;
 using Cosmos.GraphQL.Services;
 
 namespace Cosmos.GraphQL.Service.Resolvers
@@ -41,7 +39,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
         // <summary>
         // ExecuteAsync the given named graphql query on the backend.
         // </summary>
-        public async Task<JsonDocument> ExecuteAsync(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters)
+        public async Task<JsonDocument> ExecuteAsync(string graphQLQueryName, IDictionary<string, object> parameters)
         {
             // TODO: add support for nesting
             // TODO: add support for join query against another table
@@ -73,7 +71,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
         // <summary>
         // Executes the given named graphql query on the backend and expecting a list of Jsons back.
         // </summary>
-        public async Task<IEnumerable<JsonDocument>> ExecuteListAsync(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters)
+        public async Task<IEnumerable<JsonDocument>> ExecuteListAsync(string graphQLQueryName, IDictionary<string, object> parameters)
         {
             // TODO: add support for nesting
             // TODO: add support for join query against another container
@@ -96,14 +94,6 @@ namespace Cosmos.GraphQL.Service.Resolvers
             }
 
             return resultsAsList;
-        }
-
-        // <summary>
-        // Returns if the given query is a list query.
-        // </summary>
-        public bool IsListQuery(string queryName)
-        {
-            return _metadataStoreProvider.GetQueryResolver(queryName).isList;
         }
     }
 }

@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Services;
-using GraphQL.Execution;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Cosmos.GraphQL.Service.Resolvers
@@ -12,7 +12,6 @@ namespace Cosmos.GraphQL.Service.Resolvers
     public class CosmosMutationEngine : IMutationEngine
     {
         private readonly CosmosClientProvider _clientProvider;
-
         private readonly IMetadataStoreProvider _metadataStoreProvider;
 
         public CosmosMutationEngine(CosmosClientProvider clientProvider, IMetadataStoreProvider metadataStoreProvider)
@@ -29,31 +28,33 @@ namespace Cosmos.GraphQL.Service.Resolvers
         public void RegisterResolver(MutationResolver resolver)
         {
             // TODO: add into system container/rp
-
             this._metadataStoreProvider.StoreMutationResolver(resolver);
         }
 
-        private JObject execute(IDictionary<string, ArgumentValue> parameters, MutationResolver resolver)
+        private async Task<JObject> execute(IDictionary<string, object> inputDict, MutationResolver resolver)
         {
-            JObject jObject = new JObject();
+            // TODO: add support for all mutation types
+            // we only support CreateOrUpdate (Upsert) for now
+            
+            JObject jObject;
 
-            if (parameters != null)
+            if (inputDict != null)
             {
-                foreach (var prop in parameters)
-                {
-                    jObject.Add(prop.Key, prop.Value.Value.ToString());
-                }
+                // TODO: optimize this multiple round of serialization/deserialization
+                var json = JsonConvert.SerializeObject(inputDict);
+                jObject = JObject.Parse(json);
             }
             else
             {
-                jObject.Add("id", Guid.NewGuid().ToString());
+                // TODO: in which scenario the inputDict is empty
+                throw new NotSupportedException("inputDict is missing");
             }
 
             var container = _clientProvider.GetClient().GetDatabase(resolver.databaseName)
                 .GetContainer(resolver.containerName);
             // TODO: check insertion type
 
-            JObject res = container.UpsertItemAsync(jObject).Result.Resource;
+            JObject res = (await container.UpsertItemAsync(jObject)).Resource;
             return res;
         }
 
@@ -64,52 +65,14 @@ namespace Cosmos.GraphQL.Service.Resolvers
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result</returns>
         public async Task<JsonDocument> Execute(string graphQLMutationName,
-            IDictionary<string, ArgumentValue> parameters)
+            IDictionary<string, object> parameters)
         {
-
             var resolver = _metadataStoreProvider.GetMutationResolver(graphQLMutationName);
             
-            JObject jObject = execute(parameters, resolver);
+            // TODO: we are doing multiple round of serialization/deserialization
+            // fixme
+            JObject jObject = await execute(parameters, resolver);
             return JsonDocument.Parse(jObject.ToString());
-
-            // switch (resolver.Operation)
-            // {
-            //     case Operation.Upsert.ToString():
-            //     {
-            //         JObject jObject = toJObject(parameters);
-            //
-            //         await container.UpsertItemAsync(jObject);
-            //
-            //         break;
-            //         
-            //     }
-            //     default:
-            //     {
-            //         throw new NotImplementedException("not implemented");
-            //     }
-            // }
-
-
-            // ScriptState<object> scriptState = await runAndInitializedScript();
-            // scriptState = await scriptState.ContinueWithAsync(resolver.dotNetCodeRequestHandler);
-            // scriptState = await scriptState.ContinueWithAsync(resolver.dotNetCodeResponseHandler);
-            // return scriptState.ReturnValue.ToString();
-
-            // // assert resolver != null
-            // int result = await CSharpScript.EvaluateAsync<int>(resolver.dotNetCodeRequestHandler);
-            // return result.ToString();
         }
-
-        // private async Task<string> execute()
-        // {
-        //     CosmosCSharpScriptResponse response = await CosmosCSharpScript.ExecuteAsync(this.scriptState, code, this.scriptOptions);
-        //     this.scriptState = response.ScriptState;
-        //     this.scriptOptions = response.ScriptOption;
-        //
-        //     object returnValue = this.scriptState?.ReturnValue;
-        //     Dictionary<string, object> mimeBundle = ToRichOutputMIMEBundle(returnValue);
-        //
-        //     result.Data = mimeBundle;
-        // }
     }
 }

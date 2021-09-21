@@ -1,4 +1,3 @@
-using System.Configuration;
 using Cosmos.GraphQL.Service.configurations;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Fluent;
@@ -37,5 +36,4 @@ namespace Cosmos.GraphQL.Service.Resolvers
             return _cosmosClient;
         }
     }
-
 }

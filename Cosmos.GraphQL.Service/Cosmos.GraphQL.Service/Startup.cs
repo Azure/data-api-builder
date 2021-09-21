@@ -8,6 +8,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
+using Microsoft.Data.SqlClient;
+using HotChocolate.Execution;
 
 namespace Cosmos.GraphQL.Service
 {
@@ -75,12 +77,10 @@ namespace Cosmos.GraphQL.Service
 
             app.UseAuthorization();
 
-            // use graphiql at default url /ui/graphiql
-            app.UseGraphQLGraphiQL();
-
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                endpoints.MapBananaCakePop("/graphql");
             });
         }
     }

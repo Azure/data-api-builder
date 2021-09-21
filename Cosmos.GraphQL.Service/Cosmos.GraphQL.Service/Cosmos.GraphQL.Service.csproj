@@ -15,9 +15,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="GraphQL" Version="4.5.0" />
-    <PackageReference Include="GraphQL.Server.Ui.GraphiQL" Version="5.0.2" />
-    <PackageReference Include="GraphQL.SystemTextJson" Version="4.5.0" />
+
+    <PackageReference Include="HotChocolate" Version="12.0.0-rc.8" />
+    <PackageReference Include="HotChocolate.AspNetCore" Version="12.0.0-rc.8" />
     <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.18.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="3.10.0-3.final" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="3.0.0" />

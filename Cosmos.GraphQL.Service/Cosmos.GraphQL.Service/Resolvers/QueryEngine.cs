@@ -1,17 +1,8 @@
-using System;
 using System.Collections.Generic;
-using System.Configuration;
-using System.Reflection;
 using System.Text.Json;
-using System.Threading.Tasks;
-using Cosmos.GraphQL.Service.configurations;
 using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Service.Resolvers;
-using GraphQL.Execution;
 using Microsoft.Azure.Cosmos;
-using Microsoft.CodeAnalysis.CSharp.Scripting;
-using Microsoft.CodeAnalysis.Scripting;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Cosmos.GraphQL.Services
@@ -19,9 +10,7 @@ namespace Cosmos.GraphQL.Services
     public class QueryEngine
     {
         private readonly CosmosClientProvider _clientProvider;
-
-        private ScriptOptions scriptOptions;
-        private IMetadataStoreProvider _metadataStoreProvider;
+        private readonly IMetadataStoreProvider _metadataStoreProvider;
 
         public QueryEngine(CosmosClientProvider clientProvider, IMetadataStoreProvider metadataStoreProvider)
         {
@@ -34,13 +23,14 @@ namespace Cosmos.GraphQL.Services
             this._metadataStoreProvider.StoreQueryResolver(resolver);  
         }
 
-        public JsonDocument execute(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters)
+        public JsonDocument execute(string graphQLQueryName, IDictionary<string, object> parameters)
         {
+            // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
-            var resolver = _metadataStoreProvider.GetQueryResolver(graphQLQueryName);
+            var resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
             var container = this._clientProvider.getCosmosClient().GetDatabase(resolver.databaseName).GetContainer(resolver.containerName);
             var querySpec = new QueryDefinition(resolver.parametrizedQuery);
 
@@ -48,7 +38,7 @@ namespace Cosmos.GraphQL.Services
             {
                 foreach (var parameterEntry in parameters)
                 {
-                    querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value.Value);
+                    querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
                 }
             }
 
@@ -67,13 +57,14 @@ namespace Cosmos.GraphQL.Services
             return jsonDocument;
         }
 
-        public IEnumerable<JsonDocument> executeList(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters)
+        public IEnumerable<JsonDocument> executeList(string graphQLQueryName, IDictionary<string, object> parameters)
         {
+            // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
-            var resolver = _metadataStoreProvider.GetQueryResolver(graphQLQueryName);
+            var resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
             var container = this._clientProvider.getCosmosClient().GetDatabase(resolver.databaseName).GetContainer(resolver.containerName);
             var querySpec = new QueryDefinition(resolver.parametrizedQuery);
 
@@ -81,29 +72,25 @@ namespace Cosmos.GraphQL.Services
             {
                 foreach (var parameterEntry in parameters)
                 {
-                    querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value.Value);
+                    querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
                 }
             }
 
-            var firstPage = container.GetItemQueryIterator<JObject>(querySpec).ReadNextAsync().Result;
-
-            JObject firstItem = null;
-
-            var iterator = firstPage.GetEnumerator();
+            FeedIterator<JObject> resultSetIterator = container.GetItemQueryIterator<JObject>(querySpec);            
 
             List<JsonDocument> resultsAsList = new List<JsonDocument>();
-            while (iterator.MoveNext())
+            while (resultSetIterator.HasMoreResults)                
             {
-                firstItem = iterator.Current;
-                resultsAsList.Add(JsonDocument.Parse(firstItem.ToString()));
+                var nextPage = resultSetIterator.ReadNextAsync().Result;
+                IEnumerator<JObject> enumerator = nextPage.GetEnumerator();
+                while (enumerator.MoveNext())
+                {
+                    JObject item = enumerator.Current;
+                    resultsAsList.Add(JsonDocument.Parse(item.ToString()));
+                }
             }
 
             return resultsAsList;
-        }
-
-        internal bool isListQuery(string queryName)
-        {
-            return _metadataStoreProvider.GetQueryResolver(queryName).isList;
         }
     }
 }

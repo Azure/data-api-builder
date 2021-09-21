@@ -71,12 +71,12 @@ namespace Cosmos.GraphQL.Service.configurations
 
             if (string.IsNullOrEmpty(instance.ConnectionString) && instance.DbType == DatabaseType.MsSql) {
                 var server = section.GetValue<string>("Credentials:Server");
-                if (string.IsNullOrEmpty(instance.ConnectionString)) {
+                if (string.IsNullOrEmpty(server)) {
                     throw new NotSupportedException("Either ConnectionString or Server needs to be provided");
                 }
 
                 var dbName = section.GetValue<string>("Credentials:DatabaseName");
-                if (string.IsNullOrEmpty(instance.ConnectionString)) {
+                if (string.IsNullOrEmpty(dbName)) {
                     throw new NotSupportedException("Either ConnectionString or DatabaseName needs to be provided");
                 }
                 var builder = new SqlConnectionStringBuilder

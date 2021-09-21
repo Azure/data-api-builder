@@ -23,7 +23,7 @@ steps:
 
 - task: FileTransform@1
   inputs:
-#    folderPath: '$(System.DefaultWorkingDirectory)/**/*.zip'
+    folderPath: '$(System.DefaultWorkingDirectory)/**/*.zip'
     fileType: 'json'
     targetFiles: 'Cosmos.GraphQL.Service/Cosmos.GraphQL.Service/appsettings.json'
 

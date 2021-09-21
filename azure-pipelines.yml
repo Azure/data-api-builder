@@ -25,7 +25,7 @@ steps:
   inputs:
     folderPath: '$(System.DefaultWorkingDirectory)'
     fileType: 'json'
-    targetFiles: 'Cosmos.GraphQL.Service/Cosmos.GraphQL.Service/appsettings.json'
+    targetFiles: 'Cosmos.GraphQL.Service/Cosmos.GraphQL.Service/AppSettings.json'
 
 - task: DotNetCoreCLI@2
   displayName: Build

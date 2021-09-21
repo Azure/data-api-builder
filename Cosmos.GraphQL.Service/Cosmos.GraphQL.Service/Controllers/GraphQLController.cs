@@ -36,13 +36,6 @@ namespace Cosmos.GraphQL.Service.Controllers
             _schemaManager = schemaManager;
         }
 
-        [HttpGet]
-        public IEnumerable<JObject> Get()
-        {
-            JObject data =JObject.Parse(JsonData);
-            return Enumerable.Repeat(data, 1);
-        }
-        
         [Route("addResolver")]
         [HttpPost]
         public void addResolver(GraphQLQueryResolver resolver)

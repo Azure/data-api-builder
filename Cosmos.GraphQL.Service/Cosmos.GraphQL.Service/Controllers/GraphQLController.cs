@@ -36,19 +36,11 @@ namespace Cosmos.GraphQL.Service.Controllers
             _schemaManager = schemaManager;
         }
 
-        [HttpGet]
-        public IEnumerable<JObject> Get()
-        {
-            JObject data =JObject.Parse(JsonData);
-            return Enumerable.Repeat(data, 1);
-        }
-        
         [Route("addResolver")]
         [HttpPost]
         public void addResolver(GraphQLQueryResolver resolver)
         {
            _queryEngine.RegisterResolver(resolver);
-           _schemaManager.attachQueryResolverToSchema(resolver.id);
         }
         
         [Route("addMutationResolver")]
@@ -56,10 +48,8 @@ namespace Cosmos.GraphQL.Service.Controllers
         public void addMutationResolver(MutationResolver resolver)
         {
             _mutationEngine.RegisterResolver(resolver);
-            _schemaManager.attachMutationResolverToSchema(resolver.id);
         }
 
-        
         [Route("schema")]
         [HttpPost]
         public async void Schema()
@@ -72,7 +62,6 @@ namespace Cosmos.GraphQL.Service.Controllers
             if (!String.IsNullOrEmpty(data))
             {
                 this._schemaManager.parseAsync(data);
-                
                 return;
             }
 

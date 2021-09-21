@@ -25,6 +25,7 @@ namespace Cosmos.GraphQL.Service.Tests
         }
 
         [TestMethod]
+        [Ignore]
         public void TestGetResolver()
         {
             Assert.IsNotNull(_fileProvider.GetQueryResolver("authorById"));

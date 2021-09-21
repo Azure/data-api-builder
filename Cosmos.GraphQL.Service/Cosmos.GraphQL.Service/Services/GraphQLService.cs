@@ -9,7 +9,7 @@ using HotChocolate.Execution;
 
 namespace Cosmos.GraphQL.Services
 {
-    public partial class GraphQLService
+    public class GraphQLService
     {
         private ISchema _schema;
         private readonly QueryEngine _queryEngine;

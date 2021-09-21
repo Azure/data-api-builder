@@ -8,6 +8,10 @@ using HotChocolate.Types;
 
 namespace Cosmos.GraphQL.Services
 {
+    /// <summary>
+    /// The resolver middleware that is used by the schema executor to resolve
+    /// the queries and mutations
+    /// </summary>
     public class ResolverMiddleware
     {
         private readonly FieldDelegate _next;
@@ -58,6 +62,7 @@ namespace Cosmos.GraphQL.Services
                     result.RootElement.TryGetProperty(context.Selection.Field.Name.Value, out jsonElement);
                 if (result != null && hasProperty)
                 {
+                    //TODO: Try to avoid additional deserialization/serialization here.
                     context.Result = JsonDocument.Parse(jsonElement.ToString());
                 }
                 else

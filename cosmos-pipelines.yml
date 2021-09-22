@@ -1,0 +1,44 @@
+# ASP.NET Core (.NET Framework)
+# Build and test ASP.NET Core projects targeting the full .NET Framework.
+# Add steps that publish symbols, save build artifacts, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-18.04' # examples of other options: 'macOS-10.15', 'windows-2019'
+
+variables:
+  solution: '**/*.sln'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
+
+steps:
+- task: NuGetToolInstaller@1
+
+- task: NuGetCommand@2
+  inputs:
+    restoreSolution: '$(solution)'
+
+- task: FileTransform@1
+  inputs:
+    displayName: 'Generate AppSettings.json'
+    folderPath: '$(System.DefaultWorkingDirectory)'
+    fileType: 'json'
+    targetFiles: 'Cosmos.GraphQL.Service/Cosmos.GraphQL.Service/AppSettings.json'
+
+- task: DotNetCoreCLI@2
+  displayName: Build
+  inputs:
+    command: build
+    projects: '**/*.csproj'
+    arguments: '--configuration $(buildConfiguration)' # Update this to match your need
+
+- task: DotNetCoreCLI@2
+  inputs:
+    displayName: 'Run Cosmos DB Integration Tests'
+    command: test
+    arguments: '--filter "TestCategory=Cosmos" --configuration $(buildConfiguration)'
+    projects: '**/*Tests/*.csproj'
+

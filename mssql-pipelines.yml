@@ -23,6 +23,7 @@ steps:
 
 - task: FileTransform@1
   inputs:
+    displayName: 'Generate AppSettings.son'
     folderPath: '$(System.DefaultWorkingDirectory)'
     fileType: 'json'
     targetFiles: 'Cosmos.GraphQL.Service/Cosmos.GraphQL.Service/AppSettings.json'
@@ -36,6 +37,7 @@ steps:
 
 - task: DotNetCoreCLI@2
   inputs:
+    displayName: 'Run MsSql Integration Tests'
     command: test
+    arguments: '--filter "TestCategory=MsSql" --configuration $(buildConfiguration)'
     projects: '**/*Tests/*.csproj'
-    arguments: '--configuration $(buildConfiguration)'

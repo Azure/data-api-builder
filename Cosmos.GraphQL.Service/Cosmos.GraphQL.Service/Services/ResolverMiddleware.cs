@@ -97,7 +97,7 @@ namespace Cosmos.GraphQL.Services
 
         private IDictionary<string, object> GetParametersFromContext(IMiddlewareContext context)
         {
-            IReadOnlyList<ArgumentNode> arguments = context.FieldSelection.Arguments;
+            IReadOnlyList<ArgumentNode> arguments = context.Selection.SyntaxNode.Arguments;
             IDictionary<string, object> parameters = new Dictionary<string, object>();
             IEnumerator<ArgumentNode> enumerator = arguments.GetEnumerator();
             while (enumerator.MoveNext())

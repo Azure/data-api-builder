@@ -23,6 +23,7 @@ namespace Cosmos.GraphQL.Service.Tests
         /// given a valid connection string.
         /// </summary>
         [TestMethod]
+        [Ignore] // TODO: moderakh we will re-enable, once we can run all components tests in the CI
         public void TestOpenConnection()
         {
             SqlConnection connection = _clientProvider.getClient();

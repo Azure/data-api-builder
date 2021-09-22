@@ -16,7 +16,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
             _cosmosClient = new CosmosClientBuilder(cred.ConnectionString).WithContentResponseOnWrite(true).Build();
         }
 
-        public CosmosClient getClient()
+        public CosmosClient GetClient()
         {
             return getCosmosClient();
         }

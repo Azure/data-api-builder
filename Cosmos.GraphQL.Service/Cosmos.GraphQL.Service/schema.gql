@@ -1,11 +1,19 @@
-type Query { 
-      characterList: characters 
-    } 
+type Query {
+    characterList: [Character]
+    characterById (id : ID!): Character
+    planetById (id: ID!): Planet
+    planetList: [Planet]
+    }
 
-type characters { 
+type Character {
         id : ID, 
         name : String, 
         type: String, 
         homePlanet: Int, 
         primaryFunction: String 
 } 
+
+type Planet {
+    id : ID,
+    name : String
+}

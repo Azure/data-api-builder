@@ -6,8 +6,7 @@ Cosmos.GraphQL.Service/Cosmos.GraphQL.Service.Tests/obj/*
 Cosmos.GraphQL.Service/Cosmos.GraphQL.Service.Tests/.idea/*
 
 */.idea/*
+*.cd
 
 # Visual Studio 2015 cache/options directory
 .vs/
-/Microsoft.Sql.Rest/bin/Debug/net5.0
-/Microsoft.Sql.Rest/obj

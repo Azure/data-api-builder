@@ -4,29 +4,36 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Services;
+using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Cosmos.GraphQL.Service.Resolvers
 {
-    public class MutationEngine
+    public class CosmosMutationEngine : IMutationEngine
     {
-        private readonly CosmosClientProvider _clientProvider;
+        private readonly IClientProvider<CosmosClient> _clientProvider;
+
         private readonly IMetadataStoreProvider _metadataStoreProvider;
-        
-        public MutationEngine(CosmosClientProvider clientProvider, IMetadataStoreProvider metadataStoreProvider)
+
+        public CosmosMutationEngine(IClientProvider<CosmosClient> clientProvider, IMetadataStoreProvider metadataStoreProvider)
         {
-            this._clientProvider = clientProvider;
-            this._metadataStoreProvider = metadataStoreProvider;
+            _clientProvider = clientProvider;
+            _metadataStoreProvider = metadataStoreProvider;
         }
 
-        public void registerResolver(MutationResolver resolver)
+        /// <summary>
+        /// Persists resolver configuration. When resolver config,
+        /// is received from REST endpoint and not configuration file.
+        /// </summary>
+        /// <param name="resolver">The given mutation resolver.</param>
+        public void RegisterResolver(MutationResolver resolver)
         {
             // TODO: add into system container/rp
             this._metadataStoreProvider.StoreMutationResolver(resolver);
         }
 
-        private JObject execute(IDictionary<string, object> inputDict, MutationResolver resolver)
+        private async Task<JObject> executeAsync(IDictionary<string, object> inputDict, MutationResolver resolver)
         {
             // TODO: add support for all mutation types
             // we only support CreateOrUpdate (Upsert) for now
@@ -45,22 +52,29 @@ namespace Cosmos.GraphQL.Service.Resolvers
                 throw new NotSupportedException("inputDict is missing");
             }
 
-            var container = _clientProvider.getCosmosClient().GetDatabase(resolver.databaseName)
+            var container = _clientProvider.GetClient().GetDatabase(resolver.databaseName)
                 .GetContainer(resolver.containerName);
             // TODO: check insertion type
 
-            JObject res = container.UpsertItemAsync(jObject).Result.Resource;
+            var response = await container.UpsertItemAsync(jObject);
+            JObject res = response.Resource;
             return res;
         }
 
-        public async Task<JsonDocument> execute(string graphQLMutationName,
+        /// <summary>
+        /// Executes the mutation query and return result as JSON object asynchronously.
+        /// </summary>
+        /// <param name="graphQLMutationName">name of the GraphQL mutation query.</param>
+        /// <param name="parameters">parameters in the mutation query.</param>
+        /// <returns>JSON object result</returns>
+        public async Task<JsonDocument> ExecuteAsync(string graphQLMutationName,
             IDictionary<string, object> parameters)
         {
             var resolver = _metadataStoreProvider.GetMutationResolver(graphQLMutationName);
             
             // TODO: we are doing multiple round of serialization/deserialization
             // fixme
-            JObject jObject = execute(parameters, resolver);
+            JObject jObject = await executeAsync(parameters, resolver);
             return JsonDocument.Parse(jObject.ToString());
         }
     }

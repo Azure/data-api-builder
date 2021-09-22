@@ -51,7 +51,7 @@ namespace Cosmos.GraphQL.Service
                 _resolvers = new Dictionary<string,string>();
                 foreach(JsonElement resolver in resolversListJson.EnumerateArray())
                 {
-                    _resolvers.Add(resolver.GetProperty("name").ToString(), resolver.ToString());
+                    _resolvers.Add(resolver.GetProperty("id").ToString(), resolver.ToString());
                 }
             }
 
@@ -87,7 +87,7 @@ namespace Cosmos.GraphQL.Service
 
         public void StoreGraphQLSchema(string schema)
         {
-            throw new NotImplementedException();
+            // no op
         }
 
         public void StoreMutationResolver(MutationResolver mutationResolver)

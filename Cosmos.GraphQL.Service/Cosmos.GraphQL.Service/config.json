@@ -2,14 +2,12 @@
   "GraphQLSchema": "",
   "Resolvers": [
     {
-      "engine": "",
-      "name": "",
-      "database": "",
-      "container": "",
-      "parametrizedQuery": "",
-      "operationType": ""
+        "engine": "",
+        "id": "",
+        "databaseName": "",
+        "containerName": "",
+        "tableName": "",
+        "parametrizedQuery": ""
     }
   ]
 }
-
-

@@ -22,8 +22,8 @@ namespace Cosmos.GraphQL.Service.Tests
         internal GraphQLService graphQLService;
         internal CosmosClientProvider clientProvider;
         internal IMetadataStoreProvider metadataStoreProvider;
-        internal QueryEngine queryEngine;
-        internal MutationEngine mutationEngine;
+        internal CosmosQueryEngine queryEngine;
+        internal CosmosMutationEngine mutationEngine;
         internal GraphQLController controller;
 
         public TestBase()
@@ -40,12 +40,12 @@ namespace Cosmos.GraphQL.Service.Tests
             CosmosCredentials creds = (CosmosCredentials)ConfigurationProvider.getInstance().Creds;
             string databaseName = creds.Database;
             string containerId = creds.Container;
-            clientProvider.getClient().GetContainer(databaseName,containerId).CreateItemAsync(sourceItem, new PartitionKey(uid));
+            clientProvider.GetClient().GetContainer(databaseName,containerId).CreateItemAsync(sourceItem, new PartitionKey(uid));
             metadataStoreProvider = new CachedMetadataStoreProvider(new DocumentMetadataStoreProvider(clientProvider));
 
-            queryEngine = new QueryEngine(clientProvider, metadataStoreProvider);
-            mutationEngine = new MutationEngine(clientProvider, metadataStoreProvider);
-            graphQLService = new GraphQLService(queryEngine, mutationEngine, clientProvider, metadataStoreProvider);
+            queryEngine = new CosmosQueryEngine(clientProvider, metadataStoreProvider);
+            mutationEngine = new CosmosMutationEngine(clientProvider, metadataStoreProvider);
+            graphQLService = new GraphQLService(queryEngine, mutationEngine, metadataStoreProvider);
             graphQLService.parseAsync(TestHelper.GraphQLTestSchema);
             controller = new GraphQLController(null, queryEngine, mutationEngine, graphQLService);
         }

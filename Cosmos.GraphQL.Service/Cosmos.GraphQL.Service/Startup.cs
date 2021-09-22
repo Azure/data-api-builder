@@ -1,25 +1,18 @@
+using System;
+using Cosmos.GraphQL.Service.configurations;
 using Cosmos.GraphQL.Service.Resolvers;
 using Cosmos.GraphQL.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Azure.Cosmos;
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
-using Microsoft.Data.SqlClient;
 using HotChocolate.Execution;
 
 namespace Cosmos.GraphQL.Service
 {
-    enum DatabaseType
-    {
-        MsSql, 
-        Cosmos, 
-        Postgres,
-    }
-
     public class Startup
     {
         public Startup(IConfiguration configuration)
@@ -37,28 +30,30 @@ namespace Cosmos.GraphQL.Service
                 throw new NotSupportedException(String.Format("The configuration file is invalid and does not *contain* the DatabaseType key."));
             }
 
-            if (!Enum.TryParse<DatabaseType>(Configuration.GetValue<string>("DatabaseConnection:DatabaseType"), out DatabaseType dbType))
-            {
-                throw new NotSupportedException(String.Format("The configuration file is invalid and does not contain a *valid* DatabaseType key."));
-            }
-            
+            DatabaseType dbType = configurations.ConfigurationProvider.getInstance().DbType;
+
             switch (dbType)
             {
                 case DatabaseType.Cosmos:
                     services.AddSingleton<IClientProvider<CosmosClient>, CosmosClientProvider>();
                     services.AddSingleton<CosmosClientProvider, CosmosClientProvider>();
                     services.AddSingleton<DocumentMetadataStoreProvider, DocumentMetadataStoreProvider>();
+                    services.AddSingleton<IMetadataStoreProvider, CachedMetadataStoreProvider>();
+                    services.AddSingleton<IQueryEngine, CosmosQueryEngine>();
+                    services.AddSingleton<IMutationEngine, CosmosMutationEngine>();
                     break;
                 case DatabaseType.MsSql:
-                    services.AddSingleton<IClientProvider<SqlConnection>, MSSQLClientProvider>();
+                    services.AddSingleton<IDbConnectionService, MsSqlClientProvider>();
+                    services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
+                    services.AddSingleton<IQueryExecutor, QueryExecutor>();
+                    services.AddSingleton<IQueryEngine, SqlQueryEngine>();
+                    services.AddSingleton<IMutationEngine, SqlMutationEngine>();
                     break;
                 default:
-                    throw new NotSupportedException(String.Format("The provide enum value: {0} is currently not supported. Please check the configuration file.", dbType));
+                    throw new NotSupportedException(String.Format("The provided DatabaseType value: {0} is currently not supported." +
+                        "Please check the configuration file.", dbType));
             }
 
-            services.AddSingleton<IMetadataStoreProvider, CachedMetadataStoreProvider>();
-            services.AddSingleton<QueryEngine, QueryEngine>();
-            services.AddSingleton<MutationEngine, MutationEngine>();
             services.AddSingleton<GraphQLService, GraphQLService>();
             services.AddControllers();
         }

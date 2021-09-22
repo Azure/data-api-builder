@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Data.Common;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Cosmos.GraphQL.Service.configurations;
@@ -8,35 +6,66 @@ using Cosmos.GraphQL.Service.configurations;
 namespace Cosmos.GraphQL.Service.Resolvers
 {
     /// <summary>
-    /// Creates, returns, and maintains SqlConnection for all resources that make SQL database calls.
+    /// Client provider for MsSql.
     /// </summary>
-    public class MSSQLClientProvider: IClientProvider<SqlConnection>
+    public class MsSqlClientProvider : IDbConnectionService
     {
         /// <summary>
-        /// Connection object shared across engines that require database access.
+        /// Credentials provided in the config.
         /// </summary>
-        private static SqlConnection _sqlConnection;
-        private static readonly object syncLock = new object();
+        private readonly MsSqlCredentials _sqlCredentials;
 
-        private void init()
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        public MsSqlClientProvider()
         {
-            _sqlConnection = new SqlConnection(ConfigurationProvider.getInstance().Creds.ConnectionString);
+            _sqlCredentials = (MsSqlCredentials)ConfigurationProvider.getInstance().Creds;
         }
 
-        public SqlConnection getClient()
+        /// <summary>
+        /// Gets an open connection using the connection string provided in appsettings.json.
+        /// </summary>
+        public DbConnection GetClient()
         {
-            if (_sqlConnection == null)
+            return GetOpenedConnectionAsync().Result;
+        }
+
+        /// <summary>
+        /// Gets a connection to a database. The caller should close this connection.
+        /// </summary>
+        /// <param name="databaseName">Database name, optional. If not provided, the connection string
+        /// from appsettings is used.</param>
+        /// <returns>Opened sql connection.</returns>
+        public async Task<DbConnection> GetOpenedConnectionAsync(string databaseName = "")
+        {
+            string connString = _sqlCredentials.ConnectionString;
+
+            if (string.IsNullOrEmpty(connString))
             {
-                lock (syncLock)
-                {
-                    if (_sqlConnection == null)
-                    {
-                        init();
-                    }
-                }
+                connString = GetConnectionString(databaseName);
             }
 
-            return _sqlConnection;
+            SqlConnection conn = new(connString);
+            await conn.OpenAsync();
+            return conn;
+        }
+
+        /// <summary>
+        /// Constructs a connection string to the given database.
+        /// </summary>
+        /// <param name="databaseName">Database name.</param>
+        /// <returns>the constructed connection string</returns>
+        public string GetConnectionString(string databaseName)
+        {
+            SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder
+            {
+                InitialCatalog = databaseName,
+                DataSource = _sqlCredentials.Server,
+            };
+
+            builder.IntegratedSecurity = true;
+            return builder.ToString();
         }
     }
 }

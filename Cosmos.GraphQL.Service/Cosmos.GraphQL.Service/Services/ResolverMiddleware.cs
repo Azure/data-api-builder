@@ -15,10 +15,10 @@ namespace Cosmos.GraphQL.Services
     public class ResolverMiddleware
     {
         private readonly FieldDelegate _next;
-        private readonly QueryEngine _queryEngine;
-        private readonly MutationEngine _mutationEngine;
+        private readonly IQueryEngine _queryEngine;
+        private readonly IMutationEngine _mutationEngine;
 
-        public ResolverMiddleware(FieldDelegate next, QueryEngine queryEngine, MutationEngine mutationEngine)
+        public ResolverMiddleware(FieldDelegate next, IQueryEngine queryEngine, IMutationEngine mutationEngine)
         {
             _next = next;
             _queryEngine = queryEngine;
@@ -36,7 +36,7 @@ namespace Cosmos.GraphQL.Services
             {
                 IDictionary<string, object> parameters = GetParametersFromContext(context);
 
-                context.Result = _mutationEngine.execute(context.Selection.Field.Name.Value, parameters).Result;
+                context.Result = await _mutationEngine.ExecuteAsync(context.Selection.Field.Name.Value, parameters);
             }
 
             if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
@@ -45,11 +45,11 @@ namespace Cosmos.GraphQL.Services
 
                 if (context.Selection.Type.IsListType())
                 {
-                    context.Result = _queryEngine.executeList(context.Selection.Field.Name.Value, parameters);
+                    context.Result = await _queryEngine.ExecuteListAsync(context.Selection.Field.Name.Value, parameters);
                 }
                 else
                 {
-                    context.Result = _queryEngine.execute(context.Selection.Field.Name.Value, parameters);
+                    context.Result = await _queryEngine.ExecuteAsync(context.Selection.Field.Name.Value, parameters);
                 }
             }
 

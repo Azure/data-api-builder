@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Service.Resolvers;
 using Microsoft.Azure.Cosmos;
@@ -7,23 +8,35 @@ using Newtonsoft.Json.Linq;
 
 namespace Cosmos.GraphQL.Services
 {
-    public class QueryEngine
+    //<summary>
+    // CosmosQueryEngine to ExecuteAsync against CosmosDb.
+    //</summary>
+    public class CosmosQueryEngine : IQueryEngine
     {
         private readonly CosmosClientProvider _clientProvider;
         private readonly IMetadataStoreProvider _metadataStoreProvider;
 
-        public QueryEngine(CosmosClientProvider clientProvider, IMetadataStoreProvider metadataStoreProvider)
+        // <summary>
+        // Constructor.
+        // </summary>
+        public CosmosQueryEngine(IClientProvider<CosmosClient> clientProvider, IMetadataStoreProvider metadataStoreProvider)
         {
-            this._clientProvider = clientProvider;
+            this._clientProvider = (CosmosClientProvider)clientProvider;
             this._metadataStoreProvider = metadataStoreProvider;
         }
 
-        public void registerResolver(GraphQLQueryResolver resolver)
+        // <summary>
+        // Register the given resolver with this query engine.
+        // </summary>
+        public void RegisterResolver(GraphQLQueryResolver resolver)
         {
-            this._metadataStoreProvider.StoreQueryResolver(resolver);  
+            this._metadataStoreProvider.StoreQueryResolver(resolver);
         }
 
-        public JsonDocument execute(string graphQLQueryName, IDictionary<string, object> parameters)
+        // <summary>
+        // ExecuteAsync the given named graphql query on the backend.
+        // </summary>
+        public async Task<JsonDocument> ExecuteAsync(string graphQLQueryName, IDictionary<string, object> parameters)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
@@ -42,7 +55,7 @@ namespace Cosmos.GraphQL.Services
                 }
             }
 
-            var firstPage = container.GetItemQueryIterator<JObject>(querySpec).ReadNextAsync().Result;
+            var firstPage = await container.GetItemQueryIterator<JObject>(querySpec).ReadNextAsync();
 
             JObject firstItem = null;
 
@@ -57,7 +70,7 @@ namespace Cosmos.GraphQL.Services
             return jsonDocument;
         }
 
-        public IEnumerable<JsonDocument> executeList(string graphQLQueryName, IDictionary<string, object> parameters)
+        public async Task<IEnumerable<JsonDocument>> ExecuteListAsync(string graphQLQueryName, IDictionary<string, object> parameters)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
@@ -76,12 +89,12 @@ namespace Cosmos.GraphQL.Services
                 }
             }
 
-            FeedIterator<JObject> resultSetIterator = container.GetItemQueryIterator<JObject>(querySpec);            
+            FeedIterator<JObject> resultSetIterator = container.GetItemQueryIterator<JObject>(querySpec);
 
             List<JsonDocument> resultsAsList = new List<JsonDocument>();
             while (resultSetIterator.HasMoreResults)                
             {
-                var nextPage = resultSetIterator.ReadNextAsync().Result;
+                var nextPage = await resultSetIterator.ReadNextAsync();
                 IEnumerator<JObject> enumerator = nextPage.GetEnumerator();
                 while (enumerator.MoveNext())
                 {

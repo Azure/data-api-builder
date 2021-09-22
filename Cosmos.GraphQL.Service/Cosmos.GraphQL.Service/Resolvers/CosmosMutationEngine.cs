@@ -4,9 +4,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Services;
-using GraphQL.Execution;
 using Microsoft.Azure.Cosmos;
-using Microsoft.CodeAnalysis.Scripting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 

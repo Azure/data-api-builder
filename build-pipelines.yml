@@ -22,6 +22,21 @@ steps:
     restoreSolution: '$(solution)'
 
 - task: DotNetCoreCLI@2
+  displayName: Install dotnet format
+  inputs:
+    command: custom
+    custom: tool
+    arguments: 'restore'
+
+- task: DotNetCoreCLI@2
+  displayName: Check formatting
+  inputs:
+    command: custom
+    custom: format
+    projects: '$(solution)'
+    arguments: '--check --fix-whitespace --fix-style warn --fix-analyzers warn'
+
+- task: DotNetCoreCLI@2
   displayName: Build
   inputs:
     command: build

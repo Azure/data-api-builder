@@ -38,9 +38,8 @@ steps:
   inputs:
     displayName: 'Run Cosmos DB Integration Tests'
     command: test
-    arguments: '--filter "TestCategory=Cosmos"'
+    arguments: '--filter "TestCategory=Cosmos" --configuration $(buildConfiguration)'
     projects: '**/*Tests/*.csproj'
-    arguments: '--configuration $(buildConfiguration)'
 
 
 #- task: DotNetCoreCLI@2

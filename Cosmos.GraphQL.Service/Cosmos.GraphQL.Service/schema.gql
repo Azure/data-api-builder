@@ -1,11 +1,11 @@
-type Query { 
-    characterList: [character]
-    characterById (id : ID!): character
-    planetById (id: ID!): planet
-    planetList: [planet]
-    } 
+type Query {
+    characterList: [Character]
+    characterById (id : ID!): Character
+    planetById (id: ID!): Planet
+    planetList: [Planet]
+    }
 
-type character {
+type Character {
         id : ID, 
         name : String, 
         type: String, 
@@ -13,7 +13,7 @@ type character {
         primaryFunction: String 
 } 
 
-type planet {
+type Planet {
     id : ID,
     name : String
 }

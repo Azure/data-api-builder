@@ -91,14 +91,6 @@ namespace Cosmos.GraphQL.Services
             if (!string.IsNullOrEmpty(graphqlSchema))
             {
                 parseAsync(graphqlSchema);
-
-                // Loop through all the query fields and attach the resolvers for
-                // each query before hand.
-                //
-                foreach (FieldType queryField in Schema.Query.Fields)
-                {
-                    attachQueryResolverToSchema(queryField.Name);
-                }
             }
         }
 

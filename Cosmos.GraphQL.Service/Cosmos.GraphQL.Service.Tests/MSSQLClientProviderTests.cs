@@ -6,7 +6,7 @@ using System.Data.Common;
 
 namespace Cosmos.GraphQL.Service.Tests
 {
-    [TestClass]
+    [TestClass, TestCategory(TestCategory.MsSql)]
     public class MSSQLClientProviderTests
     {
         private IDbConnectionService _clientProvider;
@@ -20,7 +20,6 @@ namespace Cosmos.GraphQL.Service.Tests
         /// given a valid connection string.
         /// </summary>
         [TestMethod]
-        [Ignore] // TODO: moderakh we will re-enable, once we can run all components tests in the CI
         public void TestOpenConnection()
         {
             DbConnection connection = _clientProvider.GetClient();

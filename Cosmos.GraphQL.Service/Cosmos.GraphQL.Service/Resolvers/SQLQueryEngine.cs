@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Service.Resolvers;
-using GraphQL.Execution;
 using Microsoft.Data.SqlClient;
 using System.Data;
 
@@ -43,7 +42,7 @@ namespace Cosmos.GraphQL.Services
         // <summary>
         // ExecuteAsync the given named graphql query on the backend.
         // </summary>
-        public async Task<JsonDocument> ExecuteAsync(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters)
+        public async Task<JsonDocument> ExecuteAsync(string graphQLQueryName, IDictionary<string, object> parameters)
         {
             // TODO: add support for nesting
             // TODO: add support for join query against another table
@@ -62,7 +61,7 @@ namespace Cosmos.GraphQL.Services
                 {
                     foreach (var parameterEntry in parameters)
                     {
-                        queryParameters.Add(new SqlParameter("@" + parameterEntry.Key, parameterEntry.Value.Value));
+                        queryParameters.Add(new SqlParameter("@" + parameterEntry.Key, parameterEntry.Value));
                     }
                 }
 
@@ -92,7 +91,7 @@ namespace Cosmos.GraphQL.Services
         // <summary>
         // Executes the given named graphql query on the backend and expecting a list of Jsons back.
         // </summary>
-        public async Task<IEnumerable<JsonDocument>> ExecuteListAsync(string graphQLQueryName, IDictionary<string, ArgumentValue> parameters)
+        public async Task<IEnumerable<JsonDocument>> ExecuteListAsync(string graphQLQueryName, IDictionary<string, object> parameters)
         {
             // TODO: add support for nesting
             // TODO: add support for join query against another container
@@ -111,7 +110,7 @@ namespace Cosmos.GraphQL.Services
                 {
                     foreach (var parameterEntry in parameters)
                     {
-                        queryParameters.Add(new SqlParameter("@" + parameterEntry.Key, parameterEntry.Value.Value));
+                        queryParameters.Add(new SqlParameter("@" + parameterEntry.Key, parameterEntry.Value));
                     }
                 }
 
@@ -136,14 +135,6 @@ namespace Cosmos.GraphQL.Services
             }
 
             return resultsAsList;
-        }
-
-        // <summary>
-        // Returns if the given query is a list query.
-        // </summary>
-        public bool IsListQuery(string queryName)
-        {
-            return _metadataStoreProvider.GetQueryResolver(queryName).isList;
         }
     }
 }

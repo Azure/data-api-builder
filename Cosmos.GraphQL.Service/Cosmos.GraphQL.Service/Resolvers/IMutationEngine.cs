@@ -1,5 +1,4 @@
 using Cosmos.GraphQL.Service.Models;
-using GraphQL.Execution;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Text.Json;
@@ -24,6 +23,6 @@ namespace Cosmos.GraphQL.Service.Resolvers
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result</returns>
         public Task<JsonDocument> Execute(string graphQLMutationName,
-            IDictionary<string, ArgumentValue> parameters);
+            IDictionary<string, object> parameters);
     }
 }

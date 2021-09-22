@@ -4,7 +4,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Services;
-using GraphQL.Execution;
 
 namespace Cosmos.GraphQL.Service.Resolvers
 {
@@ -40,7 +39,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result</returns>
         public async Task<JsonDocument> Execute(string graphQLMutationName,
-            IDictionary<string, ArgumentValue> parameters)
+            IDictionary<string, object> parameters)
         {
             throw new NotImplementedException("Mutations against Sql Db are not yet supported.");
         }

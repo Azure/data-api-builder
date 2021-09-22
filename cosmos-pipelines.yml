@@ -51,4 +51,3 @@ steps:
     command: test
     arguments: '--filter "TestCategory=Cosmos" --configuration $(buildConfiguration)'
     projects: '**/*Tests/*.csproj'
-

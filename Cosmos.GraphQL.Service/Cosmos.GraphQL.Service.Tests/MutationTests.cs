@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace Cosmos.GraphQL.Service.Tests
 {
-    [TestClass]
+    [TestClass, TestCategory(TestCategory.Cosmos)]
     public class MutationTests : TestBase
     {
 

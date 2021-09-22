@@ -43,10 +43,10 @@ steps:
     arguments: '--configuration $(buildConfiguration)'
 
 
-- task: DotNetCoreCLI@2
-  inputs:
-    displayName: 'Run MsSql Integration Tests'
-    command: test
-    arguments: '--filter "TestCategory=MsSql"'
-    projects: '**/*Tests/*.csproj'
-    arguments: '--configuration $(buildConfiguration)'
+#- task: DotNetCoreCLI@2
+#  inputs:
+#    displayName: 'Run MsSql Integration Tests'
+#    command: test
+#    arguments: '--filter "TestCategory=MsSql"'
+#    projects: '**/*Tests/*.csproj'
+#    arguments: '--configuration $(buildConfiguration)'

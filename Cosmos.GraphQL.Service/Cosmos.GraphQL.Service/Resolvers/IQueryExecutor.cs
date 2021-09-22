@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace Cosmos.GraphQL.Service.Resolvers
 {
     /// <summary>
-    /// Interface for query execution.
+    /// Interface for query execution for Sql like databases (eg. MsSql, PostgresSql).
     /// </summary>
     public interface IQueryExecutor
     {

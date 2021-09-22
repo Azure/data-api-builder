@@ -4,7 +4,8 @@ using System.Threading.Tasks;
 namespace Cosmos.GraphQL.Service.Resolvers
 {
     /// <summary>
-    /// Interface representing services for managing the database connection.
+    /// Interface representing services for managing the database connection for Sql like databases
+    /// e.g. MsSql, PostgredSql
     /// </summary>
     public interface IDbConnectionService : IClientProvider<DbConnection>
     {

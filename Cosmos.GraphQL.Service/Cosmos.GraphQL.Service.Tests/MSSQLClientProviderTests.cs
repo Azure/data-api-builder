@@ -20,6 +20,7 @@ namespace Cosmos.GraphQL.Service.Tests
         /// given a valid connection string.
         /// </summary>
         [TestMethod]
+        [Ignore] // TODO: moderakh we will re-enable, once we can run all components tests in the CI
         public void TestOpenConnection()
         {
             DbConnection connection = _clientProvider.GetClient();

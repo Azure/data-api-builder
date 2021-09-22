@@ -36,7 +36,7 @@ namespace Cosmos.GraphQL.Services
         public void RegisterResolver(GraphQLQueryResolver resolver)
         {
             // Registration of Resolvers is already done at startup.
-            // _metadataStoreProvider.StoreQueryResolver(resolver);
+            // no-op
         }
 
         // <summary>

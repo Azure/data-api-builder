@@ -7,6 +7,9 @@ using Cosmos.GraphQL.Services;
 
 namespace Cosmos.GraphQL.Service.Resolvers
 {
+    /// <summary>
+    /// Implements the mutation engine interface for mutations against Sql like databases.
+    /// </summary>
     public class SqlMutationEngine : IMutationEngine
     {
         private readonly IDbConnectionService _clientProvider;
@@ -23,8 +26,8 @@ namespace Cosmos.GraphQL.Service.Resolvers
         }
 
         /// <summary>
-        /// Persists resolver configuration. This is a no-op for MsSql
-        /// since the it has been read from a config file.
+        /// Persists resolver configuration. This is a no-op for Sql like databases
+        /// since it has been read from a config file.
         /// </summary>
         /// <param name="resolver">The given mutation resolver.</param>
         public void RegisterResolver(MutationResolver resolver)
@@ -41,7 +44,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
         public async Task<JsonDocument> Execute(string graphQLMutationName,
             IDictionary<string, object> parameters)
         {
-            throw new NotImplementedException("Mutations against Sql Db are not yet supported.");
+            throw new NotImplementedException("Mutations against Sql like databases are not yet supported.");
         }
     }
 }

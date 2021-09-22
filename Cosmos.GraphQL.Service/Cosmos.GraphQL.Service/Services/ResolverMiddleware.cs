@@ -36,7 +36,7 @@ namespace Cosmos.GraphQL.Services
             {
                 IDictionary<string, object> parameters = GetParametersFromContext(context);
 
-                context.Result = _mutationEngine.Execute(context.Selection.Field.Name.Value, parameters).Result;
+                context.Result = _mutationEngine.ExecuteAsync(context.Selection.Field.Name.Value, parameters).Result;
             }
 
             if (context.Selection.Field.Coordinate.TypeName.Value == "Query")

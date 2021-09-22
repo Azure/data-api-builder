@@ -33,7 +33,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
             this._metadataStoreProvider.StoreMutationResolver(resolver);
         }
 
-        private JObject execute(IDictionary<string, object> inputDict, MutationResolver resolver)
+        private async Task<JObject> executeAsync(IDictionary<string, object> inputDict, MutationResolver resolver)
         {
             // TODO: add support for all mutation types
             // we only support CreateOrUpdate (Upsert) for now
@@ -56,7 +56,8 @@ namespace Cosmos.GraphQL.Service.Resolvers
                 .GetContainer(resolver.containerName);
             // TODO: check insertion type
 
-            JObject res = container.UpsertItemAsync(jObject).Result.Resource;
+            var response = await container.UpsertItemAsync(jObject);
+            JObject res = response.Resource;
             return res;
         }
 
@@ -66,14 +67,14 @@ namespace Cosmos.GraphQL.Service.Resolvers
         /// <param name="graphQLMutationName">name of the GraphQL mutation query.</param>
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result</returns>
-        public async Task<JsonDocument> Execute(string graphQLMutationName,
+        public async Task<JsonDocument> ExecuteAsync(string graphQLMutationName,
             IDictionary<string, object> parameters)
         {
             var resolver = _metadataStoreProvider.GetMutationResolver(graphQLMutationName);
             
             // TODO: we are doing multiple round of serialization/deserialization
             // fixme
-            JObject jObject = execute(parameters, resolver);
+            JObject jObject = await executeAsync(parameters, resolver);
             return JsonDocument.Parse(jObject.ToString());
         }
     }

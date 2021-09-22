@@ -22,7 +22,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
         /// <param name="graphQLMutationName">name of the GraphQL mutation query.</param>
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result</returns>
-        public Task<JsonDocument> Execute(string graphQLMutationName,
+        public Task<JsonDocument> ExecuteAsync(string graphQLMutationName,
             IDictionary<string, object> parameters);
     }
 }

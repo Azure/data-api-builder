@@ -41,7 +41,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
         /// <param name="graphQLMutationName">name of the GraphQL mutation query.</param>
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result</returns>
-        public async Task<JsonDocument> Execute(string graphQLMutationName,
+        public async Task<JsonDocument> ExecuteAsync(string graphQLMutationName,
             IDictionary<string, object> parameters)
         {
             throw new NotImplementedException("Mutations against Sql like databases are not yet supported.");

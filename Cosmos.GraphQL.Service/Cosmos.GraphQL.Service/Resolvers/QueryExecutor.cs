@@ -33,7 +33,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
         /// <returns>DbDataReader object for reading the result set.</returns>
         public async Task<DbDataReader> ExecuteQueryAsync(string sqltext, string databaseName, List<IDataParameter> parameters)
         {
-            DbConnection conn = await _clientProvider.GetOpenedConnection(databaseName);
+            DbConnection conn = await _clientProvider.GetOpenedConnectionAsync(databaseName);
             DbCommand cmd = conn.CreateCommand();
             cmd.CommandText = sqltext;
             cmd.CommandType = CommandType.Text;

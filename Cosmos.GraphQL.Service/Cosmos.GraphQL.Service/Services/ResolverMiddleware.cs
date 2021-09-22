@@ -45,11 +45,11 @@ namespace Cosmos.GraphQL.Services
 
                 if (context.Selection.Type.IsListType())
                 {
-                    context.Result = _queryEngine.ExecuteListAsync(context.Selection.Field.Name.Value, parameters);
+                    context.Result = await _queryEngine.ExecuteListAsync(context.Selection.Field.Name.Value, parameters);
                 }
                 else
                 {
-                    context.Result = _queryEngine.ExecuteAsync(context.Selection.Field.Name.Value, parameters);
+                    context.Result = await _queryEngine.ExecuteAsync(context.Selection.Field.Name.Value, parameters);
                 }
             }
 

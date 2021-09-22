@@ -5,6 +5,8 @@
         "engine": "",
         "id": "",
         "databaseName": "",
+        "containerName": "",
+        "tableName": "",
         "parametrizedQuery": ""
     }
   ]

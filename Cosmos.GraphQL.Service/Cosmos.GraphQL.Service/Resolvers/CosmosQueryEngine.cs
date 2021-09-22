@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Service.Resolvers;
 using Microsoft.Azure.Cosmos;
@@ -88,12 +89,12 @@ namespace Cosmos.GraphQL.Services
                 }
             }
 
-            FeedIterator<JObject> resultSetIterator = container.GetItemQueryIterator<JObject>(querySpec);            
+            FeedIterator<JObject> resultSetIterator = container.GetItemQueryIterator<JObject>(querySpec);
 
             List<JsonDocument> resultsAsList = new List<JsonDocument>();
             while (resultSetIterator.HasMoreResults)                
             {
-                var nextPage = resultSetIterator.ReadNextAsync().Result;
+                var nextPage = await resultSetIterator.ReadNextAsync();
                 IEnumerator<JObject> enumerator = nextPage.GetEnumerator();
                 while (enumerator.MoveNext())
                 {

@@ -28,7 +28,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
         /// </summary>
         public DbConnection GetClient()
         {
-            return GetOpenedConnection().Result;
+            return GetOpenedConnectionAsync().Result;
         }
 
         /// <summary>
@@ -37,7 +37,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
         /// <param name="databaseName">Database name, optional. If not provided, the connection string
         /// from appsettings is used.</param>
         /// <returns>Opened sql connection.</returns>
-        public async Task<DbConnection> GetOpenedConnection(string databaseName = "")
+        public async Task<DbConnection> GetOpenedConnectionAsync(string databaseName = "")
         {
             string connString = _sqlCredentials.ConnectionString;
 

@@ -34,3 +34,4 @@ steps:
     command: test
     projects: '**/*Tests/*.csproj'
     arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql" --configuration $(buildConfiguration)'
+

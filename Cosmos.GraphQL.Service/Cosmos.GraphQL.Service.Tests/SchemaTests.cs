@@ -1,10 +1,8 @@
 using Cosmos.GraphQL.Service.Controllers;
-using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Service.Resolvers;
 using Cosmos.GraphQL.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Newtonsoft.Json;
 using System.IO;
 using System.Net.Http;
 using System.Text;
@@ -16,7 +14,7 @@ namespace Cosmos.GraphQL.Service.Tests
     public class SchemaTests
     {
         [TestMethod]
-        public async Task TestAddSchemaAsync()
+        public Task TestAddSchemaAsync()
         {
             TestHelper.LoadConfig();
             CosmosClientProvider clientProvider = new CosmosClientProvider();
@@ -44,10 +42,7 @@ namespace Cosmos.GraphQL.Service.Tests
             // Add scehma
             controller.ControllerContext.HttpContext = httpContext;
             controller.Schema();
-
-            //controller.Request = new HttpRequestMessage();
+            return Task.CompletedTask;
         }
-
-
     }
 }

@@ -1,4 +1,3 @@
-using System;
 using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Service.Resolvers;
 using Microsoft.Azure.Cosmos;

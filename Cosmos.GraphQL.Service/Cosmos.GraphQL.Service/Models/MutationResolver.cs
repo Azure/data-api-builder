@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using Microsoft.Azure.Cosmos;
 
 namespace Cosmos.GraphQL.Service.Models
 {

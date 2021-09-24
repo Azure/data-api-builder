@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -40,9 +40,9 @@ namespace Cosmos.GraphQL.Service.Controllers
         [HttpPost]
         public void addResolver(GraphQLQueryResolver resolver)
         {
-           _queryEngine.RegisterResolver(resolver);
+            _queryEngine.RegisterResolver(resolver);
         }
-        
+
         [Route("addMutationResolver")]
         [HttpPost]
         public void addMutationResolver(MutationResolver resolver)

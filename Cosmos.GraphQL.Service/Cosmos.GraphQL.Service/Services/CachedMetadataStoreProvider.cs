@@ -28,7 +28,7 @@ namespace Cosmos.GraphQL.Services
         {
             this._storeProvider = storeProvider;
         }
-        
+
         public void StoreGraphQLSchema(string schema)
         {
             this._schema = schema;
@@ -50,7 +50,7 @@ namespace Cosmos.GraphQL.Services
         {
             // TODO: optimize for if multiple threads ask for the same name same time? 
             return _mutationResolvers.GetOrAdd(name, (name) => this._storeProvider.GetMutationResolver(name));
-            
+
         }
 
         public GraphQLQueryResolver GetQueryResolver(string name)

@@ -11,7 +11,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
     //<summary>
     // SqlQueryEngine to ExecuteAsync against Sql Db.
     //</summary>
-    public class SqlQueryEngine: IQueryEngine
+    public class SqlQueryEngine : IQueryEngine
     {
         private IMetadataStoreProvider _metadataStoreProvider;
         private readonly IQueryExecutor _queryExecutor;

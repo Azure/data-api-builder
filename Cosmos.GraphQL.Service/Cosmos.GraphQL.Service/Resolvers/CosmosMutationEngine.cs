@@ -36,7 +36,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
         {
             // TODO: add support for all mutation types
             // we only support CreateOrUpdate (Upsert) for now
-            
+
             JObject jObject;
 
             if (inputDict != null)
@@ -70,7 +70,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
             IDictionary<string, object> parameters)
         {
             var resolver = _metadataStoreProvider.GetMutationResolver(graphQLMutationName);
-            
+
             // TODO: we are doing multiple round of serialization/deserialization
             // fixme
             JObject jObject = await executeAsync(parameters, resolver);

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -63,10 +63,10 @@ namespace Cosmos.GraphQL.Services
             IRequestExecutor executor = Schema.MakeExecutable();
             IExecutionResult result =
                 await executor.ExecuteAsync(queryRequest);
-            
+
             return result.ToJson();
         }
-        
+
         private static bool IsIntrospectionPath(IEnumerable<object> path)
         {
             if (path.Any())

@@ -31,10 +31,10 @@ namespace Cosmos.GraphQL.Service.Models
 }
          */
         public string id { get; set; }
-        
+
         // TODO: add enum support
         public string operationType { get; set; }
-        
+
         public string databaseName { get; set; }
         public string containerName { get; set; }
 
@@ -54,10 +54,10 @@ namespace Cosmos.GraphQL.Service.Models
 
     public interface FieldTransformation
     {
-        
+
     }
-    
-    public class CrossDataSourceFieldTransformation: FieldTransformation
+
+    public class CrossDataSourceFieldTransformation : FieldTransformation
     {
         public string databaseName;
         public string containerName;

@@ -38,7 +38,7 @@ namespace Cosmos.GraphQL.Service.Tests
             clientProvider = new CosmosClientProvider();
             string uid = Guid.NewGuid().ToString();
             dynamic sourceItem = TestHelper.GetItem(uid);
-            clientProvider.GetClient().GetContainer(TestHelper.DB_NAME,TestHelper.COL_NAME).CreateItemAsync(sourceItem, new PartitionKey(uid));
+            clientProvider.GetClient().GetContainer(TestHelper.DB_NAME, TestHelper.COL_NAME).CreateItemAsync(sourceItem, new PartitionKey(uid));
             metadataStoreProvider = new CachedMetadataStoreProvider(new DocumentMetadataStoreProvider(clientProvider));
 
             queryEngine = new CosmosQueryEngine(clientProvider, metadataStoreProvider);

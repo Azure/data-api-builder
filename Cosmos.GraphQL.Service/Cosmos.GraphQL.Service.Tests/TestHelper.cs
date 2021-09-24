@@ -48,8 +48,10 @@ namespace Cosmos.GraphQL.Service.Tests
             return JsonConvert.DeserializeObject<MutationResolver>(raw);
         }
 
-        public static void LoadConfig() {
-            if (configurations.ConfigurationProvider.Initialized()) {
+        public static void LoadConfig()
+        {
+            if (configurations.ConfigurationProvider.Initialized())
+            {
                 return;
             }
             var config = new ConfigurationBuilder()

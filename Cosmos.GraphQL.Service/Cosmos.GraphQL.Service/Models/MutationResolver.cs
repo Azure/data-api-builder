@@ -17,9 +17,9 @@ namespace Cosmos.GraphQL.Service.Models
         transformation : {
             "databaseName": "",
             "containerName": "",
-            "parentReferenceField": "authorId" 
+            "parentReferenceField": "authorId"
             "referenceFieldMap": "[{"parentField1","referenceFIeld1"},
-                             {"parentField2","referenceFIeld2"}],
+                            {"parentField2","referenceFIeld2"}],
             "partitionKeyField": "" //(only for option 2)
         }
     },

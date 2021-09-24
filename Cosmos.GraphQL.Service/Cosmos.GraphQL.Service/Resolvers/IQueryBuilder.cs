@@ -15,4 +15,3 @@ namespace Cosmos.GraphQL.Service.Resolvers
         public string Build(string inputQuery, bool isList);
     }
 }
-

@@ -9,7 +9,7 @@ using System.Collections.Generic;
 namespace Cosmos.GraphQL.Service
 {
     /// <summary>
-    /// Reads GraphQL Schema and resolver config from text files to make available to GraphQL service. 
+    /// Reads GraphQL Schema and resolver config from text files to make available to GraphQL service.
     /// </summary>
     public class FileMetadataStoreProvider : IMetadataStoreProvider
     {
@@ -19,7 +19,7 @@ namespace Cosmos.GraphQL.Service
         private string _graphQLSchema;
 
         /// <summary>
-        /// Stores resolvers contained in configuration file. 
+        /// Stores resolvers contained in configuration file.
         /// </summary>
         private IDictionary<string, string> _resolvers;
 

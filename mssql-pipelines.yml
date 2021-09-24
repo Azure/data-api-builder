@@ -49,4 +49,3 @@ steps:
     command: test
     arguments: '--filter "TestCategory=MsSql" --configuration $(buildConfiguration)'
     projects: '**/*Tests/*.csproj'
-

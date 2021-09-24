@@ -25,44 +25,11 @@ namespace Cosmos.GraphQL.Service.Controllers
         private readonly GraphQLService _schemaManager;
 
         public GraphQLController(ILogger<GraphQLController> logger, IQueryEngine queryEngine, IMutationEngine mutationEngine, GraphQLService schemaManager)
-
         {
             _logger = logger;
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
             _schemaManager = schemaManager;
-        }
-
-        [Route("addResolver")]
-        [HttpPost]
-        public void addResolver(GraphQLQueryResolver resolver)
-        {
-            _queryEngine.RegisterResolver(resolver);
-        }
-
-        [Route("addMutationResolver")]
-        [HttpPost]
-        public void addMutationResolver(MutationResolver resolver)
-        {
-            _mutationEngine.RegisterResolver(resolver);
-        }
-
-        [Route("schema")]
-        [HttpPost]
-        public async void Schema()
-        {
-            string data;
-            using (StreamReader reader = new StreamReader(this.HttpContext.Request.Body))
-            {
-                data = await reader.ReadToEndAsync();
-            }
-            if (!String.IsNullOrEmpty(data))
-            {
-                this._schemaManager.parseAsync(data);
-                return;
-            }
-
-            throw new InvalidDataException();
         }
 
         [HttpPost]

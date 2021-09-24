@@ -31,9 +31,9 @@ namespace Cosmos.GraphQL.Service.Tests
             clientProvider = new CosmosClientProvider();
             string uid = Guid.NewGuid().ToString();
             dynamic sourceItem = TestHelper.GetItem(uid);
-            clientProvider.GetClient().GetContainer(TestHelper.DB_NAME, TestHelper.COL_NAME).CreateItemAsync(sourceItem, new PartitionKey(uid));
-            metadataStoreProvider = new CachedMetadataStoreProvider(new DocumentMetadataStoreProvider(clientProvider));
 
+            clientProvider.GetClient().GetContainer(TestHelper.DB_NAME, TestHelper.COL_NAME).CreateItemAsync(sourceItem, new PartitionKey(uid));
+            metadataStoreProvider = new MetadataStoreProviderForTest();
             queryEngine = new CosmosQueryEngine(clientProvider, metadataStoreProvider);
             mutationEngine = new CosmosMutationEngine(clientProvider, metadataStoreProvider);
             graphQLService = new GraphQLService(queryEngine, mutationEngine, metadataStoreProvider);
@@ -53,7 +53,5 @@ namespace Cosmos.GraphQL.Service.Tests
             };
             return httpContext;
         }
-
-
     }
 }

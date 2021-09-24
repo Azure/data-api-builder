@@ -23,15 +23,7 @@ namespace Cosmos.GraphQL.Services
             _mutationEngine = mutationEngine;
             _metadataStoreProvider = metadataStoreProvider;
 
-            // For CosmosDB, we need to provide the schema and resolver to a POST endpoint after
-            // startup before executing the GraphQL queries.
-            // For Sql-like databases, where the schema is known upfront, it is initialized
-            // from predefined config files.
-            //
-            if (ConfigurationProvider.getInstance().DbType != DatabaseType.Cosmos)
-            {
-                InitializeSchemaAndResolvers();
-            }
+            InitializeSchemaAndResolvers();
         }
 
         public void parseAsync(String data)
@@ -41,7 +33,6 @@ namespace Cosmos.GraphQL.Services
                 .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine))
                 .Create();
             _schema = schema;
-            this._metadataStoreProvider.StoreGraphQLSchema(data);
         }
 
         public ISchema Schema

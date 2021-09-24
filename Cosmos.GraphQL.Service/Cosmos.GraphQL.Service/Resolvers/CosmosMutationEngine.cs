@@ -28,11 +28,10 @@ namespace Cosmos.GraphQL.Service.Resolvers
         /// <param name="resolver">The given mutation resolver.</param>
         public void RegisterResolver(MutationResolver resolver)
         {
-            // TODO: add into system container/rp
-            this._metadataStoreProvider.StoreMutationResolver(resolver);
+            // TODO no op for now. remove me
         }
 
-        private async Task<JObject> executeAsync(IDictionary<string, object> inputDict, MutationResolver resolver)
+        private async Task<JObject> ExecuteAsync(IDictionary<string, object> inputDict, MutationResolver resolver)
         {
             // TODO: add support for all mutation types
             // we only support CreateOrUpdate (Upsert) for now
@@ -73,7 +72,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
 
             // TODO: we are doing multiple round of serialization/deserialization
             // fixme
-            JObject jObject = await executeAsync(parameters, resolver);
+            JObject jObject = await ExecuteAsync(parameters, resolver);
             return JsonDocument.Parse(jObject.ToString());
         }
     }

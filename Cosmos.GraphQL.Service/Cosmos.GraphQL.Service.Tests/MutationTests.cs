@@ -7,14 +7,12 @@ namespace Cosmos.GraphQL.Service.Tests
     [TestClass, TestCategory(TestCategory.Cosmos)]
     public class MutationTests : TestBase
     {
-
-
         [TestMethod]
         public async Task TestMutationRun()
         {
 
             // Add mutation resolver
-            this.controller.addMutationResolver(TestHelper.SampleMutationResolver());
+            this.metadataStoreProvider.StoreMutationResolver(TestHelper.SampleMutationResolver());
 
             // Run mutation;
             controller.ControllerContext.HttpContext = GetHttpContextWithBody(TestHelper.SampleMutation);
@@ -23,13 +21,5 @@ namespace Cosmos.GraphQL.Service.Tests
             // Validate results
             Assert.IsFalse(response.ToString().Contains("Error"));
         }
-
-        /* [ClassInitialize]
-         public void Init()
-         {
-
-         }
-        */
-
     }
 }

@@ -18,7 +18,7 @@ namespace Cosmos.GraphQL.Service.Tests
         {
             TestHelper.LoadConfig();
             CosmosClientProvider clientProvider = new CosmosClientProvider();
-            IMetadataStoreProvider metadataStoreProvider = new CachedMetadataStoreProvider(new DocumentMetadataStoreProvider(clientProvider));
+            IMetadataStoreProvider metadataStoreProvider = new MetadataStoreProviderForTest();
             CosmosQueryEngine queryEngine = new CosmosQueryEngine(clientProvider, metadataStoreProvider);
             CosmosMutationEngine mutationEngine = new CosmosMutationEngine(clientProvider, metadataStoreProvider);
             GraphQLService graphQLService = new GraphQLService(queryEngine, mutationEngine, metadataStoreProvider);
@@ -41,7 +41,6 @@ namespace Cosmos.GraphQL.Service.Tests
 
             // Add scehma
             controller.ControllerContext.HttpContext = httpContext;
-            controller.Schema();
             return Task.CompletedTask;
         }
     }

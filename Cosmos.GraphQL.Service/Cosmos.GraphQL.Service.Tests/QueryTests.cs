@@ -7,14 +7,12 @@ namespace Cosmos.GraphQL.Service.Tests
     [TestClass, TestCategory(TestCategory.Cosmos)]
     public class QueryTests : TestBase
     {
-
-
         [TestMethod]
         public async Task TestSimpleQuery()
         {
 
             // Add query resolver
-            this.controller.addResolver(TestHelper.SampleQueryResolver());
+            this.metadataStoreProvider.StoreQueryResolver(TestHelper.SampleQueryResolver());
 
             // Run query
             controller.ControllerContext.HttpContext = GetHttpContextWithBody(TestHelper.SampleQuery);
@@ -23,14 +21,5 @@ namespace Cosmos.GraphQL.Service.Tests
             // Validate results
             Assert.IsFalse(response.ToString().Contains("Error"));
         }
-
-
-        /* [ClassInitialize]
-         public void Init()
-         {
-
-         }
-        */
-
     }
 }

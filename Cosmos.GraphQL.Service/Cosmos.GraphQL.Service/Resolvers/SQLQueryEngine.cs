@@ -13,7 +13,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
     //</summary>
     public class SqlQueryEngine : IQueryEngine
     {
-        private IMetadataStoreProvider _metadataStoreProvider;
+        private readonly IMetadataStoreProvider _metadataStoreProvider;
         private readonly IQueryExecutor _queryExecutor;
         private readonly IQueryBuilder _queryBuilder;
 

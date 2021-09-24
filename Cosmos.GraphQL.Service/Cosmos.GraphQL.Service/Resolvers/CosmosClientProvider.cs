@@ -32,7 +32,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
                     }
                 }
             }
-            
+
             return _cosmosClient;
         }
     }

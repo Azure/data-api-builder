@@ -34,12 +34,12 @@ namespace Cosmos.GraphQL.Service.Tests
             Assert.IsFalse(response.ToString().Contains("Error"));
         }
 
-       /* [ClassInitialize]
-        public void Init()
-        {
+        /* [ClassInitialize]
+         public void Init()
+         {
 
-        }
-       */
+         }
+        */
 
     }
 }

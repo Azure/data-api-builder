@@ -25,7 +25,7 @@ namespace Cosmos.GraphQL.Services
             await this.client.CreateDatabaseIfNotExistsAsync(systemDatabaseName);
             await this.client.GetDatabase(systemDatabaseName).CreateContainerIfNotExistsAsync(systemContainerName, "/id");
         }
-        
+
         public void StoreGraphQLSchema(string schema)
         {
             var item = new SchemaDocument()

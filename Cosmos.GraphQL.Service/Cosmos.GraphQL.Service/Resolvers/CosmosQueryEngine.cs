@@ -92,7 +92,7 @@ namespace Cosmos.GraphQL.Services
             FeedIterator<JObject> resultSetIterator = container.GetItemQueryIterator<JObject>(querySpec);
 
             List<JsonDocument> resultsAsList = new List<JsonDocument>();
-            while (resultSetIterator.HasMoreResults)                
+            while (resultSetIterator.HasMoreResults)
             {
                 var nextPage = await resultSetIterator.ReadNextAsync();
                 IEnumerator<JObject> enumerator = nextPage.GetEnumerator();

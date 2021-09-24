@@ -48,7 +48,8 @@ namespace Cosmos.GraphQL.Service.configurations
             return instance;
         }
 
-        public static bool Initialized() {
+        public static bool Initialized()
+        {
             return instance != null;
         }
 
@@ -56,7 +57,8 @@ namespace Cosmos.GraphQL.Service.configurations
         /// Builds the connection string for MsSql based on the
         /// ConnectionString field or the Server+DatabaseName fields.
         /// </summary>
-        private static string BuildMsSqlConnectionString(IConfigurationSection credentialSection) {
+        private static string BuildMsSqlConnectionString(IConfigurationSection credentialSection)
+        {
             var connString = credentialSection.GetValue<string>("ConnectionString");
             var server = credentialSection.GetValue<string>("Server");
             var dbName = credentialSection.GetValue<string>("DatabaseName");
@@ -64,18 +66,22 @@ namespace Cosmos.GraphQL.Service.configurations
             var serverProvided = !string.IsNullOrEmpty(server);
             var dbNameProvided = !string.IsNullOrEmpty(dbName);
 
-            if (connStringProvided && (serverProvided || dbNameProvided)) {
+            if (connStringProvided && (serverProvided || dbNameProvided))
+            {
                 throw new NotSupportedException("Either Server and DatabaseName or ConnectionString need to be provided, not both");
             }
-            if (!connStringProvided && !serverProvided && !dbNameProvided) {
+            if (!connStringProvided && !serverProvided && !dbNameProvided)
+            {
                 throw new NotSupportedException("Either Server and DatabaseName or ConnectionString need to be provided");
             }
 
-            if (connStringProvided) {
+            if (connStringProvided)
+            {
                 return connString;
             }
 
-            if ((!serverProvided && dbNameProvided) || (serverProvided && !dbNameProvided)) {
+            if ((!serverProvided && dbNameProvided) || (serverProvided && !dbNameProvided))
+            {
                 throw new NotSupportedException("Both Server and DatabaseName need to be provided");
             }
 
@@ -110,11 +116,15 @@ namespace Cosmos.GraphQL.Service.configurations
             }
 
             var credentialSection = connectionSection.GetSection("Credentials");
-            if (instance.DbType == DatabaseType.MsSql) {
+            if (instance.DbType == DatabaseType.MsSql)
+            {
                 instance.ConnectionString = BuildMsSqlConnectionString(credentialSection);
-            } else {
+            }
+            else
+            {
                 instance.ConnectionString = credentialSection.GetValue<string>("ConnectionString");
-                if (string.IsNullOrEmpty(instance.ConnectionString)) {
+                if (string.IsNullOrEmpty(instance.ConnectionString))
+                {
                     throw new NotSupportedException("ConnectionString needs to be provided");
                 }
             }

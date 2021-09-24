@@ -15,7 +15,7 @@ namespace Cosmos.GraphQL.Service.configurations
     }
 
     /// <summary>
-    /// Processes appsettings.json file containing dbtype 
+    /// Processes appsettings.json file containing dbtype
     /// and database connection credentials/connections strings.
     /// </summary>
     public class ConfigurationProvider

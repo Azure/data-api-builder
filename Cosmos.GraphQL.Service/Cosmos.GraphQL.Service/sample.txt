@@ -45,6 +45,6 @@ mutation addPost {
     myProp : "myValue"
     id : "myId"
   ) {
-      myProp
+    myProp
   }
 }

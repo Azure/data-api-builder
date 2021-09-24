@@ -48,14 +48,14 @@ namespace Cosmos.GraphQL.Services
 
         public MutationResolver GetMutationResolver(string name)
         {
-            // TODO: optimize for if multiple threads ask for the same name same time? 
+            // TODO: optimize for if multiple threads ask for the same name same time?
             return _mutationResolvers.GetOrAdd(name, (name) => this._storeProvider.GetMutationResolver(name));
 
         }
 
         public GraphQLQueryResolver GetQueryResolver(string name)
         {
-            // TODO: optimize for if multiple threads ask for the same name same time? 
+            // TODO: optimize for if multiple threads ask for the same name same time?
             return _queryResolvers.GetOrAdd(name, (name) => this._storeProvider.GetQueryResolver(name));
         }
 

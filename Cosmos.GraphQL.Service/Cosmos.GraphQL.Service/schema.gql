@@ -6,12 +6,12 @@ type Query {
     }
 
 type Character {
-        id : ID, 
-        name : String, 
-        type: String, 
-        homePlanet: Int, 
-        primaryFunction: String 
-} 
+        id : ID,
+        name : String,
+        type: String,
+        homePlanet: Int,
+        primaryFunction: String
+}
 
 type Planet {
     id : ID,

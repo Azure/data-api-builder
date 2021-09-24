@@ -8,10 +8,6 @@ namespace Cosmos.GraphQL.Service.Tests
 {
     public class MetadataStoreProviderForTest : IMetadataStoreProvider
     {
-
-        /// <summary>
-        /// String Representation of graphQL schema, non escaped.
-        /// </summary>
         private string _graphQLSchema;
         private IDictionary<string, MutationResolver> _mutationResolver = new Dictionary<string, MutationResolver>();
         private IDictionary<string, GraphQLQueryResolver> _queryResolver = new Dictionary<string, GraphQLQueryResolver>();

@@ -2,6 +2,7 @@ using System.IO;
 using Cosmos.GraphQL.Service.Models;
 using Newtonsoft.Json;
 using Microsoft.Extensions.Configuration;
+using Cosmos.GraphQL.Service.configurations;
 
 namespace Cosmos.GraphQL.Service.Tests
 {
@@ -48,17 +49,16 @@ namespace Cosmos.GraphQL.Service.Tests
             return JsonConvert.DeserializeObject<MutationResolver>(raw);
         }
 
+        public static DatabaseConnection DatabaseConnection = new DatabaseConnection();
+
         public static void LoadConfig()
         {
-            if (configurations.ConfigurationProvider.Initialized())
-            {
-                return;
-            }
             var config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.Test.json")
                 .Build();
-            configurations.ConfigurationProvider.init(config);
+
+            config.Bind(nameof(DatabaseConnection), DatabaseConnection);
         }
 
         public static object GetItem(string id)

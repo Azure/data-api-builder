@@ -14,123 +14,70 @@ namespace Cosmos.GraphQL.Service.configurations
         PostgreSql,
     }
 
-    /// <summary>
-    /// Processes appsettings.json file containing dbtype
-    /// and database connection credentials/connections strings.
-    /// </summary>
-    public class ConfigurationProvider
+    public class DatabaseConnection
     {
-        private static ConfigurationProvider instance;
+        /*
+         "DatabaseConnection": {
+            "DatabaseType": "",
+            "Credentials": {
+                "ServerEndpointUrl": "",
+                "AuthorizationKey": "",
+                "Server": "",
+                "Database": "",
+                "Container": "",
+                "ConnectionString": ""
+                }
+              }
+         */
 
-        /// <summary>
-        /// Determines the type of Db this app targets.
-        /// </summary>
-        public DatabaseType DbType { get; private set; }
+        public DatabaseType DatabaseType { get; set; }
+        public CredentialConfig Credentials { get; set; }
+        public string ResolverConfigFile { get; set; }
+    }
 
-        /// <summary>
-        /// Determines the filename of the resolver config.
-        /// </summary>
-        public string ResolverConfigFile { get; private set; }
+    public class CredentialConfig
+    {
+        public string ServerEndpointUrl { get; set; }
+        public string AuthorizationKey { get; set; }
+        public string Server { get; set; }
+        public string Database { get; set; }
+        public string Container { get; set; }
+        public string ConnectionString { get; set; }
 
-        /// <summary>
-        /// Determines the connectionstring that should be used to connect to
-        /// the database.
-        /// </summary>
-        public string ConnectionString { get; private set; }
-
-        public static ConfigurationProvider getInstance()
+        public string GetConnectionString()
         {
-            if (!Initialized())
-            {
-                throw new Exception("Configuration has not been initialized yet");
-            }
+            var connStringProvided = !string.IsNullOrEmpty(ConnectionString);
+            var serverProvided = !string.IsNullOrEmpty(Server);
+            var dbNameProvided = !string.IsNullOrEmpty(Database);
 
-            return instance;
-        }
-
-        public static bool Initialized()
-        {
-            return instance != null;
-        }
-
-        /// <summary>
-        /// Builds the connection string for MsSql based on the
-        /// ConnectionString field or the Server+DatabaseName fields.
-        /// </summary>
-        private static string BuildMsSqlConnectionString(IConfigurationSection credentialSection)
-        {
-            var connString = credentialSection.GetValue<string>("ConnectionString");
-            var server = credentialSection.GetValue<string>("Server");
-            var dbName = credentialSection.GetValue<string>("DatabaseName");
-            var connStringProvided = !string.IsNullOrEmpty(connString);
-            var serverProvided = !string.IsNullOrEmpty(server);
-            var dbNameProvided = !string.IsNullOrEmpty(dbName);
-
-            if (connStringProvided && (serverProvided || dbNameProvided))
+            if(connStringProvided && (serverProvided || dbNameProvided))
             {
                 throw new NotSupportedException("Either Server and DatabaseName or ConnectionString need to be provided, not both");
             }
-            if (!connStringProvided && !serverProvided && !dbNameProvided)
+
+            if(!connStringProvided && !serverProvided && !dbNameProvided)
             {
                 throw new NotSupportedException("Either Server and DatabaseName or ConnectionString need to be provided");
             }
 
-            if (connStringProvided)
+            if(connStringProvided)
             {
-                return connString;
+                return ConnectionString;
             }
 
-            if ((!serverProvided && dbNameProvided) || (serverProvided && !dbNameProvided))
+            if((!serverProvided && dbNameProvided) || (serverProvided && !dbNameProvided))
             {
                 throw new NotSupportedException("Both Server and DatabaseName need to be provided");
             }
 
-            var builder = new SqlConnectionStringBuilder
+            SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder
             {
-                InitialCatalog = dbName,
-                DataSource = server,
+                InitialCatalog = Database,
+                DataSource = Database,
             };
 
             builder.IntegratedSecurity = true;
             return builder.ToString();
-
-        }
-
-        public static void init(IConfiguration config)
-        {
-            if (Initialized())
-            {
-                throw new Exception("Configuration provider can only be initialized once");
-            }
-
-            instance = new ConfigurationProvider();
-
-            var connectionSection = config.GetSection("DatabaseConnection");
-            if (Enum.TryParse<DatabaseType>(connectionSection["DatabaseType"], out DatabaseType dbType))
-            {
-                instance.DbType = dbType;
-            }
-            else
-            {
-                throw new NotSupportedException(String.Format("The configuration file is invalid and does not contain a *valid* DatabaseType key."));
-            }
-
-            var credentialSection = connectionSection.GetSection("Credentials");
-            if (instance.DbType == DatabaseType.MsSql)
-            {
-                instance.ConnectionString = BuildMsSqlConnectionString(credentialSection);
-            }
-            else
-            {
-                instance.ConnectionString = credentialSection.GetValue<string>("ConnectionString");
-                if (string.IsNullOrEmpty(instance.ConnectionString))
-                {
-                    throw new NotSupportedException("ConnectionString needs to be provided");
-                }
-            }
-
-
-            instance.ResolverConfigFile = config.GetValue("ResolverConfigFile", "config.json");
         }
     }
 }

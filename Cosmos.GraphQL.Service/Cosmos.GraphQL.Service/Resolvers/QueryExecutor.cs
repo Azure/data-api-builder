@@ -12,6 +12,13 @@ namespace Cosmos.GraphQL.Service.Resolvers
     public class QueryExecutor<ConnectionT> : IQueryExecutor
         where ConnectionT : DbConnection, new()
     {
+        private readonly DatabaseConnection _databaseConnection;
+
+        public QueryExecutor(DatabaseConnection databaseConnection)
+        {
+            _databaseConnection = databaseConnection;
+        }
+
         /// <summary>
         /// Executes sql text that return result set.
         /// </summary>
@@ -21,7 +28,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
         public async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object> parameters)
         {
             var conn = new ConnectionT();
-            conn.ConnectionString = ConfigurationProvider.getInstance().ConnectionString;
+            conn.ConnectionString = _databaseConnection.Credentials.GetConnectionString();
             await conn.OpenAsync();
             DbCommand cmd = conn.CreateCommand();
             cmd.CommandText = sqltext;

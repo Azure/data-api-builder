@@ -17,7 +17,7 @@ namespace Cosmos.GraphQL.Services
         private readonly IMutationEngine _mutationEngine;
         private IMetadataStoreProvider _metadataStoreProvider;
 
-        public GraphQLService(IQueryEngine queryEngine, IMutationEngine mutationEngine, IMetadataStoreProvider metadataStoreProvider)
+        public GraphQLService(IQueryEngine queryEngine, IMutationEngine mutationEngine, IMetadataStoreProvider metadataStoreProvider, DatabaseConnection databaseConnection)
         {
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
@@ -28,7 +28,7 @@ namespace Cosmos.GraphQL.Services
             // For Sql-like databases, where the schema is known upfront, it is initialized
             // from predefined config files.
             //
-            if (ConfigurationProvider.getInstance().DbType != DatabaseType.Cosmos)
+            if (databaseConnection.DatabaseType != DatabaseType.Cosmos)
             {
                 InitializeSchemaAndResolvers();
             }

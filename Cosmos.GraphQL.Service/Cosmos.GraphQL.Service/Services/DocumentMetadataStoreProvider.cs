@@ -14,7 +14,7 @@ namespace Cosmos.GraphQL.Services
 
         public DocumentMetadataStoreProvider(CosmosClientProvider client)
         {
-            this.client = client.getCosmosClient();
+            this.client = client.GetClient();
             this.container = this.client.GetDatabase(systemDatabaseName).GetContainer(systemContainerName);
             CreateSystemContainerIfDoesNotExist();
         }

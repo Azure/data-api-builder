@@ -24,11 +24,12 @@ namespace Cosmos.GraphQL.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            configurations.ConfigurationProvider.init(Configuration);
+            IConfiguration configuration = services.BuildServiceProvider().GetService<IConfiguration>();
+            DatabaseConnection databaseConnection = new DatabaseConnection();
+            configuration.Bind(nameof(DatabaseConnection), databaseConnection);
+            services.AddSingleton(databaseConnection);
 
-            DatabaseType dbType = configurations.ConfigurationProvider.getInstance().DbType;
-
-            switch (dbType)
+            switch(databaseConnection.DatabaseType)
             {
                 case DatabaseType.Cosmos:
                     services.AddSingleton<CosmosClientProvider, CosmosClientProvider>();
@@ -53,7 +54,7 @@ namespace Cosmos.GraphQL.Service
                     break;
                 default:
                     throw new NotSupportedException(String.Format("The provided DatabaseType value: {0} is currently not supported." +
-                        "Please check the configuration file.", dbType));
+                        "Please check the configuration file.", databaseConnection.DatabaseType));
             }
 
             services.AddSingleton<GraphQLService, GraphQLService>();

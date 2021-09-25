@@ -49,7 +49,7 @@ namespace Cosmos.GraphQL.Service.Tests
             return JsonConvert.DeserializeObject<MutationResolver>(raw);
         }
 
-        public static DatabaseConnection DatabaseConnection = new DatabaseConnection();
+        public static DataGatewayConfig DataGatewayConfig = new DataGatewayConfig();
 
         public static void LoadConfig()
         {
@@ -58,7 +58,7 @@ namespace Cosmos.GraphQL.Service.Tests
                 .AddJsonFile("appsettings.Test.json")
                 .Build();
 
-            config.Bind(nameof(DatabaseConnection), DatabaseConnection);
+            config.Bind("DatabaseConnection", DataGatewayConfig);
         }
 
         public static object GetItem(string id)

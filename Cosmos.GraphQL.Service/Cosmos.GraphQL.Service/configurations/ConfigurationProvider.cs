@@ -5,7 +5,7 @@ using Microsoft.Data.SqlClient;
 namespace Cosmos.GraphQL.Service.configurations
 {
     /// <summary>
-    /// The different Dbs this app supports.
+    /// The different type of databases this app supports.
     /// </summary>
     public enum DatabaseType
     {
@@ -14,11 +14,17 @@ namespace Cosmos.GraphQL.Service.configurations
         PostgreSql,
     }
 
-    public class DatabaseConnection
+    /// <summary>
+    /// Data gateway configuration.
+    /// </summary>
+    public class DataGatewayConfig
     {
         /*
-         "DatabaseConnection": {
+         * This is an example of the configuration format
+         *
+         "DataGatewayConfig": {
             "DatabaseType": "",
+            "ResolverConfigFile" : ""
             "Credentials": {
                 "ServerEndpointUrl": "",
                 "AuthorizationKey": "",
@@ -31,11 +37,16 @@ namespace Cosmos.GraphQL.Service.configurations
          */
 
         public DatabaseType DatabaseType { get; set; }
-        public CredentialConfig Credentials { get; set; }
+
+        // This should be renamed to databaseConnection but need to coordiate with moderakh on CI configuration.
+        public DatabaseConnection Credentials { get; set; }
         public string ResolverConfigFile { get; set; }
     }
 
-    public class CredentialConfig
+    /// <summary>
+    /// Database connection configuration.
+    /// </summary>
+    public class DatabaseConnection
     {
         public string ServerEndpointUrl { get; set; }
         public string AuthorizationKey { get; set; }

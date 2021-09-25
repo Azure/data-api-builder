@@ -23,9 +23,9 @@ namespace Cosmos.GraphQL.Service
         /// </summary>
         private IDictionary<string, string> _resolvers;
 
-        private readonly DatabaseConnection _databaseConnection;
+        private readonly DataGatewayConfig _databaseConnection;
 
-        public FileMetadataStoreProvider(DatabaseConnection databaseConnection)
+        public FileMetadataStoreProvider(DataGatewayConfig databaseConnection)
         {
             _databaseConnection = databaseConnection;
             init();

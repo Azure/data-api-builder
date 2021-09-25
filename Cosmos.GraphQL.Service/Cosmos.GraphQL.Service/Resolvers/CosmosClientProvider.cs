@@ -8,7 +8,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
     {
         private static CosmosClient _cosmosClient;
 
-        public CosmosClientProvider(DatabaseConnection databaseConnection)
+        public CosmosClientProvider(DataGatewayConfig databaseConnection)
         {
             _cosmosClient = new CosmosClientBuilder(databaseConnection.Credentials.GetConnectionString()).WithContentResponseOnWrite(true).Build();
         }

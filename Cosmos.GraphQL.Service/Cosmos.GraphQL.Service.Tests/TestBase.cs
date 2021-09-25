@@ -29,19 +29,14 @@ namespace Cosmos.GraphQL.Service.Tests
         private void Init()
         {
             TestHelper.LoadConfig();
-            clientProvider = new CosmosClientProvider(TestHelper.DatabaseConnection);
+            clientProvider = new CosmosClientProvider(TestHelper.DataGatewayConfig);
             string uid = Guid.NewGuid().ToString();
             dynamic sourceItem = TestHelper.GetItem(uid);
             clientProvider.GetClient().GetContainer(TestHelper.DB_NAME, TestHelper.COL_NAME).CreateItemAsync(sourceItem, new PartitionKey(uid));
             metadataStoreProvider = new CachedMetadataStoreProvider(new DocumentMetadataStoreProvider(clientProvider));
-
-            DatabaseConnection databaseConnection = new DatabaseConnection()
-            {
-                DatabaseType = DatabaseType.Cosmos
-            };
             queryEngine = new CosmosQueryEngine(clientProvider, metadataStoreProvider);
             mutationEngine = new CosmosMutationEngine(clientProvider, metadataStoreProvider);
-            graphQLService = new GraphQLService(queryEngine, mutationEngine, metadataStoreProvider, databaseConnection);
+            graphQLService = new GraphQLService(queryEngine, mutationEngine, metadataStoreProvider, TestHelper.DataGatewayConfig);
             graphQLService.parseAsync(TestHelper.GraphQLTestSchema);
             controller = new GraphQLController(null, queryEngine, mutationEngine, graphQLService);
         }

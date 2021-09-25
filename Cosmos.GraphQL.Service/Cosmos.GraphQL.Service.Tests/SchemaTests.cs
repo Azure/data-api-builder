@@ -18,11 +18,11 @@ namespace Cosmos.GraphQL.Service.Tests
         public Task TestAddSchemaAsync()
         {
             TestHelper.LoadConfig();
-            CosmosClientProvider clientProvider = new CosmosClientProvider(TestHelper.DatabaseConnection);
+            CosmosClientProvider clientProvider = new CosmosClientProvider(TestHelper.DataGatewayConfig);
             IMetadataStoreProvider metadataStoreProvider = new CachedMetadataStoreProvider(new DocumentMetadataStoreProvider(clientProvider));
             CosmosQueryEngine queryEngine = new CosmosQueryEngine(clientProvider, metadataStoreProvider);
             CosmosMutationEngine mutationEngine = new CosmosMutationEngine(clientProvider, metadataStoreProvider);
-            GraphQLService graphQLService = new GraphQLService(queryEngine, mutationEngine, metadataStoreProvider, TestHelper.DatabaseConnection);
+            GraphQLService graphQLService = new GraphQLService(queryEngine, mutationEngine, metadataStoreProvider, TestHelper.DataGatewayConfig);
 
             var graphql_schema = TestHelper.GraphQLTestSchema;
             var request = new HttpRequestMessage();

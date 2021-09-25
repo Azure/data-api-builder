@@ -25,8 +25,9 @@ namespace Cosmos.GraphQL.Service
         public void ConfigureServices(IServiceCollection services)
         {
             IConfiguration configuration = services.BuildServiceProvider().GetService<IConfiguration>();
-            DatabaseConnection databaseConnection = new DatabaseConnection();
-            configuration.Bind(nameof(DatabaseConnection), databaseConnection);
+            DataGatewayConfig databaseConnection = new DataGatewayConfig();
+            // Need to rename DatabaseConnection to DataGatewayConfig in the CI pipeline.
+            configuration.Bind("DatabaseConnection", databaseConnection);
             services.AddSingleton(databaseConnection);
 
             switch(databaseConnection.DatabaseType)

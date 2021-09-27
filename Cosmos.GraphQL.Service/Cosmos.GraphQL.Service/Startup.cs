@@ -30,7 +30,7 @@ namespace Cosmos.GraphQL.Service
             configuration.Bind("DatabaseConnection", databaseConnection);
             services.AddSingleton(databaseConnection);
 
-            switch(databaseConnection.DatabaseType)
+            switch (databaseConnection.DatabaseType)
             {
                 case DatabaseType.Cosmos:
                     services.AddSingleton<CosmosClientProvider, CosmosClientProvider>();

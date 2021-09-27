@@ -1,4 +1,3 @@
-using Cosmos.GraphQL.Service.configurations;
 using Cosmos.GraphQL.Service.Controllers;
 using Cosmos.GraphQL.Service.Resolvers;
 using Cosmos.GraphQL.Services;

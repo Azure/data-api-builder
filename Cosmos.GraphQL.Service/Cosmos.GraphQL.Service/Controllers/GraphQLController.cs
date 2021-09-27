@@ -33,7 +33,7 @@ namespace Cosmos.GraphQL.Service.Controllers
         }
 
         [HttpPost]
-        public async Task<JsonDocument> Post()
+        public async Task<JsonDocument> PostAsync()
         {
             string requestBody;
             using (StreamReader reader = new StreamReader(this.HttpContext.Request.Body))

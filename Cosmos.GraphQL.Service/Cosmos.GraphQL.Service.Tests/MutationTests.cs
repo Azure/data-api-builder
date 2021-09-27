@@ -16,7 +16,7 @@ namespace Cosmos.GraphQL.Service.Tests
 
             // Run mutation;
             controller.ControllerContext.HttpContext = GetHttpContextWithBody(TestHelper.SampleMutation);
-            JsonDocument response = await controller.Post();
+            JsonDocument response = await controller.PostAsync();
 
             // Validate results
             Assert.IsFalse(response.ToString().Contains("Error"));

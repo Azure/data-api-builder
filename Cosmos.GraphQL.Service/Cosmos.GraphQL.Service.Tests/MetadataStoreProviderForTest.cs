@@ -9,8 +9,8 @@ namespace Cosmos.GraphQL.Service.Tests
     public class MetadataStoreProviderForTest : IMetadataStoreProvider
     {
         private string _graphQLSchema;
-        private IDictionary<string, MutationResolver> _mutationResolver = new Dictionary<string, MutationResolver>();
-        private IDictionary<string, GraphQLQueryResolver> _queryResolver = new Dictionary<string, GraphQLQueryResolver>();
+        private IDictionary<string, MutationResolver> _mutationResolvers = new Dictionary<string, MutationResolver>();
+        private IDictionary<string, GraphQLQueryResolver> _queryResolvers = new Dictionary<string, GraphQLQueryResolver>();
 
         public void StoreGraphQLSchema(string schema)
         {
@@ -25,25 +25,25 @@ namespace Cosmos.GraphQL.Service.Tests
         public MutationResolver GetMutationResolver(string name)
         {
             MutationResolver result;
-            _mutationResolver.TryGetValue(name, out result);
+            _mutationResolvers.TryGetValue(name, out result);
             return result;
         }
 
         public GraphQLQueryResolver GetQueryResolver(string name)
         {
             GraphQLQueryResolver result;
-            _queryResolver.TryGetValue(name, out result);
+            _queryResolvers.TryGetValue(name, out result);
             return result;
         }
 
         public void StoreMutationResolver(MutationResolver mutationResolver)
         {
-            _mutationResolver.Add(mutationResolver.id, mutationResolver);
+            _mutationResolvers.Add(mutationResolver.id, mutationResolver);
         }
 
         public void StoreQueryResolver(GraphQLQueryResolver queryResolver)
         {
-            _queryResolver.Add(queryResolver.id, queryResolver);
+            _queryResolvers.Add(queryResolver.id, queryResolver);
         }
     }
 }

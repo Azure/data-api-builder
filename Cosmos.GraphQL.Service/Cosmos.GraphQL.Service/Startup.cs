@@ -39,8 +39,7 @@ namespace Cosmos.GraphQL.Service
             {
                 case DatabaseType.Cosmos:
                     services.AddSingleton<CosmosClientProvider, CosmosClientProvider>();
-                    services.AddSingleton<DocumentMetadataStoreProvider, DocumentMetadataStoreProvider>();
-                    services.AddSingleton<IMetadataStoreProvider, CachedMetadataStoreProvider>();
+                    services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
                     services.AddSingleton<IQueryEngine, CosmosQueryEngine>();
                     services.AddSingleton<IMutationEngine, CosmosMutationEngine>();
                     break;

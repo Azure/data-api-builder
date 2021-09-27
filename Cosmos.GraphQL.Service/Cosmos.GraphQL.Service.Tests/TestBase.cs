@@ -12,12 +12,12 @@ namespace Cosmos.GraphQL.Service.Tests
 {
     public class TestBase
     {
-        internal GraphQLService graphQLService;
-        internal CosmosClientProvider clientProvider;
-        internal IMetadataStoreProvider metadataStoreProvider;
-        internal CosmosQueryEngine queryEngine;
-        internal CosmosMutationEngine mutationEngine;
-        internal GraphQLController controller;
+        protected GraphQLService _graphQLService;
+        protected CosmosClientProvider _clientProvider;
+        protected IMetadataStoreProvider _metadataStoreProvider;
+        protected CosmosQueryEngine _queryEngine;
+        protected CosmosMutationEngine _mutationEngine;
+        protected GraphQLController _controller;
 
         public TestBase()
         {
@@ -27,16 +27,17 @@ namespace Cosmos.GraphQL.Service.Tests
 
         private void Init()
         {
-            clientProvider = new CosmosClientProvider(TestHelper.DataGatewayConfig);
+            _clientProvider = new CosmosClientProvider(TestHelper.DataGatewayConfig);
             string uid = Guid.NewGuid().ToString();
             dynamic sourceItem = TestHelper.GetItem(uid);
-            clientProvider.GetClient().GetContainer(TestHelper.DB_NAME, TestHelper.COL_NAME).CreateItemAsync(sourceItem, new PartitionKey(uid));
-            metadataStoreProvider = new CachedMetadataStoreProvider(new DocumentMetadataStoreProvider(clientProvider));
-            queryEngine = new CosmosQueryEngine(clientProvider, metadataStoreProvider);
-            mutationEngine = new CosmosMutationEngine(clientProvider, metadataStoreProvider);
-            graphQLService = new GraphQLService(queryEngine, mutationEngine, metadataStoreProvider, TestHelper.DataGatewayConfig);
-            graphQLService.parseAsync(TestHelper.GraphQLTestSchema);
-            controller = new GraphQLController(null, queryEngine, mutationEngine, graphQLService);
+
+            _clientProvider.GetClient().GetContainer(TestHelper.DB_NAME, TestHelper.COL_NAME).CreateItemAsync(sourceItem, new PartitionKey(uid));
+            _metadataStoreProvider = new MetadataStoreProviderForTest();
+            _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
+            _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
+            graphQLService = new GraphQLService(queryEngine, mutationEngine, metadataStoreProvider);
+            _graphQLService.parseAsync(TestHelper.GraphQLTestSchema);
+            _controller = new GraphQLController(null, _queryEngine, _mutationEngine, _graphQLService);
         }
 
         internal static DefaultHttpContext GetHttpContextWithBody(string data)
@@ -51,7 +52,5 @@ namespace Cosmos.GraphQL.Service.Tests
             };
             return httpContext;
         }
-
-
     }
 }

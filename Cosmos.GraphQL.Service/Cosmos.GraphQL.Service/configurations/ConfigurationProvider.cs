@@ -1,5 +1,4 @@
 using System;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Data.SqlClient;
 
 namespace Cosmos.GraphQL.Service.configurations
@@ -25,7 +24,7 @@ namespace Cosmos.GraphQL.Service.configurations
          "DataGatewayConfig": {
             "DatabaseType": "",
             "ResolverConfigFile" : ""
-            "Credentials": {
+            "DatabaseConnection": {
                 "ServerEndpointUrl": "",
                 "AuthorizationKey": "",
                 "Server": "",
@@ -39,14 +38,14 @@ namespace Cosmos.GraphQL.Service.configurations
         public DatabaseType DatabaseType { get; set; }
 
         // This should be renamed to databaseConnection but need to coordiate with moderakh on CI configuration.
-        public DatabaseConnection Credentials { get; set; }
+        public DatabaseConnectionConfig Credentials { get; set; }
         public string ResolverConfigFile { get; set; }
     }
 
     /// <summary>
     /// Database connection configuration.
     /// </summary>
-    public class DatabaseConnection
+    public class DatabaseConnectionConfig
     {
         public string ServerEndpointUrl { get; set; }
         public string AuthorizationKey { get; set; }

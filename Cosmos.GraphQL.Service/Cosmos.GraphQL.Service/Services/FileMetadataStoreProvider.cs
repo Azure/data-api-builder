@@ -23,18 +23,18 @@ namespace Cosmos.GraphQL.Service
         /// </summary>
         private IDictionary<string, string> _resolvers;
 
-        private readonly DataGatewayConfig _databaseConnection;
+        private readonly DataGatewayConfig _dataGatewayConfig;
 
-        public FileMetadataStoreProvider(DataGatewayConfig databaseConnection)
+        public FileMetadataStoreProvider(DataGatewayConfig dataGatewayConfig)
         {
-            _databaseConnection = databaseConnection;
+            _dataGatewayConfig = dataGatewayConfig;
             init();
         }
 
         private void init()
         {
             string jsonString = File.ReadAllText(
-                    _databaseConnection.ResolverConfigFile);
+                    _dataGatewayConfig.ResolverConfigFile);
 
             using (JsonDocument document = JsonDocument.Parse(jsonString))
             {

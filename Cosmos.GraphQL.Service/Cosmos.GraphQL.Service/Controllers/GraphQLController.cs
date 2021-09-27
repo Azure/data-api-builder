@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using System;
 using System.Threading.Tasks;
-using Cosmos.GraphQL.Service.Models;
 using System.IO;
 using System.Text.Json;
 using Cosmos.GraphQL.Services;
@@ -25,7 +23,6 @@ namespace Cosmos.GraphQL.Service.Controllers
         private readonly GraphQLService _schemaManager;
 
         public GraphQLController(ILogger<GraphQLController> logger, IQueryEngine queryEngine, IMutationEngine mutationEngine, GraphQLService schemaManager)
-
         {
             _logger = logger;
             _queryEngine = queryEngine;
@@ -33,40 +30,8 @@ namespace Cosmos.GraphQL.Service.Controllers
             _schemaManager = schemaManager;
         }
 
-        [Route("addResolver")]
         [HttpPost]
-        public void addResolver(GraphQLQueryResolver resolver)
-        {
-            _queryEngine.RegisterResolver(resolver);
-        }
-
-        [Route("addMutationResolver")]
-        [HttpPost]
-        public void addMutationResolver(MutationResolver resolver)
-        {
-            _mutationEngine.RegisterResolver(resolver);
-        }
-
-        [Route("schema")]
-        [HttpPost]
-        public async void Schema()
-        {
-            string data;
-            using (StreamReader reader = new StreamReader(this.HttpContext.Request.Body))
-            {
-                data = await reader.ReadToEndAsync();
-            }
-            if (!String.IsNullOrEmpty(data))
-            {
-                this._schemaManager.parseAsync(data);
-                return;
-            }
-
-            throw new InvalidDataException();
-        }
-
-        [HttpPost]
-        public async Task<JsonDocument> Post()
+        public async Task<JsonDocument> PostAsync()
         {
             string requestBody;
             using (StreamReader reader = new StreamReader(this.HttpContext.Request.Body))

@@ -49,17 +49,20 @@ namespace Cosmos.GraphQL.Service.Tests
             return JsonConvert.DeserializeObject<MutationResolver>(raw);
         }
 
-        public static DataGatewayConfig DataGatewayConfig = new DataGatewayConfig();
-
-        public static void LoadConfig()
+        /// <summary>
+        /// Static constructor to initialize some static fields.
+        /// </summary>
+        static TestHelper()
         {
-            var config = new ConfigurationBuilder()
+            IConfigurationRoot config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.Test.json")
                 .Build();
 
             config.Bind("DatabaseConnection", DataGatewayConfig);
         }
+
+        public static DataGatewayConfig DataGatewayConfig { get; }
 
         public static object GetItem(string id)
         {

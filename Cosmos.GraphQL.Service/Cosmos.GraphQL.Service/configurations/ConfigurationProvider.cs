@@ -83,7 +83,7 @@ namespace Cosmos.GraphQL.Service.configurations
             SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder
             {
                 InitialCatalog = Database,
-                DataSource = Database,
+                DataSource = Server,
             };
 
             builder.IntegratedSecurity = true;

@@ -1,5 +1,6 @@
 using System;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Options;
 
 namespace Cosmos.GraphQL.Service.configurations
 {
@@ -53,41 +54,63 @@ namespace Cosmos.GraphQL.Service.configurations
         public string Database { get; set; }
         public string Container { get; set; }
         public string ConnectionString { get; set; }
+    }
 
-        public string GetConnectionString()
+    /// <summary>
+    /// Post configuration processing for DataGatewayConfig.
+    /// We check for database connection options. If the user does not provide connection string,
+    /// we build a connection string from other connection settings and finally set the ConnectionString setting.
+    ///
+    /// This inteface is called before IValidateOptions. Hence, we need to do some validation here.
+    /// </summary>
+    public class DataGatewayConfigPostConfiguration : IPostConfigureOptions<DataGatewayConfig>
+    {
+        public void PostConfigure(string name, DataGatewayConfig options)
         {
-            var connStringProvided = !string.IsNullOrEmpty(ConnectionString);
-            var serverProvided = !string.IsNullOrEmpty(Server);
-            var dbNameProvided = !string.IsNullOrEmpty(Database);
+            bool connStringProvided = !string.IsNullOrEmpty(options.Credentials.ConnectionString);
+            bool serverProvided = !string.IsNullOrEmpty(options.Credentials.Server);
+            bool dbNameProvided = !string.IsNullOrEmpty(options.Credentials.Database);
 
-            if (connStringProvided && (serverProvided || dbNameProvided))
+            if(!connStringProvided && !serverProvided && !dbNameProvided)
+            {
+                throw new NotSupportedException("Either Server and DatabaseName or ConnectionString need to be provided");
+            }
+            else if(connStringProvided && (serverProvided || dbNameProvided))
             {
                 throw new NotSupportedException("Either Server and DatabaseName or ConnectionString need to be provided, not both");
             }
 
-            if (!connStringProvided && !serverProvided && !dbNameProvided)
+            if(string.IsNullOrWhiteSpace(options.Credentials.ConnectionString))
             {
-                throw new NotSupportedException("Either Server and DatabaseName or ConnectionString need to be provided");
+                if((!serverProvided && dbNameProvided) || (serverProvided && !dbNameProvided))
+                {
+                    throw new NotSupportedException("Both Server and DatabaseName need to be provided");
+                }
+
+                SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder
+                {
+                    InitialCatalog = options.Credentials.Database,
+                    DataSource = options.Credentials.Server,
+                };
+
+                builder.IntegratedSecurity = true;
+                options.Credentials.ConnectionString = builder.ToString();
             }
+        }
+    }
 
-            if (connStringProvided)
-            {
-                return ConnectionString;
-            }
 
-            if ((!serverProvided && dbNameProvided) || (serverProvided && !dbNameProvided))
-            {
-                throw new NotSupportedException("Both Server and DatabaseName need to be provided");
-            }
-
-            SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder
-            {
-                InitialCatalog = Database,
-                DataSource = Server,
-            };
-
-            builder.IntegratedSecurity = true;
-            return builder.ToString();
+    /// <summary>
+    /// Validate config.
+    /// This happens after post configuration.
+    /// </summary>
+    public class DataGatewayConfigValidation : IValidateOptions<DataGatewayConfig>
+    {
+        public ValidateOptionsResult Validate(string name, DataGatewayConfig options)
+        {
+            return string.IsNullOrWhiteSpace(options.Credentials.ConnectionString)
+                ? ValidateOptionsResult.Fail("Invalid connection string.")
+                : ValidateOptionsResult.Success;
         }
     }
 }

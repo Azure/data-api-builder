@@ -3,6 +3,8 @@ using Cosmos.GraphQL.Service.Models;
 using Newtonsoft.Json;
 using Microsoft.Extensions.Configuration;
 using Cosmos.GraphQL.Service.configurations;
+using System;
+using Microsoft.Extensions.Options;
 
 namespace Cosmos.GraphQL.Service.Tests
 {
@@ -49,20 +51,25 @@ namespace Cosmos.GraphQL.Service.Tests
             return JsonConvert.DeserializeObject<MutationResolver>(raw);
         }
 
-        /// <summary>
-        /// Static constructor to initialize some static fields.
-        /// </summary>
-        static TestHelper()
+        private static Lazy<IOptions<DataGatewayConfig>> _dataGatewayConfig = new Lazy<IOptions<DataGatewayConfig>>(() => TestHelper.LoadConfig());
+
+        private static IOptions<DataGatewayConfig> LoadConfig()
         {
+            DataGatewayConfig datagatewayConfig = new DataGatewayConfig();
             IConfigurationRoot config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.Test.json")
                 .Build();
 
-            config.Bind("DatabaseConnection", DataGatewayConfig);
+            config.Bind("DatabaseConnection", datagatewayConfig);
+
+            return Options.Create< DataGatewayConfig>(datagatewayConfig);
         }
 
-        public static DataGatewayConfig DataGatewayConfig { get; }
+        public static IOptions<DataGatewayConfig> DataGatewayConfig
+        {
+            get { return _dataGatewayConfig.Value; }
+        }
 
         public static object GetItem(string id)
         {

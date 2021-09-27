@@ -1,6 +1,7 @@
 using Cosmos.GraphQL.Service.configurations;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Fluent;
+using Microsoft.Extensions.Options;
 
 namespace Cosmos.GraphQL.Service.Resolvers
 {
@@ -8,9 +9,9 @@ namespace Cosmos.GraphQL.Service.Resolvers
     {
         private static CosmosClient _cosmosClient;
 
-        public CosmosClientProvider(DataGatewayConfig databaseConnection)
+        public CosmosClientProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
         {
-            _cosmosClient = new CosmosClientBuilder(databaseConnection.Credentials.GetConnectionString()).WithContentResponseOnWrite(true).Build();
+            _cosmosClient = new CosmosClientBuilder(dataGatewayConfig.Value.Credentials.ConnectionString).WithContentResponseOnWrite(true).Build();
         }
 
         public CosmosClient GetClient()

@@ -7,6 +7,7 @@ using Cosmos.GraphQL.Service.configurations;
 using Cosmos.GraphQL.Service.Resolvers;
 using HotChocolate;
 using HotChocolate.Execution;
+using Microsoft.Extensions.Options;
 
 namespace Cosmos.GraphQL.Services
 {
@@ -17,7 +18,10 @@ namespace Cosmos.GraphQL.Services
         private readonly IMutationEngine _mutationEngine;
         private IMetadataStoreProvider _metadataStoreProvider;
 
-        public GraphQLService(IQueryEngine queryEngine, IMutationEngine mutationEngine, IMetadataStoreProvider metadataStoreProvider, DataGatewayConfig databaseConnection)
+        public GraphQLService(IQueryEngine queryEngine,
+            IMutationEngine mutationEngine,
+            IMetadataStoreProvider metadataStoreProvider,
+            IOptions<DataGatewayConfig> dataGatewayConfig)
         {
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
@@ -28,7 +32,7 @@ namespace Cosmos.GraphQL.Services
             // For Sql-like databases, where the schema is known upfront, it is initialized
             // from predefined config files.
             //
-            if (databaseConnection.DatabaseType != DatabaseType.Cosmos)
+            if (dataGatewayConfig.Value.DatabaseType != DatabaseType.Cosmos)
             {
                 InitializeSchemaAndResolvers();
             }

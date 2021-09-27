@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using System.Text.Json;
 using System.Collections.Generic;
+using Microsoft.Extensions.Options;
 
 namespace Cosmos.GraphQL.Service
 {
@@ -25,9 +26,9 @@ namespace Cosmos.GraphQL.Service
 
         private readonly DataGatewayConfig _dataGatewayConfig;
 
-        public FileMetadataStoreProvider(DataGatewayConfig dataGatewayConfig)
+        public FileMetadataStoreProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
         {
-            _dataGatewayConfig = dataGatewayConfig;
+            _dataGatewayConfig = dataGatewayConfig.Value;
             init();
         }
 

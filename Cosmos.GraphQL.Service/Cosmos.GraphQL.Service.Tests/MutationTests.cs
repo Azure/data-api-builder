@@ -10,13 +10,12 @@ namespace Cosmos.GraphQL.Service.Tests
         [TestMethod]
         public async Task TestMutationRun()
         {
-
             // Add mutation resolver
-            this.metadataStoreProvider.StoreMutationResolver(TestHelper.SampleMutationResolver());
+            _metadataStoreProvider.StoreMutationResolver(TestHelper.SampleMutationResolver());
 
             // Run mutation;
-            controller.ControllerContext.HttpContext = GetHttpContextWithBody(TestHelper.SampleMutation);
-            JsonDocument response = await controller.PostAsync();
+            _controller.ControllerContext.HttpContext = GetHttpContextWithBody(TestHelper.SampleMutation);
+            JsonDocument response = await _controller.PostAsync();
 
             // Validate results
             Assert.IsFalse(response.ToString().Contains("Error"));

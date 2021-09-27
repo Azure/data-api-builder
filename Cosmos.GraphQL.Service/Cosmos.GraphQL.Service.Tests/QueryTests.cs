@@ -10,13 +10,12 @@ namespace Cosmos.GraphQL.Service.Tests
         [TestMethod]
         public async Task TestSimpleQuery()
         {
-
             // Add query resolver
-            this.metadataStoreProvider.StoreQueryResolver(TestHelper.SampleQueryResolver());
+            _metadataStoreProvider.StoreQueryResolver(TestHelper.SampleQueryResolver());
 
             // Run query
-            controller.ControllerContext.HttpContext = GetHttpContextWithBody(TestHelper.SampleQuery);
-            JsonDocument response = await controller.PostAsync();
+            _controller.ControllerContext.HttpContext = GetHttpContextWithBody(TestHelper.SampleQuery);
+            JsonDocument response = await _controller.PostAsync();
 
             // Validate results
             Assert.IsFalse(response.ToString().Contains("Error"));

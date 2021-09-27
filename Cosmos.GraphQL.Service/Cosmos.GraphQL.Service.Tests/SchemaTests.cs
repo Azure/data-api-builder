@@ -14,7 +14,7 @@ namespace Cosmos.GraphQL.Service.Tests
     public class SchemaTests
     {
         [TestMethod]
-        public Task TestAddSchemaAsync()
+        public void TestAddSchemaAsync()
         {
             TestHelper.LoadConfig();
             CosmosClientProvider clientProvider = new CosmosClientProvider();
@@ -38,10 +38,8 @@ namespace Cosmos.GraphQL.Service.Tests
                 //Request = request;
             };
 
-
             // Add scehma
             controller.ControllerContext.HttpContext = httpContext;
-            return Task.CompletedTask;
         }
     }
 }

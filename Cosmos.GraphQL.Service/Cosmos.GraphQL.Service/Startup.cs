@@ -24,10 +24,9 @@ namespace Cosmos.GraphQL.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            IConfiguration configuration = services.BuildServiceProvider().GetService<IConfiguration>();
             DataGatewayConfig databaseConnection = new DataGatewayConfig();
             // Need to rename DatabaseConnection to DataGatewayConfig in the CI pipeline.
-            configuration.Bind("DatabaseConnection", databaseConnection);
+            Configuration.Bind("DatabaseConnection", databaseConnection);
             services.AddSingleton(databaseConnection);
 
             switch (databaseConnection.DatabaseType)

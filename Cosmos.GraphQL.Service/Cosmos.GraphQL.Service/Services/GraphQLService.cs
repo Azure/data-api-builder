@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Cosmos.GraphQL.Service.configurations;
 using Cosmos.GraphQL.Service.Resolvers;
 using HotChocolate;
 using HotChocolate.Execution;

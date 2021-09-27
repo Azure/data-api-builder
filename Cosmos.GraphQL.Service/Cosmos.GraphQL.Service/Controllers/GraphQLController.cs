@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using System;
 using System.Threading.Tasks;
-using Cosmos.GraphQL.Service.Models;
 using System.IO;
 using System.Text.Json;
 using Cosmos.GraphQL.Services;

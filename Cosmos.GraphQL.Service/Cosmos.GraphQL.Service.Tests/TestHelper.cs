@@ -1,10 +1,10 @@
+using System;
 using System.IO;
 using Cosmos.GraphQL.Service.Models;
-using Newtonsoft.Json;
-using Microsoft.Extensions.Configuration;
 using Cosmos.GraphQL.Service.configurations;
-using System;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 
 namespace Cosmos.GraphQL.Service.Tests
 {

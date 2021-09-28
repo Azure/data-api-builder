@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Resolvers;
 using HotChocolate;
 using HotChocolate.Execution;
-using Microsoft.Extensions.Options;
 
 namespace Cosmos.GraphQL.Services
 {

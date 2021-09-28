@@ -63,7 +63,7 @@ namespace Cosmos.GraphQL.Service.Tests
 
             config.Bind("DatabaseConnection", datagatewayConfig);
 
-            return Options.Create< DataGatewayConfig>(datagatewayConfig);
+            return Options.Create(datagatewayConfig);
         }
 
         public static IOptions<DataGatewayConfig> DataGatewayConfig

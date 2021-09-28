@@ -40,7 +40,7 @@ namespace Cosmos.GraphQL.Service.configurations
 
         // This should be renamed to databaseConnection but need to coordiate with moderakh on CI configuration.
         public DatabaseConnectionConfig Credentials { get; set; }
-        public string ResolverConfigFile { get; set; }
+        public string ResolverConfigFile { get; set; } = "config.json";
     }
 
     /// <summary>

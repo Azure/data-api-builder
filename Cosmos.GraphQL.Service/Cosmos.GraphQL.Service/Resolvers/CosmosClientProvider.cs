@@ -1,38 +1,21 @@
 using Cosmos.GraphQL.Service.configurations;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Fluent;
+using Microsoft.Extensions.Options;
 
 namespace Cosmos.GraphQL.Service.Resolvers
 {
     public class CosmosClientProvider
     {
         private static CosmosClient _cosmosClient;
-        private static readonly object syncLock = new object();
 
-        private static void init()
+        public CosmosClientProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
         {
-            var connectionString = ConfigurationProvider.getInstance().ConnectionString;
-            _cosmosClient = new CosmosClientBuilder(connectionString).WithContentResponseOnWrite(true).Build();
+            _cosmosClient = new CosmosClientBuilder(dataGatewayConfig.Value.Credentials.ConnectionString).WithContentResponseOnWrite(true).Build();
         }
 
         public CosmosClient GetClient()
         {
-            return getCosmosClient();
-        }
-
-        public CosmosClient getCosmosClient()
-        {
-            if (_cosmosClient == null)
-            {
-                lock (syncLock)
-                {
-                    if (_cosmosClient == null)
-                    {
-                        init();
-                    }
-                }
-            }
-
             return _cosmosClient;
         }
     }

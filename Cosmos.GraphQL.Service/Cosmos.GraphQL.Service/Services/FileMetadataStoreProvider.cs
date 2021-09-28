@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using System.Text.Json;
 using System.Collections.Generic;
+using Microsoft.Extensions.Options;
 
 namespace Cosmos.GraphQL.Service
 {
@@ -23,15 +24,18 @@ namespace Cosmos.GraphQL.Service
         /// </summary>
         private IDictionary<string, string> _resolvers;
 
-        public FileMetadataStoreProvider()
+        private readonly DataGatewayConfig _dataGatewayConfig;
+
+        public FileMetadataStoreProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
         {
+            _dataGatewayConfig = dataGatewayConfig.Value;
             init();
         }
 
         private void init()
         {
             string jsonString = File.ReadAllText(
-                    ConfigurationProvider.getInstance().ResolverConfigFile);
+                    _dataGatewayConfig.ResolverConfigFile);
 
             using (JsonDocument document = JsonDocument.Parse(jsonString))
             {

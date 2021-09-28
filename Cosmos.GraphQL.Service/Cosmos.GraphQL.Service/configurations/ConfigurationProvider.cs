@@ -1,11 +1,11 @@
 using System;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Options;
 
 namespace Cosmos.GraphQL.Service.configurations
 {
     /// <summary>
-    /// The different Dbs this app supports.
+    /// The different type of databases this app supports.
     /// </summary>
     public enum DatabaseType
     {
@@ -15,122 +15,102 @@ namespace Cosmos.GraphQL.Service.configurations
     }
 
     /// <summary>
-    /// Processes appsettings.json file containing dbtype
-    /// and database connection credentials/connections strings.
+    /// Data gateway configuration.
     /// </summary>
-    public class ConfigurationProvider
+    public class DataGatewayConfig
     {
-        private static ConfigurationProvider instance;
+        /*
+         * This is an example of the configuration format
+         *
+         "DataGatewayConfig": {
+            "DatabaseType": "",
+            "ResolverConfigFile" : ""
+            "DatabaseConnection": {
+                "ServerEndpointUrl": "",
+                "AuthorizationKey": "",
+                "Server": "",
+                "Database": "",
+                "Container": "",
+                "ConnectionString": ""
+                }
+              }
+         */
 
-        /// <summary>
-        /// Determines the type of Db this app targets.
-        /// </summary>
-        public DatabaseType DbType { get; private set; }
+        public DatabaseType DatabaseType { get; set; }
 
-        /// <summary>
-        /// Determines the filename of the resolver config.
-        /// </summary>
-        public string ResolverConfigFile { get; private set; }
+        // This should be renamed to databaseConnection but need to coordiate with moderakh on CI configuration.
+        public DatabaseConnectionConfig Credentials { get; set; }
+        public string ResolverConfigFile { get; set; } = "config.json";
+    }
 
-        /// <summary>
-        /// Determines the connectionstring that should be used to connect to
-        /// the database.
-        /// </summary>
-        public string ConnectionString { get; private set; }
+    /// <summary>
+    /// Database connection configuration.
+    /// </summary>
+    public class DatabaseConnectionConfig
+    {
+        public string ServerEndpointUrl { get; set; }
+        public string AuthorizationKey { get; set; }
+        public string Server { get; set; }
+        public string Database { get; set; }
+        public string Container { get; set; }
+        public string ConnectionString { get; set; }
+    }
 
-        public static ConfigurationProvider getInstance()
+    /// <summary>
+    /// Post configuration processing for DataGatewayConfig.
+    /// We check for database connection options. If the user does not provide connection string,
+    /// we build a connection string from other connection settings and finally set the ConnectionString setting.
+    ///
+    /// This inteface is called before IValidateOptions. Hence, we need to do some validation here.
+    /// </summary>
+    public class DataGatewayConfigPostConfiguration : IPostConfigureOptions<DataGatewayConfig>
+    {
+        public void PostConfigure(string name, DataGatewayConfig options)
         {
-            if (!Initialized())
-            {
-                throw new Exception("Configuration has not been initialized yet");
-            }
+            bool connStringProvided = !string.IsNullOrEmpty(options.Credentials.ConnectionString);
+            bool serverProvided = !string.IsNullOrEmpty(options.Credentials.Server);
+            bool dbNameProvided = !string.IsNullOrEmpty(options.Credentials.Database);
 
-            return instance;
-        }
-
-        public static bool Initialized()
-        {
-            return instance != null;
-        }
-
-        /// <summary>
-        /// Builds the connection string for MsSql based on the
-        /// ConnectionString field or the Server+DatabaseName fields.
-        /// </summary>
-        private static string BuildMsSqlConnectionString(IConfigurationSection credentialSection)
-        {
-            var connString = credentialSection.GetValue<string>("ConnectionString");
-            var server = credentialSection.GetValue<string>("Server");
-            var dbName = credentialSection.GetValue<string>("DatabaseName");
-            var connStringProvided = !string.IsNullOrEmpty(connString);
-            var serverProvided = !string.IsNullOrEmpty(server);
-            var dbNameProvided = !string.IsNullOrEmpty(dbName);
-
-            if (connStringProvided && (serverProvided || dbNameProvided))
-            {
-                throw new NotSupportedException("Either Server and DatabaseName or ConnectionString need to be provided, not both");
-            }
             if (!connStringProvided && !serverProvided && !dbNameProvided)
             {
                 throw new NotSupportedException("Either Server and DatabaseName or ConnectionString need to be provided");
             }
-
-            if (connStringProvided)
+            else if (connStringProvided && (serverProvided || dbNameProvided))
             {
-                return connString;
+                throw new NotSupportedException("Either Server and DatabaseName or ConnectionString need to be provided, not both");
             }
 
-            if ((!serverProvided && dbNameProvided) || (serverProvided && !dbNameProvided))
+            if (string.IsNullOrWhiteSpace(options.Credentials.ConnectionString))
             {
-                throw new NotSupportedException("Both Server and DatabaseName need to be provided");
-            }
-
-            var builder = new SqlConnectionStringBuilder
-            {
-                InitialCatalog = dbName,
-                DataSource = server,
-            };
-
-            builder.IntegratedSecurity = true;
-            return builder.ToString();
-
-        }
-
-        public static void init(IConfiguration config)
-        {
-            if (Initialized())
-            {
-                throw new Exception("Configuration provider can only be initialized once");
-            }
-
-            instance = new ConfigurationProvider();
-
-            var connectionSection = config.GetSection("DatabaseConnection");
-            if (Enum.TryParse<DatabaseType>(connectionSection["DatabaseType"], out DatabaseType dbType))
-            {
-                instance.DbType = dbType;
-            }
-            else
-            {
-                throw new NotSupportedException(String.Format("The configuration file is invalid and does not contain a *valid* DatabaseType key."));
-            }
-
-            var credentialSection = connectionSection.GetSection("Credentials");
-            if (instance.DbType == DatabaseType.MsSql)
-            {
-                instance.ConnectionString = BuildMsSqlConnectionString(credentialSection);
-            }
-            else
-            {
-                instance.ConnectionString = credentialSection.GetValue<string>("ConnectionString");
-                if (string.IsNullOrEmpty(instance.ConnectionString))
+                if ((!serverProvided && dbNameProvided) || (serverProvided && !dbNameProvided))
                 {
-                    throw new NotSupportedException("ConnectionString needs to be provided");
+                    throw new NotSupportedException("Both Server and DatabaseName need to be provided");
                 }
+
+                SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder
+                {
+                    InitialCatalog = options.Credentials.Database,
+                    DataSource = options.Credentials.Server,
+                };
+
+                builder.IntegratedSecurity = true;
+                options.Credentials.ConnectionString = builder.ToString();
             }
+        }
+    }
 
 
-            instance.ResolverConfigFile = config.GetValue("ResolverConfigFile", "config.json");
+    /// <summary>
+    /// Validate config.
+    /// This happens after post configuration.
+    /// </summary>
+    public class DataGatewayConfigValidation : IValidateOptions<DataGatewayConfig>
+    {
+        public ValidateOptionsResult Validate(string name, DataGatewayConfig options)
+        {
+            return string.IsNullOrWhiteSpace(options.Credentials.ConnectionString)
+                ? ValidateOptionsResult.Fail("Invalid connection string.")
+                : ValidateOptionsResult.Success;
         }
     }
 }

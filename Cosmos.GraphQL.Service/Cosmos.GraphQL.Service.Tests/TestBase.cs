@@ -27,8 +27,7 @@ namespace Cosmos.GraphQL.Service.Tests
 
         private void Init()
         {
-            TestHelper.LoadConfig();
-            _clientProvider = new CosmosClientProvider();
+            _clientProvider = new CosmosClientProvider(TestHelper.DataGatewayConfig);
             string uid = Guid.NewGuid().ToString();
             dynamic sourceItem = TestHelper.GetItem(uid);
 

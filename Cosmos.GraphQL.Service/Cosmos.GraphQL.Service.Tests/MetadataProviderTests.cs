@@ -10,8 +10,7 @@ namespace Cosmos.GraphQL.Service.Tests
 
         public MetadataProviderTests()
         {
-            TestHelper.LoadConfig();
-            _fileProvider = new FileMetadataStoreProvider();
+            _fileProvider = new FileMetadataStoreProvider(TestHelper.DataGatewayConfig);
         }
 
         [TestMethod]

@@ -3,6 +3,7 @@ using System.Data;
 using System.Data.Common;
 using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.configurations;
+using Microsoft.Extensions.Options;
 
 namespace Cosmos.GraphQL.Service.Resolvers
 {
@@ -12,6 +13,13 @@ namespace Cosmos.GraphQL.Service.Resolvers
     public class QueryExecutor<ConnectionT> : IQueryExecutor
         where ConnectionT : DbConnection, new()
     {
+        private readonly DataGatewayConfig _datagatewayConfig;
+
+        public QueryExecutor(IOptions<DataGatewayConfig> dataGatewayConfig)
+        {
+            _datagatewayConfig = dataGatewayConfig.Value;
+        }
+
         /// <summary>
         /// Executes sql text that return result set.
         /// </summary>
@@ -21,7 +29,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
         public async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object> parameters)
         {
             var conn = new ConnectionT();
-            conn.ConnectionString = ConfigurationProvider.getInstance().ConnectionString;
+            conn.ConnectionString = _datagatewayConfig.Credentials.ConnectionString;
             await conn.OpenAsync();
             DbCommand cmd = conn.CreateCommand();
             cmd.CommandText = sqltext;

@@ -9,6 +9,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Data.SqlClient;
 using Npgsql;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Cosmos.GraphQL.Service
 {
@@ -24,11 +26,16 @@ namespace Cosmos.GraphQL.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            configurations.ConfigurationProvider.init(Configuration);
+            services.Configure<DataGatewayConfig>(Configuration.GetSection("DatabaseConnection"));
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<DataGatewayConfig>, DataGatewayConfigPostConfiguration>());
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<DataGatewayConfig>, DataGatewayConfigValidation>());
 
-            DatabaseType dbType = configurations.ConfigurationProvider.getInstance().DbType;
+            // Read configuration and use it locally.
+            DataGatewayConfig dataGatewayConfig = new DataGatewayConfig();
+            // Need to rename DatabaseConnection to DataGatewayConfig in the CI pipeline.
+            Configuration.Bind("DatabaseConnection", dataGatewayConfig);
 
-            switch (dbType)
+            switch (dataGatewayConfig.DatabaseType)
             {
                 case DatabaseType.Cosmos:
                     services.AddSingleton<CosmosClientProvider, CosmosClientProvider>();
@@ -52,7 +59,7 @@ namespace Cosmos.GraphQL.Service
                     break;
                 default:
                     throw new NotSupportedException(String.Format("The provided DatabaseType value: {0} is currently not supported." +
-                        "Please check the configuration file.", dbType));
+                        "Please check the configuration file.", dataGatewayConfig.DatabaseType));
             }
 
             services.AddSingleton<GraphQLService, GraphQLService>();

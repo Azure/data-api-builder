@@ -41,7 +41,7 @@ namespace Cosmos.GraphQL.Services
             get { return _schema; }
         }
 
-        internal async Task<string> ExecuteAsync(String requestBody)
+        internal async Task<string> ExecuteAsync(string requestBody)
         {
             if (this.Schema == null)
             {

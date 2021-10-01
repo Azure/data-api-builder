@@ -24,8 +24,7 @@ namespace Cosmos.GraphQL.Service
                 .ConfigureAppConfiguration(config =>
                     config
                     .SetBasePath(Directory.GetCurrentDirectory())
-                    .AddJsonFile("config.json")
-                    .AddJsonFile("appsettings.json")
+                    .AddJsonFile("appsettings.json", optional:false)
                     .AddEnvironmentVariables()
                 )
                 .ConfigureServices((context, services) =>

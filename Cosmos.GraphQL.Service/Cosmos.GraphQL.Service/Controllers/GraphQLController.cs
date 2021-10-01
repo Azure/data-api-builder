@@ -1,13 +1,10 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using System.Threading.Tasks;
 using System.IO;
-using System.Text.Json;
+using System.Net;
 using Cosmos.GraphQL.Services;
 using Cosmos.GraphQL.Service.Resolvers;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
-using System.Net;
+using Microsoft.Extensions.Logging;
 
 namespace Cosmos.GraphQL.Service.Controllers
 {

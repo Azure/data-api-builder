@@ -11,21 +11,14 @@ using System.Net;
 
 namespace Cosmos.GraphQL.Service.Controllers
 {
-    [ApiController]
-    [Route("[controller]")]
     public class GraphQLController
     {
-        private readonly IQueryEngine _queryEngine;
-        private readonly IMutationEngine _mutationEngine;
-
         private readonly ILogger<GraphQLController> _logger;
         private readonly GraphQLService _schemaManager;
 
         public GraphQLController(ILogger<GraphQLController> logger, IQueryEngine queryEngine, IMutationEngine mutationEngine, GraphQLService schemaManager)
         {
             _logger = logger;
-            _queryEngine = queryEngine;
-            _mutationEngine = mutationEngine;
             _schemaManager = schemaManager;
         }
 

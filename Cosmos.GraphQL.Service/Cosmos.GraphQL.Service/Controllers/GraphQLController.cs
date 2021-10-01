@@ -13,7 +13,7 @@ namespace Cosmos.GraphQL.Service.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class GraphQLController : ControllerBase
+    public class GraphQLController
     {
         private readonly IQueryEngine _queryEngine;
         private readonly IMutationEngine _mutationEngine;
@@ -29,8 +29,8 @@ namespace Cosmos.GraphQL.Service.Controllers
             _schemaManager = schemaManager;
         }
 
-        [Function("query")]
-        public async System.Threading.Tasks.Task<HttpResponseData> QueryAsync([HttpTrigger(AuthorizationLevel.Anonymous, "post")]
+        [Function("graphql")]
+        public async System.Threading.Tasks.Task<HttpResponseData> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post")]
             HttpRequestData req,
             FunctionContext executionContext)
         {

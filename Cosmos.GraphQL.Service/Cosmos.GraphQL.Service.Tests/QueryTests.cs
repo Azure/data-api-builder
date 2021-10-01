@@ -1,4 +1,7 @@
+using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.IO;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -13,12 +16,17 @@ namespace Cosmos.GraphQL.Service.Tests
             // Add query resolver
             _metadataStoreProvider.StoreQueryResolver(TestHelper.SampleQueryResolver());
 
-            // Run query
-            _controller.ControllerContext.HttpContext = GetHttpContextWithBody(TestHelper.SampleQuery);
-            JsonDocument response = await _controller.PostAsync();
+            // Write JSON request to the body.
+            RequestDataMock.Object.Body.Write(Encoding.UTF8.GetBytes(TestHelper.SampleQuery));
+            // Reset the stream to the beginning.
+            RequestDataMock.Object.Body.Seek(0, SeekOrigin.Begin);
 
-            // Validate results
-            Assert.IsFalse(response.ToString().Contains("Error"));
+            // Run the query.
+            HttpResponseData responseData = await _controller.Run(RequestDataMock.Object, FunctionContext);
+            responseData.Body.Seek(0, SeekOrigin.Begin);
+            JsonDocument responseJson = JsonDocument.Parse(responseData.Body);
+
+            Assert.IsFalse(responseJson.ToString().Contains("Error"));
         }
     }
 }

@@ -20,7 +20,7 @@
       // Enable launching a web browser when ASP.NET Core starts. For more information: https://aka.ms/VSCode-CS-LaunchJson-WebBrowser
       "serverReadyAction": {
         "action": "openExternally",
-        "uriFormat": "%s/ui/graphiql",
+        "uriFormat": "%s/graphql",
         "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
       },
       "env": {
@@ -46,7 +46,7 @@
       // Enable launching a web browser when ASP.NET Core starts. For more information: https://aka.ms/VSCode-CS-LaunchJson-WebBrowser
       "serverReadyAction": {
         "action": "openExternally",
-        "uriFormat": "%s/ui/graphiql",
+        "uriFormat": "%s/graphql",
         "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
       },
       "env": {

@@ -1,0 +1,23 @@
+type Query {
+    getBooks(first: Int = 3): [Book]
+}
+
+type Author {
+    id: Int
+    name: String
+    books(first: Int = 2): [Book]
+}
+
+type Book {
+    id: Int
+    title: String
+    author_id: Int
+    author: Author
+    reviews(first: Int = 2): [Review]
+}
+
+type Review {
+    id: Int
+    content: String
+    book: Book
+}

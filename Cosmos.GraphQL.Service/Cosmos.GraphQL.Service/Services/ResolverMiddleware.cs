@@ -41,22 +41,36 @@ namespace Cosmos.GraphQL.Services
 
                     context.Result = await _mutationEngine.ExecuteAsync(context.Selection.Field.Name.Value, parameters);
                 }
-
-                if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
+                else if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
                 {
                     IDictionary<string, object> parameters = GetParametersFromContext(context);
 
                     if (context.Selection.Type.IsListType())
                     {
-                        context.Result = await _queryEngine.ExecuteListAsync(context.Selection.Field.Name.Value, parameters);
+                        context.Result = await _queryEngine.ExecuteListAsync(context, parameters);
                     }
                     else
                     {
-                        context.Result = await _queryEngine.ExecuteAsync(context.Selection.Field.Name.Value, parameters);
+                        context.Result = await _queryEngine.ExecuteAsync(context, parameters);
                     }
                 }
 
-                if (isInnerObject(context))
+                else if (context.Selection.Field.Type.IsLeafType())
+                {
+                    JsonDocument result = context.Parent<JsonDocument>();
+                    JsonElement jsonElement;
+                    bool hasProperty =
+                        result.RootElement.TryGetProperty(context.Selection.Field.Name.Value, out jsonElement);
+                    if (result != null && hasProperty)
+                    {
+                        context.Result = jsonElement.ToString();
+                    }
+                    else
+                    {
+                        context.Result = null;
+                    }
+                }
+                else if (isInnerObject(context))
                 {
                     JsonDocument result = context.Parent<JsonDocument>();
 
@@ -73,22 +87,24 @@ namespace Cosmos.GraphQL.Services
                         context.Result = null;
                     }
                 }
-
-                if (context.Selection.Field.Type.IsLeafType())
+                else if (context.Selection.Type.IsListType())
                 {
                     JsonDocument result = context.Parent<JsonDocument>();
+
                     JsonElement jsonElement;
                     bool hasProperty =
                         result.RootElement.TryGetProperty(context.Selection.Field.Name.Value, out jsonElement);
                     if (result != null && hasProperty)
                     {
-                        context.Result = jsonElement.ToString();
+                        //TODO: Try to avoid additional deserialization/serialization here.
+                        context.Result = JsonSerializer.Deserialize<List<JsonDocument>>(jsonElement.ToString());
                     }
                     else
                     {
                         context.Result = null;
                     }
                 }
+
 
                 await _next(context);
             }

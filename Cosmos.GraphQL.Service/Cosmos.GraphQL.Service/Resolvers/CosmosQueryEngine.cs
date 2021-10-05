@@ -5,6 +5,7 @@ using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Service.Resolvers;
 using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json.Linq;
+using HotChocolate.Resolvers;
 
 namespace Cosmos.GraphQL.Services
 {
@@ -36,13 +37,14 @@ namespace Cosmos.GraphQL.Services
         // <summary>
         // ExecuteAsync the given named graphql query on the backend.
         // </summary>
-        public async Task<JsonDocument> ExecuteAsync(string graphQLQueryName, IDictionary<string, object> parameters)
+        public async Task<JsonDocument> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
+            string graphQLQueryName = context.Selection.Field.Name.Value;
             var resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
             var container = this._clientProvider.GetClient().GetDatabase(resolver.databaseName).GetContainer(resolver.containerName);
             var querySpec = new QueryDefinition(resolver.parametrizedQuery);
@@ -70,13 +72,14 @@ namespace Cosmos.GraphQL.Services
             return jsonDocument;
         }
 
-        public async Task<IEnumerable<JsonDocument>> ExecuteListAsync(string graphQLQueryName, IDictionary<string, object> parameters)
+        public async Task<IEnumerable<JsonDocument>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
+            string graphQLQueryName = context.Selection.Field.Name.Value;
             var resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
             var container = this._clientProvider.GetClient().GetDatabase(resolver.databaseName).GetContainer(resolver.containerName);
             var querySpec = new QueryDefinition(resolver.parametrizedQuery);

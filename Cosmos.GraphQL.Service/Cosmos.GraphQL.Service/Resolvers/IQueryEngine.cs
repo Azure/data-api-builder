@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Models;
+using HotChocolate.Resolvers;
 
 namespace Cosmos.GraphQL.Services
 {
@@ -18,11 +19,11 @@ namespace Cosmos.GraphQL.Services
         // <summary>
         // Executes the given named graphql query on the backend and expecting a single Json back.
         // </summary>
-        public Task<JsonDocument> ExecuteAsync(string graphQLQueryName, IDictionary<string, object> parameters);
+        public Task<JsonDocument> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters);
 
         // <summary>
         // Executes the given named graphql query on the backend and expecting a list of Jsons back.
         // </summary>
-        public Task<IEnumerable<JsonDocument>> ExecuteListAsync(string graphQLQueryName, IDictionary<string, object> parameters);
+        public Task<IEnumerable<JsonDocument>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters);
     }
 }

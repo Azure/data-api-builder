@@ -9,6 +9,7 @@ namespace Cosmos.GraphQL.Services
         string GetGraphQLSchema();
         MutationResolver GetMutationResolver(string name);
         GraphQLQueryResolver GetQueryResolver(string name);
+        TypeMetadata GetTypeMetadata(string name);
         void StoreMutationResolver(MutationResolver mutationResolver);
         void StoreQueryResolver(GraphQLQueryResolver mutationResolver);
     }

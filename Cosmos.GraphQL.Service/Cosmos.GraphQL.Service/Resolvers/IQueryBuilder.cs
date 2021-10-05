@@ -12,6 +12,8 @@ namespace Cosmos.GraphQL.Service.Resolvers
         // Modifies the inputQuery in such a way that it returns the results as
         // a JSON string.
         // </summary>
-        public string Build(string inputQuery, bool isList);
+        public string QuoteIdentifier(string ident);
+        public string WrapSubqueryColumn(string column, SqlQueryStructure subquery);
+        public string Build(SqlQueryStructure structure);
     }
 }

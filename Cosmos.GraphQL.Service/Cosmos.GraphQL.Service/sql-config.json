@@ -1,0 +1,42 @@
+{
+  "GraphQLSchema": "",
+  "GraphQLSchemaFile": "books.gql",
+  "QueryResolvers": [
+    {
+      "id": "getBooks"
+    }
+  ],
+  "TypeMetadata": {
+    "Author": {
+      "Table": "authors",
+      "JoinMappings": {
+        "books": {
+          "LeftColumn": "id",
+          "RightColumn": "author_id"
+        }
+      }
+    },
+    "Book": {
+      "Table": "books",
+      "JoinMappings": {
+        "author": {
+          "LeftColumn": "author_id",
+          "RightColumn": "id"
+        },
+        "reviews": {
+          "LeftColumn": "id",
+          "RightColumn": "book_id"
+        }
+      }
+    },
+    "Review": {
+      "Table": "reviews",
+      "JoinMappings": {
+        "reviews": {
+          "LeftColumn": "book_id",
+          "RightColumn": "id"
+        }
+      }
+    }
+  }
+}

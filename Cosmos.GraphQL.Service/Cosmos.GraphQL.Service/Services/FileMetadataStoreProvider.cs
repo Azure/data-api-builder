@@ -21,8 +21,9 @@ namespace Cosmos.GraphQL.Service
         /// Location of the graphQL schema file
         /// </summary>
         public string GraphQLSchemaFile { get; set; }
-        public List<GraphQLQueryResolver> QueryResolvers { get; set; }
-        public List<MutationResolver> MutationResolvers { get; set; }
+        public List<GraphQLQueryResolver> QueryResolvers { get; set; } = new();
+        public List<MutationResolver> MutationResolvers { get; set; } = new();
+        public Dictionary<string, TypeMetadata> TypeMetadata { get; set; } = new();
     }
 
     /// <summary>
@@ -60,9 +61,6 @@ namespace Cosmos.GraphQL.Service
             {
                 _config.GraphQLSchema = File.ReadAllText(_config.GraphQLSchemaFile ?? "schema.gql");
             }
-
-            _config.QueryResolvers ??= new();
-            _config.MutationResolvers ??= new();
 
             _queryResolvers = new();
             foreach (var resolver in _config.QueryResolvers)
@@ -104,6 +102,16 @@ namespace Cosmos.GraphQL.Service
             }
 
             return resolver;
+        }
+
+        public TypeMetadata GetTypeMetadata(string name)
+        {
+            if (!_config.TypeMetadata.TryGetValue(name, out TypeMetadata metadata))
+            {
+                throw new KeyNotFoundException($"TypeMetadata for {name} does not exist.");
+            }
+
+            return metadata;
         }
 
         public void StoreGraphQLSchema(string schema)

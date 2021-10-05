@@ -15,6 +15,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- extends watching group to include .json and .gql files -->
+    <Watch Include="**\*.json;**\*.gql" Exclude="obj\**\*;bin\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
 
     <PackageReference Include="HotChocolate" Version="12.0.1" />
     <PackageReference Include="HotChocolate.AspNetCore" Version="12.0.1" />

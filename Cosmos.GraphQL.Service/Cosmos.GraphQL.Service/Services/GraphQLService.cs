@@ -43,7 +43,7 @@ namespace Cosmos.GraphQL.Services
 
         internal async Task<string> ExecuteAsync(String requestBody)
         {
-            if (this.Executor == null)
+            if (_executor == null)
             {
                 return "{\"error\": \"Schema must be defined first\" }";
             }

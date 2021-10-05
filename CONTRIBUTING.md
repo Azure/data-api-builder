@@ -1,7 +1,7 @@
 
 ## Codestyle
 
-We use `dotnet format` to enforce code conventions. It is run in automatically
+We use `dotnet format` to enforce code conventions. It is run automatically
 in CI, so if you forget your PR cannot be merged. You can copy paste the
 following commands to install a git pre-commit hook. This will cause a commit to
 fail if you forgot to run `dotnet format`. If you have run on save enabled in

@@ -11,7 +11,7 @@ namespace Cosmos.GraphQL.Services
 {
     public class GraphQLService
     {
-        private ISchema _schema;
+        private IRequestExecutor _executor;
         private readonly IQueryEngine _queryEngine;
         private readonly IMutationEngine _mutationEngine;
         private IMetadataStoreProvider _metadataStoreProvider;
@@ -29,21 +29,21 @@ namespace Cosmos.GraphQL.Services
 
         public void parseAsync(String data)
         {
-            ISchema schema = SchemaBuilder.New()
+            _executor = SchemaBuilder.New()
                 .AddDocumentFromString(data)
                 .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine))
-                .Create();
-            _schema = schema;
+                .Create()
+                .MakeExecutable();
         }
 
-        public ISchema Schema
+        public IRequestExecutor Executor
         {
-            get { return _schema; }
+            get { return _executor; }
         }
 
         internal async Task<string> ExecuteAsync(String requestBody)
         {
-            if (this.Schema == null)
+            if (_executor == null)
             {
                 return "{\"error\": \"Schema must be defined first\" }";
             }
@@ -52,9 +52,8 @@ namespace Cosmos.GraphQL.Services
                 .SetQuery(req.RootElement.GetProperty("query").GetString())
                 .Create();
 
-            IRequestExecutor executor = Schema.MakeExecutable();
             IExecutionResult result =
-                await executor.ExecuteAsync(queryRequest);
+                await Executor.ExecuteAsync(queryRequest);
 
             return result.ToJson();
         }

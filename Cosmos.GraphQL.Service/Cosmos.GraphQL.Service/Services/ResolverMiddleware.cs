@@ -95,15 +95,43 @@ namespace Cosmos.GraphQL.Services
             return context.Selection.Field.Type.IsObjectType() && context.Parent<JsonDocument>() != default;
         }
 
+        static private object ArgumentValue(IValueNode value)
+        {
+            if (value.Kind == SyntaxKind.IntValue)
+            {
+                var intValue = (IntValueNode)value;
+                return intValue.ToInt64();
+            }
+            else
+            {
+                return value.Value;
+            }
+        }
+
         private IDictionary<string, object> GetParametersFromContext(IMiddlewareContext context)
         {
-            IReadOnlyList<ArgumentNode> arguments = context.Selection.SyntaxNode.Arguments;
             IDictionary<string, object> parameters = new Dictionary<string, object>();
-            IEnumerator<ArgumentNode> enumerator = arguments.GetEnumerator();
-            while (enumerator.MoveNext())
+
+            // Fill the parameters dictionary with the default argument values
+            IFieldCollection<IInputField> availableArguments = context.Selection.Field.Arguments;
+            foreach (var argument in availableArguments)
             {
-                ArgumentNode current = enumerator.Current;
-                parameters.Add(current.Name.Value, current.Value.Value);
+                if (argument.DefaultValue == null)
+                {
+                    parameters.Add(argument.Name.Value, null);
+                }
+                else
+                {
+                    parameters.Add(argument.Name.Value, ArgumentValue(argument.DefaultValue));
+                }
+            }
+
+
+            // Overwrite the default values with the passed in arguments
+            IReadOnlyList<ArgumentNode> passedArguments = context.Selection.SyntaxNode.Arguments;
+            foreach (var argument in passedArguments)
+            {
+                parameters[argument.Name.Value] = ArgumentValue(argument.Value);
             }
 
             return parameters;

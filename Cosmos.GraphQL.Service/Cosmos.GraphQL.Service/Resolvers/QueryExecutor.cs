@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -40,7 +41,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
                 {
                     var parameter = cmd.CreateParameter();
                     parameter.ParameterName = "@" + parameterEntry.Key;
-                    parameter.Value = parameterEntry.Value;
+                    parameter.Value = parameterEntry.Value ?? DBNull.Value;
                     cmd.Parameters.Add(parameter);
                 }
             }

@@ -1,7 +1,7 @@
 type Query {
     characterList: [Character]
     characterById (id : ID!): Character
-    planetById (id: ID!): Planet
+    planetById (id: ID! = 1): Planet
     planetList: [Planet]
     }
 

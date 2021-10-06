@@ -11,6 +11,7 @@
       "name": ".NET Core Launch (web)",
       "type": "coreclr",
       "request": "launch",
+      "justMyCode": false,
       "preLaunchTask": "build",
       // If you have changed target frameworks, make sure to update the program path.
       "program": "${workspaceFolder}/bin/Debug/net5.0/Cosmos.GraphQL.Service.dll",
@@ -37,6 +38,7 @@
       "name": ".NET Core Launch (PostgreSql)",
       "type": "coreclr",
       "request": "launch",
+      "justMyCode": false,
       "preLaunchTask": "build",
       // If you have changed target frameworks, make sure to update the program path.
       "program": "${workspaceFolder}/bin/Debug/net5.0/Cosmos.GraphQL.Service.dll",
@@ -59,7 +61,8 @@
     {
       "name": ".NET Core Attach",
       "type": "coreclr",
-      "request": "attach"
+      "request": "attach",
+      "justMyCode": false
     }
   ]
 }

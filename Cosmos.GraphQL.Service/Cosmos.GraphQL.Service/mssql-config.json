@@ -1,6 +1,6 @@
 {
   "GraphQLSchema": "",
-  "Resolvers": [
+  "QueryResolvers": [
     {
       "id": "characterById",
       "parametrizedQuery": "SELECT id, name, type, homePlanet, primaryFunction FROM character WHERE id = @id"

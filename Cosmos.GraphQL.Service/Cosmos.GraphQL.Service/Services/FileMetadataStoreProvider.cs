@@ -9,20 +9,38 @@ using Microsoft.Extensions.Options;
 
 namespace Cosmos.GraphQL.Service
 {
+
+    public class ResolverConfig
+    {
+        /// <summary>
+        /// String Representation of graphQL schema, non escaped.
+        /// </summary>
+        public string GraphQLSchema { get; set; }
+
+        /// <summary>
+        /// Location of the graphQL schema file
+        /// </summary>
+        public string GraphQLSchemaFile { get; set; }
+        public List<GraphQLQueryResolver> QueryResolvers { get; set; }
+        public List<MutationResolver> MutationResolvers { get; set; }
+    }
+
     /// <summary>
     /// Reads GraphQL Schema and resolver config from text files to make available to GraphQL service.
     /// </summary>
     public class FileMetadataStoreProvider : IMetadataStoreProvider
     {
-        /// <summary>
-        /// String Representation of graphQL schema, non escaped.
-        /// </summary>
-        private string _graphQLSchema;
+        private ResolverConfig _config;
 
         /// <summary>
-        /// Stores resolvers contained in configuration file.
+        /// Stores query resolvers contained in configuration file.
         /// </summary>
-        private IDictionary<string, string> _resolvers;
+        private Dictionary<string, GraphQLQueryResolver> _queryResolvers;
+
+        /// <summary>
+        /// Stores mutation resolvers contained in configuration file.
+        /// </summary>
+        private Dictionary<string, MutationResolver> _mutationResolvers;
 
         private readonly DataGatewayConfig _dataGatewayConfig;
 
@@ -36,29 +54,27 @@ namespace Cosmos.GraphQL.Service
         {
             string jsonString = File.ReadAllText(
                     _dataGatewayConfig.ResolverConfigFile);
+            _config = JsonSerializer.Deserialize<ResolverConfig>(jsonString);
 
-            using (JsonDocument document = JsonDocument.Parse(jsonString))
+            if (string.IsNullOrEmpty(_config.GraphQLSchema))
             {
-                JsonElement root = document.RootElement;
-                JsonElement schema = root.GetProperty("GraphQLSchema");
-
-                if (string.IsNullOrEmpty(schema.GetString()))
-                {
-                    _graphQLSchema = File.ReadAllText("schema.gql");
-                }
-                else
-                {
-                    _graphQLSchema = schema.GetString();
-                }
-
-                JsonElement resolversListJson = root.GetProperty("Resolvers");
-                _resolvers = new Dictionary<string, string>();
-                foreach (JsonElement resolver in resolversListJson.EnumerateArray())
-                {
-                    _resolvers.Add(resolver.GetProperty("id").ToString(), resolver.ToString());
-                }
+                _config.GraphQLSchema = File.ReadAllText(_config.GraphQLSchemaFile ?? "schema.gql");
             }
 
+            _config.QueryResolvers ??= new();
+            _config.MutationResolvers ??= new();
+
+            _queryResolvers = new();
+            foreach (var resolver in _config.QueryResolvers)
+            {
+                _queryResolvers.Add(resolver.id, resolver);
+            }
+
+            _mutationResolvers = new();
+            foreach (var resolver in _config.MutationResolvers)
+            {
+                _mutationResolvers.Add(resolver.id, resolver);
+            }
         }
         /// <summary>
         /// Reads generated JSON configuration file with GraphQL Schema
@@ -66,27 +82,28 @@ namespace Cosmos.GraphQL.Service
         /// <returns>GraphQL schema as string </returns>
         public string GetGraphQLSchema()
         {
-            return _graphQLSchema;
+            return _config.GraphQLSchema;
         }
 
         public MutationResolver GetMutationResolver(string name)
         {
-            if (!_resolvers.TryGetValue(name, out string resolver))
+            if (!_mutationResolvers.TryGetValue(name, out MutationResolver resolver))
             {
                 throw new KeyNotFoundException("Mutation Resolver does not exist.");
             }
 
-            return JsonSerializer.Deserialize<MutationResolver>(resolver);
+            return resolver;
         }
+
 
         public GraphQLQueryResolver GetQueryResolver(string name)
         {
-            if (!_resolvers.TryGetValue(name, out string resolver))
+            if (!_queryResolvers.TryGetValue(name, out GraphQLQueryResolver resolver))
             {
                 throw new KeyNotFoundException("Query Resolver does not exist.");
             }
 
-            return JsonSerializer.Deserialize<GraphQLQueryResolver>(resolver);
+            return resolver;
         }
 
         public void StoreGraphQLSchema(string schema)

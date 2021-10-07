@@ -18,11 +18,11 @@ namespace Cosmos.GraphQL.Services
         // <summary>
         // Executes the given named graphql query on the backend and expecting a single Json back.
         // </summary>
-        public Task<JsonDocument> ExecuteAsync(string graphQLQueryName, IDictionary<string, object> parameters);
+        public Task<JsonDocument> ExecuteAsync(string graphQLQueryName, IDictionary<string, object> parameters, bool isContinuationQuery = false);
 
         // <summary>
         // Executes the given named graphql query on the backend and expecting a list of Jsons back.
         // </summary>
-        public Task<IEnumerable<JsonDocument>> ExecuteListAsync(string graphQLQueryName, IDictionary<string, object> parameters);
+        public Task<IEnumerable<JsonDocument>> ExecuteListAsync(string graphQLQueryName, IDictionary<string, object> parameters, bool isContinuationQuery = false);
     }
 }

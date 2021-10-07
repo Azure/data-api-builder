@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -5,6 +6,8 @@ using Cosmos.GraphQL.Service.Resolvers;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Cosmos.GraphQL.Services
 {
@@ -42,55 +45,96 @@ namespace Cosmos.GraphQL.Services
             if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
             {
                 IDictionary<string, object> parameters = GetParametersFromContext(context);
+                string queryId = context.Selection.Field.Name.Value;
+                bool isContinuationQuery = IsContinuationQuery(parameters);
 
                 if (context.Selection.Type.IsListType())
                 {
-                    context.Result = await _queryEngine.ExecuteListAsync(context.Selection.Field.Name.Value, parameters);
+                    context.Result = await _queryEngine.ExecuteListAsync(queryId, parameters, isContinuationQuery);
                 }
                 else
                 {
-                    context.Result = await _queryEngine.ExecuteAsync(context.Selection.Field.Name.Value, parameters);
+                    context.Result = await _queryEngine.ExecuteAsync(context.Selection.Field.Name.Value, parameters, isContinuationQuery);
                 }
             }
-
-            if (isInnerObject(context))
+            else
             {
-                JsonDocument result = context.Parent<JsonDocument>();
 
-                JsonElement jsonElement;
-                bool hasProperty =
-                    result.RootElement.TryGetProperty(context.Selection.Field.Name.Value, out jsonElement);
-                if (result != null && hasProperty)
+                if (IsInnerObject(context))
                 {
-                    //TODO: Try to avoid additional deserialization/serialization here.
-                    context.Result = JsonDocument.Parse(jsonElement.ToString());
-                }
-                else
-                {
-                    context.Result = null;
-                }
-            }
+                    JsonDocument result = context.Parent<JsonDocument>();
+                    //if (result == default && context.Result != default)
+                    //{
+                    //    result = (JsonDocument)context.Result;
+                    //}
 
-            if (context.Selection.Field.Type.IsLeafType())
-            {
-                JsonDocument result = context.Parent<JsonDocument>();
-                JsonElement jsonElement;
-                bool hasProperty =
-                    result.RootElement.TryGetProperty(context.Selection.Field.Name.Value, out jsonElement);
-                if (result != null && hasProperty)
+                    JsonElement jsonElement;
+                    bool hasProperty =
+                        result.RootElement.TryGetProperty(context.Selection.Field.Name.Value, out jsonElement);
+                    if (result != null && hasProperty)
+                    {
+                        //TODO: Try to avoid additional deserialization/serialization here.
+                        context.Result = JsonDocument.Parse(jsonElement.ToString());
+                    }
+                    else
+                    {
+                        context.Result = null;
+                    }
+                }else if (context.Selection.Field.Type.IsListType())
                 {
-                    context.Result = jsonElement.ToString();
+                    JsonDocument result = context.Parent<JsonDocument>();
+                    JsonElement jsonElement;
+                    bool hasProperty =
+                        result.RootElement.TryGetProperty(context.Selection.Field.Name.Value, out jsonElement);
+                    if (result != null && hasProperty)
+                    {
+                        //TODO: Ugly logic warning!!!! System.Text.Json seem to to have very limited capabilities
+                        IEnumerable<JObject> resultArray = JsonConvert.DeserializeObject<JObject[]>(jsonElement.ToString());
+                        List<JsonDocument> resultList = new();
+                        IEnumerator<JObject> enumerator = resultArray.GetEnumerator();
+                        while (enumerator.MoveNext())
+                        {
+                            resultList.Add(JsonDocument.Parse(enumerator.Current.ToString()));
+                        }
+                        context.Result = resultList;
+                    }
+                    else
+                    {
+                        context.Result = null;
+                    }
+
                 }
-                else
+
+                if (context.Selection.Field.Type.IsLeafType())
                 {
-                    context.Result = null;
+                    JsonDocument result = context.Parent<JsonDocument>();
+                    JsonElement jsonElement;
+                    bool hasProperty =
+                        result.RootElement.TryGetProperty(context.Selection.Field.Name.Value, out jsonElement);
+                    if (result != null && hasProperty)
+                    {
+                        context.Result = jsonElement.ToString();
+                    }
+                    else
+                    {
+                        context.Result = null;
+                    }
                 }
             }
 
             await _next(context);
         }
 
-        private bool isInnerObject(IMiddlewareContext context)
+        private static bool IsContinuationQuery(IDictionary<string, object> parameters)
+        {
+           if (parameters.ContainsKey("after"))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        private static bool IsInnerObject(IMiddlewareContext context)
         {
             return context.Selection.Field.Type.IsObjectType() && context.Parent<JsonDocument>() != default;
         }

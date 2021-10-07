@@ -39,7 +39,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
         // <summary>
         // ExecuteAsync the given named graphql query on the backend.
         // </summary>
-        public async Task<JsonDocument> ExecuteAsync(string graphQLQueryName, IDictionary<string, object> parameters)
+        public async Task<JsonDocument> ExecuteAsync(string graphQLQueryName, IDictionary<string, object> parameters, bool isContinuationQuery)
         {
             // TODO: add support for nesting
             // TODO: add support for join query against another table
@@ -71,7 +71,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
         // <summary>
         // Executes the given named graphql query on the backend and expecting a list of Jsons back.
         // </summary>
-        public async Task<IEnumerable<JsonDocument>> ExecuteListAsync(string graphQLQueryName, IDictionary<string, object> parameters)
+        public async Task<IEnumerable<JsonDocument>> ExecuteListAsync(string graphQLQueryName, IDictionary<string, object> parameters, bool isContinuationQuery)
         {
             // TODO: add support for nesting
             // TODO: add support for join query against another container

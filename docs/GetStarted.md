@@ -8,7 +8,7 @@
 Ensure you have docker running, with Linux containers chosen.
 Navigate to the root folder.
 
-On Window you need to do this in a WSL terminal and run
+On Windows you need to do this in a WSL terminal and run
 
 ```bash
 docker build -t multiverse-graphql -f Dockerfile .
@@ -25,7 +25,7 @@ docker run -d -p 5000:5000 multiverse-graphql
 
 ## Deploy Container
 
-If you are planning to deploy the container on Azure App service or elsewhere, you should the image to an ACR.
+If you are planning to deploy the container on Azure App service or elsewhere, you should deploy the image to an ACR.
 In the following example we are using `multiverseacr.azurecr.io/multiverse-graphql` ACR, but you can use any other ACR to which have access to.
 
 ### Push Image

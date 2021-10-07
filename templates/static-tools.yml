@@ -30,7 +30,7 @@ jobs:
     inputs:
       toolMajorVersion: V2
       scanFolder: $(Build.SourcesDirectory)
-      suppressionsFile: CredScanSuppressions.json
+#      suppressionsFile: CredScanSuppressions.json
       debugMode: false
       verboseOutput: false
 

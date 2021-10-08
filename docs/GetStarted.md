@@ -11,6 +11,11 @@ Navigate to the root folder.
 On Windows you need to do this in a WSL terminal and run
 
 ```bash
+dotnet build Cosmos.GraphQL.Service/Cosmos.GraphQL.Service.sln
+```
+
+build a docker image
+```bash
 docker build -t multiverse-datagateway -f Dockerfile .
 ```
 

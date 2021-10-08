@@ -11,7 +11,7 @@ Navigate to the root folder.
 On Windows you need to do this in a WSL terminal and run
 
 ```bash
-docker build -t multiverse-graphql -f Dockerfile .
+docker build -t multiverse-datagateway -f Dockerfile .
 ```
 
 
@@ -20,7 +20,7 @@ docker build -t multiverse-graphql -f Dockerfile .
 Create and run container accessible on http://localhost:5000/ by running
 
 ```bash
-docker run -d -p 5000:5000 multiverse-graphql
+docker run -d -p 5000:5000 multiverse-datagateway
 ```
 
 ## Deploy Container
@@ -36,7 +36,7 @@ To push the built image to the multiverse ACR, do the following
 Tag the image correctly
 
 ```bash
-docker tag multiverse-graphql multiverseacr.azurecr.io/multiverse-graphql
+docker tag multiverse-datagateway multiverseacr.azurecr.io/multiverse-datagateway
 ```
 
 
@@ -47,5 +47,5 @@ docker login multiverseacr.azurecr.io
 
 Push the retagged image
 ```bash
-docker push multiverseacr.azurecr.io/multiverse-graphql
+docker push multiverseacr.azurecr.io/multiverse-datagateway
 ``

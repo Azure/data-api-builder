@@ -39,7 +39,7 @@ namespace Cosmos.GraphQL.Service.configurations
         public DatabaseType DatabaseType { get; set; }
 
         // This should be renamed to databaseConnection but need to coordiate with moderakh on CI configuration.
-        public DatabaseConnectionConfig Credentials { get; set; }
+        public DatabaseConnectionConfig DatabaseConnection { get; set; }
         public string ResolverConfigFile { get; set; } = "config.json";
     }
 
@@ -67,9 +67,9 @@ namespace Cosmos.GraphQL.Service.configurations
     {
         public void PostConfigure(string name, DataGatewayConfig options)
         {
-            bool connStringProvided = !string.IsNullOrEmpty(options.Credentials.ConnectionString);
-            bool serverProvided = !string.IsNullOrEmpty(options.Credentials.Server);
-            bool dbNameProvided = !string.IsNullOrEmpty(options.Credentials.Database);
+            bool connStringProvided = !string.IsNullOrEmpty(options.DatabaseConnection.ConnectionString);
+            bool serverProvided = !string.IsNullOrEmpty(options.DatabaseConnection.Server);
+            bool dbNameProvided = !string.IsNullOrEmpty(options.DatabaseConnection.Database);
 
             if (!connStringProvided && !serverProvided && !dbNameProvided)
             {
@@ -80,7 +80,7 @@ namespace Cosmos.GraphQL.Service.configurations
                 throw new NotSupportedException("Either Server and DatabaseName or ConnectionString need to be provided, not both");
             }
 
-            if (string.IsNullOrWhiteSpace(options.Credentials.ConnectionString))
+            if (string.IsNullOrWhiteSpace(options.DatabaseConnection.ConnectionString))
             {
                 if ((!serverProvided && dbNameProvided) || (serverProvided && !dbNameProvided))
                 {
@@ -89,12 +89,12 @@ namespace Cosmos.GraphQL.Service.configurations
 
                 SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder
                 {
-                    InitialCatalog = options.Credentials.Database,
-                    DataSource = options.Credentials.Server,
+                    InitialCatalog = options.DatabaseConnection.Database,
+                    DataSource = options.DatabaseConnection.Server,
                 };
 
                 builder.IntegratedSecurity = true;
-                options.Credentials.ConnectionString = builder.ToString();
+                options.DatabaseConnection.ConnectionString = builder.ToString();
             }
         }
     }
@@ -108,7 +108,7 @@ namespace Cosmos.GraphQL.Service.configurations
     {
         public ValidateOptionsResult Validate(string name, DataGatewayConfig options)
         {
-            return string.IsNullOrWhiteSpace(options.Credentials.ConnectionString)
+            return string.IsNullOrWhiteSpace(options.DatabaseConnection.ConnectionString)
                 ? ValidateOptionsResult.Fail("Invalid connection string.")
                 : ValidateOptionsResult.Success;
         }

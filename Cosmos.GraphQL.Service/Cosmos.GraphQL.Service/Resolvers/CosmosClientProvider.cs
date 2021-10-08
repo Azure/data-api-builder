@@ -11,7 +11,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
 
         public CosmosClientProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
         {
-            _cosmosClient = new CosmosClientBuilder(dataGatewayConfig.Value.Credentials.ConnectionString).WithContentResponseOnWrite(true).Build();
+            _cosmosClient = new CosmosClientBuilder(dataGatewayConfig.Value.DatabaseConnection.ConnectionString).WithContentResponseOnWrite(true).Build();
         }
 
         public CosmosClient GetClient()

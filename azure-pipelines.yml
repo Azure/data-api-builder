@@ -12,3 +12,4 @@ jobs:
   parameters:
     BuildConfiguration: Release
     VmImage: $(VmImage)
+

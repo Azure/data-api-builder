@@ -43,7 +43,6 @@ jobs:
   # AntiMalware scan
   - task: securedevelopmentteam.vss-secure-development-tools.build-task-antimalware.AntiMalware@3
     displayName: 'AntiMalware'
-#    continueOnError: true # signature refresh failing resulting in tasks failures
     inputs:
       EnableServices: true
       SignatureFreshness: OneDay

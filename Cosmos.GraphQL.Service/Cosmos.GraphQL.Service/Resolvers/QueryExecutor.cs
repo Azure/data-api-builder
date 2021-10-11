@@ -30,7 +30,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
         public async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object> parameters)
         {
             var conn = new ConnectionT();
-            conn.ConnectionString = _datagatewayConfig.Credentials.ConnectionString;
+            conn.ConnectionString = _datagatewayConfig.DatabaseConnection.ConnectionString;
             await conn.OpenAsync();
             DbCommand cmd = conn.CreateCommand();
             cmd.CommandText = sqltext;

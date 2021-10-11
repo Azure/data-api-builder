@@ -61,7 +61,7 @@ namespace Cosmos.GraphQL.Service.Tests
                 .AddJsonFile("appsettings.Test.json")
                 .Build();
 
-            config.Bind("DatabaseConnection", datagatewayConfig);
+            config.Bind(nameof(DataGatewayConfig), datagatewayConfig);
 
             return Options.Create(datagatewayConfig);
         }

@@ -26,14 +26,13 @@ namespace Cosmos.GraphQL.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.Configure<DataGatewayConfig>(Configuration.GetSection("DatabaseConnection"));
+            services.Configure<DataGatewayConfig>(Configuration.GetSection(nameof(DataGatewayConfig)));
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<DataGatewayConfig>, DataGatewayConfigPostConfiguration>());
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<DataGatewayConfig>, DataGatewayConfigValidation>());
 
             // Read configuration and use it locally.
             DataGatewayConfig dataGatewayConfig = new DataGatewayConfig();
-            // Need to rename DatabaseConnection to DataGatewayConfig in the CI pipeline.
-            Configuration.Bind("DatabaseConnection", dataGatewayConfig);
+            Configuration.Bind(nameof(DataGatewayConfig), dataGatewayConfig);
 
             switch (dataGatewayConfig.DatabaseType)
             {

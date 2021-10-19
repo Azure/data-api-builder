@@ -49,3 +49,19 @@ steps:
     command: test
     projects: '**/*Tests/*.csproj'
     arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql" --configuration $(buildConfiguration)'
+
+- task: PowerShell@2
+  inputs:
+    targetType: 'inline'
+    script: |
+      Write-Host "Setting up the date and time as a build variable for the Docker tag"
+      $date=$(Get-Date -format yyyyMMdd-HHmmss)
+      Write-Host "##vso[task.setvariable variable=BuildDate]$date"
+
+- task: Docker@2
+  inputs:
+    containerRegistry: 'CosmosDB-GraphQL-TempDockerHub'
+    repository: 'matrembl/graphql'
+    command: 'buildAndPush'
+    Dockerfile: '**/Dockerfile'
+    tags: '$(BuildDate)'

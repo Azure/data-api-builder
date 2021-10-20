@@ -42,7 +42,7 @@ namespace Cosmos.GraphQL.Service.Tests.Sql
 
             // Setup Database Components
             //
-            _queryExecutor = new QueryExecutor<SqlConnection>(TestHelper.DataGatewayConfig);
+            _queryExecutor = new QueryExecutor<SqlConnection>(SqlTestHelper.DataGatewayConfig);
             _queryBuilder = new MsSqlQueryBuilder();
             _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
 

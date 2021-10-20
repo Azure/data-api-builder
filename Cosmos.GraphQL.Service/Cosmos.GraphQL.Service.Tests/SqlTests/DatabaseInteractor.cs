@@ -1,6 +1,7 @@
 using Cosmos.GraphQL.Service.Resolvers;
 
-namespace Cosmos.GraphQL.Service.Tests.Sql {
+namespace Cosmos.GraphQL.Service.Tests.Sql
+{
     /// <summary>
     /// Class that provides functions to interact with a database.
     /// </summary>
@@ -18,7 +19,7 @@ namespace Cosmos.GraphQL.Service.Tests.Sql {
         /// </summary>
         public void InsertData(string tableName, string values)
         {
-            _ = QueryExecutor.ExecuteQueryAsync($"INSERT INTO {tableName} VALUES({values});",null).Result;
+            _ = QueryExecutor.ExecuteQueryAsync($"INSERT INTO {tableName} VALUES({values});", null).Result;
         }
 
         /// <summary>
@@ -34,7 +35,7 @@ namespace Cosmos.GraphQL.Service.Tests.Sql {
         /// </summary>
         public void CreateDatabase(string databaseName)
         {
-            _ = QueryExecutor.ExecuteQueryAsync($"CREATE DATABASE {databaseName};",null).Result;
+            _ = QueryExecutor.ExecuteQueryAsync($"CREATE DATABASE {databaseName};", null).Result;
         }
 
         /// <summary>

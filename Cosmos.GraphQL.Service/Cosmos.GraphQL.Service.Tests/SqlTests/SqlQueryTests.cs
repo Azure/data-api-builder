@@ -14,7 +14,7 @@ namespace Cosmos.GraphQL.Service.Tests.Sql
             string graphQLQuery = "{\"query\":\"{\\n characterById(id:2){\\n name\\n primaryFunction\\n}\\n}\\n\"}";
 
             _graphQLController.ControllerContext.HttpContext = GetHttpContextWithBody(graphQLQuery);
-            JsonDocument graphQLResult = await _graphQLController.PostAsync();        
+            JsonDocument graphQLResult = await _graphQLController.PostAsync();
             JsonElement graphQLResultData = graphQLResult.RootElement.GetProperty("data").GetProperty("characterById");
 
             JsonDocument sqlResult = JsonDocument.Parse("{ }");

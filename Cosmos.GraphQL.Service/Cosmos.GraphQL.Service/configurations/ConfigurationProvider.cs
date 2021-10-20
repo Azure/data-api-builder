@@ -73,18 +73,18 @@ namespace Cosmos.GraphQL.Service.configurations
 
             if (!connStringProvided && !serverProvided && !dbNameProvided)
             {
-                throw new NotSupportedException("Either Server and DatabaseName or ConnectionString need to be provided");
+                throw new NotSupportedException("Either Server and Database or ConnectionString need to be provided");
             }
             else if (connStringProvided && (serverProvided || dbNameProvided))
             {
-                throw new NotSupportedException("Either Server and DatabaseName or ConnectionString need to be provided, not both");
+                throw new NotSupportedException("Either Server and Database or ConnectionString need to be provided, not both");
             }
 
             if (string.IsNullOrWhiteSpace(options.DatabaseConnection.ConnectionString))
             {
                 if ((!serverProvided && dbNameProvided) || (serverProvided && !dbNameProvided))
                 {
-                    throw new NotSupportedException("Both Server and DatabaseName need to be provided");
+                    throw new NotSupportedException("Both Server and Database need to be provided");
                 }
 
                 SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder

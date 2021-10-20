@@ -1,8 +1,4 @@
-using Cosmos.GraphQL.Service.configurations;
 using Cosmos.GraphQL.Service.Resolvers;
-using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Options;
-using System.Collections.Generic;
 
 namespace Cosmos.GraphQL.Service.Tests.Sql {
     /// <summary>

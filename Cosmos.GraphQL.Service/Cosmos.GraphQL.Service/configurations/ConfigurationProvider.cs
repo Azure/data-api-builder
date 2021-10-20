@@ -69,20 +69,20 @@ namespace Cosmos.GraphQL.Service.configurations
         {
             bool connStringProvided = !string.IsNullOrEmpty(options.DatabaseConnection.ConnectionString);
             bool serverProvided = !string.IsNullOrEmpty(options.DatabaseConnection.Server);
-            bool dbNameProvided = !string.IsNullOrEmpty(options.DatabaseConnection.Database);
+            bool dbProvided = !string.IsNullOrEmpty(options.DatabaseConnection.Database);
 
-            if (!connStringProvided && !serverProvided && !dbNameProvided)
+            if (!connStringProvided && !serverProvided && !dbProvided)
             {
                 throw new NotSupportedException("Either Server and Database or ConnectionString need to be provided");
             }
-            else if (connStringProvided && (serverProvided || dbNameProvided))
+            else if (connStringProvided && (serverProvided || dbProvided))
             {
                 throw new NotSupportedException("Either Server and Database or ConnectionString need to be provided, not both");
             }
 
             if (string.IsNullOrWhiteSpace(options.DatabaseConnection.ConnectionString))
             {
-                if ((!serverProvided && dbNameProvided) || (serverProvided && !dbNameProvided))
+                if ((!serverProvided && dbProvided) || (serverProvided && !dbProvided))
                 {
                     throw new NotSupportedException("Both Server and Database need to be provided");
                 }

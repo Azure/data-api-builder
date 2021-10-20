@@ -65,8 +65,8 @@ namespace Cosmos.GraphQL.Service.Tests.MsSql
 
             // Setup GraphQL Components
             //
-            _graphQLService = new GraphQLService(_queryEngine, mutationEngine:null, _metadataStoreProvider);
-            _graphQLController = new GraphQLController(logger:null, _queryEngine, mutationEngine:null, _graphQLService);
+            _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _metadataStoreProvider);
+            _graphQLController = new GraphQLController(logger: null, _queryEngine, mutationEngine: null, _graphQLService);
         }
 
         internal static DefaultHttpContext GetHttpContextWithBody(string data)

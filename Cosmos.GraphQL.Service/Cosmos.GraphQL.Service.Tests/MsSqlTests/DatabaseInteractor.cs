@@ -1,6 +1,6 @@
 using Cosmos.GraphQL.Service.Resolvers;
 
-namespace Cosmos.GraphQL.Service.Tests.Sql
+namespace Cosmos.GraphQL.Service.Tests.MsSql
 {
     /// <summary>
     /// Class that provides functions to interact with a database.

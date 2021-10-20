@@ -3,10 +3,10 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Cosmos.GraphQL.Service.Tests.Sql
+namespace Cosmos.GraphQL.Service.Tests.MsSql
 {
     [TestClass, TestCategory(TestCategory.MsSql)]
-    public class MsSqlQueryBuilderTests : SqlTestBase
+    public class MsSqlQueryTests : MsSqlTestBase
     {
         [TestMethod]
         public async Task SingleResultQuery()

@@ -6,9 +6,9 @@ using Newtonsoft.Json;
 using System;
 using System.IO;
 
-namespace Cosmos.GraphQL.Service.Tests.Sql
+namespace Cosmos.GraphQL.Service.Tests.MsSql
 {
-    class SqlTestHelper
+    class MsSqlTestHelper
     {
         public static readonly string GraphQLSchema = @"
                 type Query {
@@ -32,7 +32,7 @@ namespace Cosmos.GraphQL.Service.Tests.Sql
             return JsonConvert.DeserializeObject<GraphQLQueryResolver>(rawResolverText);
         }
 
-        private static Lazy<IOptions<DataGatewayConfig>> _dataGatewayConfig = new Lazy<IOptions<DataGatewayConfig>>(() => SqlTestHelper.LoadConfig());
+        private static Lazy<IOptions<DataGatewayConfig>> _dataGatewayConfig = new Lazy<IOptions<DataGatewayConfig>>(() => MsSqlTestHelper.LoadConfig());
 
         private static IOptions<DataGatewayConfig> LoadConfig()
         {

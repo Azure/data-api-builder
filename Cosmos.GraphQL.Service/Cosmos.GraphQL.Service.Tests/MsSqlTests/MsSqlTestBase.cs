@@ -7,13 +7,12 @@ using Cosmos.GraphQL.Services;
 using Microsoft.Data.SqlClient;
 using Microsoft.AspNetCore.Http;
 
-
-namespace Cosmos.GraphQL.Service.Tests.Sql
+namespace Cosmos.GraphQL.Service.Tests.MsSql
 {
     /// <summary>
     /// Initial setup of Sql related components for running Sql unit/integration tests
     /// </summary>
-    public class SqlTestBase : IDisposable
+    public class MsSqlTestBase : IDisposable
     {
         protected IMetadataStoreProvider _metadataStoreProvider;
         protected IQueryExecutor _queryExecutor;
@@ -26,7 +25,7 @@ namespace Cosmos.GraphQL.Service.Tests.Sql
         public string IntegrationDatabaseName { get; set; } = "IntegrationDB";
         public string IntegrationTableName { get; set; } = "character";
 
-        public SqlTestBase()
+        public MsSqlTestBase()
         {
             Init();
         }
@@ -36,13 +35,13 @@ namespace Cosmos.GraphQL.Service.Tests.Sql
             // Setup Schema and Resolvers
             //
             _metadataStoreProvider = new MetadataStoreProviderForTest();
-            _metadataStoreProvider.StoreGraphQLSchema(SqlTestHelper.GraphQLSchema);
-            _metadataStoreProvider.StoreQueryResolver(SqlTestHelper.GetQueryResolverJson(SqlTestHelper.CharacterByIdResolver));
-            _metadataStoreProvider.StoreQueryResolver(SqlTestHelper.GetQueryResolverJson(SqlTestHelper.CharacterListResolver));
+            _metadataStoreProvider.StoreGraphQLSchema(MsSqlTestHelper.GraphQLSchema);
+            _metadataStoreProvider.StoreQueryResolver(MsSqlTestHelper.GetQueryResolverJson(MsSqlTestHelper.CharacterByIdResolver));
+            _metadataStoreProvider.StoreQueryResolver(MsSqlTestHelper.GetQueryResolverJson(MsSqlTestHelper.CharacterListResolver));
 
             // Setup Database Components
             //
-            _queryExecutor = new QueryExecutor<SqlConnection>(SqlTestHelper.DataGatewayConfig);
+            _queryExecutor = new QueryExecutor<SqlConnection>(MsSqlTestHelper.DataGatewayConfig);
             _queryBuilder = new MsSqlQueryBuilder();
             _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
 
@@ -66,8 +65,8 @@ namespace Cosmos.GraphQL.Service.Tests.Sql
 
             // Setup GraphQL Components
             //
-            _graphQLService = new GraphQLService(_queryEngine, null, _metadataStoreProvider);
-            _graphQLController = new GraphQLController(null, _queryEngine, null, _graphQLService);
+            _graphQLService = new GraphQLService(_queryEngine, mutationEngine:null, _metadataStoreProvider);
+            _graphQLController = new GraphQLController(logger:null, _queryEngine, mutationEngine:null, _graphQLService);
         }
 
         internal static DefaultHttpContext GetHttpContextWithBody(string data)
@@ -107,9 +106,7 @@ namespace Cosmos.GraphQL.Service.Tests.Sql
         }
 
         /// <summary>
-        /// Drops all tables in the database. The reason we are doing this because we are unable to 
-        /// drop the database because func.exe is still connected to it. The workaround is to instead
-        /// drop all of the tables inside the database.
+        /// Drops all tables in the database when tests are complete.
         /// </summary>
         public void Dispose()
         {

@@ -55,7 +55,7 @@ namespace Cosmos.GraphQL.Services
             IExecutionResult result =
                 await Executor.ExecuteAsync(queryRequest);
 
-            return result.ToJson(false);
+            return result.ToJson(withIndentations:false);
         }
 
         private static bool IsIntrospectionPath(IEnumerable<object> path)

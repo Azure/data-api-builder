@@ -70,4 +70,4 @@ steps:
     repository: 'matrembl/graphql'
     command: 'buildAndPush'
     Dockerfile: '**/Dockerfile'
-    tags: '$(BuildDate)'
+    tags: '$(BuildDate)-$(Build.SourceVersion)' # Use build date and commitId as the tag for the image

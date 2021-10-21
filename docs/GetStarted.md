@@ -1,7 +1,9 @@
 # Introduction
 
-# Deploy docker container from DockerHub
-N.B. The image is currently hosted in a temporary location, so you might not have access to the image.
+# Deploy docker container from DockerHub (Prebuilt image)
+N.B. This section only applies if you want to use a prebuilt image, if you want to build it yourself, move on to the next section (Build and deploy as Docker Container)
+
+N.B. The image is currently hosted in a temporary location, so you might not have access to it. 
 
 1. Pull the docker image:
 ```bash

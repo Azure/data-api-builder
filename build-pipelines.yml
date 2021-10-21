@@ -50,7 +50,10 @@ steps:
     projects: '**/*Tests/*.csproj'
     arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql" --configuration $(buildConfiguration)'
 
+# This task gets the current date and saves it to a variable so the docker task can use the build's 
+# date and time as a tag.
 - task: PowerShell@2
+  displayName: "Get date for Docker image Tag"
   inputs:
     targetType: 'inline'
     script: |
@@ -58,7 +61,10 @@ steps:
       $date=$(Get-Date -format yyyyMMdd-HHmmss)
       Write-Host "##vso[task.setvariable variable=BuildDate]$date"
 
+# Build a docker image and push it to the container registry. This is a temporary location until
+# we close on where we want these images to live.
 - task: Docker@2
+  displayName: "Build and push docker image to docker hub"
   inputs:
     containerRegistry: 'CosmosDB-GraphQL-TempDockerHub'
     repository: 'matrembl/graphql'

@@ -8,6 +8,8 @@ trigger:
 
 strategy:
   matrix:
+    linux:
+      imageName: "ubuntu-latest"
     windows:
       imageName: "windows-latest"
   maxParallel: 2
@@ -26,13 +28,6 @@ steps:
 - task: NuGetCommand@2
   inputs:
     restoreSolution: '$(solution)'
-
-- task: PowerShell@2
-  displayName: 'start mssqllocaldb'
-  inputs:
-    targetType: 'inline'
-    script: |
-    # sqllocaldb start mssqllocaldb\n\nsqllocaldb
 
 - task: FileTransform@1
   inputs:

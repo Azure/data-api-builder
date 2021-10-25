@@ -44,6 +44,8 @@ namespace Cosmos.GraphQL.Service.Tests.MsSql
             _metadataStoreProvider.StoreGraphQLSchema(MsSqlTestHelper.GraphQLSchema);
             _metadataStoreProvider.StoreQueryResolver(MsSqlTestHelper.GetQueryResolverJson(MsSqlTestHelper.CharacterByIdResolver));
             _metadataStoreProvider.StoreQueryResolver(MsSqlTestHelper.GetQueryResolverJson(MsSqlTestHelper.CharacterListResolver));
+            Console.WriteLine("Test Init()");
+            Console.WriteLine(MsSqlTestHelper.DataGatewayConfig.Value);
 
             // Setup Database Components
             //
@@ -81,7 +83,6 @@ namespace Cosmos.GraphQL.Service.Tests.MsSql
         [TestMethod]
         public async Task SingleResultQuery()
         {
-            Console.WriteLine(MsSqlTestHelper.DataGatewayConfig.Value);
             string graphQLQueryName = "characterById";
             string graphQLQuery = "{\"query\":\"{\\n characterById(id:2){\\n name\\n primaryFunction\\n}\\n}\\n\"}";
             string msSqlQuery = $"SELECT name, primaryFunction FROM { IntegrationTableName} WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
@@ -151,6 +152,8 @@ namespace Cosmos.GraphQL.Service.Tests.MsSql
         /// </summary>
         private static void CreateTable()
         {
+            Console.WriteLine("Outputting in Create table");
+            Console.WriteLine(MsSqlTestHelper.DataGatewayConfig.Value);
             _databaseInteractor.CreateTable(IntegrationTableName, "id int, name varchar(20), type varchar(20), homePlanet int, primaryFunction varchar(20)");
         }
 

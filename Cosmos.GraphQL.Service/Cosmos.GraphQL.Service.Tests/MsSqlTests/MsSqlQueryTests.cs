@@ -1,3 +1,4 @@
+using System;
 using System.Data.Common;
 using System.IO;
 using System.Text;
@@ -80,6 +81,7 @@ namespace Cosmos.GraphQL.Service.Tests.MsSql
         [TestMethod]
         public async Task SingleResultQuery()
         {
+            Console.WriteLine(MsSqlTestHelper.DataGatewayConfig.Value);
             string graphQLQueryName = "characterById";
             string graphQLQuery = "{\"query\":\"{\\n characterById(id:2){\\n name\\n primaryFunction\\n}\\n}\\n\"}";
             string msSqlQuery = $"SELECT name, primaryFunction FROM { IntegrationTableName} WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";

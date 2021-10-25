@@ -23,7 +23,7 @@ namespace Cosmos.GraphQL.Service.Tests.MsSql
         }
 
         /// <summary>
-        /// Creates a table in the database
+        /// Creates a table in the database with provided name and columns
         /// </summary>
         public void CreateTable(string tableName, string columns)
         {
@@ -31,30 +31,15 @@ namespace Cosmos.GraphQL.Service.Tests.MsSql
         }
 
         /// <summary>
-        /// Creates a database
-        /// </summary>
-        public void CreateDatabase(string databaseName)
-        {
-            _ = QueryExecutor.ExecuteQueryAsync($"CREATE DATABASE {databaseName};", null).Result;
-        }
-
-        /// <summary>
         /// Drops all tables in the database
         /// </summary>
-        public void DropTables()
+        public void DropTable(string tableName)
         {
             // Drops all tables in the database.
-            string dropAllTables = @"
+            string dropTable = string.Format(
+                @"DROP TABLE IF EXISTS {0};", tableName);
 
-                DECLARE @sql NVARCHAR(max)=''
-
-                SELECT @sql += ' Drop table ' + QUOTENAME(TABLE_SCHEMA) + '.'+ QUOTENAME(TABLE_NAME) + '; '
-                FROM   INFORMATION_SCHEMA.TABLES
-                WHERE  TABLE_TYPE = 'BASE TABLE'
-
-                Exec Sp_executesql @sql";
-
-            _ = QueryExecutor.ExecuteQueryAsync(dropAllTables, null).Result;
+            _ = QueryExecutor.ExecuteQueryAsync(sqltext: dropTable, parameters: null).Result;
         }
     }
 }

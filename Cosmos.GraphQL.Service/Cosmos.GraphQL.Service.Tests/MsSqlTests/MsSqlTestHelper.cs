@@ -50,7 +50,7 @@ namespace Cosmos.GraphQL.Service.Tests.MsSql
             DataGatewayConfig datagatewayConfig = new DataGatewayConfig();
             IConfigurationRoot config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.MsSqlIntegrationTest.json")
+                .AddJsonFile("appsettings.Test.json")
                 .Build();
 
             config.Bind(nameof(DataGatewayConfig), datagatewayConfig);

@@ -165,7 +165,7 @@ namespace Cosmos.GraphQL.Service.Tests.MsSql
         /// returns httpcontext with body consisting of GraphQLQuery 
         /// </summary>
         /// <param name="data">GraphQLQuery</param>
-        /// <returns></returns>
+        /// <returns>The http context with given data as stream of utf-8 bytes.</returns>
         private DefaultHttpContext GetHttpContextWithBody(string data)
         {
             var stream = new MemoryStream(Encoding.UTF8.GetBytes(data));

@@ -57,7 +57,7 @@ jobs:
     displayName: Build GraphQL.Service.sln
     inputs:
       command: build
-      projects: 'GraphQL.Service.sln'
+      projects: 'Microsoft.GraphQL.Service.sln'
       configuration: '${{ parameters.BuildConfiguration }}'
       publishTestResults: true
 

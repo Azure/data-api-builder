@@ -36,7 +36,7 @@ namespace Cosmos.GraphQL.Service.Tests
 
         public void StoreMutationResolver(MutationResolver mutationResolver)
         {
-            _mutationResolvers.Add(mutationResolver.id, mutationResolver);
+            _mutationResolvers.Add(mutationResolver.Id, mutationResolver);
         }
 
         public void StoreQueryResolver(GraphQLQueryResolver queryResolver)

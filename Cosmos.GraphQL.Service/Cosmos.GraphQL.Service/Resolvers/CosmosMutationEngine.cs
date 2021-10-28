@@ -50,8 +50,8 @@ namespace Cosmos.GraphQL.Service.Resolvers
                 throw new NotSupportedException("inputDict is missing");
             }
 
-            var container = _clientProvider.GetClient().GetDatabase(resolver.databaseName)
-                .GetContainer(resolver.containerName);
+            var container = _clientProvider.Client.GetDatabase(resolver.DatabaseName)
+                .GetContainer(resolver.ContainerName);
             // TODO: check insertion type
 
             var response = await container.UpsertItemAsync(jObject);

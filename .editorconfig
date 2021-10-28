@@ -231,7 +231,8 @@ dotnet_diagnostic.CA1032.severity = error
 dotnet_diagnostic.CA1034.severity = warning
 
 # CA1051: Do not declare visible instance fields
-dotnet_diagnostic.CA1051.severity = error
+# SQL REST has as error
+dotnet_diagnostic.CA1051.severity = suggestion
 
 # CA1805: Do not initialize unnecessarily
 dotnet_diagnostic.CA1805.severity = error

@@ -44,7 +44,7 @@ namespace Cosmos.GraphQL.Services
             // TODO: add support for TOP and Order-by push-down
 
             var resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
-            var container = this._clientProvider.GetClient().GetDatabase(resolver.databaseName).GetContainer(resolver.containerName);
+            var container = this._clientProvider.Client.GetDatabase(resolver.databaseName).GetContainer(resolver.containerName);
             var querySpec = new QueryDefinition(resolver.parametrizedQuery);
 
             if (parameters != null)
@@ -78,7 +78,7 @@ namespace Cosmos.GraphQL.Services
             // TODO: add support for TOP and Order-by push-down
 
             var resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
-            var container = this._clientProvider.GetClient().GetDatabase(resolver.databaseName).GetContainer(resolver.containerName);
+            var container = this._clientProvider.Client.GetDatabase(resolver.databaseName).GetContainer(resolver.containerName);
             var querySpec = new QueryDefinition(resolver.parametrizedQuery);
 
             if (parameters != null)

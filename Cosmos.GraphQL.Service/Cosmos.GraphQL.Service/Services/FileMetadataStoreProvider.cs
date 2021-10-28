@@ -73,7 +73,7 @@ namespace Cosmos.GraphQL.Service
             _mutationResolvers = new();
             foreach (var resolver in _config.MutationResolvers)
             {
-                _mutationResolvers.Add(resolver.id, resolver);
+                _mutationResolvers.Add(resolver.Id, resolver);
             }
         }
         /// <summary>

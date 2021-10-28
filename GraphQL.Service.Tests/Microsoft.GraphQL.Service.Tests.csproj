@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Microsoft.GraphQL.Service\Microsoft.GraphQL.Service.csproj" />
+    <ProjectReference Include="..\GraphQL.Service\Microsoft.GraphQL.Service.csproj" />
     <ProjectReference Include="..\GraphQL.Service\Microsoft.GraphQL.Service.csproj" />
   </ItemGroup>
 

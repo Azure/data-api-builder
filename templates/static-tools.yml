@@ -54,10 +54,10 @@ jobs:
     displayName: 'Vulnerability Assessment'
 
   - task: DotNetCoreCLI@2
-    displayName: Build Cosmos.GraphQL.Service/Cosmos.GraphQL.Service.sln
+    displayName: Build /GraphQL.Service.sln
     inputs:
       command: build
-      projects: 'Cosmos.GraphQL.Service/Cosmos.GraphQL.Service.sln'
+      projects: 'GraphQL.Service.sln'
       configuration: '${{ parameters.BuildConfiguration }}'
       publishTestResults: true
 

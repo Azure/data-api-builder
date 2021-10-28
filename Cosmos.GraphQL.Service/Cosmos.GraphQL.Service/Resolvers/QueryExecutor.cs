@@ -29,7 +29,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
         /// <returns>DbDataReader object for reading the result set.</returns>
         public async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object> parameters)
         {
-            var conn = new ConnectionT();
+            ConnectionT conn = new();
             conn.ConnectionString = _datagatewayConfig.DatabaseConnection.ConnectionString;
             await conn.OpenAsync();
             DbCommand cmd = conn.CreateCommand();
@@ -37,9 +37,9 @@ namespace Cosmos.GraphQL.Service.Resolvers
             cmd.CommandType = CommandType.Text;
             if (parameters != null)
             {
-                foreach (var parameterEntry in parameters)
+                foreach (KeyValuePair<string, object> parameterEntry in parameters)
                 {
-                    var parameter = cmd.CreateParameter();
+                    DbParameter parameter = cmd.CreateParameter();
                     parameter.ParameterName = "@" + parameterEntry.Key;
                     parameter.Value = parameterEntry.Value ?? DBNull.Value;
                     cmd.Parameters.Add(parameter);

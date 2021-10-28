@@ -41,7 +41,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
             if (inputDict != null)
             {
                 // TODO: optimize this multiple round of serialization/deserialization
-                var json = JsonConvert.SerializeObject(inputDict);
+                string json = JsonConvert.SerializeObject(inputDict);
                 jObject = JObject.Parse(json);
             }
             else
@@ -50,11 +50,11 @@ namespace Cosmos.GraphQL.Service.Resolvers
                 throw new NotSupportedException("inputDict is missing");
             }
 
-            var container = _clientProvider.Client.GetDatabase(resolver.DatabaseName)
+            Microsoft.Azure.Cosmos.Container container = _clientProvider.Client.GetDatabase(resolver.DatabaseName)
                 .GetContainer(resolver.ContainerName);
             // TODO: check insertion type
 
-            var response = await container.UpsertItemAsync(jObject);
+            Microsoft.Azure.Cosmos.ItemResponse<JObject> response = await container.UpsertItemAsync(jObject);
             JObject res = response.Resource;
             return res;
         }
@@ -68,7 +68,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
         public async Task<JsonDocument> ExecuteAsync(string graphQLMutationName,
             IDictionary<string, object> parameters)
         {
-            var resolver = _metadataStoreProvider.GetMutationResolver(graphQLMutationName);
+            MutationResolver resolver = _metadataStoreProvider.GetMutationResolver(graphQLMutationName);
 
             // TODO: we are doing multiple round of serialization/deserialization
             // fixme

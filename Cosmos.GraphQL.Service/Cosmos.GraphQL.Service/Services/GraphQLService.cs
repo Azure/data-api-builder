@@ -11,7 +11,6 @@ namespace Cosmos.GraphQL.Services
 {
     public class GraphQLService
     {
-        private IRequestExecutor _executor;
         private readonly IQueryEngine _queryEngine;
         private readonly IMutationEngine _mutationEngine;
         private IMetadataStoreProvider _metadataStoreProvider;
@@ -27,26 +26,24 @@ namespace Cosmos.GraphQL.Services
             InitializeSchemaAndResolvers();
         }
 
-        public void parseAsync(String data)
+        public void ParseAsync(String data)
         {
-            _executor = SchemaBuilder.New()
+            Executor = SchemaBuilder.New()
                 .AddDocumentFromString(data)
                 .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine))
                 .Create()
                 .MakeExecutable();
         }
 
-        public IRequestExecutor Executor
-        {
-            get { return _executor; }
-        }
+        public IRequestExecutor Executor { get; private set; }
 
         internal async Task<string> ExecuteAsync(String requestBody)
         {
-            if (_executor == null)
+            if (Executor == null)
             {
                 return "{\"error\": \"Schema must be defined first\" }";
             }
+
             JsonDocument req = JsonDocument.Parse(requestBody);
             IQueryRequest queryRequest = QueryRequestBuilder.New()
                 .SetQuery(req.RootElement.GetProperty("query").GetString())
@@ -62,7 +59,7 @@ namespace Cosmos.GraphQL.Services
         {
             if (path.Any())
             {
-                var firstPath = path.First() as string;
+                string firstPath = path.First() as string;
                 if (firstPath.StartsWith("__", StringComparison.InvariantCulture))
                 {
                     return true;
@@ -86,7 +83,7 @@ namespace Cosmos.GraphQL.Services
             //
             if (!string.IsNullOrEmpty(graphqlSchema))
             {
-                parseAsync(graphqlSchema);
+                ParseAsync(graphqlSchema);
             }
         }
 

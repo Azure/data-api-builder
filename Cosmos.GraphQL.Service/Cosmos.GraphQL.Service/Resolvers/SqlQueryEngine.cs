@@ -48,7 +48,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
             GraphQLQueryResolver resolver = _metadataStoreProvider.GetQueryResolver(graphQLQueryName);
             JsonDocument jsonDocument = JsonDocument.Parse("{ }");
 
-            string queryText = _queryBuilder.Build(resolver.parametrizedQuery, false);
+            string queryText = _queryBuilder.Build(resolver.ParametrizedQuery, false);
 
             // Open connection and execute query using _queryExecutor
             //
@@ -79,7 +79,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
 
             GraphQLQueryResolver resolver = _metadataStoreProvider.GetQueryResolver(graphQLQueryName);
             List<JsonDocument> resultsAsList = new List<JsonDocument>();
-            string queryText = _queryBuilder.Build(resolver.parametrizedQuery, true);
+            string queryText = _queryBuilder.Build(resolver.ParametrizedQuery, true);
             DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryText, parameters);
 
             // Deserialize results into list of JsonDocuments and return

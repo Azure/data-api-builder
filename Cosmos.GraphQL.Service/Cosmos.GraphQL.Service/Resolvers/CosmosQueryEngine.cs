@@ -43,28 +43,29 @@ namespace Cosmos.GraphQL.Services
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
-            var resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
-            var container = this._clientProvider.Client.GetDatabase(resolver.databaseName).GetContainer(resolver.containerName);
-            var querySpec = new QueryDefinition(resolver.parametrizedQuery);
+            GraphQLQueryResolver resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
+            Container container = this._clientProvider.Client.GetDatabase(resolver.DatabaseName).GetContainer(resolver.ContainerName);
+            QueryDefinition querySpec = new QueryDefinition(resolver.ParametrizedQuery);
 
             if (parameters != null)
             {
-                foreach (var parameterEntry in parameters)
+                foreach (KeyValuePair<string, object> parameterEntry in parameters)
                 {
                     querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
                 }
             }
 
-            var firstPage = await container.GetItemQueryIterator<JObject>(querySpec).ReadNextAsync();
+            FeedResponse<JObject> firstPage = await container.GetItemQueryIterator<JObject>(querySpec).ReadNextAsync();
 
             JObject firstItem = null;
 
-            var iterator = firstPage.GetEnumerator();
+            IEnumerator<JObject> iterator = firstPage.GetEnumerator();
 
             while (iterator.MoveNext() && firstItem == null)
             {
                 firstItem = iterator.Current;
             }
+
             JsonDocument jsonDocument = JsonDocument.Parse(firstItem.ToString());
 
             return jsonDocument;
@@ -77,13 +78,13 @@ namespace Cosmos.GraphQL.Services
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
-            var resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
-            var container = this._clientProvider.Client.GetDatabase(resolver.databaseName).GetContainer(resolver.containerName);
-            var querySpec = new QueryDefinition(resolver.parametrizedQuery);
+            GraphQLQueryResolver resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
+            Container container = this._clientProvider.Client.GetDatabase(resolver.DatabaseName).GetContainer(resolver.ContainerName);
+            QueryDefinition querySpec = new QueryDefinition(resolver.ParametrizedQuery);
 
             if (parameters != null)
             {
-                foreach (var parameterEntry in parameters)
+                foreach (KeyValuePair<string, object> parameterEntry in parameters)
                 {
                     querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
                 }
@@ -94,7 +95,7 @@ namespace Cosmos.GraphQL.Services
             List<JsonDocument> resultsAsList = new List<JsonDocument>();
             while (resultSetIterator.HasMoreResults)
             {
-                var nextPage = await resultSetIterator.ReadNextAsync();
+                FeedResponse<JObject> nextPage = await resultSetIterator.ReadNextAsync();
                 IEnumerator<JObject> enumerator = nextPage.GetEnumerator();
                 while (enumerator.MoveNext())
                 {

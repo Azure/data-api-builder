@@ -41,7 +41,7 @@ namespace Cosmos.GraphQL.Service.Tests
 
         public void StoreQueryResolver(GraphQLQueryResolver queryResolver)
         {
-            _queryResolvers.Add(queryResolver.id, queryResolver);
+            _queryResolvers.Add(queryResolver.Id, queryResolver);
         }
     }
 }

@@ -47,10 +47,10 @@ namespace Cosmos.GraphQL.Service
         public FileMetadataStoreProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
         {
             _dataGatewayConfig = dataGatewayConfig.Value;
-            init();
+            Init();
         }
 
-        private void init()
+        private void Init()
         {
             string jsonString = File.ReadAllText(
                     _dataGatewayConfig.ResolverConfigFile);
@@ -65,13 +65,13 @@ namespace Cosmos.GraphQL.Service
             _config.MutationResolvers ??= new();
 
             _queryResolvers = new();
-            foreach (var resolver in _config.QueryResolvers)
+            foreach (GraphQLQueryResolver resolver in _config.QueryResolvers)
             {
-                _queryResolvers.Add(resolver.id, resolver);
+                _queryResolvers.Add(resolver.Id, resolver);
             }
 
             _mutationResolvers = new();
-            foreach (var resolver in _config.MutationResolvers)
+            foreach (MutationResolver resolver in _config.MutationResolvers)
             {
                 _mutationResolvers.Add(resolver.Id, resolver);
             }
@@ -94,7 +94,6 @@ namespace Cosmos.GraphQL.Service
 
             return resolver;
         }
-
 
         public GraphQLQueryResolver GetQueryResolver(string name)
         {

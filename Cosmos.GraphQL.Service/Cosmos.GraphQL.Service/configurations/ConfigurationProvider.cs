@@ -99,7 +99,6 @@ namespace Cosmos.GraphQL.Service.configurations
         }
     }
 
-
     /// <summary>
     /// Validate config.
     /// This happens after post configuration.

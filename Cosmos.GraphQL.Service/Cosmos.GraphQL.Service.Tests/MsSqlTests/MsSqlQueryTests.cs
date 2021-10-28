@@ -15,7 +15,7 @@ namespace Cosmos.GraphQL.Service.Tests.MsSql
     /// <summary>
     /// Test GraphQL Queries validating proper resolver/engine operation.
     /// </summary>
-    [TestClass, TestCategory(TestCategory.MsSql)]
+    [TestClass, TestCategory(TestCategory.MSSQL)]
     public class MsSqlQueryTests
     {
         #region Test Fixture Setup

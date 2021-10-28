@@ -10,7 +10,7 @@ pool:
   vmImage: 'ubuntu-18.04' # examples of other options: 'macOS-10.15', 'windows-2019'
 
 variables:
-  solution: '**/*.sln'
+  solution: '*.sln'
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
 

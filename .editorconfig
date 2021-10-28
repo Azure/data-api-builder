@@ -1,7 +1,6 @@
 # top-most EditorConfig file
 root = true
 
-
 # rules for all files
 [*]
 

@@ -1,5 +1,4 @@
 using Cosmos.GraphQL.Service.Models;
-using Cosmos.GraphQL.Services;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -12,16 +11,6 @@ namespace Cosmos.GraphQL.Service.Resolvers
     /// </summary>
     public class SqlMutationEngine : IMutationEngine
     {
-        private readonly IMetadataStoreProvider _metadataStoreProvider;
-
-        /// <summary>
-        /// Constructor.
-        /// </summary>
-        public SqlMutationEngine(IMetadataStoreProvider metadataStoreProvider)
-        {
-            _metadataStoreProvider = metadataStoreProvider;
-        }
-
         /// <summary>
         /// Persists resolver configuration. This is a no-op for Sql like databases
         /// since it has been read from a config file.

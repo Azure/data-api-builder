@@ -54,10 +54,10 @@ jobs:
     displayName: 'Vulnerability Assessment'
 
   - task: DotNetCoreCLI@2
-    displayName: Build Microsoft.GraphQL.Service.sln
+    displayName: Build Azure.DataGateway.Service.sln
     inputs:
       command: build
-      projects: 'Microsoft.GraphQL.Service.sln'
+      projects: 'Azure.DataGateway.Service.sln'
       configuration: '${{ parameters.BuildConfiguration }}'
       publishTestResults: true
 

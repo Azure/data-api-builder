@@ -14,7 +14,7 @@ docker pull matrembl/graphql:20211019-154145 # Note to update to the correct tag
 3. Launch the docker container and map the config.json and appsettings.json files. The command should look something like this (depending on the path to your appsettings and config files, and the image you are using):
 
 ```bash
-docker run --mount type=bind,source="$(pwd)\Cosmos.GraphQL.Service\Cosmos.GraphQL.Service\appsettings.json",target="/App/appsettings.json" --mount type=bind,source="$(pwd)\Cosmos.GraphQL.Service\Cosmos.GraphQL.Service\config.json",target="/App/config.json" -d -p 5000:5000 matrembl/graphql:20211019-154145
+docker run --mount type=bind,source="$(pwd)\DataGateway.Service\appsettings.json",target="/App/appsettings.json" --mount type=bind,source="$(pwd)\DataGateway.Service\config.json",target="/App/config.json" -d -p 5000:5000 matrembl/graphql:20211019-154145
 # Note to update to the correct tag
 ```
 4. The container should be accessible at localhost:5000
@@ -29,7 +29,7 @@ Navigate to the root folder.
 On Windows you need to do this in a WSL terminal and run
 
 ```bash
-dotnet build Cosmos.GraphQL.Service/Cosmos.GraphQL.Service.sln
+dotnet build DataGateway.Service/Azure.DataGateway.Service.sln
 ```
 
 build a docker image

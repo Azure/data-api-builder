@@ -15,8 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\GraphQL.Service\Microsoft.GraphQL.Service.csproj" />
-    <ProjectReference Include="..\GraphQL.Service\Microsoft.GraphQL.Service.csproj" />
+    <ProjectReference Include="..\DataGateway.Service\Azure.DataGateway.Service.csproj" />
   </ItemGroup>
 
 </Project>

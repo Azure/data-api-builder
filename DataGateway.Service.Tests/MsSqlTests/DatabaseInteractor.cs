@@ -1,6 +1,6 @@
-using Microsoft.GraphQL.Service.Resolvers;
+using Azure.DataGateway.Service.Resolvers;
 
-namespace Microsoft.GraphQL.Service.Tests.MsSql
+namespace Azure.DataGateway.Service.Tests.MsSql
 {
     /// <summary>
     /// Class that provides functions to interact with a database.

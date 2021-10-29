@@ -1,4 +1,3 @@
-using System;
 using Azure.DataGateway.Service.configurations;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
@@ -11,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Npgsql;
+using System;
 
 namespace Azure.DataGateway.Service
 {

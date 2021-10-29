@@ -1,10 +1,10 @@
-using System.Collections.Generic;
-using System.Text.Json;
-using System.Threading.Tasks;
 using Azure.DataGateway.Service.Resolvers;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using System.Collections.Generic;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Azure.DataGateway.Services
 {

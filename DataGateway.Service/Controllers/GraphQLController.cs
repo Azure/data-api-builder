@@ -1,9 +1,8 @@
+using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataGateway.Services;
-using Azure.DataGateway.Service.Resolvers;
 
 namespace Azure.DataGateway.Service.Controllers
 {

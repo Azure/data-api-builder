@@ -1,10 +1,10 @@
-using System;
-using System.IO;
-using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.configurations;
+using Azure.DataGateway.Service.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using System;
+using System.IO;
 
 namespace Azure.DataGateway.Service.Tests
 {

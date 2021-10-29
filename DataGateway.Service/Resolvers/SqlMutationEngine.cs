@@ -1,9 +1,8 @@
+using Azure.DataGateway.Service.Models;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
 {

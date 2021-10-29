@@ -26,15 +26,17 @@ tab_width = 2
 [*.sln]
 indent_style = tab
 
-# unneccesary import preference for C#
-[*.cs]
-dotnet_diagnostic.IDE0005.severity = warning
-
 #### .NET Coding Conventions ####
 
+[*.cs]
+
+# unneccesary import preference for C#
+dotnet_diagnostic.IDE0005.severity = warning
+
 # Organize usings
-dotnet_separate_import_directive_groups = false:suggestion
-file_header_template = unset:suggestion
+dotnet_separate_import_directive_groups = false
+dotnet_sort_system_directives_first = false
+file_header_template = unset
 
 # this. and Me. preferences
 dotnet_style_qualification_for_event = false:silent
@@ -75,7 +77,7 @@ dotnet_style_allow_statement_immediately_after_block_experimental = false:error
 # var preferences
 csharp_style_var_elsewhere = false:error
 csharp_style_var_for_built_in_types = false:error
-csharp_style_var_when_type_is_apparent = false:error
+csharp_style_var_when_type_is_apparent = true:error
 
 # Modifier preferences
 csharp_prefer_static_local_function = true:suggestion

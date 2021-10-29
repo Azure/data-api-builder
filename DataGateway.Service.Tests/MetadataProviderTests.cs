@@ -1,4 +1,4 @@
-using Azure.DataGateway.Service.Services;
+using Azure.DataGateway.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests

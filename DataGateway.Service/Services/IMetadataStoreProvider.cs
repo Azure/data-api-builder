@@ -1,6 +1,6 @@
 using Azure.DataGateway.Service.Models;
 
-namespace Azure.DataGateway.Service.Services
+namespace Azure.DataGateway.Services
 {
 
     public interface IMetadataStoreProvider

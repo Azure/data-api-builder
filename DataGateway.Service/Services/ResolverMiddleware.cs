@@ -6,7 +6,7 @@ using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
 
-namespace Azure.DataGateway.Service.Services
+namespace Azure.DataGateway.Services
 {
     /// <summary>
     /// The resolver middleware that is used by the schema executor to resolve

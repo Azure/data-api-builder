@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
 
-namespace Azure.DataGateway.Service.Services
+namespace Azure.DataGateway.Services
 {
     // <summary>
     // Interface for execution of GraphQL queries against a database.

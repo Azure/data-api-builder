@@ -6,7 +6,7 @@ using Azure.DataGateway.Service.Resolvers;
 using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json.Linq;
 
-namespace Azure.DataGateway.Service.Services
+namespace Azure.DataGateway.Services
 {
     //<summary>
     // CosmosQueryEngine to ExecuteAsync against CosmosDb.

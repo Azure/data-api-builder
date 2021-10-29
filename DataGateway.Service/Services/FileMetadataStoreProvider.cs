@@ -1,5 +1,5 @@
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Service.Services;
+using Azure.DataGateway.Services;
 using Azure.DataGateway.Service.configurations;
 using System;
 using System.IO;

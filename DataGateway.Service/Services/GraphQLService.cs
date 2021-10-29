@@ -7,7 +7,7 @@ using Azure.DataGateway.Service.Resolvers;
 using HotChocolate;
 using HotChocolate.Execution;
 
-namespace Azure.DataGateway.Service.Services
+namespace Azure.DataGateway.Services
 {
     public class GraphQLService
     {

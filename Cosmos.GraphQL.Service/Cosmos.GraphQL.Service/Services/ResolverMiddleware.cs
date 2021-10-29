@@ -1,10 +1,10 @@
-using System.Collections.Generic;
-using System.Text.Json;
-using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Resolvers;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using System.Collections.Generic;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Cosmos.GraphQL.Services
 {
@@ -99,7 +99,7 @@ namespace Cosmos.GraphQL.Services
         {
             if (value.Kind == SyntaxKind.IntValue)
             {
-                IntValueNode intValue = (IntValueNode)value;
+                var intValue = (IntValueNode)value;
                 return intValue.ToInt64();
             }
             else

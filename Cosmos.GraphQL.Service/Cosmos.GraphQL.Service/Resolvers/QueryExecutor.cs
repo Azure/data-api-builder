@@ -1,10 +1,10 @@
+using Cosmos.GraphQL.Service.configurations;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Threading.Tasks;
-using Cosmos.GraphQL.Service.configurations;
-using Microsoft.Extensions.Options;
 
 namespace Cosmos.GraphQL.Service.Resolvers
 {

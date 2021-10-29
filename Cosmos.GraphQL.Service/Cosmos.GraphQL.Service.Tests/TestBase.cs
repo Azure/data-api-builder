@@ -37,16 +37,16 @@ namespace Cosmos.GraphQL.Service.Tests
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
             _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider);
             _graphQLService.ParseAsync(TestHelper.GraphQLTestSchema);
-            _controller = new GraphQLController(null, _queryEngine, _mutationEngine, _graphQLService);
+            _controller = new GraphQLController(_graphQLService);
         }
 
         internal static DefaultHttpContext GetHttpContextWithBody(string data)
         {
-            HttpRequestMessage request = new HttpRequestMessage();
-            MemoryStream stream = new MemoryStream(Encoding.UTF8.GetBytes(data));
+            var request = new HttpRequestMessage();
+            var stream = new MemoryStream(Encoding.UTF8.GetBytes(data));
             request.Method = HttpMethod.Post;
             request.Content = new StringContent(TestHelper.SampleQuery);
-            DefaultHttpContext httpContext = new DefaultHttpContext()
+            var httpContext = new DefaultHttpContext()
             {
                 Request = { Body = stream, ContentLength = stream.Length }
             };

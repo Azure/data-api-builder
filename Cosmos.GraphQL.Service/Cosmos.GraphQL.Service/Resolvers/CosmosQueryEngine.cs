@@ -1,10 +1,10 @@
-using System.Collections.Generic;
-using System.Text.Json;
-using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Service.Resolvers;
 using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Cosmos.GraphQL.Services
 {
@@ -45,7 +45,7 @@ namespace Cosmos.GraphQL.Services
 
             GraphQLQueryResolver resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
             Container container = this._clientProvider.Client.GetDatabase(resolver.DatabaseName).GetContainer(resolver.ContainerName);
-            QueryDefinition querySpec = new QueryDefinition(resolver.ParametrizedQuery);
+            var querySpec = new QueryDefinition(resolver.ParametrizedQuery);
 
             if (parameters != null)
             {
@@ -66,7 +66,7 @@ namespace Cosmos.GraphQL.Services
                 firstItem = iterator.Current;
             }
 
-            JsonDocument jsonDocument = JsonDocument.Parse(firstItem.ToString());
+            var jsonDocument = JsonDocument.Parse(firstItem.ToString());
 
             return jsonDocument;
         }
@@ -80,7 +80,7 @@ namespace Cosmos.GraphQL.Services
 
             GraphQLQueryResolver resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
             Container container = this._clientProvider.Client.GetDatabase(resolver.DatabaseName).GetContainer(resolver.ContainerName);
-            QueryDefinition querySpec = new QueryDefinition(resolver.ParametrizedQuery);
+            var querySpec = new QueryDefinition(resolver.ParametrizedQuery);
 
             if (parameters != null)
             {
@@ -92,7 +92,7 @@ namespace Cosmos.GraphQL.Services
 
             FeedIterator<JObject> resultSetIterator = container.GetItemQueryIterator<JObject>(querySpec);
 
-            List<JsonDocument> resultsAsList = new List<JsonDocument>();
+            var resultsAsList = new List<JsonDocument>();
             while (resultSetIterator.HasMoreResults)
             {
                 FeedResponse<JObject> nextPage = await resultSetIterator.ReadNextAsync();

@@ -1,7 +1,7 @@
+using Cosmos.GraphQL.Service.Models;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Cosmos.GraphQL.Service.Models;
 
 namespace Cosmos.GraphQL.Services
 {

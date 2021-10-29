@@ -1,16 +1,16 @@
-using System;
 using Cosmos.GraphQL.Service.configurations;
 using Cosmos.GraphQL.Service.Resolvers;
 using Cosmos.GraphQL.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Data.SqlClient;
-using Npgsql;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using Npgsql;
+using System;
 
 namespace Cosmos.GraphQL.Service
 {
@@ -31,7 +31,7 @@ namespace Cosmos.GraphQL.Service
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<DataGatewayConfig>, DataGatewayConfigValidation>());
 
             // Read configuration and use it locally.
-            DataGatewayConfig dataGatewayConfig = new DataGatewayConfig();
+            var dataGatewayConfig = new DataGatewayConfig();
             Configuration.Bind(nameof(DataGatewayConfig), dataGatewayConfig);
 
             switch (dataGatewayConfig.DatabaseType)

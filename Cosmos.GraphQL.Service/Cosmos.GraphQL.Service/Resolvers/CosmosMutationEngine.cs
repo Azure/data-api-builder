@@ -1,11 +1,12 @@
+using Cosmos.GraphQL.Service.Models;
+using Cosmos.GraphQL.Services;
+using Microsoft.Azure.Cosmos;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Cosmos.GraphQL.Service.Models;
-using Cosmos.GraphQL.Services;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Cosmos.GraphQL.Service.Resolvers
 {
@@ -50,7 +51,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
                 throw new NotSupportedException("inputDict is missing");
             }
 
-            Microsoft.Azure.Cosmos.Container container = _clientProvider.Client.GetDatabase(resolver.DatabaseName)
+            Container container = _clientProvider.Client.GetDatabase(resolver.DatabaseName)
                 .GetContainer(resolver.ContainerName);
             // TODO: check insertion type
 

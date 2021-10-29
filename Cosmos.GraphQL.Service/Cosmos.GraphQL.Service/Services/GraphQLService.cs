@@ -1,11 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Resolvers;
 using HotChocolate;
 using HotChocolate.Execution;
+using System;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Cosmos.GraphQL.Services
 {
@@ -44,7 +42,7 @@ namespace Cosmos.GraphQL.Services
                 return "{\"error\": \"Schema must be defined first\" }";
             }
 
-            JsonDocument req = JsonDocument.Parse(requestBody);
+            var req = JsonDocument.Parse(requestBody);
             IQueryRequest queryRequest = QueryRequestBuilder.New()
                 .SetQuery(req.RootElement.GetProperty("query").GetString())
                 .Create();
@@ -53,20 +51,6 @@ namespace Cosmos.GraphQL.Services
                 await Executor.ExecuteAsync(queryRequest);
 
             return result.ToJson(withIndentations: false);
-        }
-
-        private static bool IsIntrospectionPath(IEnumerable<object> path)
-        {
-            if (path.Any())
-            {
-                string firstPath = path.First() as string;
-                if (firstPath.StartsWith("__", StringComparison.InvariantCulture))
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         /// <summary>

@@ -6,15 +6,15 @@ namespace Cosmos.GraphQL.Service.Resolvers
     /// </summary>
     public class MsSqlQueryBuilder : IQueryBuilder
     {
-        private const string X_FORJSONSUFFIX = " FOR JSON PATH, INCLUDE_NULL_VALUES";
-        private const string X_WITHOUTARRAYWRAPPERSUFFIX = "WITHOUT_ARRAY_WRAPPER";
+        private const string X_FOR_JSON_SUFFIX = " FOR JSON PATH, INCLUDE_NULL_VALUES";
+        private const string X_WITHOUT_ARRAY_WRAPPER_SUFFIX = "WITHOUT_ARRAY_WRAPPER";
 
         public string Build(string inputQuery, bool isList)
         {
-            string queryText = inputQuery + X_FORJSONSUFFIX;
+            string queryText = inputQuery + X_FOR_JSON_SUFFIX;
             if (!isList)
             {
-                queryText += "," + X_WITHOUTARRAYWRAPPERSUFFIX;
+                queryText += "," + X_WITHOUT_ARRAY_WRAPPER_SUFFIX;
             }
 
             return queryText;

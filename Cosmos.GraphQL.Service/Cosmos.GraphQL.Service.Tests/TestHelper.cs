@@ -1,10 +1,10 @@
-using System;
-using System.IO;
-using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Service.configurations;
+using Cosmos.GraphQL.Service.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using System;
+using System.IO;
 
 namespace Cosmos.GraphQL.Service.Tests
 {
@@ -54,7 +54,7 @@ namespace Cosmos.GraphQL.Service.Tests
 
         private static IOptions<DataGatewayConfig> LoadConfig()
         {
-            DataGatewayConfig datagatewayConfig = new DataGatewayConfig();
+            var datagatewayConfig = new DataGatewayConfig();
             IConfigurationRoot config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.Test.json")

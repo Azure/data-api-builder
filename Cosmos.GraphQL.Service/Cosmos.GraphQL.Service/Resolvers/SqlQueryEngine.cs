@@ -1,10 +1,10 @@
+using Cosmos.GraphQL.Service.Models;
+using Cosmos.GraphQL.Services;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Cosmos.GraphQL.Service.Models;
-using Cosmos.GraphQL.Services;
 
 namespace Cosmos.GraphQL.Service.Resolvers
 {
@@ -46,7 +46,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
             // TODO: add support for TOP and Order-by push-down
 
             GraphQLQueryResolver resolver = _metadataStoreProvider.GetQueryResolver(graphQLQueryName);
-            JsonDocument jsonDocument = JsonDocument.Parse("{ }");
+            var jsonDocument = JsonDocument.Parse("{ }");
 
             string queryText = _queryBuilder.Build(resolver.ParametrizedQuery, false);
 
@@ -78,7 +78,7 @@ namespace Cosmos.GraphQL.Service.Resolvers
             // TODO: add support for TOP and Order-by push-down
 
             GraphQLQueryResolver resolver = _metadataStoreProvider.GetQueryResolver(graphQLQueryName);
-            List<JsonDocument> resultsAsList = new List<JsonDocument>();
+            var resultsAsList = new List<JsonDocument>();
             string queryText = _queryBuilder.Build(resolver.ParametrizedQuery, true);
             DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryText, parameters);
 

@@ -1,14 +1,14 @@
-using System.Data.Common;
-using System.IO;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
 using Cosmos.GraphQL.Service.Controllers;
 using Cosmos.GraphQL.Service.Resolvers;
 using Cosmos.GraphQL.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Data.Common;
+using System.IO;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Cosmos.GraphQL.Service.Tests.MsSql
 {
@@ -59,7 +59,7 @@ namespace Cosmos.GraphQL.Service.Tests.MsSql
             // Setup GraphQL Components
             //
             _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _metadataStoreProvider);
-            _graphQLController = new GraphQLController(logger: null, _queryEngine, mutationEngine: null, _graphQLService);
+            _graphQLController = new GraphQLController(_graphQLService);
         }
 
         /// <summary>
@@ -130,7 +130,7 @@ namespace Cosmos.GraphQL.Service.Tests.MsSql
         /// <returns>string in JSON format</returns>
         public static async Task<string> GetDatabaseResultAsync(string queryText)
         {
-            JsonDocument sqlResult = JsonDocument.Parse("{ }");
+            var sqlResult = JsonDocument.Parse("{ }");
             using DbDataReader reader = _databaseInteractor.QueryExecutor.ExecuteQueryAsync(queryText, parameters: null).Result;
 
             if (await reader.ReadAsync())
@@ -168,8 +168,8 @@ namespace Cosmos.GraphQL.Service.Tests.MsSql
         /// <returns>The http context with given data as stream of utf-8 bytes.</returns>
         private static DefaultHttpContext GetHttpContextWithBody(string data)
         {
-            MemoryStream stream = new MemoryStream(Encoding.UTF8.GetBytes(data));
-            DefaultHttpContext httpContext = new DefaultHttpContext()
+            var stream = new MemoryStream(Encoding.UTF8.GetBytes(data));
+            var httpContext = new DefaultHttpContext()
             {
                 Request = { Body = stream, ContentLength = stream.Length }
             };

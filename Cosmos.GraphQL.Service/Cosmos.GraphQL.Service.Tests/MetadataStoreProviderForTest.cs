@@ -1,6 +1,6 @@
-using System.Collections.Generic;
 using Cosmos.GraphQL.Service.Models;
 using Cosmos.GraphQL.Services;
+using System.Collections.Generic;
 
 namespace Cosmos.GraphQL.Service.Tests
 {

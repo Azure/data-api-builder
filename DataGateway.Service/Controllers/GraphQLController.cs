@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using System.IO;
 using System.Text.Json;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service;
 using Azure.DataGateway.Service.Resolvers;
 
 

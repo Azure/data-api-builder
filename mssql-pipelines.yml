@@ -34,7 +34,7 @@ steps:
     displayName: 'Generate appsettings.Test.json'
     folderPath: '$(System.DefaultWorkingDirectory)'
     fileType: 'json'
-    targetFiles: 'GraphQL.Service/appsettings.Test.json'
+    targetFiles: 'DataGateway.Service/appsettings.Test.json'
 
 - task: DotNetCoreCLI@2
   displayName: Build

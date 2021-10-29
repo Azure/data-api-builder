@@ -1,4 +1,4 @@
-namespace Azure.DataGateway.Services
+namespace Azure.DataGateway.Service.Services
 {
     public class SchemaDocument
     {

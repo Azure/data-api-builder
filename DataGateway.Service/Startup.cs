@@ -1,7 +1,7 @@
 using System;
 using Azure.DataGateway.Service.configurations;
 using Azure.DataGateway.Service.Resolvers;
-using Azure.DataGateway.Service;
+using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;

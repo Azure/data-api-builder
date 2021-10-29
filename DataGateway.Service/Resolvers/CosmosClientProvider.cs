@@ -14,9 +14,6 @@ namespace Azure.DataGateway.Service.Resolvers
             _cosmosClient = new CosmosClientBuilder(dataGatewayConfig.Value.DatabaseConnection.ConnectionString).WithContentResponseOnWrite(true).Build();
         }
 
-        public CosmosClient GetClient()
-        {
-            return _cosmosClient;
-        }
+        public CosmosClient Client => _cosmosClient;
     }
 }

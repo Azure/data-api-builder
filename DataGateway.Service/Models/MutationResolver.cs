@@ -28,15 +28,15 @@ namespace Azure.DataGateway.Service.Models
 #TODO: How to handle atomicity of nested types referring to different container
 }
          */
-        public string id { get; set; }
+        public string Id { get; set; }
 
         // TODO: add enum support
-        public string operationType { get; set; }
+        public string OperationType { get; set; }
 
-        public string databaseName { get; set; }
-        public string containerName { get; set; }
+        public string DatabaseName { get; set; }
+        public string ContainerName { get; set; }
 
-        public string fields { get; set; }
+        public string Fields { get; set; }
     }
 
     public enum Operation
@@ -46,16 +46,16 @@ namespace Azure.DataGateway.Service.Models
 
     public class Fields
     {
-        public string type { get; set; }
-        public FieldTransformation transformation { get; set; }
+        public string Type { get; set; }
+        public IFieldTransformation Transformation { get; set; }
     }
 
-    public interface FieldTransformation
+    public interface IFieldTransformation
     {
 
     }
 
-    public class CrossDataSourceFieldTransformation : FieldTransformation
+    public class CrossDataSourceFieldTransformation : IFieldTransformation
     {
         public string databaseName;
         public string containerName;

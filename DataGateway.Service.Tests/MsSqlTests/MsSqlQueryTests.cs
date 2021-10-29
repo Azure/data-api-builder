@@ -1,21 +1,21 @@
-using System.Data.Common;
-using System.IO;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Data.Common;
+using System.IO;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Azure.DataGateway.Service.Tests.MsSql
 {
     /// <summary>
     /// Test GraphQL Queries validating proper resolver/engine operation.
     /// </summary>
-    [TestClass, TestCategory(TestCategory.MsSql)]
+    [TestClass, TestCategory(TestCategory.MSSQL)]
     public class MsSqlQueryTests
     {
         #region Test Fixture Setup
@@ -59,7 +59,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
             // Setup GraphQL Components
             //
             _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _metadataStoreProvider);
-            _graphQLController = new GraphQLController(logger: null, _queryEngine, mutationEngine: null, _graphQLService);
+            _graphQLController = new GraphQLController(_graphQLService);
         }
 
         /// <summary>
@@ -84,8 +84,8 @@ namespace Azure.DataGateway.Service.Tests.MsSql
             string graphQLQuery = "{\"query\":\"{\\n characterById(id:2){\\n name\\n primaryFunction\\n}\\n}\\n\"}";
             string msSqlQuery = $"SELECT name, primaryFunction FROM { IntegrationTableName} WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
 
-            string actual = await getGraphQLResultAsync(graphQLQuery, graphQLQueryName);
-            string expected = await getDatabaseResultAsync(msSqlQuery);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
 
             Assert.AreEqual(actual, expected);
         }
@@ -101,8 +101,8 @@ namespace Azure.DataGateway.Service.Tests.MsSql
             string graphQLQuery = "{\"query\":\"{\\n  characterList {\\n    name\\n    primaryFunction\\n  }\\n}\\n\"}";
             string msSqlQuery = $"SELECT name, primaryFunction FROM character FOR JSON PATH, INCLUDE_NULL_VALUES";
 
-            string actual = await getGraphQLResultAsync(graphQLQuery, graphQLQueryName);
-            string expected = await getDatabaseResultAsync(msSqlQuery);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
 
             Assert.AreEqual(actual, expected);
         }
@@ -115,7 +115,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         /// <param name="graphQLQuery"></param>
         /// <param name="graphQLQueryName"></param>
         /// <returns>string in JSON format</returns>
-        public async Task<string> getGraphQLResultAsync(string graphQLQuery, string graphQLQueryName)
+        public static async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName)
         {
             _graphQLController.ControllerContext.HttpContext = GetHttpContextWithBody(graphQLQuery);
             JsonDocument graphQLResult = await _graphQLController.PostAsync();
@@ -128,9 +128,9 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         /// </summary>
         /// <param name="queryText">raw database query</param>
         /// <returns>string in JSON format</returns>
-        public async Task<string> getDatabaseResultAsync(string queryText)
+        public static async Task<string> GetDatabaseResultAsync(string queryText)
         {
-            JsonDocument sqlResult = JsonDocument.Parse("{ }");
+            var sqlResult = JsonDocument.Parse("{ }");
             using DbDataReader reader = _databaseInteractor.QueryExecutor.ExecuteQueryAsync(queryText, parameters: null).Result;
 
             if (await reader.ReadAsync())
@@ -166,7 +166,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         /// </summary>
         /// <param name="data">GraphQLQuery</param>
         /// <returns>The http context with given data as stream of utf-8 bytes.</returns>
-        private DefaultHttpContext GetHttpContextWithBody(string data)
+        private static DefaultHttpContext GetHttpContextWithBody(string data)
         {
             var stream = new MemoryStream(Encoding.UTF8.GetBytes(data));
             var httpContext = new DefaultHttpContext()

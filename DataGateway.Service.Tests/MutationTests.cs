@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Azure.DataGateway.Service.Tests
 {
-    [TestClass, TestCategory(TestCategory.Cosmos)]
+    [TestClass, TestCategory(TestCategory.COSMOS)]
     public class MutationTests : TestBase
     {
         [TestMethod]

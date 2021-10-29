@@ -1,6 +1,6 @@
-using System.Collections.Generic;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
+using System.Collections.Generic;
 
 namespace Azure.DataGateway.Service.Tests
 {
@@ -36,12 +36,12 @@ namespace Azure.DataGateway.Service.Tests
 
         public void StoreMutationResolver(MutationResolver mutationResolver)
         {
-            _mutationResolvers.Add(mutationResolver.id, mutationResolver);
+            _mutationResolvers.Add(mutationResolver.Id, mutationResolver);
         }
 
         public void StoreQueryResolver(GraphQLQueryResolver queryResolver)
         {
-            _queryResolvers.Add(queryResolver.id, queryResolver);
+            _queryResolvers.Add(queryResolver.Id, queryResolver);
         }
     }
 }

@@ -1,11 +1,11 @@
+using Azure.DataGateway.Service.configurations;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
-using Azure.DataGateway.Service.configurations;
+using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
-using System.Collections.Generic;
-using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service
 {
@@ -47,10 +47,10 @@ namespace Azure.DataGateway.Service
         public FileMetadataStoreProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
         {
             _dataGatewayConfig = dataGatewayConfig.Value;
-            init();
+            Init();
         }
 
-        private void init()
+        private void Init()
         {
             string jsonString = File.ReadAllText(
                     _dataGatewayConfig.ResolverConfigFile);
@@ -65,15 +65,15 @@ namespace Azure.DataGateway.Service
             _config.MutationResolvers ??= new();
 
             _queryResolvers = new();
-            foreach (var resolver in _config.QueryResolvers)
+            foreach (GraphQLQueryResolver resolver in _config.QueryResolvers)
             {
-                _queryResolvers.Add(resolver.id, resolver);
+                _queryResolvers.Add(resolver.Id, resolver);
             }
 
             _mutationResolvers = new();
-            foreach (var resolver in _config.MutationResolvers)
+            foreach (MutationResolver resolver in _config.MutationResolvers)
             {
-                _mutationResolvers.Add(resolver.id, resolver);
+                _mutationResolvers.Add(resolver.Id, resolver);
             }
         }
         /// <summary>
@@ -94,7 +94,6 @@ namespace Azure.DataGateway.Service
 
             return resolver;
         }
-
 
         public GraphQLQueryResolver GetQueryResolver(string name)
         {

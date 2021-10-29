@@ -1,10 +1,10 @@
-using System.Collections.Generic;
-using System.Text.Json;
-using System.Threading.Tasks;
 using Azure.DataGateway.Service.Resolvers;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using System.Collections.Generic;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Azure.DataGateway.Services
 {
@@ -53,7 +53,7 @@ namespace Azure.DataGateway.Services
                 }
             }
 
-            if (isInnerObject(context))
+            if (IsInnerObject(context))
             {
                 JsonDocument result = context.Parent<JsonDocument>();
 
@@ -90,7 +90,7 @@ namespace Azure.DataGateway.Services
             await _next(context);
         }
 
-        private bool isInnerObject(IMiddlewareContext context)
+        private static bool IsInnerObject(IMiddlewareContext context)
         {
             return context.Selection.Field.Type.IsObjectType() && context.Parent<JsonDocument>() != default;
         }
@@ -108,13 +108,13 @@ namespace Azure.DataGateway.Services
             }
         }
 
-        private IDictionary<string, object> GetParametersFromContext(IMiddlewareContext context)
+        private static IDictionary<string, object> GetParametersFromContext(IMiddlewareContext context)
         {
             IDictionary<string, object> parameters = new Dictionary<string, object>();
 
             // Fill the parameters dictionary with the default argument values
             IFieldCollection<IInputField> availableArguments = context.Selection.Field.Arguments;
-            foreach (var argument in availableArguments)
+            foreach (IInputField argument in availableArguments)
             {
                 if (argument.DefaultValue == null)
                 {
@@ -126,10 +126,9 @@ namespace Azure.DataGateway.Services
                 }
             }
 
-
             // Overwrite the default values with the passed in arguments
             IReadOnlyList<ArgumentNode> passedArguments = context.Selection.SyntaxNode.Arguments;
-            foreach (var argument in passedArguments)
+            foreach (ArgumentNode argument in passedArguments)
             {
                 parameters[argument.Name.Value] = ArgumentValue(argument.Value);
             }

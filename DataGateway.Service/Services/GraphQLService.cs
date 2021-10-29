@@ -1,17 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
 using Azure.DataGateway.Service.Resolvers;
 using HotChocolate;
 using HotChocolate.Execution;
+using System;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Azure.DataGateway.Services
 {
     public class GraphQLService
     {
-        private IRequestExecutor _executor;
         private readonly IQueryEngine _queryEngine;
         private readonly IMutationEngine _mutationEngine;
         private IMetadataStoreProvider _metadataStoreProvider;
@@ -27,27 +24,25 @@ namespace Azure.DataGateway.Services
             InitializeSchemaAndResolvers();
         }
 
-        public void parseAsync(String data)
+        public void ParseAsync(String data)
         {
-            _executor = SchemaBuilder.New()
+            Executor = SchemaBuilder.New()
                 .AddDocumentFromString(data)
                 .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine))
                 .Create()
                 .MakeExecutable();
         }
 
-        public IRequestExecutor Executor
-        {
-            get { return _executor; }
-        }
+        public IRequestExecutor Executor { get; private set; }
 
         internal async Task<string> ExecuteAsync(String requestBody)
         {
-            if (_executor == null)
+            if (Executor == null)
             {
                 return "{\"error\": \"Schema must be defined first\" }";
             }
-            JsonDocument req = JsonDocument.Parse(requestBody);
+
+            var req = JsonDocument.Parse(requestBody);
             IQueryRequest queryRequest = QueryRequestBuilder.New()
                 .SetQuery(req.RootElement.GetProperty("query").GetString())
                 .Create();
@@ -56,20 +51,6 @@ namespace Azure.DataGateway.Services
                 await Executor.ExecuteAsync(queryRequest);
 
             return result.ToJson(withIndentations: false);
-        }
-
-        private static bool IsIntrospectionPath(IEnumerable<object> path)
-        {
-            if (path.Any())
-            {
-                var firstPath = path.First() as string;
-                if (firstPath.StartsWith("__", StringComparison.InvariantCulture))
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         /// <summary>
@@ -86,7 +67,7 @@ namespace Azure.DataGateway.Services
             //
             if (!string.IsNullOrEmpty(graphqlSchema))
             {
-                parseAsync(graphqlSchema);
+                ParseAsync(graphqlSchema);
             }
         }
 

@@ -1,10 +1,10 @@
+using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Services;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -46,9 +46,9 @@ namespace Azure.DataGateway.Service.Resolvers
             // TODO: add support for TOP and Order-by push-down
 
             GraphQLQueryResolver resolver = _metadataStoreProvider.GetQueryResolver(graphQLQueryName);
-            JsonDocument jsonDocument = JsonDocument.Parse("{ }");
+            var jsonDocument = JsonDocument.Parse("{ }");
 
-            string queryText = _queryBuilder.Build(resolver.parametrizedQuery, false);
+            string queryText = _queryBuilder.Build(resolver.ParametrizedQuery, false);
 
             // Open connection and execute query using _queryExecutor
             //
@@ -78,8 +78,8 @@ namespace Azure.DataGateway.Service.Resolvers
             // TODO: add support for TOP and Order-by push-down
 
             GraphQLQueryResolver resolver = _metadataStoreProvider.GetQueryResolver(graphQLQueryName);
-            List<JsonDocument> resultsAsList = new List<JsonDocument>();
-            string queryText = _queryBuilder.Build(resolver.parametrizedQuery, true);
+            var resultsAsList = new List<JsonDocument>();
+            string queryText = _queryBuilder.Build(resolver.ParametrizedQuery, true);
             DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryText, parameters);
 
             // Deserialize results into list of JsonDocuments and return

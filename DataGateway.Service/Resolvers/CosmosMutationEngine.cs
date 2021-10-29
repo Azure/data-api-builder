@@ -1,11 +1,12 @@
+using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Services;
+using Microsoft.Azure.Cosmos;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -41,7 +42,7 @@ namespace Azure.DataGateway.Service.Resolvers
             if (inputDict != null)
             {
                 // TODO: optimize this multiple round of serialization/deserialization
-                var json = JsonConvert.SerializeObject(inputDict);
+                string json = JsonConvert.SerializeObject(inputDict);
                 jObject = JObject.Parse(json);
             }
             else
@@ -50,11 +51,11 @@ namespace Azure.DataGateway.Service.Resolvers
                 throw new NotSupportedException("inputDict is missing");
             }
 
-            var container = _clientProvider.GetClient().GetDatabase(resolver.databaseName)
-                .GetContainer(resolver.containerName);
+            Container container = _clientProvider.Client.GetDatabase(resolver.DatabaseName)
+                .GetContainer(resolver.ContainerName);
             // TODO: check insertion type
 
-            var response = await container.UpsertItemAsync(jObject);
+            Microsoft.Azure.Cosmos.ItemResponse<JObject> response = await container.UpsertItemAsync(jObject);
             JObject res = response.Resource;
             return res;
         }
@@ -68,7 +69,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public async Task<JsonDocument> ExecuteAsync(string graphQLMutationName,
             IDictionary<string, object> parameters)
         {
-            var resolver = _metadataStoreProvider.GetMutationResolver(graphQLMutationName);
+            MutationResolver resolver = _metadataStoreProvider.GetMutationResolver(graphQLMutationName);
 
             // TODO: we are doing multiple round of serialization/deserialization
             // fixme

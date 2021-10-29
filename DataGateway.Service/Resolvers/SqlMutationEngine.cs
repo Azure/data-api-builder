@@ -1,9 +1,8 @@
+using Azure.DataGateway.Service.Models;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -12,16 +11,6 @@ namespace Azure.DataGateway.Service.Resolvers
     /// </summary>
     public class SqlMutationEngine : IMutationEngine
     {
-        private readonly IMetadataStoreProvider _metadataStoreProvider;
-
-        /// <summary>
-        /// Constructor.
-        /// </summary>
-        public SqlMutationEngine(IMetadataStoreProvider metadataStoreProvider)
-        {
-            _metadataStoreProvider = metadataStoreProvider;
-        }
-
         /// <summary>
         /// Persists resolver configuration. This is a no-op for Sql like databases
         /// since it has been read from a config file.

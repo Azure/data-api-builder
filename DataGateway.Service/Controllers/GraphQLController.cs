@@ -1,11 +1,8 @@
+using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using System.Threading.Tasks;
 using System.IO;
 using System.Text.Json;
-using Azure.DataGateway.Services;
-using Azure.DataGateway.Service.Resolvers;
-
+using System.Threading.Tasks;
 
 namespace Azure.DataGateway.Service.Controllers
 {
@@ -13,20 +10,10 @@ namespace Azure.DataGateway.Service.Controllers
     [Route("[controller]")]
     public class GraphQLController : ControllerBase
     {
-
-        string JsonData = @"{'serviceName':'datagateway', 'endpointType':'graphQL'}";
-
-        private readonly IQueryEngine _queryEngine;
-        private readonly IMutationEngine _mutationEngine;
-
-        private readonly ILogger<GraphQLController> _logger;
         private readonly GraphQLService _schemaManager;
 
-        public GraphQLController(ILogger<GraphQLController> logger, IQueryEngine queryEngine, IMutationEngine mutationEngine, GraphQLService schemaManager)
+        public GraphQLController(GraphQLService schemaManager)
         {
-            _logger = logger;
-            _queryEngine = queryEngine;
-            _mutationEngine = mutationEngine;
             _schemaManager = schemaManager;
         }
 
@@ -34,11 +21,12 @@ namespace Azure.DataGateway.Service.Controllers
         public async Task<JsonDocument> PostAsync()
         {
             string requestBody;
-            using (StreamReader reader = new StreamReader(this.HttpContext.Request.Body))
+            using (var reader = new StreamReader(this.HttpContext.Request.Body))
             {
                 requestBody = await reader.ReadToEndAsync();
             }
-            var resultJson = await this._schemaManager.ExecuteAsync(requestBody);
+
+            string resultJson = await this._schemaManager.ExecuteAsync(requestBody);
             return JsonDocument.Parse(resultJson);
         }
     }

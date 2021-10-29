@@ -12,6 +12,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 return $"SELECT row_to_json(q) FROM ({inputQuery}) q";
             }
+
             return $"SELECT jsonb_agg(row_to_json(q)) FROM ({inputQuery}) q";
         }
 

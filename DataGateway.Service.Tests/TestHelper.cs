@@ -1,10 +1,10 @@
-using System;
-using System.IO;
-using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.configurations;
+using Azure.DataGateway.Service.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using System;
+using System.IO;
 
 namespace Azure.DataGateway.Service.Tests
 {
@@ -31,14 +31,13 @@ namespace Azure.DataGateway.Service.Tests
                                             ): MyPojo
                                         }";
 
-
         public static string SampleQuery = "{\"query\": \"{myQuery { myProp    }}\" } ";
 
         public static string SampleMutation = "{\"query\": \"mutation addPost {addPost(myProp : \\\"myValueBM \\\"id : \\\"myIdBM \\\") { myProp}}\"}";
 
         public static GraphQLQueryResolver SampleQueryResolver()
         {
-            var raw =
+            string raw =
                 "{\r\n    \"id\" : \"myQuery\",\r\n    \"databaseName\": \"" + DB_NAME + "\",\r\n    \"containerName\": \"" + COL_NAME + "\",\r\n    \"parametrizedQuery\": \"SELECT * FROM r\"\r\n}";
 
             return JsonConvert.DeserializeObject<GraphQLQueryResolver>(raw);
@@ -46,7 +45,7 @@ namespace Azure.DataGateway.Service.Tests
 
         public static MutationResolver SampleMutationResolver()
         {
-            var raw =
+            string raw =
                 "{   \"id\": \"addPost\",\r\n    \"databaseName\": \"" + DB_NAME + "\",\r\n    \"containerName\": \"" + COL_NAME + "\",\r\n    \"operationType\": \"UPSERT\"\r\n}";
             return JsonConvert.DeserializeObject<MutationResolver>(raw);
         }
@@ -55,7 +54,7 @@ namespace Azure.DataGateway.Service.Tests
 
         private static IOptions<DataGatewayConfig> LoadConfig()
         {
-            DataGatewayConfig datagatewayConfig = new DataGatewayConfig();
+            var datagatewayConfig = new DataGatewayConfig();
             IConfigurationRoot config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.Test.json")

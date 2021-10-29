@@ -1,10 +1,10 @@
+using Azure.DataGateway.Service.configurations;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.configurations;
-using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -29,7 +29,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>DbDataReader object for reading the result set.</returns>
         public async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object> parameters)
         {
-            var conn = new ConnectionT();
+            ConnectionT conn = new();
             conn.ConnectionString = _datagatewayConfig.DatabaseConnection.ConnectionString;
             await conn.OpenAsync();
             DbCommand cmd = conn.CreateCommand();
@@ -37,9 +37,9 @@ namespace Azure.DataGateway.Service.Resolvers
             cmd.CommandType = CommandType.Text;
             if (parameters != null)
             {
-                foreach (var parameterEntry in parameters)
+                foreach (KeyValuePair<string, object> parameterEntry in parameters)
                 {
-                    var parameter = cmd.CreateParameter();
+                    DbParameter parameter = cmd.CreateParameter();
                     parameter.ParameterName = "@" + parameterEntry.Key;
                     parameter.Value = parameterEntry.Value ?? DBNull.Value;
                     cmd.Parameters.Add(parameter);

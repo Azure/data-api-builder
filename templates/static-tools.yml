@@ -54,7 +54,7 @@ jobs:
     displayName: 'Vulnerability Assessment'
 
   - task: DotNetCoreCLI@2
-    displayName: Build GraphQL.Service.sln
+    displayName: Build Microsoft.GraphQL.Service.sln
     inputs:
       command: build
       projects: 'Microsoft.GraphQL.Service.sln'

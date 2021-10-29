@@ -1,6 +1,6 @@
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Resolvers;
-using Azure.DataGateway.Service;
+using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.Cosmos;
 using System;

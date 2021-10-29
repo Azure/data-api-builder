@@ -1,21 +1,13 @@
 {
   "GraphQLSchema": "",
-  "QueryResolvers": [
+  "Resolvers": [
     {
-      "id": "characterById",
-      "parametrizedQuery": "SELECT id, name, type, homePlanet, primaryFunction FROM character WHERE id = @id"
-    },
-    {
-      "id": "characterList",
-      "parametrizedQuery": "SELECT id, name, type, homePlanet, primaryFunction FROM character"
-    },
-    {
-      "id": "planetById",
-      "parametrizedQuery": "SELECT id, name FROM planet WHERE id = @id"
-    },
-    {
-      "id": "planetList",
-      "parametrizedQuery": "SELECT id, name FROM planet"
+        "engine": "",
+        "id": "",
+        "databaseName": "",
+        "containerName": "",
+        "tableName": "",
+        "parametrizedQuery": ""
     }
   ]
 }

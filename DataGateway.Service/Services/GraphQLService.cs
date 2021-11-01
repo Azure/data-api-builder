@@ -59,7 +59,7 @@ namespace Azure.DataGateway.Services
 
         public IRequestExecutor Executor { get; private set; }
 
-        internal async Task<string> ExecuteAsync(String requestBody)
+        public async Task<string> ExecuteAsync(String requestBody)
         {
             if (Executor == null)
             {

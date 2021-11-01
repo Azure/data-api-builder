@@ -26,13 +26,19 @@ namespace Azure.DataGateway.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.Configure<DataGatewayConfig>(Configuration.GetSection(nameof(DataGatewayConfig)));
+            DoConfigureServices(services, Configuration);
+            services.AddControllers();
+        }
+
+        public static void DoConfigureServices(IServiceCollection services, IConfiguration config)
+        {
+            services.Configure<DataGatewayConfig>(config.GetSection(nameof(DataGatewayConfig)));
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<DataGatewayConfig>, DataGatewayConfigPostConfiguration>());
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<DataGatewayConfig>, DataGatewayConfigValidation>());
 
             // Read configuration and use it locally.
             var dataGatewayConfig = new DataGatewayConfig();
-            Configuration.Bind(nameof(DataGatewayConfig), dataGatewayConfig);
+            config.Bind(nameof(DataGatewayConfig), dataGatewayConfig);
 
             switch (dataGatewayConfig.DatabaseType)
             {
@@ -62,7 +68,6 @@ namespace Azure.DataGateway.Service
             }
 
             services.AddSingleton<GraphQLService, GraphQLService>();
-            services.AddControllers();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

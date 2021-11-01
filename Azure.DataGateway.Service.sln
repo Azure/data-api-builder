@@ -1,11 +1,28 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31205.134
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataGateway.Service", "DataGateway.Service\Azure.DataGateway.Service.csproj", "{208FC26C-A21C-4C96-98EE-F10FDAEAC508}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Azure.DataGateway.Service.Tests", "DataGateway.Service.Tests\Azure.DataGateway.Service.Tests.csproj", "{4E50C9B0-818E-4041-B18B-5BB17E4D409F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataGateway.Service.Tests", "DataGateway.Service.Tests\Azure.DataGateway.Service.Tests.csproj", "{4E50C9B0-818E-4041-B18B-5BB17E4D409F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Azure.DataGateway.Service.Functions", "Azure.DataGateway.Service.Functions\Azure.DataGateway.Service.Functions.csproj", "{B5806EF5-E26E-4E2B-9076-CDDCA97BCCE6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Configs", "Configs", "{EFA9C661-D8FD-469A-9372-284387C4BEFC}"
+	ProjectSection(SolutionItems) = preProject
+		DataGateway.Service\appsettings.Cosmos.json = DataGateway.Service\appsettings.Cosmos.json
+		DataGateway.Service\appsettings.Development.json = DataGateway.Service\appsettings.Development.json
+		DataGateway.Service\appsettings.json = DataGateway.Service\appsettings.json
+		DataGateway.Service\appsettings.MsSql.json = DataGateway.Service\appsettings.MsSql.json
+		DataGateway.Service\appsettings.MsSqlIntegrationTest.json = DataGateway.Service\appsettings.MsSqlIntegrationTest.json
+		DataGateway.Service\appsettings.PostgreSql.json = DataGateway.Service\appsettings.PostgreSql.json
+		DataGateway.Service\appsettings.Test.json = DataGateway.Service\appsettings.Test.json
+		DataGateway.Service\config.json = DataGateway.Service\config.json
+		DataGateway.Service\cosmos-config.json = DataGateway.Service\cosmos-config.json
+		DataGateway.Service\mssql-config.json = DataGateway.Service\mssql-config.json
+		DataGateway.Service\postgresql-config.json = DataGateway.Service\postgresql-config.json
+		DataGateway.Service\schema.gql = DataGateway.Service\schema.gql
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +38,10 @@ Global
 		{4E50C9B0-818E-4041-B18B-5BB17E4D409F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4E50C9B0-818E-4041-B18B-5BB17E4D409F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4E50C9B0-818E-4041-B18B-5BB17E4D409F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B5806EF5-E26E-4E2B-9076-CDDCA97BCCE6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B5806EF5-E26E-4E2B-9076-CDDCA97BCCE6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B5806EF5-E26E-4E2B-9076-CDDCA97BCCE6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B5806EF5-E26E-4E2B-9076-CDDCA97BCCE6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -29,6 +29,18 @@ steps:
   inputs:
     restoreSolution: '$(solution)'
 
+- task: DockerInstaller@0
+  displayName: Docker Installer
+  inputs:
+    dockerVersion: 17.09.0-ce
+    releaseType: stable
+
+- task: PowerShell@2
+  displayName: 'Docker - Run SQL Server'
+  inputs:
+    targetType: 'inline'
+    script: 'docker run -d -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=My!P@ssw0rd1" -p 1433:1433 --name customerdb mcr.microsoft.com/mssql/server:2019-latest'
+
 - task: FileTransform@1
   inputs:
     displayName: 'Generate appsettings.Test.json'

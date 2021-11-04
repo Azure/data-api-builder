@@ -41,6 +41,13 @@ steps:
     targetType: 'inline'
     script: 'docker run -d -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=My!P@ssw0rd1" -p 1433:1433 --name customerdb mcr.microsoft.com/mssql/server:2019-latest'
 
+- task: PowerShell@2
+  displayName: 'start mssqllocaldb'
+  inputs:
+    targetType: 'inline'
+    script: |
+    # sqllocaldb start mssqllocaldb\n\nsqllocaldb
+
 - task: FileTransform@1
   inputs:
     displayName: 'Generate appsettings.Test.json'

@@ -1,7 +1,6 @@
-# ASP.NET Core (.NET Framework)
-# Build and test ASP.NET Core projects targeting the full .NET Framework.
-# Add steps that publish symbols, save build artifacts, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+# MsSql Integration Testing Pipeline config is split into two jobs:
+# 1) LinuxTests -> Run SQL Server 2019 in Linux Docker Image
+# 2) WindowsTests -> Run LocalDB preinstalled on 
 
 trigger:
 - main
@@ -29,17 +28,10 @@ jobs:
       dockerVersion: 17.09.0-ce
       releaseType: stable
 
-# Linux
   - bash: |
       docker run -d -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=My!P@ssw0rd1" -p 1433:1433 --name customerdb mcr.microsoft.com/mssql/server:2019-latest
     condition: eq( variables['Agent.OS'], 'Linux' )
     displayName: Get and Start Ubuntu SQL Server Image Docker
-
-# Windows
-  - powershell: |
-      docker run -d -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=My!P@ssw0rd1" -p 1433:1433 --name customerdb microsoft/mssql-server-windows-developer
-    condition: eq( variables['Agent.OS'], 'Windows_NT' )
-    displayName: Get and Start Windows SQL Server Image Docker
 
   - task: FileTransform@1
     inputs:
@@ -70,6 +62,8 @@ jobs:
       buildPlatform: 'Any CPU'
       buildConfiguration: 'Release'
       DataGatewayConfig.DatabaseConnection.ConnectionString: $(ConnectionStringLocalDBVariable)
+      InstallerUrl: https://download.microsoft.com/download/7/c/1/7c14e92e-bdcb-4f89-b7cf-93543e7112d1/SqlLocalDB.msi
+      SqlVersionCode: '15.0'
 
   steps:
   - task: NuGetToolInstaller@1
@@ -79,11 +73,25 @@ jobs:
       restoreSolution: '$(solution)'
 
   - task: PowerShell@2
+    displayName: Install SQL LocalDB $(InstanceName)
+    inputs:
+      targetType: 'inline'
+      script: |
+        Write-Host "Downloading"
+        Import-Module BitsTransfer
+        Start-BitsTransfer -Source $(InstallerUrl) -Destination SqlLocalDB.msi
+        Write-Host "Installing"
+        Start-Process -FilePath "SqlLocalDB.msi" -Wait -ArgumentList "/qn", "/norestart", "/l*v SqlLocalDBInstall.log", "IACCEPTSQLLOCALDBLICENSETERMS=YES";
+        SqlLocalDB.exe stop MSSQLLocalDB -k
+        SqlLocalDB.exe delete MSSQLLocalDB
+        SqlLocalDB.exe create MSSQLLocalDB $(SqlVersionCode) -s
+
+  - task: PowerShell@2
     displayName: 'start mssqllocaldb'
     inputs:
       targetType: 'inline'
       script: |
-      # sqllocaldb start mssqllocaldb\n\nsqllocaldb
+        sqllocaldb start mssqllocaldb\n\nsqllocaldb
 
   - task: FileTransform@1
     inputs:
@@ -105,4 +113,3 @@ jobs:
       command: test
       arguments: '--filter "TestCategory=MsSql" --configuration $(buildConfiguration)'
       projects: '**/*Tests/*.csproj'
-

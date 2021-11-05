@@ -29,7 +29,7 @@ jobs:
       releaseType: stable
 
   - bash: |
-      docker run -d -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=My!P@ssw0rd1" -p 1433:1433 --name customerdb mcr.microsoft.com/mssql/server:2019-latest
+      docker run -d -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=$(DockerSQLpass)" -p 1433:1433 --name customerdb mcr.microsoft.com/mssql/server:2019-latest
     condition: eq( variables['Agent.OS'], 'Linux' )
     displayName: Get and Start Ubuntu SQL Server Image Docker
 

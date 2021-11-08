@@ -2,20 +2,20 @@
   "GraphQLSchema": "",
   "QueryResolvers": [
     {
-      "id": "characterById",
-      "parametrizedQuery": "SELECT id, name, type, homePlanet, primaryFunction FROM character WHERE id = @id::integer"
+      "Id": "characterById",
+      "ParametrizedQuery": "SELECT id, name, type, homePlanet, primaryFunction FROM character WHERE id = @id::integer"
     },
     {
-      "id": "characterList",
-      "parametrizedQuery": "SELECT id, name, type, homePlanet, primaryFunction FROM character"
+      "Id": "characterList",
+      "ParametrizedQuery": "SELECT id, name, type, homePlanet, primaryFunction FROM character"
     },
     {
-      "id": "planetById",
-      "parametrizedQuery": "SELECT id, name FROM planet WHERE id = @id::integer"
+      "Id": "planetById",
+      "ParametrizedQuery": "SELECT id, name FROM planet WHERE id = @id::integer"
     },
     {
-      "id": "planetList",
-      "parametrizedQuery": "SELECT id, name FROM planet"
+      "Id": "planetList",
+      "ParametrizeQuery": "SELECT id, name FROM planet"
     }
   ]
 }

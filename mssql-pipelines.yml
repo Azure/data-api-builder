@@ -6,7 +6,7 @@ trigger:
 - main
 
 jobs:
-- job: LinuxTests
+- job: Job linux
   pool:
     vmImage: 'ubuntu-latest'
   variables:
@@ -54,7 +54,7 @@ jobs:
       arguments: '--filter "TestCategory=MsSql" --configuration $(buildConfiguration)'
       projects: '**/*Tests/*.csproj'
 
-- job: WindowsTests
+- job: Job windows
   pool:
     vmImage: 'windows-latest'
   variables:

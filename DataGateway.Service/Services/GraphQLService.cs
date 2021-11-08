@@ -1,6 +1,9 @@
 using Azure.DataGateway.Service.Resolvers;
 using HotChocolate;
 using HotChocolate.Execution;
+using HotChocolate.Execution.Configuration;
+using HotChocolate.Types;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -26,11 +29,32 @@ namespace Azure.DataGateway.Services
 
         public void ParseAsync(String data)
         {
-            Executor = SchemaBuilder.New()
+            ISchema schema = SchemaBuilder.New()
                 .AddDocumentFromString(data)
                 .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine))
-                .Create()
-                .MakeExecutable();
+                .Create();
+
+            // Below is pretty much an inlined version of
+            // ISchema.MakeExecutable. The reason that we inline it is that
+            // same changes need to be made in the middle of it, such as
+            // AddErrorFilter.
+            IRequestExecutorBuilder builder = new ServiceCollection()
+                .AddGraphQL()
+                .AddErrorFilter(error =>
+            {
+                Console.Error.WriteLine(error.Exception.Message);
+                Console.Error.WriteLine(error.Exception.StackTrace);
+                return error;
+            });
+
+            // Sadly IRequestExecutorBuilder.Configure is internal, so we also
+            // inline that one here too
+            Executor = builder.Services
+                .Configure(builder.Name, (RequestExecutorSetup o) => o.Schema = schema)
+                .BuildServiceProvider()
+                .GetRequiredService<IRequestExecutorResolver>()
+                .GetRequestExecutorAsync()
+                .Result;
         }
 
         public IRequestExecutor Executor { get; private set; }

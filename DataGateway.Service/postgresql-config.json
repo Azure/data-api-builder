@@ -15,7 +15,7 @@
     },
     {
       "Id": "planetList",
-      "ParametrizeQuery": "SELECT id, name FROM planet"
+      "ParametrizedQuery": "SELECT id, name FROM planet"
     }
   ]
 }

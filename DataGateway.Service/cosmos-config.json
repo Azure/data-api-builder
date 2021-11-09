@@ -1,0 +1,38 @@
+{
+  "GraphQLSchema": "",
+  "QueryResolvers": [
+    {
+      "id": "characterById",
+      "databaseName": "graphqldb",
+      "containerName": "character",
+      "parametrizedQuery": "select * FROM c WHERE c.id = @id"
+    },
+    {
+      "id": "characterList",
+      "databaseName": "graphqldb",
+      "containerName": "character",
+      "parametrizedQuery": "select * FROM c"
+    },
+    {
+      "id": "planetById",
+      "databaseName": "graphqldb",
+      "containerName": "planet",
+      "parametrizedQuery": "select * FROM c WHERE c.id = @id"
+    },
+    {
+      "id": "planetList",
+      "databaseName": "graphqldb",
+      "containerName": "planet",
+      "parametrizedQuery": "select * FROM c"
+    }
+  ],
+  "MutationResolvers": [
+    {
+      "id": "addPlanet",
+      "databaseName": "graphqldb",
+      "containerName": "planet",
+      "operationType": "UPSERT"
+    }
+  ]
+}
+

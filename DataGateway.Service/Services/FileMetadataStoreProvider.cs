@@ -54,7 +54,11 @@ namespace Azure.DataGateway.Service
         {
             string jsonString = File.ReadAllText(
                     _dataGatewayConfig.ResolverConfigFile);
-            _config = JsonSerializer.Deserialize<ResolverConfig>(jsonString);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+            };
+            _config = JsonSerializer.Deserialize<ResolverConfig>(jsonString, options);
 
             if (string.IsNullOrEmpty(_config.GraphQLSchema))
             {

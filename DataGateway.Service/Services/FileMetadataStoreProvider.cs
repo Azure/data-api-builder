@@ -58,7 +58,6 @@ namespace Azure.DataGateway.Service
             {
                 PropertyNameCaseInsensitive = true,
             };
-            
             _config = JsonSerializer.Deserialize<ResolverConfig>(jsonString, options);
 
             if (string.IsNullOrEmpty(_config.GraphQLSchema))

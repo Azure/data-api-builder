@@ -2,6 +2,7 @@ using Azure.DataGateway.Service.Resolvers;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -69,7 +70,7 @@ namespace Azure.DataGateway.Services
                         context.Result = null;
                     }
                 }
-                else if (isInnerObject(context))
+                else if (IsInnerObject(context))
                 {
                     JsonDocument result = context.Parent<JsonDocument>();
 
@@ -103,7 +104,6 @@ namespace Azure.DataGateway.Services
                         context.Result = null;
                     }
                 }
-
 
                 await _next(context);
             }

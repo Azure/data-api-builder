@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Cosmos.GraphQL.Service.Models
+namespace Azure.DataGateway.Service.Models
 {
     public class TypeMetadata
     {

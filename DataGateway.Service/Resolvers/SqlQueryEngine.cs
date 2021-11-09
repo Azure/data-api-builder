@@ -38,7 +38,7 @@ namespace Azure.DataGateway.Service.Resolvers
             // no-op
         }
 
-        private async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader)
+        private static async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader)
         {
             var jsonString = new StringBuilder();
             // Even though we only return a single cell, we need this loop for
@@ -52,6 +52,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 jsonString.Append(dbDataReader.GetString(0));
             }
+
             return jsonString.ToString();
         }
 
@@ -64,8 +65,6 @@ namespace Azure.DataGateway.Service.Resolvers
             // TODO: add support for join query against another table
             // TODO: add support for TOP and Order-by push-down
 
-            string graphQLQueryName = context.Selection.Field.Name.Value;
-            GraphQLQueryResolver resolver = _metadataStoreProvider.GetQueryResolver(graphQLQueryName);
             SqlQueryStructure structure = new(context, _metadataStoreProvider, _queryBuilder);
             Console.WriteLine(structure.ToString());
             // Open connection and execute query using _queryExecutor
@@ -89,9 +88,6 @@ namespace Azure.DataGateway.Service.Resolvers
             // TODO: add support for nesting
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
-
-            string graphQLQueryName = context.Selection.Field.Name.Value;
-            GraphQLQueryResolver resolver = _metadataStoreProvider.GetQueryResolver(graphQLQueryName);
 
             SqlQueryStructure structure = new(context, _metadataStoreProvider, _queryBuilder);
             Console.WriteLine(structure.ToString());

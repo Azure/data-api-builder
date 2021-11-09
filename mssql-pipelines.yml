@@ -36,7 +36,7 @@ jobs:
 
   - task: FileTransform@1
     displayName: 'Generate appsettings.Test.json'
-    inputs:     
+    inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
       targetFiles: 'DataGateway.Service/appsettings.Test.json'
@@ -97,7 +97,7 @@ jobs:
 
   - task: FileTransform@1
     displayName: 'Generate appsettings.Test.json'
-    inputs:      
+    inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
       targetFiles: 'DataGateway.Service/appsettings.Test.json'
@@ -111,7 +111,7 @@ jobs:
 
   - task: DotNetCoreCLI@2
     displayName: 'Run MsSql Integration Tests'
-    inputs:     
+    inputs:
       command: test
       arguments: '--filter "TestCategory=MsSql" --configuration $(buildConfiguration)'
       projects: '**/*Tests/*.csproj'

@@ -13,9 +13,9 @@ cat > .git/hooks/pre-commit << __EOF__
 set -euo pipefail
 
 get_files() {
-    git diff --cached --name-only --diff-filter=ACMR Cosmos.GraphQL.Service |\
+    git diff --cached --name-only --diff-filter=ACMR DataGateway.Service |\
         grep '\.cs$' |\
-        sed s=^Cosmos.GraphQL.Service/==g
+        sed s=^DataGateway.Service/==g
 }
 
 if [ "$(get_files)" = '' ]; then
@@ -23,13 +23,13 @@ if [ "$(get_files)" = '' ]; then
 fi
 
 get_files |
-    xargs dotnet format Cosmos.GraphQL.Service/Cosmos.GraphQL.Service.sln \
+    xargs dotnet format DataGateway.Service/Azure.DataGateway.Service.sln \
         --check \
         --fix-whitespace --fix-style warn --fix-analyzers warn \
         --include \
     || {
         get_files |
-            xargs dotnet format Cosmos.GraphQL.Service/Cosmos.GraphQL.Service.sln \
+            xargs dotnet format DataGateway.Service/Azure.DataGateway.Service.sln \
                 --fix-whitespace --fix-style warn --fix-analyzers warn \
                 --include
         exit 1

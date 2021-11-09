@@ -1,13 +1,11 @@
 {
   "GraphQLSchema": "",
-  "Resolvers": [
+  "QueryResolvers": [
     {
-        "engine": "",
-        "id": "",
-        "databaseName": "",
-        "containerName": "",
-        "tableName": "",
-        "parametrizedQuery": ""
+        "Id": "",
+        "DatabaseName": "",
+        "ContainerName": "",
+        "ParametrizedQuery": ""
     }
   ]
 }

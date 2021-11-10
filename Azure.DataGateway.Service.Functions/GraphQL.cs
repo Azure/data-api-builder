@@ -1,14 +1,10 @@
-using System;
-using System.IO;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
+using Azure.DataGateway.Services;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
-using Azure.DataGateway.Services;
+using Microsoft.Extensions.Logging;
+using System.IO;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Azure.DataGateway.Service.Functions
 {

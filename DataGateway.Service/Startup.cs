@@ -30,6 +30,13 @@ namespace Azure.DataGateway.Service
             services.AddControllers();
         }
 
+        /// <summary>
+        /// This method adds services that are used when running this project or the
+        /// functions project. Any services that is required should be added here, unless
+        /// it is only required for one or the other.
+        /// </summary>
+        /// <param name="services">The service collection to which services will be added.</param>
+        /// <param name="config">The applications configuration.</param>
         public static void DoConfigureServices(IServiceCollection services, IConfiguration config)
         {
             services.Configure<DataGatewayConfig>(config.GetSection(nameof(DataGatewayConfig)));

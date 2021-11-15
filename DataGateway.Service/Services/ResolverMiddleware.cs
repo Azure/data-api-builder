@@ -5,6 +5,8 @@ using HotChocolate.Types;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Services
 {
@@ -42,52 +44,84 @@ namespace Azure.DataGateway.Services
             if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
             {
                 IDictionary<string, object> parameters = GetParametersFromContext(context);
+                string queryId = context.Selection.Field.Name.Value;
+                bool isContinuationQuery = IsContinuationQuery(parameters);
 
                 if (context.Selection.Type.IsListType())
                 {
-                    context.Result = await _queryEngine.ExecuteListAsync(context.Selection.Field.Name.Value, parameters);
+                    context.Result = await _queryEngine.ExecuteListAsync(queryId, parameters);
                 }
                 else
                 {
-                    context.Result = await _queryEngine.ExecuteAsync(context.Selection.Field.Name.Value, parameters);
+                    context.Result = await _queryEngine.ExecuteAsync(context.Selection.Field.Name.Value, parameters, isContinuationQuery);
                 }
             }
-
-            if (IsInnerObject(context))
+            else
             {
                 JsonDocument result = context.Parent<JsonDocument>();
 
                 JsonElement jsonElement;
                 bool hasProperty =
                     result.RootElement.TryGetProperty(context.Selection.Field.Name.Value, out jsonElement);
-                if (result != null && hasProperty)
-                {
-                    //TODO: Try to avoid additional deserialization/serialization here.
-                    context.Result = JsonDocument.Parse(jsonElement.ToString());
-                }
-                else
-                {
-                    context.Result = null;
-                }
-            }
 
-            if (context.Selection.Field.Type.IsLeafType())
-            {
-                JsonDocument result = context.Parent<JsonDocument>();
-                JsonElement jsonElement;
-                bool hasProperty =
-                    result.RootElement.TryGetProperty(context.Selection.Field.Name.Value, out jsonElement);
-                if (result != null && hasProperty)
+                if (IsInnerObject(context))
                 {
-                    context.Result = jsonElement.ToString();
+
+                    if (result != null && hasProperty)
+                    {
+                        //TODO: Try to avoid additional deserialization/serialization here.
+                        context.Result = JsonDocument.Parse(jsonElement.ToString());
+                    }
+                    else
+                    {
+                        context.Result = null;
+                    }
                 }
-                else
+                else if (context.Selection.Field.Type.IsListType())
                 {
-                    context.Result = null;
+                    if (result != null && hasProperty)
+                    {
+                        //TODO: System.Text.Json seem to to have very limited capabilities. This will be moved to Newtonsoft
+                        IEnumerable<JObject> resultArray = JsonConvert.DeserializeObject<JObject[]>(jsonElement.ToString());
+                        List<JsonDocument> resultList = new();
+                        IEnumerator<JObject> enumerator = resultArray.GetEnumerator();
+                        while (enumerator.MoveNext())
+                        {
+                            resultList.Add(JsonDocument.Parse(enumerator.Current.ToString()));
+                        }
+                        context.Result = resultList;
+                    }
+                    else
+                    {
+                        context.Result = null;
+                    }
+
+                }
+
+                if (context.Selection.Field.Type.IsLeafType())
+                {
+                    if (result != null && hasProperty)
+                    {
+                        context.Result = jsonElement.ToString();
+                    }
+                    else
+                    {
+                        context.Result = null;
+                    }
                 }
             }
 
             await _next(context);
+        }
+
+        private static bool IsContinuationQuery(IDictionary<string, object> parameters)
+        {
+            if (parameters.ContainsKey("after"))
+            {
+                return true;
+            }
+
+            return false;
         }
 
         private static bool IsInnerObject(IMiddlewareContext context)

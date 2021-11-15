@@ -2,6 +2,7 @@ using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -36,7 +37,7 @@ namespace Azure.DataGateway.Services
         // <summary>
         // ExecuteAsync the given named graphql query on the backend.
         // </summary>
-        public async Task<JsonDocument> ExecuteAsync(string graphQLQueryName, IDictionary<string, object> parameters)
+        public async Task<JsonDocument> ExecuteAsync(string graphQLQueryName, IDictionary<string, object> parameters, bool isContinuationQuery)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
@@ -46,6 +47,8 @@ namespace Azure.DataGateway.Services
             GraphQLQueryResolver resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
             Container container = this._clientProvider.Client.GetDatabase(resolver.DatabaseName).GetContainer(resolver.ContainerName);
             var querySpec = new QueryDefinition(resolver.ParametrizedQuery);
+            var queryRequestOptions = new QueryRequestOptions();
+            string requestContinuation = null;
 
             if (parameters != null)
             {
@@ -55,7 +58,38 @@ namespace Azure.DataGateway.Services
                 }
             }
 
-            FeedResponse<JObject> firstPage = await container.GetItemQueryIterator<JObject>(querySpec).ReadNextAsync();
+            if (parameters.TryGetValue("first", out object maxSize))
+            {
+                queryRequestOptions.MaxItemCount = Convert.ToInt32(maxSize);
+            }
+
+            if (parameters.TryGetValue("after", out object after))
+            {
+                requestContinuation = after as string;
+            }
+
+            FeedResponse<JObject> firstPage = await container.GetItemQueryIterator<JObject>(querySpec, requestContinuation, queryRequestOptions).ReadNextAsync();
+
+            if (isContinuationQuery)
+            {
+                JArray jarray = new();
+                IEnumerator<JObject> enumerator = firstPage.GetEnumerator();
+                while (enumerator.MoveNext())
+                {
+                    JObject item = enumerator.Current;
+                    jarray.Add(item);
+                }
+
+                string responseContinuation = firstPage.ContinuationToken;
+                JObject res = new(
+                   new JProperty("endCursor", responseContinuation),
+                   new JProperty("hasNextPage", responseContinuation != null),
+                   new JProperty("nodes", jarray));
+
+                // This extra deserialize/serialization will be removed after moving to Newtonsoft from System.Text.Json
+                var resultJsonDoc = JsonDocument.Parse(res.ToString());
+                return resultJsonDoc;
+            }
 
             JObject firstItem = null;
 

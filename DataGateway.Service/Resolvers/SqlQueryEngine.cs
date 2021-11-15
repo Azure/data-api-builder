@@ -39,7 +39,7 @@ namespace Azure.DataGateway.Service.Resolvers
         // <summary>
         // ExecuteAsync the given named graphql query on the backend.
         // </summary>
-        public async Task<JsonDocument> ExecuteAsync(string graphQLQueryName, IDictionary<string, object> parameters)
+        public async Task<JsonDocument> ExecuteAsync(string graphQLQueryName, IDictionary<string, object> parameters, bool isContinuationQuery)
         {
             // TODO: add support for nesting
             // TODO: add support for join query against another table

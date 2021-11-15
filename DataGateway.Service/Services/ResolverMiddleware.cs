@@ -2,11 +2,11 @@ using Azure.DataGateway.Service.Resolvers;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Services
 {
@@ -89,6 +89,7 @@ namespace Azure.DataGateway.Services
                         {
                             resultList.Add(JsonDocument.Parse(enumerator.Current.ToString()));
                         }
+
                         context.Result = resultList;
                     }
                     else

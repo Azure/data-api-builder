@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace Azure.DataGateway.Service.Functions
 {
     /// <summary>
-    /// This hosts the function that runs when we send a requerst to /graphql.
+    /// This hosts the function that runs when we send a request to /graphql.
     /// The equivalent of the GraphQLController in the DotNetCore project.
     /// </summary>
     public class GraphQL

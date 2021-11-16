@@ -32,7 +32,7 @@ namespace Azure.DataGateway.Service
 
         /// <summary>
         /// This method adds services that are used when running this project or the
-        /// functions project. Any services that is required should be added here, unless
+        /// functions project. Any services that are required should be added here, unless
         /// it is only required for one or the other.
         /// </summary>
         /// <param name="services">The service collection to which services will be added.</param>

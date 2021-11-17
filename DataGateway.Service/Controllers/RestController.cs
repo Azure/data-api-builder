@@ -26,7 +26,6 @@ namespace Azure.DataGateway.Service.Controllers
         {
             string queryString = HttpContext.Request.QueryString.ToString();
 
-            /* TO DO: Stream the response instead of returning the Json Documents*/
             JsonDocument resultJson = await _restService.ExecuteAsync(entityName, queryByPrimaryKey, queryString);
             return resultJson;
         }

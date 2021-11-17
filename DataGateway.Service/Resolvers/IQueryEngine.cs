@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace Azure.DataGateway.Services
+namespace Azure.DataGateway.Service.Resolvers
 {
     // <summary>
     // Interface for execution of queries against a database.
@@ -26,8 +26,8 @@ namespace Azure.DataGateway.Services
         public Task<IEnumerable<JsonDocument>> ExecuteListAsync(string graphQLQueryName, IDictionary<string, object> parameters);
 
         // <summary>
-        // Executes the query represented by the QueryStructure to get a single Json object back.
+        // Executes the query represented by the FindQueryStructure to get a single Json object back.
         // </summary>
-        public Task<JsonDocument> ExecuteAsync(QueryStructure queryStructure);
+        public Task<JsonDocument> ExecuteAsync(FindQueryStructure queryStructure);
     }
 }

@@ -99,7 +99,7 @@ namespace Azure.DataGateway.Service.Resolvers
         // <summary>
         // ExecuteAsync the given named graphql query on the backend.
         // </summary>
-        public async Task<JsonDocument> ExecuteAsync(QueryStructure queryStructure)
+        public async Task<JsonDocument> ExecuteAsync(FindQueryStructure queryStructure)
         {
             string queryText = _queryBuilder.Build(queryStructure);
 

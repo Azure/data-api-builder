@@ -3,13 +3,10 @@ using System.Collections.Generic;
 namespace Azure.DataGateway.Service.Resolvers
 {
     ///<summary>
-    /// QueryStructure provides an intermediate represtation of a SQL query. This
-    ///intermediate structure can be used to generate a Postgres or MSSQL query.
-    /// In some sense this is an AST (abstract syntax tree) of a SQL query.
-    /// However, it only supports the very limited set of SQL constructs that we
-    /// are needed to represent a GraphQL query as SQL.
+    /// FindQueryStructure provides the major components of a REST or GraphQL query
+    /// corresponding to the FindById or FindMany operations.
     ///</summary>
-    public class QueryStructure
+    public class FindQueryStructure
     {
         /// <summary>
         /// The target Entity to be queried.
@@ -27,16 +24,22 @@ namespace Azure.DataGateway.Service.Resolvers
         public List<string> Conditions { get; set; }
 
         /// <summary>
+        /// Is the result supposed to be a list or not.
+        /// </summary>
+        public bool IsListQuery { get; set; }
+
+        /// <summary>
         /// Parameter values.
         /// </summary>
         public IDictionary<string, object> Parameters { get; set; }
 
         /// <summary>
-        /// The target Entity to be queried.
+        /// Constructor.
         /// </summary>
-        public QueryStructure(string entityName)
+        public FindQueryStructure(string entityName, bool isList)
         {
             EntityName = entityName;
+            IsListQuery = isList;
         }
     }
 }

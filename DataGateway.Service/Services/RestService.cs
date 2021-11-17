@@ -16,12 +16,11 @@ namespace Azure.DataGateway.Services
         internal async Task<JsonDocument> ExecuteAsync(string entityName, string queryByPrimaryKey, string queryString)
         {
             var requestParser = new RequestParser();
-            QueryStructure queryStructure = new(entityName);
-            requestParser.ParsePrimayKey(queryByPrimaryKey, queryStructure);
+            FindQueryStructure queryStructure = new(entityName, isList: false);
+            requestParser.ParsePrimaryKey(queryByPrimaryKey, queryStructure);
             requestParser.ParseQueryString(System.Web.HttpUtility.ParseQueryString(queryString), queryStructure);
             return await _queryEngine.ExecuteAsync(queryStructure);
         }
 
     }
-}
 }

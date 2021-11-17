@@ -1,5 +1,6 @@
 using Azure.DataGateway.Service.Resolvers;
 using System;
+using System.Collections.Specialized;
 using System.Threading.Tasks;
 
 namespace Azure.DataGateway.Services
@@ -13,7 +14,7 @@ namespace Azure.DataGateway.Services
         /// </summary>
         /// <param name="queryByPrimaryKey">the string contains all the values that will be used when query by primary key.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public void ParsePrimayKey(string queryByPrimaryKey, QueryStructure queryStructure)
+        public void ParsePrimaryKey(string queryByPrimaryKey, FindQueryStructure queryStructure)
         {
             if (!string.IsNullOrWhiteSpace(queryByPrimaryKey))
             {
@@ -41,7 +42,7 @@ namespace Azure.DataGateway.Services
         /// already loaded from the URL when we parse the body.
         /// </summary>
         /// <param name="nvc">NameValueCollection representing query params from the URL's query string.</param>
-        private void QueryStringParser(NameValueCollection nvc)
+        private void ParseQueryString(NameValueCollection nvc, FindQueryStructure queryStructure)
         {
             foreach (string key in nvc.Keys)
             {
@@ -49,7 +50,7 @@ namespace Azure.DataGateway.Services
                 {
                     case Constants.QueryParam.COLUMNS_URL:
                         CheckListForNullElement(nvc[key].Split(",").ToList());
-                        queryStructure.Fields = nvc[key].Split(",").ToList();
+                        queryStructure.Fields = nvc[key].Split(",");
                         break;
                     default:
                         throw new ArgumentException("Invalid Query Parameter: " + key.ToString());

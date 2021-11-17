@@ -12,12 +12,12 @@ namespace Azure.DataGateway.Service.Tests
 {
     public class TestBase
     {
-        protected GraphQLService _graphQLService;
-        protected CosmosClientProvider _clientProvider;
-        protected IMetadataStoreProvider _metadataStoreProvider;
-        protected CosmosQueryEngine _queryEngine;
-        protected CosmosMutationEngine _mutationEngine;
-        protected GraphQLController _controller;
+        internal GraphQLService _graphQLService;
+        internal CosmosClientProvider _clientProvider;
+        internal IMetadataStoreProvider _metadataStoreProvider;
+        internal CosmosQueryEngine _queryEngine;
+        internal CosmosMutationEngine _mutationEngine;
+        internal GraphQLController _controller;
 
         public TestBase()
         {

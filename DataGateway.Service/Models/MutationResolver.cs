@@ -57,8 +57,8 @@ namespace Azure.DataGateway.Service.Models
 
     public class CrossDataSourceFieldTransformation : IFieldTransformation
     {
-        public string databaseName;
-        public string containerName;
-        public Dictionary<string, string> referenceFieldMap;
+        private string DatabaseName { get; set; }
+        private string ContainerName { get; set; }
+        private Dictionary<string, string> ReferenceFieldMap { get; set; }
     }
 }

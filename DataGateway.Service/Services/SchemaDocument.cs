@@ -2,7 +2,7 @@ namespace Azure.DataGateway.Services
 {
     public class SchemaDocument
     {
-        public string id;
-        public string schema;
+        private string Id { get; set; }
+        private string Schema { get; set; }
     }
 }

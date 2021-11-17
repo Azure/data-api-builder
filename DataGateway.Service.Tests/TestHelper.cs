@@ -50,7 +50,7 @@ namespace Azure.DataGateway.Service.Tests
             return JsonConvert.DeserializeObject<MutationResolver>(raw);
         }
 
-        private static Lazy<IOptions<DataGatewayConfig>> _dataGatewayConfig = new Lazy<IOptions<DataGatewayConfig>>(() => TestHelper.LoadConfig());
+        private static Lazy<IOptions<DataGatewayConfig>> _dataGatewayConfig = new(() => TestHelper.LoadConfig());
 
         private static IOptions<DataGatewayConfig> LoadConfig()
         {

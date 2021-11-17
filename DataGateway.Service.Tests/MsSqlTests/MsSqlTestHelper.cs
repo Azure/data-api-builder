@@ -29,7 +29,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
 
         public static readonly string CharacterListResolver = "{\r\n \"id\": \"characterList\",\r\n \"parametrizedQuery\": \"SELECT id, name, type, homePlanet, primaryFunction FROM character\"\r\n }";
         public static readonly string CharacterByIdResolver = "{\r\n \"id\": \"characterById\",\r\n \"parametrizedQuery\": \"SELECT id, name, type, homePlanet, primaryFunction FROM character WHERE id = @id\"\r\n}";
-        private static Lazy<IOptions<DataGatewayConfig>> _dataGatewayConfig = new Lazy<IOptions<DataGatewayConfig>>(() => MsSqlTestHelper.LoadConfig());
+        private static Lazy<IOptions<DataGatewayConfig>> _dataGatewayConfig = new(() => MsSqlTestHelper.LoadConfig());
 
         /// <summary>
         /// Converts Raw JSON resolver to Resolver class object

@@ -4,6 +4,9 @@ using System.Threading.Tasks;
 
 namespace Azure.DataGateway.Services
 {
+    /// <summary>
+    /// Service providing REST Api executions.
+    /// </summary>
     public class RestService
     {
         private readonly IQueryEngine _queryEngine;
@@ -13,7 +16,14 @@ namespace Azure.DataGateway.Services
             _queryEngine = queryEngine;
         }
 
-        internal async Task<JsonDocument> ExecuteAsync(string entityName, string queryByPrimaryKey, string queryString)
+        /// <summary>
+        /// Invokes the request parser to identify major components of the FindQueryStructure
+        /// and executes the find query.
+        /// </summary>
+        /// <param name="entityName">The entity name.</param>
+        /// <param name="queryByPrimaryKey">The primary key route. e.g. customerName/Xyz/saleOrderId/123</param>
+        /// <param name="queryString">The query string portion of the request. e.g. ?_f=customerName</param>
+        internal async Task<JsonDocument> ExecuteFindAsync(string entityName, string queryByPrimaryKey, string queryString)
         {
             FindQueryStructure queryStructure = new(entityName, isList: string.IsNullOrEmpty(queryByPrimaryKey));
             RequestParser.ParsePrimaryKey(queryByPrimaryKey, queryStructure);

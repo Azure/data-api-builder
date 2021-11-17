@@ -106,6 +106,7 @@ namespace Azure.DataGateway.Service.Resolvers
             // Open connection and execute query using _queryExecutor
             //
             DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryText, queryStructure.Parameters);
+            JsonDocument jsonDocument = null;
 
             // Parse Results into Json and return
             //

@@ -12,6 +12,13 @@ namespace Azure.DataGateway.Service.Resolvers
     {
         private const string FOR_JSON_SUFFIX = " FOR JSON PATH, INCLUDE_NULL_VALUES";
         private const string WITHOUT_ARRAY_WRAPPER_SUFFIX = "WITHOUT_ARRAY_WRAPPER";
+        private const string ALL_FIELDS = "*";
+
+        private static DbCommandBuilder _builder = new SqlCommandBuilder();
+        public string QuoteIdentifier(string ident)
+        {
+            return _builder.QuoteIdentifier(ident);
+        }
 
         public string Build(string inputQuery, bool isList)
         {
@@ -32,19 +39,23 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>The formed query text.</returns>
         public string Build(FindQueryStructure structure)
         {
-            // Add *
-            string selectedColumns = string.Join(", ", structure.Fields.Select(x => $"{x}"));
+            string selectedColumns = ALL_FIELDS;
+            if (structure.Fields.Count > 0)
+            {
+                selectedColumns = string.Join(", ", structure.Fields.Select(x => $"{QuoteIdentifier(x)}"));
+            }
+
             string fromPart = structure.EntityName;
 
             var query = new StringBuilder($"SELECT {selectedColumns} FROM {fromPart}");
-
             if (structure.Conditions.Count() > 0)
             {
                 query.Append($" WHERE {string.Join(" AND ", structure.Conditions)}");
             }
 
-            // Add Without array wrapper suffix
-            return Build(query.ToString(), structure.IsList());
+            // Call the basic build to add the correct FOR JSON suffixes.
+            //
+            return Build(query.ToString(), structure.IsListQuery);
         }
     }
 }

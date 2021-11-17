@@ -18,7 +18,7 @@ namespace Azure.DataGateway.Service.Controllers
         }
 
         [HttpGet]
-        [Route("{queryByPrimaryKey}")]
+        [Route("{*queryByPrimaryKey}")]
         [Produces("application/json")]
         public async Task<JsonDocument> FindById(
             string entityName,

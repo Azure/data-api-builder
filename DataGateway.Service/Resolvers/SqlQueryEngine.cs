@@ -95,5 +95,30 @@ namespace Azure.DataGateway.Service.Resolvers
 
             return resultsAsList;
         }
+
+        // <summary>
+        // ExecuteAsync the given named graphql query on the backend.
+        // </summary>
+        public async Task<JsonDocument> ExecuteAsync(QueryStructure queryStructure)
+        {
+            string queryText = _queryBuilder.Build(queryStructure);
+
+            // Open connection and execute query using _queryExecutor
+            //
+            DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryText, queryStructure.Parameters);
+
+            // Parse Results into Json and return
+            //
+            if (await dbDataReader.ReadAsync())
+            {
+                jsonDocument = JsonDocument.Parse(dbDataReader.GetString(0));
+            }
+            else
+            {
+                Console.WriteLine("Did not return enough rows in the JSON result.");
+            }
+
+            return jsonDocument;
+        }
     }
 }

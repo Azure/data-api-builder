@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace Azure.DataGateway.Services
 {
     // <summary>
-    // Interface for execution of GraphQL queries against a database.
+    // Interface for execution of queries against a database.
     // </summary>
     public interface IQueryEngine
     {
@@ -24,5 +24,10 @@ namespace Azure.DataGateway.Services
         // Executes the given named graphql query on the backend and expecting a list of Jsons back.
         // </summary>
         public Task<IEnumerable<JsonDocument>> ExecuteListAsync(string graphQLQueryName, IDictionary<string, object> parameters);
+
+        // <summary>
+        // Executes the query represented by the QueryStructure to get a single Json object back.
+        // </summary>
+        public Task<JsonDocument> ExecuteAsync(QueryStructure queryStructure);
     }
 }

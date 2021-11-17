@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace Azure.DataGateway.Service.Models
 {
     public class MutationResolver
@@ -42,23 +40,5 @@ namespace Azure.DataGateway.Service.Models
     public enum Operation
     {
         Upsert, Delete, Create
-    }
-
-    public class Fields
-    {
-        public string Type { get; set; }
-        public IFieldTransformation Transformation { get; set; }
-    }
-
-    public interface IFieldTransformation
-    {
-
-    }
-
-    public class CrossDataSourceFieldTransformation : IFieldTransformation
-    {
-        private string DatabaseName { get; set; }
-        private string ContainerName { get; set; }
-        private Dictionary<string, string> ReferenceFieldMap { get; set; }
     }
 }

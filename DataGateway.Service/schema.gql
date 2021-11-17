@@ -10,7 +10,7 @@ type Character {
         name : String,
         type: String,
         homePlanet: Int,
-        primaryFunction: String
+        primaryFunction: String @authorize
 }
 
 type Planet {

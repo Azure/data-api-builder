@@ -62,6 +62,7 @@ namespace Azure.DataGateway.Service
             }
 
             services.AddSingleton<GraphQLService, GraphQLService>();
+            services.AddAuthorization();
             services.AddControllers();
         }
 
@@ -77,6 +78,7 @@ namespace Azure.DataGateway.Service
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>

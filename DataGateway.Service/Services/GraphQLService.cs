@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace Azure.DataGateway.Services
 {
@@ -30,9 +31,10 @@ namespace Azure.DataGateway.Services
         public void ParseAsync(String data)
         {
             ISchema schema = SchemaBuilder.New()
-                .AddDocumentFromString(data)
-                .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine))
-                .Create();
+               .AddDocumentFromString(data)
+               .AddAuthorizeDirectiveType()
+               .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine))
+               .Create();
 
             // Below is pretty much an inlined version of
             // ISchema.MakeExecutable. The reason that we inline it is that
@@ -40,10 +42,11 @@ namespace Azure.DataGateway.Services
             // AddErrorFilter.
             IRequestExecutorBuilder builder = new ServiceCollection()
                 .AddGraphQL()
+                .AddAuthorization()
                 .AddErrorFilter(error =>
             {
-                Console.Error.WriteLine(error.Exception.Message);
-                Console.Error.WriteLine(error.Exception.StackTrace);
+                Console.WriteLine(error.Code);
+                Console.WriteLine(error.Message);
                 return error;
             });
 
@@ -59,22 +62,23 @@ namespace Azure.DataGateway.Services
 
         public IRequestExecutor Executor { get; private set; }
 
-        internal async Task<string> ExecuteAsync(String requestBody)
+        /// <summary>
+        /// Executes GraphQL request within GraphQL Libarary components. 
+        /// </summary>
+        /// <param name="requestBody">Http request body</param>
+        /// <param name="requestProperties">key/value pair of Http headers to be used in GraphQL library pipeline</param>
+        /// <returns></returns>
+        internal async Task<string> ExecuteAsync(String requestBody, Dictionary<string,object> requestProperties)
         {
             if (Executor == null)
             {
                 return "{\"error\": \"Schema must be defined first\" }";
             }
 
-            var req = JsonDocument.Parse(requestBody);
-            IQueryRequest queryRequest = QueryRequestBuilder.New()
-                .SetQuery(req.RootElement.GetProperty("query").GetString())
-                .Create();
+            IQueryRequest queryRequest = CompileRequest(requestBody, requestProperties);
 
-            IExecutionResult result =
-                await Executor.ExecuteAsync(queryRequest);
-
-            return result.ToJson(withIndentations: false);
+            IExecutionResult result = await Executor.ExecuteAsync(queryRequest);
+            return result.ToJson(withIndentations: false);        
         }
 
         /// <summary>
@@ -95,5 +99,32 @@ namespace Azure.DataGateway.Services
             }
         }
 
+        /// <summary>
+        /// Adds request properties(i.e. AuthN details) as GraphQL QueryRequest properties so key/values
+        /// can be used in HotChocolate Middleware.
+        /// </summary>
+        /// <param name="requestBody">Http Request Body</param>
+        /// <param name="requestProperties">Key/Value Pair of Https Headers intended to be used in GraphQL service</param>
+        /// <returns></returns>
+        private static IQueryRequest CompileRequest(string requestBody, Dictionary<string,object> requestProperties)
+        {
+            var requestBodyJson = JsonDocument.Parse(requestBody);
+            IQueryRequestBuilder requestBuilder = QueryRequestBuilder.New()
+                .SetQuery(requestBodyJson.RootElement.GetProperty("query").GetString());
+
+            // Individually adds each property to requestBuilder if they are provided.
+            // Avoids using SetProperties() as it detrimentally overwrites
+            // any properties other Middleware sets.
+            //
+            if (requestProperties != null && requestProperties.Count > 0)
+            {
+                foreach (KeyValuePair<string,object> property in requestProperties)
+                {
+                    requestBuilder.AddProperty(property.Key, property.Value);
+                }              
+            }
+
+            return requestBuilder.Create();
+        }
     }
 }

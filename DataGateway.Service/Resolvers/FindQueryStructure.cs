@@ -39,7 +39,10 @@ namespace Azure.DataGateway.Service.Resolvers
         public FindQueryStructure(string entityName, bool isList)
         {
             EntityName = entityName;
+            Fields = new List<string>();
             IsListQuery = isList;
+            Conditions = new List<string>();
+            Parameters = new Dictionary<string, object>();
         }
     }
 }

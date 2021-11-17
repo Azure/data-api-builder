@@ -15,8 +15,8 @@ namespace Azure.DataGateway.Service.Resolvers
         public string Build(string inputQuery, bool isList);
 
         /// <summary>
-        /// Build the target database query for the given FindQueryStructure object which
-        /// holds the major components of a query.
+        /// Builds the query specific to the target database for the given FindQueryStructure
+        /// object which holds the major components of the query.
         /// </summary>
         public string Build(FindQueryStructure structure);
     }

@@ -26,7 +26,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public Task<IEnumerable<JsonDocument>> ExecuteListAsync(string graphQLQueryName, IDictionary<string, object> parameters);
 
         // <summary>
-        // Given the FindQuery structure, obtain the query text and execute it against the backend.
+        // Given the FindQuery structure, obtains the query text and executes it against the backend.
         // </summary>
         public Task<JsonDocument> ExecuteAsync(FindQueryStructure queryStructure);
     }

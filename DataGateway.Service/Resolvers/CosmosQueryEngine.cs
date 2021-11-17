@@ -106,5 +106,13 @@ namespace Azure.DataGateway.Services
 
             return resultsAsList;
         }
+
+        // <summary>
+        // Executes the query represented by the FindQueryStructure to get a single Json object back.
+        // </summary>
+        public Task<JsonDocument> ExecuteAsync(FindQueryStructure queryStructure)
+        {
+            return null;
+        }
     }
 }

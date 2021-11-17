@@ -62,6 +62,7 @@ namespace Azure.DataGateway.Service
             }
 
             services.AddSingleton<GraphQLService, GraphQLService>();
+            services.AddSingleton<RestService, RestService>();
             services.AddControllers();
         }
 

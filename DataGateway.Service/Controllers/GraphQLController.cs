@@ -22,7 +22,7 @@ namespace Azure.DataGateway.Service.Controllers
 
         [HttpPost]
         public async Task<JsonDocument> PostAsync()
-       {
+        {
             string requestBody;
             using (var reader = new StreamReader(this.HttpContext.Request.Body))
             {

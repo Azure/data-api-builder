@@ -5,9 +5,9 @@ using HotChocolate.Execution.Configuration;
 using HotChocolate.Types;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 
 namespace Azure.DataGateway.Services
 {
@@ -68,7 +68,7 @@ namespace Azure.DataGateway.Services
         /// <param name="requestBody">Http request body</param>
         /// <param name="requestProperties">key/value pair of Http headers to be used in GraphQL library pipeline</param>
         /// <returns></returns>
-        internal async Task<string> ExecuteAsync(String requestBody, Dictionary<string,object> requestProperties)
+        internal async Task<string> ExecuteAsync(string requestBody, Dictionary<string, object> requestProperties)
         {
             if (Executor == null)
             {
@@ -78,7 +78,7 @@ namespace Azure.DataGateway.Services
             IQueryRequest queryRequest = CompileRequest(requestBody, requestProperties);
 
             IExecutionResult result = await Executor.ExecuteAsync(queryRequest);
-            return result.ToJson(withIndentations: false);        
+            return result.ToJson(withIndentations: false);
         }
 
         /// <summary>
@@ -106,7 +106,7 @@ namespace Azure.DataGateway.Services
         /// <param name="requestBody">Http Request Body</param>
         /// <param name="requestProperties">Key/Value Pair of Https Headers intended to be used in GraphQL service</param>
         /// <returns></returns>
-        private static IQueryRequest CompileRequest(string requestBody, Dictionary<string,object> requestProperties)
+        private static IQueryRequest CompileRequest(string requestBody, Dictionary<string, object> requestProperties)
         {
             var requestBodyJson = JsonDocument.Parse(requestBody);
             IQueryRequestBuilder requestBuilder = QueryRequestBuilder.New()
@@ -118,10 +118,10 @@ namespace Azure.DataGateway.Services
             //
             if (requestProperties != null && requestProperties.Count > 0)
             {
-                foreach (KeyValuePair<string,object> property in requestProperties)
+                foreach (KeyValuePair<string, object> property in requestProperties)
                 {
                     requestBuilder.AddProperty(property.Key, property.Value);
-                }              
+                }
             }
 
             return requestBuilder.Create();

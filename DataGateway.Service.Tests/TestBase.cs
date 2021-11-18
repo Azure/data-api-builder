@@ -1,12 +1,12 @@
+using System;
+using System.IO;
+using System.Net.Http;
+using System.Text;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.Cosmos;
-using System;
-using System.IO;
-using System.Net.Http;
-using System.Text;
 
 namespace Azure.DataGateway.Service.Tests
 {

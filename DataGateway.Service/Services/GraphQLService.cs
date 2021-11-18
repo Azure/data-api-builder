@@ -63,7 +63,7 @@ namespace Azure.DataGateway.Services
         public IRequestExecutor Executor { get; private set; }
 
         /// <summary>
-        /// Executes GraphQL request within GraphQL Libarary components. 
+        /// Executes GraphQL request within GraphQL Library components. 
         /// </summary>
         /// <param name="requestBody">Http request body</param>
         /// <param name="requestProperties">key/value pair of Http headers to be used in GraphQL library pipeline</param>
@@ -88,11 +88,9 @@ namespace Azure.DataGateway.Services
         private void InitializeSchemaAndResolvers()
         {
             // Attempt to get schema from the metadata store.
-            //
             string graphqlSchema = _metadataStoreProvider.GetGraphQLSchema();
 
             // If the schema is available, parse it and attach resolvers.
-            //
             if (!string.IsNullOrEmpty(graphqlSchema))
             {
                 ParseAsync(graphqlSchema);
@@ -115,7 +113,6 @@ namespace Azure.DataGateway.Services
             // Individually adds each property to requestBuilder if they are provided.
             // Avoids using SetProperties() as it detrimentally overwrites
             // any properties other Middleware sets.
-            //
             if (requestProperties != null && requestProperties.Count > 0)
             {
                 foreach (KeyValuePair<string, object> property in requestProperties)

@@ -46,7 +46,6 @@ namespace Azure.DataGateway.Service.Models
         {
             // x-ms-client-principal is base64 encoded custom JWT injected by AppService Authentication (EasyAuth)
             // only when Bearer token has been validated.
-            //
             if (context.Request.Headers.TryGetValue("x-ms-client-principal", out StringValues header))
             {
                 string encodedPrincipalData = header[0];

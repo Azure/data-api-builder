@@ -10,7 +10,7 @@ namespace Azure.DataGateway.Service.Controllers
     /// Controller to serve REST Api requests for the route /entityName.
     /// </summary>
     [ApiController]
-    [Route("{entityName}")]
+    [Route("{databaseName}/{entityName}")]
     public class RestController : ControllerBase
     {
         /// <summary>

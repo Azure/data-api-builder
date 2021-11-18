@@ -32,7 +32,7 @@ namespace Azure.DataGateway.Service.Controllers
             // Parse App Service's EasyAuth injected headers into MiddleWare usable Security Principal
             Dictionary<string, object> requestProperties = new();
             ClaimsIdentity identity = AppServiceAuthentication.Parse(this.HttpContext);
-            if (identity is not null)
+            if (identity != null)
             {
                 this.HttpContext.User = new ClaimsPrincipal(identity);
 

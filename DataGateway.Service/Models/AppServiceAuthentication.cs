@@ -55,7 +55,7 @@ namespace Azure.DataGateway.Service.Models
 
                 ClaimsIdentity identity = new(principal.Auth_typ, principal.Name_typ, principal.Role_typ);
 
-                if (principal.Claims is not null && principal.Claims.Count() > 0)
+                if (principal.Claims != null && principal.Claims.Count() > 0)
                 {
                     foreach (AppServiceClaim claim in principal.Claims)
                     {

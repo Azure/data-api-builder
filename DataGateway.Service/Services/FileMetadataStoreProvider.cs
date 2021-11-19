@@ -1,11 +1,11 @@
-using Azure.DataGateway.Service.configurations;
-using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
-using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using Azure.DataGateway.Service.configurations;
+using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Services;
+using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service
 {

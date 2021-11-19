@@ -88,11 +88,6 @@ jobs:
         SqlLocalDB.exe stop MSSqlLocalDB -k
         SqlLocalDB.exe delete MSSqlLocalDB
         SqlLocalDB.exe start
-  - pwsh: Install-Module dbatools -Force
-    displayName: Install DBATools
-
-  - pwsh: Invoke-DbaQuery -SqlInstance "(localdb)\MSSqlLocalDB" -Query "SELECT @@VERSION;" | Write-Output
-    displayName: Show server version
 
   - task: PowerShell@2
     displayName: 'start mssqllocaldb'

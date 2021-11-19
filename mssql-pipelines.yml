@@ -88,9 +88,9 @@ jobs:
         Start-Process -FilePath "SqlLocalDB.msi" -Wait -ArgumentList "/qn", "/norestart", "/l*v SqlLocalDBInstall.log", "IACCEPTSQLLOCALDBLICENSETERMS=YES";
         SqlLocalDB.exe info
         SqlLocalDB.exe versions
-        SqlLocalDB.exe stop MSSQLLocalDB -k
-        SqlLocalDB.exe delete MSSQLLocalDB
-        SqlLocalDB.exe create MSSQLLocalDB $(SqlVersionCode) -s
+        SqlLocalDB.exe stop mssqllocaldb -k
+        SqlLocalDB.exe delete mssqllocaldb
+        SqlLocalDB.exe create mssqllocaldb $(SqlVersionCode) -s
 
   - task: PowerShell@2
     displayName: 'start mssqllocaldb'

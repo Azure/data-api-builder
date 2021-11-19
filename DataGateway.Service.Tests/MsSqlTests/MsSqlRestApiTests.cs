@@ -109,7 +109,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         private static string ToJsonString(JsonDocument jdoc)
         {
             MemoryStream stream = new();
-            Utf8JsonWriter writer = new (stream, new JsonWriterOptions { Indented = false });
+            Utf8JsonWriter writer = new(stream, new JsonWriterOptions { Indented = false });
             jdoc.WriteTo(writer);
             writer.Flush();
             return Encoding.UTF8.GetString(stream.ToArray());

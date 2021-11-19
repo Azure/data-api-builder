@@ -79,7 +79,6 @@ jobs:
     inputs:
       targetType: 'inline'
       script: |
-        SqlLocalDb.exe start
         Write-Host "Downloading"
         Import-Module BitsTransfer
         Start-BitsTransfer -Source $(InstallerUrl) -Destination SqlLocalDB.msi
@@ -87,7 +86,6 @@ jobs:
         Start-Process -FilePath "SqlLocalDB.msi" -Wait -ArgumentList "/qn", "/norestart", "/l*v SqlLocalDBInstall.log", "IACCEPTSQLLOCALDBLICENSETERMS=YES";
         SqlLocalDB.exe stop MSSQLLocalDB -k
         SqlLocalDB.exe delete MSSQLLocalDB
-        SqlLocalDB.exe start
 
   - task: PowerShell@2
     displayName: 'start mssqllocaldb'

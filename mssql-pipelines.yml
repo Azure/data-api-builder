@@ -87,6 +87,7 @@ jobs:
         Write-Host "Installing"
         Start-Process -FilePath "SqlLocalDB.msi" -Wait -ArgumentList "/qn", "/norestart", "/l*v SqlLocalDBInstall.log", "IACCEPTSQLLOCALDBLICENSETERMS=YES";
         SqlLocalDB.exe info MSSqlLocalDB
+        SqlLocalDB.exe info SQL2019
         SqlLocalDB.exe versions
         SqlLocalDB.exe stop mssqllocaldb -k
         SqlLocalDB.exe delete mssqllocaldb

@@ -84,6 +84,7 @@ jobs:
         Start-BitsTransfer -Source $(InstallerUrl) -Destination SqlLocalDB.msi
         Write-Host "Installing"
         Start-Process -FilePath "SqlLocalDB.msi" -Wait -ArgumentList "/qn", "/norestart", "/l*v SqlLocalDBInstall.log", "IACCEPTSQLLOCALDBLICENSETERMS=YES";
+        SqlLocalDB.exe info
         SqlLocalDB.exe stop MSSQLLocalDB -k
         SqlLocalDB.exe delete MSSQLLocalDB
         SqlLocalDB.exe create MSSQLLocalDB $(SqlVersionCode) -s

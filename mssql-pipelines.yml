@@ -98,7 +98,7 @@ jobs:
     inputs:
       targetType: 'inline'
       script: |
-        sqllocaldb start mssqllocaldb\n\nsqllocaldb
+        sqllocaldb start mssqllocaldb
 
   - task: FileTransform@1
     displayName: 'Generate appsettings.Test.json'

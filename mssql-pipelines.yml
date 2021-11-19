@@ -85,17 +85,17 @@ jobs:
         Write-Host "Installing"
         Start-Process -FilePath "SqlLocalDB.msi" -Wait -ArgumentList "/qn", "/norestart", "/l*v SqlLocalDBInstall.log", "IACCEPTSQLLOCALDBLICENSETERMS=YES";
         SqlLocalDb.exe start
-        SqlLocalDB.exe MSSQLLocalDB info
+        SqlLocalDB.exe info "MSSQLLocalDB"
         SqlLocalDB.exe stop MSSQLLocalDB -k
         SqlLocalDB.exe delete MSSQLLocalDB
 
   - task: PowerShell@2
-    displayName: 'start mssqllocaldb'
+    displayName: 'Start MSSQLLocalDB'
     inputs:
       targetType: 'inline'
       script: |
-        sqllocaldb start mssqllocaldb
-        sqllocaldb info "mssqllocaldb"
+        SqlLocalDb.exe start MSSQLLocalDB
+        SqlLocalDb.exe info "MSSQLLocalDB"
 
   - task: FileTransform@1
     displayName: 'Generate appsettings.Test.json'

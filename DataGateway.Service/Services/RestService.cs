@@ -21,12 +21,12 @@ namespace Azure.DataGateway.Services
         /// and executes the find query.
         /// </summary>
         /// <param name="entityName">The entity name.</param>
-        /// <param name="queryByPrimaryKey">The primary key route. e.g. customerName/Xyz/saleOrderId/123</param>
+        /// <param name="primaryKeyRoute">The primary key route. e.g. customerName/Xyz/saleOrderId/123</param>
         /// <param name="queryString">The query string portion of the request. e.g. ?_f=customerName</param>
-        internal async Task<JsonDocument> ExecuteFindAsync(string entityName, string queryByPrimaryKey, string queryString)
+        internal async Task<JsonDocument> ExecuteFindAsync(string entityName, string primaryKeyRoute, string queryString)
         {
-            FindQueryStructure queryStructure = new(entityName, isList: string.IsNullOrEmpty(queryByPrimaryKey));
-            RequestParser.ParsePrimaryKey(queryByPrimaryKey, queryStructure);
+            FindQueryStructure queryStructure = new(entityName, isList: string.IsNullOrEmpty(primaryKeyRoute));
+            RequestParser.ParsePrimaryKey(primaryKeyRoute, queryStructure);
             RequestParser.ParseQueryString(System.Web.HttpUtility.ParseQueryString(queryString), queryStructure);
             return await _queryEngine.ExecuteAsync(queryStructure);
         }

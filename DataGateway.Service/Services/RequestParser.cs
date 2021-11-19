@@ -7,7 +7,7 @@ using System.Linq;
 namespace Azure.DataGateway.Services
 {
     /// <summary>
-    /// Class providing parsing logic for different portions of the request.
+    /// Class providing parsing logic for different portions of the request url.
     /// </summary>
     public class RequestParser
     {
@@ -23,11 +23,11 @@ namespace Azure.DataGateway.Services
         /// </summary>
         /// <param name="queryByPrimaryKey">The primary key route. e.g. customerName/Xyz/saleOrderId/123.</param>
         /// <param name="queryStructure">The FindQueryStructure holding the major components of the query.</param>
-        public static void ParsePrimaryKey(string queryByPrimaryKey, FindQueryStructure queryStructure)
+        public static void ParsePrimaryKey(string primaryKeyRoute, FindQueryStructure queryStructure)
         {
-            if (!string.IsNullOrWhiteSpace(queryByPrimaryKey))
+            if (!string.IsNullOrWhiteSpace(primaryKeyRoute))
             {
-                string[] primaryKeyValues = queryByPrimaryKey.Split("/");
+                string[] primaryKeyValues = primaryKeyRoute.Split("/");
 
                 if (primaryKeyValues.Length % 2 != 0)
                 {

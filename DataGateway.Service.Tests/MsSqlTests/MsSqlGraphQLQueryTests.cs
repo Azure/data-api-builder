@@ -15,6 +15,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         #region Test Fixture Setup
         private static GraphQLService _graphQLService;
         private static GraphQLController _graphQLController;
+        private static readonly string _integrationTableName = "character";
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
@@ -22,9 +23,9 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         /// </summary>
         /// <param name="context"></param>
         [ClassInitialize]
-        public new static void InitializeTestFixture(TestContext context)
+        public static void InitializeTestFixture(TestContext context)
         {
-            MsSqlTestBase.InitializeTestFixture(context);
+            MsSqlTestBase.InitializeTestFixture(context, _integrationTableName);
 
             // Setup GraphQL Components
             //
@@ -37,16 +38,16 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         /// conclusion of test run, as defined by MSTest decorator.
         /// </summary>
         [ClassCleanup]
-        public new static void CleanupTestFixture()
+        public static void CleanupTestFixture()
         {
-            MsSqlTestBase.CleanupTestFixture();
+            CleanupTestFixture(_integrationTableName);
         }
 
         #endregion
 
         #region Tests
         /// <summary>
-        /// Get result of quering singular object
+        /// Gets result of quering singular object
         /// </summary>
         /// <returns></returns>
         [TestMethod]
@@ -54,7 +55,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         {
             string graphQLQueryName = "characterById";
             string graphQLQuery = "{\"query\":\"{\\n characterById(id:2){\\n name\\n primaryFunction\\n}\\n}\\n\"}";
-            string msSqlQuery = $"SELECT name, primaryFunction FROM { IntegrationTableName} WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
+            string msSqlQuery = $"SELECT name, primaryFunction FROM { _integrationTableName } WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(msSqlQuery);

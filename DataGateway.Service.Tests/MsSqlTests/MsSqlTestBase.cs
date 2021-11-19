@@ -1,4 +1,3 @@
-using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Http;
@@ -24,15 +23,13 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         protected static IMetadataStoreProvider _metadataStoreProvider;
         protected static DatabaseInteractor _databaseInteractor;
 
-        public static string IntegrationTableName { get; } = "character";
-
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
         /// MSTest decorator. 
         /// </summary>
         /// <param name="context"></param>
         [ClassInitialize]
-        protected static void InitializeTestFixture(TestContext context)
+        protected static void InitializeTestFixture(TestContext context, string tableName)
         {
             // Setup Schema and Resolvers
             //
@@ -50,8 +47,8 @@ namespace Azure.DataGateway.Service.Tests.MsSql
             // Setup Integration DB Components
             //
             _databaseInteractor = new DatabaseInteractor(_queryExecutor);
-            CreateTable();
-            InsertData();
+            CreateTable(tableName);
+            InsertData(tableName);
         }
 
         /// <summary>
@@ -59,34 +56,35 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         /// conclusion of test run, as defined by MSTest decorator.
         /// </summary>
         [ClassCleanup]
-        protected static void CleanupTestFixture()
+        protected static void CleanupTestFixture(string tableName)
         {
-            _databaseInteractor.DropTable(IntegrationTableName);
+            _databaseInteractor.DropTable(tableName);
         }
 
         #region Helper Functions
         /// <summary>
-        /// Creates a default table
+        /// Creates the given table.
         /// </summary>
-        private static void CreateTable()
+        /// <param name="tableName">The table name.</param>
+        private static void CreateTable(string tableName)
         {
-            _databaseInteractor.CreateTable(IntegrationTableName, "id int, name varchar(20), type varchar(20), homePlanet int, primaryFunction varchar(20)");
+            _databaseInteractor.CreateTable(tableName, "id int, name varchar(20), type varchar(20), homePlanet int, primaryFunction varchar(20)");
         }
 
         /// <summary>
-        /// Inserts some default data into the table
+        /// Inserts some default data into the table.
         /// </summary>
-        private static void InsertData()
+        private static void InsertData(string tableName)
         {
-            _databaseInteractor.InsertData(IntegrationTableName, "'1', 'Mace', 'Jedi','1','Master'");
-            _databaseInteractor.InsertData(IntegrationTableName, "'2', 'Plo Koon', 'Jedi','2','Master'");
-            _databaseInteractor.InsertData(IntegrationTableName, "'3', 'Yoda', 'Jedi','3','Master'");
+            _databaseInteractor.InsertData(tableName, "'1', 'Mace', 'Jedi','1','Master'");
+            _databaseInteractor.InsertData(tableName, "'2', 'Plo Koon', 'Jedi','2','Master'");
+            _databaseInteractor.InsertData(tableName, "'3', 'Yoda', 'Jedi','3','Master'");
         }
 
         /// <summary>
-        /// returns httpcontext with body consisting of GraphQLQuery 
+        /// returns httpcontext with body consisting of the given data.
         /// </summary>
-        /// <param name="data">GraphQLQuery</param>
+        /// <param name="data">The data to be put in the request body e.g. GraphQLQuery</param>
         /// <returns>The http context with given data as stream of utf-8 bytes.</returns>
         protected static DefaultHttpContext GetHttpContextWithBody(string data)
         {
@@ -101,7 +99,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         /// <summary>
         /// Constructs an http context with request consisting of the given query string.
         /// </summary>
-        /// <param name="queryStringUrl">GraphQLQuery</param>
+        /// <param name="queryStringUrl">query</param>
         /// <returns>The http context with request consisting of the given query string.</returns>
         protected static DefaultHttpContext GetHttpContextWithQueryString(string queryStringUrl)
         {
@@ -114,7 +112,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         }
 
         /// <summary>
-        /// Sends raw SQL query to database engine to retrieve expected result in JSON format
+        /// Sends raw SQL query to database engine to retrieve expected result in JSON format.
         /// </summary>
         /// <param name="queryText">raw database query</param>
         /// <returns>string in JSON format</returns>
@@ -132,6 +130,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
 
             return sqlResultData.ToString();
         }
+
         #endregion
     }
 }

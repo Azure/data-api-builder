@@ -18,6 +18,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         #region Test Fixture Setup
         private static RestService _restService;
         private static RestController _restController;
+        private static readonly string _integrationTableName = "characterTableForRestApi";
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
@@ -25,9 +26,9 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         /// </summary>
         /// <param name="context"></param>
         [ClassInitialize]
-        public new static void InitializeTestFixture(TestContext context)
+        public static void InitializeTestFixture(TestContext context)
         {
-            MsSqlTestBase.InitializeTestFixture(context);
+            MsSqlTestBase.InitializeTestFixture(context, _integrationTableName);
 
             // Setup REST Components
             //
@@ -40,9 +41,9 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         /// conclusion of test run, as defined by MSTest decorator.
         /// </summary>
         [ClassCleanup]
-        public new static void CleanupTestFixture()
+        public static void CleanupTestFixture()
         {
-            MsSqlTestBase.CleanupTestFixture();
+            MsSqlTestBase.CleanupTestFixture(_integrationTableName);
         }
 
         #endregion
@@ -55,22 +56,22 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         public async Task FindByIdTest()
         {
             string primaryKeyRoute = "id/2";
-            string msSqlQuery = $"SELECT * FROM { IntegrationTableName} " +
+            string msSqlQuery = $"SELECT * FROM { _integrationTableName } " +
                 $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
 
             await PerformTest(_restController.FindById,
-                IntegrationTableName,
+                _integrationTableName,
                 primaryKeyRoute,
                 queryString: string.Empty,
                 msSqlQuery);
 
             primaryKeyRoute = "id/1";
             string queryStringWithFields = "?_f=id,name,type";
-            msSqlQuery = $"SELECT [id], [name], [type] FROM { IntegrationTableName } " +
+            msSqlQuery = $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
                 $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
 
             await PerformTest(_restController.FindById,
-                IntegrationTableName,
+                _integrationTableName,
                 primaryKeyRoute,
                 queryStringWithFields,
                 msSqlQuery);

@@ -94,7 +94,7 @@ jobs:
   - pwsh: Install-Module dbatools -Force
     displayName: Install DBATools
 
-  - pwsh: Invoke-DbaQuery -SqlInstance "(localdb)\$(InstanceName)" -Query "SELECT @@VERSION;" | Write-Output
+  - pwsh: Invoke-DbaQuery -SqlInstance "(localdb)\MSSqlLocalDB" -Query "SELECT @@VERSION;" | Write-Output
     displayName: Show server version
 
   - task: PowerShell@2

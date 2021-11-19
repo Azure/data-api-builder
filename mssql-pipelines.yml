@@ -80,16 +80,13 @@ jobs:
       targetType: 'inline'
       script: |
         SqlLocalDb.exe start
-        SqlLocalDB.exe info MSSqlLocalDB
         Write-Host "Downloading"
         Import-Module BitsTransfer
         Start-BitsTransfer -Source $(InstallerUrl) -Destination SqlLocalDB.msi
         Write-Host "Installing"
         Start-Process -FilePath "SqlLocalDB.msi" -Wait -ArgumentList "/qn", "/norestart", "/l*v SqlLocalDBInstall.log", "IACCEPTSQLLOCALDBLICENSETERMS=YES";
-        SqlLocalDB.exe info MSSqlLocalDB
         SqlLocalDB.exe stop MSSqlLocalDB -k
         SqlLocalDB.exe delete MSSqlLocalDB
-        SqlLocalDB.exe create mssqllocaldb $(SqlVersionCode) -s
         SqlLocalDB.exe start
   - pwsh: Install-Module dbatools -Force
     displayName: Install DBATools

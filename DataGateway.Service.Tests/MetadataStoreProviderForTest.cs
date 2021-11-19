@@ -1,6 +1,6 @@
+using System.Collections.Generic;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
-using System.Collections.Generic;
 
 namespace Azure.DataGateway.Service.Tests
 {

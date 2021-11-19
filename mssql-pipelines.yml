@@ -79,6 +79,7 @@ jobs:
     inputs:
       targetType: 'inline'
       script: |
+        SqlLocalDb.exe start
         SqlLocalDB.exe info "MSSQLLocalDB"
         Write-Host "Downloading"
         Import-Module BitsTransfer

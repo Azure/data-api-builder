@@ -79,8 +79,7 @@ jobs:
     inputs:
       targetType: 'inline'
       script: |
-        SqlLocalDB.exe info
-        SqlLocalDB.exe versions
+        SqlLocalDB.exe info MSSqlLocalDB
         Write-Host "Downloading"
         Import-Module BitsTransfer
         Start-BitsTransfer -Source $(InstallerUrl) -Destination SqlLocalDB.msi

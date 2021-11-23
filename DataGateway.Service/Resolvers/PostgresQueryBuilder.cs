@@ -51,7 +51,6 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             // Call the basic build to add the correct FOR JSON suffixes.
-            //
             return Build(query.ToString(), structure.IsListQuery);
         }
 

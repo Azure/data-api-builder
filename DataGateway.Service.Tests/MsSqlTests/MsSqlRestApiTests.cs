@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         [ClassInitialize]
         public static void InitializeTestFixture(TestContext context)
         {
-            MsSqlTestBase.InitializeTestFixture(context, _integrationTableName);
+            InitializeTestFixture(context, _integrationTableName);
 
             // Setup REST Components
             //
@@ -43,7 +43,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         [ClassCleanup]
         public static void CleanupTestFixture()
         {
-            MsSqlTestBase.CleanupTestFixture(_integrationTableName);
+            CleanupTestFixture(_integrationTableName);
         }
 
         #endregion
@@ -55,19 +55,9 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         [TestMethod]
         public async Task FindByIdTest()
         {
-            string primaryKeyRoute = "id/2";
-            string msSqlQuery = $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
-
-            await PerformTest(_restController.FindById,
-                _integrationTableName,
-                primaryKeyRoute,
-                queryString: string.Empty,
-                msSqlQuery);
-
-            primaryKeyRoute = "id/1";
+            string primaryKeyRoute = "id/1";
             string queryStringWithFields = "?_f=id,name,type";
-            msSqlQuery = $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
+            string msSqlQuery = $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
                 $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
 
             await PerformTest(_restController.FindById,

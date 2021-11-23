@@ -14,7 +14,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
     /// <summary>
     /// Base class providing common test fixture for both REST and GraphQL tests.
     /// </summary>
-    [TestClass()]
+    [TestClass]
     public abstract class MsSqlTestBase
     {
         protected static IQueryExecutor _queryExecutor;

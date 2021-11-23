@@ -50,10 +50,28 @@ namespace Azure.DataGateway.Service.Tests.MsSql
 
         #region Tests
         /// <summary>
-        /// Tests the REST Api for FindById operation.
+        /// Tests the REST Api for FindById operation without a query string.
         /// </summary>
         [TestMethod]
         public async Task FindByIdTest()
+        {
+            string primaryKeyRoute = "id/2";
+            string msSqlQuery = $"SELECT * FROM { _integrationTableName} " +
+                $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
+
+            await PerformTest(_restController.FindById,
+                _integrationTableName,
+                primaryKeyRoute,
+                queryString: string.Empty,
+                msSqlQuery);
+        }
+
+        /// <summary>
+        /// Tests the REST Api for FindById operation with a query string
+        /// including the field names.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestWithQueryStringFields()
         {
             string primaryKeyRoute = "id/1";
             string queryStringWithFields = "?_f=id,name,type";

@@ -75,6 +75,7 @@ namespace Azure.DataGateway.Service
             }
 
             services.AddSingleton<GraphQLService, GraphQLService>();
+            services.AddSingleton<RestService, RestService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

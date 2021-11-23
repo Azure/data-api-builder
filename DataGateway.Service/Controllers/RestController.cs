@@ -43,8 +43,13 @@ namespace Azure.DataGateway.Service.Controllers
             string entityName,
             string primaryKeyRoute)
         {
-            string queryString = HttpContext.Request.QueryString.ToString();
-            JsonDocument resultJson = await _restService.ExecuteFindAsync(entityName, primaryKeyRoute, queryString);
+            var resultJson = JsonDocument.Parse(@"{ ""error"": ""FindMany is not supported yet.""}");
+            if (!string.IsNullOrEmpty(primaryKeyRoute))
+            {
+                string queryString = HttpContext.Request.QueryString.ToString();
+                resultJson = await _restService.ExecuteFindAsync(entityName, primaryKeyRoute, queryString);
+            }
+
             return resultJson;
         }
     }

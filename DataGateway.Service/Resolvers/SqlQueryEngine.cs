@@ -97,7 +97,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         // <summary>
-        // Given the FindQuery structure, obtains the query text and executes it against the backend.
+        // Given the FindQuery structure, obtains the query text and executes it against the backend. Useful for REST API scenarios.
         // </summary>
         public async Task<JsonDocument> ExecuteAsync(FindQueryStructure queryStructure)
         {

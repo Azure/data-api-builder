@@ -31,10 +31,12 @@ namespace Azure.DataGateway.Service.Controllers
         /// </summary>
         /// <param name="entityName">The name of the entity.</param>
         /// <param name="primaryKeyRoute">The string representing the primary key route
+        /// which gets it content from the route attribute {*primaryKeyRoute}.
+        /// asterisk(*) here is a wild-card/catch all i.e it matches the rest of the route after {entityName}.
         /// primary_key = [shard_value/]id_key_value
         /// Expected URL template is of the following form:
-        /// CosmosDb: URL template: /<EntityName></EntityName>/[<shard_key>/<shard_value>]/[<id_key>/]<id_key_value>
-        /// MsSql/PgSql: URL template: /<EntityName>/[<primary_key_column_name>/<primary_key_value>
+        /// CosmosDb: URL template: /<entityName>/[<shard_key>/<shard_value>]/[<id_key>/]<id_key_value>
+        /// MsSql/PgSql: URL template: /<entityName>/[<primary_key_column_name>/<primary_key_value>
         /// URL example: /SalesOrders/customerName/Xyz/saleOrderId/123 </param>
         [HttpGet]
         [Route("{*primaryKeyRoute}")]

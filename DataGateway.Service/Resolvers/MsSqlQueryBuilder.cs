@@ -1,7 +1,7 @@
-using Microsoft.Data.SqlClient;
 using System.Data.Common;
 using System.Linq;
 using System.Text;
+using Microsoft.Data.SqlClient;
 
 namespace Azure.DataGateway.Service.Resolvers
 {

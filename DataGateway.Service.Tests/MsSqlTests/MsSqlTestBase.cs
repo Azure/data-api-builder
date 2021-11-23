@@ -1,6 +1,6 @@
 using Azure.DataGateway.Service.Resolvers;
-using System.IO;
 using System.Data.Common;
+using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;

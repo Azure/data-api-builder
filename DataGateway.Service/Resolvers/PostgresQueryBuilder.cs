@@ -1,7 +1,7 @@
-using Npgsql;
 using System.Data.Common;
 using System.Linq;
 using System.Text;
+using Npgsql;
 
 namespace Azure.DataGateway.Service.Resolvers
 {

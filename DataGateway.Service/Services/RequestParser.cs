@@ -1,8 +1,8 @@
-using Azure.DataGateway.Service.Resolvers;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using Azure.DataGateway.Service.Resolvers;
 
 namespace Azure.DataGateway.Services
 {

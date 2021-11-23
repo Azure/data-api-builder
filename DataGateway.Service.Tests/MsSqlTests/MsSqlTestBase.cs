@@ -1,10 +1,10 @@
-using Azure.DataGateway.Service.Resolvers;
 using System.Data.Common;
 using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.VisualStudio.TestTools.UnitTesting;

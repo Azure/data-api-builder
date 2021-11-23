@@ -48,7 +48,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
 
         #endregion
 
-        #region Tests
+        #region Positive Tests
         /// <summary>
         /// Tests the REST Api for FindById operation without a query string.
         /// </summary>
@@ -87,6 +87,30 @@ namespace Azure.DataGateway.Service.Tests.MsSql
 
         #endregion
 
+        #region Negative Tests
+
+        /// <summary>
+        /// Tests the REST Api for FindById operation with a query string
+        /// having invalid field names.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestWithInvalidFields()
+        {
+            string primaryKeyRoute = "id/1";
+            string queryStringWithFields = "?_f=id,null,type";
+            string msSqlQuery = $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
+                $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
+
+            await PerformTest(_restController.FindById,
+                _integrationTableName,
+                primaryKeyRoute,
+                queryStringWithFields,
+                msSqlQuery,
+                expectException: true);
+        }
+
+        #endregion
+
         #region Test Helper Functions
         /// <summary>
         /// Performs the test by calling the given api, on the entity name,
@@ -98,16 +122,27 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         /// <param name="primaryKeyRoute">The primary key portion of the route.</param>
         /// <param name="queryString">The queryString portion of the url.</param>
         /// <param name="msSqlQuery">The expected SQL query.</param>
-        public static async Task PerformTest(Func<string, string, Task<JsonDocument>> api,
+        /// <param name="expectException">True if we expect exceptions.</param>
+        private static async Task PerformTest(Func<string, string, Task<JsonDocument>> api,
             string entityName,
             string primaryKeyRoute,
             string queryString,
-            string msSqlQuery)
+            string msSqlQuery,
+            bool expectException = false)
         {
             _restController.ControllerContext.HttpContext = GetHttpContextWithQueryString(queryString);
-            JsonDocument actualJson = await api(entityName, primaryKeyRoute);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
-            Assert.AreEqual(expected, ToJsonString(actualJson));
+
+            try
+            {
+                JsonDocument actualJson = await api(entityName, primaryKeyRoute);
+                string expected = await GetDatabaseResultAsync(msSqlQuery);
+                Assert.AreEqual(expected, ToJsonString(actualJson));
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(expectException);
+            }
+
         }
 
         /// <summary>

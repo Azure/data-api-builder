@@ -1,11 +1,11 @@
-using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Services;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Services;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.MsSql
 {

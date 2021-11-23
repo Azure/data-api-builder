@@ -1,11 +1,10 @@
-using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
-using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
 using System.IO;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Models;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataGateway.Service.Controllers
 {

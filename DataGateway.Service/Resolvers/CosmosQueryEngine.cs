@@ -1,15 +1,15 @@
+using System.Collections.Generic;
+using System.Text.Json;
+using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json.Linq;
-using System.Collections.Generic;
-using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Azure.DataGateway.Services
 {
     //<summary>
-    // CosmosQueryEngine to ExecuteAsync against CosmosDb.
+    // CosmosQueryEngine to execute queries against CosmosDb.
     //</summary>
     public class CosmosQueryEngine : IQueryEngine
     {
@@ -34,7 +34,7 @@ namespace Azure.DataGateway.Services
         }
 
         // <summary>
-        // ExecuteAsync the given named graphql query on the backend.
+        // ExecuteFindAsync the given named graphql query on the backend.
         // </summary>
         public async Task<JsonDocument> ExecuteAsync(string graphQLQueryName, IDictionary<string, object> parameters)
         {
@@ -105,6 +105,14 @@ namespace Azure.DataGateway.Services
             }
 
             return resultsAsList;
+        }
+
+        // <summary>
+        // Given the FindQuery structure, obtains the query text and executes it against the backend.
+        // </summary>
+        public Task<JsonDocument> ExecuteAsync(FindQueryStructure queryStructure)
+        {
+            return null;
         }
     }
 }

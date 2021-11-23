@@ -1,9 +1,9 @@
-using Azure.DataGateway.Services;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Services;
+using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
 
 namespace Azure.DataGateway.Service.Functions
 {

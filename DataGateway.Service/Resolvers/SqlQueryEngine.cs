@@ -1,15 +1,15 @@
-using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
     //<summary>
-    // SqlQueryEngine to ExecuteAsync against Sql Db.
+    // SqlQueryEngine to execute queries against Sql like databases.
     //</summary>
     public class SqlQueryEngine : IQueryEngine
     {
@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         // <summary>
-        // Register the given resolver with this query engine.
+        // Registers the given resolver with this query engine.
         // </summary>
         public void RegisterResolver(GraphQLQueryResolver resolver)
         {
@@ -37,7 +37,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         // <summary>
-        // ExecuteAsync the given named graphql query on the backend.
+        // Executes the given named graphql query on the backend.
         // </summary>
         public async Task<JsonDocument> ExecuteAsync(string graphQLQueryName, IDictionary<string, object> parameters)
         {
@@ -94,6 +94,32 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return resultsAsList;
+        }
+
+        // <summary>
+        // Given the FindQuery structure, obtains the query text and executes it against the backend. Useful for REST API scenarios.
+        // </summary>
+        public async Task<JsonDocument> ExecuteAsync(FindQueryStructure queryStructure)
+        {
+            string queryText = _queryBuilder.Build(queryStructure);
+
+            // Open connection and execute query using _queryExecutor
+            //
+            DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryText, queryStructure.Parameters);
+            JsonDocument jsonDocument = null;
+
+            // Parse Results into Json and return
+            //
+            if (await dbDataReader.ReadAsync())
+            {
+                jsonDocument = JsonDocument.Parse(dbDataReader.GetString(0));
+            }
+            else
+            {
+                Console.WriteLine("Did not return enough rows in the JSON result.");
+            }
+
+            return jsonDocument;
         }
     }
 }

@@ -1,23 +1,23 @@
+using System;
+using System.IO;
+using System.Net.Http;
+using System.Text;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.Cosmos;
-using System;
-using System.IO;
-using System.Net.Http;
-using System.Text;
 
 namespace Azure.DataGateway.Service.Tests
 {
     public class TestBase
     {
-        protected GraphQLService _graphQLService;
-        protected CosmosClientProvider _clientProvider;
-        protected IMetadataStoreProvider _metadataStoreProvider;
-        protected CosmosQueryEngine _queryEngine;
-        protected CosmosMutationEngine _mutationEngine;
-        protected GraphQLController _controller;
+        internal GraphQLService _graphQLService;
+        internal CosmosClientProvider _clientProvider;
+        internal IMetadataStoreProvider _metadataStoreProvider;
+        internal CosmosQueryEngine _queryEngine;
+        internal CosmosMutationEngine _mutationEngine;
+        internal GraphQLController _controller;
 
         public TestBase()
         {

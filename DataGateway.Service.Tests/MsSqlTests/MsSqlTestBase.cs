@@ -1,13 +1,13 @@
 using Azure.DataGateway.Service.Resolvers;
+using System.IO;
+using System.Data.Common;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
 using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Data.Common;
-using System.IO;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Azure.DataGateway.Service.Tests.MsSql
 {

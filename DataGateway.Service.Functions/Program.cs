@@ -1,7 +1,7 @@
+using System.IO;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using System.IO;
 
 namespace Azure.DataGateway.Service.Functions
 {

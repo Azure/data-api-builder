@@ -36,7 +36,7 @@ namespace Azure.DataGateway.Service.Functions
                 requestBody = await reader.ReadToEndAsync();
             }
 
-            string resultJson = await _schemaManager.ExecuteAsync(requestBody);
+            string resultJson = await _schemaManager.ExecuteAsync(requestBody, requestProperties: null);
 
             return JsonDocument.Parse(resultJson);
         }

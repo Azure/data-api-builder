@@ -76,6 +76,8 @@ namespace Azure.DataGateway.Service
 
             services.AddSingleton<GraphQLService, GraphQLService>();
             services.AddSingleton<RestService, RestService>();
+            services.AddAuthorization();
+            services.AddControllers();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -90,6 +92,7 @@ namespace Azure.DataGateway.Service
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>

@@ -21,8 +21,9 @@
 
   <ItemGroup>
 
-    <PackageReference Include="HotChocolate" Version="12.0.1" />
-    <PackageReference Include="HotChocolate.AspNetCore" Version="12.0.1" />
+    <PackageReference Include="HotChocolate" Version="12.3.0" />
+    <PackageReference Include="HotChocolate.AspNetCore" Version="12.3.0" />
+    <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="12.3.0" />
     <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.18.0" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="3.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="6.0.0-preview.3.21201.4" />

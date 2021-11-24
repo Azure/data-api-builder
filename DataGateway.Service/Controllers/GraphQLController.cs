@@ -1,6 +1,9 @@
+using System.Collections.Generic;
 using System.IO;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -26,7 +29,19 @@ namespace Azure.DataGateway.Service.Controllers
                 requestBody = await reader.ReadToEndAsync();
             }
 
-            string resultJson = await this._schemaManager.ExecuteAsync(requestBody);
+            // Parse App Service's EasyAuth injected headers into MiddleWare usable Security Principal
+            Dictionary<string, object> requestProperties = new();
+            ClaimsIdentity identity = AppServiceAuthentication.Parse(this.HttpContext);
+            if (identity != null)
+            {
+                this.HttpContext.User = new ClaimsPrincipal(identity);
+
+                // ClaimsPrincipal object must be added as a request property so HotChocolate
+                // recognizes the authenticated user. 
+                requestProperties.Add(nameof(ClaimsPrincipal), this.HttpContext.User);
+            }
+
+            string resultJson = await this._schemaManager.ExecuteAsync(requestBody, requestProperties);
             return JsonDocument.Parse(resultJson);
         }
     }

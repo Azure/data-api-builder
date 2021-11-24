@@ -113,7 +113,7 @@ namespace Azure.DataGateway.Services
             // Individually adds each property to requestBuilder if they are provided.
             // Avoids using SetProperties() as it detrimentally overwrites
             // any properties other Middleware sets.
-            if (requestProperties != null && requestProperties.Count > 0)
+            if (requestProperties != null)
             {
                 foreach (KeyValuePair<string, object> property in requestProperties)
                 {

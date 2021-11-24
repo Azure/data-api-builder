@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
@@ -44,6 +43,7 @@ namespace Azure.DataGateway.Service.Models
         /// <returns></returns>
         public static ClaimsIdentity Parse(HttpContext context)
         {
+            ClaimsIdentity identity = null;
             // x-ms-client-principal is base64 encoded custom JWT injected by AppService Authentication (EasyAuth)
             // only when Bearer token has been validated.
             if (context.Request.Headers.TryGetValue("x-ms-client-principal", out StringValues header))
@@ -53,20 +53,18 @@ namespace Azure.DataGateway.Service.Models
                 string json = Encoding.UTF8.GetString(decodedPrincpalData);
                 AppServiceClientPrincipal principal = JsonSerializer.Deserialize<AppServiceClientPrincipal>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                ClaimsIdentity identity = new(principal.Auth_typ, principal.Name_typ, principal.Role_typ);
+                identity = new(principal.Auth_typ, principal.Name_typ, principal.Role_typ);
 
-                if (principal.Claims != null && principal.Claims.Count() > 0)
+                if (principal.Claims != null)
                 {
                     foreach (AppServiceClaim claim in principal.Claims)
                     {
                         identity.AddClaim(new Claim(type: claim.Typ, value: claim.Val));
                     }
                 }
-
-                return identity;
             }
 
-            return null;
+            return identity;
         }
     }
 }

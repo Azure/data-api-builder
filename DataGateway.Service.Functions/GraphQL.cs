@@ -31,7 +31,7 @@ namespace Azure.DataGateway.Service.Functions
             [HttpTrigger(AuthorizationLevel.User, "post", Route = null)] HttpRequestData req)
         {
             string requestBody;
-            using (var reader = new StreamReader(req.Body))
+            using (StreamReader reader = new(req.Body))
             {
                 requestBody = await reader.ReadToEndAsync();
             }

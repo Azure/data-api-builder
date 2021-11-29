@@ -110,7 +110,7 @@ namespace Azure.DataGateway.Services
         /// <returns></returns>
         private static IQueryRequest CompileRequest(string requestBody, Dictionary<string, object> requestProperties)
         {
-            var requestBodyJson = JsonDocument.Parse(requestBody);
+            JsonDocument requestBodyJson = JsonDocument.Parse(requestBody);
             IQueryRequestBuilder requestBuilder = QueryRequestBuilder.New()
                 .SetQuery(requestBodyJson.RootElement.GetProperty("query").GetString());
 

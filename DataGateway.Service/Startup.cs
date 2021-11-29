@@ -44,7 +44,7 @@ namespace Azure.DataGateway.Service
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<DataGatewayConfig>, DataGatewayConfigValidation>());
 
             // Read configuration and use it locally.
-            var dataGatewayConfig = new DataGatewayConfig();
+            DataGatewayConfig dataGatewayConfig = new();
             config.Bind(nameof(DataGatewayConfig), dataGatewayConfig);
 
             switch (dataGatewayConfig.DatabaseType)

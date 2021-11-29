@@ -88,8 +88,8 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         /// <returns>The http context with given data as stream of utf-8 bytes.</returns>
         protected static DefaultHttpContext GetHttpContextWithBody(string data)
         {
-            var stream = new MemoryStream(Encoding.UTF8.GetBytes(data));
-            var httpContext = new DefaultHttpContext()
+            MemoryStream stream = new(Encoding.UTF8.GetBytes(data));
+            DefaultHttpContext httpContext = new()
             {
                 Request = { Body = stream, ContentLength = stream.Length }
             };
@@ -103,7 +103,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         /// <returns>The http context with request consisting of the given query string.</returns>
         protected static DefaultHttpContext GetHttpContextWithQueryString(string queryStringUrl)
         {
-            var httpContext = new DefaultHttpContext()
+            DefaultHttpContext httpContext = new()
             {
                 Request = { QueryString = new(queryStringUrl) }
             };
@@ -118,7 +118,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         /// <returns>string in JSON format</returns>
         public static async Task<string> GetDatabaseResultAsync(string queryText)
         {
-            var sqlResult = JsonDocument.Parse("{ }");
+            JsonDocument sqlResult = JsonDocument.Parse("{ }");
             using DbDataReader reader = _databaseInteractor.QueryExecutor.ExecuteQueryAsync(queryText, parameters: null).Result;
 
             if (await reader.ReadAsync())

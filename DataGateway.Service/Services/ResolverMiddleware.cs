@@ -99,7 +99,7 @@ namespace Azure.DataGateway.Services
         {
             if (value.Kind == SyntaxKind.IntValue)
             {
-                var intValue = (IntValueNode)value;
+                IntValueNode intValue = (IntValueNode)value;
                 return intValue.ToInt64();
             }
             else

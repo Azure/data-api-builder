@@ -24,7 +24,7 @@ namespace Azure.DataGateway.Service.Controllers
         public async Task<JsonDocument> PostAsync()
         {
             string requestBody;
-            using (var reader = new StreamReader(this.HttpContext.Request.Body))
+            using (StreamReader reader = new(this.HttpContext.Request.Body))
             {
                 requestBody = await reader.ReadToEndAsync();
             }

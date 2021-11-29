@@ -45,7 +45,7 @@ namespace Azure.DataGateway.Service.Controllers
             string entityName,
             string primaryKeyRoute)
         {
-            var resultJson = JsonDocument.Parse(@"{ ""error"": ""FindMany is not supported yet.""}");
+            JsonDocument resultJson = JsonDocument.Parse(@"{ ""error"": ""FindMany is not supported yet.""}");
             if (!string.IsNullOrEmpty(primaryKeyRoute))
             {
                 string queryString = HttpContext.Request.QueryString.ToString();

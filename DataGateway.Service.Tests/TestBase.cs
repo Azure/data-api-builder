@@ -42,11 +42,11 @@ namespace Azure.DataGateway.Service.Tests
 
         internal static DefaultHttpContext GetHttpContextWithBody(string data)
         {
-            var request = new HttpRequestMessage();
-            var stream = new MemoryStream(Encoding.UTF8.GetBytes(data));
+            HttpRequestMessage request = new();
+            MemoryStream stream = new(Encoding.UTF8.GetBytes(data));
             request.Method = HttpMethod.Post;
             request.Content = new StringContent(TestHelper.SampleQuery);
-            var httpContext = new DefaultHttpContext()
+            DefaultHttpContext httpContext = new()
             {
                 Request = { Body = stream, ContentLength = stream.Length }
             };

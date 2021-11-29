@@ -46,7 +46,7 @@ namespace Azure.DataGateway.Service.Resolvers
             // TODO: add support for TOP and Order-by push-down
 
             GraphQLQueryResolver resolver = _metadataStoreProvider.GetQueryResolver(graphQLQueryName);
-            var jsonDocument = JsonDocument.Parse("{ }");
+            JsonDocument jsonDocument = JsonDocument.Parse("{ }");
 
             string queryText = _queryBuilder.Build(resolver.ParametrizedQuery, false);
 
@@ -78,7 +78,7 @@ namespace Azure.DataGateway.Service.Resolvers
             // TODO: add support for TOP and Order-by push-down
 
             GraphQLQueryResolver resolver = _metadataStoreProvider.GetQueryResolver(graphQLQueryName);
-            var resultsAsList = new List<JsonDocument>();
+            List<JsonDocument> resultsAsList = new();
             string queryText = _queryBuilder.Build(resolver.ParametrizedQuery, true);
             DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryText, parameters);
 

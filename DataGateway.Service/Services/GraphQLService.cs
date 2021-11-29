@@ -45,8 +45,12 @@ namespace Azure.DataGateway.Services
                 .AddAuthorization()
                 .AddErrorFilter(error =>
             {
-                Console.WriteLine(error.Code);
-                Console.WriteLine(error.Message);
+                if (error.Exception != null)
+                {
+                    Console.Error.WriteLine(error.Exception.Message);
+                    Console.Error.WriteLine(error.Exception.StackTrace);
+                }
+
                 return error;
             });
 
@@ -63,7 +67,7 @@ namespace Azure.DataGateway.Services
         public IRequestExecutor Executor { get; private set; }
 
         /// <summary>
-        /// Executes GraphQL request within GraphQL Library components. 
+        /// Executes GraphQL request within GraphQL Library components.
         /// </summary>
         /// <param name="requestBody">GraphQL request body</param>
         /// <param name="requestProperties">key/value pairs of properties to be used in GraphQL library pipeline</param>

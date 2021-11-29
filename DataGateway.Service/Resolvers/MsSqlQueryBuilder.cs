@@ -38,7 +38,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>The JSON suffixed query.</returns>
         public string Build(string inputQuery, bool isList)
         {
-            var queryText = new StringBuilder(inputQuery + FOR_JSON_SUFFIX);
+            StringBuilder queryText = new(inputQuery + FOR_JSON_SUFFIX);
             if (!isList)
             {
                 queryText.Append("," + WITHOUT_ARRAY_WRAPPER_SUFFIX);
@@ -63,7 +63,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             string fromPart = structure.EntityName;
 
-            var query = new StringBuilder($"SELECT {selectedColumns} FROM {fromPart}");
+            StringBuilder query = new($"SELECT {selectedColumns} FROM {fromPart}");
             if (structure.Conditions.Count() > 0)
             {
                 query.Append($" WHERE {string.Join(" AND ", structure.Conditions)}");

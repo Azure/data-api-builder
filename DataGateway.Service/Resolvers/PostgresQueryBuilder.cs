@@ -44,7 +44,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             string fromPart = structure.EntityName;
 
-            var query = new StringBuilder($"SELECT {selectedColumns} FROM {fromPart}");
+            StringBuilder query = new($"SELECT {selectedColumns} FROM {fromPart}");
             if (structure.Conditions.Count() > 0)
             {
                 query.Append($" WHERE {string.Join(" AND ", structure.Conditions)}");

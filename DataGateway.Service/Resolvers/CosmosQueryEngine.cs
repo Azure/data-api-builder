@@ -45,7 +45,7 @@ namespace Azure.DataGateway.Services
 
             GraphQLQueryResolver resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
             Container container = this._clientProvider.Client.GetDatabase(resolver.DatabaseName).GetContainer(resolver.ContainerName);
-            var querySpec = new QueryDefinition(resolver.ParametrizedQuery);
+            QueryDefinition querySpec = new(resolver.ParametrizedQuery);
 
             if (parameters != null)
             {
@@ -66,7 +66,7 @@ namespace Azure.DataGateway.Services
                 firstItem = iterator.Current;
             }
 
-            var jsonDocument = JsonDocument.Parse(firstItem.ToString());
+            JsonDocument jsonDocument = JsonDocument.Parse(firstItem.ToString());
 
             return jsonDocument;
         }
@@ -80,7 +80,7 @@ namespace Azure.DataGateway.Services
 
             GraphQLQueryResolver resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
             Container container = this._clientProvider.Client.GetDatabase(resolver.DatabaseName).GetContainer(resolver.ContainerName);
-            var querySpec = new QueryDefinition(resolver.ParametrizedQuery);
+            QueryDefinition querySpec = new(resolver.ParametrizedQuery);
 
             if (parameters != null)
             {
@@ -92,7 +92,7 @@ namespace Azure.DataGateway.Services
 
             FeedIterator<JObject> resultSetIterator = container.GetItemQueryIterator<JObject>(querySpec);
 
-            var resultsAsList = new List<JsonDocument>();
+            List<JsonDocument> resultsAsList = new();
             while (resultSetIterator.HasMoreResults)
             {
                 FeedResponse<JObject> nextPage = await resultSetIterator.ReadNextAsync();

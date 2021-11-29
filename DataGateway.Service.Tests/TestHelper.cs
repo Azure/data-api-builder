@@ -54,7 +54,7 @@ namespace Azure.DataGateway.Service.Tests
 
         private static IOptions<DataGatewayConfig> LoadConfig()
         {
-            var datagatewayConfig = new DataGatewayConfig();
+            DataGatewayConfig datagatewayConfig = new();
             IConfigurationRoot config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.Test.json")

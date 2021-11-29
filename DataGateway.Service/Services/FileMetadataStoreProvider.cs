@@ -54,7 +54,7 @@ namespace Azure.DataGateway.Service
         {
             string jsonString = File.ReadAllText(
                     _dataGatewayConfig.ResolverConfigFile);
-            var options = new JsonSerializerOptions
+            JsonSerializerOptions options = new()
             {
                 PropertyNameCaseInsensitive = true,
             };

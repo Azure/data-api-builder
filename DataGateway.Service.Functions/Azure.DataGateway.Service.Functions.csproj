@@ -11,8 +11,10 @@
     <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="1.5.2" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.0.13" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="1.3.0" />
+    <PackageReference Include="Microsoft.Azure.WebJobs.Core" Version="3.0.30" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="6.0.0-preview.3.21201.4" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0-preview.3.21201.4" />
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.38.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DataGateway.Service\Azure.DataGateway.Service.csproj" />

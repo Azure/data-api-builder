@@ -11,6 +11,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using System;
+using System.Threading.Tasks;
 
 namespace Azure.DataGateway.Service
 {
@@ -75,6 +76,11 @@ namespace Azure.DataGateway.Service
             }
 
             services.AddSingleton<GraphQLService, GraphQLService>();
+
+            Task.Run(async () =>
+            {
+                await new ConnectToContainerGateway().RunAsync(new System.Threading.CancellationToken(), config);
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -84,6 +90,12 @@ namespace Azure.DataGateway.Service
             {
                 app.UseDeveloperExceptionPage();
             }
+
+            var webSocketOptions = new WebSocketOptions()
+            {
+                KeepAliveInterval = TimeSpan.FromSeconds(3)
+            };
+            app.UseWebSockets(webSocketOptions);
 
             app.UseHttpsRedirection();
 

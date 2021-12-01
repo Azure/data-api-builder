@@ -9,6 +9,8 @@ namespace Azure.DataGateway.Services
         string GetGraphQLSchema();
         MutationResolver GetMutationResolver(string name);
         GraphQLQueryResolver GetQueryResolver(string name);
+        TableDefinition GetTableDefinition(string name);
+        GraphqlType GetGraphqlType(string name);
         void StoreMutationResolver(MutationResolver mutationResolver);
         void StoreQueryResolver(GraphQLQueryResolver mutationResolver);
     }

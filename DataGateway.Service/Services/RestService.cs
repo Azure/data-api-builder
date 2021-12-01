@@ -25,15 +25,15 @@ namespace Azure.DataGateway.Services
         /// <param name="queryString">The query string portion of the request. e.g. ?_f=customerName</param>
         public async Task<JsonDocument> ExecuteFindAsync(string entityName, string primaryKeyRoute, string queryString)
         {
-            FindQueryStructure queryStructure = new(entityName, isList: string.IsNullOrEmpty(primaryKeyRoute));
-            RequestParser.ParsePrimaryKey(primaryKeyRoute, queryStructure);
+            FindRequestContext context = new(entityName, isList: string.IsNullOrEmpty(primaryKeyRoute));
+            RequestParser.ParsePrimaryKey(primaryKeyRoute, context);
 
             if (!string.IsNullOrEmpty(queryString))
             {
-                RequestParser.ParseQueryString(System.Web.HttpUtility.ParseQueryString(queryString), queryStructure);
+                RequestParser.ParseQueryString(System.Web.HttpUtility.ParseQueryString(queryString), context);
             }
 
-            return await _queryEngine.ExecuteAsync(queryStructure);
+            return await _queryEngine.ExecuteAsync(context);
         }
 
     }

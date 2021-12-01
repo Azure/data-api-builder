@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
+using HotChocolate.Resolvers;
 using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json.Linq;
 
@@ -36,13 +38,14 @@ namespace Azure.DataGateway.Services
         // <summary>
         // ExecuteFindAsync the given named graphql query on the backend.
         // </summary>
-        public async Task<JsonDocument> ExecuteAsync(string graphQLQueryName, IDictionary<string, object> parameters)
+        public async Task<JsonDocument> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
+            string graphQLQueryName = context.Selection.Field.Name.Value;
             GraphQLQueryResolver resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
             Container container = this._clientProvider.Client.GetDatabase(resolver.DatabaseName).GetContainer(resolver.ContainerName);
             QueryDefinition querySpec = new(resolver.ParametrizedQuery);
@@ -71,13 +74,14 @@ namespace Azure.DataGateway.Services
             return jsonDocument;
         }
 
-        public async Task<IEnumerable<JsonDocument>> ExecuteListAsync(string graphQLQueryName, IDictionary<string, object> parameters)
+        public async Task<IEnumerable<JsonDocument>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
+            string graphQLQueryName = context.Selection.Field.Name.Value;
             GraphQLQueryResolver resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
             Container container = this._clientProvider.Client.GetDatabase(resolver.DatabaseName).GetContainer(resolver.ContainerName);
             QueryDefinition querySpec = new(resolver.ParametrizedQuery);
@@ -108,11 +112,11 @@ namespace Azure.DataGateway.Services
         }
 
         // <summary>
-        // Given the FindQuery structure, obtains the query text and executes it against the backend.
+        // Given the SqlQueryStructure structure, obtains the query text and executes it against the backend.
         // </summary>
-        public Task<JsonDocument> ExecuteAsync(FindQueryStructure queryStructure)
+        public Task<JsonDocument> ExecuteAsync(FindRequestContext queryStructure)
         {
-            return null;
+            throw new NotImplementedException();
         }
     }
 }

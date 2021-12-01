@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Azure.DataGateway.Service.configurations;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
@@ -21,8 +22,10 @@ namespace Azure.DataGateway.Service
         /// Location of the graphQL schema file
         /// </summary>
         public string GraphQLSchemaFile { get; set; }
-        public List<GraphQLQueryResolver> QueryResolvers { get; set; }
-        public List<MutationResolver> MutationResolvers { get; set; }
+        public List<GraphQLQueryResolver> QueryResolvers { get; set; } = new();
+        public List<MutationResolver> MutationResolvers { get; set; } = new();
+        public Dictionary<string, GraphqlType> GraphqlTypes { get; set; } = new();
+        public DatabaseSchema DatabaseSchema { get; set; }
     }
 
     /// <summary>
@@ -42,22 +45,17 @@ namespace Azure.DataGateway.Service
         /// </summary>
         private Dictionary<string, MutationResolver> _mutationResolvers;
 
-        private readonly DataGatewayConfig _dataGatewayConfig;
-
         public FileMetadataStoreProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
-        {
-            _dataGatewayConfig = dataGatewayConfig.Value;
-            Init();
-        }
+        : this(dataGatewayConfig.Value.ResolverConfigFile) { }
 
-        private void Init()
+        public FileMetadataStoreProvider(string resolverConfigPath)
         {
-            string jsonString = File.ReadAllText(
-                    _dataGatewayConfig.ResolverConfigFile);
+            string jsonString = File.ReadAllText(resolverConfigPath);
             JsonSerializerOptions options = new()
             {
                 PropertyNameCaseInsensitive = true,
             };
+            options.Converters.Add(new JsonStringEnumConverter());
 
             _config = JsonSerializer.Deserialize<ResolverConfig>(jsonString, options);
 
@@ -65,9 +63,6 @@ namespace Azure.DataGateway.Service
             {
                 _config.GraphQLSchema = File.ReadAllText(_config.GraphQLSchemaFile ?? "schema.gql");
             }
-
-            _config.QueryResolvers ??= new();
-            _config.MutationResolvers ??= new();
 
             _queryResolvers = new();
             foreach (GraphQLQueryResolver resolver in _config.QueryResolvers)
@@ -108,6 +103,26 @@ namespace Azure.DataGateway.Service
             }
 
             return resolver;
+        }
+
+        public TableDefinition GetTableDefinition(string name)
+        {
+            if (!_config.DatabaseSchema.Tables.TryGetValue(name, out TableDefinition metadata))
+            {
+                throw new KeyNotFoundException($"Table Definition for {name} does not exist.");
+            }
+
+            return metadata;
+        }
+
+        public GraphqlType GetGraphqlType(string name)
+        {
+            if (!_config.GraphqlTypes.TryGetValue(name, out GraphqlType typeInfo))
+            {
+                throw new KeyNotFoundException($"Table Definition for {name} does not exist.");
+            }
+
+            return typeInfo;
         }
 
         public void StoreGraphQLSchema(string schema)

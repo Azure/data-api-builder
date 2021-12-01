@@ -1,6 +1,5 @@
 using System.Data.Common;
 using System.Linq;
-using System.Text;
 using Microsoft.Data.SqlClient;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -13,6 +12,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private const string FOR_JSON_SUFFIX = " FOR JSON PATH, INCLUDE_NULL_VALUES";
         private const string WITHOUT_ARRAY_WRAPPER_SUFFIX = "WITHOUT_ARRAY_WRAPPER";
 
+        // TODO: Remove this once REST uses the schema defined in the config.
         /// <summary>
         /// Wild Card for field selection.
         /// </summary>
@@ -30,47 +30,43 @@ namespace Azure.DataGateway.Service.Resolvers
             return _builder.QuoteIdentifier(ident);
         }
 
-        /// <summary>
-        /// For the given query, append the correct JSON suffixes based on if the query is a list or not.
-        /// </summary>
-        /// <param name="inputQuery">The given query.</param>
-        /// <param name="isList">True if its a list query, false otherwise</param>
-        /// <returns>The JSON suffixed query.</returns>
-        public string Build(string inputQuery, bool isList)
+        public string WrapSubqueryColumn(string column, SqlQueryStructure subquery)
         {
-            StringBuilder queryText = new(inputQuery + FOR_JSON_SUFFIX);
-            if (!isList)
+            if (subquery.IsListQuery)
             {
-                queryText.Append("," + WITHOUT_ARRAY_WRAPPER_SUFFIX);
+                return $"JSON_QUERY (COALESCE({column}, '[]'))";
             }
 
-            return queryText.ToString();
+            return $"JSON_QUERY ({column})";
         }
 
-        /// <summary>
-        /// Builds the MsSql query for the given FindQueryStructure object which
-        /// holds the major components of a query.
-        /// </summary>
-        /// <param name="structure">The query structure holding the components.</param>
-        /// <returns>The formed query text.</returns>
-        public string Build(FindQueryStructure structure)
+        public string Build(SqlQueryStructure structure)
         {
             string selectedColumns = ALL_FIELDS;
-            if (structure.Fields.Count > 0)
+            if (structure.Columns.Count > 0)
             {
-                selectedColumns = string.Join(", ", structure.Fields.Select(x => $"{QuoteIdentifier(x)}"));
+                selectedColumns = string.Join(", ", structure.Columns.Select(x => $"{x.Value} AS {QuoteIdentifier(x.Key)}"));
             }
 
-            string fromPart = structure.EntityName;
-
-            StringBuilder query = new($"SELECT {selectedColumns} FROM {fromPart}");
+            string fromPart = structure.Table(structure.TableName, structure.TableAlias);
+            IQueryBuilder queryBuilder = this;
+            fromPart += string.Join(
+                    "",
+                    structure.JoinQueries.Select(
+                        x => $" OUTER APPLY ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)}({queryBuilder.DataIdent()})"));
+            string query = $"SELECT TOP {structure.Limit()} {selectedColumns} FROM {fromPart}";
             if (structure.Conditions.Count() > 0)
             {
-                query.Append($" WHERE {string.Join(" AND ", structure.Conditions)}");
+                query += $" WHERE {string.Join(" AND ", structure.Conditions)}";
             }
 
-            // Call the basic build to add the correct FOR JSON suffixes.
-            return Build(query.ToString(), structure.IsListQuery);
+            query += FOR_JSON_SUFFIX;
+            if (!structure.IsListQuery)
+            {
+                query += "," + WITHOUT_ARRAY_WRAPPER_SUFFIX;
+            }
+
+            return query;
         }
     }
 }

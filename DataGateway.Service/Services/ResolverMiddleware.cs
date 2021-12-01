@@ -32,62 +32,73 @@ namespace Azure.DataGateway.Services
 
         public async Task InvokeAsync(IMiddlewareContext context)
         {
+            JsonElement jsonElement;
             if (context.Selection.Field.Coordinate.TypeName.Value == "Mutation")
             {
                 IDictionary<string, object> parameters = GetParametersFromContext(context);
 
                 context.Result = await _mutationEngine.ExecuteAsync(context.Selection.Field.Name.Value, parameters);
             }
-
-            if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
+            else if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
             {
                 IDictionary<string, object> parameters = GetParametersFromContext(context);
 
                 if (context.Selection.Type.IsListType())
                 {
-                    context.Result = await _queryEngine.ExecuteListAsync(context.Selection.Field.Name.Value, parameters);
+                    context.Result = await _queryEngine.ExecuteListAsync(context, parameters);
                 }
                 else
                 {
-                    context.Result = await _queryEngine.ExecuteAsync(context.Selection.Field.Name.Value, parameters);
+                    context.Result = await _queryEngine.ExecuteAsync(context, parameters);
                 }
             }
-
-            if (IsInnerObject(context))
+            else if (context.Selection.Field.Type.IsLeafType())
             {
-                JsonDocument result = context.Parent<JsonDocument>();
-
-                JsonElement jsonElement;
-                bool hasProperty =
-                    result.RootElement.TryGetProperty(context.Selection.Field.Name.Value, out jsonElement);
-                if (result != null && hasProperty)
+                // This means this field is a scalar, so we don't need to do
+                // anything for it.
+                if (TryGetPropertyFromParent(context, out jsonElement))
+                {
+                    context.Result = jsonElement.ToString();
+                }
+            }
+            else if (IsInnerObject(context))
+            {
+                // This means it's a field that has another custom type as its
+                // type, so there is a full JSON object inside this key. For
+                // example such a JSON object could have been created by a
+                // One-To-Many join.
+                if (TryGetPropertyFromParent(context, out jsonElement))
                 {
                     //TODO: Try to avoid additional deserialization/serialization here.
                     context.Result = JsonDocument.Parse(jsonElement.ToString());
                 }
-                else
-                {
-                    context.Result = null;
-                }
             }
-
-            if (context.Selection.Field.Type.IsLeafType())
+            else if (context.Selection.Type.IsListType())
             {
-                JsonDocument result = context.Parent<JsonDocument>();
-                JsonElement jsonElement;
-                bool hasProperty =
-                    result.RootElement.TryGetProperty(context.Selection.Field.Name.Value, out jsonElement);
-                if (result != null && hasProperty)
+                // This means the field is a list and HotChocolate requires
+                // that to be returned as a List of JsonDocuments. For example
+                // such a JSON list could have been created by a One-To-Many
+                // join.
+                if (TryGetPropertyFromParent(context, out jsonElement))
                 {
-                    context.Result = jsonElement.ToString();
-                }
-                else
-                {
-                    context.Result = null;
+                    //TODO: Try to avoid additional deserialization/serialization here.
+                    context.Result = JsonSerializer.Deserialize<List<JsonDocument>>(jsonElement.ToString());
                 }
             }
 
             await _next(context);
+        }
+
+        private static bool TryGetPropertyFromParent(IMiddlewareContext context, out JsonElement jsonElement)
+        {
+            JsonDocument result = context.Parent<JsonDocument>();
+            if (result == null)
+            {
+                jsonElement = default;
+                return false;
+            }
+
+            return result.RootElement.TryGetProperty(context.Selection.Field.Name.Value, out jsonElement);
         }
 
         private static bool IsInnerObject(IMiddlewareContext context)

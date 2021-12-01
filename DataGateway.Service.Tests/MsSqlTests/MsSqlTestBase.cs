@@ -25,18 +25,14 @@ namespace Azure.DataGateway.Service.Tests.MsSql
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
-        /// MSTest decorator. 
+        /// MSTest decorator.
         /// </summary>
         /// <param name="context"></param>
         [ClassInitialize]
         protected static void InitializeTestFixture(TestContext context, string tableName)
         {
             // Setup Schema and Resolvers
-            //
-            _metadataStoreProvider = new MetadataStoreProviderForTest();
-            _metadataStoreProvider.StoreGraphQLSchema(MsSqlTestHelper.GraphQLSchema);
-            _metadataStoreProvider.StoreQueryResolver(MsSqlTestHelper.GetQueryResolverJson(MsSqlTestHelper.CharacterByIdResolver));
-            _metadataStoreProvider.StoreQueryResolver(MsSqlTestHelper.GetQueryResolverJson(MsSqlTestHelper.CharacterListResolver));
+            _metadataStoreProvider = new FileMetadataStoreProvider("sql-config.json");
 
             // Setup Database Components
             //
@@ -47,6 +43,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
             // Setup Integration DB Components
             //
             _databaseInteractor = new DatabaseInteractor(_queryExecutor);
+            _databaseInteractor.QueryExecutor.ExecuteNonQueryAsync(File.ReadAllText("books.sql")).Wait();
             CreateTable(tableName);
             InsertData(tableName);
         }

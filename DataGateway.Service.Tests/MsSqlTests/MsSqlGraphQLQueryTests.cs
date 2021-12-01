@@ -1,8 +1,10 @@
+using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Service.Tests.MsSql
 {
@@ -47,32 +49,20 @@ namespace Azure.DataGateway.Service.Tests.MsSql
 
         #region Tests
         /// <summary>
-        /// Gets result of quering singular object
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public async Task SingleResultQuery()
-        {
-            string graphQLQueryName = "characterById";
-            string graphQLQuery = "{\"query\":\"{\\n characterById(id:2){\\n name\\n primaryFunction\\n}\\n}\\n\"}";
-            string msSqlQuery = $"SELECT name, primaryFunction FROM { _integrationTableName } WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
-
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
-
-            Assert.AreEqual(actual, expected);
-        }
-
-        /// <summary>
         /// Gets array of results for querying more than one item.
         /// </summary>
         /// <returns></returns>
         [TestMethod]
         public async Task MultipleResultQuery()
         {
-            string graphQLQueryName = "characterList";
-            string graphQLQuery = "{\"query\":\"{\\n  characterList {\\n    name\\n    primaryFunction\\n  }\\n}\\n\"}";
-            string msSqlQuery = $"SELECT name, primaryFunction FROM character FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(first: 123) {
+                    id
+                    title
+                }
+            }";
+            string msSqlQuery = $"SELECT id, title FROM books ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(msSqlQuery);
@@ -85,15 +75,21 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         #region Query Test Helper Functions
         /// <summary>
         /// Sends graphQL query through graphQL service, consisting of gql engine processing (resolvers, object serialization)
-        /// returning JSON formatted result from 'data' property. 
+        /// returning JSON formatted result from 'data' property.
         /// </summary>
         /// <param name="graphQLQuery"></param>
         /// <param name="graphQLQueryName"></param>
         /// <returns>string in JSON format</returns>
         public static async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName)
         {
-            _graphQLController.ControllerContext.HttpContext = MsSqlTestBase.GetHttpContextWithBody(graphQLQuery);
+            string graphqlQueryJson = JObject.FromObject(new
+            {
+                query = graphQLQuery
+            }).ToString();
+            Console.WriteLine(graphqlQueryJson);
+            _graphQLController.ControllerContext.HttpContext = MsSqlTestBase.GetHttpContextWithBody(graphqlQueryJson);
             JsonDocument graphQLResult = await _graphQLController.PostAsync();
+            Console.WriteLine(graphQLResult.RootElement.ToString());
             JsonElement graphQLResultData = graphQLResult.RootElement.GetProperty("data").GetProperty(graphQLQueryName);
             return graphQLResultData.ToString();
         }

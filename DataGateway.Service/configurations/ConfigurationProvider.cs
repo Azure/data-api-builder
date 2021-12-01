@@ -32,8 +32,8 @@ namespace Azure.DataGateway.Service.configurations
                 "Database": "",
                 "Container": "",
                 "ConnectionString": ""
-                }
               }
+            }
          */
 
         public DatabaseType DatabaseType { get; set; }

@@ -1,10 +1,13 @@
 using System;
 using System.Linq;
+using System.Configuration;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
+using Azure.DataGateway.Service;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -23,9 +26,18 @@ namespace Azure.DataGateway.Service
 {
     public class Startup
     {
+        internal static DateTime StartupTime { get; private set; }
+        internal static object CurrentConnectionsLock { get; } = new object();
+        internal static int CurrentConnections { get; set; }
+        internal static DateTime LastActivity { get; set; } = DateTime.UtcNow;
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
+            lock (CurrentConnectionsLock)
+            {
+                CurrentConnections = 0;
+            }
         }
 
         public IConfiguration Configuration { get; }
@@ -45,6 +57,9 @@ namespace Azure.DataGateway.Service
             // Read configuration and use it locally.
             DataGatewayConfig dataGatewayConfig = new();
             Configuration.Bind(nameof(DataGatewayConfig), dataGatewayConfig);
+
+            services.AddSingleton(new ContainerMetadata());
+            services.AddSingleton(new CosmosDbConfiguration());
 
             if (Configuration is IConfigurationRoot root)
             {
@@ -154,7 +169,7 @@ namespace Azure.DataGateway.Service
             services.AddSingleton<IDocumentHashProvider, Sha256DocumentHashProvider>();
             services.AddSingleton<IDocumentCache, DocumentCache>();
             services.AddSingleton<GraphQLService>();
-            services.AddSingleton<RestService>();
+            //services.AddSingleton<RestService>();
 
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
@@ -183,10 +198,18 @@ namespace Azure.DataGateway.Service
                 });
             }
 
+            Startup.StartupTime = DateTime.UtcNow;
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
+
+            WebSocketOptions webSocketOptions = new()
+            {
+                KeepAliveInterval = TimeSpan.FromSeconds(3)
+            };
+            app.UseWebSockets(webSocketOptions);
 
             app.UseHttpsRedirection();
 
@@ -196,7 +219,7 @@ namespace Azure.DataGateway.Service
                 IOptionsMonitor<DataGatewayConfig>? dataGatewayConfig = context.RequestServices.GetService<IOptionsMonitor<DataGatewayConfig>>();
 
                 bool isConfigSetup = (dataGatewayConfig != null && dataGatewayConfig.CurrentValue.DatabaseType.HasValue);
-                bool isConfigPath = context.Request.Path.StartsWithSegments("/configuration");
+                bool isConfigPath = context.Request.Path.StartsWithSegments("/configuration") || context.Request.Path.StartsWithSegments("/api/bind");
 
                 if (isConfigSetup || isConfigPath)
                 {

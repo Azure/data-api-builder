@@ -25,15 +25,20 @@ EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
+		Docker|Any CPU = Docker|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{208FC26C-A21C-4C96-98EE-F10FDAEAC508}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{208FC26C-A21C-4C96-98EE-F10FDAEAC508}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{208FC26C-A21C-4C96-98EE-F10FDAEAC508}.Docker|Any CPU.ActiveCfg = Docker|Any CPU
+		{208FC26C-A21C-4C96-98EE-F10FDAEAC508}.Docker|Any CPU.Build.0 = Docker|Any CPU
 		{208FC26C-A21C-4C96-98EE-F10FDAEAC508}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{208FC26C-A21C-4C96-98EE-F10FDAEAC508}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4E50C9B0-818E-4041-B18B-5BB17E4D409F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4E50C9B0-818E-4041-B18B-5BB17E4D409F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E50C9B0-818E-4041-B18B-5BB17E4D409F}.Docker|Any CPU.ActiveCfg = Docker|Any CPU
+		{4E50C9B0-818E-4041-B18B-5BB17E4D409F}.Docker|Any CPU.Build.0 = Docker|Any CPU
 		{4E50C9B0-818E-4041-B18B-5BB17E4D409F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4E50C9B0-818E-4041-B18B-5BB17E4D409F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection

@@ -5,6 +5,6 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - "./DataGateway.Service/appsettings.cosmos.json:/App/appsettings.json"
-      - "./DataGateway.Service/cosmos-config.json:/App/config.json"
-      - "./DataGateway.Service/schema.gql:/App/schema.gql"
+      - "./DataGateway.Service/appsettings.cosmos.json:/app/appsettings.json"
+      - "./DataGateway.Service/cosmos-config.json:/app/config.json"
+      - "./DataGateway.Service/schema.gql:/app/schema.gql"

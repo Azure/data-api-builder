@@ -104,17 +104,29 @@ namespace Azure.DataGateway.Service.Configurations
             {
                 if ((!serverProvided && dbProvided) || (serverProvided && !dbProvided))
                 {
-                    throw new NotSupportedException("Both Server and Database need to be provided");
+                    throw new NotSupportedException("Either Server and Database or ConnectionString need to be provided");
+                }
+                else if (connStringProvided && (serverProvided || dbProvided))
+                {
+                    throw new NotSupportedException("Either Server and Database or ConnectionString need to be provided, not both");
                 }
 
-                SqlConnectionStringBuilder builder = new()
+                if (string.IsNullOrWhiteSpace(options.DatabaseConnection.ConnectionString))
                 {
-                    InitialCatalog = options.DatabaseConnection.Database,
-                    DataSource = options.DatabaseConnection.Server,
-                };
+                    if ((!serverProvided && dbProvided) || (serverProvided && !dbProvided))
+                    {
+                        throw new NotSupportedException("Both Server and Database need to be provided");
+                    }
 
-                builder.IntegratedSecurity = true;
-                options.DatabaseConnection.ConnectionString = builder.ToString();
+                    SqlConnectionStringBuilder builder = new()
+                    {
+                        InitialCatalog = options.DatabaseConnection.Database,
+                        DataSource = options.DatabaseConnection.Server,
+                    };
+
+                    builder.IntegratedSecurity = true;
+                    options.DatabaseConnection.ConnectionString = builder.ToString();
+                }
             }
         }
     }

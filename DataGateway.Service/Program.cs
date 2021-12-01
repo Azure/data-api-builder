@@ -1,7 +1,9 @@
 using Azure.DataGateway.Service.Configurations;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using System.IO;
 
 namespace Azure.DataGateway.Service
 {
@@ -9,7 +11,14 @@ namespace Azure.DataGateway.Service
     {
         public static void Main(string[] args)
         {
-            CreateHostBuilder(args).Build().Run();
+            CreateHostBuilder(args)
+                .ConfigureAppConfiguration(config =>
+                    config
+                    .SetBasePath(Directory.GetCurrentDirectory())
+                    .AddJsonFile("appsettings.json", optional: true)
+                    .AddEnvironmentVariables("DataGatewayService_")
+                )
+                .Build().Run();
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>

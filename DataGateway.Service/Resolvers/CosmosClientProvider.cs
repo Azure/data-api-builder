@@ -3,6 +3,8 @@ using Azure.DataGateway.Service.Configurations;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Fluent;
 using Microsoft.Extensions.Options;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Azure.DataGateway.Service.Resolvers
 {

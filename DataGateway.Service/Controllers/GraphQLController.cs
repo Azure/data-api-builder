@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Claims;
@@ -10,7 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Azure.DataGateway.Service.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     public class GraphQLController : ControllerBase
     {
         private readonly GraphQLService _schemaManager;
@@ -26,6 +27,13 @@ namespace Azure.DataGateway.Service.Controllers
         [HttpPost]
         public async Task<JsonElement> PostAsync()
         {
+            // TODO: We probably don't even need to keep track of "connections" since these are more requests but this will do for now.
+            lock (Startup.CurrentConnectionsLock)
+            {
+                Startup.CurrentConnections++;
+                Startup.LastActivity = DateTime.UtcNow;
+            }
+
             string requestBody;
             using (StreamReader reader = new(this.HttpContext.Request.Body))
             {
@@ -40,13 +48,19 @@ namespace Azure.DataGateway.Service.Controllers
                 this.HttpContext.User = new ClaimsPrincipal(identity);
 
                 // ClaimsPrincipal object must be added as a request property so HotChocolate
-                // recognizes the authenticated user. 
+                // recognizes the authenticated user.
                 requestProperties.Add(nameof(ClaimsPrincipal), this.HttpContext.User);
             }
 
             // JsonElement returned so that JsonDocument is disposed when thread exits
             string resultJson = await this._schemaManager.ExecuteAsync(requestBody, requestProperties);
             using JsonDocument jsonDoc = JsonDocument.Parse(resultJson);
+
+            lock (Startup.CurrentConnectionsLock)
+            {
+                Startup.CurrentConnections--;
+            }
+
             return jsonDoc.RootElement.Clone();
         }
     }

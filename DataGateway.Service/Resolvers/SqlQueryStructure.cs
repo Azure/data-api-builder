@@ -324,8 +324,8 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// The maximum number of results this query should return;
-        /// </summary.
+        /// The maximum number of results this query should return.
+        /// </summary>
         public uint Limit()
         {
             if (IsListQuery)

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Azure.DataGateway.Service.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     public class GraphQLController : ControllerBase
     {
         private readonly GraphQLService _schemaManager;

@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Azure.DataGateway.Service.Functions": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DataGatewayService_GatewayAuthTokenFileName": "authfile.txt",
+        "DataGatewayService_WorkFolderLocation": "D:/Work",
+        "DataGatewayService_ControlPlaneUrl": "http://9eac-2001-4898-80e8-3-58a3-c457-231f-cc4.ngrok.io/"
+      }
+    }
+  }
+}

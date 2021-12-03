@@ -36,7 +36,7 @@ namespace Azure.DataGateway.Service.Controllers
         public DateTime AllocationTime { get; set; }
     }
 
-    [Route("api/bind")]
+    [Route("api/[controller]")]
     [ApiController]
     public sealed class BindController : ControllerBase
     {

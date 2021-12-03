@@ -19,49 +19,54 @@
     },
     "Azure.DataGateway.Service": {
       "commandName": "Project",
-      "dotnetRunMessages": "true",
       "launchBrowser": true,
       "launchUrl": "graphql",
-      "applicationUrl": "https://localhost:5001;http://localhost:5000"
+      "environmentVariables": {
+        "DataGatewayService_GatewayAuthTokenFileName": "authfile.txt",
+        "DataGatewayService_ControlPlaneUrl": "http://9eac-2001-4898-80e8-3-58a3-c457-231f-cc4.ngrok.io/",
+        "DataGatewayService_WorkFolderLocation": "D:/Work"
+      },
+      "dotnetRunMessages": "true",
+      "applicationUrl": "http://localhost:7071"
     },
     "Development": {
       "commandName": "Project",
-      "dotnetRunMessages": "true",
       "launchBrowser": true,
       "launchUrl": "graphql",
-      "applicationUrl": "https://localhost:5001;http://localhost:5000",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
-      }
+      },
+      "dotnetRunMessages": "true",
+      "applicationUrl": "https://localhost:5001;http://localhost:5000"
     },
     "PostgreSql": {
       "commandName": "Project",
-      "dotnetRunMessages": "true",
       "launchBrowser": true,
       "launchUrl": "graphql",
-      "applicationUrl": "https://localhost:5001;http://localhost:5000",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "PostgreSql"
-      }
+      },
+      "dotnetRunMessages": "true",
+      "applicationUrl": "https://localhost:5001;http://localhost:5000"
     },
     "MsSql": {
       "commandName": "Project",
-      "dotnetRunMessages": "true",
       "launchBrowser": true,
       "launchUrl": "graphql",
-      "applicationUrl": "https://localhost:5001;http://localhost:5000",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "MsSql"
-      }
+      },
+      "dotnetRunMessages": "true",
+      "applicationUrl": "https://localhost:5001;http://localhost:5000"
     },
     "Cosmos": {
       "commandName": "Project",
       "launchBrowser": true,
       "launchUrl": "graphql",
-      "applicationUrl": "https://localhost:5001;http://localhost:5000",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Cosmos"
-      }
+      },
+      "applicationUrl": "https://localhost:5001;http://localhost:5000"
     }
   }
 }

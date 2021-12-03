@@ -15,7 +15,7 @@ namespace Azure.DataGateway.Service.Functions
                     config
                     .SetBasePath(Directory.GetCurrentDirectory())
                     .AddJsonFile("appsettings.json", optional: false)
-                    .AddEnvironmentVariables()
+                    .AddEnvironmentVariables("DataGatewayService_")
                 )
                 .ConfigureServices((context, services) =>
                 {

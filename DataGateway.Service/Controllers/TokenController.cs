@@ -14,7 +14,7 @@ namespace Azure.DataGateway.Service.Controllers
         public string AadToken { get; set; }
     }
 
-    [Route("api/token")]
+    [Route("api/[controller]")]
     [ApiController]
     public sealed class TokenController : ControllerBase
     {

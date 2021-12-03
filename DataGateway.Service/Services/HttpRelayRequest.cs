@@ -39,16 +39,11 @@ namespace Azure.DataGateway.Service.Services
 
             string uri = baseUri + this.Path;
 
-            // This is a temporary hack so we don't need to reimplement the sockets to the gateway in the graphql project.
-            if (this.Path == "/api/graphql")
-            {
-                uri = "http://localhost:7071/api/graphql";
-            }
-
             if (this.Content != null)
             {
                 content = new StringContent(this.Content, Encoding.UTF8, "application/json");
             }
+
             if (this.Method == HttpMethod.Get.ToString())
             {
                 response = await httpClient.GetAsync(uri);

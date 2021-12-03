@@ -12,12 +12,6 @@ namespace Azure.DataGateway.Service.Resolvers
         private const string FOR_JSON_SUFFIX = " FOR JSON PATH, INCLUDE_NULL_VALUES";
         private const string WITHOUT_ARRAY_WRAPPER_SUFFIX = "WITHOUT_ARRAY_WRAPPER";
 
-        // TODO: Remove this once REST uses the schema defined in the config.
-        /// <summary>
-        /// Wild Card for field selection.
-        /// </summary>
-        private const string ALL_FIELDS = "*";
-
         private static DbCommandBuilder _builder = new SqlCommandBuilder();
 
         public string DataIdent { get; } = "[data]";
@@ -44,23 +38,15 @@ namespace Azure.DataGateway.Service.Resolvers
 
         public string Build(SqlQueryStructure structure)
         {
-            string selectedColumns = ALL_FIELDS;
-            if (structure.Columns.Count > 0)
-            {
-                selectedColumns = string.Join(", ", structure.Columns.Select(x => $"{x.Value} AS {QuoteIdentifier(x.Key)}"));
-            }
-
-            string fromPart = structure.Table(structure.TableName, structure.TableAlias);
-            IQueryBuilder queryBuilder = this;
-            fromPart += string.Join(
+            string fromSql = structure.TableSql();
+            fromSql += string.Join(
                     "",
                     structure.JoinQueries.Select(
-                        x => $" OUTER APPLY ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)}({queryBuilder.DataIdent})"));
-            string query = $"SELECT TOP {structure.Limit()} {selectedColumns} FROM {fromPart}";
-            if (structure.Conditions.Count() > 0)
-            {
-                query += $" WHERE {string.Join(" AND ", structure.Conditions)}";
-            }
+                        x => $" OUTER APPLY ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)}({DataIdent})"));
+            string query = $"SELECT TOP {structure.Limit()} {structure.ColumnsSql()}"
+                + $" FROM {fromSql}"
+                + $" WHERE {structure.ConditionsSql()}"
+                + $" ORDER BY {structure.OrderBySql()}";
 
             query += FOR_JSON_SUFFIX;
             if (!structure.IsListQuery)

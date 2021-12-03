@@ -100,7 +100,12 @@ namespace Azure.DataGateway.Service.Resolvers
         private readonly IQueryBuilder _queryBuilder;
 
         private readonly GraphqlType _typeInfo;
-        private readonly TableDefinition _tableDefinition;
+
+        // TODO: Remove this once REST uses the schema defined in the config.
+        /// <summary>
+        /// Wild Card for column selection.
+        /// </summary>
+        private const string ALL_COLUMNS = "*";
 
         /// <summary>
         /// Generate the structure for a SQL query based on GraphQL query
@@ -156,7 +161,6 @@ namespace Azure.DataGateway.Service.Resolvers
             _underlyingFieldType = UnderlyingType(outputType);
 
             _typeInfo = _metadataStoreProvider.GetGraphqlType(_underlyingFieldType.Name);
-            _tableDefinition = _metadataStoreProvider.GetTableDefinition(_typeInfo.Table);
             TableName = _typeInfo.Table;
             TableAlias = tableAlias;
             AddGraphqlFields(queryField.SelectionSet.Selections);
@@ -205,17 +209,6 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return UnderlyingType(type.InnerType());
-        }
-
-        /// <summary>
-        /// Given an unquoted tablename and alias, create the SQL code to
-        /// define the table in the from clause. So the {Table} bit in this
-        /// example:
-        /// SELECT ... FROM {Table} WHERE ...
-        /// </summary>
-        public string Table(string name, string alias)
-        {
-            return $"{QuoteIdentifier(name)} AS {QuoteIdentifier(alias)}";
         }
 
         /// <summary>
@@ -283,11 +276,11 @@ namespace Azure.DataGateway.Service.Resolvers
                     switch (fieldInfo.RelationshipType)
                     {
                         case GraphqlRelationshipType.ManyToOne:
-                            leftColumnNames = _tableDefinition.ForeignKeys[fieldInfo.ForeignKey].Columns;
+                            leftColumnNames = TableDefinition().ForeignKeys[fieldInfo.ForeignKey].Columns;
                             rightColumnNames = subTableDefinition.PrimaryKey;
                             break;
                         case GraphqlRelationshipType.OneToMany:
-                            leftColumnNames = _tableDefinition.PrimaryKey;
+                            leftColumnNames = TableDefinition().PrimaryKey;
                             rightColumnNames = subTableDefinition.ForeignKeys[fieldInfo.ForeignKey].Columns;
                             break;
                         case GraphqlRelationshipType.None:
@@ -311,6 +304,14 @@ namespace Azure.DataGateway.Service.Resolvers
                     Columns.Add(fieldName, column);
                 }
             }
+        }
+
+        /// <summary>
+        /// Returns the TableDefinition for the the table of this query.
+        /// </summary>
+        private TableDefinition TableDefinition()
+        {
+            return _metadataStoreProvider.GetTableDefinition(TableName);
         }
 
         /// <summary>
@@ -344,6 +345,61 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 return 1;
             }
+        }
+
+        /// <summary>
+        /// Create the SQL code to select the columns defined in Columns for
+        /// selection in the SELECT clause. So the {ColumnsSql} bit in this
+        /// example:
+        /// SELECT {ColumnsSql} FROM ... WHERE ...
+        /// </summary>
+        public string ColumnsSql()
+        {
+            if (Columns.Count == 0)
+            {
+                return ALL_COLUMNS;
+            }
+
+            return string.Join(", ", Columns.Select(
+                        x => $"{x.Value} AS {QuoteIdentifier(x.Key)}"));
+        }
+
+        /// <summary>
+        /// Create the SQL code to define the table in the FROM clause. So the
+        /// {TableSql} bit in this example:
+        /// SELECT ... FROM {TableSql} WHERE ...
+        /// </summary>
+        public string TableSql()
+        {
+            return $"{QuoteIdentifier(TableName)} AS {QuoteIdentifier(TableAlias)}";
+        }
+
+        /// <summary>
+        /// Create the SQL code to filter the rows in the WHERE clause. So the
+        /// {ConditionsSql} bit in this example:
+        /// SELECT ... FROM ... WHERE {ConditionsSql}
+        /// </summary>
+        public string ConditionsSql()
+        {
+            if (Conditions.Count() == 0)
+            {
+                return "1 = 1";
+            }
+
+            return string.Join(" AND ", Conditions);
+        }
+        /// <summary>
+        /// Create the SQL code to that should be included in the ORDER BY
+        /// section to order the results as intended. So the {OrderBySql} bit
+        /// in this example:
+        /// SELECT ... FROM ... WHERE ... ORDER BY {OrderBySql}
+        ///
+        /// NOTE: Currently all queries are ordered by their primary key.
+        /// </summary>
+        public string OrderBySql()
+        {
+            return string.Join(", ", TableDefinition().PrimaryKey.Select(
+                        x => QuoteIdentifier(x)));
         }
     }
 }

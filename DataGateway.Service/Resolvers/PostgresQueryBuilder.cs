@@ -1,4 +1,3 @@
-using System;
 using System.Data.Common;
 using System.Linq;
 using Npgsql;
@@ -11,8 +10,6 @@ namespace Azure.DataGateway.Service.Resolvers
     public class PostgresQueryBuilder : IQueryBuilder
     {
         private static DbCommandBuilder _builder = new NpgsqlCommandBuilder();
-        // TODO: Remove this once REST uses the schema defined in the config.
-        private const string ALL_FIELDS = "*";
 
         public string DataIdent { get; } = "\"data\"";
 
@@ -28,34 +25,25 @@ namespace Azure.DataGateway.Service.Resolvers
 
         public string Build(SqlQueryStructure structure)
         {
-            string selectedColumns = ALL_FIELDS;
-            if (structure.Columns.Count > 0)
-            {
-                selectedColumns = string.Join(", ", structure.Columns.Select(x => $"{x.Value} AS {QuoteIdentifier(x.Key)}"));
-            }
+            string fromSql = structure.TableSql();
+            fromSql += string.Join("", structure.JoinQueries.Select(x => $" LEFT OUTER JOIN LATERAL ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)} ON TRUE"));
 
-            Console.WriteLine($"selectedColumns: {selectedColumns}");
-            string fromPart = structure.Table(structure.TableName, structure.TableAlias);
-            fromPart += string.Join("", structure.JoinQueries.Select(x => $" LEFT OUTER JOIN LATERAL ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)} ON TRUE"));
-            string query = $"SELECT {selectedColumns} FROM {fromPart}";
-            if (structure.Conditions.Count() > 0)
-            {
-                query += $" WHERE {string.Join(" AND ", structure.Conditions)}";
-            }
-
-            query += $" LIMIT {structure.Limit()}";
+            string query = $"SELECT {structure.ColumnsSql()}"
+                + $" FROM {fromSql}"
+                + $" WHERE {structure.ConditionsSql()}"
+                + $" ORDER BY {structure.OrderBySql()}"
+                + $" LIMIT {structure.Limit()}";
 
             string subqueryName = QuoteIdentifier($"subq{structure.Counter.Next()}");
 
-            IQueryBuilder queryBuilder = this;
             string start;
             if (structure.IsListQuery)
             {
-                start = $"SELECT COALESCE(jsonb_agg(to_jsonb({subqueryName})), '[]') AS {queryBuilder.DataIdent} FROM (";
+                start = $"SELECT COALESCE(jsonb_agg(to_jsonb({subqueryName})), '[]') AS {DataIdent} FROM (";
             }
             else
             {
-                start = $"SELECT to_jsonb({subqueryName}) AS {queryBuilder.DataIdent} FROM (";
+                start = $"SELECT to_jsonb({subqueryName}) AS {DataIdent} FROM (";
             }
 
             string end = $") AS {subqueryName}";

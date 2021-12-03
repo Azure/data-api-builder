@@ -43,7 +43,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
             // Setup Integration DB Components
             //
             _databaseInteractor = new DatabaseInteractor(_queryExecutor);
-            _databaseInteractor.QueryExecutor.ExecuteNonQueryAsync(File.ReadAllText("books.sql")).Wait();
+            GetDatabaseResultAsync(File.ReadAllText("books.sql")).Wait();
             CreateTable(tableName);
             InsertData(tableName);
         }
@@ -116,7 +116,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         public static async Task<string> GetDatabaseResultAsync(string queryText)
         {
             JsonDocument sqlResult = JsonDocument.Parse("{ }");
-            using DbDataReader reader = _databaseInteractor.QueryExecutor.ExecuteQueryAsync(queryText, parameters: null).Result;
+            using DbDataReader reader = await _databaseInteractor.QueryExecutor.ExecuteQueryAsync(queryText, parameters: null);
 
             if (await reader.ReadAsync())
             {

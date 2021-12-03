@@ -34,9 +34,6 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Simply a quoted version of the identifier "data". This identifier
         /// is commonly used throughout the query.
         /// </summary>
-        public string DataIdent()
-        {
-            return QuoteIdentifier("data");
-        }
+        public string DataIdent { get; }
     }
 }

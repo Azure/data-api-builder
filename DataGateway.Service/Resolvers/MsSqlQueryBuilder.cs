@@ -20,6 +20,8 @@ namespace Azure.DataGateway.Service.Resolvers
 
         private static DbCommandBuilder _builder = new SqlCommandBuilder();
 
+        public string DataIdent { get; } = "[data]";
+
         /// <summary>
         /// Enclose the given string within [] specific for MsSql.
         /// </summary>
@@ -53,7 +55,7 @@ namespace Azure.DataGateway.Service.Resolvers
             fromPart += string.Join(
                     "",
                     structure.JoinQueries.Select(
-                        x => $" OUTER APPLY ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)}({queryBuilder.DataIdent()})"));
+                        x => $" OUTER APPLY ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)}({queryBuilder.DataIdent})"));
             string query = $"SELECT TOP {structure.Limit()} {selectedColumns} FROM {fromPart}";
             if (structure.Conditions.Count() > 0)
             {

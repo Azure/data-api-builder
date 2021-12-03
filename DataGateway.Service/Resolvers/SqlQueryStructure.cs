@@ -208,7 +208,10 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// The code
+        /// Given an unquoted tablename and alias, create the SQL code to
+        /// define the table in the from clause. So the {Table} bit in this
+        /// example:
+        /// SELECT ... FROM {Table} WHERE ...
         /// </summary>
         public string Table(string name, string alias)
         {
@@ -217,7 +220,9 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// Given an unquoted column name, return a quoted qualified column
-        /// name for the table that is queried in this query.
+        /// name for the table that is queried in this query. Quoting takes
+        /// into account the database (double quotes for Postgres and square
+        /// brackets for MSSQL).
         /// </summary>
         public string QualifiedColumn(string columnName)
         {
@@ -226,7 +231,9 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// Given an unquoted table alias and unquoted column name, return a
-        /// quoted qualified column name.
+        /// quoted qualified column name. Quoting takes into account the
+        /// database (double quotes for Postgres and square brackets for
+        /// MSSQL).
         /// </summary>
         public string QualifiedColumn(string tableAlias, string columnName)
         {
@@ -234,8 +241,8 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Add a column of the queried table to the columns of the result of
-        /// this query.
+        /// Given an unquoted column, add a column of the queried table to the
+        /// columns of the result of this query.
         /// </summary>
         public void AddColumn(string columnName)
         {
@@ -300,7 +307,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     string subqueryAlias = $"{subtableAlias}_subq";
                     JoinQueries.Add(subqueryAlias, subquery);
-                    string column = _queryBuilder.WrapSubqueryColumn($"{QuoteIdentifier(subqueryAlias)}.{_queryBuilder.DataIdent()}", subquery);
+                    string column = _queryBuilder.WrapSubqueryColumn($"{QuoteIdentifier(subqueryAlias)}.{_queryBuilder.DataIdent}", subquery);
                     Columns.Add(fieldName, column);
                 }
             }
@@ -338,6 +345,5 @@ namespace Azure.DataGateway.Service.Resolvers
                 return 1;
             }
         }
-
     }
 }

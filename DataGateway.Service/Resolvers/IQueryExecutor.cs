@@ -16,11 +16,5 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="parameters">The parameters used to execute the SQL text.</param>
         /// <returns>DbDataReader object for reading the result set.</returns>
         public Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object> parameters);
-        /// <summary>
-        /// Execute non queries, this is mostly useful to execute complete SQL
-        /// scripts against the database during testing. For most other use
-        /// cases you should use ExecuteQueryAsync.
-        /// </summary>
-        public Task ExecuteNonQueryAsync(string sqltext);
     }
 }

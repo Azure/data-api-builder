@@ -48,22 +48,5 @@ namespace Azure.DataGateway.Service.Resolvers
 
             return await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
         }
-
-        /// <summary>
-        /// Execute non queries, this is mostly useful to execute complete SQL
-        /// scripts against the database during testing. For most other use
-        /// cases you should use ExecuteQueryAsync.
-        /// </summary>
-        public async Task ExecuteNonQueryAsync(string sqltext)
-        {
-            ConnectionT conn = new();
-            conn.ConnectionString = _datagatewayConfig.DatabaseConnection.ConnectionString;
-            await conn.OpenAsync();
-            await using (DbCommand cmd = conn.CreateCommand())
-            {
-                cmd.CommandText = sqltext;
-                await cmd.ExecuteNonQueryAsync();
-            }
-        }
     }
 }

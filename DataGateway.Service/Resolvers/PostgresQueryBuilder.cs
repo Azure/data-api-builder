@@ -14,6 +14,8 @@ namespace Azure.DataGateway.Service.Resolvers
         // TODO: Remove this once REST uses the schema defined in the config.
         private const string ALL_FIELDS = "*";
 
+        public string DataIdent { get; } = "\"data\"";
+
         public string QuoteIdentifier(string ident)
         {
             return _builder.QuoteIdentifier(ident);
@@ -49,11 +51,11 @@ namespace Azure.DataGateway.Service.Resolvers
             string start;
             if (structure.IsListQuery)
             {
-                start = $"SELECT COALESCE(jsonb_agg(to_jsonb({subqueryName})), '[]') AS {queryBuilder.DataIdent()} FROM (";
+                start = $"SELECT COALESCE(jsonb_agg(to_jsonb({subqueryName})), '[]') AS {queryBuilder.DataIdent} FROM (";
             }
             else
             {
-                start = $"SELECT to_jsonb({subqueryName}) AS {queryBuilder.DataIdent()} FROM (";
+                start = $"SELECT to_jsonb({subqueryName}) AS {queryBuilder.DataIdent} FROM (";
             }
 
             string end = $") AS {subqueryName}";

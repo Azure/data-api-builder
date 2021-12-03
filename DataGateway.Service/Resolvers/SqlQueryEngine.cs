@@ -38,7 +38,7 @@ namespace Azure.DataGateway.Service.Resolvers
             // no-op
         }
 
-        private static async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader)
+        public static async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader)
         {
             StringBuilder jsonString = new();
             // Even though we only return a single cell, we need this loop for

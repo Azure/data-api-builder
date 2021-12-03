@@ -35,16 +35,6 @@ namespace Azure.DataGateway.Service.Tests.MsSql
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
-        /// <summary>
-        /// Cleans up querying table used for Tests in this class. Only to be run once at
-        /// conclusion of test run, as defined by MSTest decorator.
-        /// </summary>
-        [ClassCleanup]
-        public static void CleanupTestFixture()
-        {
-            CleanupTestFixture(_integrationTableName);
-        }
-
         #endregion
 
         #region Tests
@@ -63,6 +53,157 @@ namespace Azure.DataGateway.Service.Tests.MsSql
                 }
             }";
             string msSqlQuery = $"SELECT id, title FROM books ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            Assert.AreEqual(actual, expected);
+        }
+
+        /// <summary>
+        /// Gets array of results for querying more than one item.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task MultipleResultJoinQuery()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(first: 100) {
+                    id
+                    title
+                    publisher_id
+                    publisher {
+                        id
+                        name
+                    }
+                    reviews(first: 100) {
+                        id
+                        content
+                    }
+                }
+            }";
+            string msSqlQuery = @"
+                SELECT TOP 100 [table0].[id] AS [id],
+                    [table0].[title] AS [title],
+                    [table0].[publisher_id] AS [publisher_id],
+                    JSON_QUERY([table1_subq].[data]) AS [publisher],
+                    JSON_QUERY(COALESCE([table2_subq].[data], '[]')) AS [reviews]
+                FROM [books] AS [table0]
+                OUTER APPLY (
+                    SELECT TOP 1 [table1].[id] AS [id],
+                        [table1].[name] AS [name]
+                    FROM [publishers] AS [table1]
+                    WHERE [table0].[publisher_id] = [table1].[id]
+                    ORDER BY [id]
+                    FOR JSON PATH,
+                        INCLUDE_NULL_VALUES,
+                        WITHOUT_ARRAY_WRAPPER
+                    ) AS [table1_subq]([data])
+                OUTER APPLY (
+                    SELECT TOP 100 [table2].[id] AS [id],
+                        [table2].[content] AS [content]
+                    FROM [reviews] AS [table2]
+                    WHERE [table0].[id] = [table2].[book_id]
+                    ORDER BY [id]
+                    FOR JSON PATH,
+                        INCLUDE_NULL_VALUES
+                    ) AS [table2_subq]([data])
+                WHERE 1 = 1
+                ORDER BY [id]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            Assert.AreEqual(actual, expected);
+        }
+
+        /// <summary>
+        /// Gets array of results for querying more than one item.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task DeeplyNestedJoinQuery()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+              getBooks(first: 100) {
+                title
+                publisher {
+                  name
+                  books(first: 100) {
+                    title
+                    publisher {
+                      name
+                      books(first: 100) {
+                        title
+                        publisher {
+                          name
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }";
+            string msSqlQuery = @"
+                SELECT TOP 100 [table0].[title] AS [title],
+                    JSON_QUERY([table1_subq].[data]) AS [publisher]
+                FROM [books] AS [table0]
+                OUTER APPLY (
+                    SELECT TOP 1 [table1].[name] AS [name],
+                        JSON_QUERY(COALESCE([table2_subq].[data], '[]')) AS [books]
+                    FROM [publishers] AS [table1]
+                    OUTER APPLY (
+                        SELECT TOP 100 [table2].[title] AS [title],
+                            JSON_QUERY([table3_subq].[data]) AS [publisher]
+                        FROM [books] AS [table2]
+                        OUTER APPLY (
+                            SELECT TOP 1 [table3].[name] AS [name],
+                                JSON_QUERY(COALESCE([table4_subq].[data], '[]')) AS [books]
+                            FROM [publishers] AS [table3]
+                            OUTER APPLY (
+                                SELECT TOP 100 [table4].[title] AS [title],
+                                    JSON_QUERY([table5_subq].[data]) AS [publisher]
+                                FROM [books] AS [table4]
+                                OUTER APPLY (
+                                    SELECT TOP 1 [table5].[name] AS [name]
+                                    FROM [publishers] AS [table5]
+                                    WHERE [table4].[publisher_id] = [table5].[id]
+                                    ORDER BY [id]
+                                    FOR JSON PATH,
+                                        INCLUDE_NULL_VALUES,
+                                        WITHOUT_ARRAY_WRAPPER
+                                    ) AS [table5_subq]([data])
+                                WHERE [table3].[id] = [table4].[publisher_id]
+                                ORDER BY [id]
+                                FOR JSON PATH,
+                                    INCLUDE_NULL_VALUES
+                                ) AS [table4_subq]([data])
+                            WHERE [table2].[publisher_id] = [table3].[id]
+                            ORDER BY [id]
+                            FOR JSON PATH,
+                                INCLUDE_NULL_VALUES,
+                                WITHOUT_ARRAY_WRAPPER
+                            ) AS [table3_subq]([data])
+                        WHERE [table1].[id] = [table2].[publisher_id]
+                        ORDER BY [id]
+                        FOR JSON PATH,
+                            INCLUDE_NULL_VALUES
+                        ) AS [table2_subq]([data])
+                    WHERE [table0].[publisher_id] = [table1].[id]
+                    ORDER BY [id]
+                    FOR JSON PATH,
+                        INCLUDE_NULL_VALUES,
+                        WITHOUT_ARRAY_WRAPPER
+                    ) AS [table1_subq]([data])
+                WHERE 1 = 1
+                ORDER BY [id]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES
+            ";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(msSqlQuery);

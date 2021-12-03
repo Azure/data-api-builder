@@ -43,41 +43,10 @@ namespace Azure.DataGateway.Service.Tests.MsSql
             // Setup Integration DB Components
             //
             _databaseInteractor = new DatabaseInteractor(_queryExecutor);
-            GetDatabaseResultAsync(File.ReadAllText("books.sql")).Wait();
-            CreateTable(tableName);
-            InsertData(tableName);
-        }
-
-        /// <summary>
-        /// Cleans up querying table used for Tests in this class. Only to be run once at
-        /// conclusion of test run, as defined by MSTest decorator.
-        /// </summary>
-        [ClassCleanup]
-        protected static void CleanupTestFixture(string tableName)
-        {
-            _databaseInteractor.DropTable(tableName);
+            using DbDataReader _ = _databaseInteractor.QueryExecutor.ExecuteQueryAsync(File.ReadAllText("books.sql"), null).Result;
         }
 
         #region Helper Functions
-        /// <summary>
-        /// Creates the given table.
-        /// </summary>
-        /// <param name="tableName">The table name.</param>
-        private static void CreateTable(string tableName)
-        {
-            _databaseInteractor.CreateTable(tableName, "id int, name varchar(20), type varchar(20), homePlanet int, primaryFunction varchar(20)");
-        }
-
-        /// <summary>
-        /// Inserts some default data into the table.
-        /// </summary>
-        private static void InsertData(string tableName)
-        {
-            _databaseInteractor.InsertData(tableName, "'1', 'Mace', 'Jedi','1','Master'");
-            _databaseInteractor.InsertData(tableName, "'2', 'Plo Koon', 'Jedi','2','Master'");
-            _databaseInteractor.InsertData(tableName, "'3', 'Yoda', 'Jedi','3','Master'");
-        }
-
         /// <summary>
         /// returns httpcontext with body consisting of the given data.
         /// </summary>
@@ -115,13 +84,10 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         /// <returns>string in JSON format</returns>
         public static async Task<string> GetDatabaseResultAsync(string queryText)
         {
-            JsonDocument sqlResult = JsonDocument.Parse("{ }");
+            _ = JsonDocument.Parse("{ }");
             using DbDataReader reader = await _databaseInteractor.QueryExecutor.ExecuteQueryAsync(queryText, parameters: null);
 
-            if (await reader.ReadAsync())
-            {
-                sqlResult = JsonDocument.Parse(reader.GetString(0));
-            }
+            JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader));
 
             JsonElement sqlResultData = sqlResult.RootElement;
 

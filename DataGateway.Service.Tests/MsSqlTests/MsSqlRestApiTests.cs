@@ -18,7 +18,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         #region Test Fixture Setup
         private static RestService _restService;
         private static RestController _restController;
-        private static readonly string _integrationTableName = "characterTableForRestApi";
+        private static readonly string _integrationTableName = "books";
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
@@ -34,16 +34,6 @@ namespace Azure.DataGateway.Service.Tests.MsSql
             //
             _restService = new RestService(_queryEngine);
             _restController = new RestController(_restService);
-        }
-
-        /// <summary>
-        /// Cleans up querying table used for Tests in this class. Only to be run once at
-        /// conclusion of test run, as defined by MSTest decorator.
-        /// </summary>
-        [ClassCleanup]
-        public static void CleanupTestFixture()
-        {
-            CleanupTestFixture(_integrationTableName);
         }
 
         #endregion
@@ -74,8 +64,8 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         public async Task FindByIdTestWithQueryStringFields()
         {
             string primaryKeyRoute = "id/1";
-            string queryStringWithFields = "?_f=id,name,type";
-            string msSqlQuery = $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
+            string queryStringWithFields = "?_f=id,title";
+            string msSqlQuery = $"SELECT [id], [title] FROM { _integrationTableName } " +
                 $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
 
             await PerformTest(_restController.FindById,
@@ -97,7 +87,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         public async Task FindByIdTestWithInvalidFields()
         {
             string primaryKeyRoute = "id/1";
-            string queryStringWithFields = "?_f=id,null,type";
+            string queryStringWithFields = "?_f=id,null";
             string msSqlQuery = $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
                 $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
 
@@ -135,12 +125,20 @@ namespace Azure.DataGateway.Service.Tests.MsSql
             try
             {
                 JsonDocument actualJson = await api(entityName, primaryKeyRoute);
+                Assert.IsFalse(expectException);
                 string expected = await GetDatabaseResultAsync(msSqlQuery);
                 Assert.AreEqual(expected, ToJsonString(actualJson));
             }
             catch (Exception)
             {
-                Assert.IsTrue(expectException);
+                if (expectException)
+                {
+                    Assert.IsTrue(expectException);
+                }
+                else
+                {
+                    throw;
+                }
             }
 
         }

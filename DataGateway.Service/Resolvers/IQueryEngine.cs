@@ -1,12 +1,12 @@
-using Azure.DataGateway.Service.Models;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Models;
 
-namespace Azure.DataGateway.Services
+namespace Azure.DataGateway.Service.Resolvers
 {
     // <summary>
-    // Interface for execution of GraphQL queries against a database.
+    // Interface for execution of queries against a database.
     // </summary>
     public interface IQueryEngine
     {
@@ -24,5 +24,10 @@ namespace Azure.DataGateway.Services
         // Executes the given named graphql query on the backend and expecting a list of Jsons back.
         // </summary>
         public Task<IEnumerable<JsonDocument>> ExecuteListAsync(string graphQLQueryName, IDictionary<string, object> parameters);
+
+        // <summary>
+        // Given the FindQuery structure, obtains the query text and executes it against the backend.
+        // </summary>
+        public Task<JsonDocument> ExecuteAsync(FindQueryStructure queryStructure);
     }
 }

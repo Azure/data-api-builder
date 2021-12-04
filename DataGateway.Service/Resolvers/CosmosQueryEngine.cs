@@ -1,16 +1,17 @@
+using System.Collections.Generic;
+using System.Text.Json;
+using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json.Linq;
+
 using System;
-using System.Collections.Generic;
-using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Azure.DataGateway.Services
 {
     //<summary>
-    // CosmosQueryEngine to ExecuteAsync against CosmosDb.
+    // CosmosQueryEngine to execute queries against CosmosDb.
     //</summary>
     public class CosmosQueryEngine : IQueryEngine
     {
@@ -35,7 +36,7 @@ namespace Azure.DataGateway.Services
         }
 
         // <summary>
-        // ExecuteAsync the given named graphql query on the backend.
+        // ExecuteFindAsync the given named graphql query on the backend.
         // </summary>
         public async Task<JsonDocument> ExecuteAsync(string graphQLQueryName, IDictionary<string, object> parameters, bool isContinuationQuery)
         {
@@ -46,9 +47,12 @@ namespace Azure.DataGateway.Services
 
             GraphQLQueryResolver resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
             Container container = this._clientProvider.Client.GetDatabase(resolver.DatabaseName).GetContainer(resolver.ContainerName);
+
             var querySpec = new QueryDefinition(resolver.ParametrizedQuery);
             var queryRequestOptions = new QueryRequestOptions();
             string requestContinuation = null;
+
+            QueryDefinition querySpec = new(resolver.ParametrizedQuery);
 
             if (parameters != null)
             {
@@ -100,7 +104,7 @@ namespace Azure.DataGateway.Services
                 firstItem = iterator.Current;
             }
 
-            var jsonDocument = JsonDocument.Parse(firstItem.ToString());
+            JsonDocument jsonDocument = JsonDocument.Parse(firstItem.ToString());
 
             return jsonDocument;
         }
@@ -114,7 +118,7 @@ namespace Azure.DataGateway.Services
 
             GraphQLQueryResolver resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
             Container container = this._clientProvider.Client.GetDatabase(resolver.DatabaseName).GetContainer(resolver.ContainerName);
-            var querySpec = new QueryDefinition(resolver.ParametrizedQuery);
+            QueryDefinition querySpec = new(resolver.ParametrizedQuery);
 
             if (parameters != null)
             {
@@ -126,7 +130,7 @@ namespace Azure.DataGateway.Services
 
             FeedIterator<JObject> resultSetIterator = container.GetItemQueryIterator<JObject>(querySpec);
 
-            var resultsAsList = new List<JsonDocument>();
+            List<JsonDocument> resultsAsList = new();
             while (resultSetIterator.HasMoreResults)
             {
                 FeedResponse<JObject> nextPage = await resultSetIterator.ReadNextAsync();
@@ -139,6 +143,14 @@ namespace Azure.DataGateway.Services
             }
 
             return resultsAsList;
+        }
+
+        // <summary>
+        // Given the FindQuery structure, obtains the query text and executes it against the backend.
+        // </summary>
+        public Task<JsonDocument> ExecuteAsync(FindQueryStructure queryStructure)
+        {
+            return null;
         }
     }
 }

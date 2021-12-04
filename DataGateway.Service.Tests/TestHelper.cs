@@ -1,10 +1,10 @@
+using System;
+using System.IO;
 using Azure.DataGateway.Service.configurations;
 using Azure.DataGateway.Service.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using System;
-using System.IO;
 
 namespace Azure.DataGateway.Service.Tests
 {
@@ -50,11 +50,11 @@ namespace Azure.DataGateway.Service.Tests
             return JsonConvert.DeserializeObject<MutationResolver>(raw);
         }
 
-        private static Lazy<IOptions<DataGatewayConfig>> _dataGatewayConfig = new Lazy<IOptions<DataGatewayConfig>>(() => TestHelper.LoadConfig());
+        private static Lazy<IOptions<DataGatewayConfig>> _dataGatewayConfig = new(() => TestHelper.LoadConfig());
 
         private static IOptions<DataGatewayConfig> LoadConfig()
         {
-            var datagatewayConfig = new DataGatewayConfig();
+            DataGatewayConfig datagatewayConfig = new();
             IConfigurationRoot config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.Test.json")

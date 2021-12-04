@@ -1,12 +1,12 @@
+using System.Collections.Generic;
+using System.Text.Json;
+using System.Threading.Tasks;
 using Azure.DataGateway.Service.Resolvers;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Collections.Generic;
-using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Azure.DataGateway.Services
 {
@@ -134,7 +134,7 @@ namespace Azure.DataGateway.Services
         {
             if (value.Kind == SyntaxKind.IntValue)
             {
-                var intValue = (IntValueNode)value;
+                IntValueNode intValue = (IntValueNode)value;
                 return intValue.ToInt64();
             }
             else

@@ -1,3 +1,4 @@
+using System;
 using Azure.DataGateway.Service.configurations;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
@@ -10,7 +11,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Npgsql;
-using System;
 
 namespace Azure.DataGateway.Service
 {
@@ -26,13 +26,26 @@ namespace Azure.DataGateway.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.Configure<DataGatewayConfig>(Configuration.GetSection(nameof(DataGatewayConfig)));
+            DoConfigureServices(services, Configuration);
+            services.AddControllers();
+        }
+
+        /// <summary>
+        /// This method adds services that are used when running this project or the
+        /// functions project. Any services that are required should be added here, unless
+        /// it is only required for one or the other.
+        /// </summary>
+        /// <param name="services">The service collection to which services will be added.</param>
+        /// <param name="config">The applications configuration.</param>
+        public static void DoConfigureServices(IServiceCollection services, IConfiguration config)
+        {
+            services.Configure<DataGatewayConfig>(config.GetSection(nameof(DataGatewayConfig)));
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<DataGatewayConfig>, DataGatewayConfigPostConfiguration>());
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<DataGatewayConfig>, DataGatewayConfigValidation>());
 
             // Read configuration and use it locally.
-            var dataGatewayConfig = new DataGatewayConfig();
-            Configuration.Bind(nameof(DataGatewayConfig), dataGatewayConfig);
+            DataGatewayConfig dataGatewayConfig = new();
+            config.Bind(nameof(DataGatewayConfig), dataGatewayConfig);
 
             switch (dataGatewayConfig.DatabaseType)
             {
@@ -62,6 +75,8 @@ namespace Azure.DataGateway.Service
             }
 
             services.AddSingleton<GraphQLService, GraphQLService>();
+            services.AddSingleton<RestService, RestService>();
+            services.AddAuthorization();
             services.AddControllers();
         }
 
@@ -77,6 +92,7 @@ namespace Azure.DataGateway.Service
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>

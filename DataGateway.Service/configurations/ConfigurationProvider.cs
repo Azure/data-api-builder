@@ -1,6 +1,6 @@
+using System;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
-using System;
 
 namespace Azure.DataGateway.Service.configurations
 {
@@ -87,7 +87,7 @@ namespace Azure.DataGateway.Service.configurations
                     throw new NotSupportedException("Both Server and Database need to be provided");
                 }
 
-                var builder = new SqlConnectionStringBuilder
+                SqlConnectionStringBuilder builder = new()
                 {
                     InitialCatalog = options.DatabaseConnection.Database,
                     DataSource = options.DatabaseConnection.Server,

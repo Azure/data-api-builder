@@ -1,10 +1,10 @@
-using Azure.DataGateway.Service.configurations;
-using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.configurations;
+using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Resolvers
 {

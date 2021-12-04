@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -5,8 +6,6 @@ using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json.Linq;
-
-using System;
 
 namespace Azure.DataGateway.Services
 {
@@ -48,8 +47,7 @@ namespace Azure.DataGateway.Services
             GraphQLQueryResolver resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
             Container container = this._clientProvider.Client.GetDatabase(resolver.DatabaseName).GetContainer(resolver.ContainerName);
 
-            var querySpec = new QueryDefinition(resolver.ParametrizedQuery);
-            var queryRequestOptions = new QueryRequestOptions();
+            QueryRequestOptions queryRequestOptions = new();
             string requestContinuation = null;
 
             QueryDefinition querySpec = new(resolver.ParametrizedQuery);
@@ -85,13 +83,18 @@ namespace Azure.DataGateway.Services
                 }
 
                 string responseContinuation = firstPage.ContinuationToken;
+                if (String.IsNullOrEmpty(responseContinuation))
+                {
+                    responseContinuation = null;
+                }
+
                 JObject res = new(
                    new JProperty("endCursor", responseContinuation),
                    new JProperty("hasNextPage", responseContinuation != null),
                    new JProperty("nodes", jarray));
 
                 // This extra deserialize/serialization will be removed after moving to Newtonsoft from System.Text.Json
-                var resultJsonDoc = JsonDocument.Parse(res.ToString());
+                JsonDocument resultJsonDoc = JsonDocument.Parse(res.ToString());
                 return resultJsonDoc;
             }
 

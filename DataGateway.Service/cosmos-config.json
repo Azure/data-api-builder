@@ -24,6 +24,12 @@
       "databaseName": "graphqldb",
       "containerName": "planet",
       "parametrizedQuery": "select * FROM c"
+    },
+    {
+      "id": "planets",
+      "databaseName": "graphqldb",
+      "containerName": "planet",
+      "parametrizedQuery": "select * FROM c"
     }
   ],
   "MutationResolvers": [

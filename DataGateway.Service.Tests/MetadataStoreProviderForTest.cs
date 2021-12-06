@@ -6,19 +6,14 @@ namespace Azure.DataGateway.Service.Tests
 {
     public class MetadataStoreProviderForTest : IMetadataStoreProvider
     {
-        private string _graphQLSchema;
+        public string GraphqlSchema { get; set; }
         public Dictionary<string, MutationResolver> MutationResolvers { get; set; } = new();
         public Dictionary<string, GraphQLQueryResolver> QueryResolvers { get; set; } = new();
         public Dictionary<string, TableDefinition> Tables { get; set; } = new();
 
-        public void StoreGraphQLSchema(string schema)
-        {
-            _graphQLSchema = schema;
-        }
-
         public string GetGraphQLSchema()
         {
-            return _graphQLSchema;
+            return GraphqlSchema;
         }
 
         public MutationResolver GetMutationResolver(string name)

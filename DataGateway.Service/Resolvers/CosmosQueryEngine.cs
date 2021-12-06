@@ -27,14 +27,6 @@ namespace Azure.DataGateway.Services
             this._metadataStoreProvider = metadataStoreProvider;
         }
 
-        // <summary>
-        // Register the given resolver with this query engine.
-        // </summary>
-        public void RegisterResolver(GraphQLQueryResolver resolver)
-        {
-            this._metadataStoreProvider.StoreQueryResolver(resolver);
-        }
-
         /// <summary>
         /// Executes the given IMiddlewareContext of the GraphQL query and
         /// expecting a single Json back.

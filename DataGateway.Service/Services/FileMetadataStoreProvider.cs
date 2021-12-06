@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -148,21 +147,6 @@ namespace Azure.DataGateway.Service
             }
 
             return typeInfo;
-        }
-
-        public void StoreGraphQLSchema(string schema)
-        {
-            // no op
-        }
-
-        public void StoreMutationResolver(MutationResolver mutationResolver)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void StoreQueryResolver(GraphQLQueryResolver mutationResolver)
-        {
-            throw new NotImplementedException();
         }
     }
 }

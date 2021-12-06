@@ -30,7 +30,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             string query = $"SELECT {structure.ColumnsSql()}"
                 + $" FROM {fromSql}"
-                + $" WHERE {structure.ConditionsSql()}"
+                + $" WHERE {structure.PredicatesSql()}"
                 + $" ORDER BY {structure.OrderBySql()}"
                 + $" LIMIT {structure.Limit()}";
 

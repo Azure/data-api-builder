@@ -19,7 +19,8 @@ namespace Azure.DataGateway.Services
         /// <summary>
         /// Parses the primary key string to identify the field names composing the key
         /// and their values.
-        /// Adds the key name as conditions and values as parameters of the given FindRequestContext.
+        /// Adds the an equality comparison between the keyname and the given
+        /// value to the list of predicates.
         /// </summary>
         /// <param name="queryByPrimaryKey">The primary key route. e.g. customerName/Xyz/saleOrderId/123.</param>
         /// <param name="queryStructure">The FindRequestContext holding the major components of the query.</param>
@@ -36,11 +37,11 @@ namespace Azure.DataGateway.Services
 
                 for (int primaryKeyIndex = 0; primaryKeyIndex < primaryKeyValues.Length; primaryKeyIndex += 2)
                 {
-                    RestCondition condition = new(
+                    RestPredicate predicate = new(
                             primaryKeyValues[primaryKeyIndex],
                             primaryKeyValues[primaryKeyIndex + 1]
                             );
-                    context.Conditions.Add(condition);
+                    context.Predicates.Add(predicate);
                 }
 
             }

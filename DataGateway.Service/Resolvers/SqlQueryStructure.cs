@@ -35,11 +35,11 @@ namespace Azure.DataGateway.Service.Resolvers
     }
 
     /// <summary>
-    /// SqlQueryStructure is an intermediate represtation of a SQL query. This
-    /// intermediate structure can be used to generate a Postgres or MSSQL query.
-    /// In some sense this is an AST (abstract syntax tree) of a SQL query.
-    /// However, it only supports the very limited set of SQL constructs that we
-    /// are needed to represent a GraphQL query or REST request as SQL.
+    /// SqlQueryStructure is an intermediate representation of a SQL query.
+    /// This intermediate structure can be used to generate a Postgres or MSSQL
+    /// query. In some sense this is an AST (abstract syntax tree) of a SQL
+    /// query. However, it only supports the very limited set of SQL constructs
+    /// that we are needed to represent a GraphQL query or REST request as SQL.
     /// </summary>
     public class SqlQueryStructure
     {
@@ -49,9 +49,9 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public Dictionary<string, string> Columns { get; }
         /// <summary>
-        /// Conditions to be added to the query.
+        /// Predicates that should filter the result set of the query.
         /// </summary>
-        public List<string> Conditions { get; }
+        public List<string> Predicates { get; }
         /// <summary>
         /// The subqueries with which this query should be joined. The key are
         /// the aliases of the query.
@@ -111,15 +111,24 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Generate the structure for a SQL query based on GraphQL query
         /// information.
         /// </summary>
-        public SqlQueryStructure(IResolverContext ctx, IMetadataStoreProvider metadataStoreProvider, IQueryBuilder queryBuilder) : this(
-            ctx,
-            metadataStoreProvider,
-            queryBuilder,
-            ctx.Selection.Field,
-            "table0",
-            ctx.Selection.SyntaxNode,
-            new IncrementingInteger()
-        )
+        public SqlQueryStructure(IResolverContext ctx, IMetadataStoreProvider metadataStoreProvider, IQueryBuilder queryBuilder)
+            // This constructor simply forwards to the more general constructor
+            // that is used to create GraphQL queries. We give it some values
+            // that make sense for the outermost query.
+            : this(
+                ctx,
+                metadataStoreProvider,
+                queryBuilder,
+                ctx.Selection.Field,
+                // IncrementingInteger starts at 1, so we use 0 in our initial
+                // table alias. This ensures it's unique.
+                "table0",
+                ctx.Selection.SyntaxNode,
+                // The outermost query is where we start, so this can define
+                // create the IncrementingInteger that will be shared between
+                // all subqueries in this query.
+                new IncrementingInteger()
+            )
         { }
 
         /// <summary>
@@ -133,11 +142,11 @@ namespace Azure.DataGateway.Service.Resolvers
             IsListQuery = context.IsListQuery;
 
             context.Fields.ForEach(fieldName => AddColumn(fieldName));
-            context.Conditions.ForEach(condition =>
+            context.Predicates.ForEach(predicate =>
             {
                 string parameterName = $"param{Counter.Next()}";
-                Parameters.Add(parameterName, condition.Value);
-                Conditions.Add($"{QualifiedColumn(condition.Field)} = @{parameterName}");
+                Parameters.Add(parameterName, predicate.Value);
+                Predicates.Add($"{QualifiedColumn(predicate.Field)} = @{parameterName}");
             });
         }
 
@@ -183,7 +192,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             Columns = new();
             JoinQueries = new();
-            Conditions = new();
+            Predicates = new();
             Parameters = new();
             _metadataStoreProvider = metadataStoreProvider;
             _queryBuilder = queryBuilder;
@@ -276,11 +285,11 @@ namespace Azure.DataGateway.Service.Resolvers
                     switch (fieldInfo.RelationshipType)
                     {
                         case GraphqlRelationshipType.ManyToOne:
-                            leftColumnNames = TableDefinition().ForeignKeys[fieldInfo.ForeignKey].Columns;
+                            leftColumnNames = GetTableDefinition().ForeignKeys[fieldInfo.ForeignKey].Columns;
                             rightColumnNames = subTableDefinition.PrimaryKey;
                             break;
                         case GraphqlRelationshipType.OneToMany:
-                            leftColumnNames = TableDefinition().PrimaryKey;
+                            leftColumnNames = GetTableDefinition().PrimaryKey;
                             rightColumnNames = subTableDefinition.ForeignKeys[fieldInfo.ForeignKey].Columns;
                             break;
                         case GraphqlRelationshipType.None:
@@ -295,7 +304,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     {
                         string leftColumn = QualifiedColumn(columnName.Left);
                         string rightColumn = QualifiedColumn(subtableAlias, columnName.Right);
-                        subquery.Conditions.Add($"{leftColumn} = {rightColumn}");
+                        subquery.Predicates.Add($"{leftColumn} = {rightColumn}");
                     }
 
                     string subqueryAlias = $"{subtableAlias}_subq";
@@ -309,7 +318,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Returns the TableDefinition for the the table of this query.
         /// </summary>
-        private TableDefinition TableDefinition()
+        private TableDefinition GetTableDefinition()
         {
             return _metadataStoreProvider.GetTableDefinition(TableName);
         }
@@ -317,6 +326,8 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// QuoteIdentifier simply forwards to the QuoteIdentifier
         /// implementation of the querybuilder that this query structure uses.
+        /// So it wrapse the string in double quotes for Postgres and square
+        /// brackets for MSSQL.
         /// </summary>
         public string QuoteIdentifier(string ident)
         {
@@ -376,17 +387,17 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// Create the SQL code to filter the rows in the WHERE clause. So the
-        /// {ConditionsSql} bit in this example:
-        /// SELECT ... FROM ... WHERE {ConditionsSql}
+        /// {PredicatesSql} bit in this example:
+        /// SELECT ... FROM ... WHERE {PredicatesSql}
         /// </summary>
-        public string ConditionsSql()
+        public string PredicatesSql()
         {
-            if (Conditions.Count() == 0)
+            if (Predicates.Count() == 0)
             {
                 return "1 = 1";
             }
 
-            return string.Join(" AND ", Conditions);
+            return string.Join(" AND ", Predicates);
         }
         /// <summary>
         /// Create the SQL code to that should be included in the ORDER BY
@@ -398,7 +409,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public string OrderBySql()
         {
-            return string.Join(", ", TableDefinition().PrimaryKey.Select(
+            return string.Join(", ", GetTableDefinition().PrimaryKey.Select(
                         x => QuoteIdentifier(x)));
         }
     }

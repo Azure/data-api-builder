@@ -84,10 +84,9 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         /// <returns>string in JSON format</returns>
         public static async Task<string> GetDatabaseResultAsync(string queryText)
         {
-            _ = JsonDocument.Parse("{ }");
             using DbDataReader reader = await _databaseInteractor.QueryExecutor.ExecuteQueryAsync(queryText, parameters: null);
 
-            JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader));
+            using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader));
 
             JsonElement sqlResultData = sqlResult.RootElement;
 

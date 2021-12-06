@@ -1,6 +1,8 @@
+using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Resolvers;
+using Azure.DataGateway.Service.Services;
 
 namespace Azure.DataGateway.Services
 {
@@ -10,10 +12,12 @@ namespace Azure.DataGateway.Services
     public class RestService
     {
         private readonly IQueryEngine _queryEngine;
+        private readonly IMetadataStoreProvider _metadataStoreProvider;
 
-        public RestService(IQueryEngine queryEngine)
+        public RestService(IQueryEngine queryEngine, IMetadataStoreProvider metadataStoreProvider)
         {
             _queryEngine = queryEngine;
+            _metadataStoreProvider = metadataStoreProvider;
         }
 
         /// <summary>
@@ -33,8 +37,12 @@ namespace Azure.DataGateway.Services
                 RequestParser.ParseQueryString(System.Web.HttpUtility.ParseQueryString(queryString), context);
             }
 
+            if(!RequestValidator.IsValidFindRequest(context, _metadataStoreProvider))
+            {
+                throw new ArgumentException(message:"Invalid Primary Key usage");
+            }
+
             return await _queryEngine.ExecuteAsync(context);
         }
-
     }
 }

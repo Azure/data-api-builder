@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Services;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.MsSql
@@ -32,7 +33,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
 
             // Setup REST Components
             //
-            _restService = new RestService(_queryEngine);
+            _restService = new RestService(_queryEngine, _metadataStoreProvider);
             _restController = new RestController(_restService);
         }
 
@@ -113,7 +114,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         /// <param name="queryString">The queryString portion of the url.</param>
         /// <param name="msSqlQuery">The expected SQL query.</param>
         /// <param name="expectException">True if we expect exceptions.</param>
-        private static async Task PerformTest(Func<string, string, Task<JsonDocument>> api,
+        private static async Task PerformTest(Func<string, string, Task<IActionResult>> api,
             string entityName,
             string primaryKeyRoute,
             string queryString,
@@ -124,7 +125,9 @@ namespace Azure.DataGateway.Service.Tests.MsSql
 
             try
             {
-                using JsonDocument actualJson = await api(entityName, primaryKeyRoute);
+                IActionResult actionResult = await api(entityName, primaryKeyRoute);
+                OkObjectResult okResult = (OkObjectResult)actionResult;
+                JsonDocument actualJson = okResult.Value as JsonDocument;
                 Assert.IsFalse(expectException);
                 string expected = await GetDatabaseResultAsync(msSqlQuery);
                 Assert.AreEqual(expected, ToJsonString(actualJson));

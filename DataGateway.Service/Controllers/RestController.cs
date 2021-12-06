@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Services;
@@ -25,7 +26,6 @@ namespace Azure.DataGateway.Service.Controllers
         {
             _restService = restService;
         }
-
         /// <summary>
         /// FindById action serving the HttpGet verb.
         /// </summary>
@@ -41,18 +41,20 @@ namespace Azure.DataGateway.Service.Controllers
         [HttpGet]
         [Route("{*primaryKeyRoute}")]
         [Produces("application/json")]
-        public async Task<JsonDocument> FindById(
+        public async Task<IActionResult> FindById(
             string entityName,
             string primaryKeyRoute)
         {
-            JsonDocument resultJson = JsonDocument.Parse(@"{ ""error"": ""FindMany is not supported yet.""}");
-            if (!string.IsNullOrEmpty(primaryKeyRoute))
+            try
             {
                 string queryString = HttpContext.Request.QueryString.ToString();
-                resultJson = await _restService.ExecuteFindAsync(entityName, primaryKeyRoute, queryString);
+                JsonDocument result = await _restService.ExecuteFindAsync(entityName, primaryKeyRoute, queryString);
+                return Ok(result);
             }
-
-            return resultJson;
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }                      
         }
     }
 }

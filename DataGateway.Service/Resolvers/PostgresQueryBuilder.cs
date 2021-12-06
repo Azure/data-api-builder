@@ -1,6 +1,5 @@
 using System.Data.Common;
 using System.Linq;
-using System.Text;
 using Npgsql;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -11,48 +10,45 @@ namespace Azure.DataGateway.Service.Resolvers
     public class PostgresQueryBuilder : IQueryBuilder
     {
         private static DbCommandBuilder _builder = new NpgsqlCommandBuilder();
-        private const string ALL_FIELDS = "*";
+
+        public string DataIdent { get; } = "\"data\"";
 
         public string QuoteIdentifier(string ident)
         {
             return _builder.QuoteIdentifier(ident);
         }
 
-        public string Build(string inputQuery, bool isList)
+        public string WrapSubqueryColumn(string column, SqlQueryStructure subquery)
         {
-            if (!isList)
-            {
-                return $"SELECT row_to_json(q) FROM ({inputQuery}) q";
-            }
-
-            return $"SELECT jsonb_agg(row_to_json(q)) FROM ({inputQuery}) q";
+            return column;
         }
 
-        /// <summary>
-        /// Build the PgSql query for the given FindQueryStructure object which
-        /// holds the major components of a query.
-        /// </summary>
-        /// <param name="structure">The query structure holding the properties.</param>
-        /// <returns>The formed query text.</returns>
-        public string Build(FindQueryStructure structure)
+        public string Build(SqlQueryStructure structure)
         {
-            string selectedColumns = ALL_FIELDS;
-            if (structure.Fields.Count > 0)
+            string fromSql = structure.TableSql();
+            fromSql += string.Join("", structure.JoinQueries.Select(x => $" LEFT OUTER JOIN LATERAL ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)} ON TRUE"));
+
+            string query = $"SELECT {structure.ColumnsSql()}"
+                + $" FROM {fromSql}"
+                + $" WHERE {structure.PredicatesSql()}"
+                + $" ORDER BY {structure.OrderBySql()}"
+                + $" LIMIT {structure.Limit()}";
+
+            string subqueryName = QuoteIdentifier($"subq{structure.Counter.Next()}");
+
+            string start;
+            if (structure.IsListQuery)
             {
-                selectedColumns = string.Join(", ", structure.Fields.Select(x => $"{QuoteIdentifier(x)}"));
+                start = $"SELECT COALESCE(jsonb_agg(to_jsonb({subqueryName})), '[]') AS {DataIdent} FROM (";
+            }
+            else
+            {
+                start = $"SELECT to_jsonb({subqueryName}) AS {DataIdent} FROM (";
             }
 
-            string fromPart = structure.EntityName;
-
-            StringBuilder query = new($"SELECT {selectedColumns} FROM {fromPart}");
-            if (structure.Conditions.Count() > 0)
-            {
-                query.Append($" WHERE {string.Join(" AND ", structure.Conditions)}");
-            }
-
-            // Call the basic build to add the correct FOR JSON suffixes.
-            return Build(query.ToString(), structure.IsListQuery);
+            string end = $") AS {subqueryName}";
+            query = $"{start} {query} {end}";
+            return query;
         }
-
     }
 }

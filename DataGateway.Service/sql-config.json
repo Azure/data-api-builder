@@ -1,0 +1,129 @@
+{
+  "GraphQLSchema": "",
+  "GraphQLSchemaFile": "books.gql",
+  "QueryResolvers": [
+    {
+      "Id": "getBooks"
+    }
+  ],
+  "GraphqlTypes": {
+    "Publisher": {
+      "Table": "publishers",
+      "Fields": {
+        "books": {
+          "RelationshipType": "OneToMany",
+          "ForeignKey": "book_publisher_fk"
+        }
+      }
+    },
+    "Book": {
+      "Table": "books",
+      "Fields": {
+        "publisher": {
+          "RelationshipType": "ManyToOne",
+          "ForeignKey": "book_publisher_fk"
+        },
+        "reviews": {
+          "RelationshipType": "OneToMany",
+          "ForeignKey": "review_book_fk"
+        }
+      }
+    },
+    "Review": {
+      "Table": "reviews",
+      "Fields": {
+        "book": {
+          "RelationshipType": "ManyToOne",
+          "ForeignKey": "review_book_fk"
+        }
+      }
+    }
+  },
+  "DatabaseSchema": {
+    "Tables": {
+      "publishers": {
+        "PrimaryKey": ["id"],
+        "Columns": {
+          "id": {
+            "Type": "bigint"
+          },
+          "name": {
+            "Type": "text"
+          }
+        }
+      },
+      "books": {
+        "PrimaryKey": ["id"],
+        "Columns": {
+          "id": {
+            "Type": "bigint"
+          },
+          "title": {
+            "Type": "text"
+          },
+          "publisher_id": {
+            "Type": "bigint"
+          }
+        },
+        "ForeignKeys": {
+          "book_publisher_fk": {
+            "ReferencedTable": "publishers",
+            "Columns": ["publisher_id"]
+          }
+        }
+      },
+      "authors": {
+        "PrimaryKey": ["id"],
+        "Columns": {
+          "id": {
+            "Type": "bigint"
+          },
+          "name": {
+            "Type": "text"
+          }
+        }
+      },
+      "reviews": {
+        "PrimaryKey": ["id"],
+        "Columns": {
+          "id": {
+            "Type": "bigint"
+          },
+          "title": {
+            "Type": "text"
+          },
+          "publisher_id": {
+            "Type": "bigint"
+          }
+        },
+        "ForeignKeys": {
+          "review_book_fk": {
+            "ReferencedTable": "books",
+            "Columns": ["book_id"]
+          }
+        }
+      },
+      "book_author_link": {
+        "PrimaryKey": ["book_id", "author_id"],
+        "Columns": {
+          "book_id": {
+            "Type": "bigint"
+          },
+          "author_id": {
+            "Type": "bigint"
+          }
+        },
+        "ForeignKeys": {
+          "book_author_link_book_fk": {
+            "ReferencedTable": "books",
+            "Columns": ["book_id"]
+          },
+          "book_author_link_author_fk": {
+            "ReferencedTable": "authors",
+            "Columns": ["author_id"]
+          }
+        }
+      }
+    }
+  }
+}

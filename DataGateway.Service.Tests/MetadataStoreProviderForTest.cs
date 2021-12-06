@@ -7,8 +7,9 @@ namespace Azure.DataGateway.Service.Tests
     public class MetadataStoreProviderForTest : IMetadataStoreProvider
     {
         private string _graphQLSchema;
-        private IDictionary<string, MutationResolver> _mutationResolvers = new Dictionary<string, MutationResolver>();
-        private IDictionary<string, GraphQLQueryResolver> _queryResolvers = new Dictionary<string, GraphQLQueryResolver>();
+        public Dictionary<string, MutationResolver> MutationResolvers { get; set; } = new();
+        public Dictionary<string, GraphQLQueryResolver> QueryResolvers { get; set; } = new();
+        public Dictionary<string, TableDefinition> Tables { get; set; } = new();
 
         public void StoreGraphQLSchema(string schema)
         {
@@ -23,25 +24,37 @@ namespace Azure.DataGateway.Service.Tests
         public MutationResolver GetMutationResolver(string name)
         {
             MutationResolver result;
-            _mutationResolvers.TryGetValue(name, out result);
+            MutationResolvers.TryGetValue(name, out result);
             return result;
         }
 
         public GraphQLQueryResolver GetQueryResolver(string name)
         {
             GraphQLQueryResolver result;
-            _queryResolvers.TryGetValue(name, out result);
+            QueryResolvers.TryGetValue(name, out result);
+            return result;
+        }
+
+        public TableDefinition GetTableDefinition(string name)
+        {
+            TableDefinition result;
+            Tables.TryGetValue(name, out result);
             return result;
         }
 
         public void StoreMutationResolver(MutationResolver mutationResolver)
         {
-            _mutationResolvers.Add(mutationResolver.Id, mutationResolver);
+            MutationResolvers.Add(mutationResolver.Id, mutationResolver);
         }
 
         public void StoreQueryResolver(GraphQLQueryResolver queryResolver)
         {
-            _queryResolvers.Add(queryResolver.Id, queryResolver);
+            QueryResolvers.Add(queryResolver.Id, queryResolver);
+        }
+
+        public GraphqlType GetGraphqlType(string name)
+        {
+            throw new System.NotImplementedException();
         }
     }
 }

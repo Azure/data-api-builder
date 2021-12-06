@@ -16,6 +16,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Configs", "Configs", "{EFA9
 		DataGateway.Service\appsettings.MsSql.json = DataGateway.Service\appsettings.MsSql.json
 		DataGateway.Service\appsettings.MsSqlIntegrationTest.json = DataGateway.Service\appsettings.MsSqlIntegrationTest.json
 		DataGateway.Service\appsettings.PostgreSql.json = DataGateway.Service\appsettings.PostgreSql.json
+		DataGateway.Service\appsettings.PostgreSqlIntegrationTest.json = DataGateway.Service\appsettings.PostgreSqlIntegrationTest.json
 		DataGateway.Service\appsettings.Test.json = DataGateway.Service\appsettings.Test.json
 		DataGateway.Service\config.json = DataGateway.Service\config.json
 		DataGateway.Service\cosmos-config.json = DataGateway.Service\cosmos-config.json

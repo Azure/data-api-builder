@@ -124,7 +124,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
 
             try
             {
-                JsonDocument actualJson = await api(entityName, primaryKeyRoute);
+                using JsonDocument actualJson = await api(entityName, primaryKeyRoute);
                 Assert.IsFalse(expectException);
                 string expected = await GetDatabaseResultAsync(msSqlQuery);
                 Assert.AreEqual(expected, ToJsonString(actualJson));
@@ -149,8 +149,8 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         /// <param name="jdoc">The Json document.</param>
         private static string ToJsonString(JsonDocument jdoc)
         {
-            MemoryStream stream = new();
-            Utf8JsonWriter writer = new(stream, new JsonWriterOptions { Indented = false });
+            using MemoryStream stream = new();
+            using Utf8JsonWriter writer = new(stream, new JsonWriterOptions { Indented = false });
             jdoc.WriteTo(writer);
             writer.Flush();
             return Encoding.UTF8.GetString(stream.ToArray());

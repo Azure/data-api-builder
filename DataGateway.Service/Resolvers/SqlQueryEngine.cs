@@ -74,7 +74,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             SqlQueryStructure structure = new(context, _metadataStoreProvider, _queryBuilder);
             Console.WriteLine(structure.ToString());
-            DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(structure.ToString(), structure.Parameters);
+            using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(structure.ToString(), structure.Parameters);
 
             // Parse Results into Json and return
             //
@@ -103,7 +103,7 @@ namespace Azure.DataGateway.Service.Resolvers
             // Open connection and execute query using _queryExecutor
             //
             Console.WriteLine(structure.ToString());
-            DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(structure.ToString(), structure.Parameters);
+            using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(structure.ToString(), structure.Parameters);
             JsonDocument jsonDocument = null;
 
             // Parse Results into Json and return

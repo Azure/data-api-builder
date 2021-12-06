@@ -45,7 +45,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         x => $" OUTER APPLY ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)}({DataIdent})"));
             string query = $"SELECT TOP {structure.Limit()} {structure.ColumnsSql()}"
                 + $" FROM {fromSql}"
-                + $" WHERE {structure.ConditionsSql()}"
+                + $" WHERE {structure.PredicatesSql()}"
                 + $" ORDER BY {structure.OrderBySql()}";
 
             query += FOR_JSON_SUFFIX;

@@ -56,18 +56,20 @@ namespace Azure.DataGateway.Service.Resolvers
             return jsonString.ToString();
         }
 
-        // <summary>
-        // Executes the given named graphql query on the backend.
-        // </summary>
+        /// <summary>
+        /// Executes the given IMiddlewareContext of the GraphQL query and
+        /// expecting a single Json back.
+        /// </summary>
         public async Task<JsonDocument> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             SqlQueryStructure structure = new(context, _metadataStoreProvider, _queryBuilder);
             return await ExecuteAsync(structure);
         }
 
-        // <summary>
-        // Executes the given named graphql query on the backend and expecting a list of Jsons back.
-        // </summary>
+        /// <summary>
+        /// Executes the given IMiddlewareContext of the GraphQL and expecting a
+        /// list of Jsons back.
+        /// </summary>
         public async Task<IEnumerable<JsonDocument>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             SqlQueryStructure structure = new(context, _metadataStoreProvider, _queryBuilder);

@@ -3,24 +3,30 @@ using System.Collections.Generic;
 namespace Azure.DataGateway.Service.Resolvers
 {
     /// <summary>
-    /// RestCondition is a class that represents a parsed condition that can be
+    /// RestPredicate is a class that represents a parsed predicate that can be
     /// specified in the rest calls.
     /// </summary>
-    public class RestCondition
+    public class RestPredicate
     {
+        /// <summary>
+        /// The field that is compared in the predicate.
+        /// </summary>
         public string Field { get; set; }
+        /// <summary>
+        /// The value to which the field is compared.
+        /// </summary>
         public string Value { get; set; }
-        public RestCondition(string field, string value)
+        public RestPredicate(string field, string value)
         {
             Field = field;
             Value = value;
         }
     }
 
-    ///<summary>
+    /// <summary>
     /// FindRequestContext provides the major components of a REST or GraphQL query
     /// corresponding to the FindById or FindMany operations.
-    ///</summary>
+    /// </summary>
     public class FindRequestContext
     {
         /// <summary>
@@ -34,9 +40,9 @@ namespace Azure.DataGateway.Service.Resolvers
         public List<string> Fields { get; set; }
 
         /// <summary>
-        /// Conditions to be that are defined by the request.
+        /// Predicates to be that are defined by the request.
         /// </summary>
-        public List<RestCondition> Conditions { get; set; }
+        public List<RestPredicate> Predicates { get; set; }
 
         /// <summary>
         /// Is the result supposed to be a list or not.
@@ -51,7 +57,7 @@ namespace Azure.DataGateway.Service.Resolvers
             EntityName = entityName;
             Fields = new();
             IsListQuery = isList;
-            Conditions = new();
+            Predicates = new();
         }
     }
 }

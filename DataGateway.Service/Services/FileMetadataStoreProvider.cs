@@ -11,10 +11,15 @@ using Microsoft.Extensions.Options;
 namespace Azure.DataGateway.Service
 {
 
+    /// <summary>
+    /// A class describing the format of the JSON resolver configuration file.
+    /// </summary>
     public class ResolverConfig
     {
         /// <summary>
-        /// String Representation of graphQL schema, non escaped.
+        /// String Representation of graphQL schema, non escaped. This has
+        /// higher priority than GraphQLSchemaFile, so if both are set this one
+        /// will be used.
         /// </summary>
         public string GraphQLSchema { get; set; }
 
@@ -22,9 +27,29 @@ namespace Azure.DataGateway.Service
         /// Location of the graphQL schema file
         /// </summary>
         public string GraphQLSchemaFile { get; set; }
+
+        /// <summary>
+        /// A list containing metadata required to resolve the different
+        /// queries in the GraphQL schema. See GraphQLQueryResolver for details.
+        /// </summary>
         public List<GraphQLQueryResolver> QueryResolvers { get; set; } = new();
+
+        /// <summary>
+        /// A list containing metadata required to execute the different
+        /// mutations in the GraphQL schema. See MutationResolver for details.
+        /// </summary>
         public List<MutationResolver> MutationResolvers { get; set; } = new();
+
+        /// <summary>
+        /// A list containing metadata required to resolve the different
+        /// types in the GraphQL schema. See GraphqlType for details.
+        /// </summary>
         public Dictionary<string, GraphqlType> GraphqlTypes { get; set; } = new();
+
+        /// <summary>
+        /// A JSON encoded version of the information that resolvers need about
+        /// schema of the schema of the database.
+        /// </summary>
         public DatabaseSchema DatabaseSchema { get; set; }
     }
 

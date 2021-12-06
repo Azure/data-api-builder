@@ -13,9 +13,8 @@ cat > .git/hooks/pre-commit << __EOF__
 set -euo pipefail
 
 get_files() {
-    git diff --cached --name-only --diff-filter=ACMR DataGateway.Service |\\
-        grep '\.cs$' |\\
-        sed s=^DataGateway.Service/==g
+    git diff --cached --name-only --diff-filter=ACMR |\\
+        grep '\.cs$'
 }
 
 if [ "\$(get_files)" = '' ]; then

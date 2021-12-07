@@ -57,7 +57,7 @@ namespace Azure.DataGateway.Service.Tests.PostgreSql {
         /// </summary>
         [TestMethod]
         public async Task FindIdTestWithQueryStringFields(){
-            string primaryKeyRoute = "id/`";
+            string primaryKeyRoute = "id/1";
             string queryStringWithFields = "?_f=id,title";
             string postgresQuery = @"   
                 SELECT to_jsonb(subq) AS data
@@ -136,9 +136,10 @@ namespace Azure.DataGateway.Service.Tests.PostgreSql {
 
             try{
                 JsonDocument actualJson = await api(entityName, primaryKeyRoute);
+                
                 Assert.IsFalse(expectException);
 
-                string actual = actualJson.ToString();
+                string actual = actualJson.RootElement.ToString();
                 string expected = await GetDatabaseResultAsync(postgresQuery);
                 
                 Assert.IsTrue(JsonStringsDeepEqual(expected, actual), 

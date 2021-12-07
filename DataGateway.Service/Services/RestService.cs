@@ -37,9 +37,9 @@ namespace Azure.DataGateway.Services
                 RequestParser.ParseQueryString(System.Web.HttpUtility.ParseQueryString(queryString), context);
             }
 
-            if(!RequestValidator.IsValidFindRequest(context, _metadataStoreProvider))
+            if (!RequestValidator.IsValidFindRequest(context, _metadataStoreProvider))
             {
-                throw new ArgumentException(message:"Invalid Primary Key usage");
+                throw new ArgumentException(message: "Invalid Primary Key usage");
             }
 
             return await _queryEngine.ExecuteAsync(context);

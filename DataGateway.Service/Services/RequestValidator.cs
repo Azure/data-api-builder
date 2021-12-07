@@ -22,12 +22,12 @@ namespace Azure.DataGateway.Service.Services
             ///         -Not defining any primary key values.
             ///         , return false
             ///Edge Cases: context of validation : findOne -> all parts of composite key needed Vs. findMany -> not all composite PrimaryKey are needed
-            if ( context == null)
+            if (context == null)
             {
                 throw new ArgumentNullException(paramName: context.GetType().ToString(), message: "Context can't be null.");
             }
 
-            if ( configurationProvider == null )
+            if (configurationProvider == null)
             {
                 throw new ArgumentNullException(paramName: configurationProvider.GetType().ToString(), message: "configurationProvider can't be null.");
             }
@@ -46,14 +46,14 @@ namespace Azure.DataGateway.Service.Services
                     bool validPrimaryKeyAlignment = true;
                     foreach (RestPredicate predicate in context.Predicates)
                     {
-                        if(!tableDefinition.PrimaryKey.Contains(predicate.Field))
+                        if (!tableDefinition.PrimaryKey.Contains(predicate.Field))
                         {
                             validPrimaryKeyAlignment = false;
                             break;
                         }
                     }
 
-                    if(validPrimaryKeyAlignment)
+                    if (validPrimaryKeyAlignment)
                     {
                         validFindRequest = true;
                     }

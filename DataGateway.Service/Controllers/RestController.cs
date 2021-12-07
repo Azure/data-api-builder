@@ -54,7 +54,7 @@ namespace Azure.DataGateway.Service.Controllers
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
-            }                      
+            }
         }
     }
 }

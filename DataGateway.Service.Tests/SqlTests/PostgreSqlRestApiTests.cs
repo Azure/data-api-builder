@@ -1,14 +1,12 @@
-using System;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataGateway.Service.Tests.PostgreSql {
+namespace Azure.DataGateway.Service.Tests.SqlTests {
     
     [TestClass, TestCategory(TestCategory.POSTGRESSQL)]
-    public class PostgreSqlRestApiTests : PostgreSqlTestBase {
+    public class PostgreSqlRestApiTests : SqlTestBase {
 
         #region Test Fixture Setup
         private static RestService _restService;
@@ -17,7 +15,7 @@ namespace Azure.DataGateway.Service.Tests.PostgreSql {
 
         [ClassInitialize]
         public static void InitializeTestFixture(TestContext context){
-            IntializeTestFixture(context, _integrationTableName);
+            IntializeTestFixture(context, _integrationTableName, TestCategory.POSTGRESSQL);
 
             _restService = new RestService(_queryEngine);
             _restController = new RestController(_restService);
@@ -33,6 +31,7 @@ namespace Azure.DataGateway.Service.Tests.PostgreSql {
         [TestMethod]
         public async Task FindByIdTest(){
             string primaryKeyRoute = "id/2";
+            string queryString = string.Empty;
             string postgresQuery = @"SELECT to_jsonb(subq) AS data
                                     FROM (
                                         SELECT * 
@@ -42,12 +41,15 @@ namespace Azure.DataGateway.Service.Tests.PostgreSql {
                                         LIMIT 1
                                     ) AS subq";
             
-            await PerformTest( 
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+
+            ConfigureRestController(_restController, queryString);
+
+            await SqlTestHelper.PerformApiTest( 
                 _restController.FindById,
                 _integrationTableName,
                 primaryKeyRoute,
-                queryString: string.Empty,
-                postgresQuery
+                GetDatabaseResultAsync(postgresQuery)
             );
         }
 
@@ -70,12 +72,15 @@ namespace Azure.DataGateway.Service.Tests.PostgreSql {
                 ) AS subq
             ";
 
-            await PerformTest(
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+            
+            ConfigureRestController(_restController, queryStringWithFields);
+
+            await SqlTestHelper.PerformApiTest( 
                 _restController.FindById,
                 _integrationTableName,
                 primaryKeyRoute,
-                queryStringWithFields,
-                postgresQuery
+                GetDatabaseResultAsync(postgresQuery)
             );
         }
 
@@ -98,64 +103,16 @@ namespace Azure.DataGateway.Service.Tests.PostgreSql {
                     FROM " + _integrationTableName + @"
                 ) AS subq
             "; 
+            
+            ConfigureRestController(_restController, queryStringWithFields);
 
-            await PerformTest(
+            await SqlTestHelper.PerformApiTest( 
                 _restController.FindById,
                 _integrationTableName,
                 primaryKeyRoute,
-                queryStringWithFields,
-                postgresQuery,
+                GetDatabaseResultAsync(postgresQuery),
                 expectException: true
             );
-        }
-
-        #endregion 
-
-        #region Test Helper Functions
-
-        /// <summary>
-        /// Performs the test by calling the given api, on the entity name,
-        /// primaryKeyRoute and queryString. Uses the Postgres string to get the result
-        /// from database and asserts the results match.
-        /// </summary>
-        /// <param name="api">The REST api to be invoked.</param>
-        /// <param name="entityName">The entity name.</param>
-        /// <param name="primaryKeyRoute">The primary key portion of the route.</param>
-        /// <param name="queryString">The queryString portion of the url.</param>
-        /// <param name="postgresQuery">The expected Postgres query.</param>
-        /// <param name="expectException">True if we expect exceptions.</param>
-        private static async Task PerformTest(
-            Func<string, string, Task<JsonDocument>> api,
-            string entityName,
-            string primaryKeyRoute,
-            string queryString,
-            string postgresQuery,
-            bool expectException = false ) {
-
-            _restController.ControllerContext.HttpContext = GetHttpContextWithQueryString(queryString);
-
-            try{
-                JsonDocument actualJson = await api(entityName, primaryKeyRoute);
-                
-                Assert.IsFalse(expectException);
-
-                string actual = actualJson.RootElement.ToString();
-                string expected = await GetDatabaseResultAsync(postgresQuery);
-                
-                Assert.IsTrue(JsonStringsDeepEqual(expected, actual), 
-                        $"\nExpected:<{expected}>\nActual:\n");
-            
-            } catch (Exception e) {
-                // Consider scenarios:
-                // no exception + expectException: true -> test fails
-                // exception + expectException: true    -> test passes
-                // no exception + expectException: false-> test passes
-                // exception + expectException: false   -> test fails
-                if(expectException && !(e is AssertFailedException))
-                    Assert.IsTrue(expectException);
-                else
-                    throw;
-            }
         }
 
         #endregion

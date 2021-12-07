@@ -2,28 +2,28 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Data.Common;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Threading.Tasks;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Azure.DataGateway.Services;
-using Azure.DataGateway.Service.Tests.MsSql;
 using Azure.DataGateway.Service.Resolvers;
+using Azure.DataGateway.Service.Controllers;
 using Microsoft.AspNetCore.Http;
-using Newtonsoft.Json.Linq;
+using Microsoft.Data.SqlClient;
 using Npgsql;
 
-
-
-namespace Azure.DataGateway.Service.Tests.PostgreSql {
+namespace Azure.DataGateway.Service.Tests.SqlTests {
     /// <summary>
     /// Base class providing common test fixture for GraphQL tests.
     /// </summary>
     [TestClass]
-    public abstract class PostgreSqlTestBase {
+    public abstract class SqlTestBase {
+        private static readonly string POSTGRESQL_TEST_CONFIG_FILE = "appsettings.PostgreSqlIntegrationTest.json";
+        private static readonly string MSSQL_TEST_CONFIG_FILE = "appsettings.Test.json";
+
         protected static IQueryExecutor _queryExecutor;
         protected static IQueryBuilder _queryBuilder;
         protected static IQueryEngine _queryEngine;
-        protected static IMetadataStoreProvider _metaDataStoreProvider;
-        protected static DatabaseInteractor _databaseInteractor;
+        protected static IMetadataStoreProvider _metadataStoreProvider;
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
@@ -31,15 +31,23 @@ namespace Azure.DataGateway.Service.Tests.PostgreSql {
         /// </summary>
         /// <param name="context"></param>
         [ClassInitialize]
-        protected static void IntializeTestFixture(TestContext context, string tableName){
-            _metaDataStoreProvider = new FileMetadataStoreProvider("sql-config.json");
+        protected static void IntializeTestFixture(TestContext context, string tableName, string testCategory){
+            _metadataStoreProvider = new FileMetadataStoreProvider("sql-config.json");
 
-            _queryExecutor = new QueryExecutor<NpgsqlConnection>(PostgreSqlTestHelper.DataGatewayConfig);
-            _queryBuilder = new PostgresQueryBuilder();
-            _queryEngine = new SqlQueryEngine(_metaDataStoreProvider, _queryExecutor, _queryBuilder);
-        
-            _databaseInteractor = new DatabaseInteractor(_queryExecutor);
-            using DbDataReader _ = _databaseInteractor.QueryExecutor.ExecuteQueryAsync(File.ReadAllText("books.sql"), parameters: null).Result;
+            switch (testCategory){
+                case TestCategory.POSTGRESSQL:
+                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(SqlTestHelper.LoadConfig(POSTGRESQL_TEST_CONFIG_FILE));
+                    _queryBuilder = new PostgresQueryBuilder();
+                    _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
+                    break;
+                case TestCategory.MSSQL:
+                    _queryExecutor = new QueryExecutor<SqlConnection>(SqlTestHelper.LoadConfig(MSSQL_TEST_CONFIG_FILE));
+                    _queryBuilder = new MsSqlQueryBuilder();
+                    _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
+                    break;
+            }
+            
+            using DbDataReader _ = _queryExecutor.ExecuteQueryAsync(File.ReadAllText("books.sql"), parameters: null).Result;
         }
 
         /// <summary>
@@ -79,26 +87,21 @@ namespace Azure.DataGateway.Service.Tests.PostgreSql {
         /// <returns>string in JSON format</returns>
         protected static async Task<string> GetDatabaseResultAsync(string queryText){
             JsonDocument sqlResult = JsonDocument.Parse( "{ }");
-            using DbDataReader reader = _databaseInteractor.QueryExecutor.ExecuteQueryAsync(queryText, parameters: null).Result;
+            using DbDataReader reader = _queryExecutor.ExecuteQueryAsync(queryText, parameters: null).Result;
 
             if(await reader.ReadAsync()){
                 sqlResult = JsonDocument.Parse(reader.GetString(0));
             }
 
             JsonElement sqlResultData = sqlResult.RootElement;
-
             return sqlResultData.ToString();
         }
 
-        /// <summary>
-        /// Converts strings to JSON objects and does a deep compare
-        /// </summary>
-        /// <param name="jsonString1"></param>
-        /// <param name="jsonString2"></param>
-        /// <returns>True if JSON objects are the same</returns>
-        protected static bool JsonStringsDeepEqual(string jsonString1, string jsonString2) {
-            return JToken.DeepEquals(JToken.Parse(jsonString1), JToken.Parse(jsonString2));
+        ///<summary>
+        /// Add HttpContext with query to the RestController
+        ///</summary>
+        protected static void ConfigureRestController(RestController restController, string queryString){
+            restController.ControllerContext.HttpContext = GetHttpContextWithQueryString(queryString);
         }
-
     }
 }

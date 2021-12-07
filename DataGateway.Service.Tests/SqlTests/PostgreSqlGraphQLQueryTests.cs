@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataGateway.Service.Tests.PostgreSql {
+namespace Azure.DataGateway.Service.Tests.SqlTests {
 
     [TestClass, TestCategory(TestCategory.POSTGRESSQL)]
-    public class PostgreSqlGraphQLQueryTests : PostgreSqlTestBase {
+    public class PostgreSqlGraphQLQueryTests : SqlTestBase {
         
         #region Test Fixture Setup
         private static GraphQLService _graphQLService;
@@ -24,11 +24,10 @@ namespace Azure.DataGateway.Service.Tests.PostgreSql {
         [ClassInitialize]
         public static void InitializeTestFixture(TestContext context)
         {
-            IntializeTestFixture(context, _integrationTableName);
+            IntializeTestFixture(context, _integrationTableName, TestCategory.POSTGRESSQL);
 
             // Setup GraphQL Components
-            //
-            _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _metaDataStoreProvider);
+            _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _metadataStoreProvider);
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
@@ -50,8 +49,7 @@ namespace Azure.DataGateway.Service.Tests.PostgreSql {
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(postgresQuery);
 
-            Assert.IsTrue(JsonStringsDeepEqual(actual, expected),
-                    $"Expected:<{expected}>Actual:<{actual}>");
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
         [TestMethod]
@@ -110,8 +108,7 @@ namespace Azure.DataGateway.Service.Tests.PostgreSql {
             string expected = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
             string actual = await GetDatabaseResultAsync(postgresQuery);
 
-            Assert.IsTrue(JsonStringsDeepEqual(expected, actual),
-                        $"Expected:<{expected}>Actual:<{actual}>");
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
         [TestMethod]
@@ -201,8 +198,7 @@ namespace Azure.DataGateway.Service.Tests.PostgreSql {
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(postgresQuery);
 
-            Assert.IsTrue(JsonStringsDeepEqual(actual, expected), 
-                        $"\nExpected:<{expected}>\nActual:<{actual}>");
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
         #endregion

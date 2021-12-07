@@ -9,19 +9,6 @@ namespace Azure.DataGateway.Service.Services
     {
         public static bool IsValidFindRequest(FindRequestContext context, IMetadataStoreProvider configurationProvider)
         {
-            //validate primary key matches
-            //DatabaseSchema is a Dictionary of TableDefinition entries
-            ////which contain a PrimaryKey list.
-            ///1) from the FindRequestContext, get the table/entityName that is being queried
-            ///2) validate that the entityName exists in the Database Schema
-            ///3) ensure the PrimaryKey from FRC, which is defined in FRC.Conditions list,
-            ///         exists in the DatabaseSchema>TableDefinition PrimaryKey list
-            ///4) upon primaryKey match failure
-            ///         -Keys that aren't Primary Keys
-            ///         -Not defining the whole composite key
-            ///         -Not defining any primary key values.
-            ///         , return false
-            ///Edge Cases: context of validation : findOne -> all parts of composite key needed Vs. findMany -> not all composite PrimaryKey are needed
             if (context == null)
             {
                 throw new ArgumentNullException(paramName: context.GetType().ToString(), message: "Context can't be null.");

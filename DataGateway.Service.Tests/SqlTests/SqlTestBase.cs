@@ -86,14 +86,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests {
         /// <param name="queryText">raw database query</param>
         /// <returns>string in JSON format</returns>
         protected static async Task<string> GetDatabaseResultAsync(string queryText){
-            JsonDocument sqlResult = JsonDocument.Parse( "{ }");
-            using DbDataReader reader = _queryExecutor.ExecuteQueryAsync(queryText, parameters: null).Result;
+            using DbDataReader reader = await _queryExecutor.ExecuteQueryAsync(queryText, parameters: null);
 
-            if(await reader.ReadAsync()){
-                sqlResult = JsonDocument.Parse(reader.GetString(0));
-            }
+            using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader));
 
             JsonElement sqlResultData = sqlResult.RootElement;
+
             return sqlResultData.ToString();
         }
 

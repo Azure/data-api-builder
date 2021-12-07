@@ -18,7 +18,7 @@
       "Fields": {
         "books": {
           "RelationshipType": "OneToMany",
-          "ForeignKey": "book_publisher_fk"
+          "RightForeignKey": "book_publisher_fk"
         }
       }
     },
@@ -27,11 +27,28 @@
       "Fields": {
         "publisher": {
           "RelationshipType": "ManyToOne",
-          "ForeignKey": "book_publisher_fk"
+          "LeftForeignKey": "book_publisher_fk"
         },
         "reviews": {
           "RelationshipType": "OneToMany",
-          "ForeignKey": "review_book_fk"
+          "RightForeignKey": "review_book_fk"
+        },
+        "authors": {
+          "RelationShipType": "ManyToMany",
+          "AssociativeTable": "book_author_link",
+          "LeftForeignKey": "book_author_link_book_fk",
+          "RightForeignKey": "book_author_link_author_fk"
+        }
+      }
+    },
+    "Author": {
+      "Table": "authors",
+      "Fields": {
+        "books": {
+          "RelationShipType": "ManyToMany",
+          "AssociativeTable": "book_author_link",
+          "LeftForeignKey": "book_author_link_author_fk",
+          "RightForeignKey": "book_author_link_book_fk"
         }
       }
     },
@@ -40,7 +57,7 @@
       "Fields": {
         "book": {
           "RelationshipType": "ManyToOne",
-          "ForeignKey": "review_book_fk"
+          "LeftForeignKey": "review_book_fk"
         }
       }
     }
@@ -85,6 +102,9 @@
             "Type": "bigint"
           },
           "name": {
+            "Type": "text"
+          },
+          "birthdate": {
             "Type": "text"
           }
         }

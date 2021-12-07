@@ -81,6 +81,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         id
                         content
                     }
+                    authors(first: 100) {
+                        id
+                        name
+                    }
                 }
             }";
             string msSqlQuery = @"
@@ -88,7 +92,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     [table0].[title] AS [title],
                     [table0].[publisher_id] AS [publisher_id],
                     JSON_QUERY([table1_subq].[data]) AS [publisher],
-                    JSON_QUERY(COALESCE([table2_subq].[data], '[]')) AS [reviews]
+                    JSON_QUERY(COALESCE([table2_subq].[data], '[]')) AS [reviews],
+                    JSON_QUERY(COALESCE([table3_subq].[data], '[]')) AS [authors]
                 FROM [books] AS [table0]
                 OUTER APPLY (
                     SELECT TOP 1 [table1].[id] AS [id],
@@ -109,6 +114,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     FOR JSON PATH,
                         INCLUDE_NULL_VALUES
                     ) AS [table2_subq]([data])
+                OUTER APPLY (
+                    SELECT TOP 100 [table3].[id] AS [id],
+                        [table3].[name] AS [name]
+                    FROM [authors] AS [table3]
+                    INNER JOIN [book_author_link] AS [table4] ON [table4].[author_id] = [table3].[id]
+                    WHERE [table0].[id] = [table4].[book_id]
+                    ORDER BY [id]
+                    FOR JSON PATH,
+                        INCLUDE_NULL_VALUES
+                    ) AS [table3_subq]([data])
                 WHERE 1 = 1
                 ORDER BY [id]
                 FOR JSON PATH,
@@ -146,11 +161,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     }
                   }
                 }
+                authors(first: 100) {
+                  name
+                  books(first: 100) {
+                    title
+                    authors(first: 100) {
+                      name
+                    }
+                  }
+                }
               }
             }";
+
             string msSqlQuery = @"
                 SELECT TOP 100 [table0].[title] AS [title],
-                    JSON_QUERY([table1_subq].[data]) AS [publisher]
+                    JSON_QUERY([table1_subq].[data]) AS [publisher],
+                    JSON_QUERY(COALESCE([table6_subq].[data], '[]')) AS [authors]
                 FROM [books] AS [table0]
                 OUTER APPLY (
                     SELECT TOP 1 [table1].[name] AS [name],
@@ -199,6 +225,35 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         INCLUDE_NULL_VALUES,
                         WITHOUT_ARRAY_WRAPPER
                     ) AS [table1_subq]([data])
+                OUTER APPLY (
+                    SELECT TOP 100 [table6].[name] AS [name],
+                        JSON_QUERY(COALESCE([table7_subq].[data], '[]')) AS [books]
+                    FROM [authors] AS [table6]
+                    INNER JOIN [book_author_link] AS [table11] ON [table11].[author_id] = [table6].[id]
+                    OUTER APPLY (
+                        SELECT TOP 100 [table7].[title] AS [title],
+                            JSON_QUERY(COALESCE([table8_subq].[data], '[]')) AS [authors]
+                        FROM [books] AS [table7]
+                        INNER JOIN [book_author_link] AS [table10] ON [table10].[book_id] = [table7].[id]
+                        OUTER APPLY (
+                            SELECT TOP 100 [table8].[name] AS [name]
+                            FROM [authors] AS [table8]
+                            INNER JOIN [book_author_link] AS [table9] ON [table9].[author_id] = [table8].[id]
+                            WHERE [table7].[id] = [table9].[book_id]
+                            ORDER BY [id]
+                            FOR JSON PATH,
+                                INCLUDE_NULL_VALUES
+                            ) AS [table8_subq]([data])
+                        WHERE [table6].[id] = [table10].[author_id]
+                        ORDER BY [id]
+                        FOR JSON PATH,
+                            INCLUDE_NULL_VALUES
+                        ) AS [table7_subq]([data])
+                    WHERE [table0].[id] = [table11].[book_id]
+                    ORDER BY [id]
+                    FOR JSON PATH,
+                        INCLUDE_NULL_VALUES
+                    ) AS [table6_subq]([data])
                 WHERE 1 = 1
                 ORDER BY [id]
                 FOR JSON PATH,

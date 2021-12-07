@@ -37,22 +37,25 @@ namespace Azure.DataGateway.Service.Resolvers
     /// Stores one predicate which goes in the WHERE section of the sql query
     /// Provides opt-in typecasting support
     ///</summary>
-    public class SqlPredicate {      
+    public class SqlPredicate
+    {
         public string Field { get; }
         public string Value { get; }
         public string CompOp { get; }
-        public string FieldType {get; }
+        public string FieldType { get; }
 
-        public SqlPredicate(string Field, string Value, string CompOp, string FieldType) {
+        public SqlPredicate(string Field, string Value, string CompOp, string FieldType)
+        {
             this.Field = Field;
             this.Value = Value;
             this.CompOp = CompOp;
             this.FieldType = FieldType;
         }
 
-        public SqlPredicate(string Field, string Value, string CompOp) : this(Field, Value, CompOp, null) {}
+        public SqlPredicate(string Field, string Value, string CompOp) : this(Field, Value, CompOp, null) { }
 
-        public override string ToString(){
+        public override string ToString()
+        {
             return $"{Field} {CompOp} {Value}";
         }
 
@@ -60,10 +63,13 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Typecasts the predicate if possible (if the FieldType is available)
         /// Defaults to ToString if typecasting is not possible
         ///</summart>
-        public string ToStringTypecastedIfPossible(){
-            if(FieldType == null)
+        public string ToStringTypecastedIfPossible()
+        {
+            if (FieldType == null)
+            {
                 return this.ToString();
-                
+            }
+
             return $"{Field} {CompOp} CAST({Value} AS {FieldType})";
         }
     }
@@ -181,7 +187,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 string parameterName = $"param{Counter.Next()}";
                 Parameters.Add(parameterName, predicate.Value);
 
-                Predicates.Add(new( QualifiedColumn(predicate.Field), $"@{parameterName}", "=", GetFieldType(TableName, predicate.Field)));
+                Predicates.Add(new(QualifiedColumn(predicate.Field), $"@{parameterName}", "=", GetFieldType(TableName, predicate.Field)));
             });
         }
 
@@ -432,18 +438,21 @@ namespace Azure.DataGateway.Service.Resolvers
                 return "1 = 1";
             }
 
-            if(typecast) {
+            if (typecast)
+            {
                 return string.Join(" AND ", Predicates.Select(Predicate => Predicate.ToStringTypecastedIfPossible()));
             }
-            else {
+            else
+            {
                 return string.Join(" AND ", Predicates.Select(Predicate => Predicate.ToString()));
             }
-            
+
         }
         ///<summary>
         /// Get type of a field from a table
         ///</summary>
-        public string GetFieldType(string TableName, string FieldName){
+        public string GetFieldType(string TableName, string FieldName)
+        {
             return _metadataStoreProvider.GetTableDefinition(TableName).Columns.GetValueOrDefault(FieldName).Type;
         }
         /// <summary>

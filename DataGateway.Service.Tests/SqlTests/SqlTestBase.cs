@@ -1,22 +1,24 @@
+using System.Data.Common;
 using System.IO;
 using System.Text;
 using System.Text.Json;
-using System.Data.Common;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Azure.DataGateway.Services;
-using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Resolvers;
+using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Npgsql;
 
-namespace Azure.DataGateway.Service.Tests.SqlTests {
+namespace Azure.DataGateway.Service.Tests.SqlTests
+{
     /// <summary>
     /// Base class providing common test fixture for both REST and GraphQL tests.
     /// </summary>
     [TestClass]
-    public abstract class SqlTestBase {
+    public abstract class SqlTestBase
+    {
         private static readonly string POSTGRESQL_TEST_CONFIG_FILE = "appsettings.PostgreSqlIntegrationTest.json";
         private static readonly string MSSQL_TEST_CONFIG_FILE = "appsettings.Test.json";
 
@@ -31,10 +33,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests {
         /// </summary>
         /// <param name="context"></param>
         [ClassInitialize]
-        protected static void IntializeTestFixture(TestContext context, string tableName, string testCategory){
+        protected static void IntializeTestFixture(TestContext context, string tableName, string testCategory)
+        {
             _metadataStoreProvider = new FileMetadataStoreProvider("sql-config.json");
 
-            switch (testCategory){
+            switch (testCategory)
+            {
                 case TestCategory.POSTGRESSQL:
                     _queryExecutor = new QueryExecutor<NpgsqlConnection>(SqlTestHelper.LoadConfig(POSTGRESQL_TEST_CONFIG_FILE));
                     _queryBuilder = new PostgresQueryBuilder();
@@ -46,7 +50,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests {
                     _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
                     break;
             }
-            
+
             using DbDataReader _ = _queryExecutor.ExecuteQueryAsync(File.ReadAllText("books.sql"), parameters: null).Result;
         }
 
@@ -85,7 +89,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests {
         /// </summary>
         /// <param name="queryText">raw database query</param>
         /// <returns>string in JSON format</returns>
-        protected static async Task<string> GetDatabaseResultAsync(string queryText){
+        protected static async Task<string> GetDatabaseResultAsync(string queryText)
+        {
             using DbDataReader reader = await _queryExecutor.ExecuteQueryAsync(queryText, parameters: null);
 
             using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader));
@@ -98,7 +103,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests {
         ///<summary>
         /// Add HttpContext with query to the RestController
         ///</summary>
-        protected static void ConfigureRestController(RestController restController, string queryString){
+        protected static void ConfigureRestController(RestController restController, string queryString)
+        {
             restController.ControllerContext.HttpContext = GetHttpContextWithQueryString(queryString);
         }
     }

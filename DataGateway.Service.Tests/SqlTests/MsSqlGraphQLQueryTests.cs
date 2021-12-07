@@ -26,7 +26,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="context"></param>
         [ClassInitialize]
         public static void InitializeTestFixture(TestContext context)
-        {   
+        {
             IntializeTestFixture(context, _integrationTableName, TestCategory.MSSQL);
 
             // Setup GraphQL Components

@@ -2,16 +2,19 @@ using System;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Azure.DataGateway.Service.configurations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
 
-namespace Azure.DataGateway.Service.Tests.SqlTests {
-    public class SqlTestHelper {
-        public static IOptions<DataGatewayConfig> LoadConfig(string JsonConfigFile) {
-            
+namespace Azure.DataGateway.Service.Tests.SqlTests
+{
+    public class SqlTestHelper
+    {
+        public static IOptions<DataGatewayConfig> LoadConfig(string JsonConfigFile)
+        {
+
             DataGatewayConfig datagatewayConfig = new();
             IConfigurationRoot config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
@@ -29,16 +32,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests {
         /// <param name="jsonString1"></param>
         /// <param name="jsonString2"></param>
         /// <returns>True if JSON objects are the same</returns>
-        public static bool JsonStringsDeepEqual(string jsonString1, string jsonString2) {
+        public static bool JsonStringsDeepEqual(string jsonString1, string jsonString2)
+        {
             return JToken.DeepEquals(JToken.Parse(jsonString1), JToken.Parse(jsonString2));
         }
 
-        public static void PerformTestEqualJsonStrings(string expected, string actual){
+        public static void PerformTestEqualJsonStrings(string expected, string actual)
+        {
             Assert.IsTrue(JsonStringsDeepEqual(expected, actual),
                 $"\nExpected:<{expected}>\nActual:<{actual}>");
         }
 
-        
         /// <summary>
         /// Performs the test by calling the given api, on the entity name,
         /// primaryKeyRoute and queryString. Uses the sql query string to get the result
@@ -58,28 +62,36 @@ namespace Azure.DataGateway.Service.Tests.SqlTests {
             string entityName,
             string primaryKeyRoute,
             Task<string> expectedWorker,
-            bool expectException = false ) {
+            bool expectException = false)
+        {
 
-            try{
+            try
+            {
                 JsonDocument actualJson = await api(entityName, primaryKeyRoute);
-                
+
                 string expected = await expectedWorker;
                 string actual = actualJson.RootElement.ToString();
 
                 Assert.IsFalse(expectException, "An exception was suppossed to be thrown, but it was not");
 
                 PerformTestEqualJsonStrings(expected, actual);
-            
-            } catch (Exception e) {
+
+            }
+            catch (Exception e)
+            {
                 // Consider scenarios:
                 // no exception + expectException: true -> test fails
                 // exception + expectException: true    -> test passes
                 // no exception + expectException: false-> test passes
                 // exception + expectException: false   -> test fails
-                if(expectException && !(e is AssertFailedException))
+                if (expectException && !(e is AssertFailedException))
+                {
                     Assert.IsTrue(expectException);
+                }
                 else
+                {
                     throw;
+                }
             }
         }
     }

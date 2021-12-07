@@ -48,7 +48,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             ConfigureRestController(_restController, queryString);
 
-            await SqlTestHelper.PerformApiTest( 
+            await SqlTestHelper.PerformApiTest(
                 _restController.FindById,
                 _integrationTableName,
                 primaryKeyRoute,
@@ -70,7 +70,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             ConfigureRestController(_restController, queryStringWithFields);
 
-            await SqlTestHelper.PerformApiTest( 
+            await SqlTestHelper.PerformApiTest(
                 _restController.FindById,
                 _integrationTableName,
                 primaryKeyRoute,
@@ -96,7 +96,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             ConfigureRestController(_restController, queryStringWithFields);
 
-            await SqlTestHelper.PerformApiTest( 
+            await SqlTestHelper.PerformApiTest(
                 _restController.FindById,
                 _integrationTableName,
                 primaryKeyRoute,

@@ -1,16 +1,18 @@
 using System;
 using System.Text.Json;
-using Azure.DataGateway.Services;
-using Azure.DataGateway.Service.Controllers;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
+using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json.Linq;
 
-namespace Azure.DataGateway.Service.Tests.SqlTests {
+namespace Azure.DataGateway.Service.Tests.SqlTests
+{
 
     [TestClass, TestCategory(TestCategory.POSTGRESSQL)]
-    public class PostgreSqlGraphQLQueryTests : SqlTestBase {
-        
+    public class PostgreSqlGraphQLQueryTests : SqlTestBase
+    {
+
         #region Test Fixture Setup
         private static GraphQLService _graphQLService;
         private static GraphQLController _graphQLController;
@@ -53,7 +55,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests {
         }
 
         [TestMethod]
-        public async Task MultipleResultJoinQuery(){
+        public async Task MultipleResultJoinQuery()
+        {
             string graphQLQueryName = "getBooks";
             string graphQLQuery = @"{
                 getBooks(first: 100) {
@@ -112,7 +115,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests {
         }
 
         [TestMethod]
-        public async Task DeeplyNestedJoinQuery(){
+        public async Task DeeplyNestedJoinQuery()
+        {
             string graphQLQueryName = "getBooks";
             string graphQLQuery = @"{
               getBooks(first: 100) {
@@ -217,7 +221,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests {
             {
                 query = graphQLQuery
             }).ToString();
-            
+
             Console.WriteLine(graphqlQueryJson);
 
             _graphQLController.ControllerContext.HttpContext = GetHttpContextWithBody(graphqlQueryJson);

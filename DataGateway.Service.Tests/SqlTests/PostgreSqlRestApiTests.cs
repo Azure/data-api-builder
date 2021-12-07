@@ -3,10 +3,12 @@ using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataGateway.Service.Tests.SqlTests {
-    
+namespace Azure.DataGateway.Service.Tests.SqlTests
+{
+
     [TestClass, TestCategory(TestCategory.POSTGRESSQL)]
-    public class PostgreSqlRestApiTests : SqlTestBase {
+    public class PostgreSqlRestApiTests : SqlTestBase
+    {
 
         #region Test Fixture Setup
         private static RestService _restService;
@@ -14,7 +16,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests {
         private static readonly string _integrationTableName = "books";
 
         [ClassInitialize]
-        public static void InitializeTestFixture(TestContext context){
+        public static void InitializeTestFixture(TestContext context)
+        {
             IntializeTestFixture(context, _integrationTableName, TestCategory.POSTGRESSQL);
 
             _restService = new RestService(_queryEngine);
@@ -29,7 +32,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests {
         /// Tests the REST Api for FindById operation without a query string.
         /// </summary>
         [TestMethod]
-        public async Task FindByIdTest(){
+        public async Task FindByIdTest()
+        {
             string primaryKeyRoute = "id/2";
             string queryString = string.Empty;
             string postgresQuery = @"SELECT to_jsonb(subq) AS data
@@ -40,12 +44,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests {
                                         ORDER BY id
                                         LIMIT 1
                                     ) AS subq";
-            
+
             string expected = await GetDatabaseResultAsync(postgresQuery);
 
             ConfigureRestController(_restController, queryString);
 
-            await SqlTestHelper.PerformApiTest( 
+            await SqlTestHelper.PerformApiTest(
                 _restController.FindById,
                 _integrationTableName,
                 primaryKeyRoute,
@@ -58,7 +62,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests {
         /// including the field names.
         /// </summary>
         [TestMethod]
-        public async Task FindIdTestWithQueryStringFields(){
+        public async Task FindIdTestWithQueryStringFields()
+        {
             string primaryKeyRoute = "id/1";
             string queryStringWithFields = "?_f=id,title";
             string postgresQuery = @"   
@@ -73,10 +78,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests {
             ";
 
             string expected = await GetDatabaseResultAsync(postgresQuery);
-            
+
             ConfigureRestController(_restController, queryStringWithFields);
 
-            await SqlTestHelper.PerformApiTest( 
+            await SqlTestHelper.PerformApiTest(
                 _restController.FindById,
                 _integrationTableName,
                 primaryKeyRoute,
@@ -93,7 +98,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests {
         /// having invalid field names.
         /// </summary>
         [TestMethod]
-        public async Task FindByIdTestWithInvalidFields(){
+        public async Task FindByIdTestWithInvalidFields()
+        {
             string primaryKeyRoute = "id/1";
             string queryStringWithFields = "?_f=id,null";
             string postgresQuery = @"
@@ -102,11 +108,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests {
                     SELECT id, name, type
                     FROM " + _integrationTableName + @"
                 ) AS subq
-            "; 
-            
+            ";
+
             ConfigureRestController(_restController, queryStringWithFields);
 
-            await SqlTestHelper.PerformApiTest( 
+            await SqlTestHelper.PerformApiTest(
                 _restController.FindById,
                 _integrationTableName,
                 primaryKeyRoute,

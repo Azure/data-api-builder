@@ -13,7 +13,7 @@ using Npgsql;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests {
     /// <summary>
-    /// Base class providing common test fixture for GraphQL tests.
+    /// Base class providing common test fixture for both REST and GraphQL tests.
     /// </summary>
     [TestClass]
     public abstract class SqlTestBase {

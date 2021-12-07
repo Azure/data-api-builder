@@ -19,8 +19,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     [TestClass]
     public abstract class SqlTestBase
     {
-        private static readonly string POSTGRESQL_TEST_CONFIG_FILE = "appsettings.PostgreSqlIntegrationTest.json";
-        private static readonly string MSSQL_TEST_CONFIG_FILE = "appsettings.Test.json";
+        private static readonly string _postgresqlTestConfigFile = "appsettings.PostgreSqlIntegrationTest.json";
+        private static readonly string _mssqlTestConfigFile = "appsettings.Test.json";
 
         protected static IQueryExecutor _queryExecutor;
         protected static IQueryBuilder _queryBuilder;
@@ -40,12 +40,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             switch (testCategory)
             {
                 case TestCategory.POSTGRESSQL:
-                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(SqlTestHelper.LoadConfig(POSTGRESQL_TEST_CONFIG_FILE));
+                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(SqlTestHelper.LoadConfig(_postgresqlTestConfigFile));
                     _queryBuilder = new PostgresQueryBuilder();
                     _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
                     break;
                 case TestCategory.MSSQL:
-                    _queryExecutor = new QueryExecutor<SqlConnection>(SqlTestHelper.LoadConfig(MSSQL_TEST_CONFIG_FILE));
+                    _queryExecutor = new QueryExecutor<SqlConnection>(SqlTestHelper.LoadConfig(_mssqlTestConfigFile));
                     _queryBuilder = new MsSqlQueryBuilder();
                     _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
                     break;

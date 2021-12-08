@@ -3,25 +3,28 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.configurations;
+using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Npgsql;
 
-namespace Azure.DataGateway.Service.Tests.MsSql
+namespace Azure.DataGateway.Service.Tests.SqlTests
 {
     /// <summary>
     /// Base class providing common test fixture for both REST and GraphQL tests.
     /// </summary>
     [TestClass]
-    public abstract class MsSqlTestBase
+    public abstract class SqlTestBase
     {
         protected static IQueryExecutor _queryExecutor;
         protected static IQueryBuilder _queryBuilder;
         protected static IQueryEngine _queryEngine;
         protected static IMetadataStoreProvider _metadataStoreProvider;
-        protected static DatabaseInteractor _databaseInteractor;
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
@@ -29,24 +32,28 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         /// </summary>
         /// <param name="context"></param>
         [ClassInitialize]
-        protected static void InitializeTestFixture(TestContext context, string tableName)
+        protected static void InitializeTestFixture(TestContext context, string tableName, string testCategory)
         {
-            // Setup Schema and Resolvers
-            _metadataStoreProvider = new FileMetadataStoreProvider("sql-config.json");
+            IOptions<DataGatewayConfig> config = SqlTestHelper.LoadConfig($"{testCategory}IntegrationTest");
 
-            // Setup Database Components
-            //
-            _queryExecutor = new QueryExecutor<SqlConnection>(MsSqlTestHelper.DataGatewayConfig);
-            _queryBuilder = new MsSqlQueryBuilder();
+            switch (testCategory)
+            {
+                case TestCategory.POSTGRESQL:
+                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(config);
+                    _queryBuilder = new PostgresQueryBuilder();
+                    break;
+                case TestCategory.MSSQL:
+                    _queryExecutor = new QueryExecutor<SqlConnection>(config);
+                    _queryBuilder = new MsSqlQueryBuilder();
+                    break;
+            }
+
+            _metadataStoreProvider = new FileMetadataStoreProvider("sql-config.json");
             _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
 
-            // Setup Integration DB Components
-            //
-            _databaseInteractor = new DatabaseInteractor(_queryExecutor);
-            using DbDataReader _ = _databaseInteractor.QueryExecutor.ExecuteQueryAsync(File.ReadAllText("books.sql"), null).Result;
+            using DbDataReader _ = _queryExecutor.ExecuteQueryAsync(File.ReadAllText("books.sql"), parameters: null).Result;
         }
 
-        #region Helper Functions
         /// <summary>
         /// returns httpcontext with body consisting of the given data.
         /// </summary>
@@ -82,9 +89,9 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         /// </summary>
         /// <param name="queryText">raw database query</param>
         /// <returns>string in JSON format</returns>
-        public static async Task<string> GetDatabaseResultAsync(string queryText)
+        protected static async Task<string> GetDatabaseResultAsync(string queryText)
         {
-            using DbDataReader reader = await _databaseInteractor.QueryExecutor.ExecuteQueryAsync(queryText, parameters: null);
+            using DbDataReader reader = await _queryExecutor.ExecuteQueryAsync(queryText, parameters: null);
 
             using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader));
 
@@ -93,6 +100,12 @@ namespace Azure.DataGateway.Service.Tests.MsSql
             return sqlResultData.ToString();
         }
 
-        #endregion
+        ///<summary>
+        /// Add HttpContext with query to the RestController
+        ///</summary>
+        protected static void ConfigureRestController(RestController restController, string queryString)
+        {
+            restController.ControllerContext.HttpContext = GetHttpContextWithQueryString(queryString);
+        }
     }
 }

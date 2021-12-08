@@ -6,13 +6,13 @@ using Azure.DataGateway.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
 
-namespace Azure.DataGateway.Service.Tests.MsSql
+namespace Azure.DataGateway.Service.Tests.SqlTests
 {
     /// <summary>
     /// Test GraphQL Queries validating proper resolver/engine operation.
     /// </summary>
     [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class MsSqlGraphQLQueryTests : MsSqlTestBase
+    public class MsSqlGraphQLQueryTests : SqlTestBase
     {
         #region Test Fixture Setup
         private static GraphQLService _graphQLService;
@@ -27,7 +27,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
         [ClassInitialize]
         public static void InitializeTestFixture(TestContext context)
         {
-            InitializeTestFixture(context, _integrationTableName);
+            InitializeTestFixture(context, _integrationTableName, TestCategory.MSSQL);
 
             // Setup GraphQL Components
             //
@@ -57,7 +57,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(msSqlQuery);
 
-            Assert.AreEqual(actual, expected);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
         /// <summary>
@@ -117,7 +117,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(msSqlQuery);
 
-            Assert.AreEqual(actual, expected);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
         /// <summary>
@@ -208,7 +208,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(msSqlQuery);
 
-            Assert.AreEqual(actual, expected);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
         #endregion
@@ -228,7 +228,7 @@ namespace Azure.DataGateway.Service.Tests.MsSql
                 query = graphQLQuery
             }).ToString();
             Console.WriteLine(graphqlQueryJson);
-            _graphQLController.ControllerContext.HttpContext = MsSqlTestBase.GetHttpContextWithBody(graphqlQueryJson);
+            _graphQLController.ControllerContext.HttpContext = GetHttpContextWithBody(graphqlQueryJson);
             JsonDocument graphQLResult = await _graphQLController.PostAsync();
             Console.WriteLine(graphQLResult.RootElement.ToString());
             JsonElement graphQLResultData = graphQLResult.RootElement.GetProperty("data").GetProperty(graphQLQueryName);

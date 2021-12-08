@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Models;
 using HotChocolate.Resolvers;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -11,11 +10,6 @@ namespace Azure.DataGateway.Service.Resolvers
     /// </summary>
     public interface IQueryEngine
     {
-        /// <summary>
-        /// Registers the given resolver with this query engine.
-        /// </summary>
-        public void RegisterResolver(GraphQLQueryResolver resolver);
-
         /// <summary>
         /// Executes the given IMiddlewareContext of the GraphQL query and
         /// expecting a single Json back.

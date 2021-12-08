@@ -31,8 +31,5 @@ namespace Azure.DataGateway.Services
         /// name.
         /// </summary>
         GraphqlType GetGraphqlType(string name);
-        void StoreGraphQLSchema(string schema);
-        void StoreMutationResolver(MutationResolver mutationResolver);
-        void StoreQueryResolver(GraphQLQueryResolver mutationResolver);
     }
 }

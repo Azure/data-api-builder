@@ -4,7 +4,6 @@ using System.Data.Common;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
 using HotChocolate.Resolvers;
 
@@ -27,15 +26,6 @@ namespace Azure.DataGateway.Service.Resolvers
             _metadataStoreProvider = metadataStoreProvider;
             _queryExecutor = queryExecutor;
             _queryBuilder = queryBuilder;
-        }
-
-        // <summary>
-        // Registers the given resolver with this query engine.
-        // </summary>
-        public void RegisterResolver(GraphQLQueryResolver resolver)
-        {
-            // Registration of Resolvers is already done at startup.
-            // no-op
         }
 
         public static async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader)

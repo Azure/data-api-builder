@@ -14,7 +14,7 @@ namespace Azure.DataGateway.Service.Tests
     {
         internal GraphQLService _graphQLService;
         internal CosmosClientProvider _clientProvider;
-        internal IMetadataStoreProvider _metadataStoreProvider;
+        internal MetadataStoreProviderForTest _metadataStoreProvider;
         internal CosmosQueryEngine _queryEngine;
         internal CosmosMutationEngine _mutationEngine;
         internal GraphQLController _controller;

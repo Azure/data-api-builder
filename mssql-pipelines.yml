@@ -1,6 +1,6 @@
 # MsSql Integration Testing Pipeline config is split into two jobs:
 # 1) LinuxTests -> Run SQL Server 2019 in Linux Docker Image
-# 2) WindowsTests -> Run LocalDB preinstalled on 
+# 2) WindowsTests -> Run LocalDB preinstalled on
 
 trigger:
 - main

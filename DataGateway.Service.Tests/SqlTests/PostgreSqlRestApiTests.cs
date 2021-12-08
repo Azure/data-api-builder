@@ -6,7 +6,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Azure.DataGateway.Service.Tests.SqlTests
 {
 
-    [TestClass, TestCategory(TestCategory.POSTGRESSQL)]
+    [TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class PostgreSqlRestApiTests : SqlTestBase
     {
 
@@ -18,7 +18,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [ClassInitialize]
         public static void InitializeTestFixture(TestContext context)
         {
-            InitializeTestFixture(context, _integrationTableName, TestCategory.POSTGRESSQL);
+            InitializeTestFixture(context, _integrationTableName, TestCategory.POSTGRESQL);
 
             _restService = new RestService(_queryEngine);
             _restController = new RestController(_restService);
@@ -38,7 +38,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string queryString = string.Empty;
             string postgresQuery = @"SELECT to_jsonb(subq) AS data
                                     FROM (
-                                        SELECT * 
+                                        SELECT *
                                         FROM " + _integrationTableName + @"
                                         WHERE id = 2
                                         ORDER BY id
@@ -66,10 +66,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string primaryKeyRoute = "id/1";
             string queryStringWithFields = "?_f=id,title";
-            string postgresQuery = @"   
+            string postgresQuery = @"
                 SELECT to_jsonb(subq) AS data
                 FROM (
-                    SELECT id, title 
+                    SELECT id, title
                     FROM " + _integrationTableName + @"
                     WHERE id = 1
                     ORDER BY id

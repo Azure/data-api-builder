@@ -22,16 +22,6 @@ namespace Azure.DataGateway.Service.Resolvers
             _metadataStoreProvider = metadataStoreProvider;
         }
 
-        /// <summary>
-        /// Persists resolver configuration. When resolver config,
-        /// is received from REST endpoint and not configuration file.
-        /// </summary>
-        /// <param name="resolver">The given mutation resolver.</param>
-        public void RegisterResolver(MutationResolver resolver)
-        {
-            // TODO no op for now. remove me
-        }
-
         private async Task<JObject> ExecuteAsync(IDictionary<string, object> inputDict, MutationResolver resolver)
         {
             // TODO: add support for all mutation types

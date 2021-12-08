@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Models;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -10,12 +9,6 @@ namespace Azure.DataGateway.Service.Resolvers
     /// </summary>
     public interface IMutationEngine
     {
-        /// <summary>
-        /// Persists resolver configuration.
-        /// </summary>
-        /// <param name="resolver">The given mutation resolver.</param>
-        public void RegisterResolver(MutationResolver resolver);
-
         /// <summary>
         /// Executes the mutation query and returns result as JSON object asynchronously.
         /// </summary>

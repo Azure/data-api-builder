@@ -48,7 +48,7 @@ steps:
   inputs:
     command: test
     projects: '**/*Tests/*.csproj'
-    arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql" --configuration $(buildConfiguration)'
+    arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgresSql" --configuration $(buildConfiguration)'
 
 # This task gets the current date and saves it to a variable so the docker task can use the build's 
 # date and time as a tag.

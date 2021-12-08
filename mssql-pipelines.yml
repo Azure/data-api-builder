@@ -35,11 +35,11 @@ jobs:
     displayName: Get and Start Ubuntu SQL Server Image Docker
 
   - task: FileTransform@1
-    displayName: 'Generate appsettings.Test.json'
+    displayName: 'Generate appsettings.MsSqlIntegrationTest.json'
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 'DataGateway.Service/appsettings.Test.json'
+      targetFiles: 'DataGateway.Service/appsettings.MsSqlIntegrationTest.json'
 
   - task: DotNetCoreCLI@2
     displayName: Build
@@ -98,11 +98,11 @@ jobs:
         SqlLocalDb.exe info "MSSQLLocalDB"
 
   - task: FileTransform@1
-    displayName: 'Generate appsettings.Test.json'
+    displayName: 'Generate appsettings.MsSqlIntegrationTest.json'
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 'DataGateway.Service/appsettings.Test.json'
+      targetFiles: 'DataGateway.Service/appsettings.MsSqlIntegrationTest.json'
 
   - task: DotNetCoreCLI@2
     displayName: Build

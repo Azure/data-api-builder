@@ -9,6 +9,8 @@ appsettings.*.json
 !appsettings.MsSql.json
 !appsettings.Cosmos.json
 !appsettings.Test.json
+!appsettings.MsSqlIntegrationTest.json
+!appsettings.PostgreSqlIntegrationTest.json
 
 *.cd
 

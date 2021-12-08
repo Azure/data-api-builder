@@ -20,7 +20,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     public abstract class SqlTestBase
     {
         private static readonly string _postgresqlTestConfigFile = "appsettings.PostgreSqlIntegrationTest.json";
-        private static readonly string _mssqlTestConfigFile = "appsettings.Test.json";
+        private static readonly string _mssqlTestConfigFile = "appsettings.MsSqlIntegrationTest.json";
 
         protected static IQueryExecutor _queryExecutor;
         protected static IQueryBuilder _queryBuilder;
@@ -33,7 +33,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </summary>
         /// <param name="context"></param>
         [ClassInitialize]
-        protected static void IntializeTestFixture(TestContext context, string tableName, string testCategory)
+        protected static void InitializeTestFixture(TestContext context, string tableName, string testCategory)
         {
             _metadataStoreProvider = new FileMetadataStoreProvider("sql-config.json");
 

@@ -26,7 +26,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [ClassInitialize]
         public static void InitializeTestFixture(TestContext context)
         {
-            IntializeTestFixture(context, _integrationTableName, TestCategory.POSTGRESSQL);
+            InitializeTestFixture(context, _integrationTableName, TestCategory.POSTGRESSQL);
 
             // Setup GraphQL Components
             _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _metadataStoreProvider);

@@ -29,6 +29,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Converts strings to JSON objects and does a deep compare
         /// </summary>
+        /// <remarks>
+        /// This method of comparing JSON-s provides:
+        /// <list type="number">
+        /// <item> Insesitivity to spaces in the JSON formatting </item>
+        /// <item> Insesitivity to order for elements in dictionaries. E.g. {"a": 1, "b": 2} = {"b": 2, "a": 1} </item>
+        /// <item> Sensitivity to order for elements in lists. E.g. [{"a": 1}, {"b": 2}] ~= [{"b": 2}, {"a": 1}] </item>
+        /// </list>
+        /// In contrast, string comparing does not provide 1 and 2.
+        /// </remarks>
         /// <param name="jsonString1"></param>
         /// <param name="jsonString2"></param>
         /// <returns>True if JSON objects are the same</returns>

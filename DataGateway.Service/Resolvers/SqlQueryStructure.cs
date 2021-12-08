@@ -33,6 +33,46 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
     }
+    ///<summary>
+    /// Stores one predicate which goes in the WHERE section of the sql query
+    /// Provides opt-in typecasting support
+    ///</summary>
+    public class SqlPredicate
+    {
+        public string Field { get; }
+        public string Value { get; }
+        public string CompOp { get; }
+        public string FieldType { get; }
+
+        public SqlPredicate(string Field, string Value, string CompOp, string FieldType)
+        {
+            this.Field = Field;
+            this.Value = Value;
+            this.CompOp = CompOp;
+            this.FieldType = FieldType;
+        }
+
+        public SqlPredicate(string Field, string Value, string CompOp) : this(Field, Value, CompOp, null) { }
+
+        public override string ToString()
+        {
+            return $"{Field} {CompOp} {Value}";
+        }
+
+        ///<summary>
+        /// Typecasts the predicate if possible (if the FieldType is available)
+        /// Defaults to ToString if typecasting is not possible
+        ///</summart>
+        public string ToStringTypecastedIfPossible()
+        {
+            if (FieldType == null)
+            {
+                return this.ToString();
+            }
+
+            return $"{Field} {CompOp} CAST({Value} AS {FieldType})";
+        }
+    }
 
     /// <summary>
     /// SqlQueryStructure is an intermediate representation of a SQL query.
@@ -51,7 +91,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Predicates that should filter the result set of the query.
         /// </summary>
-        public List<string> Predicates { get; }
+        public List<SqlPredicate> Predicates { get; }
         /// <summary>
         /// The subqueries with which this query should be joined. The key are
         /// the aliases of the query.
@@ -146,7 +186,8 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 string parameterName = $"param{Counter.Next()}";
                 Parameters.Add(parameterName, predicate.Value);
-                Predicates.Add($"{QualifiedColumn(predicate.Field)} = @{parameterName}");
+
+                Predicates.Add(new(QualifiedColumn(predicate.Field), $"@{parameterName}", "=", GetFieldType(TableName, predicate.Field)));
             });
         }
 
@@ -304,7 +345,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     {
                         string leftColumn = QualifiedColumn(columnName.Left);
                         string rightColumn = QualifiedColumn(subtableAlias, columnName.Right);
-                        subquery.Predicates.Add($"{leftColumn} = {rightColumn}");
+                        subquery.Predicates.Add(new(leftColumn, rightColumn, "="));
                     }
 
                     string subqueryAlias = $"{subtableAlias}_subq";
@@ -388,16 +429,31 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Create the SQL code to filter the rows in the WHERE clause. So the
         /// {PredicatesSql} bit in this example:
-        /// SELECT ... FROM ... WHERE {PredicatesSql}
+        /// SELECT ... FROM ... WHERE {PredicatesMsSql}
         /// </summary>
-        public string PredicatesSql()
+        public string PredicatesSql(bool typecast = false)
         {
             if (Predicates.Count() == 0)
             {
                 return "1 = 1";
             }
 
-            return string.Join(" AND ", Predicates);
+            if (typecast)
+            {
+                return string.Join(" AND ", Predicates.Select(Predicate => Predicate.ToStringTypecastedIfPossible()));
+            }
+            else
+            {
+                return string.Join(" AND ", Predicates.Select(Predicate => Predicate.ToString()));
+            }
+
+        }
+        ///<summary>
+        /// Get type of a field from a table
+        ///</summary>
+        public string GetFieldType(string TableName, string FieldName)
+        {
+            return _metadataStoreProvider.GetTableDefinition(TableName).Columns.GetValueOrDefault(FieldName).Type;
         }
         /// <summary>
         /// Create the SQL code to that should be included in the ORDER BY

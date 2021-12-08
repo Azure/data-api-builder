@@ -19,11 +19,12 @@ namespace Azure.DataGateway.Services
         /// <summary>
         /// Parses the primary key string to identify the field names composing the key
         /// and their values.
-        /// Adds the key name as conditions and values as parameters of the given FindQueryStructure.
+        /// Adds the an equality comparison between the keyname and the given
+        /// value to the list of predicates.
         /// </summary>
         /// <param name="queryByPrimaryKey">The primary key route. e.g. customerName/Xyz/saleOrderId/123.</param>
-        /// <param name="queryStructure">The FindQueryStructure holding the major components of the query.</param>
-        public static void ParsePrimaryKey(string primaryKeyRoute, FindQueryStructure queryStructure)
+        /// <param name="queryStructure">The FindRequestContext holding the major components of the query.</param>
+        public static void ParsePrimaryKey(string primaryKeyRoute, FindRequestContext context)
         {
             if (!string.IsNullOrWhiteSpace(primaryKeyRoute))
             {
@@ -36,8 +37,11 @@ namespace Azure.DataGateway.Services
 
                 for (int primaryKeyIndex = 0; primaryKeyIndex < primaryKeyValues.Length; primaryKeyIndex += 2)
                 {
-                    queryStructure.Conditions.Add($"{primaryKeyValues[primaryKeyIndex]} = @{primaryKeyValues[primaryKeyIndex]}");
-                    queryStructure.Parameters.Add(primaryKeyValues[primaryKeyIndex], primaryKeyValues[primaryKeyIndex + 1]);
+                    RestPredicate predicate = new(
+                            primaryKeyValues[primaryKeyIndex],
+                            primaryKeyValues[primaryKeyIndex + 1]
+                            );
+                    context.Predicates.Add(predicate);
                 }
 
             }
@@ -46,11 +50,11 @@ namespace Azure.DataGateway.Services
         /// <summary>
         /// ParseQueryString is a helper function used to parse the query String provided
         /// in the URL of the http request. It parses and saves the values that are needed to
-        /// later generate queries in the given FindQueryStructure.
+        /// later generate queries in the given FindRequestContext.
         /// </summary>
         /// <param name="nvc">NameValueCollection representing query params from the URL's query string.</param>
-        /// <param name="queryStructure">The FindQueryStructure holding the major components of the query.</param>
-        public static void ParseQueryString(NameValueCollection nvc, FindQueryStructure queryStructure)
+        /// <param name="queryStructure">The FindRequestContext holding the major components of the query.</param>
+        public static void ParseQueryString(NameValueCollection nvc, FindRequestContext context)
         {
             foreach (string key in nvc.Keys)
             {
@@ -58,7 +62,7 @@ namespace Azure.DataGateway.Services
                 {
                     case FIELDS_URL:
                         CheckListForNullElement(nvc[key].Split(",").ToList());
-                        queryStructure.Fields = nvc[key].Split(",").ToList();
+                        context.Fields = nvc[key].Split(",").ToList();
                         break;
                     default:
                         throw new ArgumentException("Invalid Query Parameter: " + key.ToString());

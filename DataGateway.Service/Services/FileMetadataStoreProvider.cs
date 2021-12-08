@@ -1,7 +1,7 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Azure.DataGateway.Service.configurations;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
@@ -10,10 +10,15 @@ using Microsoft.Extensions.Options;
 namespace Azure.DataGateway.Service
 {
 
+    /// <summary>
+    /// A class describing the format of the JSON resolver configuration file.
+    /// </summary>
     public class ResolverConfig
     {
         /// <summary>
-        /// String Representation of graphQL schema, non escaped.
+        /// String Representation of graphQL schema, non escaped. This has
+        /// higher priority than GraphQLSchemaFile, so if both are set this one
+        /// will be used.
         /// </summary>
         public string GraphQLSchema { get; set; }
 
@@ -21,8 +26,30 @@ namespace Azure.DataGateway.Service
         /// Location of the graphQL schema file
         /// </summary>
         public string GraphQLSchemaFile { get; set; }
-        public List<GraphQLQueryResolver> QueryResolvers { get; set; }
-        public List<MutationResolver> MutationResolvers { get; set; }
+
+        /// <summary>
+        /// A list containing metadata required to resolve the different
+        /// queries in the GraphQL schema. See GraphQLQueryResolver for details.
+        /// </summary>
+        public List<GraphQLQueryResolver> QueryResolvers { get; set; } = new();
+
+        /// <summary>
+        /// A list containing metadata required to execute the different
+        /// mutations in the GraphQL schema. See MutationResolver for details.
+        /// </summary>
+        public List<MutationResolver> MutationResolvers { get; set; } = new();
+
+        /// <summary>
+        /// A list containing metadata required to resolve the different
+        /// types in the GraphQL schema. See GraphqlType for details.
+        /// </summary>
+        public Dictionary<string, GraphqlType> GraphqlTypes { get; set; } = new();
+
+        /// <summary>
+        /// A JSON encoded version of the information that resolvers need about
+        /// schema of the schema of the database.
+        /// </summary>
+        public DatabaseSchema DatabaseSchema { get; set; }
     }
 
     /// <summary>
@@ -42,22 +69,17 @@ namespace Azure.DataGateway.Service
         /// </summary>
         private Dictionary<string, MutationResolver> _mutationResolvers;
 
-        private readonly DataGatewayConfig _dataGatewayConfig;
-
         public FileMetadataStoreProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
-        {
-            _dataGatewayConfig = dataGatewayConfig.Value;
-            Init();
-        }
+        : this(dataGatewayConfig.Value.ResolverConfigFile) { }
 
-        private void Init()
+        public FileMetadataStoreProvider(string resolverConfigPath)
         {
-            string jsonString = File.ReadAllText(
-                    _dataGatewayConfig.ResolverConfigFile);
+            string jsonString = File.ReadAllText(resolverConfigPath);
             JsonSerializerOptions options = new()
             {
                 PropertyNameCaseInsensitive = true,
             };
+            options.Converters.Add(new JsonStringEnumConverter());
 
             _config = JsonSerializer.Deserialize<ResolverConfig>(jsonString, options);
 
@@ -65,9 +87,6 @@ namespace Azure.DataGateway.Service
             {
                 _config.GraphQLSchema = File.ReadAllText(_config.GraphQLSchemaFile ?? "schema.gql");
             }
-
-            _config.QueryResolvers ??= new();
-            _config.MutationResolvers ??= new();
 
             _queryResolvers = new();
             foreach (GraphQLQueryResolver resolver in _config.QueryResolvers)
@@ -110,19 +129,24 @@ namespace Azure.DataGateway.Service
             return resolver;
         }
 
-        public void StoreGraphQLSchema(string schema)
+        public TableDefinition GetTableDefinition(string name)
         {
-            // no op
+            if (!_config.DatabaseSchema.Tables.TryGetValue(name, out TableDefinition metadata))
+            {
+                throw new KeyNotFoundException($"Table Definition for {name} does not exist.");
+            }
+
+            return metadata;
         }
 
-        public void StoreMutationResolver(MutationResolver mutationResolver)
+        public GraphqlType GetGraphqlType(string name)
         {
-            throw new NotImplementedException();
-        }
+            if (!_config.GraphqlTypes.TryGetValue(name, out GraphqlType typeInfo))
+            {
+                throw new KeyNotFoundException($"Table Definition for {name} does not exist.");
+            }
 
-        public void StoreQueryResolver(GraphQLQueryResolver mutationResolver)
-        {
-            throw new NotImplementedException();
+            return typeInfo;
         }
     }
 }

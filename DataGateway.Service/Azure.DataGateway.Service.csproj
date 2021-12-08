@@ -6,11 +6,19 @@
 
   <ItemGroup>
     <None Remove="schema.gql" />
+    <None Remove="books.gql" />
+    <None Remove="books.sql" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="schema.gql">
-    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="books.gql">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="books.sql">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 

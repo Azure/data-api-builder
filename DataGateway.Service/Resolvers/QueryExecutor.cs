@@ -46,7 +46,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            return await cmd.ExecuteReaderAsync(CommandBehavior.SequentialAccess | CommandBehavior.CloseConnection);
+            return await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
         }
     }
 }

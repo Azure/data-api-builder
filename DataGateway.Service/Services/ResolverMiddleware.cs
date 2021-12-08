@@ -44,7 +44,7 @@ namespace Azure.DataGateway.Services
             else if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
             {
                 IDictionary<string, object> parameters = GetParametersFromContext(context);
-                bool isContinuationQuery = IsContinuationQuery(parameters);
+                bool isPaginatedQuery = IsPaginatedQuery(parameters);
 
                 if (context.Selection.Type.IsListType())
                 {
@@ -52,7 +52,7 @@ namespace Azure.DataGateway.Services
                 }
                 else
                 {
-                    context.Result = await _queryEngine.ExecuteAsync(context, parameters, isContinuationQuery);
+                    context.Result = await _queryEngine.ExecuteAsync(context, parameters, isPaginatedQuery);
                 }
             }
             else if (context.Selection.Field.Type.IsLeafType())
@@ -100,7 +100,7 @@ namespace Azure.DataGateway.Services
             await _next(context);
         }
 
-        private static bool IsContinuationQuery(IDictionary<string, object> parameters)
+        private static bool IsPaginatedQuery(IDictionary<string, object> parameters)
         {
             return parameters.ContainsKey("after");
         }

@@ -32,7 +32,6 @@ namespace Azure.DataGateway.Service.Tests
             _controller.ControllerContext.HttpContext = GetHttpContextWithBody(TestHelper.SimpleListQuery);
             JsonDocument fullQueryResponse = await _controller.PostAsync();
             int actualElements = fullQueryResponse.RootElement.GetProperty("data").GetProperty("queryAll").GetArrayLength();
-            //fullQueryResponse.RootElement.GetProperty("data").GetProperty("myQuery")
 
             // Run paginated query
             int totalElements = 0;
@@ -48,8 +47,8 @@ namespace Azure.DataGateway.Service.Tests
                         "\\\"";
                 }
 
-                string paginagedQuery = string.Format(TestHelper.SimplePaginatedQueryFormat, arg0: pagesize, arg1: continuationToken);
-                _controller.ControllerContext.HttpContext = GetHttpContextWithBody(paginagedQuery);
+                string paginatedQuery = string.Format(TestHelper.SimplePaginatedQueryFormat, arg0: pagesize, arg1: continuationToken);
+                _controller.ControllerContext.HttpContext = GetHttpContextWithBody(paginatedQuery);
                 JsonDocument paginatedQueryResponse = await _controller.PostAsync();
                 JsonElement page = paginatedQueryResponse.RootElement
                     .GetProperty("data")

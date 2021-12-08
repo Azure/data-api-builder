@@ -22,7 +22,6 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public Task<IEnumerable<JsonDocument>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters);
 
-
         /// <summary>
         /// Given the FindQueryContext structure, obtains the query text and executes it against the backend.
         /// </summary>

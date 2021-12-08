@@ -44,78 +44,15 @@ namespace Azure.DataGateway.Services
             else if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
             {
                 IDictionary<string, object> parameters = GetParametersFromContext(context);
-                string queryId = context.Selection.Field.Name.Value;
                 bool isContinuationQuery = IsContinuationQuery(parameters);
 
                 if (context.Selection.Type.IsListType())
                 {
-<<<<<<< HEAD
                     context.Result = await _queryEngine.ExecuteListAsync(context, parameters);
                 }
                 else
                 {
                     context.Result = await _queryEngine.ExecuteAsync(context, parameters, isContinuationQuery);
-                }
-            }
-            else
-            {
-                JsonDocument result = context.Parent<JsonDocument>();
-
-                JsonElement jsonElement;
-                bool hasProperty =
-                    result.RootElement.TryGetProperty(context.Selection.Field.Name.Value, out jsonElement);
-
-                if (IsInnerObject(context))
-                {
-
-                    if (result != null && hasProperty)
-                    {
-                        //TODO: Try to avoid additional deserialization/serialization here.
-                        context.Result = JsonDocument.Parse(jsonElement.ToString());
-                    }
-                    else
-                    {
-                        context.Result = null;
-                    }
-                }
-                else if (context.Selection.Field.Type.IsListType())
-                {
-                    if (result != null && hasProperty)
-                    {
-                        //TODO: System.Text.Json seem to to have very limited capabilities. This will be moved to Newtonsoft
-                        IEnumerable<JObject> resultArray = JsonConvert.DeserializeObject<JObject[]>(jsonElement.ToString());
-                        List<JsonDocument> resultList = new();
-                        IEnumerator<JObject> enumerator = resultArray.GetEnumerator();
-                        while (enumerator.MoveNext())
-                        {
-                            resultList.Add(JsonDocument.Parse(enumerator.Current.ToString()));
-                        }
-
-                        context.Result = resultList;
-                    }
-                    else
-                    {
-                        context.Result = null;
-                    }
-
-                }
-
-                if (context.Selection.Field.Type.IsLeafType())
-                {
-                    if (result != null && hasProperty)
-                    {
-                        context.Result = jsonElement.ToString();
-                    }
-                    else
-                    {
-                        context.Result = null;
-                    }
-=======
-                    context.Result = await _queryEngine.ExecuteListAsync(context, parameters);
-                }
-                else
-                {
-                    context.Result = await _queryEngine.ExecuteAsync(context, parameters);
                 }
             }
             else if (context.Selection.Field.Type.IsLeafType())
@@ -148,24 +85,26 @@ namespace Azure.DataGateway.Services
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
                     //TODO: Try to avoid additional deserialization/serialization here.
-                    context.Result = JsonSerializer.Deserialize<List<JsonDocument>>(jsonElement.ToString());
->>>>>>> main
+                    List<JsonDocument> resultList = new();
+                    IEnumerable<JObject> resultArray = JsonConvert.DeserializeObject<JObject[]>(jsonElement.ToString());
+                    IEnumerator<JObject> enumerator = resultArray.GetEnumerator();
+                    while (enumerator.MoveNext())
+                    {
+                        resultList.Add(JsonDocument.Parse(enumerator.Current.ToString()));
+                    }
+
+                    context.Result = resultList;
                 }
             }
 
             await _next(context);
         }
 
-<<<<<<< HEAD
         private static bool IsContinuationQuery(IDictionary<string, object> parameters)
         {
-            if (parameters.ContainsKey("after"))
-            {
-                return true;
-            }
+            return parameters.ContainsKey("after");
+        }
 
-            return false;
-=======
         private static bool TryGetPropertyFromParent(IMiddlewareContext context, out JsonElement jsonElement)
         {
             JsonDocument result = context.Parent<JsonDocument>();
@@ -176,7 +115,6 @@ namespace Azure.DataGateway.Services
             }
 
             return result.RootElement.TryGetProperty(context.Selection.Field.Name.Value, out jsonElement);
->>>>>>> main
         }
 
         private static bool IsInnerObject(IMiddlewareContext context)

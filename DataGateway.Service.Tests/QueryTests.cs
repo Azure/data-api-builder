@@ -37,7 +37,7 @@ namespace Azure.DataGateway.Service.Tests
             // Run paginated query
             int totalElements = 0;
             string continuationToken = "null";
-            const int pagesize = 10;
+            const int pagesize = 15;
 
             do
             {

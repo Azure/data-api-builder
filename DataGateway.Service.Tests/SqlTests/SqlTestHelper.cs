@@ -12,13 +12,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 {
     public class SqlTestHelper
     {
-        public static IOptions<DataGatewayConfig> LoadConfig(string JsonConfigFile)
+        public static IOptions<DataGatewayConfig> LoadConfig(string environment)
         {
 
             DataGatewayConfig datagatewayConfig = new();
             IConfigurationRoot config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile(JsonConfigFile)
+                .AddJsonFile($"appsettings.{environment}.json")
+                .AddJsonFile($"appsettings.{environment}.overrides.json", optional: true)
                 .Build();
 
             config.Bind(nameof(DataGatewayConfig), datagatewayConfig);
@@ -61,9 +62,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="entityName">The entity name.</param>
         /// <param name="primaryKeyRoute">The primary key portion of the route.</param>
         /// <param name="expectedWorker">
-        /// A worker to calculate the expected sql query result. A worker is used to abstract any database 
+        /// A worker to calculate the expected sql query result. A worker is used to abstract any database
         /// specific detail from the PerformApiTest function, while still allowing the function to detect
-        /// exceptions thrown during the execution of that logic.  
+        /// exceptions thrown during the execution of that logic.
         /// </param>
         /// <param name="expectException">True if we expect exceptions.</param>
         public static async Task PerformApiTest(

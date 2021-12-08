@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 namespace Azure.DataGateway.Service.Tests.SqlTests
 {
 
-    [TestClass, TestCategory(TestCategory.POSTGRESSQL)]
+    [TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class PostgreSqlGraphQLQueryTests : SqlTestBase
     {
 
@@ -26,7 +26,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [ClassInitialize]
         public static void InitializeTestFixture(TestContext context)
         {
-            InitializeTestFixture(context, _integrationTableName, TestCategory.POSTGRESSQL);
+            InitializeTestFixture(context, _integrationTableName, TestCategory.POSTGRESQL);
 
             // Setup GraphQL Components
             _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _metadataStoreProvider);
@@ -73,16 +73,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     }
                 }
             }";
-            string postgresQuery = @" 
-                SELECT COALESCE(json_agg(to_jsonb(subq5)), '[]') AS data 
+            string postgresQuery = @"
+                SELECT COALESCE(json_agg(to_jsonb(subq5)), '[]') AS data
                 FROM (
-                    SELECT 
+                    SELECT
                         table0.id AS id,
                         table0.title AS title,
                         table0.publisher_id AS publisher_id,
                         table1_subq.data AS publisher,
                         table2_subq.data AS reviews
-                    FROM 
+                    FROM
                         books AS table0
                         LEFT OUTER JOIN LATERAL (
                             SELECT to_jsonb(subq3) AS data
@@ -101,8 +101,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                 FROM reviews AS table2
                                 WHERE table0.id = table2.book_id
                                 ORDER BY id
-                            ) AS subq4 
-                        ) AS table2_subq ON TRUE 
+                            ) AS subq4
+                        ) AS table2_subq ON TRUE
                     ORDER BY id
                     LIMIT 100
                 ) AS subq5

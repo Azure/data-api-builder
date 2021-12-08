@@ -3,11 +3,13 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.configurations;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Npgsql;
 
@@ -19,9 +21,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     [TestClass]
     public abstract class SqlTestBase
     {
-        private static readonly string _postgresqlTestConfigFile = "appsettings.PostgreSqlIntegrationTest.json";
-        private static readonly string _mssqlTestConfigFile = "appsettings.MsSqlIntegrationTest.json";
-
         protected static IQueryExecutor _queryExecutor;
         protected static IQueryBuilder _queryBuilder;
         protected static IQueryEngine _queryEngine;
@@ -35,21 +34,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [ClassInitialize]
         protected static void InitializeTestFixture(TestContext context, string tableName, string testCategory)
         {
-            _metadataStoreProvider = new FileMetadataStoreProvider("sql-config.json");
+            IOptions<DataGatewayConfig> config = SqlTestHelper.LoadConfig($"{testCategory}IntegrationTest");
 
             switch (testCategory)
             {
-                case TestCategory.POSTGRESSQL:
-                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(SqlTestHelper.LoadConfig(_postgresqlTestConfigFile));
+                case TestCategory.POSTGRESQL:
+                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(config);
                     _queryBuilder = new PostgresQueryBuilder();
-                    _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
                     break;
                 case TestCategory.MSSQL:
-                    _queryExecutor = new QueryExecutor<SqlConnection>(SqlTestHelper.LoadConfig(_mssqlTestConfigFile));
+                    _queryExecutor = new QueryExecutor<SqlConnection>(config);
                     _queryBuilder = new MsSqlQueryBuilder();
-                    _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
                     break;
             }
+
+            _metadataStoreProvider = new FileMetadataStoreProvider("sql-config.json");
+            _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
 
             using DbDataReader _ = _queryExecutor.ExecuteQueryAsync(File.ReadAllText("books.sql"), parameters: null).Result;
         }

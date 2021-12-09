@@ -205,6 +205,58 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        [TestMethod]
+        public async Task QueryWithSingleColumnPrimaryKey()
+        {
+            string graphQLQueryName = "getBook";
+            string graphQLQuery = @"{
+                getBook(id: 2) {
+                    title
+                }
+            }";
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS data
+                FROM (
+                    SELECT table0.title AS title
+                    FROM books AS table0
+                    WHERE id = 2
+                    ORDER BY id
+                    LIMIT 1
+                ) AS subq
+            ";
+
+            string expected = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
+            string actual = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        [TestMethod]
+        public async Task QueryWithMultileColumnPrimaryKey()
+        {
+            string graphQLQueryName = "getReview";
+            string graphQLQuery = @"{
+                getReview(id: 568, book_id: 1) {
+                    content
+                }
+            }";
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS data
+                FROM (
+                    SELECT table0.content AS content
+                    FROM reviews AS table0
+                    WHERE id = 568 AND book_id = 1
+                    ORDER BY id, book_id
+                    LIMIT 1
+                ) AS subq
+            ";
+
+            string expected = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
+            string actual = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Query Test Helper Functions

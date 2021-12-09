@@ -93,6 +93,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             using DbDataReader reader = await _queryExecutor.ExecuteQueryAsync(queryText, parameters: null);
 
+            // an empty result will cause an error with the json parser
+            if (!reader.HasRows)
+            {
+                return "";
+            }
+
             using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader));
 
             JsonElement sqlResultData = sqlResult.RootElement;

@@ -4,6 +4,12 @@
   "QueryResolvers": [
     {
       "Id": "getBooks"
+    },
+    {
+      "Id": "getBook"
+    },
+    {
+      "Id": "getReview"
     }
   ],
   "GraphqlTypes": {
@@ -84,7 +90,7 @@
         }
       },
       "reviews": {
-        "PrimaryKey": ["id"],
+        "PrimaryKey": ["id", "book_id"],
         "Columns": {
           "id": {
             "Type": "bigint"

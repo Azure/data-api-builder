@@ -49,6 +49,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         public static void PerformTestEqualJsonStrings(string expected, string actual)
         {
+            // required to handle the no result from query scenario
+            if (expected == string.Empty && actual == string.Empty)
+            {
+                Assert.IsTrue(true);
+                return;
+            }
+
             Assert.IsTrue(JsonStringsDeepEqual(expected, actual),
                 $"\nExpected:<{expected}>\nActual:<{actual}>");
         }

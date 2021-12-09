@@ -1,5 +1,7 @@
 type Query {
     getBooks(first: Int = 3): [Book!]!
+    getBook(id: Int!): Book
+    getReview(id: Int!, book_id: Int!): Review
 }
 
 type Publisher {

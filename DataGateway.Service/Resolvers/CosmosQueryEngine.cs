@@ -31,8 +31,7 @@ namespace Azure.DataGateway.Services
         /// Executes the given IMiddlewareContext of the GraphQL query and
         /// expecting a single Json back.
         /// </summary>
-        public async Task<JsonDocument> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters, bool isContinuationQuery)
-
+        public async Task<JsonDocument> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters, bool isPaginatedQuery)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
@@ -68,7 +67,7 @@ namespace Azure.DataGateway.Services
 
             FeedResponse<JObject> firstPage = await container.GetItemQueryIterator<JObject>(querySpec, requestContinuation, queryRequestOptions).ReadNextAsync();
 
-            if (isContinuationQuery)
+            if (isPaginatedQuery)
             {
                 JArray jarray = new();
                 IEnumerator<JObject> enumerator = firstPage.GetEnumerator();

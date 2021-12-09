@@ -49,9 +49,9 @@ namespace Azure.DataGateway.Service.Tests
         public static GraphQLQueryResolver SampleQueryResolver()
         {
             string raw =
-                "{\r\n    \"id\" : \"myQuery\",\r\n    \"databaseName\": \"" +
-                DB_NAME + "\",\r\n    \"containerName\": \"" + COL_NAME +
-                "\",\r\n    \"parametrizedQuery\": \"SELECT * FROM r\"\r\n}";
+                "{\n    \"id\" : \"myQuery\",\n    \"databaseName\": \"" +
+                DB_NAME + "\",\n    \"containerName\": \"" + COL_NAME +
+                "\",\n    \"parametrizedQuery\": \"SELECT * FROM r\"\n}";
 
             return JsonConvert.DeserializeObject<GraphQLQueryResolver>(raw);
         }

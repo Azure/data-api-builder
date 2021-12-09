@@ -21,6 +21,10 @@ namespace Azure.DataGateway.Service.Tests
             Assert.IsFalse(response.ToString().Contains("Error"));
         }
 
+        /// <summary>
+        /// This test runs a query to list all the items in a container. Then, gets all the items by
+        /// running a paginated query that gets n items per page. We then make sure the number of documents match
+        /// </summary>
         [TestMethod]
         public async Task TestPaginatedQuery()
         {
@@ -34,7 +38,7 @@ namespace Azure.DataGateway.Service.Tests
             int actualElements = fullQueryResponse.RootElement.GetProperty("data").GetProperty("queryAll").GetArrayLength();
 
             // Run paginated query
-            int totalElements = 0;
+            int totalElementsFromPaginatedQuery = 0;
             string continuationToken = "null";
             const int pagesize = 15;
 
@@ -56,11 +60,11 @@ namespace Azure.DataGateway.Service.Tests
                 JsonElement continuation = page.GetProperty("endCursor");
                 continuationToken = continuation.ToString();
 
-                totalElements += page.GetProperty("nodes").GetArrayLength();
+                totalElementsFromPaginatedQuery += page.GetProperty("nodes").GetArrayLength();
             } while (!string.IsNullOrEmpty(continuationToken));
 
             // Validate results
-            Assert.AreEqual(actualElements, totalElements);
+            Assert.AreEqual(actualElements, totalElementsFromPaginatedQuery);
         }
     }
 }

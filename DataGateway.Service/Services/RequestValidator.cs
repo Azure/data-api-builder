@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
@@ -7,7 +8,7 @@ namespace Azure.DataGateway.Service.Services
 {
     public class RequestValidator
     {
-        public static bool IsValidFindRequest(FindRequestContext context, IMetadataStoreProvider configurationProvider)
+        public static void ValidateFindRequest(FindRequestContext context, IMetadataStoreProvider configurationProvider)
         {
             if (context == null)
             {
@@ -19,35 +20,46 @@ namespace Azure.DataGateway.Service.Services
                 throw new ArgumentNullException(paramName: configurationProvider.GetType().ToString(), message: "configurationProvider can't be null.");
             }
 
-            // Invalid until proven valid. 
-            bool validFindRequest = false;
             TableDefinition tableDefinition = configurationProvider.GetTableDefinition(context.EntityName);
-            if (tableDefinition != null)
+            if (tableDefinition == null)
             {
-                int primaryKeysInSchema = tableDefinition.PrimaryKey.Count;
-                int primaryKeysInRequest = context.Predicates.Count;
-
-                //Mismatched count means invalid usage of composite PrimaryKey
-                if (primaryKeysInRequest > 0 && primaryKeysInRequest == primaryKeysInSchema)
-                {
-                    bool validPrimaryKeyAlignment = true;
-                    foreach (RestPredicate predicate in context.Predicates)
-                    {
-                        if (!tableDefinition.PrimaryKey.Contains(predicate.Field))
-                        {
-                            validPrimaryKeyAlignment = false;
-                            break;
-                        }
-                    }
-
-                    if (validPrimaryKeyAlignment)
-                    {
-                        validFindRequest = true;
-                    }
-                }
+                throw new InvalidOperationException(message: "TableDefinition for Entity:" + context.EntityName + " does not exist.");
             }
 
-            return validFindRequest;
+            int primaryKeysInSchema = tableDefinition.PrimaryKey.Count;
+            int primaryKeysInRequest = context.Predicates.Count;
+
+            if (primaryKeysInRequest == 0)
+            {
+                throw new InvalidOperationException(message: "Primary Key must be provided in request");
+            }
+
+            if (primaryKeysInRequest != primaryKeysInSchema)
+            {
+                throw new InvalidOperationException(message: "Primary key column(s) provided do not match DB schema.");
+            }
+
+            //Each Predicate (Column) that is checked against the DB schema
+            //is added to a list of validated columns. If a column has already
+            //been checked and comes up again, the request contains duplicates.
+            List<string> validatedColumns = new();
+            foreach (RestPredicate predicate in context.Predicates)
+            {
+                if( validatedColumns.Contains(predicate.Field))
+                {
+                    throw new InvalidOperationException(message: "Primary Key field: " + predicate.Field + " appears more than once.");
+
+                }
+
+                if (!tableDefinition.PrimaryKey.Contains(predicate.Field))
+                {
+                    throw new InvalidOperationException(message: "Primary Key field: " + predicate.Field + " does not exist in DB schema");
+                }
+                else
+                {
+                    validatedColumns.Add(predicate.Field);
+                }
+            }
         }
     }
 }

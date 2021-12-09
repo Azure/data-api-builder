@@ -1,4 +1,3 @@
-using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Resolvers;
@@ -37,10 +36,7 @@ namespace Azure.DataGateway.Services
                 RequestParser.ParseQueryString(System.Web.HttpUtility.ParseQueryString(queryString), context);
             }
 
-            if (!RequestValidator.IsValidFindRequest(context, _metadataStoreProvider))
-            {
-                throw new ArgumentException(message: "Invalid Primary Key usage");
-            }
+            RequestValidator.ValidateFindRequest(context, _metadataStoreProvider);
 
             return await _queryEngine.ExecuteAsync(context);
         }

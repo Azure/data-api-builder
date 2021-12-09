@@ -1,3 +1,4 @@
+using System;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
@@ -31,9 +32,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             string primaryKeyRoute = "id/1";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
-            bool actual = RequestValidator.IsValidFindRequest(findRequestContext, _metadataStore.Object);
-
-            Assert.IsTrue(actual);
+            PerformTest(findRequestContext, _metadataStore.Object, expectsException: false);
         }
 
         [TestMethod]
@@ -47,9 +46,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             string primaryKeyRoute = "id/2/isbn/12345";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
-            bool actual = RequestValidator.IsValidFindRequest(findRequestContext, _metadataStore.Object);
-
-            Assert.IsTrue(actual);
+            PerformTest(findRequestContext, _metadataStore.Object, expectsException: false);
         }
 
         [TestMethod]
@@ -63,9 +60,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             string primaryKeyRoute = "isbn/12345/id/2";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
-            bool actual = RequestValidator.IsValidFindRequest(findRequestContext, _metadataStore.Object);
-
-            Assert.IsTrue(actual);
+            PerformTest(findRequestContext, _metadataStore.Object, expectsException: false);
         }
         #endregion
         #region Negative Tests
@@ -80,9 +75,35 @@ namespace Azure.DataGateway.Service.Tests.REST
             string primaryKeyRoute = "name/Catch22";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
-            bool actual = RequestValidator.IsValidFindRequest(findRequestContext, _metadataStore.Object);
+            PerformTest(findRequestContext, _metadataStore.Object, expectsException: true);
+        }
 
-            Assert.IsFalse(actual);
+        [TestMethod]
+        public void RequestWithDuplicatePrimaryKeyTest()
+        {
+            string[] primaryKeys = new string[] { "id" };
+            TableDefinition tableDef = new();
+            tableDef.PrimaryKey = new(primaryKeys);
+            _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
+            string primaryKeyRoute = "id/1/id/1";
+            RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
+
+            PerformTest(findRequestContext, _metadataStore.Object, expectsException: true);
+        }
+
+        [TestMethod]
+        public void RequestWithDuplicatePrimaryKeyColumnAndCorrectColumnCountTest()
+        {
+            string[] primaryKeys = new string[] { "id","name" };
+            TableDefinition tableDef = new();
+            tableDef.PrimaryKey = new(primaryKeys);
+            _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
+            string primaryKeyRoute = "id/1/id/1";
+            RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
+
+            PerformTest(findRequestContext, _metadataStore.Object, expectsException: true);
         }
 
         [TestMethod]
@@ -96,9 +117,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             string primaryKeyRoute = "name/1";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
-            bool actual = RequestValidator.IsValidFindRequest(findRequestContext, _metadataStore.Object);
-
-            Assert.IsFalse(actual);
+            PerformTest(findRequestContext, _metadataStore.Object, expectsException: true);
         }
 
         [TestMethod]
@@ -112,9 +131,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             string primaryKeyRoute = "id/12345/name/2";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
-            bool actual = RequestValidator.IsValidFindRequest(findRequestContext, _metadataStore.Object);
-
-            Assert.IsFalse(actual);
+            PerformTest(findRequestContext, _metadataStore.Object, expectsException: true);
         }
 
         [TestMethod]
@@ -128,9 +145,27 @@ namespace Azure.DataGateway.Service.Tests.REST
             string primaryKeyRoute = "id/12345/isbn/2/name/TwoTowers";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
-            bool actual = RequestValidator.IsValidFindRequest(findRequestContext, _metadataStore.Object);
-
-            Assert.IsFalse(actual);
+            PerformTest(findRequestContext, _metadataStore.Object, expectsException: true);
+        }
+        #endregion
+        #region Helper Methods
+        public static void PerformTest(FindRequestContext findRequestContext, IMetadataStoreProvider metadataStore, bool expectsException)
+        {
+            try
+            {
+                RequestValidator.ValidateFindRequest(findRequestContext, _metadataStore.Object);
+                if (expectsException)
+                {
+                    Assert.Fail();
+                }
+            }
+            catch (Exception ex)
+            {
+                if(expectsException)
+                {
+                    Assert.IsTrue(ex is InvalidOperationException);
+                }
+            }
         }
         #endregion
     }

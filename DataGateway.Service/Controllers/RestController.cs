@@ -51,9 +51,14 @@ namespace Azure.DataGateway.Service.Controllers
                 JsonDocument result = await _restService.ExecuteFindAsync(entityName, primaryKeyRoute, queryString);
                 return Ok(result);
             }
-            catch (Exception ex)
+            catch (InvalidOperationException ex)
             {
                 return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine(ex.StackTrace);
+                return StatusCode(statusCode: 500);
             }
         }
     }

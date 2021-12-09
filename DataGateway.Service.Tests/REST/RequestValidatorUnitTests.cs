@@ -95,7 +95,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         [TestMethod]
         public void RequestWithDuplicatePrimaryKeyColumnAndCorrectColumnCountTest()
         {
-            string[] primaryKeys = new string[] { "id","name" };
+            string[] primaryKeys = new string[] { "id", "name" };
             TableDefinition tableDef = new();
             tableDef.PrimaryKey = new(primaryKeys);
             _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
@@ -161,7 +161,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             }
             catch (Exception ex)
             {
-                if(expectsException)
+                if (expectsException)
                 {
                     Assert.IsTrue(ex is InvalidOperationException);
                 }

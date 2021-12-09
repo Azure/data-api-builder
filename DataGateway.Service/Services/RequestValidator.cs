@@ -45,7 +45,7 @@ namespace Azure.DataGateway.Service.Services
             List<string> validatedColumns = new();
             foreach (RestPredicate predicate in context.Predicates)
             {
-                if( validatedColumns.Contains(predicate.Field))
+                if (validatedColumns.Contains(predicate.Field))
                 {
                     throw new InvalidOperationException(message: "Primary Key field: " + predicate.Field + " appears more than once.");
 

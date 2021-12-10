@@ -79,16 +79,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             try
             {
                 IActionResult actionResult = await api(entityName, primaryKeyRoute);
-                OkObjectResult okResult = (OkObjectResult)actionResult;
-                JsonDocument actualJson = okResult.Value as JsonDocument;
+                OkObjectResult okResult = (OkObjectResult) actionResult;
+                JsonElement actualJson = (JsonElement) okResult.Value;
 
                 string expected = await expectedWorker;
-                string actual = actualJson.RootElement.ToString();
+                string actual = actualJson.ToString();
 
                 Assert.IsFalse(expectException, "An exception was suppossed to be thrown, but it was not");
 
                 PerformTestEqualJsonStrings(expected, actual);
-
             }
             catch (Exception e)
             {

@@ -7,8 +7,6 @@ using Azure.DataGateway.Service.Resolvers;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Services
 {
@@ -92,15 +90,7 @@ namespace Azure.DataGateway.Services
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
                     //TODO: Try to avoid additional deserialization/serialization here.
-                    List<JsonDocument> resultList = new();
-                    IEnumerable<JObject> resultArray = JsonConvert.DeserializeObject<JObject[]>(jsonElement.ToString());
-                    IEnumerator<JObject> enumerator = resultArray.GetEnumerator();
-                    while (enumerator.MoveNext())
-                    {
-                        resultList.Add(JsonDocument.Parse(enumerator.Current.ToString()));
-                    }
-
-                    context.Result = resultList;
+                    context.Result = JsonSerializer.Deserialize<List<JsonDocument>>(jsonElement.ToString());
                 }
             }
 

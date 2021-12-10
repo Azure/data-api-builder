@@ -78,7 +78,7 @@ namespace Azure.DataGateway.Service.Tests
             string raw =
                 "{\r\n    \"id\" : \"paginatedQuery\",\r\n    \"databaseName\": \"" +
                 DB_NAME + "\",\r\n    \"containerName\": \"" + COL_NAME +
-                "\" ,\n \"isPaginated\" : true "+
+                "\" ,\n \"isPaginated\" : true " +
                 ",\r\n    \"parametrizedQuery\": \"SELECT * FROM r\"\r\n}";
 
             return JsonConvert.DeserializeObject<GraphQLQueryResolver>(raw);

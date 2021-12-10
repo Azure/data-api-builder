@@ -79,8 +79,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             try
             {
                 IActionResult actionResult = await api(entityName, primaryKeyRoute);
-                OkObjectResult okResult = (OkObjectResult) actionResult;
-                JsonElement actualJson = (JsonElement) okResult.Value;
+                OkObjectResult okResult = (OkObjectResult)actionResult;
+                JsonElement actualJson = (JsonElement)okResult.Value;
 
                 string expected = await expectedWorker;
                 string actual = actualJson.ToString();

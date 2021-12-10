@@ -260,7 +260,7 @@ namespace Azure.DataGateway.Service.Resolvers
         void AddPrimaryKeyPredicates(IDictionary<string, object> queryParams)
         {
             // queryParams for list queries are not used as primary keys
-            if(!IsListQuery)
+            if (!IsListQuery)
             {
                 List<string> primaryKey = GetTableDefinition().PrimaryKey;
                 foreach (KeyValuePair<string, object> parameter in queryParams)

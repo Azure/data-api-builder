@@ -258,7 +258,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         [TestMethod]
-        public async Task QueryWithNullResult(){
+        public async Task QueryWithNullResult()
+        {
             string graphQLQueryName = "getBook";
             string graphQLQuery = @"{
                 getBook(id: -9999) {

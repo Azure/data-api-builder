@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;

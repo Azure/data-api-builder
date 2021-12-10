@@ -162,7 +162,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                     Assert.Fail();
                 }
             }
-            catch (Exception ex)
+            catch (PrimaryKeyValidationException ex)
             {
                 //If we are not expecting an exception, fail the test. Completing test method without
                 //failure will pass the test, so no Assert.Pass() is necessary (nor exists).
@@ -171,6 +171,13 @@ namespace Azure.DataGateway.Service.Tests.REST
                     Console.Error.WriteLine(ex.Message);
                     Assert.Fail();
                 }
+            }
+            catch (Exception ex)
+            {
+                //Any exception that is not validation related means another
+                //unexpected issue was encountered.
+                Console.Error.WriteLine(ex.Message);
+                Assert.Fail();
             }
         }
         #endregion

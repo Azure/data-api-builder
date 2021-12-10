@@ -1,4 +1,5 @@
 using System;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
@@ -154,6 +155,8 @@ namespace Azure.DataGateway.Service.Tests.REST
             try
             {
                 RequestValidator.ValidateFindRequest(findRequestContext, _metadataStore.Object);
+
+                //If expecting an exception, the code should not reach this point.
                 if (expectsException)
                 {
                     Assert.Fail();
@@ -161,9 +164,12 @@ namespace Azure.DataGateway.Service.Tests.REST
             }
             catch (Exception ex)
             {
-                if (expectsException)
+                //If we are not expecting an exception, fail the test. Completing test method without
+                //failure will pass the test, so no Assert.Pass() is necessary (nor exists).
+                if (!expectsException)
                 {
-                    Assert.IsTrue(ex is InvalidOperationException);
+                    Console.Error.WriteLine(ex.Message);
+                    Assert.Fail();
                 }
             }
         }

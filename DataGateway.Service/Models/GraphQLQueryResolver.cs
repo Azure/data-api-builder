@@ -10,6 +10,7 @@ namespace Azure.DataGateway.Service.Models
         public string ParametrizedQuery { get; set; }
         public QuerySpec QuerySpec { get; set; }
         public bool IsList { get; set; }
+        public bool IsPaginated { get; set; }
     }
 
     public class QuerySpec

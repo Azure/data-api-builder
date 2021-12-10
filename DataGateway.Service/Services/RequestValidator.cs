@@ -42,7 +42,7 @@ namespace Azure.DataGateway.Service.Services
             //Each Predicate (Column) that is checked against the DB schema
             //is added to a list of validated columns. If a column has already
             //been checked and comes up again, the request contains duplicates.
-            List<string> validatedColumns = new();
+            HashSet<string> validatedColumns = new();
             foreach (RestPredicate predicate in context.Predicates)
             {
                 if (validatedColumns.Contains(predicate.Field))
@@ -53,7 +53,7 @@ namespace Azure.DataGateway.Service.Services
 
                 if (!tableDefinition.PrimaryKey.Contains(predicate.Field))
                 {
-                    throw new PrimaryKeyValidationException(message: "Primary Key field: " + predicate.Field + " is invalid.");
+                    throw new PrimaryKeyValidationException(message: "Primary Key field: " + predicate.Field + " in the request is invalid.");
                 }
                 else
                 {

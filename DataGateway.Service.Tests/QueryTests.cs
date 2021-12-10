@@ -33,10 +33,12 @@ namespace Azure.DataGateway.Service.Tests
             _metadataStoreProvider.StoreQueryResolver(TestHelper.SimpleListQueryResolver());
 
             // Run query
+            int actualElements = 0;
             _controller.ControllerContext.HttpContext = GetHttpContextWithBody(TestHelper.SimpleListQuery);
-            JsonDocument fullQueryResponse = await _controller.PostAsync();
-            int actualElements = fullQueryResponse.RootElement.GetProperty("data").GetProperty("queryAll").GetArrayLength();
-
+            using (JsonDocument fullQueryResponse = await _controller.PostAsync())
+            {
+                actualElements = fullQueryResponse.RootElement.GetProperty("data").GetProperty("queryAll").GetArrayLength();
+            }
             // Run paginated query
             int totalElementsFromPaginatedQuery = 0;
             string continuationToken = "null";
@@ -53,7 +55,7 @@ namespace Azure.DataGateway.Service.Tests
 
                 string paginatedQuery = string.Format(TestHelper.SimplePaginatedQueryFormat, arg0: pagesize, arg1: continuationToken);
                 _controller.ControllerContext.HttpContext = GetHttpContextWithBody(paginatedQuery);
-                JsonDocument paginatedQueryResponse = await _controller.PostAsync();
+                using JsonDocument paginatedQueryResponse = await _controller.PostAsync();
                 JsonElement page = paginatedQueryResponse.RootElement
                     .GetProperty("data")
                     .GetProperty("paginatedQuery");

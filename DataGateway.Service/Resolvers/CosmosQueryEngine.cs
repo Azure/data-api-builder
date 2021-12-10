@@ -78,7 +78,7 @@ namespace Azure.DataGateway.Services
                 }
 
                 string responseContinuation = firstPage.ContinuationToken;
-                if (String.IsNullOrEmpty(responseContinuation))
+                if (string.IsNullOrEmpty(responseContinuation))
                 {
                     responseContinuation = null;
                 }
@@ -89,8 +89,7 @@ namespace Azure.DataGateway.Services
                    new JProperty("nodes", jarray));
 
                 // This extra deserialize/serialization will be removed after moving to Newtonsoft from System.Text.Json
-                JsonDocument resultJsonDoc = JsonDocument.Parse(res.ToString());
-                return resultJsonDoc;
+                return JsonDocument.Parse(res.ToString());
             }
 
             JObject firstItem = null;

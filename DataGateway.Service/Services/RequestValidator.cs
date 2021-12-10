@@ -6,8 +6,18 @@ using Azure.DataGateway.Services;
 
 namespace Azure.DataGateway.Service.Services
 {
+    /// <summary>
+    /// Class which validates input supplied by a REST request.
+    /// </summary>
     public class RequestValidator
     {
+        /// <summary>
+        /// Validates a FindOne request by ensuring each supplied primary key column
+        /// exactly matches the DB schema.
+        /// </summary>
+        /// <param name="context">Request context containing request primary key columns and values</param>
+        /// <param name="configurationProvider">Configuration provider that enables referencing DB schema in config.</param>
+        /// <exception cref="PrimaryKeyValidationException"></exception>
         public static void ValidateFindRequest(FindRequestContext context, IMetadataStoreProvider configurationProvider)
         {
             TableDefinition tableDefinition = configurationProvider.GetTableDefinition(context.EntityName);

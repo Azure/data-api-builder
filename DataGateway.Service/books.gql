@@ -22,7 +22,7 @@ type Book {
 type Author {
     id: Int
     name: String
-    birtdate: String
+    birthdate: String
     books(first: Int = 2): [Book!]!
 }
 

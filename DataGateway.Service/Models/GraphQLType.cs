@@ -46,7 +46,7 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// The name of the foreign key that should be used to do the join on
         /// the left side of the join. Depending on the RelationshipType this
-        /// this foreign key has some different requirements:
+        /// foreign key has some different requirements:
         ///
         /// 1. For OneToOne and ManyToOne it means that this foreign key should
         ///    be defined on the table of the type that this field is part of.
@@ -60,7 +60,7 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// The name of the foreign key that should be used to do the join on
         /// the right side of the join. Depending on the RelationshipType this
-        /// this foreign key has some different requirements:
+        /// foreign key has some different requirements:
         ///
         /// 1. For OneToOne and OneToMany it means that this foreign key should
         ///    be defined on the table of the type that this field has.

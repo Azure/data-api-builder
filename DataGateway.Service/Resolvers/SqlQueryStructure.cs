@@ -130,20 +130,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 new IncrementingInteger()
             )
         {
-            List<string> primaryKey = GetTableDefinition().PrimaryKey;
-            foreach (KeyValuePair<string, object> parameter in queryParams)
-            {
-                // do not handle non primary key query parameters for now
-                if (primaryKey.IndexOf(parameter.Key) == -1)
-                {
-                    Console.WriteLine($"Skipping {parameter.Key}");
-                    continue;
-                }
-
-                string parameterName = $"param{Counter.Next()}";
-                Parameters.Add(parameterName, parameter.Value);
-                Predicates.Add($"{QualifiedColumn(parameter.Key)} = @{parameterName}");
-            }
+            AddPrimaryKeyPredicates(queryParams);
         }
 
         /// <summary>
@@ -265,6 +252,31 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             string column = QualifiedColumn(columnName);
             Columns.Add(columnName, column);
+        }
+
+        ///<summary>
+        /// Adds predicates for the primary keys in the paramters of the graphql query
+        ///</summary>
+        void AddPrimaryKeyPredicates(IDictionary<string, object> queryParams)
+        {
+            // queryParams for list queries are not used as primary keys
+            if(!IsListQuery)
+            {
+                List<string> primaryKey = GetTableDefinition().PrimaryKey;
+                foreach (KeyValuePair<string, object> parameter in queryParams)
+                {
+                    // do not handle non primary key query parameters for now
+                    if (!primaryKey.Contains(parameter.Key))
+                    {
+                        Console.WriteLine($"Skipping {parameter.Key}");
+                        continue;
+                    }
+
+                    string parameterName = $"param{Counter.Next()}";
+                    Parameters.Add(parameterName, parameter.Value);
+                    Predicates.Add($"{QualifiedColumn(parameter.Key)} = @{parameterName}");
+                }
+            }
         }
 
         /// <summary>

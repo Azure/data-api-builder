@@ -220,13 +220,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     title
                 }
             }";
-            string mssqlQuery = @"
+            string msSqlQuery = @"
                 SELECT title FROM books
                 WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
             ";
 
-            string expected = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
-            string actual = await GetDatabaseResultAsync(mssqlQuery);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
@@ -240,15 +240,29 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     content
                 }
             }";
-            string mssqlQuery = @"
+            string msSqlQuery = @"
                 SELECT TOP 1 content FROM reviews
                 WHERE id = 568 AND book_id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
             ";
 
-            string expected = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
-            string actual = await GetDatabaseResultAsync(mssqlQuery);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        [TestMethod]
+        public async Task QueryWithNullResult(){
+            string graphQLQueryName = "getBook";
+            string graphQLQuery = @"{
+                getBook(id: -9999) {
+                    title
+                }
+            }";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
+
+            SqlTestHelper.PerformTestEqualJsonStrings("null", actual);
         }
 
         #endregion
@@ -272,7 +286,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             JsonDocument graphQLResult = await _graphQLController.PostAsync();
             Console.WriteLine(graphQLResult.RootElement.ToString());
             JsonElement graphQLResultData = graphQLResult.RootElement.GetProperty("data").GetProperty(graphQLQueryName);
-            return graphQLResultData.ToString();
+
+            // JsonElement.ToString() prints null values as empty strings instead of "null"
+            return graphQLResultData.GetRawText();
         }
 
         #endregion

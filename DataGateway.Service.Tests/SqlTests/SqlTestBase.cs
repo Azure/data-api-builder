@@ -96,7 +96,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             // an empty result will cause an error with the json parser
             if (!reader.HasRows)
             {
-                return "";
+                throw new System.Exception("No rows to read from database result");
             }
 
             using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader));

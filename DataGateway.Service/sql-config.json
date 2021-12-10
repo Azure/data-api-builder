@@ -90,7 +90,7 @@
         }
       },
       "reviews": {
-        "PrimaryKey": ["id", "book_id"],
+        "PrimaryKey": ["book_id", "id"],
         "Columns": {
           "id": {
             "Type": "bigint"

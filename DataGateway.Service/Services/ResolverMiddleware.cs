@@ -113,10 +113,6 @@ namespace Azure.DataGateway.Services
                 IntValueNode intValue = (IntValueNode)value;
                 return intValue.ToInt64();
             }
-            else if (value.Kind == SyntaxKind.StringValue)
-            {
-                return value.ToString();
-            }
             else
             {
                 return value.Value;

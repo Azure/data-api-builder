@@ -505,6 +505,12 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             if (predicates.Count() == 0)
             {
+                // By always returning a valid predicate we don't have to
+                // handle the edge case of not having a predicate in other
+                // parts of the code. For example, this way we can add a WHERE
+                // clause to the query unconditionally. Any half-decent SQL
+                // engine will ignore this predicate during execution, because
+                // of basic constant optimizations.
                 return "1 = 1";
             }
 

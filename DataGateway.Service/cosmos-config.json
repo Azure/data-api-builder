@@ -27,6 +27,7 @@
     },
     {
       "id": "planets",
+      "isPaginated":  true,
       "databaseName": "graphqldb",
       "containerName": "planet",
       "parametrizedQuery": "select * FROM c"

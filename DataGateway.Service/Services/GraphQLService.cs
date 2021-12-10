@@ -33,7 +33,7 @@ namespace Azure.DataGateway.Services
             ISchema schema = SchemaBuilder.New()
                .AddDocumentFromString(data)
                .AddAuthorizeDirectiveType()
-               .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine))
+               .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine, _metadataStoreProvider))
                .Create();
 
             // Below is pretty much an inlined version of

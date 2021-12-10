@@ -62,7 +62,7 @@ namespace Azure.DataGateway.Services
 
             if (parameters.TryGetValue("after", out object after))
             {
-                requestContinuation = after as string;
+                requestContinuation = Base64Decode(after as string);
             }
 
             FeedResponse<JObject> firstPage = await container.GetItemQueryIterator<JObject>(querySpec, requestContinuation, queryRequestOptions).ReadNextAsync();
@@ -84,7 +84,7 @@ namespace Azure.DataGateway.Services
                 }
 
                 JObject res = new(
-                   new JProperty("endCursor", responseContinuation),
+                   new JProperty("endCursor", Base64Encode(responseContinuation)),
                    new JProperty("hasNextPage", responseContinuation != null),
                    new JProperty("nodes", jarray));
 
@@ -151,5 +151,28 @@ namespace Azure.DataGateway.Services
         {
             throw new NotImplementedException();
         }
+
+        private static string Base64Encode(string plainText)
+        {
+            if (plainText == default)
+            {
+                return null;
+            }
+
+            byte[] plainTextBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
+            return System.Convert.ToBase64String(plainTextBytes);
+        }
+
+        private static string Base64Decode(string base64EncodedData)
+        {
+            if (base64EncodedData == default)
+            {
+                return null;
+            }
+
+            byte[] base64EncodedBytes = System.Convert.FromBase64String(base64EncodedData);
+            return System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
+        }
+
     }
 }

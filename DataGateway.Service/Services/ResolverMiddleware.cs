@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
@@ -19,12 +21,17 @@ namespace Azure.DataGateway.Services
         private readonly FieldDelegate _next;
         private readonly IQueryEngine _queryEngine;
         private readonly IMutationEngine _mutationEngine;
+        private readonly IMetadataStoreProvider _metadataStoreProvider;
 
-        public ResolverMiddleware(FieldDelegate next, IQueryEngine queryEngine, IMutationEngine mutationEngine)
+        public ResolverMiddleware(FieldDelegate next,
+            IQueryEngine queryEngine,
+            IMutationEngine mutationEngine,
+            IMetadataStoreProvider metadataStoreProvider)
         {
             _next = next;
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
+            _metadataStoreProvider = metadataStoreProvider;
         }
 
         public ResolverMiddleware(FieldDelegate next)
@@ -44,7 +51,7 @@ namespace Azure.DataGateway.Services
             else if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
             {
                 IDictionary<string, object> parameters = GetParametersFromContext(context);
-                bool isPaginatedQuery = IsPaginatedQuery(parameters);
+                bool isPaginatedQuery = IsPaginatedQuery(context.Selection.Field.Name.Value);
 
                 if (context.Selection.Type.IsListType())
                 {
@@ -100,9 +107,21 @@ namespace Azure.DataGateway.Services
             await _next(context);
         }
 
-        private static bool IsPaginatedQuery(IDictionary<string, object> parameters)
+        /// <summary>
+        /// Identifies if a query is paginated or not by checking the IsPaginated param on the respective resolver.
+        /// </summary>
+        /// <param name="queryName the name of the query"></param>
+        /// <returns></returns>
+        private bool IsPaginatedQuery(string queryName)
         {
-            return parameters.ContainsKey("after");
+            GraphQLQueryResolver resolver = _metadataStoreProvider.GetQueryResolver(queryName);
+            if (resolver == null)
+            {
+                string message = string.Format("There is no resolver for the query: {0}", queryName);
+                throw new InvalidOperationException(message);
+            }
+
+            return resolver.IsPaginated;
         }
 
         private static bool TryGetPropertyFromParent(IMiddlewareContext context, out JsonElement jsonElement)

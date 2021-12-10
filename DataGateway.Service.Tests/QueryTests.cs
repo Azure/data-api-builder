@@ -44,13 +44,6 @@ namespace Azure.DataGateway.Service.Tests
 
             do
             {
-                if (continuationToken != "null")
-                {
-                    continuationToken = "\\\"" +
-                        continuationToken.Replace(@"""", @"\\\""") +
-                        "\\\"";
-                }
-
                 string paginatedQuery = string.Format(TestHelper.SimplePaginatedQueryFormat, arg0: pagesize, arg1: continuationToken);
                 _controller.ControllerContext.HttpContext = GetHttpContextWithBody(paginatedQuery);
                 JsonDocument paginatedQueryResponse = await _controller.PostAsync();
@@ -59,7 +52,6 @@ namespace Azure.DataGateway.Service.Tests
                     .GetProperty("paginatedQuery");
                 JsonElement continuation = page.GetProperty("endCursor");
                 continuationToken = continuation.ToString();
-
                 totalElementsFromPaginatedQuery += page.GetProperty("nodes").GetArrayLength();
             } while (!string.IsNullOrEmpty(continuationToken));
 

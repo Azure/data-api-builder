@@ -31,7 +31,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Tests the REST Api for FindById operation without a query string.
         /// </summary>
-        [TestMethod, Ignore]
+        [TestMethod]
         public async Task FindByIdTest()
         {
             string primaryKeyRoute = "id/2";
@@ -61,7 +61,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Tests the REST Api for FindById operation with a query string
         /// including the field names.
         /// </summary>
-        [TestMethod, Ignore]
+        [TestMethod]
         public async Task FindIdTestWithQueryStringFields()
         {
             string primaryKeyRoute = "id/1";

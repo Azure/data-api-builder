@@ -52,7 +52,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public async Task<JsonDocument> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            SqlQueryStructure structure = new(context, _metadataStoreProvider, _queryBuilder);
+            SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _queryBuilder);
             return await ExecuteAsync(structure);
         }
 
@@ -62,7 +62,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public async Task<IEnumerable<JsonDocument>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            SqlQueryStructure structure = new(context, _metadataStoreProvider, _queryBuilder);
+            SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _queryBuilder);
             Console.WriteLine(structure.ToString());
             using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(structure.ToString(), structure.Parameters);
 

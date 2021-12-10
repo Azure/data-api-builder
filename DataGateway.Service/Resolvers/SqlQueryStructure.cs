@@ -322,7 +322,8 @@ namespace Azure.DataGateway.Service.Resolvers
         object ResolveParamTypeFromField(string param, string fieldName)
         {
             string type = GetTableDefinition().Columns.GetValueOrDefault(fieldName).Type;
-            switch(type){
+            switch (type)
+            {
                 case "text":
                     return param;
                 case "bigint":

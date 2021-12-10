@@ -47,13 +47,13 @@ namespace Azure.DataGateway.Service.Services
             {
                 if (validatedColumns.Contains(predicate.Field))
                 {
-                    throw new PrimaryKeyValidationException(message: "Primary Key field: " + predicate.Field + " appears more than once.");
+                    throw new PrimaryKeyValidationException(message: "Primary Key field: " + predicate.Field + " appears more than once in the request.");
 
                 }
 
                 if (!tableDefinition.PrimaryKey.Contains(predicate.Field))
                 {
-                    throw new PrimaryKeyValidationException(message: "Primary Key field: " + predicate.Field + " does not exist in DB schema");
+                    throw new PrimaryKeyValidationException(message: "Primary Key field: " + predicate.Field + " is invalid.");
                 }
                 else
                 {

@@ -136,11 +136,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Gets array of results for querying more than one item.
+        /// This deeply nests a many-to-one/one-to-many join multiple times to
+        /// show that it still results in a valid query.
         /// </summary>
         /// <returns></returns>
         [TestMethod]
-        public async Task DeeplyNestedJoinQuery()
+        public async Task DeeplyNestedManyToOneJoinQuery()
         {
             string graphQLQueryName = "getBooks";
             string graphQLQuery = @"{
@@ -161,22 +162,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     }
                   }
                 }
-                authors(first: 100) {
-                  name
-                  books(first: 100) {
-                    title
-                    authors(first: 100) {
-                      name
-                    }
-                  }
-                }
               }
             }";
 
             string msSqlQuery = @"
                 SELECT TOP 100 [table0].[title] AS [title],
-                    JSON_QUERY([table1_subq].[data]) AS [publisher],
-                    JSON_QUERY(COALESCE([table6_subq].[data], '[]')) AS [authors]
+                    JSON_QUERY([table1_subq].[data]) AS [publisher]
                 FROM [books] AS [table0]
                 OUTER APPLY (
                     SELECT TOP 1 [table1].[name] AS [name],
@@ -225,6 +216,46 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         INCLUDE_NULL_VALUES,
                         WITHOUT_ARRAY_WRAPPER
                     ) AS [table1_subq]([data])
+                WHERE 1 = 1
+                ORDER BY [id]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// This deeply nests a many-to-many join multiple times to show that
+        /// it still results in a valid query.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task DeeplyNestedManyToManyJoinQuery()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+              getBooks(first: 100) {
+                title
+                authors(first: 100) {
+                  name
+                  books(first: 100) {
+                    title
+                    authors(first: 100) {
+                      name
+                    }
+                  }
+                }
+              }
+            }";
+
+            string msSqlQuery = @"
+                SELECT TOP 100 [table0].[title] AS [title],
+                    JSON_QUERY(COALESCE([table6_subq].[data], '[]')) AS [authors]
+                FROM [books] AS [table0]
                 OUTER APPLY (
                     SELECT TOP 100 [table6].[name] AS [name],
                         JSON_QUERY(COALESCE([table7_subq].[data], '[]')) AS [books]

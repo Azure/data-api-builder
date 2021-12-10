@@ -44,6 +44,13 @@ namespace Azure.DataGateway.Service.Tests
 
             do
             {
+                if (continuationToken != "null")
+                {
+                    // We need to append an escape quote to continuation token because of the way we are using string.format
+                    // for generating the graphql paginated query stringformat for this test.
+                    continuationToken = "\\\"" + continuationToken + "\\\"";
+                }
+
                 string paginatedQuery = string.Format(TestHelper.SimplePaginatedQueryFormat, arg0: pagesize, arg1: continuationToken);
                 _controller.ControllerContext.HttpContext = GetHttpContextWithBody(paginatedQuery);
                 JsonDocument paginatedQueryResponse = await _controller.PostAsync();

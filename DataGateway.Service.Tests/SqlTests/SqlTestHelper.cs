@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.configurations;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -68,7 +69,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </param>
         /// <param name="expectException">True if we expect exceptions.</param>
         public static async Task PerformApiTest(
-            Func<string, string, Task<JsonDocument>> api,
+            Func<string, string, Task<IActionResult>> api,
             string entityName,
             string primaryKeyRoute,
             Task<string> expectedWorker,
@@ -77,15 +78,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             try
             {
-                JsonDocument actualJson = await api(entityName, primaryKeyRoute);
+                IActionResult actionResult = await api(entityName, primaryKeyRoute);
+                OkObjectResult okResult = (OkObjectResult)actionResult;
+                JsonElement actualJson = (JsonElement)okResult.Value;
 
                 string expected = await expectedWorker;
-                string actual = actualJson.RootElement.ToString();
+                string actual = actualJson.ToString();
 
                 Assert.IsFalse(expectException, "An exception was suppossed to be thrown, but it was not");
 
                 PerformTestEqualJsonStrings(expected, actual);
-
             }
             catch (Exception e)
             {

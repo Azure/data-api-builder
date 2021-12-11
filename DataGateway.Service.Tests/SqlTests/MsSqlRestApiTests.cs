@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             // Setup REST Components
             //
-            _restService = new RestService(_queryEngine);
+            _restService = new RestService(_queryEngine, _metadataStoreProvider);
             _restController = new RestController(_restService);
         }
 

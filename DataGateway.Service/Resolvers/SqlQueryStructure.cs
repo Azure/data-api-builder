@@ -501,6 +501,10 @@ namespace Azure.DataGateway.Service.Resolvers
             return tableSql + joinSql;
         }
 
+        /// <summary>
+        /// Convert a list of predicates to a valid predicate string. This
+        /// string can be used in WHERE or ON clauses of the query.
+        /// </summary>
         static string PredicatesSql(List<string> predicates)
         {
             if (predicates.Count() == 0)

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 namespace Azure.DataGateway.Service.Resolvers
 {
     /// <summary>
-    /// Interface for query execution for Sql like databases (eg. MsSql, PostgresSql).
+    /// Interface for query execution for Sql like databases (eg. MsSql, PostgreSql).
     /// </summary>
     public interface IQueryExecutor
     {

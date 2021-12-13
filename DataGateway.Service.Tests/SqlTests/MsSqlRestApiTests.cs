@@ -22,13 +22,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </summary>
         /// <param name="context"></param>
         [ClassInitialize]
-        public static void InitializeTestFixture(TestContext context)
+        public static async Task InitializeTestFixture(TestContext context)
         {
-            InitializeTestFixture(context, _integrationTableName, TestCategory.MSSQL);
+            await InitializeTestFixture(context, _integrationTableName, TestCategory.MSSQL);
 
             // Setup REST Components
             //
-            _restService = new RestService(_queryEngine);
+            _restService = new RestService(_queryEngine, _metadataStoreProvider);
             _restController = new RestController(_restService);
         }
 

@@ -1,5 +1,7 @@
+using System;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -25,7 +27,6 @@ namespace Azure.DataGateway.Service.Controllers
         {
             _restService = restService;
         }
-
         /// <summary>
         /// FindById action serving the HttpGet verb.
         /// </summary>
@@ -41,18 +42,31 @@ namespace Azure.DataGateway.Service.Controllers
         [HttpGet]
         [Route("{*primaryKeyRoute}")]
         [Produces("application/json")]
-        public async Task<JsonDocument> FindById(
+        public async Task<IActionResult> FindById(
             string entityName,
             string primaryKeyRoute)
         {
-            JsonDocument resultJson = JsonDocument.Parse(@"{ ""error"": ""FindMany is not supported yet.""}");
-            if (!string.IsNullOrEmpty(primaryKeyRoute))
+            try
             {
                 string queryString = HttpContext.Request.QueryString.ToString();
-                resultJson = await _restService.ExecuteFindAsync(entityName, primaryKeyRoute, queryString);
-            }
 
-            return resultJson;
+                //Utilizes C#8 using syntax which does not require brackets.
+                using JsonDocument result = await _restService.ExecuteFindAsync(entityName, primaryKeyRoute, queryString);
+
+                //Clones the root element to a new JsonElement that can be
+                //safely stored beyond the lifetime of the original JsonDocument.
+                JsonElement resultElement = result.RootElement.Clone();
+                return Ok(resultElement);
+            }
+            catch (PrimaryKeyValidationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine(ex.StackTrace);
+                return StatusCode(statusCode: 500);
+            }
         }
     }
 }

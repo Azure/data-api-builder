@@ -20,18 +20,38 @@ namespace Azure.DataGateway.Service.Resolvers
         private ulong _integer;
         public IncrementingInteger()
         {
-            _integer = 1;
+            _integer = 0;
         }
 
         /// <summary>
         /// Get the next integer from this sequence of integers. The first
-        /// integer that is returned is 1.
+        /// integer that is returned is 0.
         /// </summary>
         public ulong Next()
         {
             return _integer++;
         }
 
+    }
+
+    /// <summary>
+    /// A simple class that is used to hold the information about joins that
+    /// are part of an SQL query.
+    /// <summary>
+    public class SqlJoinStructure
+    {
+        /// <summary>
+        /// The name of the table that is joined with.
+        /// </summary>
+        public string TableName { get; set; }
+        /// <summary>
+        /// The alias of the table that is joined with.
+        /// </summary>
+        public string TableAlias { get; set; }
+        /// <summary>
+        /// The predicates that are part of the ON clause of the join.
+        /// </summary>
+        public List<string> Predicates { get; set; }
     }
 
     /// <summary>
@@ -44,14 +64,22 @@ namespace Azure.DataGateway.Service.Resolvers
     public class SqlQueryStructure
     {
         /// <summary>
+        /// All tables that should be in the FROM clause of the query. The key
+        /// is the alias of the table and the value is the actual table name.
+        /// </summary>
+        public List<SqlJoinStructure> Joins { get; }
+
+        /// <summary>
         /// The columns which the query selects. The keys are the alias of this
         /// column.
         /// </summary>
         public Dictionary<string, string> Columns { get; }
+
         /// <summary>
         /// Predicates that should filter the result set of the query.
         /// </summary>
         public List<string> Predicates { get; }
+
         /// <summary>
         /// The subqueries with which this query should be joined. The key are
         /// the aliases of the query.
@@ -59,12 +87,12 @@ namespace Azure.DataGateway.Service.Resolvers
         public Dictionary<string, SqlQueryStructure> JoinQueries { get; }
 
         /// <summary>
-        /// The name of the table to be queried.
+        /// The name of the main table to be queried.
         /// </summary>
         public string TableName { get; }
 
         /// <summary>
-        /// The alias of the table to be queried.
+        /// The alias of the main table to be queried.
         /// </summary>
         public string TableAlias { get; }
 
@@ -120,9 +148,6 @@ namespace Azure.DataGateway.Service.Resolvers
                 metadataStoreProvider,
                 queryBuilder,
                 ctx.Selection.Field,
-                // IncrementingInteger starts at 1, so we use 0 in our initial
-                // table alias. This ensures it's unique.
-                "table0",
                 ctx.Selection.SyntaxNode,
                 // The outermost query is where we start, so this can define
                 // create the IncrementingInteger that will be shared between
@@ -162,7 +187,6 @@ namespace Azure.DataGateway.Service.Resolvers
                 IMetadataStoreProvider metadataStoreProvider,
                 IQueryBuilder queryBuilder,
                 IObjectField schemaField,
-                string tableAlias,
                 FieldNode queryField,
                 IncrementingInteger counter
         ) : this(metadataStoreProvider, queryBuilder, counter)
@@ -173,7 +197,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             _typeInfo = _metadataStoreProvider.GetGraphqlType(_underlyingFieldType.Name);
             TableName = _typeInfo.Table;
-            TableAlias = tableAlias;
+            TableAlias = CreateTableAlias();
             AddGraphqlFields(queryField.SelectionSet.Selections);
 
             if (outputType.IsNonNullType())
@@ -196,6 +220,7 @@ namespace Azure.DataGateway.Service.Resolvers
             JoinQueries = new();
             Predicates = new();
             Parameters = new();
+            Joins = new();
             _metadataStoreProvider = metadataStoreProvider;
             _queryBuilder = queryBuilder;
             Counter = counter;
@@ -280,6 +305,35 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
+        /// Creates equality predicates between the columns of the left table and
+        /// the columns of the right table. The columns are compared in order,
+        /// thus the lists should be the same length.
+        /// </summary>
+        public IEnumerable<string> CreateJoinPredicates(
+                string leftTableAlias,
+                List<string> leftColumnNames,
+                string rightTableAlias,
+                List<string> rightColumnNames)
+        {
+            return leftColumnNames.Zip(rightColumnNames,
+                    (leftColumnName, rightColumnName) =>
+                    {
+                        string leftColumn = QualifiedColumn(leftTableAlias, leftColumnName);
+                        string rightColumn = QualifiedColumn(rightTableAlias, rightColumnName);
+                        return $"{leftColumn} = {rightColumn}";
+                    }
+                );
+        }
+
+        /// <summary>
+        /// Creates a unique table alias.
+        /// </summary>
+        public string CreateTableAlias()
+        {
+            return $"table{Counter.Next()}";
+        }
+
+        /// <summary>
         /// AddGraphqlFields looks at the fields that are selected in the
         /// GraphQL query and all the necessary elements to the query which are
         /// required to return these fields. This includes adding the columns
@@ -299,7 +353,6 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
                 else
                 {
-                    string subtableAlias = $"table{Counter.Next()}";
                     ObjectField subschemaField = _underlyingFieldType.Fields[fieldName];
                     ObjectType subunderlyingType = UnderlyingType(subschemaField.Type);
 
@@ -307,31 +360,57 @@ namespace Azure.DataGateway.Service.Resolvers
                     TableDefinition subTableDefinition = _metadataStoreProvider.GetTableDefinition(subTypeInfo.Table);
                     GraphqlField fieldInfo = _typeInfo.Fields[fieldName];
 
-                    List<string> leftColumnNames;
-                    List<string> rightColumnNames;
+                    SqlQueryStructure subquery = new(_ctx, _metadataStoreProvider, _queryBuilder, subschemaField, field, Counter);
+                    string subtableAlias = subquery.TableAlias;
+
                     switch (fieldInfo.RelationshipType)
                     {
                         case GraphqlRelationshipType.ManyToOne:
-                            leftColumnNames = GetTableDefinition().ForeignKeys[fieldInfo.ForeignKey].Columns;
-                            rightColumnNames = subTableDefinition.PrimaryKey;
+                            subquery.Predicates.AddRange(CreateJoinPredicates(
+                                TableAlias,
+                                GetTableDefinition().ForeignKeys[fieldInfo.LeftForeignKey].Columns,
+                                subtableAlias,
+                                subTableDefinition.PrimaryKey
+                            ));
                             break;
                         case GraphqlRelationshipType.OneToMany:
-                            leftColumnNames = GetTableDefinition().PrimaryKey;
-                            rightColumnNames = subTableDefinition.ForeignKeys[fieldInfo.ForeignKey].Columns;
+                            subquery.Predicates.AddRange(CreateJoinPredicates(
+                                TableAlias,
+                                GetTableDefinition().PrimaryKey,
+                                subtableAlias,
+                                subTableDefinition.ForeignKeys[fieldInfo.RightForeignKey].Columns
+                            ));
                             break;
+                        case GraphqlRelationshipType.ManyToMany:
+                            string associativeTableName = fieldInfo.AssociativeTable;
+                            string associativeTableAlias = CreateTableAlias();
+
+                            TableDefinition associativeTableDefinition = _metadataStoreProvider.GetTableDefinition(associativeTableName);
+                            subquery.Predicates.AddRange(CreateJoinPredicates(
+                                TableAlias,
+                                GetTableDefinition().PrimaryKey,
+                                associativeTableAlias,
+                                associativeTableDefinition.ForeignKeys[fieldInfo.LeftForeignKey].Columns
+                            ));
+
+                            subquery.Joins.Add(new SqlJoinStructure
+                            {
+                                TableName = associativeTableName,
+                                TableAlias = associativeTableAlias,
+                                Predicates = CreateJoinPredicates(
+                                        associativeTableAlias,
+                                        associativeTableDefinition.ForeignKeys[fieldInfo.RightForeignKey].Columns,
+                                        subtableAlias,
+                                        subTableDefinition.PrimaryKey
+                                    ).ToList()
+                            });
+
+                            break;
+
                         case GraphqlRelationshipType.None:
                             throw new NotSupportedException("Cannot do a join when there is no relationship");
                         default:
                             throw new NotImplementedException("OneToOne and ManyToMany relationships are not yet implemented");
-                    }
-
-                    SqlQueryStructure subquery = new(_ctx, _metadataStoreProvider, _queryBuilder, subschemaField, subtableAlias, field, Counter);
-
-                    foreach (var columnName in leftColumnNames.Zip(rightColumnNames, (l, r) => new { Left = l, Right = r }))
-                    {
-                        string leftColumn = QualifiedColumn(columnName.Left);
-                        string rightColumn = QualifiedColumn(subtableAlias, columnName.Right);
-                        subquery.Predicates.Add($"{leftColumn} = {rightColumn}");
                     }
 
                     string subqueryAlias = $"{subtableAlias}_subq";
@@ -403,13 +482,43 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Create the SQL code to define the table in the FROM clause. So the
-        /// {TableSql} bit in this example:
+        /// Create the SQL code to define the main table of the query as well
+        /// as the tables it joins with. So the {TableSql} bit in this example:
         /// SELECT ... FROM {TableSql} WHERE ...
         /// </summary>
         public string TableSql()
         {
-            return $"{QuoteIdentifier(TableName)} AS {QuoteIdentifier(TableAlias)}";
+            string tableSql = $"{QuoteIdentifier(TableName)} AS {QuoteIdentifier(TableAlias)}";
+            string joinSql = string.Join(
+                    "",
+                    Joins.Select(x =>
+                           $" INNER JOIN {QuoteIdentifier(x.TableName)}"
+                           + $" AS {QuoteIdentifier(x.TableAlias)}"
+                           + $" ON {PredicatesSql(x.Predicates)}"
+                        )
+                    );
+
+            return tableSql + joinSql;
+        }
+
+        /// <summary>
+        /// Convert a list of predicates to a valid predicate string. This
+        /// string can be used in WHERE or ON clauses of the query.
+        /// </summary>
+        static string PredicatesSql(List<string> predicates)
+        {
+            if (predicates.Count() == 0)
+            {
+                // By always returning a valid predicate we don't have to
+                // handle the edge case of not having a predicate in other
+                // parts of the code. For example, this way we can add a WHERE
+                // clause to the query unconditionally. Any half-decent SQL
+                // engine will ignore this predicate during execution, because
+                // of basic constant optimizations.
+                return "1 = 1";
+            }
+
+            return string.Join(" AND ", predicates);
         }
 
         /// <summary>
@@ -419,12 +528,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public string PredicatesSql()
         {
-            if (Predicates.Count() == 0)
-            {
-                return "1 = 1";
-            }
-
-            return string.Join(" AND ", Predicates);
+            return PredicatesSql(Predicates);
         }
         /// <summary>
         /// Create the SQL code to that should be included in the ORDER BY

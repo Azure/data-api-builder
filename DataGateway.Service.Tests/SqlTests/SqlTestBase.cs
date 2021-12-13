@@ -27,12 +27,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static IMetadataStoreProvider _metadataStoreProvider;
 
         /// <summary>
-        /// Sets up test fixture for class, only to be run once per test run, as defined by
-        /// MSTest decorator.
+        /// Sets up test fixture for class, only to be run once per test run.
+        /// This is a helper that is called from the non abstract versions of
+        /// this class.
         /// </summary>
         /// <param name="context"></param>
-        [ClassInitialize]
-        protected static void InitializeTestFixture(TestContext context, string tableName, string testCategory)
+        protected static async Task InitializeTestFixture(TestContext context, string tableName, string testCategory)
         {
             IOptions<DataGatewayConfig> config = SqlTestHelper.LoadConfig($"{testCategory}IntegrationTest");
 
@@ -51,7 +51,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _metadataStoreProvider = new FileMetadataStoreProvider("sql-config.json");
             _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
 
-            using DbDataReader _ = _queryExecutor.ExecuteQueryAsync(File.ReadAllText("books.sql"), parameters: null).Result;
+            using DbDataReader _ = await _queryExecutor.ExecuteQueryAsync(File.ReadAllText("books.sql"), parameters: null);
         }
 
         /// <summary>

@@ -172,7 +172,7 @@ namespace Azure.DataGateway.Service.Resolvers
             context.Predicates.ForEach(predicate =>
             {
                 string parameterName = $"param{Counter.Next()}";
-                Parameters.Add(parameterName, predicate.Value);
+                Parameters.Add(parameterName, ResolveParamTypeFromField(predicate.Value, predicate.Field));
                 Predicates.Add($"{QualifiedColumn(predicate.Field)} = @{parameterName}");
             });
         }
@@ -418,6 +418,27 @@ namespace Azure.DataGateway.Service.Resolvers
                     string column = _queryBuilder.WrapSubqueryColumn($"{QuoteIdentifier(subqueryAlias)}.{_queryBuilder.DataIdent}", subquery);
                     Columns.Add(fieldName, column);
                 }
+            }
+        }
+
+        ///<summary>
+        /// Resolves a string parameter to the correct type, by using the type of the field
+        /// it is supposed to be compared with
+        ///</summary>
+        object ResolveParamTypeFromField(string param, string fieldName)
+        {
+            string type = GetTableDefinition().Columns.GetValueOrDefault(fieldName).Type;
+            switch (type)
+            {
+                case "text":
+                case "varchar":
+                    return param;
+                case "bigint":
+                case "int":
+                case "smallint":
+                    return Int64.Parse(param);
+                default:
+                    throw new Exception("Type of field could not be determined");
             }
         }
 

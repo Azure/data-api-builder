@@ -20,7 +20,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             await InitializeTestFixture(context, _integrationTableName, TestCategory.POSTGRESQL);
 
-            _restService = new RestService(_queryEngine, metadataStoreProvider: null);
+            _restService = new RestService(_queryEngine, _metadataStoreProvider);
             _restController = new RestController(_restService);
         }
 
@@ -31,7 +31,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Tests the REST Api for FindById operation without a query string.
         /// </summary>
-        [TestMethod, Ignore]
+        [TestMethod]
         public async Task FindByIdTest()
         {
             string primaryKeyRoute = "id/2";
@@ -61,7 +61,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Tests the REST Api for FindById operation with a query string
         /// including the field names.
         /// </summary>
-        [TestMethod, Ignore]
+        [TestMethod]
         public async Task FindIdTestWithQueryStringFields()
         {
             string primaryKeyRoute = "id/1";

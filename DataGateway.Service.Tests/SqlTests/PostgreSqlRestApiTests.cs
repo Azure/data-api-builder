@@ -20,7 +20,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             InitializeTestFixture(context, _integrationTableName, TestCategory.POSTGRESQL);
 
-            _restService = new RestService(_queryEngine, metadataStoreProvider: null);
+            _restService = new RestService(_queryEngine, _metadataStoreProvider);
             _restController = new RestController(_restService);
         }
 

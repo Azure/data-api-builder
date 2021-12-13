@@ -1,6 +1,13 @@
 {
   "GraphQLSchema": "",
   "GraphQLSchemaFile": "books.gql",
+  "MutationResolvers": [
+    {
+      "id": "insertBook",
+      "Table": "books",
+      "operationType": "INSERT"
+    }
+  ]
   "QueryResolvers": [
     {
       "Id": "getBooks"
@@ -115,7 +122,7 @@
           "id": {
             "Type": "bigint"
           },
-          "title": {
+          "content": {
             "Type": "text"
           },
           "publisher_id": {

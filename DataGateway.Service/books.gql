@@ -4,6 +4,38 @@ type Query {
     getReview(id: Int!, book_id: Int!): Review
 }
 
+
+INSERT ... VALUES (...) RETURNING id, name
+
+type BookMutationResult {
+    id: Int
+    title: String
+    publisher_id: Int
+    publisher: Publisher!
+}
+
+type Mutation {
+    insertBook(id: Int, name: String!): BookMutationResult
+    insertReview(book_id: Int!, id: Int, name: String!): Review
+    insertAuthor(id: Int, name: String!): AuthorMutationResult
+    insertBookAuthorLink(book_id: Int, author_id: Int): BookAuthorLinkMutationResult
+    addAuthorToBook(book_id: Int, author_id: Int): Null
+}
+
+mutation {
+    insertReview(book_id: 123, content: "hello") {
+        id
+        content
+    }
+
+    insertReview(book_id: 123, content: "hello") {
+        id
+        content
+        book {
+            title
+        }
+    }
+}
 type Publisher {
     id: Int
     name: String

@@ -22,7 +22,7 @@ namespace Azure.DataGateway.Services
         /// Adds the an equality comparison between the keyname and the given
         /// value to the list of predicates.
         /// </summary>
-        /// <param name="queryByPrimaryKey">The primary key route. e.g. customerName/Xyz/saleOrderId/123.</param>
+        /// <param name="queryByPrimaryKey">The primary key route. e.g. tablename/{saleOrderId/123/customerName/Xyz/}.</param>
         /// <param name="queryStructure">The FindRequestContext holding the major components of the query.</param>
         public static void ParsePrimaryKey(string primaryKeyRoute, FindRequestContext context)
         {
@@ -43,7 +43,6 @@ namespace Azure.DataGateway.Services
                             );
                     context.Predicates.Add(predicate);
                 }
-
             }
         }
 

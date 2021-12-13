@@ -3,7 +3,14 @@ type Query {
     characterById (id : ID!): Character
     planetById (id: ID! = 1): Planet
     planetList: [Planet]
+    planets(first: Int, after: String): PlanetConnection
     }
+
+type PlanetConnection {
+        nodes: [Planet]
+        endCursor: String
+        hasNextPage: Boolean
+}
 
 type Character {
         id : ID,

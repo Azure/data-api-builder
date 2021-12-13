@@ -31,7 +31,7 @@ namespace Azure.DataGateway.Services
         /// Executes the given IMiddlewareContext of the GraphQL query and
         /// expecting a single Json back.
         /// </summary>
-        public async Task<JsonDocument> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
+        public async Task<JsonDocument> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters, bool isPaginatedQuery)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
@@ -41,6 +41,10 @@ namespace Azure.DataGateway.Services
             string graphQLQueryName = context.Selection.Field.Name.Value;
             GraphQLQueryResolver resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
             Container container = this._clientProvider.Client.GetDatabase(resolver.DatabaseName).GetContainer(resolver.ContainerName);
+
+            QueryRequestOptions queryRequestOptions = new();
+            string requestContinuation = null;
+
             QueryDefinition querySpec = new(resolver.ParametrizedQuery);
 
             if (parameters != null)
@@ -51,7 +55,42 @@ namespace Azure.DataGateway.Services
                 }
             }
 
-            FeedResponse<JObject> firstPage = await container.GetItemQueryIterator<JObject>(querySpec).ReadNextAsync();
+            if (parameters.TryGetValue("first", out object maxSize))
+            {
+                queryRequestOptions.MaxItemCount = Convert.ToInt32(maxSize);
+            }
+
+            if (parameters.TryGetValue("after", out object after))
+            {
+                requestContinuation = Base64Decode(after as string);
+            }
+
+            FeedResponse<JObject> firstPage = await container.GetItemQueryIterator<JObject>(querySpec, requestContinuation, queryRequestOptions).ReadNextAsync();
+
+            if (isPaginatedQuery)
+            {
+                JArray jarray = new();
+                IEnumerator<JObject> enumerator = firstPage.GetEnumerator();
+                while (enumerator.MoveNext())
+                {
+                    JObject item = enumerator.Current;
+                    jarray.Add(item);
+                }
+
+                string responseContinuation = firstPage.ContinuationToken;
+                if (string.IsNullOrEmpty(responseContinuation))
+                {
+                    responseContinuation = null;
+                }
+
+                JObject res = new(
+                   new JProperty("endCursor", Base64Encode(responseContinuation)),
+                   new JProperty("hasNextPage", responseContinuation != null),
+                   new JProperty("nodes", jarray));
+
+                // This extra deserialize/serialization will be removed after moving to Newtonsoft from System.Text.Json
+                return JsonDocument.Parse(res.ToString());
+            }
 
             JObject firstItem = null;
 
@@ -111,5 +150,28 @@ namespace Azure.DataGateway.Services
         {
             throw new NotImplementedException();
         }
+
+        private static string Base64Encode(string plainText)
+        {
+            if (plainText == default)
+            {
+                return null;
+            }
+
+            byte[] plainTextBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
+            return System.Convert.ToBase64String(plainTextBytes);
+        }
+
+        private static string Base64Decode(string base64EncodedData)
+        {
+            if (base64EncodedData == default)
+            {
+                return null;
+            }
+
+            byte[] base64EncodedBytes = System.Convert.FromBase64String(base64EncodedData);
+            return System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
+        }
+
     }
 }

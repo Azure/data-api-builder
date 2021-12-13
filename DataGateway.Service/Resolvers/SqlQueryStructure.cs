@@ -325,8 +325,11 @@ namespace Azure.DataGateway.Service.Resolvers
             switch (type)
             {
                 case "text":
+                case "varchar":
                     return param;
                 case "bigint":
+                case "int":
+                case "smallint":
                     return Int64.Parse(param);
                 default:
                     throw new Exception("Type of field could not be determined");

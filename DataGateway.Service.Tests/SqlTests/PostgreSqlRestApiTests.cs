@@ -16,9 +16,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         private static readonly string _integrationTableName = "books";
 
         [ClassInitialize]
-        public static void InitializeTestFixture(TestContext context)
+        public static async Task InitializeTestFixture(TestContext context)
         {
-            InitializeTestFixture(context, _integrationTableName, TestCategory.POSTGRESQL);
+            await InitializeTestFixture(context, _integrationTableName, TestCategory.POSTGRESQL);
 
             _restService = new RestService(_queryEngine, metadataStoreProvider: null);
             _restController = new RestController(_restService);

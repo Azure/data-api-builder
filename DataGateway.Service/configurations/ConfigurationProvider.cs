@@ -71,30 +71,34 @@ namespace Azure.DataGateway.Service.configurations
             bool serverProvided = !string.IsNullOrEmpty(options.DatabaseConnection.Server);
             bool dbProvided = !string.IsNullOrEmpty(options.DatabaseConnection.Database);
 
-            if (!connStringProvided && !serverProvided && !dbProvided)
+            // Cosmosdb gets configured when its called from phoenix instead of through appsettings for now.
+            if (options.DatabaseType != DatabaseType.Cosmos)
             {
-                throw new NotSupportedException("Either Server and Database or ConnectionString need to be provided");
-            }
-            else if (connStringProvided && (serverProvided || dbProvided))
-            {
-                throw new NotSupportedException("Either Server and Database or ConnectionString need to be provided, not both");
-            }
-
-            if (string.IsNullOrWhiteSpace(options.DatabaseConnection.ConnectionString))
-            {
-                if ((!serverProvided && dbProvided) || (serverProvided && !dbProvided))
+                if (!connStringProvided && !serverProvided && !dbProvided)
                 {
-                    throw new NotSupportedException("Both Server and Database need to be provided");
+                    throw new NotSupportedException("Either Server and Database or ConnectionString need to be provided");
+                }
+                else if (connStringProvided && (serverProvided || dbProvided))
+                {
+                    throw new NotSupportedException("Either Server and Database or ConnectionString need to be provided, not both");
                 }
 
-                var builder = new SqlConnectionStringBuilder
+                if (string.IsNullOrWhiteSpace(options.DatabaseConnection.ConnectionString))
                 {
-                    InitialCatalog = options.DatabaseConnection.Database,
-                    DataSource = options.DatabaseConnection.Server,
-                };
+                    if ((!serverProvided && dbProvided) || (serverProvided && !dbProvided))
+                    {
+                        throw new NotSupportedException("Both Server and Database need to be provided");
+                    }
 
-                builder.IntegratedSecurity = true;
-                options.DatabaseConnection.ConnectionString = builder.ToString();
+                    var builder = new SqlConnectionStringBuilder
+                    {
+                        InitialCatalog = options.DatabaseConnection.Database,
+                        DataSource = options.DatabaseConnection.Server,
+                    };
+
+                    builder.IntegratedSecurity = true;
+                    options.DatabaseConnection.ConnectionString = builder.ToString();
+                }
             }
         }
     }
@@ -107,9 +111,7 @@ namespace Azure.DataGateway.Service.configurations
     {
         public ValidateOptionsResult Validate(string name, DataGatewayConfig options)
         {
-            return string.IsNullOrWhiteSpace(options.DatabaseConnection.ConnectionString)
-                ? ValidateOptionsResult.Fail("Invalid connection string.")
-                : ValidateOptionsResult.Success;
+            return ValidateOptionsResult.Success;
         }
     }
 }

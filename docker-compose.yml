@@ -1,0 +1,12 @@
+version: '3'
+services:
+  datagateway:
+    image: "multiverse-datagateway:latest"
+    ports:
+      - "7071:7071"
+    environment:
+      - DataGatewayService_ControlPlaneUrl=https://9eac-2001-4898-80e8-3-58a3-c457-231f-cc4.ngrok.io/
+      - DataGatewayService_WorkFolderLocation=/Work
+      - DataGatewayService_GatewayAuthTokenFileName=authfile.txt
+    restart: "no"
+    network_mode: "host"

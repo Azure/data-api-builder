@@ -55,11 +55,24 @@ namespace Azure.DataGateway.Service
                 hubUrl = $"{containerGatewayNodeUrl}api/containergateway/containerconnection";
             }
 
+            Console.WriteLine("Build hub connection {0}", hubUrl);
+
             connection = new HubConnectionBuilder()
                     .WithUrl(hubUrl, options =>
                     {
                         options.AccessTokenProvider = () => Task.FromResult(containerBootstrapToken);
                         options.Headers.Add("Container-Type", "Hawaii");
+                        options.HttpMessageHandlerFactory = (message) =>
+                        {
+                            if (message is HttpClientHandler clientHandler)
+                            {
+                                // Bypass certificate validation
+                                // TODO take this out once it's no longer needed
+                                clientHandler.ServerCertificateCustomValidationCallback += (sender, cert, chain, sslPolicyErrors) => true;
+                            }
+
+                            return message;
+                        };
                     })
                     .Build();
 
@@ -90,6 +103,7 @@ namespace Azure.DataGateway.Service
 
         public async Task RunAsync(CancellationToken stoppingToken, IConfiguration configuration)
         {
+            Console.WriteLine("ConnectToContainerGateway::RunAsync");
             if (stoppingToken.IsCancellationRequested)
             {
                 return;
@@ -113,20 +127,31 @@ namespace Azure.DataGateway.Service
                 //this.logger.LogInformation("Connecting web socket ...");
 
                 string authToken = ContainerGatewayUtils.GetAuthTokenFromFileAsync(configuration);
+                if(string.IsNullOrEmpty(authToken))
+                {
+                    Console.WriteLine("Auth token empty from file, getting from env");
+                    // TODO: We should probably do the same as notebook service and remove this from the env variables so the user can't see it?
+                    authToken = configuration.GetValue<string>("CONTAINER_BOOTSTRAP_JWT_TOKEN");
+                }
 
+                //string authToken = "";
                 if (!string.IsNullOrEmpty(authToken))
                 {
                     var authHeader = new AuthenticationHeaderValue("Bearer", authToken);
                     _httpClient.DefaultRequestHeaders.Authorization = authHeader;
                 }
 
+                Console.WriteLine(authToken);
                 string hubAssignmentUrl = $"{configuration["ControlPlaneUrl"]}api/controlplane/containerpooling/allocategateway";
-
+                Console.WriteLine(hubAssignmentUrl);
                 string allocateGatewayToContainerResponseString = await _httpClient.GetStringAsync(hubAssignmentUrl);
+                Console.WriteLine(allocateGatewayToContainerResponseString);
                 if (allocateGatewayToContainerResponseString != null)
                 {
                     AllocateGatewayToContainerResponse allocateGatewayToContainerResponse = JsonConvert.DeserializeObject<AllocateGatewayToContainerResponse>(allocateGatewayToContainerResponseString);
+                    Console.WriteLine("Rewriting auth token file.");
                     ContainerGatewayUtils.RewriteAuthTokenFile(allocateGatewayToContainerResponse.GatewayAuthJwtToken, configuration);
+                    Console.WriteLine("building hub connection with {0}.", allocateGatewayToContainerResponse.GatewayAddress);
                     this.BuildHubConnection(allocateGatewayToContainerResponse.GatewayAddress, allocateGatewayToContainerResponse.GatewayAuthJwtToken, configuration);
                 }
                 else
@@ -138,8 +163,9 @@ namespace Azure.DataGateway.Service
 
                 //WebSocketResponseSender.Current.SetHubConnection(connection);
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Console.Error.WriteLine(e.ToString());
                 _webSocketConnectionStatus = ConnectionStatus.Disconnected;
                 //this.logger.LogError($"Websocket registration failed - {e}");
             }

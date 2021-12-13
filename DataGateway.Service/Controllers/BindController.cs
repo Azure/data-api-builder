@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 
 namespace Azure.DataGateway.Service.Controllers
 {
-
     public sealed class BindRequest
     {
         [JsonProperty("cosmosEndpoint")]
@@ -40,23 +39,20 @@ namespace Azure.DataGateway.Service.Controllers
     [ApiController]
     public sealed class BindController : ControllerBase
     {
-        //private readonly CosmosDBCredentialsProvider cosmosDBCredentialsProvider;
-
-        public BindController(/*CosmosDBCredentialsProvider cosmosDBCredentialsProvider*/)
+        public BindController()
         {
-            //this.cosmosDBCredentialsProvider = cosmosDBCredentialsProvider;
         }
 
         [HttpPost]
         public async Task<BindResponse> BindAsync([FromBody] BindRequest bindRequest, [FromHeader(Name = "Authorization")] string aadToken)
         {
-            //CosmosDbConfiguration cosmosDbConfiguration = CosmosDbConfiguration.Instance;
-            //if (cosmosDbConfiguration.CosmosEndpoint != null)
-            //{
-            //    throw new Exception("Container is already bound.");
-            //}
+            CosmosDbConfiguration cosmosDbConfiguration = CosmosDbConfiguration.Instance;
+            if (cosmosDbConfiguration.CosmosEndpoint != null)
+            {
+                throw new Exception("Container is already bound.");
+            }
 
-            //await cosmosDbConfiguration.InitializeAsync(cosmosDBCredentialsProvider, bindRequest, aadToken);
+            await cosmosDbConfiguration.InitializeAsync(bindRequest, aadToken);
             //ContainerMetadata.Instance.AllocatedTime = DateTime.UtcNow;
             //ContainerMetadata.Instance.SessionToken = bindRequest.SessionToken;
             //ContainerMetadata.Instance.LastHeartbeatTime = DateTime.UtcNow;

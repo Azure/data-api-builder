@@ -58,8 +58,10 @@ namespace Azure.DataGateway.Service.configurations
                     File.WriteAllText(authTokenFilePath, gatewayAuthToken);
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Console.WriteLine("Error while rewriting auth token file.");
+                Console.WriteLine(e.ToString());
             }
         }
     }

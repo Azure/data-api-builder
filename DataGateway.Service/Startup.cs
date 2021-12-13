@@ -40,6 +40,7 @@ namespace Azure.DataGateway.Service
         /// <param name="config">The applications configuration.</param>
         public static void DoConfigureServices(IServiceCollection services, IConfiguration config)
         {
+            services.AddSingleton(new CosmosDbConfiguration());
             services.Configure<DataGatewayConfig>(config.GetSection(nameof(DataGatewayConfig)));
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<DataGatewayConfig>, DataGatewayConfigPostConfiguration>());
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<DataGatewayConfig>, DataGatewayConfigValidation>());

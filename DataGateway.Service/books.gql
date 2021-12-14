@@ -16,6 +16,14 @@ type Book {
     publisher_id: Int
     publisher: Publisher!
     reviews(first: Int = 2): [Review!]!
+    authors(first: Int = 2): [Author!]!
+}
+
+type Author {
+    id: Int
+    name: String
+    birthdate: String
+    books(first: Int = 2): [Book!]!
 }
 
 type Review {

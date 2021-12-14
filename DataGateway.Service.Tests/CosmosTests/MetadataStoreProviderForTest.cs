@@ -10,6 +10,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         public Dictionary<string, MutationResolver> MutationResolvers { get; set; } = new();
         public Dictionary<string, GraphQLQueryResolver> QueryResolvers { get; set; } = new();
         public Dictionary<string, TableDefinition> Tables { get; set; } = new();
+
         public string GetGraphQLSchema()
         {
             return GraphqlSchema;

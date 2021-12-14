@@ -42,6 +42,12 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             Client = _clientProvider.Client;
         }
 
+        /// <summary>
+        /// Creates items on the specified container
+        /// </summary>
+        /// <param name="dbName">the database name</param>
+        /// <param name="containerName">the container name</param>
+        /// <param name="numItems">number of items to be created</param>
         internal static void CreateItems(string dbName, string containerName, int numItems)
         {
             for (int i = 0; i < numItems; i++)
@@ -53,7 +59,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             }
         }
 
-        internal static DefaultHttpContext GetHttpContextWithBody(string data)
+        private static DefaultHttpContext GetHttpContextWithBody(string data)
         {
             HttpRequestMessage request = new();
             MemoryStream stream = new(Encoding.UTF8.GetBytes(data));
@@ -99,6 +105,13 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             _metadataStoreProvider.StoreQueryResolver(graphQLQueryResolver);
         }
 
+        /// <summary>
+        /// Creates and registers a mutation resolver
+        /// </summary>
+        /// <param name="id">name of the mutation</param>
+        /// <param name="databaseName">the database name</param>
+        /// <param name="containerName">the container name</param>
+        /// <param name="operationType">the type of operation. Defaults to UPSERT</param>
         internal static void RegisterMutationResolver(string id,
            string databaseName,
            string containerName,
@@ -115,6 +128,12 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             _metadataStoreProvider.StoreMutationResolver(mutationResolver);
         }
 
+        /// <summary>
+        /// Executes the GraphQL request and returns the results
+        /// </summary>
+        /// <param name="queryName"> Name of the GraphQL query/mutation</param>
+        /// <param name="graphQLQuery"> The GraphQL query/mutation</param>
+        /// <returns></returns>
         internal static async Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string graphQLQuery)
         {
             string queryJson = JObject.FromObject(new

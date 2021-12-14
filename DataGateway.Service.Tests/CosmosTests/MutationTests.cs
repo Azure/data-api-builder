@@ -43,5 +43,14 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             // Validate results
             Assert.IsFalse(response.ToString().Contains("Error"));
         }
+
+        /// <summary>
+        /// Runs once after all tests in this class are executed
+        /// </summary>
+        [ClassCleanup]
+        public static void TestFixtureTearDown()
+        {
+            Client.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
+        }
     }
 }

@@ -4,7 +4,11 @@ type Query {
     planetById (id: ID! = 1): Planet
     planetList: [Planet]
     planets(first: Int, after: String): PlanetConnection
-    }
+}
+
+type Mutation {
+    addPlanet(id: String, name: String): Planet
+}
 
 type PlanetConnection {
         nodes: [Planet]

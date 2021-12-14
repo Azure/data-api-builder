@@ -1,3 +1,4 @@
+using Azure.DataGateway.Service.Tests.CosmosTests;
 using Azure.DataGateway.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
 
-namespace Azure.DataGateway.Service.Tests
+namespace Azure.DataGateway.Service.Tests.CosmosTests
 {
     public class MetadataStoreProviderForTest : IMetadataStoreProvider
     {
@@ -10,7 +10,6 @@ namespace Azure.DataGateway.Service.Tests
         public Dictionary<string, MutationResolver> MutationResolvers { get; set; } = new();
         public Dictionary<string, GraphQLQueryResolver> QueryResolvers { get; set; } = new();
         public Dictionary<string, TableDefinition> Tables { get; set; } = new();
-
         public string GetGraphQLSchema()
         {
             return GraphqlSchema;

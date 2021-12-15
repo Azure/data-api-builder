@@ -12,6 +12,28 @@
       "Id": "getReview"
     }
   ],
+  "MutationResolvers": [
+    {
+      "Id": "insertBook",
+      "Table": "books",
+      "OperationType": "INSERT"
+    },
+    {
+      "Id": "editBook",
+      "Table": "books",
+      "OperationType": "UPDATE",
+      "UpdateFieldToColumnMappings": {
+        "new_id": "id",
+        "new_title": "title",
+        "new_publisher_id": "publisher_id"
+      }
+    },
+    {
+      "Id": "addAuthorToBook",
+      "Table": "book_author_link",
+      "OperationType": "INSERT"
+    }
+  ],
   "GraphqlTypes": {
     "Publisher": {
       "Table": "publishers",
@@ -68,7 +90,7 @@
         "PrimaryKey": ["id"],
         "Columns": {
           "id": {
-            "Type": "bigint"
+            "Type": "serial"
           },
           "name": {
             "Type": "text"
@@ -79,7 +101,7 @@
         "PrimaryKey": ["id"],
         "Columns": {
           "id": {
-            "Type": "bigint"
+            "Type": "serial"
           },
           "title": {
             "Type": "text"
@@ -99,7 +121,7 @@
         "PrimaryKey": ["id"],
         "Columns": {
           "id": {
-            "Type": "bigint"
+            "Type": "serial"
           },
           "name": {
             "Type": "text"
@@ -113,7 +135,7 @@
         "PrimaryKey": ["book_id", "id"],
         "Columns": {
           "id": {
-            "Type": "bigint"
+            "Type": "serial"
           },
           "title": {
             "Type": "text"

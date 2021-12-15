@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using HotChocolate;
 using HotChocolate.Execution;
@@ -43,6 +44,16 @@ namespace Azure.DataGateway.Services
             IRequestExecutorBuilder builder = new ServiceCollection()
                 .AddGraphQL()
                 .AddAuthorization()
+                .AddErrorFilter(error =>
+            {
+                // Updates the "Unexpected Error" message to give the user more useful feedback on the issue
+                if (error.Exception is GraphQLUserLevelException)
+                {
+                    return error.WithMessage(error.Exception.Message);
+                }
+
+                return error;
+            })
                 .AddErrorFilter(error =>
             {
                 if (error.Exception != null)

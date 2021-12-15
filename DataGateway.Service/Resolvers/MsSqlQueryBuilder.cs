@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using Microsoft.Data.SqlClient;
@@ -55,6 +56,28 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return query;
+        }
+
+        public string Build(SqlInsertStructure structure)
+        {
+
+            return $"INSERT INTO {QuoteIdentifier(structure.TableName)} {structure.ColumnsSql()} " +
+                    $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, "Inserted")} " +
+                    $"VALUES {structure.ValuesSql()};";
+        }
+
+        public string Build(SqlUpdateStructure structure)
+        {
+            return $"UPDATE {QuoteIdentifier(structure.TableName)} " +
+                    $"SET {structure.SetOperationsSql()} " +
+                    $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, "Inserted")} " +
+                    $"WHERE {structure.PredicatesSql()};";
+        }
+
+        private static string MakeOutputColumns(List<string> columns, string outputQualifier)
+        {
+            List<string> outputColumns = columns.Select(column => $"{outputQualifier}.{column}").ToList();
+            return string.Join(", ", outputColumns);
         }
     }
 }

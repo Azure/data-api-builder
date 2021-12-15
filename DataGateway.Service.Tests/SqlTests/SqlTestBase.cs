@@ -51,7 +51,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _metadataStoreProvider = new FileMetadataStoreProvider("sql-config.json");
             _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
 
-            using DbDataReader _ = await _queryExecutor.ExecuteQueryAsync(File.ReadAllText("books.sql"), parameters: null);
+            using DbDataReader _ = await _queryExecutor.ExecuteQueryAsync(File.ReadAllText($"{testCategory}Books.sql"), parameters: null);
         }
 
         /// <summary>

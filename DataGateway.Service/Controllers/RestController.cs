@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -63,10 +62,17 @@ namespace Azure.DataGateway.Service.Controllers
                 //Utilizes C#8 using syntax which does not require brackets.
                 using JsonDocument result = await _restService.ExecuteFindAsync(entityName, primaryKeyRoute, queryString);
 
-                //Clones the root element to a new JsonElement that can be
-                //safely stored beyond the lifetime of the original JsonDocument.
-                JsonElement resultElement = result.RootElement.Clone();
-                return Ok(resultElement);
+                if(result != null)
+                {
+                    //Clones the root element to a new JsonElement that can be
+                    //safely stored beyond the lifetime of the original JsonDocument.
+                    JsonElement resultElement = result.RootElement.Clone();
+                    return Ok(resultElement);
+                }else
+                {
+                    return NotFound();
+                }
+
             }
             catch (PrimaryKeyValidationException ex)
             {

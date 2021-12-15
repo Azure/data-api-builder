@@ -1,7 +1,10 @@
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
 {
@@ -20,7 +23,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             await InitializeTestFixture(context, _integrationTableName, TestCategory.POSTGRESQL);
 
-            _restService = new RestService(_queryEngine, _metadataStoreProvider);
+            _restService = new RestService(_queryEngine, _metadataStoreProvider, httpContextAccessor: null, authorizationService: null);
             _restController = new RestController(_restService);
         }
 

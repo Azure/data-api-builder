@@ -80,6 +80,7 @@ namespace Azure.DataGateway.Service.Controllers
             }
             catch (BadHttpRequestException ex)
             {
+                Console.Error.WriteLine(ex.StackTrace);
                 return new UnauthorizedResult();
             }
             catch (Exception ex)

@@ -1,4 +1,3 @@
-using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Resolvers;
@@ -53,7 +52,7 @@ namespace Azure.DataGateway.Services
             //RequestContext is finalized for QueryBuilding and QueryExecution.
             //Perform Authorization check prior to moving forward in request pipeline.
             //RESTAuthorizationService
-            var authorizationResult = await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, resource: context, policyName: "AuthenticatedPolicy");
+            AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, resource: context, policyName: "AuthenticatedPolicy");
             if (authorizationResult.Succeeded)
             {
                 return await _queryEngine.ExecuteAsync(context);

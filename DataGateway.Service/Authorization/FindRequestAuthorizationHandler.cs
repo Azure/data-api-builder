@@ -1,3 +1,4 @@
+using System.Net.Http;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
@@ -6,6 +7,9 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace Azure.DataGateway.Service.Authorization
 {
+    /// <summary>
+    /// Enumeration of Supported Authorization Types
+    /// </summary>
     public enum AuthorizationType
     {
         Anonymous,
@@ -13,6 +17,11 @@ namespace Azure.DataGateway.Service.Authorization
         Roles,
         Attributes
     }
+
+    /// <summary>
+    /// Checks the provided AuthorizationContext and FindRequestContext to ensure user is allowed to
+    /// operate (GET, POST, etc.) on the entity (table).
+    /// </summary>
     public class FindRequestAuthorizationHandler : AuthorizationHandler<IsAuthenticatedRequirement, FindRequestContext>
     {
         private readonly IMetadataStoreProvider _configurationProvider;
@@ -25,54 +34,35 @@ namespace Azure.DataGateway.Service.Authorization
                                                   IsAuthenticatedRequirement requirement,
                                                   FindRequestContext resource)
         {
-            //Reference the TableDefinition from the configuration metadata.
+            //Request is validated before Authorization, so table will exist.
             TableDefinition tableDefinition = _configurationProvider.GetTableDefinition(resource.EntityName);
 
-            if(tableDefinition != null)
+            //Check current operation against tableDefinition supported operations.
+            if (tableDefinition.Operations.ContainsKey(HttpMethod.Get.ToString()))
             {
-                //Check current operation against tableDefinition supported operations.
-                string requestOperationType = "Get";
-                if (tableDefinition.Operations.ContainsKey(requestOperationType))
+                switch (tableDefinition.Operations[HttpMethod.Get.ToString()].AuthorizationType)
                 {
-                    switch (tableDefinition.Operations[requestOperationType].AuthorizationType)
-                    {
-                        case AuthorizationType.Anonymous:
+                    case AuthorizationType.Anonymous:
+                        context.Succeed(requirement);
+                        break;
+                    case AuthorizationType.Authenticated:
+                        if (context.User.Identity.IsAuthenticated)
+                        {
                             context.Succeed(requirement);
-                            break;
-                        case AuthorizationType.Authenticated:
-                            //Require General Authentication to succeed.
-                            if (context.User.Identity.IsAuthenticated)
-                            {
-                                context.Succeed(requirement);
-                            }
-                            else
-                            {
-                                context.Fail();
-                            }
+                        }
 
-                            break;
-                        default:
-                            break;
-                    }
-                }
-                else
-                {
-                    //TODO: currently fail authZ if table is not scoped as visible within config
-                    //This should actually trigger a 404 not found instead of 401/403 as unauthorized would leak
-                    //database table entity existance knowledge.
-                    context.Fail();
+                        break;
+                    default:
+                        break;
                 }
             }
-            else
-            {
-                context.Fail();
-            }
 
-            //Check table
+            //If we don't explicitly call Succeed(), the Authorization fails.
             return Task.CompletedTask;
         }
     }
 
-    //Marker Interface: https://stackoverflow.com/questions/1023068/what-is-the-purpose-of-a-marker-interface
+    //Marker Interface required by ASP.NET Authorization Handler.
+    //Explanation of Marker Interface: https://stackoverflow.com/questions/1023068/what-is-the-purpose-of-a-marker-interface
     public class IsAuthenticatedRequirement : IAuthorizationRequirement { }
 }

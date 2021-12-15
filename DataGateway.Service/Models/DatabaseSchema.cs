@@ -43,6 +43,9 @@ namespace Azure.DataGateway.Service.Models
 
     public class AuthorizationRule
     {
+        /// <summary>
+        /// The various type of AuthZ scenarios supported: Anonymous, Authenticated.
+        /// </summary>
         public AuthorizationType AuthorizationType { get; set; }
     }
 }

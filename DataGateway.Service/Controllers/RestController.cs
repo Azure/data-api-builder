@@ -28,16 +28,18 @@ namespace Azure.DataGateway.Service.Controllers
             _restService = restService;
         }
         /// <summary>
-        /// FindById action serving the HttpGet verb.
+        /// Find action serving the HttpGet verb.
         /// </summary>
         /// <param name="entityName">The name of the entity.</param>
         /// <param name="primaryKeyRoute">The string representing the primary key route
         /// which gets it content from the route attribute {*primaryKeyRoute}.
         /// asterisk(*) here is a wild-card/catch all i.e it matches the rest of the route after {entityName}.
         /// primary_key = [shard_value/]id_key_value
+        /// primaryKeyRoute will be empty for FindOne or FindMany
         /// Expected URL template is of the following form:
         /// CosmosDb: URL template: /<entityName>/[<shard_key>/<shard_value>]/[<id_key>/]<id_key_value>
         /// MsSql/PgSql: URL template: /<entityName>/[<primary_key_column_name>/<primary_key_value>
+        /// URL may also contain a queryString
         /// URL example: /SalesOrders/customerName/Xyz/saleOrderId/123 </param>
         [HttpGet]
         [Route("{*primaryKeyRoute}")]

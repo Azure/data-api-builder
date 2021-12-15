@@ -65,7 +65,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task FindIdTestWithQueryStringFields()
         {
             string primaryKeyRoute = "id/1";
-            string queryStringWithFields = "?$filter=id,title";
+            string queryStringWithFields = "?_f=id,title";
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS data
                 FROM (

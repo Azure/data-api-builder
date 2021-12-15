@@ -64,7 +64,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task FindByIdTestWithQueryStringFields()
         {
             string primaryKeyRoute = "id/1";
-            string queryStringWithFields = "?$filter=id,title";
+            string queryStringWithFields = "?_f=id,title";
             string msSqlQuery = $"SELECT [id], [title] FROM { _integrationTableName } " +
                 $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
 
@@ -86,7 +86,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task FindTestWithQueryStringOneField()
         {
             string primaryKeyRoute = string.Empty;
-            string queryStringWithFields = "?$filter=id";
+            string queryStringWithFields = "?_f=id";
             string msSqlQuery = $"SELECT [id] FROM { _integrationTableName } " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES";
 
@@ -108,7 +108,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task FindTestWithQueryStringMultipleFields()
         {
             string primaryKeyRoute = string.Empty;
-            string queryStringWithFields = "?$filter=id,title";
+            string queryStringWithFields = "?_f=id,title";
             string msSqlQuery = $"SELECT [id], [title] FROM { _integrationTableName } " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES";
 

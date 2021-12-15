@@ -37,7 +37,6 @@ namespace Azure.DataGateway.Services
             }
 
             RequestValidator.ValidateFindRequest(context, _metadataStoreProvider);
-            
             return await _queryEngine.ExecuteAsync(context);
         }
     }

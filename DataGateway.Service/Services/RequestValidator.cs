@@ -31,6 +31,7 @@ namespace Azure.DataGateway.Service.Services
 
             if (primaryKeysInRequest == 0)
             {
+                // FindMany request, further primary key validation not required
                 return;
             }
 

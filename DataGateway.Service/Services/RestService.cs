@@ -36,7 +36,11 @@ namespace Azure.DataGateway.Services
                 RequestParser.ParseQueryString(System.Web.HttpUtility.ParseQueryString(queryString), context);
             }
 
-            RequestValidator.ValidateFindRequest(context, _metadataStoreProvider);
+            // Find will have empty primary key route, we only validate for FindByID, where the primary key is not empty
+            if (!string.IsNullOrEmpty(primaryKeyRoute))
+            {
+                RequestValidator.ValidateFindRequest(context, _metadataStoreProvider);
+            }
 
             return await _queryEngine.ExecuteAsync(context);
         }

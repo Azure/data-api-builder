@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Azure.DataGateway.Service.Authorization;
 
 namespace Azure.DataGateway.Service.Models
 {
@@ -18,6 +19,7 @@ namespace Azure.DataGateway.Service.Models
         public List<string> PrimaryKey { get; set; } = new();
         public Dictionary<string, ColumnDefinition> Columns { get; set; } = new();
         public Dictionary<string, ForeignKeyDefinition> ForeignKeys { get; set; } = new();
+        public Dictionary<string, AuthorizationRule> Operations { get; set; } = new();
     }
 
     public class ColumnDefinition
@@ -37,5 +39,10 @@ namespace Azure.DataGateway.Service.Models
         /// the order of the columns of the primary key.
         /// </summary>
         public List<string> Columns { get; set; } = new();
+    }
+
+    public class AuthorizationRule
+    {
+        public AuthorizationType AuthorizationType { get; set; }
     }
 }

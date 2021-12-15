@@ -73,17 +73,25 @@
           "name": {
             "Type": "text"
           }
+        },
+        "Operations": {
+          "Post": {
+            "Authorization": "Authenticated"
+          },
+          "Get": {
+            "Authorization": "Anonymous"
+          }
         }
       },
       "books": {
-        "PrimaryKey": ["id"],
+        "PrimaryKey": [ "id" ],
         "Columns": {
           "id": {
             "Type": "bigint"
           },
           "title": {
             "Type": "text"
-          },
+            },
           "publisher_id": {
             "Type": "bigint"
           }
@@ -91,7 +99,12 @@
         "ForeignKeys": {
           "book_publisher_fk": {
             "ReferencedTable": "publishers",
-            "Columns": ["publisher_id"]
+            "Columns": [ "publisher_id" ]
+          }
+        },
+        "Operations": {
+          "Get": {
+            "AuthorizationType": "Authenticated"
           }
         }
       },

@@ -50,7 +50,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             ConfigureRestController(_restController, queryString);
 
             await SqlTestHelper.PerformApiTest(
-                _restController.FindById,
+                _restController.Find,
                 _integrationTableName,
                 primaryKeyRoute,
                 GetDatabaseResultAsync(postgresQuery)
@@ -82,7 +82,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             ConfigureRestController(_restController, queryStringWithFields);
 
             await SqlTestHelper.PerformApiTest(
-                _restController.FindById,
+                _restController.Find,
                 _integrationTableName,
                 primaryKeyRoute,
                 GetDatabaseResultAsync(postgresQuery)
@@ -113,7 +113,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             ConfigureRestController(_restController, queryStringWithFields);
 
             await SqlTestHelper.PerformApiTest(
-                _restController.FindById,
+                _restController.Find,
                 _integrationTableName,
                 primaryKeyRoute,
                 GetDatabaseResultAsync(postgresQuery),

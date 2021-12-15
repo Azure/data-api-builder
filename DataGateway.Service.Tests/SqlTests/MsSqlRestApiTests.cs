@@ -49,7 +49,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             ConfigureRestController(_restController, queryString);
 
             await SqlTestHelper.PerformApiTest(
-                _restController.FindById,
+                _restController.Find,
                 _integrationTableName,
                 primaryKeyRoute,
                 GetDatabaseResultAsync(msSqlQuery)
@@ -71,7 +71,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             ConfigureRestController(_restController, queryStringWithFields);
 
             await SqlTestHelper.PerformApiTest(
-                _restController.FindById,
+                _restController.Find,
                 _integrationTableName,
                 primaryKeyRoute,
                 GetDatabaseResultAsync(msSqlQuery)
@@ -156,14 +156,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task FindByIdTestWithInvalidFields()
         {
             string primaryKeyRoute = "id/1";
-            string queryStringWithFields = "?$filter=id,null";
+            string queryStringWithFields = "?_f=id,null";
             string msSqlQuery = $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
                 $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
 
             ConfigureRestController(_restController, queryStringWithFields);
 
             await SqlTestHelper.PerformApiTest(
-                _restController.FindById,
+                _restController.Find,
                 _integrationTableName,
                 primaryKeyRoute,
                 GetDatabaseResultAsync(msSqlQuery),
@@ -179,7 +179,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task FindTestWithInvalidFields()
         {
             string primaryKeyRoute = string.Empty;
-            string queryStringWithFields = "?$filter=id,null";
+            string queryStringWithFields = "?_f=id,null";
             string msSqlQuery = $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
                 $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
 

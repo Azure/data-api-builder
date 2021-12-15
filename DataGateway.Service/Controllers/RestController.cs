@@ -42,7 +42,7 @@ namespace Azure.DataGateway.Service.Controllers
         [HttpGet]
         [Route("{*primaryKeyRoute}")]
         [Produces("application/json")]
-        public async Task<IActionResult> FindById(
+        public async Task<IActionResult> Find(
             string entityName,
             string primaryKeyRoute)
         {
@@ -61,39 +61,6 @@ namespace Azure.DataGateway.Service.Controllers
             catch (PrimaryKeyValidationException ex)
             {
                 return BadRequest(ex.Message);
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine(ex.StackTrace);
-                return StatusCode(statusCode: 500);
-            }
-        }
-
-        /// <summary>
-        /// Find action serving the HttpGet verb.
-        /// </summary>
-        /// <param name="entityName">The name of the entity.</param>
-        /// <param name="primaryKeyRoute">The string representing the empty primary key route
-        /// Expected URL template is of the following form:
-        /// MsSql/PgSql: URL template: /<entityName><querystring>
-        /// URL example: /SalesOrders?$filter=price </param>
-        [HttpGet]
-        [Produces("application/json")]
-        public async Task<IActionResult> Find(
-            string entityName,
-            string primaryKeyRoute = "")
-        {
-            try
-            {
-                string queryString = HttpContext.Request.QueryString.ToString();
-
-                //Utilizes C#8 using syntax which does not require brackets.
-                using JsonDocument result = await _restService.ExecuteFindAsync(entityName, primaryKeyRoute, queryString);
-
-                //Clones the root element to a new JsonElement that can be
-                //safely stored beyond the lifetime of the original JsonDocument.
-                JsonElement resultElement = result.RootElement.Clone();
-                return Ok(resultElement);
             }
             catch (Exception ex)
             {

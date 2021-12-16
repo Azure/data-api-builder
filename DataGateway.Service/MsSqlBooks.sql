@@ -4,26 +4,26 @@ DROP TABLE IF EXISTS authors;
 DROP TABLE IF EXISTS books;
 DROP TABLE IF EXISTS publishers;
 CREATE TABLE publishers(
-    id bigint IDENTITY(5000, 1) PRIMARY KEY,
-    name text NOT NULL
+    id bigint IDENTITY(5001, 1) PRIMARY KEY,
+    name varchar(max) NOT NULL
 );
 
 CREATE TABLE books(
-    id bigint IDENTITY(5000, 1) PRIMARY KEY,
-    title text NOT NULL,
+    id bigint IDENTITY(5001, 1) PRIMARY KEY,
+    title varchar(max) NOT NULL,
     publisher_id bigint NOT NULL
 );
 
 CREATE TABLE authors(
-    id bigint IDENTITY(5000, 1) PRIMARY KEY,
-    name text NOT NULL,
-    birthdate text NOT NULL
+    id bigint IDENTITY(5001, 1) PRIMARY KEY,
+    name varchar(max) NOT NULL,
+    birthdate varchar(max) NOT NULL
 );
 
 CREATE TABLE reviews(
     book_id bigint,
-    id bigint IDENTITY(5000, 1),
-    content text,
+    id bigint IDENTITY(5001, 1),
+    content varchar(max),
     PRIMARY KEY(book_id, id)
 );
 

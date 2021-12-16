@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -54,7 +54,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (mutationParams.Count == 0)
             {
-                throw new GraphQLUserLevelException("No values found to insert");
+                throw new InsertMutationHasNoValuesException();
             }
 
             foreach (KeyValuePair<string, object> param in mutationParams)
@@ -174,7 +174,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (UpdateOperations.Count == 0)
             {
-                throw new GraphQLUserLevelException("No values found to change.");
+                throw new UpdateMutationHasNoUpdatesException();
             }
 
             // currently only allow modifying one entry at a time

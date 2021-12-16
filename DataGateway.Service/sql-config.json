@@ -120,6 +120,9 @@
           },
           "publisher_id": {
             "Type": "bigint"
+          },
+          "book_id": {
+            "Type": "bigint"
           }
         },
         "ForeignKeys": {

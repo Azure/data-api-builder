@@ -78,6 +78,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             );
         }
 
+        [TestMethod]
+        public async Task FindTestWithPrimaryKeyContainingForeignKey()
+        {
+            string primaryKeyRoute = "id/567/book_id/1";
+            string queryStringWithFields = "?_f=id,content";
+            string entityName = "reviews";
+            string msSqlQuery = $"SELECT [id], [content] FROM { entityName } " +
+                $"WHERE id = 567 AND book_id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
+
+            ConfigureRestController(_restController, queryStringWithFields);
+
+            await SqlTestHelper.PerformApiTest(
+                _restController.FindById,
+                entityName,
+                primaryKeyRoute,
+                GetDatabaseResultAsync(msSqlQuery)
+            );
+        }
+
         #endregion
 
         #region Negative Tests

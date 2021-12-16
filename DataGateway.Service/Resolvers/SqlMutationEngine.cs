@@ -132,7 +132,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 case "UPDATE":
                     if (resolver.UpdateFieldToColumnMappings == null)
                     {
-                        throw new Exception("Update mutation should have UpdateFieldToColumnMapptings");
+                        throw new Exception("Update mutation must have UpdateFieldToColumnMapptings");
                     }
 
                     break;

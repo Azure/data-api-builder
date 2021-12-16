@@ -21,7 +21,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Values to insert into the given columns
         /// </summary>
-        public List<object> Values { get; }
+        public List<string> Values { get; }
 
         ///<summary>
         /// Columns which will be returned from the inserted row
@@ -180,7 +180,7 @@ namespace Azure.DataGateway.Service.Resolvers
             // currently only allow modifying one entry at a time
             if (primaryKeysUsedToSelectRows < primaryKeys.Count)
             {
-                throw new Exception("Not all primary keys have been specified for table under update. The query will affect multiple tables");
+                throw new Exception("Not all primary keys have been specified for table under update. The query will affect multiple rows");
             }
 
             // return primary key so the updated row can be identified

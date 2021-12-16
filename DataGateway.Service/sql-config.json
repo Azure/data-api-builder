@@ -90,7 +90,7 @@
         "PrimaryKey": ["id"],
         "Columns": {
           "id": {
-            "Type": "serial"
+            "Type": "bigint"
           },
           "name": {
             "Type": "text"
@@ -101,7 +101,7 @@
         "PrimaryKey": ["id"],
         "Columns": {
           "id": {
-            "Type": "serial"
+            "Type": "bigint"
           },
           "title": {
             "Type": "text"
@@ -121,7 +121,7 @@
         "PrimaryKey": ["id"],
         "Columns": {
           "id": {
-            "Type": "serial"
+            "Type": "bigint"
           },
           "name": {
             "Type": "text"
@@ -135,7 +135,7 @@
         "PrimaryKey": ["book_id", "id"],
         "Columns": {
           "id": {
-            "Type": "serial"
+            "Type": "bigint"
           },
           "title": {
             "Type": "text"

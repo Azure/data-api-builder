@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Services;
@@ -30,8 +32,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await InitializeTestFixture(context, _integrationTableName, TestCategory.MSSQL);
 
             // Setup REST Components
-            //
-            _restService = new RestService(_queryEngine, _metadataStoreProvider, httpContextAccessor: null, authorizationService: null);
+            _restService = new RestService(_queryEngine, _metadataStoreProvider, _httpContextAccessor.Object, _authorizationService.Object);
             _restController = new RestController(_restService);
         }
 

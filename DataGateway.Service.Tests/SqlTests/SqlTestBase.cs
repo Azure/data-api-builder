@@ -1,5 +1,6 @@
 using System.Data.Common;
 using System.IO;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -7,10 +8,12 @@ using Azure.DataGateway.Service.configurations;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using Npgsql;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
@@ -25,6 +28,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static IQueryBuilder _queryBuilder;
         protected static IQueryEngine _queryEngine;
         protected static IMetadataStoreProvider _metadataStoreProvider;
+        protected static Mock<IAuthorizationService> _authorizationService;
+        protected static Mock<IHttpContextAccessor> _httpContextAccessor;
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run.
@@ -47,6 +52,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _queryBuilder = new MsSqlQueryBuilder();
                     break;
             }
+
+            //Setup AuthorizationService to always return Authorized.
+            _authorizationService = new Mock<IAuthorizationService>();
+            _authorizationService.Setup(x => x.AuthorizeAsync(
+                It.IsAny<ClaimsPrincipal>(),
+                It.IsAny<object>(),
+                It.IsAny<string>()
+                ).Result).Returns(AuthorizationResult.Success);
+
+            //Setup Mock HttpContextAccess to return user as required when calling AuthorizationService.AuthorizeAsync
+            _httpContextAccessor = new Mock<IHttpContextAccessor>();
+            _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
 
             _metadataStoreProvider = new FileMetadataStoreProvider("sql-config.json");
             _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);

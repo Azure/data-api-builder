@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
@@ -24,6 +25,17 @@ namespace Azure.DataGateway.Service.Services
             if (tableDefinition == null)
             {
                 throw new PrimaryKeyValidationException(message: "TableDefinition for Entity:" + context.EntityName + " does not exist.");
+            }
+
+            if (context.Fields.Count != 0)
+            {
+                foreach (string field in context.Fields)
+                {
+                    if (!tableDefinition.Columns.ContainsKey(field))
+                    {
+                        throw new ArgumentException(message: "Invalid Column name: " + field);
+                    }
+                }
             }
 
             int primaryKeysInSchema = tableDefinition.PrimaryKey.Count;

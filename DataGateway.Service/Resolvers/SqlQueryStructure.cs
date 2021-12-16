@@ -495,7 +495,9 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             if (Columns.Count == 0)
             {
-                return ALL_COLUMNS;
+                TableDefinition tableDefinition = GetTableDefinition();
+                return string.Join(", ", tableDefinition.Columns.Select(
+                        x => $"{x.Key}"));
             }
 
             return string.Join(", ", Columns.Select(

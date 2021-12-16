@@ -109,7 +109,7 @@
         }
       },
       "authors": {
-        "PrimaryKey": ["id"],
+        "PrimaryKey": [ "id" ],
         "Columns": {
           "id": {
             "Type": "bigint"
@@ -120,10 +120,15 @@
           "birthdate": {
             "Type": "text"
           }
+        },
+        "Operations": {
+          "Get": {
+            "AuthorizationType": "Anonymous"
+          }
         }
       },
       "reviews": {
-        "PrimaryKey": ["book_id", "id"],
+        "PrimaryKey": [ "book_id", "id" ],
         "Columns": {
           "id": {
             "Type": "bigint"
@@ -141,7 +146,12 @@
         "ForeignKeys": {
           "review_book_fk": {
             "ReferencedTable": "books",
-            "Columns": ["book_id"]
+            "Columns": [ "book_id" ]
+          }
+        },
+        "Operations": {
+          "Get": {
+            "AuthorizationType": "Anonymous"
           }
         }
       },

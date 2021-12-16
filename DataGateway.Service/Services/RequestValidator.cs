@@ -31,7 +31,8 @@ namespace Azure.DataGateway.Service.Services
 
             if (primaryKeysInRequest == 0)
             {
-                throw new PrimaryKeyValidationException(message: "Primary Key must be provided in request");
+                // FindMany request, further primary key validation not required
+                return;
             }
 
             if (primaryKeysInRequest != primaryKeysInSchema)

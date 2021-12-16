@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
 
-namespace Azure.DataGateway.Service.Tests
+namespace Azure.DataGateway.Service.Tests.CosmosTests
 {
     public class MetadataStoreProviderForTest : IMetadataStoreProvider
     {

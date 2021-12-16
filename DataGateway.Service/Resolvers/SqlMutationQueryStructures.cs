@@ -1,21 +1,24 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
-    ///<summary>
+    /// <summary>
     /// Wraps all the required data and logic to write a SQL INSERT query
-    ///</summary>
+    /// </summary>
     public class SqlInsertStructure
     {
+        /// <summary>
+        /// The name of the table the qeury will be applied on
+        /// </summary>
         public string TableName { get; }
 
-        ///<summary>
+        /// <summary>
         /// Columns in which values will be inserted
-        ///</summary>
+        /// </summary>
         public List<string> Columns { get; }
 
         /// <summary>
@@ -23,19 +26,19 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<string> Values { get; }
 
-        ///<summary>
+        /// <summary>
         /// Columns which will be returned from the inserted row
-        ///</summary>
+        /// </summary>
         public List<string> ReturnColumns { get; }
 
-        ///<summary>
+        /// <summary>
         /// Parameters required to execute the query
-        ///</summary>
+        /// </summary>
         public Dictionary<string, object> Parameters { get; }
 
-        ///<summary>
+        /// <summary>
         /// Used to assign unique parameter names
-        ///</summary>
+        /// </summary>
         public IncrementingInteger Counter { get; }
 
         private readonly IQueryBuilder _queryBuilder;
@@ -51,11 +54,6 @@ namespace Azure.DataGateway.Service.Resolvers
 
             _queryBuilder = queryBuilder;
             _metadataStoreProvider = metadataStoreProvider;
-
-            if (mutationParams.Count == 0)
-            {
-                throw new InsertMutationHasNoValuesException();
-            }
 
             foreach (KeyValuePair<string, object> param in mutationParams)
             {
@@ -75,26 +73,48 @@ namespace Azure.DataGateway.Service.Resolvers
             ReturnColumns = _metadataStoreProvider.GetTableDefinition(TableName).PrimaryKey.Select(primaryKey => QuoteIdentifier(primaryKey)).ToList();
         }
 
+        /// <summary>
+        /// QuoteIdentifier simply forwards to the QuoteIdentifier
+        /// implementation of the querybuilder that this query structure uses.
+        /// So it wrapse the string in double quotes for Postgres and square
+        /// brackets for MSSQL.
+        /// </summary>
         private string QuoteIdentifier(string ident)
         {
             return _queryBuilder.QuoteIdentifier(ident);
         }
 
+        /// <summary>
+        /// Used to identify the columns in which to insert values
+        /// INSERT INTO {TableName} {ColumnsSql} VALUES ...
+        /// </summary>
         public string ColumnsSql()
         {
             return "(" + string.Join(", ", Columns) + ")";
         }
 
+        /// <summary>
+        /// Creates the SLQ code for the inserted values
+        /// INSERT INTO ... VALUES {ValuesSql}
+        /// </summary>
         public string ValuesSql()
         {
             return "(" + string.Join(", ", Values) + ")";
         }
 
+        /// <summary>
+        /// Returns quote identified column names seperated by commas
+        /// Used by Postgres like
+        /// INSET INTO ... VALUES ... RETURNING {ReturnColumnsSql}
+        /// </summary>
         public string ReturnColumnsSql()
         {
             return string.Join(", ", ReturnColumns);
         }
 
+        /// <summary>
+        /// Converts the query structure to the actual query string.
+        /// </summary>
         public override string ToString()
         {
             return _queryBuilder.Build(this);
@@ -106,37 +126,40 @@ namespace Azure.DataGateway.Service.Resolvers
     ///</summary>
     public class SqlUpdateStructure
     {
+        /// <summary>
+        /// The name of the table the qeury will be applied on
+        /// </summary>
         public string TableName { get; }
 
-        ///<summary>
+        /// <summary>
         /// Predicates used to select the row to be updated
-        ///</summary>
+        /// </summary>
         public List<string> Predicates { get; }
 
-        ///<summary>
+        /// <summary>
         /// Updates to be applied to selected row
-        ///</summary>
+        /// </summary>
         public List<string> UpdateOperations { get; }
 
-        ///<summary>
+        /// <summary>
         /// Columns which will be returned from the updated row
-        ///</summary>
+        /// </summary>
         public List<string> ReturnColumns { get; }
 
-        ///<summary>
+        /// <summary>
         /// Parameters required to execute the query
-        ///</summary>
+        /// </summary>
         public Dictionary<string, object> Parameters { get; }
 
-        ///<summary>
+        /// <summary>
         /// Used to assign unique parameter names
-        ///</summary>
+        /// </summary>
         public IncrementingInteger Counter { get; }
 
         private readonly IQueryBuilder _queryBuilder;
         private readonly IMetadataStoreProvider _metadataStoreProvider;
 
-        public SqlUpdateStructure(string tableName, IDictionary<string, object> mutationParams, IDictionary<string, string> fieldsToColumns, IQueryBuilder queryBuilder, IMetadataStoreProvider metadataStoreProvider)
+        public SqlUpdateStructure(string tableName, IDictionary<string, object> mutationParams, IQueryBuilder queryBuilder, IMetadataStoreProvider metadataStoreProvider)
         {
             TableName = tableName;
             Predicates = new();
@@ -147,9 +170,9 @@ namespace Azure.DataGateway.Service.Resolvers
             _queryBuilder = queryBuilder;
             _metadataStoreProvider = metadataStoreProvider;
 
-            List<string> primaryKeys = _metadataStoreProvider.GetTableDefinition(TableName).PrimaryKey;
-            int primaryKeysUsedToSelectRows = 0;
-
+            TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(TableName);
+            List<string> primaryKeys = tableDefinition.PrimaryKey;
+            List<string> columns = tableDefinition.Columns.Keys.ToList();
             foreach (KeyValuePair<string, object> param in mutationParams)
             {
                 if (param.Value == null)
@@ -160,15 +183,12 @@ namespace Azure.DataGateway.Service.Resolvers
                 // primary keys used as predicates
                 if (primaryKeys.Contains(param.Key))
                 {
-                    primaryKeysUsedToSelectRows++;
                     Predicates.Add($"{QuoteIdentifier(param.Key)} = @{MakeParamWithValue(param.Value)}");
                 }
-                // mapped parameters used as input for the update operations
-                else if (fieldsToColumns.ContainsKey(param.Key))
+                // use columns to determine values to edit
+                else if (columns.Contains(param.Key))
                 {
-                    string tableColumnName;
-                    fieldsToColumns.TryGetValue(param.Key, out tableColumnName);
-                    UpdateOperations.Add($"{QuoteIdentifier(tableColumnName)} = @{MakeParamWithValue(param.Value)}");
+                    UpdateOperations.Add($"{QuoteIdentifier(param.Key)} = @{MakeParamWithValue(param.Value)}");
                 }
             }
 
@@ -177,19 +197,13 @@ namespace Azure.DataGateway.Service.Resolvers
                 throw new UpdateMutationHasNoUpdatesException();
             }
 
-            // currently only allow modifying one entry at a time
-            if (primaryKeysUsedToSelectRows < primaryKeys.Count)
-            {
-                throw new Exception("Not all primary keys have been specified for table under update. The query will affect multiple rows");
-            }
-
             // return primary key so the updated row can be identified
             ReturnColumns = primaryKeys.Select(primaryKey => QuoteIdentifier(primaryKey)).ToList();
         }
 
-        ///<summary>
-        /// Add parameter to Parameters and return the name associated it with it
-        ///</summary>
+        /// <summary>
+        ///  Add parameter to Parameters and return the name associated it with it
+        /// </summary>
         private string MakeParamWithValue(object value)
         {
             string paramName = $"param{Counter.Next()}";
@@ -197,11 +211,21 @@ namespace Azure.DataGateway.Service.Resolvers
             return paramName;
         }
 
+        /// <summary>
+        /// QuoteIdentifier simply forwards to the QuoteIdentifier
+        /// implementation of the querybuilder that this query structure uses.
+        /// So it wrapse the string in double quotes for Postgres and square
+        /// brackets for MSSQL.
+        /// </summary>
         private string QuoteIdentifier(string ident)
         {
             return _queryBuilder.QuoteIdentifier(ident);
         }
 
+        /// <summary>
+        /// Create the SQL code which will indetify which rows will be updated
+        /// UPDATE ... SET ... WHERE {PredicatesSql}
+        /// </summary>
         public string PredicatesSql()
         {
             if (Predicates.Count == 0)
@@ -212,16 +236,28 @@ namespace Azure.DataGateway.Service.Resolvers
             return string.Join(" AND ", Predicates);
         }
 
+        /// <summary>
+        /// Create the SQL code which will define the updates applied to the rows
+        /// UPDATE ... SET {SetOperationsSql} WHERE ...
+        /// </summary>
         public string SetOperationsSql()
         {
             return string.Join(", ", UpdateOperations);
         }
 
+        /// <summary>
+        /// Returns quote identified column names seperated by commas
+        /// Used by Postgres like
+        /// UPDATE ... SET ... WHERE ... RETURNING {ReturnColumnsSql}
+        /// </summary>
         public string ReturnColumnsSql()
         {
             return string.Join(", ", ReturnColumns);
         }
 
+        /// <summary>
+        /// Converts the query structure to the actual query string.
+        /// </summary>
         public override string ToString()
         {
             return _queryBuilder.Build(this);

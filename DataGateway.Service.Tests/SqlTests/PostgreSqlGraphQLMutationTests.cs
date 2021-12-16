@@ -76,7 +76,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLMutationName = "editBook";
             string graphQLMutation = @"
                 mutation {
-                    editBook(id: 1, new_title: ""Even Better Title"", new_publisher_id: 2345) {
+                    editBook(id: 1, title: ""Even Better Title"", publisher_id: 2345) {
                         title
                         publisher_id
                     }
@@ -218,7 +218,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLMutationName = "editBook";
             string graphQLMutation = @"
                 mutation {
-                    editBook(id: 1, new_publisher_id: -1) {
+                    editBook(id: 1, publisher_id: -1) {
                         id
                         title
                     }

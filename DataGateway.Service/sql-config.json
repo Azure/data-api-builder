@@ -21,12 +21,7 @@
     {
       "Id": "editBook",
       "Table": "books",
-      "OperationType": "UPDATE",
-      "UpdateFieldToColumnMappings": {
-        "new_id": "id",
-        "new_title": "title",
-        "new_publisher_id": "publisher_id"
-      }
+      "OperationType": "UPDATE"
     },
     {
       "Id": "addAuthorToBook",

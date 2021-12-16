@@ -42,13 +42,11 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             if (context.Selection.Type.IsListType())
             {
-                throw new GraphQLUserLevelException("Returning list types from mutations not supported");
+                throw new NotSupportedException("Returning list types from mutations not supported");
             }
 
             string graphqlMutationName = context.Selection.Field.Name.Value;
             MutationResolver mutationResolver = _metadataStoreProvider.GetMutationResolver(graphqlMutationName);
-
-            ValidateMutationResolver(mutationResolver);
 
             string queryString;
             Dictionary<string, object> queryParameters;
@@ -61,13 +59,12 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryParameters = insertQueryStruct.Parameters;
                     break;
                 case "UPDATE":
-                    SqlUpdateStructure updateQueryStruct = new(mutationResolver.Table, parameters, mutationResolver.UpdateFieldToColumnMappings, _queryBuilder, _metadataStoreProvider);
+                    SqlUpdateStructure updateQueryStruct = new(mutationResolver.Table, parameters, _queryBuilder, _metadataStoreProvider);
                     queryString = updateQueryStruct.ToString();
                     queryParameters = updateQueryStruct.Parameters;
                     break;
                 default:
-                    // this should never trigger, but it is required to make the compiler stop complaining about queryString and queryParameters not being assigned
-                    throw new Exception("MutationResolver validator did not catch mutation with invalid operation type");
+                    throw new Exception($"Unexpected value for MutationResolver.OperationType \"{mutationResolver.OperationType}\" found.");
             }
 
             Console.WriteLine(queryString);
@@ -108,38 +105,6 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return row;
-        }
-
-        ///<summary>
-        /// Make sure that the MutationResolver has everything needed to resolve the mutation
-        ///<summary>
-        private static void ValidateMutationResolver(MutationResolver resolver)
-        {
-            if (resolver.OperationType == null)
-            {
-                throw new Exception("Mutation resolver must have an OperationType");
-            }
-
-            if (resolver.Table == null)
-            {
-                throw new Exception("Mutation resolver must have a Table");
-            }
-
-            switch (resolver.OperationType)
-            {
-                case "INSERT":
-                    break;
-                case "UPDATE":
-                    if (resolver.UpdateFieldToColumnMappings == null)
-                    {
-                        throw new Exception("Update mutation must have UpdateFieldToColumnMapptings");
-                    }
-
-                    break;
-                default:
-                    throw new Exception("Invalid OperationType for mutation");
-
-            }
         }
     }
 }

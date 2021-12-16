@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace Azure.DataGateway.Service.Models
 {
     public class MutationResolver
@@ -36,18 +34,6 @@ namespace Azure.DataGateway.Service.Models
         public string ContainerName { get; set; }
         public string Fields { get; set; }
         public string Table { get; set; }
-
-        ///<summary>
-        /// Maps the parameter names of the update query to table names
-        ///</summary>
-        ///<remarks>
-        /// Because Update queries are configured to find the row to update by using the primary key,
-        /// in order to edit primary key columns (if this is desirable is up for debate)
-        /// a mapping is required.
-        /// e.g. <code> changeReviewBook(id: Int!, book_id: Int!, new_book_id: Int): Review </code>
-        /// Note that in the example above an alias is needed to give the new value of book_id
-        ///</remarks>
-        public Dictionary<string, string> UpdateFieldToColumnMappings { get; set; }
     }
 
     public enum Operation

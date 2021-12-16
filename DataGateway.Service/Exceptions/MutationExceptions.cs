@@ -11,13 +11,4 @@ namespace Azure.DataGateway.Service.Exceptions
         public UpdateMutationHasNoUpdatesException(string message) : base(MESSAGE) { }
         public UpdateMutationHasNoUpdatesException(string message, Exception inner) : base(MESSAGE, inner) { }
     }
-
-    [System.Serializable]
-    public class InsertMutationHasNoValuesException : GraphQLUserLevelException
-    {
-        public static readonly string MESSAGE = "Insert mutation doesn't contain values to insert";
-        public InsertMutationHasNoValuesException() : base(MESSAGE) { }
-        public InsertMutationHasNoValuesException(string message) : base(MESSAGE) { }
-        public InsertMutationHasNoValuesException(string message, Exception inner) : base(MESSAGE, inner) { }
-    }
 }

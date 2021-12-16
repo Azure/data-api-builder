@@ -66,6 +66,7 @@ namespace Azure.DataGateway.Service.Controllers
             }
             catch (Exception ex)
             {
+                Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine(ex.StackTrace);
                 return StatusCode(statusCode: 500);
             }

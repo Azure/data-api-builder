@@ -109,7 +109,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             ConfigureRestController(_restController, queryStringWithFields);
 
             await SqlTestHelper.PerformApiTest(
-                _restController.FindById,
+                _restController.Find,
                 entityName,
                 primaryKeyRoute,
                 GetDatabaseResultAsync(postgresQuery)

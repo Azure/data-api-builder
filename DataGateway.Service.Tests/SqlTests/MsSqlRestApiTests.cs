@@ -102,7 +102,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         /// <summary>
         /// Tests the REST Api for Find operation with a query string with multiple fields
-        /// including the field names.
+        /// including the field names. Only returns fields designated in the query string.
         /// </summary>
         [TestMethod]
         public async Task FindTestWithQueryStringMultipleFields()
@@ -139,6 +139,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SqlTestHelper.PerformApiTest(
                 _restController.Find,
                 _integrationTableName,
+                primaryKeyRoute,
+                GetDatabaseResultAsync(msSqlQuery)
+            );
+        }
+
+        [TestMethod]
+        public async Task FindTestWithPrimaryKeyContainingForeignKey()
+        {
+            string primaryKeyRoute = "id/567/book_id/1";
+            string queryStringWithFields = "?_f=id,content";
+            string entityName = "reviews";
+            string msSqlQuery = $"SELECT [id], [content] FROM { entityName } " +
+                $"WHERE id = 567 AND book_id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
+
+            ConfigureRestController(_restController, queryStringWithFields);
+
+            await SqlTestHelper.PerformApiTest(
+                _restController.Find,
+                entityName,
                 primaryKeyRoute,
                 GetDatabaseResultAsync(msSqlQuery)
             );

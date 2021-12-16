@@ -102,7 +102,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         /// <summary>
         /// Tests the REST Api for Find operation with a query string with multiple fields
-        /// including the field names.
+        /// including the field names. Only returns fields designated in the query string.
         /// </summary>
         [TestMethod]
         public async Task FindTestWithQueryStringMultipleFields()

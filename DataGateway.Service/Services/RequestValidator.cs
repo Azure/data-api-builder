@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
@@ -18,13 +17,13 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="context">Request context containing request primary key columns and values</param>
         /// <param name="configurationProvider">Configuration provider that enables referencing DB schema in config.</param>
-        /// <exception cref="PrimaryKeyValidationException"></exception>
+        /// <exception cref="DatagatewayException"></exception>
         public static void ValidateFindRequest(FindRequestContext context, IMetadataStoreProvider configurationProvider)
         {
             TableDefinition tableDefinition = configurationProvider.GetTableDefinition(context.EntityName);
             if (tableDefinition == null)
             {
-                throw new PrimaryKeyValidationException(message: "TableDefinition for Entity:" + context.EntityName + " does not exist.");
+                throw new DatagatewayException(message: "TableDefinition for Entity:" + context.EntityName + " does not exist.", statusCode: 400, subStatusCode: "Bad Request");
             }
 
             if (context.Fields.Count != 0)
@@ -33,7 +32,7 @@ namespace Azure.DataGateway.Service.Services
                 {
                     if (!tableDefinition.Columns.ContainsKey(field))
                     {
-                        throw new ArgumentException(message: "Invalid Column name: " + field);
+                        throw new DatagatewayException(message: "Invalid Column name: " + field, statusCode: 400, subStatusCode: "Bad Request");
                     }
                 }
             }
@@ -49,7 +48,7 @@ namespace Azure.DataGateway.Service.Services
 
             if (primaryKeysInRequest != primaryKeysInSchema)
             {
-                throw new PrimaryKeyValidationException(message: "Primary key column(s) provided do not match DB schema.");
+                throw new DatagatewayException(message: "Primary key column(s) provided do not match DB schema.", statusCode: 400, subStatusCode: "Bad Request");
             }
 
             //Each Predicate (Column) that is checked against the DB schema
@@ -60,13 +59,13 @@ namespace Azure.DataGateway.Service.Services
             {
                 if (validatedColumns.Contains(predicate.Field))
                 {
-                    throw new PrimaryKeyValidationException(message: "The request is invalid.");
+                    throw new DatagatewayException(message: "The request is invalid.", statusCode: 400, subStatusCode: "Bad Request");
 
                 }
 
                 if (!tableDefinition.PrimaryKey.Contains(predicate.Field))
                 {
-                    throw new PrimaryKeyValidationException(message: "The request is invalid.");
+                    throw new DatagatewayException(message: "The request is invalid.", statusCode: 400, subStatusCode: "Bad Request");
                 }
                 else
                 {

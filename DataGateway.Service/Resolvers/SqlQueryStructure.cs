@@ -129,12 +129,6 @@ namespace Azure.DataGateway.Service.Resolvers
 
         private readonly GraphqlType _typeInfo;
 
-        // TODO: Remove this once REST uses the schema defined in the config.
-        /// <summary>
-        /// Wild Card for column selection.
-        /// </summary>
-        private const string ALL_COLUMNS = "*";
-
         /// <summary>
         /// Generate the structure for a SQL query based on GraphQL query
         /// information.

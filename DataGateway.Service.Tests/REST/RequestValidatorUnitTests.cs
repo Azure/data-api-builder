@@ -194,7 +194,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         #region Helper Methods
         /// <summary>
         /// Runs the Validation method to show success/failure. Extracted to separate helper method
-        /// to avoid code duplication. Only attempt to catch PrimaryKeyValidationException since
+        /// to avoid code duplication. Only attempt to catch DatagatewayException since
         /// that exception determines whether we encounter an expected validation failure in case
         /// of negative tests, vs downstream service failure.
         /// </summary>
@@ -213,7 +213,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                     Assert.Fail();
                 }
             }
-            catch (PrimaryKeyValidationException ex)
+            catch (DatagatewayException ex)
             {
                 //If we are not expecting an exception, fail the test. Completing test method without
                 //failure will pass the test, so no Assert.Pass() is necessary (nor exists).

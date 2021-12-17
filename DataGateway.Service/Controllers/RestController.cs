@@ -60,7 +60,7 @@ namespace Azure.DataGateway.Service.Controllers
                 JsonElement resultElement = result.RootElement.Clone();
                 return Ok(resultElement);
             }
-            catch (PrimaryKeyValidationException ex)
+            catch (DatagatewayException ex)
             {
                 return BadRequest(ex.Message);
             }

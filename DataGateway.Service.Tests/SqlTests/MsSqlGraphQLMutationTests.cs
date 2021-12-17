@@ -32,10 +32,24 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
+        /// <summary>
+        /// Runs after every test to reset the database state
+        /// </summary>
+        [TestCleanup]
+        public async Task TestCleanup()
+        {
+            await ResetDbStateAsync();
+        }
+
         #endregion
 
-        #region  Tests
+        #region  Positive Tests
 
+        /// <summary>
+        /// <code>Do: </code> Inserts new book and return its id and title
+        /// <code>Check: </code> If book with the expected values of the new book is present in the database and
+        /// if the mutation query has returned the correct information
+        /// </summary>
         [TestMethod]
         public async Task InsertMutation()
         {
@@ -66,10 +80,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string expected = await GetDatabaseResultAsync(msSqlQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-
-            await ResetDbStateAsync();
         }
 
+        /// <summary>
+        /// <code>Do: </code>Update book in database and return its updated fields
+        /// <code>Check: </code>if the book with the id of the edited book and the new values exists in the database
+        /// and if the mutation query has returned the values correctly
+        /// </summary>
         [TestMethod]
         public async Task UpdateMutation()
         {
@@ -100,10 +117,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string expected = await GetDatabaseResultAsync(msSqlQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-
-            await ResetDbStateAsync();
         }
 
+        /// <summary>
+        /// <code>Do: </code>run a mutation which mutates a relationship instead of a graphql type
+        /// <code>Check: </code>that the insertion of the entry in the appropriate link table was successful
+        /// </summary>
         [TestMethod]
         public async Task InsertMutationForNonGraphQLTypeTable()
         {
@@ -129,10 +148,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             using JsonDocument result = JsonDocument.Parse(dbResponse);
             Assert.AreEqual(result.RootElement.GetProperty("count").GetInt64(), 1);
-
-            await ResetDbStateAsync();
         }
 
+        /// <summary>
+        /// <code>Do: </code>a new Book insertion and do a nested querying of the returned book
+        /// <code>Check: </code>if the result returned from the mutation is correct
+        /// </summary>
         [TestMethod]
         public async Task NestedQueryingInMutation()
         {
@@ -176,13 +197,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string expected = await GetDatabaseResultAsync(msSqlQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-
-            await ResetDbStateAsync();
         }
         #endregion
 
         #region Negative Tests
 
+        /// <summary>
+        /// <code>Do: </code>insert a new Book with an invalid foreign key
+        /// <code>Check: </code>that GraphQL returns an error and that the book has not actually been added
+        /// </summary>
         [TestMethod]
         public async Task InsertWithInvalidForeignKey()
         {
@@ -196,7 +219,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             ";
 
-            JsonDocument result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            using JsonDocument result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
 
             // TODO improve the error message returned by the graphql service to something more useful then smth generic
             Assert.IsTrue(result.RootElement.ToString().Contains("error"), "Error was expected");
@@ -213,10 +236,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string dbResponse = await GetDatabaseResultAsync(msSqlQuery);
             using JsonDocument dbResponseJson = JsonDocument.Parse(dbResponse);
             Assert.AreEqual(dbResponseJson.RootElement.GetProperty("count").GetInt64(), 0);
-
-            await ResetDbStateAsync();
         }
 
+        /// <summary>
+        /// <code>Do: </code>edit a book with an invalid foreign key
+        /// <code>Check: </code>that GraphQL returns an error and the book has not been editted
+        /// </summary>
         [TestMethod]
         public async Task UpdateWithInvalidForeignKey()
         {
@@ -230,7 +255,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             ";
 
-            JsonDocument result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            using JsonDocument result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
 
             // TODO improve the error message returned by the graphql service to something more useful then smth generic
             Assert.IsTrue(result.RootElement.ToString().Contains("error"), "Error was expected");
@@ -248,10 +273,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string dbResponse = await GetDatabaseResultAsync(msSqlQuery);
             using JsonDocument dbResponseJson = JsonDocument.Parse(dbResponse);
             Assert.AreEqual(dbResponseJson.RootElement.GetProperty("count").GetInt64(), 0);
-
-            await ResetDbStateAsync();
         }
 
+        /// <summary>
+        /// <code>Do: </code>use an update mutation without passing any of the optional new values to update
+        /// <code>Check: </code>check that GraphQL returns the appropriate message to the user
+        /// </summary>
         [TestMethod]
         public async Task UpdateWithNoNewValues()
         {
@@ -265,7 +292,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             ";
 
-            JsonDocument result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            using JsonDocument result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
             Assert.IsTrue(result.RootElement.ToString().Contains(UpdateMutationHasNoUpdatesException.MESSAGE), "Error was expected");
         }
         #endregion

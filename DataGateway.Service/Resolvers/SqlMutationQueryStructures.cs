@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -41,10 +40,10 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public IncrementingInteger Counter { get; }
 
+        private readonly TableDefinition _tableDefinition;
         private readonly IQueryBuilder _queryBuilder;
-        private readonly IMetadataStoreProvider _metadataStoreProvider;
 
-        public SqlInsertStructure(string tableName, IDictionary<string, object> mutationParams, IQueryBuilder queryBuilder, IMetadataStoreProvider metadataStoreProvider)
+        public SqlInsertStructure(string tableName, TableDefinition tableDefinition, IDictionary<string, object> mutationParams, IQueryBuilder queryBuilder)
         {
             TableName = tableName;
             Columns = new();
@@ -52,8 +51,8 @@ namespace Azure.DataGateway.Service.Resolvers
             Parameters = new();
             Counter = new();
 
+            _tableDefinition = tableDefinition;
             _queryBuilder = queryBuilder;
-            _metadataStoreProvider = metadataStoreProvider;
 
             foreach (KeyValuePair<string, object> param in mutationParams)
             {
@@ -70,7 +69,7 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             // return primary key so the inserted row can be identified
-            ReturnColumns = _metadataStoreProvider.GetTableDefinition(TableName).PrimaryKey.Select(primaryKey => QuoteIdentifier(primaryKey)).ToList();
+            ReturnColumns = _tableDefinition.PrimaryKey.Select(primaryKey => QuoteIdentifier(primaryKey)).ToList();
         }
 
         /// <summary>
@@ -156,10 +155,10 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public IncrementingInteger Counter { get; }
 
+        private readonly TableDefinition _tableDefinition;
         private readonly IQueryBuilder _queryBuilder;
-        private readonly IMetadataStoreProvider _metadataStoreProvider;
 
-        public SqlUpdateStructure(string tableName, IDictionary<string, object> mutationParams, IQueryBuilder queryBuilder, IMetadataStoreProvider metadataStoreProvider)
+        public SqlUpdateStructure(string tableName, TableDefinition tableDefinition, IDictionary<string, object> mutationParams, IQueryBuilder queryBuilder)
         {
             TableName = tableName;
             Predicates = new();
@@ -167,12 +166,11 @@ namespace Azure.DataGateway.Service.Resolvers
             Parameters = new();
             Counter = new();
 
+            _tableDefinition = tableDefinition;
             _queryBuilder = queryBuilder;
-            _metadataStoreProvider = metadataStoreProvider;
 
-            TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(TableName);
-            List<string> primaryKeys = tableDefinition.PrimaryKey;
-            List<string> columns = tableDefinition.Columns.Keys.ToList();
+            List<string> primaryKeys = _tableDefinition.PrimaryKey;
+            List<string> columns = _tableDefinition.Columns.Keys.ToList();
             foreach (KeyValuePair<string, object> param in mutationParams)
             {
                 if (param.Value == null)

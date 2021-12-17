@@ -48,18 +48,21 @@ namespace Azure.DataGateway.Service.Resolvers
             string graphqlMutationName = context.Selection.Field.Name.Value;
             MutationResolver mutationResolver = _metadataStoreProvider.GetMutationResolver(graphqlMutationName);
 
+            string tableName = mutationResolver.Table;
+            TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(tableName);
+
             string queryString;
             Dictionary<string, object> queryParameters;
 
             switch (mutationResolver.OperationType)
             {
                 case "INSERT":
-                    SqlInsertStructure insertQueryStruct = new(mutationResolver.Table, parameters, _queryBuilder, _metadataStoreProvider);
+                    SqlInsertStructure insertQueryStruct = new(tableName, tableDefinition, parameters, _queryBuilder);
                     queryString = insertQueryStruct.ToString();
                     queryParameters = insertQueryStruct.Parameters;
                     break;
                 case "UPDATE":
-                    SqlUpdateStructure updateQueryStruct = new(mutationResolver.Table, parameters, _queryBuilder, _metadataStoreProvider);
+                    SqlUpdateStructure updateQueryStruct = new(tableName, tableDefinition, parameters, _queryBuilder);
                     queryString = updateQueryStruct.ToString();
                     queryParameters = updateQueryStruct.Parameters;
                     break;
@@ -72,6 +75,7 @@ namespace Azure.DataGateway.Service.Resolvers
             using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, queryParameters);
 
             // scalar type return for mutation not supported / not useful
+            // nothing to query
             if (context.Selection.Type.IsScalarType())
             {
                 return null;
@@ -79,11 +83,14 @@ namespace Azure.DataGateway.Service.Resolvers
 
             Dictionary<string, object> searchParams = await ExtractRowFromDbDataReader(dbDataReader);
 
+            // delegates the querying part of the mutation to the QueryEngine
+            // this allows for nested queries in muatations
+            // the searchParams are used to indetefy the mutated record so it can then be further queried on
             return await _queryEngine.ExecuteAsync(context, searchParams, false);
         }
 
         ///<summary>
-        /// Extracts a single row from DbDataReader
+        /// Extracts a single row from DbDataReader and format it so it can be used as a paramter to a query execution
         ///</summary>
         ///<returns>A dictionary representating the row in <c>ColumnName: Value</c> format</returns>
         private static async Task<Dictionary<string, object>> ExtractRowFromDbDataReader(DbDataReader dbDataReader)

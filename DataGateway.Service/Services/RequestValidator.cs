@@ -23,7 +23,7 @@ namespace Azure.DataGateway.Service.Services
             TableDefinition tableDefinition = configurationProvider.GetTableDefinition(context.EntityName);
             if (tableDefinition == null)
             {
-                throw new DatagatewayException(message: "TableDefinition for Entity:" + context.EntityName + " does not exist.", statusCode: 400, subStatusCode: "Bad Request");
+                throw new DatagatewayException(message: "TableDefinition for Entity:" + context.EntityName + " does not exist.", statusCode: 400, DatagatewayException.SubStatusCodes.BadRequest);
             }
 
             if (context.Fields.Count != 0)
@@ -32,7 +32,7 @@ namespace Azure.DataGateway.Service.Services
                 {
                     if (!tableDefinition.Columns.ContainsKey(field))
                     {
-                        throw new DatagatewayException(message: "Invalid Column name: " + field, statusCode: 400, subStatusCode: "Bad Request");
+                        throw new DatagatewayException(message: "Invalid Column name: " + field, statusCode: 400, DatagatewayException.SubStatusCodes.BadRequest);
                     }
                 }
             }
@@ -48,7 +48,7 @@ namespace Azure.DataGateway.Service.Services
 
             if (primaryKeysInRequest != primaryKeysInSchema)
             {
-                throw new DatagatewayException(message: "Primary key column(s) provided do not match DB schema.", statusCode: 400, subStatusCode: "Bad Request");
+                throw new DatagatewayException(message: "Primary key column(s) provided do not match DB schema.", statusCode: 400, DatagatewayException.SubStatusCodes.BadRequest);
             }
 
             //Each Predicate (Column) that is checked against the DB schema
@@ -59,13 +59,13 @@ namespace Azure.DataGateway.Service.Services
             {
                 if (validatedColumns.Contains(predicate.Field))
                 {
-                    throw new DatagatewayException(message: "The request is invalid.", statusCode: 400, subStatusCode: "Bad Request");
+                    throw new DatagatewayException(message: "The request is invalid.", statusCode: 400, DatagatewayException.SubStatusCodes.BadRequest);
 
                 }
 
                 if (!tableDefinition.PrimaryKey.Contains(predicate.Field))
                 {
-                    throw new DatagatewayException(message: "The request is invalid.", statusCode: 400, subStatusCode: "Bad Request");
+                    throw new DatagatewayException(message: "The request is invalid.", statusCode: 400, DatagatewayException.SubStatusCodes.BadRequest);
                 }
                 else
                 {

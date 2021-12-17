@@ -7,30 +7,18 @@ namespace Azure.DataGateway.Service.Exceptions
     /// Message and http statusCode will be returned to the user but
     /// subStatus code is not returned.
     /// </summary>
+#pragma warning disable CA1032 // Implement standard exception constructors
     public class DatagatewayException : Exception
     {
+        public enum SubStatusCodes { BadRequest };
         public int StatusCode { get; }
         public string SubStatusCode { get; }
 
-        public DatagatewayException(string message)
-            : base(message)
-        {
-        }
-
-        public DatagatewayException(string message, int statusCode, string subStatusCode)
+        public DatagatewayException(string message, int statusCode, SubStatusCodes subStatusCode)
             : base(message)
         {
             StatusCode = statusCode;
-            SubStatusCode = subStatusCode;
-        }
-
-        public DatagatewayException(string message, Exception innerException)
-            : base(message, innerException)
-        {
-        }
-
-        public DatagatewayException()
-        {
+            SubStatusCode = subStatusCode.ToString();
         }
     }
 }

@@ -15,13 +15,13 @@ namespace Azure.DataGateway.Service.Exceptions
             BadRequest
         };
         public int StatusCode { get; }
-        public string SubStatusCode { get; }
+        public SubStatusCodes SubStatusCode { get; }
 
         public DatagatewayException(string message, int statusCode, SubStatusCodes subStatusCode)
             : base(message)
         {
             StatusCode = statusCode;
-            SubStatusCode = subStatusCode.ToString();
+            SubStatusCode = subStatusCode;
         }
     }
 }

@@ -80,6 +80,44 @@ namespace Azure.DataGateway.Service.Tests.REST
 
             PerformTest(findRequestContext, _metadataStore.Object, expectsException: false);
         }
+
+        /// <summary>
+        /// Simluated client request contains matching number of Primary Key columns,
+        /// but defines column that is NOT a primary key. We verify that the correct
+        /// status code is a part of the DatagatewayException thrown.
+        /// </summary>
+        [TestMethod]
+        public void RequestBadWithValidStatusCodeTest()
+        {
+            string[] primaryKeys = new string[] { "id" };
+            TableDefinition tableDef = new();
+            tableDef.PrimaryKey = new(primaryKeys);
+            _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
+            string primaryKeyRoute = "name/Catch22";
+            RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
+
+            PerformTest(findRequestContext, _metadataStore.Object, expectsException: true, statusCode: 400, code: true);
+        }
+
+        /// <summary>
+        /// Simluated client request contains matching number of Primary Key columns,
+        /// but defines column that is NOT a primary key. We verify that the correct
+        /// sub status code is a part of the DatagatewayException thrown.
+        /// </summary>
+        [TestMethod]
+        public void RequestBadWithValidSubStatusCodeTest()
+        {
+            string[] primaryKeys = new string[] { "id" };
+            TableDefinition tableDef = new();
+            tableDef.PrimaryKey = new(primaryKeys);
+            _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
+            string primaryKeyRoute = "name/Catch22";
+            RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
+
+            PerformTest(findRequestContext, _metadataStore.Object, expectsException: true, subStatusCode: DatagatewayException.SubStatusCodes.BadRequest, subCode: true);
+        }
         #endregion
         #region Negative Tests
         /// <summary>
@@ -201,7 +239,8 @@ namespace Azure.DataGateway.Service.Tests.REST
         /// <param name="findRequestContext">Client simulated request</param>
         /// <param name="metadataStore">Mocked Config provider</param>
         /// <param name="expectsException">True/False whether we expect validation to fail.</param>
-        public static void PerformTest(FindRequestContext findRequestContext, IMetadataStoreProvider metadataStore, bool expectsException)
+        public static void PerformTest(FindRequestContext findRequestContext, IMetadataStoreProvider metadataStore, bool expectsException, int statusCode = 400,
+            DatagatewayException.SubStatusCodes subStatusCode = DatagatewayException.SubStatusCodes.BadRequest, bool code = false, bool subCode = false)
         {
             try
             {
@@ -221,6 +260,18 @@ namespace Azure.DataGateway.Service.Tests.REST
                 {
                     Console.Error.WriteLine(ex.Message);
                     throw;
+                }
+
+                // validates the status code matches the expected value.
+                if (code)
+                {
+                    Assert.AreEqual(statusCode, ex.StatusCode);
+                }
+
+                // validates the sub status code matches the expected value.
+                if (subCode)
+                {
+                    Assert.AreEqual(subStatusCode, ex.SubStatusCode);
                 }
             }
         }

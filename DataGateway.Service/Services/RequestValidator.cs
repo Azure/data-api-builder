@@ -26,14 +26,11 @@ namespace Azure.DataGateway.Service.Services
                 throw new DatagatewayException(message: "TableDefinition for Entity:" + context.EntityName + " does not exist.", statusCode: 400, DatagatewayException.SubStatusCodes.BadRequest);
             }
 
-            if (context.Fields.Count != 0)
+            foreach (string field in context.Fields)
             {
-                foreach (string field in context.Fields)
+                if (!tableDefinition.Columns.ContainsKey(field))
                 {
-                    if (!tableDefinition.Columns.ContainsKey(field))
-                    {
-                        throw new DatagatewayException(message: "Invalid Column name: " + field, statusCode: 400, DatagatewayException.SubStatusCodes.BadRequest);
-                    }
+                    throw new DatagatewayException(message: "Invalid Column name: " + field, statusCode: 400, DatagatewayException.SubStatusCodes.BadRequest);
                 }
             }
 

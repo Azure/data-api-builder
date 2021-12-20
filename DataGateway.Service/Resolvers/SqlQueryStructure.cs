@@ -163,6 +163,15 @@ namespace Azure.DataGateway.Service.Resolvers
             IsListQuery = context.IsListQuery;
 
             context.Fields.ForEach(fieldName => AddColumn(fieldName));
+            if (Columns.Count == 0)
+            {
+                TableDefinition tableDefinition = GetTableDefinition();
+                foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
+                {
+                    AddColumn(column.Key);
+                }
+            }
+
             context.Predicates.ForEach(predicate =>
             {
                 string parameterName = $"param{Counter.Next()}";
@@ -487,13 +496,6 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public string ColumnsSql()
         {
-            if (Columns.Count == 0)
-            {
-                TableDefinition tableDefinition = GetTableDefinition();
-                return string.Join(", ", tableDefinition.Columns.Select(
-                        x => $"{x.Key}"));
-            }
-
             return string.Join(", ", Columns.Select(
                         x => $"{x.Value} AS {QuoteIdentifier(x.Key)}"));
         }

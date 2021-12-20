@@ -30,7 +30,7 @@ namespace Azure.DataGateway.Service.Services
             {
                 if (!tableDefinition.Columns.ContainsKey(field))
                 {
-                    throw new DatagatewayException(message: "Invalid Column name: " + field, statusCode: 400, DatagatewayException.SubStatusCodes.BadRequest);
+                    throw new DatagatewayException(message: "Invalid Column name", statusCode: 400, DatagatewayException.SubStatusCodes.BadRequest);
                 }
             }
 

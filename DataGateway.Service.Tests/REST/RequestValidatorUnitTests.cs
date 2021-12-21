@@ -80,10 +80,30 @@ namespace Azure.DataGateway.Service.Tests.REST
 
             PerformTest(findRequestContext, _metadataStore.Object, expectsException: false);
         }
+
+        /// <summary>
+        /// Simulated client request contains matching number of Primary Key columns,
+        /// but defines column that is NOT a primary key. We verify that the correct
+        /// status code and sub status code is a part of the DatagatewayException thrown.
+        /// </summary>
+        [TestMethod]
+        public void RequestBadWithValidCodesTest()
+        {
+            string[] primaryKeys = new string[] { "id" };
+            TableDefinition tableDef = new();
+            tableDef.PrimaryKey = new(primaryKeys);
+            _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
+            string primaryKeyRoute = "name/Catch22";
+            RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
+
+            PerformTest(findRequestContext, _metadataStore.Object, expectsException: true, statusCode: 400, subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+        }
+
         #endregion
         #region Negative Tests
         /// <summary>
-        /// Simluated client request contains matching number of Primary Key columns,
+        /// Simulated client request contains matching number of Primary Key columns,
         /// but defines column that is NOT a primary key.
         /// </summary>
         [TestMethod]
@@ -194,14 +214,17 @@ namespace Azure.DataGateway.Service.Tests.REST
         #region Helper Methods
         /// <summary>
         /// Runs the Validation method to show success/failure. Extracted to separate helper method
-        /// to avoid code duplication. Only attempt to catch PrimaryKeyValidationException since
+        /// to avoid code duplication. Only attempt to catch DatagatewayException since
         /// that exception determines whether we encounter an expected validation failure in case
         /// of negative tests, vs downstream service failure.
         /// </summary>
         /// <param name="findRequestContext">Client simulated request</param>
         /// <param name="metadataStore">Mocked Config provider</param>
         /// <param name="expectsException">True/False whether we expect validation to fail.</param>
-        public static void PerformTest(FindRequestContext findRequestContext, IMetadataStoreProvider metadataStore, bool expectsException)
+        /// <param name="statusCode">Integer which represents the http status code expected to return.</param>
+        /// <param name="subStatusCode">Represents the sub status code that we expect to return.</param>
+        public static void PerformTest(FindRequestContext findRequestContext, IMetadataStoreProvider metadataStore, bool expectsException, int statusCode = 400,
+            DatagatewayException.SubStatusCodes subStatusCode = DatagatewayException.SubStatusCodes.BadRequest)
         {
             try
             {
@@ -213,7 +236,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                     Assert.Fail();
                 }
             }
-            catch (PrimaryKeyValidationException ex)
+            catch (DatagatewayException ex)
             {
                 //If we are not expecting an exception, fail the test. Completing test method without
                 //failure will pass the test, so no Assert.Pass() is necessary (nor exists).
@@ -222,6 +245,10 @@ namespace Azure.DataGateway.Service.Tests.REST
                     Console.Error.WriteLine(ex.Message);
                     throw;
                 }
+
+                // validates the status code and sub status code match the expected values.
+                Assert.AreEqual(statusCode, ex.StatusCode);
+                Assert.AreEqual(subStatusCode, ex.SubStatusCode);
             }
         }
         #endregion

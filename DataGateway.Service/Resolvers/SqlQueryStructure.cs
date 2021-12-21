@@ -129,12 +129,6 @@ namespace Azure.DataGateway.Service.Resolvers
 
         private readonly GraphqlType _typeInfo;
 
-        // TODO: Remove this once REST uses the schema defined in the config.
-        /// <summary>
-        /// Wild Card for column selection.
-        /// </summary>
-        private const string ALL_COLUMNS = "*";
-
         /// <summary>
         /// Generate the structure for a SQL query based on GraphQL query
         /// information.
@@ -169,6 +163,15 @@ namespace Azure.DataGateway.Service.Resolvers
             IsListQuery = context.IsListQuery;
 
             context.Fields.ForEach(fieldName => AddColumn(fieldName));
+            if (Columns.Count == 0)
+            {
+                TableDefinition tableDefinition = GetTableDefinition();
+                foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
+                {
+                    AddColumn(column.Key);
+                }
+            }
+
             context.Predicates.ForEach(predicate =>
             {
                 string parameterName = $"param{Counter.Next()}";
@@ -493,11 +496,6 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public string ColumnsSql()
         {
-            if (Columns.Count == 0)
-            {
-                return ALL_COLUMNS;
-            }
-
             return string.Join(", ", Columns.Select(
                         x => $"{x.Value} AS {QuoteIdentifier(x.Key)}"));
         }

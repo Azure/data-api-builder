@@ -115,11 +115,8 @@
           "id": {
             "Type": "bigint"
           },
-          "title": {
+          "content": {
             "Type": "text"
-          },
-          "publisher_id": {
-            "Type": "bigint"
           },
           "book_id": {
             "Type": "bigint"

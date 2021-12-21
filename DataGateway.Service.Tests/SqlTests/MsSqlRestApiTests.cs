@@ -131,7 +131,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string primaryKeyRoute = string.Empty;
             string queryStringWithFields = string.Empty;
-            string msSqlQuery = $"SELECT * FROM { _integrationTableName } " +
+            string msSqlQuery = $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES";
 
             ConfigureRestController(_restController, queryStringWithFields);

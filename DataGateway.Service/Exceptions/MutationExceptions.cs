@@ -3,6 +3,10 @@ using Azure.DataGateway.Service.Models;
 
 namespace Azure.DataGateway.Service.Exceptions
 {
+    /// <summary>
+    /// Thrown when an update mutation in GraphQL has none of the optional parameters
+    /// used to determine the values to update
+    /// </summary>
     [System.Serializable]
     public class UpdateMutationHasNoUpdatesException : GraphQLUserLevelException
     {

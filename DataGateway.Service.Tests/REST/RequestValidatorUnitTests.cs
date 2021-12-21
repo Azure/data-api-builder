@@ -82,12 +82,12 @@ namespace Azure.DataGateway.Service.Tests.REST
         }
 
         /// <summary>
-        /// Simluated client request contains matching number of Primary Key columns,
+        /// Simulated client request contains matching number of Primary Key columns,
         /// but defines column that is NOT a primary key. We verify that the correct
-        /// status code is a part of the DatagatewayException thrown.
+        /// status code and sub status code is a part of the DatagatewayException thrown.
         /// </summary>
         [TestMethod]
-        public void RequestBadWithValidStatusCodeTest()
+        public void RequestBadWithValidCodesTest()
         {
             string[] primaryKeys = new string[] { "id" };
             TableDefinition tableDef = new();
@@ -97,31 +97,13 @@ namespace Azure.DataGateway.Service.Tests.REST
             string primaryKeyRoute = "name/Catch22";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
-            PerformTest(findRequestContext, _metadataStore.Object, expectsException: true, statusCode: 400, code: true);
+            PerformTest(findRequestContext, _metadataStore.Object, expectsException: true, statusCode: 400, subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
         }
 
-        /// <summary>
-        /// Simluated client request contains matching number of Primary Key columns,
-        /// but defines column that is NOT a primary key. We verify that the correct
-        /// sub status code is a part of the DatagatewayException thrown.
-        /// </summary>
-        [TestMethod]
-        public void RequestBadWithValidSubStatusCodeTest()
-        {
-            string[] primaryKeys = new string[] { "id" };
-            TableDefinition tableDef = new();
-            tableDef.PrimaryKey = new(primaryKeys);
-            _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
-            string primaryKeyRoute = "name/Catch22";
-            RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
-
-            PerformTest(findRequestContext, _metadataStore.Object, expectsException: true, subStatusCode: DatagatewayException.SubStatusCodes.BadRequest, subCode: true);
-        }
         #endregion
         #region Negative Tests
         /// <summary>
-        /// Simluated client request contains matching number of Primary Key columns,
+        /// Simulated client request contains matching number of Primary Key columns,
         /// but defines column that is NOT a primary key.
         /// </summary>
         [TestMethod]
@@ -239,8 +221,10 @@ namespace Azure.DataGateway.Service.Tests.REST
         /// <param name="findRequestContext">Client simulated request</param>
         /// <param name="metadataStore">Mocked Config provider</param>
         /// <param name="expectsException">True/False whether we expect validation to fail.</param>
+        /// <param name="statusCode">Integer which represents the http status code expected to return.</param>
+        /// <param name="subStatusCode">Represents the sub status code that we expect to return.</param>
         public static void PerformTest(FindRequestContext findRequestContext, IMetadataStoreProvider metadataStore, bool expectsException, int statusCode = 400,
-            DatagatewayException.SubStatusCodes subStatusCode = DatagatewayException.SubStatusCodes.BadRequest, bool code = false, bool subCode = false)
+            DatagatewayException.SubStatusCodes subStatusCode = DatagatewayException.SubStatusCodes.BadRequest)
         {
             try
             {
@@ -262,17 +246,9 @@ namespace Azure.DataGateway.Service.Tests.REST
                     throw;
                 }
 
-                // validates the status code matches the expected value.
-                if (code)
-                {
-                    Assert.AreEqual(statusCode, ex.StatusCode);
-                }
-
-                // validates the sub status code matches the expected value.
-                if (subCode)
-                {
-                    Assert.AreEqual(subStatusCode, ex.SubStatusCode);
-                }
+                // validates the status code and sub status code match the expected values.
+                Assert.AreEqual(statusCode, ex.StatusCode);
+                Assert.AreEqual(subStatusCode, ex.SubStatusCode);
             }
         }
         #endregion

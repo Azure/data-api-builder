@@ -106,7 +106,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 queryString: "?_f=id,title",
                 entity: _integrationTableName,
                 sqlQuery: msSqlQuery,
-                _restController
+                controller: _restController
             );
         }
 

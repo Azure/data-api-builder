@@ -34,8 +34,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindByIdTest()
         {
-            string primaryKeyRoute = "id/2";
-            string queryString = string.Empty;
             string postgresQuery = @"SELECT to_jsonb(subq) AS data
                                     FROM (
                                         SELECT *
@@ -45,15 +43,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                         LIMIT 1
                                     ) AS subq";
 
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            ConfigureRestController(_restController, queryString);
-
-            await SqlTestHelper.PerformApiTest(
-                _restController.Find,
-                _integrationTableName,
-                primaryKeyRoute,
-                GetDatabaseResultAsync(postgresQuery)
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/2",
+                queryString: string.Empty,
+                entity: _integrationTableName,
+                sqlQuery: postgresQuery,
+                controller: _restController
             );
         }
 
@@ -64,8 +59,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindIdTestWithQueryStringFields()
         {
-            string primaryKeyRoute = "id/1";
-            string queryStringWithFields = "?_f=id,title";
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS data
                 FROM (
@@ -77,23 +70,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 ) AS subq
             ";
 
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            ConfigureRestController(_restController, queryStringWithFields);
-
-            await SqlTestHelper.PerformApiTest(
-                _restController.Find,
-                _integrationTableName,
-                primaryKeyRoute,
-                GetDatabaseResultAsync(postgresQuery)
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: "?_f=id,title",
+                entity: _integrationTableName,
+                sqlQuery: postgresQuery,
+                controller: _restController
             );
         }
 
         [TestMethod]
         public async Task FindTestWithPrimaryKeyContainingForeignKey()
         {
-            string primaryKeyRoute = "id/567/book_id/1";
-            string queryStringWithFields = "?_f=id,content";
             string entityName = "reviews";
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS data
@@ -106,13 +94,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 ) AS subq
             ";
 
-            ConfigureRestController(_restController, queryStringWithFields);
-
-            await SqlTestHelper.PerformApiTest(
-                _restController.Find,
-                entityName,
-                primaryKeyRoute,
-                GetDatabaseResultAsync(postgresQuery)
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/567/book_id/1",
+                queryString: "?_f=id,content",
+                entity: entityName,
+                sqlQuery: postgresQuery,
+                controller: _restController
             );
         }
 
@@ -127,8 +114,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindByIdTestWithInvalidFields()
         {
-            string primaryKeyRoute = "id/1";
-            string queryStringWithFields = "?_f=id,null";
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS data
                 FROM (
@@ -137,14 +122,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 ) AS subq
             ";
 
-            ConfigureRestController(_restController, queryStringWithFields);
-
-            await SqlTestHelper.PerformApiTest(
-                _restController.Find,
-                _integrationTableName,
-                primaryKeyRoute,
-                GetDatabaseResultAsync(postgresQuery),
-                expectException: true
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/567/book_id/1",
+                queryString: "?_f=id,content",
+                entity: _integrationTableName,
+                sqlQuery: postgresQuery,
+                controller: _restController,
+                exception: true
             );
         }
 

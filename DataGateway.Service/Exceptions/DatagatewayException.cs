@@ -13,7 +13,8 @@ namespace Azure.DataGateway.Service.Exceptions
         public enum SubStatusCodes
         {
             BadRequest
-        };
+        }
+
         public int StatusCode { get; }
         public SubStatusCodes SubStatusCode { get; }
 

@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using Newtonsoft.Json;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -114,6 +116,45 @@ namespace Azure.DataGateway.Service.Resolvers
         public Dictionary<string, object> Parameters { get; set; }
 
         /// <summary>
+        /// Whether the query is paginated
+        /// </summary>
+        public bool IsPaginatedQuery { get; }
+
+        /// <summary>
+        /// Invalid value for the Limit member variable
+        /// </summary>
+        private const int INVALID_LIMIT_VALUE = -1;
+
+        /// <summary>
+        /// The maximum number of results this query should return.
+        /// </summary>
+        private long _limit = INVALID_LIMIT_VALUE;
+
+        /// <summary>
+        /// Public wrapper for _limit
+        /// </summary>
+        public long Limit
+        {
+            get
+            {
+                if (IsListQuery || IsPaginatedQuery)
+                {
+                    return _limit != INVALID_LIMIT_VALUE ? _limit : 100;
+                }
+                else
+                {
+                    return 1;
+                }
+            }
+            private set { _limit = value; }
+        }
+
+        /// <summary>
+        /// The fields the user wants back from the Connection result of the paginated query
+        /// </summary>
+        private HashSet<string> _requestedPaginationResults;
+
+        /// <summary>
         /// If this query is built because of a GraphQL query (as opposed to
         /// REST), then this is set to the resolver context of that query.
         /// </summary>
@@ -139,7 +180,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Generate the structure for a SQL query based on GraphQL query
         /// information.
         /// </summary>
-        public SqlQueryStructure(IResolverContext ctx, IDictionary<String, object> queryParams, IMetadataStoreProvider metadataStoreProvider, IQueryBuilder queryBuilder)
+        public SqlQueryStructure(IResolverContext ctx, IDictionary<String, object> queryParams, IMetadataStoreProvider metadataStoreProvider, IQueryBuilder queryBuilder, bool isPaginatedQuery = false)
             // This constructor simply forwards to the more general constructor
             // that is used to create GraphQL queries. We give it some values
             // that make sense for the outermost query.
@@ -152,10 +193,20 @@ namespace Azure.DataGateway.Service.Resolvers
                 // The outermost query is where we start, so this can define
                 // create the IncrementingInteger that will be shared between
                 // all subqueries in this query.
-                new IncrementingInteger()
+                new IncrementingInteger(),
+                isPaginatedQuery
             )
         {
-            AddPrimaryKeyPredicates(queryParams);
+            // support identification of entities by primary key when query is not paginated and returns non list type
+            if (!IsListQuery && !isPaginatedQuery)
+            {
+                AddPrimaryKeyPredicates(queryParams);
+            }
+
+            if (IsPaginatedQuery)
+            {
+                ProcessPaginationParameters(queryParams);
+            }
         }
 
         /// <summary>
@@ -188,17 +239,38 @@ namespace Azure.DataGateway.Service.Resolvers
                 IQueryBuilder queryBuilder,
                 IObjectField schemaField,
                 FieldNode queryField,
-                IncrementingInteger counter
+                IncrementingInteger counter,
+                bool isPaginatedQuery = false
         ) : this(metadataStoreProvider, queryBuilder, counter)
         {
             _ctx = ctx;
-            IOutputType outputType = schemaField.Type;
+            IsPaginatedQuery = isPaginatedQuery;
+
+            IOutputType outputType;
+            IReadOnlyList<ISelectionNode> fields;
+
+            if (isPaginatedQuery)
+            {
+                _requestedPaginationResults = new();
+
+                // get the type expected in the **Connection.nodes
+                ObjectType connectionFieldType = UnderlyingType(schemaField.Type);
+                outputType = connectionFieldType.Fields["nodes"].Type;
+
+                fields = ProcessPaginationFields(queryField.SelectionSet.Selections);
+            }
+            else
+            {
+                outputType = schemaField.Type;
+                fields = queryField.SelectionSet.Selections;
+            }
+
             _underlyingFieldType = UnderlyingType(outputType);
 
             _typeInfo = _metadataStoreProvider.GetGraphqlType(_underlyingFieldType.Name);
             TableName = _typeInfo.Table;
             TableAlias = CreateTableAlias();
-            AddGraphqlFields(queryField.SelectionSet.Selections);
+            AddGraphqlFields(fields);
 
             if (outputType.IsNonNullType())
             {
@@ -284,24 +356,80 @@ namespace Azure.DataGateway.Service.Resolvers
         ///</summary>
         void AddPrimaryKeyPredicates(IDictionary<string, object> queryParams)
         {
-            // queryParams for list queries are not used as primary keys
-            if (!IsListQuery)
+            List<string> primaryKey = PrimaryKey();
+            foreach (KeyValuePair<string, object> parameter in queryParams)
             {
-                List<string> primaryKey = GetTableDefinition().PrimaryKey;
-                foreach (KeyValuePair<string, object> parameter in queryParams)
+                // do not handle non primary key query parameters for now
+                if (!primaryKey.Contains(parameter.Key))
                 {
-                    // do not handle non primary key query parameters for now
-                    if (!primaryKey.Contains(parameter.Key))
-                    {
-                        Console.WriteLine($"Skipping {parameter.Key}");
-                        continue;
-                    }
+                    Console.WriteLine($"Skipping {parameter.Key}");
+                    continue;
+                }
 
-                    string parameterName = $"param{Counter.Next()}";
-                    Parameters.Add(parameterName, parameter.Value);
-                    Predicates.Add($"{QualifiedColumn(parameter.Key)} = @{parameterName}");
+                Predicates.Add($"{QualifiedColumn(parameter.Key)} = @{MakeParamWithValue(parameter.Value)}");
+            }
+        }
+
+        /// <summary>
+        ///  Add parameter to Parameters and return the name associated it with it
+        /// </summary>
+        private string MakeParamWithValue(object value)
+        {
+            string paramName = $"param{Counter.Next()}";
+            Parameters.Add(paramName, value);
+            return paramName;
+        }
+
+        /// <summary>
+        /// Process information from first and after params.
+        /// Create and store all information required to build a pagination query
+        /// </summary>
+        void ProcessPaginationParameters(IDictionary<string, object> queryParams)
+        {
+            // process parameter first
+            object intermediateFirst;
+            if (queryParams.TryGetValue("first", out intermediateFirst) && intermediateFirst != null)
+            {
+                Limit = (long)intermediateFirst;
+            }
+
+            // process parameter after
+            object intermediateAfter;
+            string afterBase64 = queryParams.TryGetValue("after", out intermediateAfter) ? (string)intermediateAfter : null;
+
+            Dictionary<string, object> after = null;
+
+            // parse after parameter into a Dictionary<string, object>
+            if (afterBase64 != null)
+            {
+                string jsonString = Encoding.UTF8.GetString(Convert.FromBase64String(afterBase64));
+                after = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonString);
+            }
+
+            if (after != null && !ListsAreEqual(after.Keys.ToList(), PrimaryKey()))
+            {
+                // TODO replace with custom type, user level exception PaginationException
+                throw new Exception("Invalid cursor");
+            }
+            else if (after != null)
+            {
+                // add the cursor contrains on the pagination query
+                foreach (KeyValuePair<string, object> keyValuePair in after)
+                {
+                    Predicates.Add($"{QuoteIdentifier(keyValuePair.Key)} > @{MakeParamWithValue(keyValuePair.Value)}");
                 }
             }
+        }
+
+        /// <summary>
+        /// Does set-like compare for two string lists.
+        /// <summary>
+        private static bool ListsAreEqual(List<string> list1, List<string> list2)
+        {
+            IEnumerable<string> inList1NotInList2 = list1.Except(list2);
+            IEnumerable<string> inList2NotInList1 = list2.Except(list1);
+
+            return !inList1NotInList2.Any() && !inList2NotInList1.Any();
         }
 
         /// <summary>
@@ -376,7 +504,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         case GraphqlRelationshipType.OneToMany:
                             subquery.Predicates.AddRange(CreateJoinPredicates(
                                 TableAlias,
-                                GetTableDefinition().PrimaryKey,
+                                PrimaryKey(),
                                 subtableAlias,
                                 subTableDefinition.ForeignKeys[fieldInfo.RightForeignKey].Columns
                             ));
@@ -388,7 +516,7 @@ namespace Azure.DataGateway.Service.Resolvers
                             TableDefinition associativeTableDefinition = _metadataStoreProvider.GetTableDefinition(associativeTableName);
                             subquery.Predicates.AddRange(CreateJoinPredicates(
                                 TableAlias,
-                                GetTableDefinition().PrimaryKey,
+                                PrimaryKey(),
                                 associativeTableAlias,
                                 associativeTableDefinition.ForeignKeys[fieldInfo.LeftForeignKey].Columns
                             ));
@@ -419,6 +547,29 @@ namespace Azure.DataGateway.Service.Resolvers
                     Columns.Add(fieldName, column);
                 }
             }
+        }
+
+        /// <summary>
+        /// Store the requested pagination connection fields and return the fields of the <c>nodes</c> field so they can be processed further
+        /// </summary>
+        /// <returns> The fields of the <c>**Conneciton.nodes</c> of the Conneciton type used for pagination. Empty list if <c>nodes</c> was not requested as a field</returns>
+        IReadOnlyList<ISelectionNode> ProcessPaginationFields(IReadOnlyList<ISelectionNode> paginationSelections)
+        {
+            FieldNode nodesField = null;
+            foreach (ISelectionNode node in paginationSelections)
+            {
+                FieldNode field = node as FieldNode;
+                string fieldName = field.Name.Value;
+
+                if (fieldName == "nodes")
+                {
+                    nodesField = field;
+                }
+
+                _requestedPaginationResults.Add(fieldName);
+            }
+
+            return nodesField?.SelectionSet?.Selections ?? new List<ISelectionNode>().AsReadOnly();
         }
 
         ///<summary>
@@ -470,28 +621,21 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// The maximum number of results this query should return.
-        /// </summary>
-        public uint Limit()
-        {
-            if (IsListQuery)
-            {
-                // TODO: Make this configurable
-                return 100;
-            }
-            else
-            {
-                return 1;
-            }
-        }
-
-        /// <summary>
-        /// Create the SQL code to select the columns defined in Columns for
+        /// Create the SQL code to select the columns defined in Columns and pagination related columns for
         /// selection in the SELECT clause. So the {ColumnsSql} bit in this
         /// example:
         /// SELECT {ColumnsSql} FROM ... WHERE ...
         /// </summary>
         public string ColumnsSql()
+        {
+            return IsPaginatedQuery ? PaginationColumnsSql() : NonPaginationColumnsSql();
+        }
+
+        /// <summary>
+        // Create the SQL code to select the columns defined in Columns for
+        /// selection in the SELECT clause.
+        /// </summary>
+        private string NonPaginationColumnsSql()
         {
             if (Columns.Count == 0)
             {
@@ -500,6 +644,56 @@ namespace Azure.DataGateway.Service.Resolvers
 
             return string.Join(", ", Columns.Select(
                         x => $"{x.Value} AS {QuoteIdentifier(x.Key)}"));
+        }
+
+        /// <summary>
+        /// Create the SQL code to select columns
+        /// Adds pagination metadata related columns to the set of exitings columns
+        /// </summary>
+        public string PaginationColumnsSql()
+        {
+            List<string> columns = new();
+
+            if (IsRequestedPaginationResult("nodes"))
+            {
+                // note that due to the type in the pagination query being set to the type of the nodes
+                // these columns correspond to the fields of the type of nodes and not of the **Connection type
+                columns.Add(NonPaginationColumnsSql());
+            }
+
+            if (IsRequestedPaginationResult("endCursor"))
+            {
+                // make sure all the primary keys are selected since they are needed to make the endCursor
+                List<string> primaryKeys = PrimaryKey();
+                if (columns.Count == 0)
+                {
+                    columns.Add(string.Join(", ", primaryKeys.Select(primaryKey => $"{QualifiedColumn(primaryKey)} AS {QuoteIdentifier(primaryKey)}")));
+                }
+                else
+                {
+                    IEnumerable<string> extraNeededColumns = primaryKeys.Except(Columns.Keys);
+
+                    if (extraNeededColumns.Any())
+                    {
+                        columns.Add(string.Join(", ", extraNeededColumns.Select(column => $"{QualifiedColumn(column)} AS {QuoteIdentifier(column)}")));
+                    }
+                }
+            }
+
+            if (columns.Count == 0)
+            {
+                return "*";
+            }
+
+            return string.Join(", ", columns);
+        }
+
+        /// <summary>
+        /// Checks if field is expected in the paginated query result
+        /// </summary>
+        public bool IsRequestedPaginationResult(string field)
+        {
+            return _requestedPaginationResults.Contains(field);
         }
 
         /// <summary>
@@ -561,8 +755,24 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public string OrderBySql()
         {
-            return string.Join(", ", GetTableDefinition().PrimaryKey.Select(
+            return string.Join(", ", PrimaryKey().Select(
                         x => QuoteIdentifier(x)));
+        }
+
+        /// <summary>
+        /// Creates the SQL code which generates the cursor json in pagination queries
+        /// </summary>
+        public string PaginationCursorJson()
+        {
+            return "CONCAT('{ ', " + string.Join(", ", PrimaryKey().Select(primaryKey => $"'\"{primaryKey}\": ', max({primaryKey})")) + ", ' }')";
+        }
+
+        /// <summary>
+        /// Exposes the primary key of the underlying table of the structure
+        /// </summary>
+        public List<string> PrimaryKey()
+        {
+            return GetTableDefinition().PrimaryKey;
         }
     }
 }

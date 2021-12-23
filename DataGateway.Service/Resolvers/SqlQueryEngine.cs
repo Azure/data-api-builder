@@ -50,9 +50,9 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Executes the given IMiddlewareContext of the GraphQL query and
         /// expecting a single Json back.
         /// </summary>
-        public async Task<JsonDocument> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters, bool isContinuationQuery)
+        public async Task<JsonDocument> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters, bool isPaginatedQuery)
         {
-            SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _queryBuilder);
+            SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _queryBuilder, isPaginatedQuery);
             return await ExecuteAsync(structure);
         }
 

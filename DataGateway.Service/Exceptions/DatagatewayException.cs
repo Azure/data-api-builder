@@ -12,8 +12,15 @@ namespace Azure.DataGateway.Service.Exceptions
     {
         public enum SubStatusCodes
         {
+            /// <summary>
+            /// The given request was invalid and could not be handled. This only includes
+            /// validation errors that do not require access to the database. So only the server config and the request itself
+            /// </summary>
             BadRequest,
-            BadMutation
+            /// <summary>
+            /// The entity for which an operation was requested does not exist.
+            /// </summary>
+            EntityNotFound
         }
 
         public int StatusCode { get; }

@@ -9,6 +9,7 @@ using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using System.Linq;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -86,7 +87,8 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (searchParams == null)
             {
-                throw new DatagatewayException("Mutation does not affect any data", 400, DatagatewayException.SubStatusCodes.BadMutation);
+                string searchedPK = '<' + string.Join(", " , tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
+                throw new DatagatewayException($"Could not find entity with {searchedPK}", 404, DatagatewayException.SubStatusCodes.EntityNotFound);
             }
 
             // delegates the querying part of the mutation to the QueryEngine

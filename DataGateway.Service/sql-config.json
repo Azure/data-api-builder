@@ -132,10 +132,10 @@
           "id": {
             "Type": "bigint"
           },
-          "title": {
+          "content": {
             "Type": "text"
           },
-          "publisher_id": {
+          "book_id": {
             "Type": "bigint"
           }
         },

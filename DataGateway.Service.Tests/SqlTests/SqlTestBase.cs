@@ -118,6 +118,37 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             return sqlResultData.ToString();
         }
 
+        /// <summary>
+        /// Does the setup required to perform a test of the REST Api for both
+        /// MsSql and Postgress. Shared setup logic eliminates some code duplication
+        /// between MsSql and Postgress.
+        /// </summary>
+        /// <param name="primaryKeyRoute">string represents the primary key route</param>
+        /// <param name="queryString">string represents the query string provided in URL</param>
+        /// <param name="entity">string represents the name of the entity</param>
+        /// <param name="sqlQuery">string represents the query to be executed</param>
+        /// <param name="controller">string represents the rest controller</param>
+        /// <param name="exception">bool represents if we expect an exception</param>
+        /// <returns></returns>
+        protected static async Task SetupAndRunRestApiTest(
+            string primaryKeyRoute,
+            string queryString,
+            string entity,
+            string sqlQuery,
+            RestController controller,
+            bool exception = false)
+        {
+            ConfigureRestController(controller, queryString);
+
+            await SqlTestHelper.PerformApiTest(
+                controller.Find,
+                entity,
+                primaryKeyRoute,
+                GetDatabaseResultAsync(sqlQuery),
+                exception
+            );
+        }
+
         ///<summary>
         /// Add HttpContext with query to the RestController
         ///</summary>

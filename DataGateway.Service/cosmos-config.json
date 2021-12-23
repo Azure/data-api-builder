@@ -1,5 +1,6 @@
 {
   "GraphQLSchema": "",
+  "GraphQLSchemaFile": "schema.gql",
   "QueryResolvers": [
     {
       "id": "characterById",
@@ -27,7 +28,7 @@
     },
     {
       "id": "planets",
-      "isPaginated":  true,
+      "isPaginated": true,
       "databaseName": "graphqldb",
       "containerName": "planet",
       "parametrizedQuery": "select * FROM c"

@@ -41,18 +41,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindByIdTest()
         {
-            string primaryKeyRoute = "id/2";
-            string queryString = "";
             string msSqlQuery = $"SELECT * FROM { _integrationTableName} " +
                 $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
 
-            ConfigureRestController(_restController, queryString);
-
-            await SqlTestHelper.PerformApiTest(
-                _restController.FindById,
-                _integrationTableName,
-                primaryKeyRoute,
-                GetDatabaseResultAsync(msSqlQuery)
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/2",
+                queryString: string.Empty,
+                entity: _integrationTableName,
+                sqlQuery: msSqlQuery,
+                controller: _restController
             );
         }
 
@@ -63,18 +60,88 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindByIdTestWithQueryStringFields()
         {
-            string primaryKeyRoute = "id/1";
-            string queryStringWithFields = "?_f=id,title";
             string msSqlQuery = $"SELECT [id], [title] FROM { _integrationTableName } " +
                 $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
 
-            ConfigureRestController(_restController, queryStringWithFields);
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: "?_f=id,title",
+                entity: _integrationTableName,
+                sqlQuery: msSqlQuery,
+                controller: _restController
+            );
+        }
 
-            await SqlTestHelper.PerformApiTest(
-                _restController.FindById,
-                _integrationTableName,
-                primaryKeyRoute,
-                GetDatabaseResultAsync(msSqlQuery)
+        /// <summary>
+        /// Tests the REST Api for Find operation with a query string with 1 field
+        /// including the field names.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithQueryStringOneField()
+        {
+            string msSqlQuery = $"SELECT [id] FROM { _integrationTableName } " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?_f=id",
+                entity: _integrationTableName,
+                sqlQuery: msSqlQuery,
+                controller: _restController);
+
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with a query string with multiple fields
+        /// including the field names. Only returns fields designated in the query string.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithQueryStringMultipleFields()
+        {
+            string msSqlQuery = $"SELECT [id], [title] FROM { _integrationTableName } " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?_f=id,title",
+                entity: _integrationTableName,
+                sqlQuery: msSqlQuery,
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with an empty query string
+        /// including the field names.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithQueryStringAllFields()
+        {
+            string msSqlQuery = $"SELECT * FROM { _integrationTableName } " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _integrationTableName,
+                sqlQuery: msSqlQuery,
+                controller: _restController
+            );
+        }
+
+        [TestMethod]
+        public async Task FindTestWithPrimaryKeyContainingForeignKey()
+        {
+            string entityName = "reviews";
+            string msSqlQuery = $"SELECT [id], [content] FROM { entityName } " +
+                $"WHERE id = 567 AND book_id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/567/book_id/1",
+                queryString: "?_f=id,content",
+                entity: entityName,
+                sqlQuery: msSqlQuery,
+                controller: _restController
             );
         }
 
@@ -89,19 +156,36 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindByIdTestWithInvalidFields()
         {
-            string primaryKeyRoute = "id/1";
-            string queryStringWithFields = "?_f=id,null";
             string msSqlQuery = $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
                 $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
 
-            ConfigureRestController(_restController, queryStringWithFields);
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/567/book_id/1",
+                queryString: "?_f=id,content",
+                entity: _integrationTableName,
+                sqlQuery: msSqlQuery,
+                controller: _restController,
+                exception: true
+            );
+        }
 
-            await SqlTestHelper.PerformApiTest(
-                _restController.FindById,
-                _integrationTableName,
-                primaryKeyRoute,
-                GetDatabaseResultAsync(msSqlQuery),
-                expectException: true
+        /// <summary>
+        /// Tests the REST Api for Find operation with a query string that has an invalid field
+        /// having invalid field names.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithInvalidFields()
+        {
+            string msSqlQuery = $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
+                $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?_f=id,null",
+                entity: _integrationTableName,
+                sqlQuery: msSqlQuery,
+                controller: _restController,
+                exception: true
             );
         }
 

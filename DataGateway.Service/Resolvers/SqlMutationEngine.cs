@@ -86,7 +86,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (searchParams == null)
             {
-                throw new DatagatewayException("Mutation does not affect any data", 400, DatagatewayException.SubStatusCodes.BadRequest);
+                throw new DatagatewayException("Mutation does not affect any data", 400, DatagatewayException.SubStatusCodes.BadMutation);
             }
 
             // delegates the querying part of the mutation to the QueryEngine

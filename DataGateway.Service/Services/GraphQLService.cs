@@ -63,7 +63,7 @@ namespace Azure.DataGateway.Services
                             .RemoveLocations()
                             .RemovePath()
                             .WithMessage(thrownException.Message)
-                            .WithCode($"{thrownException.StatusCode}");
+                            .WithCode($"{thrownException.SubStatusCode}");
                 }
 
                 return error;

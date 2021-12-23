@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -292,7 +293,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             ";
 
             using JsonDocument result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.RootElement.ToString(), statusCode: 400);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.RootElement.ToString(), statusCode: $"{DatagatewayException.SubStatusCodes.BadMutation}");
         }
 
         /// <summary>
@@ -313,7 +314,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             ";
 
             using JsonDocument result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.RootElement.ToString(), statusCode: 400);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.RootElement.ToString(), statusCode: $"{DatagatewayException.SubStatusCodes.BadMutation}");
         }
         #endregion
     }

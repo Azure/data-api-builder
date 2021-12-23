@@ -60,8 +60,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Tests for different aspects of the error in a GraphQL response
         /// </summary>
-        public static void TestForErrorInGraphQLResponse(string response, string message = null, int? statusCode = null)
+        public static void TestForErrorInGraphQLResponse(string response, string message = null, string statusCode = null)
         {
+            Console.WriteLine(response);
+
             Assert.IsTrue(response.Contains("\"errors\""), "No error was found where error is expected.");
 
             if (message != null)
@@ -71,7 +73,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             if (statusCode != null)
             {
-                Assert.IsTrue(response.Contains($"\"code\":\"{statusCode}\""), $"Status code {statusCode} not found in error");
+                Assert.IsTrue(response.Contains($"\"code\":\"{statusCode}\""), $"Status code \"{statusCode}\" not found in error");
             }
         }
 

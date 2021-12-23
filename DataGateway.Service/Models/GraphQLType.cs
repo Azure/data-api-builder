@@ -71,19 +71,4 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
         public string RightForeignKey { get; set; }
     }
-
-    ///<summary>
-    /// Special exception which will be caught by HotChocolate.
-    /// The message of this exception will be displayed to the user
-    ///</summary>
-    [System.Serializable]
-    public class GraphQLUserLevelException : System.Exception
-    {
-        public GraphQLUserLevelException() { }
-        public GraphQLUserLevelException(string message) : base(message) { }
-        public GraphQLUserLevelException(string message, System.Exception inner) : base(message, inner) { }
-        protected GraphQLUserLevelException(
-            System.Runtime.Serialization.SerializationInfo info,
-            System.Runtime.Serialization.StreamingContext context) : base(info, context) { }
-    }
 }

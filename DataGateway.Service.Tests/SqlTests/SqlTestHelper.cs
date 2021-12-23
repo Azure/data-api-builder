@@ -48,10 +48,31 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             return JToken.DeepEquals(JToken.Parse(jsonString1), JToken.Parse(jsonString2));
         }
 
+        /// <summary>
+        /// Adds a useful failure message around the excpeted == actual operation
+        /// <summary>
         public static void PerformTestEqualJsonStrings(string expected, string actual)
         {
             Assert.IsTrue(JsonStringsDeepEqual(expected, actual),
                 $"\nExpected:<{expected}>\nActual:<{actual}>");
+        }
+
+        /// <summary>
+        /// Tests for different aspects of the error in a GraphQL response
+        /// </summary>
+        public static void TestForErrorInGraphQLResponse(string response, string message = null, int? statusCode = null)
+        {
+            Assert.IsTrue(response.Contains("\"errors\""), "No error was found where error is expected.");
+
+            if (message != null)
+            {
+                Assert.IsTrue(response.Contains(message), $"Message \"{message}\" not found in error");
+            }
+
+            if (statusCode != null)
+            {
+                Assert.IsTrue(response.Contains($"\"code\":\"{statusCode}\""), $"Status code {statusCode} not found in error");
+            }
         }
 
         /// <summary>

@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.Common;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
 using HotChocolate.Resolvers;
@@ -83,16 +84,21 @@ namespace Azure.DataGateway.Service.Resolvers
 
             Dictionary<string, object> searchParams = await ExtractRowFromDbDataReader(dbDataReader);
 
+            if (searchParams == null)
+            {
+                throw new DatagatewayException("Mutation does not affect any data", 400, DatagatewayException.SubStatusCodes.BadRequest);
+            }
+
             // delegates the querying part of the mutation to the QueryEngine
             // this allows for nested queries in muatations
-            // the searchParams are used to indetefy the mutated record so it can then be further queried on
+            // the searchParams are used to indetify the mutated record so it can then be further queried on
             return await _queryEngine.ExecuteAsync(context, searchParams, false);
         }
 
         ///<summary>
         /// Extracts a single row from DbDataReader and format it so it can be used as a paramter to a query execution
         ///</summary>
-        ///<returns>A dictionary representating the row in <c>ColumnName: Value</c> format</returns>
+        ///<returns>A dictionary representating the row in <c>ColumnName: Value</c> format, null if no row was found</returns>
         private static async Task<Dictionary<string, object>> ExtractRowFromDbDataReader(DbDataReader dbDataReader)
         {
             Dictionary<string, object> row = new();
@@ -109,6 +115,12 @@ namespace Azure.DataGateway.Service.Resolvers
                         row.Add(columnName, dbDataReader[columnName]);
                     }
                 }
+            }
+
+            // no row was read
+            if (row.Count == 0)
+            {
+                return null;
             }
 
             return row;

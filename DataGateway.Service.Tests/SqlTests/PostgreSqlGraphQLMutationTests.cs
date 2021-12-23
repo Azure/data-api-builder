@@ -1,7 +1,6 @@
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -218,7 +217,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             using JsonDocument result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
 
             // TODO improve the error message returned by the graphql service to something more useful then smth generic
-            Assert.IsTrue(result.RootElement.ToString().Contains("error"), "Error was expected");
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.RootElement.ToString());
 
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
@@ -253,7 +252,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             using JsonDocument result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
 
             // TODO improve the error message returned by the graphql service to something more useful then smth generic
-            Assert.IsTrue(result.RootElement.ToString().Contains("error"), "Error was expected");
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.RootElement.ToString());
 
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
@@ -286,7 +285,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             ";
 
             using JsonDocument result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            Assert.IsTrue(result.RootElement.ToString().Contains(UpdateMutationHasNoUpdatesException.MESSAGE), "Error was expected");
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.RootElement.ToString(), statusCode: 400);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>use an update mutation with an invalid id to update
+        /// <code>Check: </code>check that GraphQL returns an appropriate exception to the user
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateWithInvalidIdentifier()
+        {
+            string graphQLMutationName = "editBook";
+            string graphQLMutation = @"
+                mutation {
+                    editBook(id: -1, title: ""Even Better Title"") {
+                        id
+                        title
+                    }
+                }
+            ";
+
+            using JsonDocument result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.RootElement.ToString(), statusCode: 400);
         }
         #endregion
     }

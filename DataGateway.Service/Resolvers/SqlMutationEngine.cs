@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
@@ -9,7 +10,6 @@ using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
-using System.Linq;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -87,7 +87,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (searchParams == null)
             {
-                string searchedPK = '<' + string.Join(", " , tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
+                string searchedPK = '<' + string.Join(", ", tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
                 throw new DatagatewayException($"Could not find entity with {searchedPK}", 404, DatagatewayException.SubStatusCodes.EntityNotFound);
             }
 

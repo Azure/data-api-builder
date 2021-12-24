@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
+using HotChocolate.Resolvers;
 using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -53,12 +54,13 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Executes the mutation query and return result as JSON object asynchronously.
         /// </summary>
-        /// <param name="graphQLMutationName">name of the GraphQL mutation query.</param>
+        /// <param name="context">context of graphql mutation</param>
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result</returns>
-        public async Task<JsonDocument> ExecuteAsync(string graphQLMutationName,
+        public async Task<JsonDocument> ExecuteAsync(IMiddlewareContext context,
             IDictionary<string, object> parameters)
         {
+            string graphQLMutationName = context.Selection.Field.Name.Value;
             MutationResolver resolver = _metadataStoreProvider.GetMutationResolver(graphQLMutationName);
 
             // TODO: we are doing multiple round of serialization/deserialization

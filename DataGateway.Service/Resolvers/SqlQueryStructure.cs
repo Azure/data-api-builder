@@ -190,13 +190,19 @@ namespace Azure.DataGateway.Service.Resolvers
                     foreach (string column in extraNeededColumns)
                     {
                         AddColumn(column);
-                        // Columns.Add(column, $"{QualifiedColumn(column)} AS {QuoteIdentifier(column)}");
                     }
                 }
 
                 if (IsRequestedPaginationResult("hasNextPage"))
                 {
                     _limit++;
+                }
+
+                // if the user does a paginated query only requesting hasNextPage
+                // there will be no elements in Columns
+                if (!Columns.Any())
+                {
+                    AddColumn(PrimaryKey()[0]);
                 }
             }
 
@@ -635,13 +641,6 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public string ColumnsSql()
         {
-            // if the user does a paginated query only requesting hasNextPage
-            // there will be no elements in Columns
-            if (!Columns.Any())
-            {
-                return QualifiedColumn(PrimaryKey()[0]);
-            }
-
             return string.Join(", ", Columns.Select(
                         x => $"{x.Value} AS {QuoteIdentifier(x.Key)}"));
         }

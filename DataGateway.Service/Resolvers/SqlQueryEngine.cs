@@ -54,7 +54,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _queryBuilder, isPaginatedQuery);
 
-            if(isPaginatedQuery)
+            if (isPaginatedQuery)
             {
                 return SqlPaginationUtil.CreatePaginationConnectionFromDbResult(await ExecuteAsync(structure), structure);
             }

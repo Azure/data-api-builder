@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
@@ -182,18 +182,19 @@ namespace Azure.DataGateway.Service.Resolvers
                 AddPaginationPredicates(queryParams);
                 ProcessPaginationFields(ctx.Selection.SyntaxNode.SelectionSet.Selections);
 
-                if(IsRequestedPaginationResult("endCursor")) {
+                if (IsRequestedPaginationResult("endCursor"))
+                {
                     // add the primary keys in the selected columns if they are missing
                     IEnumerable<string> extraNeededColumns = PrimaryKey().Except(Columns.Keys);
 
-                    foreach(string column in extraNeededColumns)
+                    foreach (string column in extraNeededColumns)
                     {
                         AddColumn(column);
                         // Columns.Add(column, $"{QualifiedColumn(column)} AS {QuoteIdentifier(column)}");
                     }
                 }
 
-                if(IsRequestedPaginationResult("hasNextPage"))
+                if (IsRequestedPaginationResult("hasNextPage"))
                 {
                     _limit++;
                 }
@@ -287,8 +288,10 @@ namespace Azure.DataGateway.Service.Resolvers
             TableName = _typeInfo.Table;
             TableAlias = CreateTableAlias();
 
-            if(queryField != null)
+            if (queryField != null)
+            {
                 AddGraphqlFields(queryField.SelectionSet.Selections);
+            }
 
             if (outputType.IsNonNullType())
             {
@@ -299,16 +302,16 @@ namespace Azure.DataGateway.Service.Resolvers
                 IsListQuery = outputType.IsListType();
             }
 
-            if(IsListQuery)
+            if (IsListQuery)
             {
                 // parse first parameter for all list queries
                 object firstObject = queryParams["first"];
 
-                if(firstObject != null)
+                if (firstObject != null)
                 {
-                    int first = (int)(long) firstObject;
+                    int first = (int)(long)firstObject;
 
-                    if(first <= 0)
+                    if (first <= 0)
                     {
                         throw new DatagatewayException($"first must be a positive integer for {schemaField.Name}", 400, DatagatewayException.SubStatusCodes.BadRequest);
                     }
@@ -634,7 +637,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             // if the user does a paginated query only requesting hasNextPage
             // there will be no elements in Columns
-            if(!Columns.Any())
+            if (!Columns.Any())
             {
                 return QualifiedColumn(PrimaryKey()[0]);
             }

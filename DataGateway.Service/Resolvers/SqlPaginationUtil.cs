@@ -1,9 +1,9 @@
+using System;
 using System.Collections.Generic;
-using Azure.DataGateway.Service.Exceptions;
-using Newtonsoft.Json;
 using System.Linq;
 using System.Text.Json;
-using System;
+using Azure.DataGateway.Service.Exceptions;
+using Newtonsoft.Json;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -16,7 +16,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             List<string> connectionJsonElems = new();
 
-            if(dbResult == null)
+            if (dbResult == null)
             {
                 dbResult = JsonDocument.Parse("[]");
             }
@@ -25,32 +25,35 @@ namespace Azure.DataGateway.Service.Resolvers
             IEnumerable<JsonElement> rootElems = root.EnumerateArray();
 
             bool hasExtraElement = false;
-            if(structure.IsRequestedPaginationResult("hasNextPage"))
+            if (structure.IsRequestedPaginationResult("hasNextPage"))
             {
                 hasExtraElement = rootElems.Count() == structure.Limit();
                 connectionJsonElems.Add($"\"hasNextPage\": {(hasExtraElement ? "true" : "false")}");
 
-                if(hasExtraElement)
+                if (hasExtraElement)
+                {
                     // remove the last element
                     rootElems = rootElems.Take(rootElems.Count() - 1);
+                }
             }
 
             int returnedElemNo = rootElems.Count();
 
-            if(structure.IsRequestedPaginationResult("nodes"))
+            if (structure.IsRequestedPaginationResult("nodes"))
             {
-                if(hasExtraElement)
+                if (hasExtraElement)
                 {
                     connectionJsonElems.Add($"\"nodes\": {'[' + string.Join(", ", rootElems.Select(e => e.GetRawText())) + ']'}");
                 }
-                else {
+                else
+                {
                     connectionJsonElems.Add($"\"nodes\": {root.GetRawText()}");
                 }
             }
 
-            if(structure.IsRequestedPaginationResult("endCursor"))
+            if (structure.IsRequestedPaginationResult("endCursor"))
             {
-                if(returnedElemNo > 0)
+                if (returnedElemNo > 0)
                 {
                     JsonElement lastElemInRoot = rootElems.ElementAtOrDefault(returnedElemNo - 1);
                     connectionJsonElems.Add($"\"endCursor\": {MakeCursorFromJsonElement(lastElemInRoot, structure.PrimaryKey())}");
@@ -67,7 +70,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             List<string> jsonText = new();
 
-            foreach(string key in primaryKeys)
+            foreach (string key in primaryKeys)
             {
                 jsonText.Add($"\"{key}\": {element.GetProperty(key).GetRawText()}");
             }
@@ -80,25 +83,27 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public static IDictionary<string, object> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, List<string> primaryKeys)
         {
-            Dictionary<string, object> after = new Dictionary<string, object>();
+            Dictionary<string, object> after = new();
 
             object afterObject = queryParams["after"];
             string afterJsonString;
 
-            if(afterObject != null)
+            if (afterObject != null)
             {
-                try {
-                    string afterPlainText = (string) afterObject;
+                try
+                {
+                    string afterPlainText = (string)afterObject;
                     afterJsonString = Base64Decode(afterPlainText);
                     after = JsonConvert.DeserializeObject<Dictionary<string, object>>(afterJsonString);
                 }
-                catch(Exception e) {
+                catch (Exception e)
+                {
                     Console.Error.WriteLine(e);
                     string notValidString = $"Parameter after with value {afterObject} is not a valid base64 encoded json string.";
                     throw new DatagatewayException(notValidString, 400, DatagatewayException.SubStatusCodes.BadRequest);
                 }
 
-                if(!ListsAreEqual(after.Keys.ToList(), primaryKeys))
+                if (!ListsAreEqual(after.Keys.ToList(), primaryKeys))
                 {
                     string incorrectValues = $"Parameter \"after\" with values {afterJsonString} does not contain all the required" +
                                                 $"values <{string.Join(", ", primaryKeys.Select(key => $"\"{key}\""))}>";
@@ -124,7 +129,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public static string Base64Decode(string base64EncodedData)
         {
-            var base64EncodedBytes = System.Convert.FromBase64String(base64EncodedData);
+            byte[] base64EncodedBytes = System.Convert.FromBase64String(base64EncodedData);
             return System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
         }
 

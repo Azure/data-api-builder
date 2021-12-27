@@ -1,8 +1,8 @@
-using System.Threading.Tasks;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -18,7 +18,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         private static GraphQLController _graphQLController;
         private static readonly string _integrationTableName = "books";
 
-         /// <summary>
+        /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
         /// MSTest decorator.
         /// </summary>
@@ -41,7 +41,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Request a full connection object {nodes, endCursor, hasNextPage}
         /// </summary>
         [TestMethod]
-        public async Task RequestFullConnection(){
+        public async Task RequestFullConnection()
+        {
             string graphQLQueryName = "books";
             string after = SqlPaginationUtil.Base64Encode("{ \"id\": 4 }");
             string graphQLQuery = @"{
@@ -188,7 +189,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Request only nodes from the pagination
         /// </summary>
         [TestMethod]
-        public async Task RequestNodesOnly(){
+        public async Task RequestNodesOnly()
+        {
             string graphQLQueryName = "books";
             string after = SqlPaginationUtil.Base64Encode("{ \"id\": 4 }");
             string graphQLQuery = @"{
@@ -236,7 +238,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// selectively retreive data
         /// </remarks>
         [TestMethod]
-        public async Task RequestEndCursorOnly(){
+        public async Task RequestEndCursorOnly()
+        {
             string graphQLQueryName = "books";
             string after = SqlPaginationUtil.Base64Encode("{ \"id\": 4 }");
             string graphQLQuery = @"{
@@ -284,7 +287,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// selectively retreive data
         /// </remarks>
         [TestMethod]
-        public async Task RequestHasNextPageOnly(){
+        public async Task RequestHasNextPageOnly()
+        {
             string graphQLQueryName = "books";
             string after = SqlPaginationUtil.Base64Encode("{ \"id\": 4 }");
             string graphQLQuery = @"{

@@ -1,5 +1,5 @@
-using System.Threading.Tasks;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Services;
@@ -357,7 +357,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Test if first param successfully limits list quries
         /// </summary>
         [TestMethod]
-        public async Task TestFirstParamForListQueries(){
+        public async Task TestFirstParamForListQueries()
+        {
             string graphQLQueryName = "getBooks";
             string graphQLQuery = @"{
                 getBooks(first: 1) {
@@ -407,7 +408,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         #endregion
 
-         #region Negative Tests
+        #region Negative Tests
 
         [TestMethod]
         public async Task TestInvalidFirstParamQuery()

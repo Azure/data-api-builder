@@ -144,12 +144,12 @@ namespace Azure.DataGateway.Services
             }
         }
 
-        private static IDictionary<string, object> GetParametersFromContext(IMiddlewareContext context)
+        public static IDictionary<string, object> GetParametersFromSchemaAndQueryFields(IObjectField schema, FieldNode query)
         {
             IDictionary<string, object> parameters = new Dictionary<string, object>();
 
             // Fill the parameters dictionary with the default argument values
-            IFieldCollection<IInputField> availableArguments = context.Selection.Field.Arguments;
+            IFieldCollection<IInputField> availableArguments = schema.Arguments;
             foreach (IInputField argument in availableArguments)
             {
                 if (argument.DefaultValue == null)
@@ -163,13 +163,18 @@ namespace Azure.DataGateway.Services
             }
 
             // Overwrite the default values with the passed in arguments
-            IReadOnlyList<ArgumentNode> passedArguments = context.Selection.SyntaxNode.Arguments;
+            IReadOnlyList<ArgumentNode> passedArguments = query.Arguments;
             foreach (ArgumentNode argument in passedArguments)
             {
                 parameters[argument.Name.Value] = ArgumentValue(argument.Value);
             }
 
             return parameters;
+        }
+
+        private static IDictionary<string, object> GetParametersFromContext(IMiddlewareContext context)
+        {
+            return GetParametersFromSchemaAndQueryFields(context.Selection.Field, context.Selection.SyntaxNode);
         }
     }
 }

@@ -31,6 +31,18 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public string Build(SqlQueryStructure structure);
         /// <summary>
+        /// Builds the query specific to the target database for the given
+        /// SqlInsertStructure object which holds the major components of the
+        /// query.
+        /// </summary>
+        public string Build(SqlInsertStructure structure);
+        /// <summary>
+        /// Builds the query specific to the target database for the given
+        /// SqlInsertStructure object which holds the major components of the
+        /// query.
+        /// </summary>
+        public string Build(SqlUpdateStructure structure);
+        /// <summary>
         /// Simply a quoted version of the identifier "data". This identifier
         /// is commonly used throughout the query.
         /// </summary>

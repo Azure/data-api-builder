@@ -44,7 +44,7 @@ namespace Azure.DataGateway.Services
             {
                 IDictionary<string, object> parameters = GetParametersFromContext(context);
 
-                context.Result = await _mutationEngine.ExecuteAsync(context.Selection.Field.Name.Value, parameters);
+                context.Result = await _mutationEngine.ExecuteAsync(context, parameters);
             }
             else if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
             {

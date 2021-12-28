@@ -441,7 +441,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 case "smallint":
                     return Int64.Parse(param);
                 default:
-                    throw new Exception("Type of field could not be determined");
+                    throw new Exception($"Type of field \"{type}\" could not be determined");
             }
         }
 

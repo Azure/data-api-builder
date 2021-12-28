@@ -4,6 +4,12 @@ type Query {
     getReview(id: Int!, book_id: Int!): Review
 }
 
+type Mutation {
+    editBook(id: Int!, title: String, publisher_id: Int): Book
+    insertBook(title: String!, publisher_id: Int!): Book
+    addAuthorToBook(author_id: Int!, book_id: Int!): Boolean
+}
+
 type Publisher {
     id: Int
     name: String

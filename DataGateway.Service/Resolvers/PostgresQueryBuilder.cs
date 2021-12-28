@@ -50,5 +50,20 @@ namespace Azure.DataGateway.Service.Resolvers
             query = $"{start} {query} {end}";
             return query;
         }
+
+        public string Build(SqlInsertStructure structure)
+        {
+            return $"INSERT INTO {QuoteIdentifier(structure.TableName)} {structure.ColumnsSql()} " +
+                    $"VALUES {structure.ValuesSql()} " +
+                    $"RETURNING {structure.ReturnColumnsSql()};";
+        }
+
+        public string Build(SqlUpdateStructure structure)
+        {
+            return $"UPDATE {QuoteIdentifier(structure.TableName)} " +
+                    $"SET {structure.SetOperationsSql()} " +
+                    $"WHERE {structure.PredicatesSql()} " +
+                    $"RETURNING {structure.ReturnColumnsSql()};";
+        }
     }
 }

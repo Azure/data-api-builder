@@ -9,7 +9,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     /// <summary>
     /// Test REST Apis validating expected results are obtained.
     /// </summary>
-    [TestClass, TestCategory(TestCategory.MSSQL)]
+    [TestClass]
     public class RestApiTestBase : SqlTestBase
     {
         #region Test Fixture Setup

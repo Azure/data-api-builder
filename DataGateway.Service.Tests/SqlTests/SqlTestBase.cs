@@ -131,7 +131,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="controller">string represents the rest controller</param>
         /// <param name="exception">bool represents if we expect an exception</param>
         /// <param name="checkError">bool represents if we check error condition format</param>
-        /// <param name="message">string represents the error mesage</param>
+        /// <param name="message">string represents the error message in the JsonResponse</param>
         /// <param name="statusCode">int represents the returned http status code</param>
         /// <param name="subStatusCode">enum represents the returned sub status code</param>
         /// <returns></returns>

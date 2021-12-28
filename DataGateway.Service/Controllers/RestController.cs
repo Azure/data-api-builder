@@ -62,7 +62,14 @@ namespace Azure.DataGateway.Service.Controllers
             }
             catch (DatagatewayException ex)
             {
-                return BadRequest(ex.Message);
+                // returns JSON with error has key and value is JSON with key value pairs
+                // "code": SubStatusCode and "message": Message
+                var error = new[]
+                    {
+                        new { code = ex.SubStatusCode.ToString(), message = ex.Message }
+                    };
+                Response.StatusCode = ex.StatusCode;
+                return new JsonResult(new { error });
             }
             catch (Exception ex)
             {

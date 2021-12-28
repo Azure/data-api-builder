@@ -6,7 +6,7 @@ type Query {
 }
 
 type BookConnection {
-    nodes: [Book]
+    items: [Book]
     endCursor: String
     hasNextPage: Boolean
 }

@@ -113,9 +113,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader));
 
-            JsonElement sqlResultData = sqlResult.RootElement;
-
-            return sqlResultData.ToString();
+            return sqlResult.RootElement.ToString();
         }
 
         /// <summary>

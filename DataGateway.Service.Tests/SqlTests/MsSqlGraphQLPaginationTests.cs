@@ -38,7 +38,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         #region Tests
 
         /// <summary>
-        /// Request a full connection object {nodes, endCursor, hasNextPage}
+        /// Request a full connection object {items, endCursor, hasNextPage}
         /// </summary>
         [TestMethod]
         public async Task RequestFullConnection()
@@ -47,7 +47,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string after = SqlPaginationUtil.Base64Encode("{ \"id\": 4 }");
             string graphQLQuery = @"{
                 books(first: 2," + $"after: \"{after}\")" + @"{
-                    nodes {
+                    items {
                         title
                         publisher {
                             name
@@ -58,15 +58,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
             string msSqlQuery = @"
-                SELECT [nodes] = JSON_QUERY('[' + COALESCE(STRING_AGG([jsonelems], ', '), '') + ']'),
+                SELECT [items] = JSON_QUERY('[' + COALESCE(STRING_AGG([jsonelems], ', '), '') + ']'),
                     [endCursor] = CASE
                         WHEN max([id]) IS NOT NULL
                             THEN (
                                     SELECT CAST(CONCAT (
-                                                '{ ',
-                                                '""id"": ',
+                                                '{',
+                                                '""id"":',
                                                 max(id),
-                                                ' }'
+                                                '}'
                                                 ) AS VARBINARY(MAX))
                                     FOR XML PATH(''),
                                         BINARY BASE64
@@ -118,7 +118,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Request a full connection object {nodes, endCursor, hasNextPage}
+        /// Request a full connection object {items, endCursor, hasNextPage}
         /// without providing any parameters
         /// </summary>
         [TestMethod]
@@ -127,7 +127,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
                 books {
-                    nodes {
+                    items {
                         id
                         title
                     }
@@ -136,15 +136,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
             string msSqlQuery = @"
-                SELECT [nodes] = JSON_QUERY('[' + COALESCE(STRING_AGG([jsonelems], ', '), '') + ']'),
+                SELECT [items] = JSON_QUERY('[' + COALESCE(STRING_AGG([jsonelems], ', '), '') + ']'),
                     [endCursor] = CASE
                         WHEN max([id]) IS NOT NULL
                             THEN (
                                     SELECT CAST(CONCAT (
-                                                '{ ',
-                                                '""id"": ',
+                                                '{',
+                                                '""id"":',
                                                 max(id),
-                                                ' }'
+                                                '}'
                                                 ) AS VARBINARY(MAX))
                                     FOR XML PATH(''),
                                         BINARY BASE64
@@ -186,23 +186,23 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Request only nodes from the pagination
+        /// Request only items from the pagination
         /// </summary>
         [TestMethod]
-        public async Task RequestNodesOnly()
+        public async Task RequestItemsOnly()
         {
             string graphQLQueryName = "books";
             string after = SqlPaginationUtil.Base64Encode("{ \"id\": 4 }");
             string graphQLQuery = @"{
                 books(first: 2," + $"after: \"{after}\")" + @"{
-                    nodes {
+                    items {
                         title
                         publisher_id
                     }
                 }
             }";
             string msSqlQuery = @"
-                SELECT [nodes] = JSON_QUERY('[' + COALESCE(STRING_AGG([jsonelems], ', '), '') + ']')
+                SELECT [items] = JSON_QUERY('[' + COALESCE(STRING_AGG([jsonelems], ', '), '') + ']')
                 FROM (
                     SELECT [jsonelems] = (
                             SELECT [title],
@@ -252,10 +252,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         WHEN max([id]) IS NOT NULL
                             THEN (
                                     SELECT CAST(CONCAT (
-                                                '{ ',
-                                                '""id"": ',
+                                                '{',
+                                                '""id"":',
                                                 max(id),
-                                                ' }'
+                                                '}'
                                                 ) AS VARBINARY(MAX))
                                     FOR XML PATH(''),
                                         BINARY BASE64
@@ -332,7 +332,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string after = SqlPaginationUtil.Base64Encode("{ \"id\": 1000000 }");
             string graphQLQuery = @"{
                  books(first: 2," + $"after: \"{after}\")" + @"{
-                    nodes {
+                    items {
                         title
                     }
                     endCursor
@@ -343,7 +343,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             using JsonDocument result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
             JsonElement root = result.RootElement.GetProperty("data").GetProperty(graphQLQueryName);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected: "[]", root.GetProperty("nodes").ToString());
+            SqlTestHelper.PerformTestEqualJsonStrings(expected: "[]", root.GetProperty("items").ToString());
             Assert.AreEqual(null, root.GetProperty("endCursor").GetString());
             Assert.AreEqual(false, root.GetProperty("hasNextPage").GetBoolean());
         }
@@ -360,7 +360,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
                 books(first: -1) {
-                    nodes {
+                    items {
                         id
                     }
                 }
@@ -379,7 +379,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
                 books(after: ""aaaaaaaaa"") {
-                    nodes {
+                    items {
                         id
                     }
                 }
@@ -399,7 +399,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string after = SqlPaginationUtil.Base64Encode("{ \"title\": \"Great Book\" }");
             string graphQLQuery = @"{
                  books(" + $"after: \"{after}\")" + @"{
-                    nodes {
+                    items {
                         title
                     }
                 }
@@ -419,14 +419,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string after = SqlPaginationUtil.Base64Encode("{ \"id\": \"Great Book\" }");
             string graphQLQuery = @"{
                  books(" + $"after: \"{after}\")" + @"{
-                    nodes {
+                    items {
                         title
                     }
                 }
             }";
 
             using JsonDocument result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.RootElement.ToString());
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.RootElement.ToString(), statusCode: $"{DatagatewayException.SubStatusCodes.BadRequest}");
         }
 
         #endregion

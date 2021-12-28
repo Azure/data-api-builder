@@ -122,12 +122,12 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Default limit when no first param is specified for list queries
         /// </summary>
-        private const int DEFAULT_LIST_LIMIT = 100;
+        private const uint DEFAULT_LIST_LIMIT = 500;
 
         /// <summary>
         /// The maximum number of results this query should return.
         /// </summary>
-        private int _limit = DEFAULT_LIST_LIMIT;
+        private uint _limit = DEFAULT_LIST_LIMIT;
 
         /// <summary>
         /// The fields the user wants back from the Connection result of the paginated query
@@ -160,13 +160,13 @@ namespace Azure.DataGateway.Service.Resolvers
             // that is used to create GraphQL queries. We give it some values
             // that make sense for the outermost query.
             // If the query is paginated, schemaField and queryField are replaced with the
-            // schemaField and queryField of the *Connection.nodes field
+            // schemaField and queryField of the *Connection.items field
             : this(ctx,
                 queryParams,
                 metadataStoreProvider,
                 queryBuilder,
-                isPaginatedQuery ? ExtractNodesSchemaField(ctx) : ctx.Selection.Field,
-                isPaginatedQuery ? ExtractNodesQueryField(ctx) : ctx.Selection.SyntaxNode,
+                isPaginatedQuery ? ExtractItemsSchemaField(ctx) : ctx.Selection.Field,
+                isPaginatedQuery ? ExtractItemsQueryField(ctx) : ctx.Selection.SyntaxNode,
                 // The outermost query is where we start, so this can define
                 // create the IncrementingInteger that will be shared between
                 // all subqueries in this query.
@@ -215,32 +215,32 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Extracts the *Connection.nodes schema field from the ctx
+        /// Extracts the *Connection.items schema field from the ctx
         /// </summary>
-        private static IObjectField ExtractNodesSchemaField(IResolverContext ctx)
+        private static IObjectField ExtractItemsSchemaField(IResolverContext ctx)
         {
-            return UnderlyingType(ctx.Selection.Field.Type).Fields["nodes"];
+            return UnderlyingType(ctx.Selection.Field.Type).Fields["items"];
         }
 
         /// <summary>
-        /// Extracts the *Connection.nodes query field from the ctx
+        /// Extracts the *Connection.items query field from the ctx
         /// </summary>
-        /// <returns> The query field or null if **Conneciton.nodes is not requested in the query</returns>
-        private static FieldNode ExtractNodesQueryField(IResolverContext ctx)
+        /// <returns> The query field or null if **Conneciton.items is not requested in the query</returns>
+        private static FieldNode ExtractItemsQueryField(IResolverContext ctx)
         {
-            FieldNode nodesField = null;
+            FieldNode itemsField = null;
             foreach (ISelectionNode node in ctx.Selection.SyntaxNode.SelectionSet.Selections)
             {
                 FieldNode field = node as FieldNode;
                 string fieldName = field.Name.Value;
 
-                if (fieldName == "nodes")
+                if (fieldName == "items")
                 {
-                    nodesField = field;
+                    itemsField = field;
                 }
             }
 
-            return nodesField;
+            return itemsField;
         }
 
         /// <summary>
@@ -315,14 +315,22 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 if (firstObject != null)
                 {
-                    int first = (int)(long)firstObject;
+                    // due to the way parameters get resolved,
+                    long first = (long)firstObject;
 
                     if (first <= 0)
                     {
                         throw new DatagatewayException($"first must be a positive integer for {schemaField.Name}", 400, DatagatewayException.SubStatusCodes.BadRequest);
                     }
 
-                    _limit = first;
+                    try
+                    {
+                        _limit = (uint)first;
+                    }
+                    catch
+                    {
+                        throw new DatagatewayException($"Parameter \"first\" with value {first} is too large, uint32 expected", 400, DatagatewayException.SubStatusCodes.BadRequest);
+                    }
                 }
             }
         }
@@ -421,7 +429,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         void AddPaginationPredicates(IDictionary<string, object> queryParams)
         {
-            IDictionary<string, object> afterJsonValues = SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PrimaryKey());
+            IDictionary<string, object> afterJsonValues = SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, this);
             foreach (KeyValuePair<string, object> parameter in afterJsonValues)
             {
                 Predicates.Add($"{QualifiedColumn(parameter.Key)} > @{MakeParamWithValue(parameter.Value)}");
@@ -468,9 +476,12 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Store the requested pagination connection fields and return the fields of the <c>"nodes"</c> field
+        /// Store the requested pagination connection fields and return the fields of the <c>"items"</c> field
         /// </summary>
-        /// <returns> The fields of the <c>**Conneciton.nodes</c> of the Conneciton type used for pagination. Empty list if <c>nodes</c> was not requested as a field</returns>
+        /// <returns>
+        /// The fields of the <c>**Conneciton.items</c> of the Conneciton type used for pagination.
+        /// Empty list if <c>items</c> was not requested as a field
+        /// </returns>
         void ProcessPaginationFields(IReadOnlyList<ISelectionNode> paginationSelections)
         {
             foreach (ISelectionNode node in paginationSelections)
@@ -573,21 +584,40 @@ namespace Azure.DataGateway.Service.Resolvers
         ///<summary>
         /// Resolves a string parameter to the correct type, by using the type of the field
         /// it is supposed to be compared with
+        /// Throws exceptions if fieldName is not a valid column for the table or if param cannot be converted to the field type
         ///</summary>
-        object ResolveParamTypeFromField(string param, string fieldName)
+        public object ResolveParamTypeFromField(string param, string fieldName)
         {
-            string type = GetTableDefinition().Columns.GetValueOrDefault(fieldName).Type;
-            switch (type)
+            string type;
+            ColumnDefinition column;
+            if (GetTableDefinition().Columns.TryGetValue(fieldName, out column))
             {
-                case "text":
-                case "varchar":
-                    return param;
-                case "bigint":
-                case "int":
-                case "smallint":
-                    return Int64.Parse(param);
-                default:
-                    throw new Exception($"Type of field \"{type}\" could not be determined");
+                type = column.Type;
+            }
+            else
+            {
+                throw new Exception($"{fieldName} is not a valid column of {TableName}");
+            }
+
+            try
+            {
+                switch (type)
+                {
+                    case "text":
+                    case "varchar":
+                        return param;
+                    case "bigint":
+                    case "int":
+                    case "smallint":
+                        return Int64.Parse(param);
+                    default:
+                        // should never happen due to the config being validated for correct types
+                        return null;
+                }
+            }
+            catch
+            {
+                throw new Exception($"{param} is not a valid value for property {fieldName}");
             }
         }
 
@@ -621,7 +651,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// The maximum number of results this query should return.
         /// </summary>
-        public int Limit()
+        public uint Limit()
         {
             if (IsListQuery || IsPaginatedQuery)
             {

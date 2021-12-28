@@ -208,7 +208,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 exception: true,
                 checkError: true,
                 message: "Invalid Column name: content"
-
             );
         }
 

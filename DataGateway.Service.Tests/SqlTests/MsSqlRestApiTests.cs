@@ -9,12 +9,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     /// Test REST Apis validating expected results are obtained.
     /// </summary>
     [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class MsSqlRestApiTests : SqlTestBase
+    public class MsSqlRestApiTests : RestApiTestBase
     {
         #region Test Fixture Setup
-        private static RestService _restService;
-        private static RestController _restController;
-        private static readonly string _integrationTableName = "books";
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
@@ -24,7 +21,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [ClassInitialize]
         public static async Task InitializeTestFixture(TestContext context)
         {
-            await InitializeTestFixture(context, _integrationTableName, TestCategory.MSSQL);
+            await InitializeTestFixture(context, RestApiTestBase._integrationTableName, TestCategory.MSSQL);
 
             // Setup REST Components
             //
@@ -41,16 +38,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindByIdTest()
         {
-            string msSqlQuery = $"SELECT * FROM { _integrationTableName} " +
-                $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/2",
-                queryString: string.Empty,
-                entity: _integrationTableName,
-                sqlQuery: msSqlQuery,
-                controller: _restController
-            );
+            await RestApiTestBase.FindByIdTest(_queryMap["MsSqlFindById"]);
         }
 
         /// <summary>
@@ -60,16 +48,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindByIdTestWithQueryStringFields()
         {
-            string msSqlQuery = $"SELECT [id], [title] FROM { _integrationTableName } " +
-                $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/1",
-                queryString: "?_f=id,title",
-                entity: _integrationTableName,
-                sqlQuery: msSqlQuery,
-                controller: _restController
-            );
+            await RestApiTestBase.FindByIdTestWithQueryStringFields(_queryMap["MsSqlFindByIdTestWithQueryStringFields"]);
         }
 
         /// <summary>
@@ -79,16 +58,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithQueryStringOneField()
         {
-            string msSqlQuery = $"SELECT [id] FROM { _integrationTableName } " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: string.Empty,
-                queryString: "?_f=id",
-                entity: _integrationTableName,
-                sqlQuery: msSqlQuery,
-                controller: _restController);
-
+            await RestApiTestBase.FindTestWithQueryStringOneField(_queryMap["MsSqlFindTestWithQueryStringOneField"]);
         }
 
         /// <summary>
@@ -98,16 +68,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithQueryStringMultipleFields()
         {
-            string msSqlQuery = $"SELECT [id], [title] FROM { _integrationTableName } " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: string.Empty,
-                queryString: "?_f=id,title",
-                entity: _integrationTableName,
-                sqlQuery: msSqlQuery,
-                controller: _restController
-            );
+            await RestApiTestBase.FindTestWithQueryStringMultipleFields(_queryMap["MsSqlFindTestWithQueryStringMultipleFields"]);
         }
 
         /// <summary>
@@ -117,32 +78,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithQueryStringAllFields()
         {
-            string msSqlQuery = $"SELECT * FROM { _integrationTableName } " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: string.Empty,
-                queryString: string.Empty,
-                entity: _integrationTableName,
-                sqlQuery: msSqlQuery,
-                controller: _restController
-            );
+            await RestApiTestBase.FindTestWithQueryStringAllFields(_queryMap["MsSqlFindTestWithQueryStringAllFields"]);
         }
 
         [TestMethod]
         public async Task FindTestWithPrimaryKeyContainingForeignKey()
         {
-            string entityName = "reviews";
-            string msSqlQuery = $"SELECT [id], [content] FROM { entityName } " +
-                $"WHERE id = 567 AND book_id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/567/book_id/1",
-                queryString: "?_f=id,content",
-                entity: entityName,
-                sqlQuery: msSqlQuery,
-                controller: _restController
-            );
+            await RestApiTestBase.FindTestWithPrimaryKeyContainingForeignKey(_queryMap["MsSqlFindTestWithPrimaryKeyContainingForeignKey"]);
         }
 
         #endregion
@@ -156,17 +98,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindByIdTestWithInvalidFields()
         {
-            string msSqlQuery = $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
-                $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/567/book_id/1",
-                queryString: "?_f=id,content",
-                entity: _integrationTableName,
-                sqlQuery: msSqlQuery,
-                controller: _restController,
-                exception: true
-            );
+            await RestApiTestBase.FindByIdTestWithInvalidFields(_queryMap["MsSqlFindByIdTestWithInvalidFields"]);
         }
 
         /// <summary>
@@ -176,17 +108,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithInvalidFields()
         {
-            string msSqlQuery = $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
-                $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: string.Empty,
-                queryString: "?_f=id,null",
-                entity: _integrationTableName,
-                sqlQuery: msSqlQuery,
-                controller: _restController,
-                exception: true
-            );
+            await RestApiTestBase.FindTestWithInvalidFields(_queryMap["MsSqlFindTestWithInvalidFields"]);
         }
 
         #endregion

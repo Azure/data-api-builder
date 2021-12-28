@@ -7,14 +7,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 {
 
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
-    public class PostgreSqlRestApiTests : SqlTestBase
+    public class PostgreSqlRestApiTests : RestApiTestBase
     {
 
         #region Test Fixture Setup
-        private static RestService _restService;
-        private static RestController _restController;
-        private static readonly string _integrationTableName = "books";
 
+        /// <summary>
+        /// Sets up test fixture for class, only to be run once per test run, as defined by
+        /// MSTest decorator.
+        /// </summary>
+        /// <param name="context"></param>
         [ClassInitialize]
         public static async Task InitializeTestFixture(TestContext context)
         {
@@ -34,22 +36,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindByIdTest()
         {
-            string postgresQuery = @"SELECT to_jsonb(subq) AS data
-                                    FROM (
-                                        SELECT *
-                                        FROM " + _integrationTableName + @"
-                                        WHERE id = 2
-                                        ORDER BY id
-                                        LIMIT 1
-                                    ) AS subq";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/2",
-                queryString: string.Empty,
-                entity: _integrationTableName,
-                sqlQuery: postgresQuery,
-                controller: _restController
-            );
+            await RestApiTestBase.FindByIdTest(_queryMap["PostgresFindByIdTest"]);
         }
 
         /// <summary>
@@ -57,50 +44,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// including the field names.
         /// </summary>
         [TestMethod]
-        public async Task FindIdTestWithQueryStringFields()
+        public async Task FindByIdTestWithQueryStringFields()
         {
-            string postgresQuery = @"
-                SELECT to_jsonb(subq) AS data
-                FROM (
-                    SELECT id, title
-                    FROM " + _integrationTableName + @"
-                    WHERE id = 1
-                    ORDER BY id
-                    LIMIT 1
-                ) AS subq
-            ";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/1",
-                queryString: "?_f=id,title",
-                entity: _integrationTableName,
-                sqlQuery: postgresQuery,
-                controller: _restController
-            );
+            await RestApiTestBase.FindByIdTestWithQueryStringFields(_queryMap["PostgresFindByIdTestWithQueryStringFields"]);
         }
 
         [TestMethod]
         public async Task FindTestWithPrimaryKeyContainingForeignKey()
         {
-            string entityName = "reviews";
-            string postgresQuery = @"
-                SELECT to_jsonb(subq) AS data
-                FROM (
-                    SELECT id, content
-                    FROM " + entityName + @"
-                    WHERE id = 567 AND book_id = 1
-                    ORDER BY id
-                    LIMIT 1
-                ) AS subq
-            ";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/567/book_id/1",
-                queryString: "?_f=id,content",
-                entity: entityName,
-                sqlQuery: postgresQuery,
-                controller: _restController
-            );
+            await RestApiTestBase.FindTestWithPrimaryKeyContainingForeignKey(_queryMap["PostgresFindTestWithPrimaryKeyContainingForeignKey"]);
         }
 
         #endregion
@@ -114,22 +66,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindByIdTestWithInvalidFields()
         {
-            string postgresQuery = @"
-                SELECT to_jsonb(subq) AS data
-                FROM (
-                    SELECT id, name, type
-                    FROM " + _integrationTableName + @"
-                ) AS subq
-            ";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/567/book_id/1",
-                queryString: "?_f=id,content",
-                entity: _integrationTableName,
-                sqlQuery: postgresQuery,
-                controller: _restController,
-                exception: true
-            );
+            await RestApiTestBase.FindByIdTestWithInvalidFields(_queryMap["PostgresFindByIdTestWithInvalidFields"]);
         }
 
         #endregion

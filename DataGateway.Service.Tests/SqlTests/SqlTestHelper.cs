@@ -93,7 +93,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </param>
         /// <param name="expectException">True if we expect exceptions.</param>
         /// <param name="checkError">bool represents if we check error condition format</param>
-        /// <param name="message">string represents the error mesage</param>
+        /// <param name="message">string represents the error message in the JsonResponse</param>
         /// <param name="statusCode">int represents the returned http status code</param>
         /// <param name="subStatusCode">enum represents the returned sub status code</param>
         public static async Task PerformApiTest(

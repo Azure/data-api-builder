@@ -59,7 +59,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "PostgresFindById",
+                "PostgresFindByIdTest",
                 @"SELECT to_jsonb(subq) AS data
                                     FROM (
                                         SELECT *

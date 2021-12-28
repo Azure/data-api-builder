@@ -62,7 +62,7 @@ namespace Azure.DataGateway.Service.Controllers
             }
             catch (DatagatewayException ex)
             {
-                // returns JSON with error has key and value is JSON with key value pairs
+                // returns JSON with key value pair where key is "error" and value is JSON with key value pairs
                 // "code": SubStatusCode and "message": Message
                 var error = new[]
                     {

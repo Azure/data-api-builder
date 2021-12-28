@@ -189,6 +189,29 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             );
         }
 
+        /// <summary>
+        /// Tests the REST Api for the correct error condition format when 
+        /// a DatagatewayException is thrown
+        /// </summary>
+        [TestMethod]
+        public async Task RestDatagatewayExceptionErrorConditionFormat()
+        {
+            string msSqlQuery = $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
+                $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?_f=id,content",
+                entity: _integrationTableName,
+                sqlQuery: msSqlQuery,
+                controller: _restController,
+                exception: true,
+                checkError: true,
+                message: "Invalid Column name: content"
+
+            );
+        }
+
         #endregion
     }
 }

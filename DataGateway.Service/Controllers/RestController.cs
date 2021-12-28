@@ -65,6 +65,7 @@ namespace Azure.DataGateway.Service.Controllers
                 Response.StatusCode = ex.StatusCode;
                 return new JsonResult(new
                 {
+                    StatusCode = ex.StatusCode,
                     error = new
                     {
                         code = ex.SubStatusCode.ToString(),

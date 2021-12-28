@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.configurations;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Http;
@@ -129,6 +130,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="sqlQuery">string represents the query to be executed</param>
         /// <param name="controller">string represents the rest controller</param>
         /// <param name="exception">bool represents if we expect an exception</param>
+        /// <param name="checkError">bool represents if we check error condition format</param>
+        /// <param name="message">string represents the error mesage</param>
+        /// <param name="statusCode">int represents the returned http status code</param>
+        /// <param name="subStatusCode">enum represents the returned sub status code</param>
         /// <returns></returns>
         protected static async Task SetupAndRunRestApiTest(
             string primaryKeyRoute,
@@ -136,7 +141,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string entity,
             string sqlQuery,
             RestController controller,
-            bool exception = false)
+            bool exception = false,
+            bool checkError = false,
+            string message = "",
+            int statusCode = 400,
+            DatagatewayException.SubStatusCodes subStatusCode = DatagatewayException.SubStatusCodes.BadRequest)
         {
             ConfigureRestController(controller, queryString);
 
@@ -145,7 +154,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity,
                 primaryKeyRoute,
                 GetDatabaseResultAsync(sqlQuery),
-                exception
+                exception,
+                checkError,
+                message,
+                statusCode,
+                subStatusCode
             );
         }
 

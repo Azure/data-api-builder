@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.configurations;
+using Azure.DataGateway.Service.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
@@ -91,22 +92,48 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// exceptions thrown during the execution of that logic.
         /// </param>
         /// <param name="expectException">True if we expect exceptions.</param>
+        /// <param name="checkError">bool represents if we check error condition format</param>
+        /// <param name="message">string represents the error mesage</param>
+        /// <param name="statusCode">int represents the returned http status code</param>
+        /// <param name="subStatusCode">enum represents the returned sub status code</param>
         public static async Task PerformApiTest(
             Func<string, string, Task<IActionResult>> api,
             string entityName,
             string primaryKeyRoute,
             Task<string> expectedWorker,
-            bool expectException = false)
+            bool expectException = false,
+            bool checkError = false,
+            string message = "",
+            int statusCode = 400,
+            DatagatewayException.SubStatusCodes subStatusCode = DatagatewayException.SubStatusCodes.BadRequest)
         {
-
             try
             {
+                string actual;
+                string expected;
                 IActionResult actionResult = await api(entityName, primaryKeyRoute);
+                if (checkError)
+                {
+                    JsonResult actualResult = (JsonResult)actionResult;
+                    JsonResult expectedResult = new(new
+                    {
+                        StatusCode = statusCode,
+                        error = new
+                        {
+                            code = subStatusCode.ToString(),
+                            message = message,
+                        }
+                    });
+                    actual = actualResult.Value.ToString();
+                    expected = expectedResult.Value.ToString();
+                    PerformTestEqualJsonStrings(expected, actual);
+                }
+
                 OkObjectResult okResult = (OkObjectResult)actionResult;
                 JsonElement actualJson = (JsonElement)okResult.Value;
 
-                string expected = await expectedWorker;
-                string actual = actualJson.ToString();
+                expected = await expectedWorker;
+                actual = actualJson.ToString();
 
                 Assert.IsFalse(expectException, "An exception was suppossed to be thrown, but it was not");
 

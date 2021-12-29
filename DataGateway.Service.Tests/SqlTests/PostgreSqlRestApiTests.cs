@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -12,7 +13,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static Dictionary<string, string> _queryMap = new()
         {
             {
-                "PostgresFindByIdTest",
+                "FindByIdTest",
                 @"
                   SELECT to_jsonb(subq) AS data
                   FROM (
@@ -24,7 +25,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ) AS subq"
             },
             {
-                "PostgresFindByIdTestWithQueryStringFields",
+                "FindByIdTestWithQueryStringFields",
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
@@ -37,7 +38,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
-                "PostgresFindTestWithPrimaryKeyContainingForeignKey",
+                "FindTestWithPrimaryKeyContainingForeignKey",
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
@@ -50,7 +51,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
-                "PostgresFindByIdTestWithInvalidFields",
+                "FindByIdTestWithInvalidFields",
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
@@ -68,7 +69,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </summary>
         /// <param name="context"></param>
         [ClassInitialize]
-        public static async void InitializeTestFixture(TestContext context)
+        public static async Task InitializeTestFixture(TestContext context)
         {
             await InitializeTestFixture(context, RestApiTestBase._integrationTableName, TestCategory.POSTGRESQL);
 
@@ -89,9 +90,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Tests the REST Api for FindById operation without a query string.
         /// </summary>
         [TestMethod]
-        public override void FindByIdTest()
+        public override Task FindByIdTest()
         {
-            base.FindByIdTest();
+            return base.FindByIdTest();
         }
 
         /// <summary>
@@ -99,15 +100,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// including the field names.
         /// </summary>
         [TestMethod]
-        public override void FindByIdTestWithQueryStringFields()
+        public override Task FindByIdTestWithQueryStringFields()
         {
-            base.FindByIdTestWithQueryStringFields();
+            return base.FindByIdTestWithQueryStringFields();
         }
 
         [TestMethod]
-        public override void FindTestWithPrimaryKeyContainingForeignKey()
+        public override Task FindTestWithPrimaryKeyContainingForeignKey()
         {
-            base.FindTestWithPrimaryKeyContainingForeignKey();
+            return base.FindTestWithPrimaryKeyContainingForeignKey();
         }
 
         #endregion
@@ -119,9 +120,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// having invalid field names.
         /// </summary>
         [TestMethod]
-        public override void FindByIdTestWithInvalidFields()
+        public override Task FindByIdTestWithInvalidFields()
         {
-            base.FindByIdTestWithInvalidFields();
+            return base.FindByIdTestWithInvalidFields();
         }
 
         #endregion

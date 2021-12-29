@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Services;
@@ -12,103 +11,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     [TestClass]
     public abstract class RestApiTestBase : SqlTestBase
     {
-        #region Test Fixture Setup
         protected static RestService _restService;
         protected static RestController _restController;
         protected static readonly string _integrationTableName = "books";
 
-        //protected static Dictionary<string, string> _queryMap = new()
-        //{
-        //    {
-        //        "MsSqlFindById",
-        //        $"SELECT * FROM { _integrationTableName } " +
-        //        $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-        //    },
-        //    {
-        //        "MsSqlFindByIdTestWithQueryStringFields",
-        //        $"SELECT[id], [title] FROM { _integrationTableName } " +
-        //        $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-        //    },
-        //    {
-        //        "MsSqlFindTestWithQueryStringOneField",
-        //        $"SELECT [id] FROM { _integrationTableName } " +
-        //        $"FOR JSON PATH, INCLUDE_NULL_VALUES"
-        //    },
-        //    {
-        //        "MsSqlFindTestWithQueryStringMultipleFields",
-        //        $"SELECT [id], [title] FROM { _integrationTableName } " +
-        //        $"FOR JSON PATH, INCLUDE_NULL_VALUES"
-        //    },
-        //    {
-        //        "MsSqlFindTestWithQueryStringAllFields",
-        //        $"SELECT * FROM { _integrationTableName } " +
-        //        $"FOR JSON PATH, INCLUDE_NULL_VALUES"
-        //    },
-        //    {
-        //        "MsSqlFindTestWithPrimaryKeyContainingForeignKey",
-        //        $"SELECT [id], [content] FROM reviews " +
-        //        $"WHERE id = 567 AND book_id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-        //    },
-        //    {
-        //        "MsSqlFindByIdTestWithInvalidFields",
-        //        $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
-        //        $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-        //    },
-        //    {
-        //        "MsSqlFindTestWithInvalidFields",
-        //        $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
-        //        $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-        //    },
-        //    {
-        //        "PostgresFindByIdTest",
-        //        @"SELECT to_jsonb(subq) AS data
-        //                            FROM (
-        //                                SELECT *
-        //                                FROM " + _integrationTableName + @"
-        //                                WHERE id = 2
-        //                                ORDER BY id
-        //                                LIMIT 1
-        //                            ) AS subq"
-        //    },
-        //    {
-        //        "PostgresFindByIdTestWithQueryStringFields",
-        //        @"
-        //        SELECT to_jsonb(subq) AS data
-        //        FROM (
-        //            SELECT id, title
-        //            FROM " + _integrationTableName + @"
-        //            WHERE id = 1
-        //            ORDER BY id
-        //            LIMIT 1
-        //        ) AS subq
-        //    "
-        //    },
-        //    {
-        //        "PostgresFindTestWithPrimaryKeyContainingForeignKey",
-        //        @"
-        //        SELECT to_jsonb(subq) AS data
-        //        FROM (
-        //            SELECT id, content
-        //            FROM reviews" + @"
-        //            WHERE id = 567 AND book_id = 1
-        //            ORDER BY id
-        //            LIMIT 1
-        //        ) AS subq
-        //    "
-        //    },
-        //    {
-        //        "PostgresFindByIdTestWithInvalidFields",
-        //        @"
-        //        SELECT to_jsonb(subq) AS data
-        //        FROM (
-        //            SELECT id, name, type
-        //            FROM " + _integrationTableName + @"
-        //        ) AS subq
-        //    "
-        //    }
-        //};
-
-        #endregion
         public abstract string GetQuery(string key);
 
         #region Positive Tests
@@ -116,7 +22,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Tests the REST Api for FindById operation without a query string.
         /// </summary>
         [TestMethod]
-        public async virtual void FindByIdTest()
+        public async virtual Task FindByIdTest()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/2",
@@ -132,7 +38,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// including the field names.
         /// </summary>
         [TestMethod]
-        public async virtual void FindByIdTestWithQueryStringFields()
+        public async virtual Task FindByIdTestWithQueryStringFields()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/1",
@@ -148,7 +54,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// including the field names.
         /// </summary>
         [TestMethod]
-        public async virtual void FindTestWithQueryStringOneField()
+        public async virtual Task FindTestWithQueryStringOneField()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
@@ -164,7 +70,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// including the field names. Only returns fields designated in the query string.
         /// </summary>
         [TestMethod]
-        public async virtual void FindTestWithQueryStringMultipleFields()
+        public async virtual Task FindTestWithQueryStringMultipleFields()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
@@ -180,7 +86,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// including the field names.
         /// </summary>
         [TestMethod]
-        public async virtual void FindTestWithQueryStringAllFields()
+        public async virtual Task FindTestWithQueryStringAllFields()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
@@ -192,7 +98,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         [TestMethod]
-        public async virtual void FindTestWithPrimaryKeyContainingForeignKey()
+        public async virtual Task FindTestWithPrimaryKeyContainingForeignKey()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/567/book_id/1",
@@ -212,7 +118,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// having invalid field names.
         /// </summary>
         [TestMethod]
-        public async virtual void FindByIdTestWithInvalidFields()
+        public async virtual Task FindByIdTestWithInvalidFields()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/567/book_id/1",
@@ -229,7 +135,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// having invalid field names.
         /// </summary>
         [TestMethod]
-        public async virtual void FindTestWithInvalidFields()
+        public async virtual Task FindTestWithInvalidFields()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,

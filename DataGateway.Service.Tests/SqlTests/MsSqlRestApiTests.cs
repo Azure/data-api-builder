@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -11,8 +12,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class MsSqlRestApiTests : RestApiTestBase
     {
-
-        protected static Dictionary<string, string> _queryMap = new()
+        private static Dictionary<string, string> _queryMap = new()
         {
             {
                 "FindByIdTest",
@@ -20,37 +20,37 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "MsSqlFindByIdTestWithQueryStringFields",
+                "FindByIdTestWithQueryStringFields",
                 $"SELECT[id], [title] FROM { _integrationTableName } " +
                 $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "MsSqlFindTestWithQueryStringOneField",
+                "FindTestWithQueryStringOneField",
                 $"SELECT [id] FROM { _integrationTableName } " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
-                "MsSqlFindTestWithQueryStringMultipleFields",
+                "FindTestWithQueryStringMultipleFields",
                 $"SELECT [id], [title] FROM { _integrationTableName } " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
-                "MsSqlFindTestWithQueryStringAllFields",
+                "FindTestWithQueryStringAllFields",
                 $"SELECT * FROM { _integrationTableName } " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
-                "MsSqlFindTestWithPrimaryKeyContainingForeignKey",
+                "FindTestWithPrimaryKeyContainingForeignKey",
                 $"SELECT [id], [content] FROM reviews " +
                 $"WHERE id = 567 AND book_id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "MsSqlFindByIdTestWithInvalidFields",
+                "FindByIdTestWithInvalidFields",
                 $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
                 $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "MsSqlFindTestWithInvalidFields",
+                "FindTestWithInvalidFields",
                 $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
                 $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
@@ -63,7 +63,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </summary>
         /// <param name="context"></param>
         [ClassInitialize]
-        public static async void InitializeTestFixture(TestContext context)
+        public static async Task InitializeTestFixture(TestContext context)
         {
             await InitializeTestFixture(context, RestApiTestBase._integrationTableName, TestCategory.MSSQL);
 
@@ -85,9 +85,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Tests the REST Api for FindById operation without a query string.
         /// </summary>
         [TestMethod]
-        public override void FindByIdTest()
+        public override Task FindByIdTest()
         {
-            base.FindByIdTest();
+            return base.FindByIdTest();
         }
 
         /// <summary>
@@ -95,9 +95,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// including the field names.
         /// </summary>
         [TestMethod]
-        public override void FindByIdTestWithQueryStringFields()
+        public override Task FindByIdTestWithQueryStringFields()
         {
-            base.FindByIdTestWithQueryStringFields();
+            return base.FindByIdTestWithQueryStringFields();
         }
 
         /// <summary>
@@ -105,9 +105,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// including the field names.
         /// </summary>
         [TestMethod]
-        public override void FindTestWithQueryStringOneField()
+        public override Task FindTestWithQueryStringOneField()
         {
-            base.FindTestWithQueryStringOneField();
+            return base.FindTestWithQueryStringOneField();
         }
 
         /// <summary>
@@ -115,9 +115,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// including the field names. Only returns fields designated in the query string.
         /// </summary>
         [TestMethod]
-        public override void FindTestWithQueryStringMultipleFields()
+        public override Task FindTestWithQueryStringMultipleFields()
         {
-            base.FindTestWithQueryStringMultipleFields();
+            return base.FindTestWithQueryStringMultipleFields();
         }
 
         /// <summary>
@@ -125,15 +125,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// including the field names.
         /// </summary>
         [TestMethod]
-        public override void FindTestWithQueryStringAllFields()
+        public override Task FindTestWithQueryStringAllFields()
         {
-            base.FindTestWithQueryStringAllFields();
+            return base.FindTestWithQueryStringAllFields();
         }
 
         [TestMethod]
-        public override void FindTestWithPrimaryKeyContainingForeignKey()
+        public override Task FindTestWithPrimaryKeyContainingForeignKey()
         {
-            base.FindTestWithPrimaryKeyContainingForeignKey();
+            return base.FindTestWithPrimaryKeyContainingForeignKey();
         }
 
         #endregion
@@ -145,9 +145,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// having invalid field names.
         /// </summary>
         [TestMethod]
-        public override void FindByIdTestWithInvalidFields()
+        public override Task FindByIdTestWithInvalidFields()
         {
-            base.FindByIdTestWithInvalidFields();
+            return base.FindByIdTestWithInvalidFields();
         }
 
         /// <summary>
@@ -155,9 +155,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// having invalid field names.
         /// </summary>
         [TestMethod]
-        public override void FindTestWithInvalidFields()
+        public override Task FindTestWithInvalidFields()
         {
-            base.FindTestWithInvalidFields();
+            return base.FindTestWithInvalidFields();
         }
 
         #endregion

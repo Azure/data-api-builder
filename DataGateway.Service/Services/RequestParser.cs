@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using Azure.DataGateway.Service.Resolvers;
-using Microsoft.OData.UriParser;
 
 namespace Azure.DataGateway.Services
 {
@@ -16,7 +15,6 @@ namespace Azure.DataGateway.Services
         /// Prefix used for specifying the fields in the query string of the URL.
         /// </summary>
         private const string FIELDS_URL = "_f";
-        private const string FILTER_URL = "$filter";
 
         /// <summary>
         /// Parses the primary key string to identify the field names composing the key
@@ -64,11 +62,6 @@ namespace Azure.DataGateway.Services
                     case FIELDS_URL:
                         CheckListForNullElement(nvc[key].Split(",").ToList());
                         context.Fields = nvc[key].Split(",").ToList();
-                        break;
-                    case FILTER_URL:
-                        FilterClause result = ODataUriParser.ParseFilter(nvc[key], model, type);
-                        // traverse result AST
-                        // add predicates to context.predicates
                         break;
                     default:
                         throw new ArgumentException("Invalid Query Parameter: " + key.ToString());

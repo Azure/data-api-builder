@@ -56,7 +56,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
-                "FindByIdTestWithQueryStringMultipleFields",
+                "FindTestWithQueryStringMultipleFields",
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (

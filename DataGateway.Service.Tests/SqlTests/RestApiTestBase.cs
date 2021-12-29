@@ -22,7 +22,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Tests the REST Api for FindById operation without a query string.
         /// </summary>
         [TestMethod]
-        public async virtual Task FindByIdTest()
+        public async Task FindByIdTest()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/2",
@@ -38,7 +38,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// including the field names.
         /// </summary>
         [TestMethod]
-        public async virtual Task FindByIdTestWithQueryStringFields()
+        public async Task FindByIdTestWithQueryStringFields()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/1",
@@ -54,7 +54,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// including the field names.
         /// </summary>
         [TestMethod]
-        public async virtual Task FindTestWithQueryStringOneField()
+        public async Task FindTestWithQueryStringOneField()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
@@ -70,7 +70,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// including the field names. Only returns fields designated in the query string.
         /// </summary>
         [TestMethod]
-        public async virtual Task FindTestWithQueryStringMultipleFields()
+        public async Task FindTestWithQueryStringMultipleFields()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
@@ -86,7 +86,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// including the field names.
         /// </summary>
         [TestMethod]
-        public async virtual Task FindTestWithQueryStringAllFields()
+        public async Task FindTestWithQueryStringAllFields()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
@@ -98,7 +98,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         [TestMethod]
-        public async virtual Task FindTestWithPrimaryKeyContainingForeignKey()
+        public async Task FindTestWithPrimaryKeyContainingForeignKey()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/567/book_id/1",
@@ -118,7 +118,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// having invalid field names.
         /// </summary>
         [TestMethod]
-        public async virtual Task FindByIdTestWithInvalidFields()
+        public async Task FindByIdTestWithInvalidFields()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/567/book_id/1",
@@ -135,7 +135,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// having invalid field names.
         /// </summary>
         [TestMethod]
-        public async virtual Task FindTestWithInvalidFields()
+        public async Task FindTestWithInvalidFields()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,

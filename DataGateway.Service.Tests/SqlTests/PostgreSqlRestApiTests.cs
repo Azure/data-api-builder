@@ -66,7 +66,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     FROM (
                         SELECT id, title
                         FROM " + _integrationTableName + @"
-                        WHERE id = 1
+                        WHERE 1 = 1
                         ORDER BY id
                     ) AS subq
                 "
@@ -127,88 +127,5 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             return _queryMap[key];
         }
-
-        #region Positive Tests
-
-        /// <summary>
-        /// Tests the REST Api for FindById operation without a query string.
-        /// </summary>
-        [TestMethod]
-        public override Task FindByIdTest()
-        {
-            return base.FindByIdTest();
-        }
-
-        /// <summary>
-        /// Tests the REST Api for Find operation with a query string with 1 field
-        /// including the field names.
-        /// </summary>
-        [TestMethod]
-        public override Task FindTestWithQueryStringOneField()
-        {
-            return base.FindTestWithQueryStringOneField();
-        }
-
-        /// <summary>
-        /// Tests the REST Api for Find operation with a query string with multiple fields
-        /// including the field names. Only returns fields designated in the query string.
-        /// </summary>
-        [TestMethod]
-        public override Task FindTestWithQueryStringMultipleFields()
-        {
-            return base.FindTestWithQueryStringMultipleFields();
-        }
-
-        /// <summary>
-        /// Tests the REST Api for FindById operation with a query string
-        /// including the field names.
-        /// </summary>
-        [TestMethod]
-        public override Task FindByIdTestWithQueryStringFields()
-        {
-            return base.FindByIdTestWithQueryStringFields();
-        }
-
-        /// <summary>
-        /// Tests the REST Api for Find operation with an empty query string
-        /// including the field names.
-        /// </summary>
-        [TestMethod]
-        public override Task FindTestWithQueryStringAllFields()
-        {
-            return base.FindTestWithQueryStringAllFields();
-        }
-
-        [TestMethod]
-        public override Task FindTestWithPrimaryKeyContainingForeignKey()
-        {
-            return base.FindTestWithPrimaryKeyContainingForeignKey();
-        }
-
-        #endregion
-
-        #region Negative Tests
-
-        /// <summary>
-        /// Tests the REST Api for FindById operation with a query string
-        /// having invalid field names.
-        /// </summary>
-        [TestMethod]
-        public override Task FindByIdTestWithInvalidFields()
-        {
-            return base.FindByIdTestWithInvalidFields();
-        }
-
-        /// <summary>
-        /// Tests the REST Api for Find operation with a query string that has an invalid field
-        /// having invalid field names.
-        /// </summary>
-        [TestMethod]
-        public override Task FindTestWithInvalidFields()
-        {
-            return base.FindTestWithInvalidFields();
-        }
-
-        #endregion
     }
 }

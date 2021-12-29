@@ -31,7 +31,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   FROM (
                       SELECT id
                       FROM " + _integrationTableName + @"
-                      WHERE 1 = 1
                       ORDER BY id
                   ) AS subq"
             },
@@ -42,7 +41,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   FROM (
                       SELECT *
                       FROM " + _integrationTableName + @"
-                      WHERE 1 = 1
                       ORDER BY id
                   ) AS subq"
             },
@@ -66,7 +64,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     FROM (
                         SELECT id, title
                         FROM " + _integrationTableName + @"
-                        WHERE 1 = 1
                         ORDER BY id
                     ) AS subq
                 "

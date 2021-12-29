@@ -1,4 +1,4 @@
-using System.Threading.Tasks;
+using System.Collections.Generic;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -11,6 +11,50 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class MsSqlRestApiTests : RestApiTestBase
     {
+
+        protected static Dictionary<string, string> _queryMap = new()
+        {
+            {
+                "FindByIdTest",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "MsSqlFindByIdTestWithQueryStringFields",
+                $"SELECT[id], [title] FROM { _integrationTableName } " +
+                $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "MsSqlFindTestWithQueryStringOneField",
+                $"SELECT [id] FROM { _integrationTableName } " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "MsSqlFindTestWithQueryStringMultipleFields",
+                $"SELECT [id], [title] FROM { _integrationTableName } " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "MsSqlFindTestWithQueryStringAllFields",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "MsSqlFindTestWithPrimaryKeyContainingForeignKey",
+                $"SELECT [id], [content] FROM reviews " +
+                $"WHERE id = 567 AND book_id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "MsSqlFindByIdTestWithInvalidFields",
+                $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
+                $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "MsSqlFindTestWithInvalidFields",
+                $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
+                $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            }
+        };
         #region Test Fixture Setup
 
         /// <summary>
@@ -19,7 +63,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </summary>
         /// <param name="context"></param>
         [ClassInitialize]
-        public static async Task InitializeTestFixture(TestContext context)
+        public static async void InitializeTestFixture(TestContext context)
         {
             await InitializeTestFixture(context, RestApiTestBase._integrationTableName, TestCategory.MSSQL);
 
@@ -31,14 +75,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         #endregion
 
+        public override string GetQuery(string key)
+        {
+            return _queryMap[key];
+        }
+
         #region Positive Tests
         /// <summary>
         /// Tests the REST Api for FindById operation without a query string.
         /// </summary>
         [TestMethod]
-        public async Task FindByIdTest()
+        public override void FindByIdTest()
         {
-            await RestApiTestBase.FindByIdTest(_queryMap["MsSqlFindById"]);
+            base.FindByIdTest();
         }
 
         /// <summary>
@@ -46,9 +95,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// including the field names.
         /// </summary>
         [TestMethod]
-        public async Task FindByIdTestWithQueryStringFields()
+        public override void FindByIdTestWithQueryStringFields()
         {
-            await RestApiTestBase.FindByIdTestWithQueryStringFields(_queryMap["MsSqlFindByIdTestWithQueryStringFields"]);
+            base.FindByIdTestWithQueryStringFields();
         }
 
         /// <summary>
@@ -56,9 +105,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// including the field names.
         /// </summary>
         [TestMethod]
-        public async Task FindTestWithQueryStringOneField()
+        public override void FindTestWithQueryStringOneField()
         {
-            await RestApiTestBase.FindTestWithQueryStringOneField(_queryMap["MsSqlFindTestWithQueryStringOneField"]);
+            base.FindTestWithQueryStringOneField();
         }
 
         /// <summary>
@@ -66,9 +115,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// including the field names. Only returns fields designated in the query string.
         /// </summary>
         [TestMethod]
-        public async Task FindTestWithQueryStringMultipleFields()
+        public override void FindTestWithQueryStringMultipleFields()
         {
-            await RestApiTestBase.FindTestWithQueryStringMultipleFields(_queryMap["MsSqlFindTestWithQueryStringMultipleFields"]);
+            base.FindTestWithQueryStringMultipleFields();
         }
 
         /// <summary>
@@ -76,15 +125,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// including the field names.
         /// </summary>
         [TestMethod]
-        public async Task FindTestWithQueryStringAllFields()
+        public override void FindTestWithQueryStringAllFields()
         {
-            await RestApiTestBase.FindTestWithQueryStringAllFields(_queryMap["MsSqlFindTestWithQueryStringAllFields"]);
+            base.FindTestWithQueryStringAllFields();
         }
 
         [TestMethod]
-        public async Task FindTestWithPrimaryKeyContainingForeignKey()
+        public override void FindTestWithPrimaryKeyContainingForeignKey()
         {
-            await RestApiTestBase.FindTestWithPrimaryKeyContainingForeignKey(_queryMap["MsSqlFindTestWithPrimaryKeyContainingForeignKey"]);
+            base.FindTestWithPrimaryKeyContainingForeignKey();
         }
 
         #endregion
@@ -96,9 +145,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// having invalid field names.
         /// </summary>
         [TestMethod]
-        public async Task FindByIdTestWithInvalidFields()
+        public override void FindByIdTestWithInvalidFields()
         {
-            await RestApiTestBase.FindByIdTestWithInvalidFields(_queryMap["MsSqlFindByIdTestWithInvalidFields"]);
+            base.FindByIdTestWithInvalidFields();
         }
 
         /// <summary>
@@ -106,9 +155,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// having invalid field names.
         /// </summary>
         [TestMethod]
-        public async Task FindTestWithInvalidFields()
+        public override void FindTestWithInvalidFields()
         {
-            await RestApiTestBase.FindTestWithInvalidFields(_queryMap["MsSqlFindTestWithInvalidFields"]);
+            base.FindTestWithInvalidFields();
         }
 
         #endregion

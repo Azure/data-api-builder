@@ -25,6 +25,24 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ) AS subq"
             },
             {
+                "FindTestWithQueryStringOneField",
+                @"
+                  SELECT to_jsonb(subq) AS data
+                  FROM (
+                      SELECT id
+                      FROM " + _integrationTableName + @"
+                  ) AS subq"
+            },
+            {
+                "FindTestWithQueryStringAllFields",
+                @"
+                  SELECT to_jsonb(subq) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                  ) AS subq"
+            },
+            {
                 "FindByIdTestWithQueryStringFields",
                 @"
                     SELECT to_jsonb(subq) AS data
@@ -34,6 +52,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         WHERE id = 1
                         ORDER BY id
                         LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindByIdTestWithQueryStringMultipleFields",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title
+                        FROM " + _integrationTableName + @"
                     ) AS subq
                 "
             },
@@ -52,6 +80,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             },
             {
                 "FindByIdTestWithInvalidFields",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, name, type
+                        FROM " + _integrationTableName + @"
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithInvalidFields",
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
@@ -96,6 +134,26 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Tests the REST Api for Find operation with a query string with 1 field
+        /// including the field names.
+        /// </summary>
+        [TestMethod]
+        public override Task FindTestWithQueryStringOneField()
+        {
+            return base.FindTestWithQueryStringOneField();
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with a query string with multiple fields
+        /// including the field names. Only returns fields designated in the query string.
+        /// </summary>
+        [TestMethod]
+        public override Task FindTestWithQueryStringMultipleFields()
+        {
+            return base.FindTestWithQueryStringMultipleFields();
+        }
+
+        /// <summary>
         /// Tests the REST Api for FindById operation with a query string
         /// including the field names.
         /// </summary>
@@ -103,6 +161,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public override Task FindByIdTestWithQueryStringFields()
         {
             return base.FindByIdTestWithQueryStringFields();
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with an empty query string
+        /// including the field names.
+        /// </summary>
+        [TestMethod]
+        public override Task FindTestWithQueryStringAllFields()
+        {
+            return base.FindTestWithQueryStringAllFields();
         }
 
         [TestMethod]
@@ -123,6 +191,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public override Task FindByIdTestWithInvalidFields()
         {
             return base.FindByIdTestWithInvalidFields();
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with a query string that has an invalid field
+        /// having invalid field names.
+        /// </summary>
+        [TestMethod]
+        public override Task FindTestWithInvalidFields()
+        {
+            return base.FindTestWithInvalidFields();
         }
 
         #endregion

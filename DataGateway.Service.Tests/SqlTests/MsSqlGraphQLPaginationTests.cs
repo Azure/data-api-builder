@@ -10,7 +10,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 {
 
     [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class MsSqlGraphQLPaginationTests : SqlTestBase
+    public class MsSqlGraphQLPaginationTests : GraphQLPaginationTestBase
     {
 
         #region Test Fixture Setup
@@ -29,7 +29,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await InitializeTestFixture(context, _integrationTableName, TestCategory.MSSQL);
 
             // Setup GraphQL Components
-            _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _metadataStoreProvider);
+            _graphQLService = new GraphQLService(_metadataStoreProvider, _resolverMiddlewareMaker);
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
@@ -44,7 +44,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task RequestFullConnection()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode("{ \"id\": 4 }");
+            string after = SqlPaginationUtil.Base64Encode("{ \"id\": 1 }");
             string graphQLQuery = @"{
                 books(first: 2," + $"after: \"{after}\")" + @"{
                     items {
@@ -57,62 +57,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     hasNextPage
                 }
             }";
-            string msSqlQuery = @"
-                SELECT [items] = JSON_QUERY('[' + COALESCE(STRING_AGG([jsonelems], ', '), '') + ']'),
-                    [endCursor] = CASE
-                        WHEN max([id]) IS NOT NULL
-                            THEN (
-                                    SELECT CAST(CONCAT (
-                                                '{',
-                                                '""id"":',
-                                                max(id),
-                                                '}'
-                                                ) AS VARBINARY(MAX))
-                                    FOR XML PATH(''),
-                                        BINARY BASE64
-                                    )
-                        ELSE NULL
-                        END,
-                    [hasNextPage] = CAST(CASE
-                            WHEN max(___rowcount___) > 2
-                                THEN 1
-                            ELSE 0
-                            END AS BIT)
-                FROM (
-                    SELECT TOP 2 [jsonelems] = (
-                            SELECT [title],
-                                [publisher]
-                            FOR JSON PATH,
-                                INCLUDE_NULL_VALUES,
-                                WITHOUT_ARRAY_WRAPPER
-                            ),
-                        [id],
-                        COUNT(*) OVER () AS ___rowcount___
-                    FROM (
-                        SELECT TOP 3 [table0].[title] AS [title],
-                            JSON_QUERY([table1_subq].[data]) AS [publisher],
-                            [table0].[id] AS [id]
-                        FROM [books] AS [table0]
-                        OUTER APPLY (
-                            SELECT TOP 1 [table1].[name] AS [name]
-                            FROM [publishers] AS [table1]
-                            WHERE [table0].[publisher_id] = [table1].[id]
-                            ORDER BY [id]
-                            FOR JSON PATH,
-                                INCLUDE_NULL_VALUES,
-                                WITHOUT_ARRAY_WRAPPER
-                            ) AS [table1_subq]([data])
-                        WHERE [id] > 4
-                        ORDER BY [id]
-                        ) AS wrapper
-                    ) AS paginatedquery
-                FOR JSON PATH,
-                    INCLUDE_NULL_VALUES,
-                    WITHOUT_ARRAY_WRAPPER
-            ";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
+            string expected = ExpectedJsonResultsPerTest["RequestFullConnection"];
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
@@ -135,52 +82,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     hasNextPage
                 }
             }";
-            string msSqlQuery = @"
-                SELECT [items] = JSON_QUERY('[' + COALESCE(STRING_AGG([jsonelems], ', '), '') + ']'),
-                    [endCursor] = CASE
-                        WHEN max([id]) IS NOT NULL
-                            THEN (
-                                    SELECT CAST(CONCAT (
-                                                '{',
-                                                '""id"":',
-                                                max(id),
-                                                '}'
-                                                ) AS VARBINARY(MAX))
-                                    FOR XML PATH(''),
-                                        BINARY BASE64
-                                    )
-                        ELSE NULL
-                        END,
-                    [hasNextPage] = CAST(CASE
-                            WHEN max(___rowcount___) > 100
-                                THEN 1
-                            ELSE 0
-                            END AS BIT)
-                FROM (
-                    SELECT TOP 100 [jsonelems] = (
-                            SELECT [id],
-                                [title]
-                            FOR JSON PATH,
-                                INCLUDE_NULL_VALUES,
-                                WITHOUT_ARRAY_WRAPPER
-                            ),
-                        [id],
-                        COUNT(*) OVER () AS ___rowcount___
-                    FROM (
-                        SELECT TOP 101 [table0].[id] AS [id],
-                            [table0].[title] AS [title]
-                        FROM [books] AS [table0]
-                        WHERE 1 = 1
-                        ORDER BY [id]
-                        ) AS wrapper
-                    ) AS paginatedquery
-                FOR JSON PATH,
-                    INCLUDE_NULL_VALUES,
-                    WITHOUT_ARRAY_WRAPPER
-            ";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
+            string expected = ExpectedJsonResultsPerTest["RequestNoParamFullConnection"];
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
@@ -192,7 +96,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task RequestItemsOnly()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode("{ \"id\": 4 }");
+            string after = SqlPaginationUtil.Base64Encode("{ \"id\": 1 }");
             string graphQLQuery = @"{
                 books(first: 2," + $"after: \"{after}\")" + @"{
                     items {
@@ -201,31 +105,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     }
                 }
             }";
-            string msSqlQuery = @"
-                SELECT [items] = JSON_QUERY('[' + COALESCE(STRING_AGG([jsonelems], ', '), '') + ']')
-                FROM (
-                    SELECT [jsonelems] = (
-                            SELECT [title],
-                                [publisher_id]
-                            FOR JSON PATH,
-                                INCLUDE_NULL_VALUES,
-                                WITHOUT_ARRAY_WRAPPER
-                            )
-                    FROM (
-                        SELECT TOP 2 [table0].[title] AS [title],
-                            [table0].[publisher_id] AS [publisher_id]
-                        FROM [books] AS [table0]
-                        WHERE [id] > 4
-                        ORDER BY [id]
-                        ) AS wrapper
-                    ) AS paginatedquery
-                FOR JSON PATH,
-                    INCLUDE_NULL_VALUES,
-                    WITHOUT_ARRAY_WRAPPER
-            ";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
+            string expected = ExpectedJsonResultsPerTest["RequestItemsOnly"];
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
@@ -241,40 +123,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task RequestEndCursorOnly()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode("{ \"id\": 4 }");
+            string after = SqlPaginationUtil.Base64Encode("{ \"id\": 1 }");
             string graphQLQuery = @"{
                 books(first: 2," + $"after: \"{after}\")" + @"{
                     endCursor
                 }
             }";
-            string msSqlQuery = @"
-                SELECT [endCursor] = CASE
-                        WHEN max([id]) IS NOT NULL
-                            THEN (
-                                    SELECT CAST(CONCAT (
-                                                '{',
-                                                '""id"":',
-                                                max(id),
-                                                '}'
-                                                ) AS VARBINARY(MAX))
-                                    FOR XML PATH(''),
-                                        BINARY BASE64
-                                    )
-                        ELSE NULL
-                        END
-                FROM (
-                    SELECT TOP 2 [table0].[id] AS [id]
-                    FROM [books] AS [table0]
-                    WHERE [id] > 4
-                    ORDER BY [id]
-                    ) AS paginatedquery
-                FOR JSON PATH,
-                    INCLUDE_NULL_VALUES,
-                    WITHOUT_ARRAY_WRAPPER
-            ";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
+            using JsonDocument result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement root = result.RootElement.GetProperty("data").GetProperty(graphQLQueryName);
+            string actual = SqlPaginationUtil.Base64Decode(root.GetProperty("endCursor").GetString());
+            string expected = "{\"id\":3}";
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
@@ -290,36 +149,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task RequestHasNextPageOnly()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode("{ \"id\": 4 }");
+            string after = SqlPaginationUtil.Base64Encode("{\"id\":1}");
             string graphQLQuery = @"{
                 books(first: 2," + $"after: \"{after}\")" + @"{
                     hasNextPage
                 }
             }";
-            string msSqlQuery = @"
-                SELECT [hasNextPage] = CAST(CASE
-                            WHEN max(___rowcount___) > 2
-                                THEN 1
-                            ELSE 0
-                            END AS BIT)
-                FROM (
-                    SELECT TOP 2 COUNT(*) OVER () AS ___rowcount___
-                    FROM (
-                        SELECT TOP 3 *
-                        FROM [books] AS [table0]
-                        WHERE [id] > 4
-                        ORDER BY [id]
-                        ) AS wrapper
-                    ) AS paginatedquery
-                FOR JSON PATH,
-                    INCLUDE_NULL_VALUES,
-                    WITHOUT_ARRAY_WRAPPER
-            ";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
+            using JsonDocument result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement root = result.RootElement.GetProperty("data").GetProperty(graphQLQueryName);
+            bool actual = root.GetProperty("hasNextPage").GetBoolean();
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            Assert.AreEqual(true, actual);
         }
 
         /// <summary>
@@ -347,6 +188,41 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             Assert.AreEqual(null, root.GetProperty("endCursor").GetString());
             Assert.AreEqual(false, root.GetProperty("hasNextPage").GetBoolean());
         }
+
+        /// <summary>
+        /// Request nested pagination queries
+        /// </summary>
+        [TestMethod]
+        public async Task RequestNestedPaginationQueries()
+        {
+            string graphQLQueryName = "books";
+            string after = SqlPaginationUtil.Base64Encode("{\"id\":1}");
+            string graphQLQuery = @"{
+                 books(first: 2," + $"after: \"{after}\")" + @"{
+                    items {
+                        title
+                        publisher {
+                            name
+                            paginatedBooks(first: 2){
+                                items {
+                                    id
+                                    title
+                                }
+                                hasNextPage
+                            }
+                        }
+                    }
+                    endCursor
+                    hasNextPage
+                }
+            }";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = ExpectedJsonResultsPerTest["RequestNestedPaginationQueries"];
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Negative Tests

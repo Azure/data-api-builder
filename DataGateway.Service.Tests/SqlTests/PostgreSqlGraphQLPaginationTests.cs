@@ -10,7 +10,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 {
 
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
-    public class PostgreSqlGraphQLPaginationTests : SqlTestBase
+    public class PostgreSqlGraphQLPaginationTests : GraphQLPaginationTestBase
     {
 
         #region Test Fixture Setup
@@ -29,7 +29,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await InitializeTestFixture(context, _integrationTableName, TestCategory.POSTGRESQL);
 
             // Setup GraphQL Components
-            _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _metadataStoreProvider);
+            _graphQLService = new GraphQLService(_metadataStoreProvider, _resolverMiddlewareMaker);
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
@@ -44,7 +44,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task RequestFullConnection()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode("{ \"id\": 4 }");
+            string after = SqlPaginationUtil.Base64Encode("{\"id\":1}");
             string graphQLQuery = @"{
                 books(first: 2," + $"after: \"{after}\")" + @"{
                     items {
@@ -57,39 +57,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     hasNextPage
                 }
             }";
-            string postgresQuery = @"
-                SELECT to_jsonb(paginatedquery) AS DATA
-                FROM
-                  (SELECT COALESCE(jsonb_agg(json_build_object('title', title, 'publisher', publisher)), '[]') AS items,
-                          CASE
-                              WHEN max(id) IS NOT NULL THEN ENCODE(CONVERT_TO(CONCAT('{', '""id"":', max(id), '}'), 'UTF-8'), 'BASE64')
-                              ELSE NULL
-                          END AS ""endCursor"",
-                          COALESCE(max(___rowcount___), 0) > 2 AS ""hasNextPage""
-                   FROM
-                     (SELECT *,
-                             COUNT(*) OVER() AS ___rowcount___
-                      FROM
-                        (SELECT table0.title AS title,
-                                table1_subq.data AS publisher,
-                                table0.id AS id
-                         FROM books AS table0
-                         LEFT OUTER JOIN LATERAL
-                           (SELECT to_jsonb(subq3) AS DATA
-                            FROM
-                              (SELECT table1.name AS name
-                               FROM publishers AS table1
-                               WHERE table0.publisher_id = table1.id
-                               ORDER BY id
-                               LIMIT 1) AS subq3) AS table1_subq ON TRUE
-                         WHERE id > 4
-                         ORDER BY id
-                         LIMIT 3) AS count_wrapper
-                      LIMIT 2) AS subq4) AS paginatedquery
-            ";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
+            string expected = ExpectedJsonResultsPerTest["RequestFullConnection"];
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
@@ -112,30 +82,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     hasNextPage
                 }
             }";
-            string msSqlQuery = @"
-                SELECT to_jsonb(paginatedquery) AS DATA
-                FROM
-                  (SELECT COALESCE(jsonb_agg(json_build_object('id', id, 'title', title)), '[]') AS items,
-                          CASE
-                              WHEN max(id) IS NOT NULL THEN ENCODE(CONVERT_TO(CONCAT('{', '""id"":', max(id), '}'), 'UTF-8'), 'BASE64')
-                              ELSE NULL
-                          END AS ""endCursor"",
-                                            COALESCE(max(___rowcount___), 0) > 100 AS ""hasNextPage""
-                   FROM
-                     (SELECT *,
-                             COUNT(*) OVER() AS ___rowcount___
-                      FROM
-                        (SELECT table0.id AS id,
-                                table0.title AS title
-                         FROM books AS table0
-                         WHERE 1 = 1
-                         ORDER BY id
-                         LIMIT 101) AS count_wrapper
-                      LIMIT 100) AS subq1) AS paginatedquery
-            ";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
+            string expected = ExpectedJsonResultsPerTest["RequestNoParamFullConnection"];
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
@@ -147,7 +96,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task RequestItemsOnly()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode("{ \"id\": 4 }");
+            string after = SqlPaginationUtil.Base64Encode("{\"id\":1}");
             string graphQLQuery = @"{
                 books(first: 2," + $"after: \"{after}\")" + @"{
                     items {
@@ -156,21 +105,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     }
                 }
             }";
-            string postgresQuery = @"
-                SELECT to_jsonb(paginatedquery) AS DATA
-                FROM
-                  (SELECT COALESCE(jsonb_agg(json_build_object('title', title, 'publisher_id', publisher_id)), '[]') AS items
-                   FROM
-                     (SELECT table0.title AS title,
-                             table0.publisher_id AS publisher_id
-                      FROM books AS table0
-                      WHERE id > 4
-                      ORDER BY id
-                      LIMIT 2) AS subq2) AS paginatedquery
-            ";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
+            string expected = ExpectedJsonResultsPerTest["RequestItemsOnly"];
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
@@ -186,29 +123,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task RequestEndCursorOnly()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode("{ \"id\": 4 }");
+            string after = SqlPaginationUtil.Base64Encode("{\"id\":1}");
             string graphQLQuery = @"{
                 books(first: 2," + $"after: \"{after}\")" + @"{
                     endCursor
                 }
             }";
-            string postgresQuery = @"
-                SELECT to_jsonb(paginatedquery) AS DATA
-                FROM
-                  (SELECT CASE
-                              WHEN max(id) IS NOT NULL THEN ENCODE(CONVERT_TO(CONCAT('{', '""id"":', max(id), '}'), 'UTF-8'), 'BASE64')
-                              ELSE NULL
-                          END AS ""endCursor""
-                   FROM
-                     (SELECT table0.id AS id
-                      FROM books AS table0
-                      WHERE id > 4
-                      ORDER BY id
-                      LIMIT 2) AS subq2) AS paginatedquery
-            ";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
+            using JsonDocument result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement root = result.RootElement.GetProperty("data").GetProperty(graphQLQueryName);
+            string actual = SqlPaginationUtil.Base64Decode(root.GetProperty("endCursor").GetString());
+            string expected = "{\"id\":3}";
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
@@ -224,32 +149,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task RequestHasNextPageOnly()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode("{ \"id\": 4 }");
+            string after = SqlPaginationUtil.Base64Encode("{\"id\":1}");
             string graphQLQuery = @"{
                 books(first: 2," + $"after: \"{after}\")" + @"{
                     hasNextPage
                 }
             }";
-            string postgresQuery = @"
-                SELECT to_jsonb(paginatedquery) AS DATA
-                FROM
-                  (SELECT COALESCE(max(___rowcount___), 0) > 2 AS ""hasNextPage""
-                   FROM
-                     (SELECT *,
-                             COUNT(*) OVER() AS ___rowcount___
-                      FROM
-                        (SELECT *
-                         FROM books AS table0
-                         WHERE id > 4
-                         ORDER BY id
-                         LIMIT 3) AS count_wrapper
-                      LIMIT 2) AS subq2) AS paginatedquery
-            ";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
+            using JsonDocument result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement root = result.RootElement.GetProperty("data").GetProperty(graphQLQueryName);
+            bool actual = root.GetProperty("hasNextPage").GetBoolean();
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            Assert.AreEqual(true, actual);
         }
 
         /// <summary>
@@ -276,6 +187,40 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected: "[]", root.GetProperty("items").ToString());
             Assert.AreEqual(null, root.GetProperty("endCursor").GetString());
             Assert.AreEqual(false, root.GetProperty("hasNextPage").GetBoolean());
+        }
+
+        /// <summary>
+        /// Request nested pagination queries
+        /// </summary>
+        [TestMethod]
+        public async Task RequestNestedPaginationQueries()
+        {
+            string graphQLQueryName = "books";
+            string after = SqlPaginationUtil.Base64Encode("{\"id\":1}");
+            string graphQLQuery = @"{
+                 books(first: 2," + $"after: \"{after}\")" + @"{
+                    items {
+                        title
+                        publisher {
+                            name
+                            paginatedBooks(first: 2){
+                                items {
+                                    id
+                                    title
+                                }
+                                hasNextPage
+                            }
+                        }
+                    }
+                    endCursor
+                    hasNextPage
+                }
+            }";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = ExpectedJsonResultsPerTest["RequestNestedPaginationQueries"];
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
         #endregion

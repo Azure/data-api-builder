@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Models;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -12,33 +13,26 @@ namespace Azure.DataGateway.Service.Resolvers
     public class SqlPaginationUtil
     {
         /// <summary>
-        /// Receives the result of a query and parses:
+        /// Receives the result of a query as a JsonElement and parses:
         /// <list type="bullet">
         /// <list>*Connection.items which is trivially resolved to all the elements of the result (last  discarded if hasNextPage has been requested)</list>
         /// <list>*Connection.endCursur which is the primary key of the last element of the result (last  discarded if hasNextPage has been requested)</list>
         /// <list>*Connection.hasNextPage which is decided on whether structure.Limit() elements have been returned</list>
         /// </list>
         /// </summary>
-        public static JsonDocument CreatePaginationConnectionFromDbResult(JsonDocument dbResult, SqlQueryStructure structure)
+        public static JsonDocument CreatePaginationConnectionFromJsonElement(JsonElement root, PaginationMetadata paginationMetadata)
         {
             // maintains the conneciton JSON object *Connection
             Dictionary<string, object> connectionJson = new();
 
-            // necessary for MsSql because it doesn't coalesce list query results like Postgres
-            if (dbResult == null)
-            {
-                dbResult = JsonDocument.Parse("[]");
-            }
-
-            JsonElement root = dbResult.RootElement;
             IEnumerable<JsonElement> rootEnumerated = root.EnumerateArray();
 
             bool hasExtraElement = false;
-            if (structure.IsRequestedPaginationResult("hasNextPage"))
+            if (paginationMetadata.RequestedHasNextPage)
             {
                 // check if the number of elements requested is successfully returned
                 // structure.Limit() is first + 1 for paginated queries where hasNextPage is requested
-                hasExtraElement = rootEnumerated.Count() == structure.Limit();
+                hasExtraElement = rootEnumerated.Count() == paginationMetadata.Structure.Limit();
 
                 // add hasNextPage to connection elements
                 connectionJson.Add("hasNextPage", hasExtraElement ? true : false);
@@ -52,13 +46,13 @@ namespace Azure.DataGateway.Service.Resolvers
 
             int returnedElemNo = rootEnumerated.Count();
 
-            if (structure.IsRequestedPaginationResult("items"))
+            if (paginationMetadata.RequestedItems)
             {
                 if (hasExtraElement)
                 {
                     // use rootEnumerated to make the *Connection.items since the last element of rootEnumerated
                     // is removed if the result has an extra element
-                    connectionJson.Add("items", rootEnumerated.Select(e => e.ToString()).ToArray());
+                    connectionJson.Add("items", JsonSerializer.Serialize(rootEnumerated.ToArray()));
                 }
                 else
                 {
@@ -67,21 +61,44 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            if (structure.IsRequestedPaginationResult("endCursor"))
+            if (paginationMetadata.RequestedEndCursor)
             {
                 // parse *Connection.endCursor if there are no elements
                 // if no endCursor is added, but it has been requested HotChocolate will report it as null
                 if (returnedElemNo > 0)
                 {
                     JsonElement lastElemInRoot = rootEnumerated.ElementAtOrDefault(returnedElemNo - 1);
-                    connectionJson.Add("endCursor", MakeCursorFromJsonElement(lastElemInRoot, structure));
+                    connectionJson.Add("endCursor", MakeCursorFromJsonElement(lastElemInRoot, paginationMetadata));
                 }
             }
 
             // results have been parsed from the dbResult so the JsonDocument can be disposed
-            dbResult.Dispose();
+            // dbResult.Dispose();
 
             return JsonDocument.Parse(JsonSerializer.Serialize(connectionJson));
+        }
+
+        /// <summary>
+        /// Wrapper for CreatePaginationConnectionFromJsonElement
+        /// Disposes the JsonDocument passes to it
+        /// <summary>
+        public static JsonDocument CreatePaginationConnectionFromJsonDocument(JsonDocument jsonDocument, PaginationMetadata paginationMetadata)
+        {
+            // necessary for MsSql because it doesn't coalesce list query results like Postgres
+            if (jsonDocument == null)
+            {
+                jsonDocument = JsonDocument.Parse("[]");
+            }
+
+            JsonElement root = jsonDocument.RootElement;
+
+            // this is intentionally not disposed since it will be used for processing later
+            JsonDocument result = CreatePaginationConnectionFromJsonElement(root, paginationMetadata);
+
+            // no longer needed, so it is disposed
+            jsonDocument.Dispose();
+
+            return result;
         }
 
         /// <summary>
@@ -89,14 +106,14 @@ namespace Azure.DataGateway.Service.Resolvers
         /// The JSON is encoded in base64 for opaqueness. The cursor should function as a token that the user copies and pastes
         /// and doesn't need to know how it works
         /// </summary>
-        private static string MakeCursorFromJsonElement(JsonElement element, SqlQueryStructure structure)
+        private static string MakeCursorFromJsonElement(JsonElement element, PaginationMetadata paginationMetadata)
         {
             Dictionary<string, object> cursorJson = new();
-            List<string> primaryKeys = structure.PrimaryKey();
+            List<string> primaryKeys = paginationMetadata.Structure.PrimaryKey();
 
             foreach (string key in primaryKeys)
             {
-                cursorJson.Add(key, structure.ResolveParamTypeFromField(element.GetProperty(key).ToString(), key));
+                cursorJson.Add(key, paginationMetadata.Structure.ResolveParamTypeFromField(element.GetProperty(key).ToString(), key));
             }
 
             return Base64Encode(JsonSerializer.Serialize(cursorJson));
@@ -105,11 +122,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Parse the value of "after" parameter from query parameters, validate it, and return the json object it stores
         /// </summary>
-        public static IDictionary<string, object> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, SqlQueryStructure structure)
+        public static IDictionary<string, object> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
         {
             Dictionary<string, object> after = new();
             Dictionary<string, JsonElement> afterDeserialized = new();
-            List<string> primaryKeys = structure.PrimaryKey();
+            List<string> primaryKeys = paginationMetadata.Structure.PrimaryKey();
 
             object afterObject = queryParams["after"];
             string afterJsonString;
@@ -132,7 +149,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     foreach (KeyValuePair<string, JsonElement> keyValuePair in afterDeserialized)
                     {
-                        after.Add(keyValuePair.Key, structure.ResolveParamTypeFromField(keyValuePair.Value.ToString(), keyValuePair.Key));
+                        after.Add(keyValuePair.Key, paginationMetadata.Structure.ResolveParamTypeFromField(keyValuePair.Value.ToString(), keyValuePair.Key));
                     }
                 }
                 catch (Exception e)

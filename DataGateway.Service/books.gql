@@ -21,6 +21,7 @@ type Publisher {
     id: Int
     name: String
     books(first: Int = 100): [Book!]!
+    paginatedBooks(first: Int, after: Int): BookConnection
 }
 
 type Book {

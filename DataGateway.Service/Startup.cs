@@ -54,6 +54,7 @@ namespace Azure.DataGateway.Service
                     services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
                     services.AddSingleton<IQueryEngine, CosmosQueryEngine>();
                     services.AddSingleton<IMutationEngine, CosmosMutationEngine>();
+                    services.AddSingleton<IResolverMiddlewareMaker, CosmosResolverMiddlewareMaker>();
                     break;
                 case DatabaseType.MsSql:
                     services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
@@ -61,6 +62,7 @@ namespace Azure.DataGateway.Service
                     services.AddSingleton<IQueryBuilder, MsSqlQueryBuilder>();
                     services.AddSingleton<IQueryEngine, SqlQueryEngine>();
                     services.AddSingleton<IMutationEngine, SqlMutationEngine>();
+                    services.AddSingleton<IResolverMiddlewareMaker, SqlResolverMiddlewareMaker>();
                     break;
                 case DatabaseType.PostgreSql:
                     services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
@@ -68,6 +70,7 @@ namespace Azure.DataGateway.Service
                     services.AddSingleton<IQueryBuilder, PostgresQueryBuilder>();
                     services.AddSingleton<IQueryEngine, SqlQueryEngine>();
                     services.AddSingleton<IMutationEngine, SqlMutationEngine>();
+                    services.AddSingleton<IResolverMiddlewareMaker, SqlResolverMiddlewareMaker>();
                     break;
                 default:
                     throw new NotSupportedException(String.Format("The provided DatabaseType value: {0} is currently not supported." +

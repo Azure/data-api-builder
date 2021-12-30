@@ -1,21 +1,6 @@
 {
   "GraphQLSchema": "",
   "GraphQLSchemaFile": "books.gql",
-  "QueryResolvers": [
-    {
-      "Id": "getBooks"
-    },
-    {
-      "Id": "getBook"
-    },
-    {
-      "Id": "getReview"
-    },
-    {
-      "Id": "books",
-      "IsPaginated": true
-    }
-  ],
   "MutationResolvers": [
     {
       "Id": "insertBook",
@@ -38,6 +23,10 @@
       "Table": "publishers",
       "Fields": {
         "books": {
+          "RelationshipType": "OneToMany",
+          "RightForeignKey": "book_publisher_fk"
+        },
+        "paginatedBooks": {
           "RelationshipType": "OneToMany",
           "RightForeignKey": "book_publisher_fk"
         }
@@ -81,6 +70,9 @@
           "LeftForeignKey": "review_book_fk"
         }
       }
+    },
+    "BookConnection": {
+     "IsPaginationType": true
     }
   },
   "DatabaseSchema": {

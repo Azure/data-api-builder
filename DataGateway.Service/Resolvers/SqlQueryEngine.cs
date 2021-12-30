@@ -4,6 +4,7 @@ using System.Data.Common;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
 using HotChocolate.Resolvers;
 
@@ -48,28 +49,35 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// Executes the given IMiddlewareContext of the GraphQL query and
-        /// expecting a single Json back.
+        /// expecting a single Json and its related pagination metadata back.
         /// </summary>
-        public async Task<JsonDocument> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters, bool isPaginatedQuery)
+        public async Task<Tuple<JsonDocument, PaginationMetadata>> ExecuteAsyncWithMetadata(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _queryBuilder, isPaginatedQuery);
+            SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _queryBuilder);
+            return new Tuple<JsonDocument, PaginationMetadata>(await ExecuteAsync(structure), structure.PaginationMetadata);
+        }
 
-            if (isPaginatedQuery)
-            {
-                return SqlPaginationUtil.CreatePaginationConnectionFromDbResult(await ExecuteAsync(structure), structure);
-            }
-            else
-            {
-                return await ExecuteAsync(structure);
-            }
+        /// <summary>
+        /// Only used to conform to the IQueryEngine interface
+        /// </summary>
+        public Task<JsonDocument> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters, bool isPaginatedQuery)
+        {
+            throw new NotSupportedException();
+        }
 
+        /// <summary>
+        /// Only used to conform to the IQueryEngine interface
+        /// </summary>
+        public Task<IEnumerable<JsonDocument>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
+        {
+            throw new NotSupportedException();
         }
 
         /// <summary>
         /// Executes the given IMiddlewareContext of the GraphQL and expecting a
-        /// list of Jsons back.
+        /// list of Jsons and the relevant pagination metadata back.
         /// </summary>
-        public async Task<IEnumerable<JsonDocument>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
+        public async Task<Tuple<IEnumerable<JsonDocument>, PaginationMetadata>> ExecuteListAsyncWithMetadata(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _queryBuilder);
             Console.WriteLine(structure.ToString());
@@ -79,10 +87,13 @@ namespace Azure.DataGateway.Service.Resolvers
             //
             if (!dbDataReader.HasRows)
             {
-                return new List<JsonDocument>();
+                return new Tuple<IEnumerable<JsonDocument>, PaginationMetadata>(new List<JsonDocument>(), null);
             }
 
-            return JsonSerializer.Deserialize<List<JsonDocument>>(await GetJsonStringFromDbReader(dbDataReader));
+            return new Tuple<IEnumerable<JsonDocument>, PaginationMetadata>(
+                JsonSerializer.Deserialize<List<JsonDocument>>(await GetJsonStringFromDbReader(dbDataReader)),
+                structure.PaginationMetadata
+            );
         }
 
         // <summary>

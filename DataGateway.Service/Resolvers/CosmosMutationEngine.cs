@@ -68,5 +68,13 @@ namespace Azure.DataGateway.Service.Resolvers
             JObject jObject = await ExecuteAsync(parameters, resolver);
             return JsonDocument.Parse(jObject.ToString());
         }
+
+        /// <summary>
+        /// Only used to conform to the IMutationEngine interface
+        /// </summary>
+        public Task<Tuple<JsonDocument, PaginationMetadata>> ExecuteAsyncWithMetadata(IMiddlewareContext context, IDictionary<string, object> parameters)
+        {
+            throw new NotSupportedException();
+        }
     }
 }

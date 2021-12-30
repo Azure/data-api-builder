@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.Resolvers;
 using HotChocolate;
 using HotChocolate.Execution;
 using HotChocolate.Execution.Configuration;
@@ -14,17 +13,16 @@ namespace Azure.DataGateway.Services
 {
     public class GraphQLService
     {
-        private readonly IQueryEngine _queryEngine;
-        private readonly IMutationEngine _mutationEngine;
         private IMetadataStoreProvider _metadataStoreProvider;
 
-        public GraphQLService(IQueryEngine queryEngine,
-            IMutationEngine mutationEngine,
-            IMetadataStoreProvider metadataStoreProvider)
+        private IResolverMiddlewareMaker _resolverMiddlewareMaker;
+
+        public GraphQLService(
+            IMetadataStoreProvider metadataStoreProvider,
+            IResolverMiddlewareMaker resolverMiddlewareMaker)
         {
-            _queryEngine = queryEngine;
-            _mutationEngine = mutationEngine;
             _metadataStoreProvider = metadataStoreProvider;
+            _resolverMiddlewareMaker = resolverMiddlewareMaker;
 
             InitializeSchemaAndResolvers();
         }
@@ -34,7 +32,7 @@ namespace Azure.DataGateway.Services
             ISchema schema = SchemaBuilder.New()
                .AddDocumentFromString(data)
                .AddAuthorizeDirectiveType()
-               .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine, _metadataStoreProvider))
+               .Use((services, next) => _resolverMiddlewareMaker.MakeWith(next))
                .Create();
 
             // Below is pretty much an inlined version of

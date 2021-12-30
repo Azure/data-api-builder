@@ -29,6 +29,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static IQueryEngine _queryEngine;
         protected static IMutationEngine _mutationEngine;
         protected static IMetadataStoreProvider _metadataStoreProvider;
+        protected static IResolverMiddlewareMaker _resolverMiddlewareMaker;
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run.
@@ -57,6 +58,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _metadataStoreProvider = new FileMetadataStoreProvider("sql-config.json");
             _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
             _mutationEngine = new SqlMutationEngine(_queryEngine, _metadataStoreProvider, _queryExecutor, _queryBuilder);
+            _resolverMiddlewareMaker = new SqlResolverMiddlewareMaker(_queryEngine, _mutationEngine, _metadataStoreProvider);
 
             await ResetDbStateAsync();
         }

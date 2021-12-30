@@ -115,9 +115,9 @@ namespace Azure.DataGateway.Service.Resolvers
         public Dictionary<string, object> Parameters { get; set; }
 
         /// <summary>
-        /// Whether the query is paginated
+        /// Hold the pagination metadata for the query
         /// </summary>
-        public bool IsPaginatedQuery { get; }
+        public PaginationMetadata PaginationMetadata { get; set; }
 
         /// <summary>
         /// Default limit when no first param is specified for list queries
@@ -128,11 +128,6 @@ namespace Azure.DataGateway.Service.Resolvers
         /// The maximum number of results this query should return.
         /// </summary>
         private uint _limit = DEFAULT_LIST_LIMIT;
-
-        /// <summary>
-        /// The fields the user wants back from the Connection result of the paginated query
-        /// </summary>
-        private HashSet<string> _requestedPaginationResults;
 
         /// <summary>
         /// If this query is built because of a GraphQL query (as opposed to
@@ -155,81 +150,45 @@ namespace Azure.DataGateway.Service.Resolvers
         /// information.
         /// Only use as constructor for the outermost queries not subqueries
         /// </summary>
-        public SqlQueryStructure(IResolverContext ctx, IDictionary<String, object> queryParams, IMetadataStoreProvider metadataStoreProvider, IQueryBuilder queryBuilder, bool isPaginatedQuery = false)
+        public SqlQueryStructure(IResolverContext ctx, IDictionary<String, object> queryParams, IMetadataStoreProvider metadataStoreProvider, IQueryBuilder queryBuilder)
             // This constructor simply forwards to the more general constructor
             // that is used to create GraphQL queries. We give it some values
             // that make sense for the outermost query.
-            // If the query is paginated, schemaField and queryField are replaced with the
-            // schemaField and queryField of the *Connection.items field
             : this(ctx,
                 queryParams,
                 metadataStoreProvider,
                 queryBuilder,
-                isPaginatedQuery ? ExtractItemsSchemaField(ctx) : ctx.Selection.Field,
-                isPaginatedQuery ? ExtractItemsQueryField(ctx) : ctx.Selection.SyntaxNode,
+                ctx.Selection.Field,
+                ctx.Selection.SyntaxNode,
                 // The outermost query is where we start, so this can define
                 // create the IncrementingInteger that will be shared between
                 // all subqueries in this query.
                 new IncrementingInteger())
         {
-
-            IsPaginatedQuery = isPaginatedQuery;
-
-            if (isPaginatedQuery)
-            {
-                _requestedPaginationResults = new();
-
-                AddPaginationPredicates(queryParams);
-                ProcessPaginationFields(ctx.Selection.SyntaxNode.SelectionSet.Selections);
-
-                if (IsRequestedPaginationResult("endCursor"))
-                {
-                    // add the primary keys in the selected columns if they are missing
-                    IEnumerable<string> extraNeededColumns = PrimaryKey().Except(Columns.Keys);
-
-                    foreach (string column in extraNeededColumns)
-                    {
-                        AddColumn(column);
-                    }
-                }
-
-                if (IsRequestedPaginationResult("hasNextPage"))
-                {
-                    _limit++;
-                }
-
-                // if the user does a paginated query only requesting hasNextPage
-                // there will be no elements in Columns
-                if (!Columns.Any())
-                {
-                    AddColumn(PrimaryKey()[0]);
-                }
-            }
-
             // support identification of entities by primary key when query is non list type nor paginated
             // only perform this action for the outermost query as subqueries shouldn't provide primary key search
-            if (!IsListQuery && !IsPaginatedQuery)
+            if (!IsListQuery && !PaginationMetadata.IsPaginated)
             {
                 AddPrimaryKeyPredicates(queryParams);
             }
         }
 
         /// <summary>
-        /// Extracts the *Connection.items schema field from the ctx
+        /// Extracts the *Connection.items schema field from the *Connection schema field
         /// </summary>
-        private static IObjectField ExtractItemsSchemaField(IResolverContext ctx)
+        private static IObjectField ExtractItemsSchemaField(IObjectField connectionSchemaField)
         {
-            return UnderlyingType(ctx.Selection.Field.Type).Fields["items"];
+            return UnderlyingType(connectionSchemaField.Type).Fields["items"];
         }
 
         /// <summary>
-        /// Extracts the *Connection.items query field from the ctx
+        /// Extracts the *Connection.items query field from the *Connection query field
         /// </summary>
         /// <returns> The query field or null if **Conneciton.items is not requested in the query</returns>
-        private static FieldNode ExtractItemsQueryField(IResolverContext ctx)
+        private static FieldNode ExtractItemsQueryField(FieldNode connectionQueryField)
         {
             FieldNode itemsField = null;
-            foreach (ISelectionNode node in ctx.Selection.SyntaxNode.SelectionSet.Selections)
+            foreach (ISelectionNode node in connectionQueryField.SelectionSet.Selections)
             {
                 FieldNode field = node as FieldNode;
                 string fieldName = field.Name.Value;
@@ -291,6 +250,22 @@ namespace Azure.DataGateway.Service.Resolvers
             _underlyingFieldType = UnderlyingType(outputType);
 
             _typeInfo = _metadataStoreProvider.GetGraphqlType(_underlyingFieldType.Name);
+            PaginationMetadata.IsPaginated = _typeInfo.IsPaginationType;
+
+            if (PaginationMetadata.IsPaginated)
+            {
+                // process pagination fields without overringing them
+                ProcessPaginationFields(queryField.SelectionSet.Selections);
+
+                // override schemaField and queryField with the schemaField and queryField of *Connection.items
+                queryField = ExtractItemsQueryField(queryField);
+                schemaField = ExtractItemsSchemaField(schemaField);
+
+                outputType = schemaField.Type;
+                _underlyingFieldType = UnderlyingType(outputType);
+                _typeInfo = _metadataStoreProvider.GetGraphqlType(_underlyingFieldType.Name);
+            }
+
             TableName = _typeInfo.Table;
             TableAlias = CreateTableAlias();
 
@@ -333,6 +308,36 @@ namespace Azure.DataGateway.Service.Resolvers
                     }
                 }
             }
+
+            // need to run after the rest of the query has been processed since it relies on
+            // TableName, TableAlias, Columns, and _limit
+            if (PaginationMetadata.IsPaginated)
+            {
+                AddPaginationPredicates(queryParams);
+
+                if (PaginationMetadata.RequestedEndCursor)
+                {
+                    // add the primary keys in the selected columns if they are missing
+                    IEnumerable<string> extraNeededColumns = PrimaryKey().Except(Columns.Keys);
+
+                    foreach (string column in extraNeededColumns)
+                    {
+                        AddColumn(column);
+                    }
+                }
+
+                // if the user does a paginated query only requesting hasNextPage
+                // there will be no elements in Columns
+                if (!Columns.Any())
+                {
+                    AddColumn(PrimaryKey()[0]);
+                }
+
+                if (PaginationMetadata.RequestedHasNextPage)
+                {
+                    _limit++;
+                }
+            }
         }
 
         /// <summary>
@@ -341,12 +346,12 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         private SqlQueryStructure(IMetadataStoreProvider metadataStoreProvider, IQueryBuilder queryBuilder, IncrementingInteger counter)
         {
-            IsPaginatedQuery = false;
             Columns = new();
             JoinQueries = new();
             Predicates = new();
             Parameters = new();
             Joins = new();
+            PaginationMetadata = new(this);
             _metadataStoreProvider = metadataStoreProvider;
             _queryBuilder = queryBuilder;
             Counter = counter;
@@ -429,7 +434,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         void AddPaginationPredicates(IDictionary<string, object> queryParams)
         {
-            IDictionary<string, object> afterJsonValues = SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, this);
+            IDictionary<string, object> afterJsonValues = SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata);
             foreach (KeyValuePair<string, object> parameter in afterJsonValues)
             {
                 Predicates.Add($"{QualifiedColumn(parameter.Key)} > @{MakeParamWithValue(parameter.Value)}");
@@ -488,7 +493,19 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 FieldNode field = node as FieldNode;
                 string fieldName = field.Name.Value;
-                _requestedPaginationResults.Add(fieldName);
+
+                switch (fieldName)
+                {
+                    case "items":
+                        PaginationMetadata.RequestedItems = true;
+                        break;
+                    case "endCursor":
+                        PaginationMetadata.RequestedEndCursor = true;
+                        break;
+                    case "hasNextPage":
+                        PaginationMetadata.RequestedHasNextPage = true;
+                        break;
+                }
             }
         }
 
@@ -512,15 +529,23 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
                 else
                 {
-                    ObjectField subschemaField = _underlyingFieldType.Fields[fieldName];
-                    ObjectType subunderlyingType = UnderlyingType(subschemaField.Type);
+                    IObjectField subschemaField = _underlyingFieldType.Fields[fieldName];
+
+                    IDictionary<string, object> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field);
+                    SqlQueryStructure subquery = new(_ctx, subqueryParams, _metadataStoreProvider, _queryBuilder, subschemaField, field, Counter);
+                    PaginationMetadata.Subqueries.Add(fieldName, subquery.PaginationMetadata);
+
+                    // explicitly set to null so it not used later because this value does not reflect the schema of subquery
+                    // if the subquery is paginated since it will be overriden with the schema of *Conntion.items
+                    subschemaField = null;
+
+                    // use the _underlyingType from the subquery which will be overriten appropriately if the query is paginated
+                    ObjectType subunderlyingType = subquery._underlyingFieldType;
 
                     GraphqlType subTypeInfo = _metadataStoreProvider.GetGraphqlType(subunderlyingType.Name);
                     TableDefinition subTableDefinition = _metadataStoreProvider.GetTableDefinition(subTypeInfo.Table);
                     GraphqlField fieldInfo = _typeInfo.Fields[fieldName];
 
-                    IDictionary<string, object> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field);
-                    SqlQueryStructure subquery = new(_ctx, subqueryParams, _metadataStoreProvider, _queryBuilder, subschemaField, field, Counter);
                     string subtableAlias = subquery.TableAlias;
 
                     switch (fieldInfo.RelationshipType)
@@ -653,7 +678,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public uint Limit()
         {
-            if (IsListQuery || IsPaginatedQuery)
+            if (IsListQuery || PaginationMetadata.IsPaginated)
             {
                 return _limit;
             }
@@ -673,14 +698,6 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             return string.Join(", ", Columns.Select(
                         x => $"{x.Value} AS {QuoteIdentifier(x.Key)}"));
-        }
-
-        /// <summary>
-        /// Checks if field is expected in the paginated query result
-        /// </summary>
-        public bool IsRequestedPaginationResult(string field)
-        {
-            return _requestedPaginationResults.Contains(field);
         }
 
         /// <summary>

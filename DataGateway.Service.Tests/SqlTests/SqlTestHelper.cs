@@ -111,6 +111,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             if (actionResult.GetType().Name.Equals("OkObjectResult"))
             {
                 OkObjectResult actualResult = (OkObjectResult)actionResult;
+                Assert.AreEqual(actualResult.StatusCode, 200);
                 actual = actualResult.Value.ToString();
             }
             else

@@ -87,7 +87,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 queryString: "?_f=id",
                 entity: _integrationTableName,
                 sqlQuery: msSqlQuery,
-                controller: _restController);
+                controller: _restController
+            );
 
         }
 
@@ -166,7 +167,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: msSqlQuery,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: "Invalid Column name: content"
+                expectedErrorMessage: "Invalid Column name: content",
+                expectedStatusCode: 400
             );
         }
 
@@ -188,10 +190,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController,
                 exception: true,
                 expectedErrorMessage: "Invalid Field name: null or white space",
-                statusCode: 500,
-                subStatusCode: "InternalServerError"
-                );
-            ;
+                expectedStatusCode: 500,
+                expectedSubStatusCode: "InternalServerError"
+            );
         }
 
         /// <summary>
@@ -210,8 +211,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: msSqlQuery,
                 controller: _restController,
                 exception: true,
-                checkError: true,
-                expectedErrorMessage: "Invalid Column name: content"
+                expectedErrorMessage: "Invalid Column name: content",
+                expectedStatusCode: 400
             );
         }
 

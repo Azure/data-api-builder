@@ -102,16 +102,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             Func<string, string, Task<IActionResult>> api,
             string entityName,
             string primaryKeyRoute,
-            string expected)
+            string expected,
+            int expectedStatusCode)
 
         {
             string actual;
+            int statusCode;
             IActionResult actionResult = await api(entityName, primaryKeyRoute);
             // OkObjectResult will throw exception if we attempt cast to JsonResult
             if (actionResult.GetType().Name.Equals("OkObjectResult"))
             {
                 OkObjectResult actualResult = (OkObjectResult)actionResult;
-                Assert.AreEqual(actualResult.StatusCode, 200);
+                Assert.AreEqual(expectedStatusCode, actualResult.StatusCode);
                 actual = actualResult.Value.ToString();
             }
             else

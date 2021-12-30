@@ -142,10 +142,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string sqlQuery,
             RestController controller,
             bool exception = false,
-            bool checkError = false,
             string expectedErrorMessage = "",
-            int statusCode = 400,
-            string subStatusCode = "BadRequest")
+            int expectedStatusCode = 200,
+            string expectedSubStatusCode = "BadRequest")
         {
             ConfigureRestController(controller, queryString);
             string expected;
@@ -156,9 +155,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 {
                     error = new
                     {
-                        code = subStatusCode.ToString(),
+                        code = expectedSubStatusCode.ToString(),
                         message = expectedErrorMessage,
-                        status = statusCode,
+                        status = expectedStatusCode,
                     }
                 });
                 expected = expectedResult.Value.ToString();
@@ -172,7 +171,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller.Find,
                 entity,
                 primaryKeyRoute,
-                expected
+                expected,
+                expectedStatusCode
             );
         }
 

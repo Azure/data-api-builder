@@ -186,8 +186,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _integrationTableName,
                 sqlQuery: msSqlQuery,
                 controller: _restController,
-                exception: true
-            );
+                exception: true,
+                expectedErrorMessage: "Invalid Field name: null or white space",
+                statusCode: 500,
+                subStatusCode: "InternalServerError"
+                );
+            ;
         }
 
         /// <summary>
@@ -197,8 +201,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task RestDatagatewayExceptionErrorConditionFormat()
         {
-            string msSqlQuery = $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
-                $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
+            string msSqlQuery = string.Empty;
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,

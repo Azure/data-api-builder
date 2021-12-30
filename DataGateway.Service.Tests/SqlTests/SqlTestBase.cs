@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.configurations;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Http;
@@ -146,7 +145,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             bool checkError = false,
             string expectedErrorMessage = "",
             int statusCode = 400,
-            DatagatewayException.SubStatusCodes subStatusCode = DatagatewayException.SubStatusCodes.BadRequest)
+            string subStatusCode = "BadRequest")
         {
             ConfigureRestController(controller, queryString);
             string expected;

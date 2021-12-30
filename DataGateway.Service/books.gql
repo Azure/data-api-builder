@@ -5,12 +5,6 @@ type Query {
     books(first: Int, after: String): BookConnection
 }
 
-type BookConnection {
-    items: [Book]
-    endCursor: String
-    hasNextPage: Boolean
-}
-
 type Mutation {
     editBook(id: Int!, title: String, publisher_id: Int): Book
     insertBook(title: String!, publisher_id: Int!): Book
@@ -30,7 +24,9 @@ type Book {
     publisher_id: Int
     publisher: Publisher!
     reviews(first: Int = 100): [Review!]!
+    paginatedReviews(first: Int, after: String): ReviewConnection
     authors(first: Int = 100): [Author!]!
+    paginatedAuthors(first: Int, after: String): AuthorConnection
 }
 
 type Author {
@@ -38,10 +34,29 @@ type Author {
     name: String
     birthdate: String
     books(first: Int = 100): [Book!]!
+    paginatedBooks(first: Int, after: String): BookConnection
 }
 
 type Review {
     id: Int
     content: String
     book: Book
+}
+
+type BookConnection {
+    items: [Book]
+    endCursor: String
+    hasNextPage: Boolean
+}
+
+type ReviewConnection {
+    items: [Review]
+    endCursor: String
+    hasNextPage: Boolean
+}
+
+type AuthorConnection {
+    items: [Author]
+    endCursor: String
+    hasNextPage: Boolean
 }

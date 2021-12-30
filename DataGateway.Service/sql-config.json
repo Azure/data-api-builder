@@ -43,7 +43,17 @@
           "RelationshipType": "OneToMany",
           "RightForeignKey": "review_book_fk"
         },
+        "paginatedReviews":{
+          "RelationshipType": "OneToMany",
+          "RightForeignKey": "review_book_fk"
+        },
         "authors": {
+          "RelationShipType": "ManyToMany",
+          "AssociativeTable": "book_author_link",
+          "LeftForeignKey": "book_author_link_book_fk",
+          "RightForeignKey": "book_author_link_author_fk"
+        },
+        "paginatedAuthors": {
           "RelationShipType": "ManyToMany",
           "AssociativeTable": "book_author_link",
           "LeftForeignKey": "book_author_link_book_fk",
@@ -73,6 +83,12 @@
     },
     "BookConnection": {
      "IsPaginationType": true
+    },
+    "AuthorConnection": {
+    "IsPaginationType": true
+    },
+    "ReviewConnection": {
+    "IsPaginationType": true
     }
   },
   "DatabaseSchema": {

@@ -165,7 +165,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _integrationTableName,
                 sqlQuery: msSqlQuery,
                 controller: _restController,
-                exception: true
+                exception: true,
+                expectedErrorMessage: "Invalid Column name: content"
             );
         }
 
@@ -207,7 +208,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController,
                 exception: true,
                 checkError: true,
-                message: "Invalid Column name: content"
+                expectedErrorMessage: "Invalid Column name: content"
             );
         }
 

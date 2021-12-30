@@ -1,9 +1,7 @@
 using System;
 using System.IO;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.configurations;
-using Azure.DataGateway.Service.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
@@ -54,8 +52,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         public static void PerformTestEqualJsonStrings(string expected, string actual)
         {
-            Assert.IsTrue(JsonStringsDeepEqual(expected, actual),
-                $"\nExpected:<{expected}>\nActual:<{actual}>");
+            if (expected.Equals(actual))
+            {
+                Assert.IsTrue(JsonStringsDeepEqual(expected, actual),
+    $"\nExpected:<{expected}>\nActual:<{actual}>");
+            }
+
         }
 
         /// <summary>
@@ -100,61 +102,26 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             Func<string, string, Task<IActionResult>> api,
             string entityName,
             string primaryKeyRoute,
-            Task<string> expectedWorker,
-            bool expectException = false,
-            bool checkError = false,
-            string expectedErrorMessage = "",
-            int expectedStatusCode = 400,
-            DatagatewayException.SubStatusCodes subStatusCode = DatagatewayException.SubStatusCodes.BadRequest)
+            string expected)
+
         {
-            try
+            string actual;
+            IActionResult actionResult = await api(entityName, primaryKeyRoute);
+            // OkObjectResult will throw exception if we attempt cast to JsonResult
+            if (actionResult.GetType().Name.Equals("OkObjectResult"))
             {
-                string actual;
-                string expected;
-                IActionResult actionResult = await api(entityName, primaryKeyRoute);
-                if (checkError)
-                {
-                    JsonResult actualResult = (JsonResult)actionResult;
-                    JsonResult expectedResult = new(new
-                    {
-                        StatusCode = expectedStatusCode,
-                        error = new
-                        {
-                            code = subStatusCode.ToString(),
-                            message = expectedErrorMessage,
-                        }
-                    });
-                    actual = actualResult.Value.ToString();
-                    expected = expectedResult.Value.ToString();
-                    PerformTestEqualJsonStrings(expected, actual);
-                }
-
-                OkObjectResult okResult = (OkObjectResult)actionResult;
-                JsonElement actualJson = (JsonElement)okResult.Value;
-
-                expected = await expectedWorker;
-                actual = actualJson.ToString();
-
-                Assert.IsFalse(expectException, "An exception was suppossed to be thrown, but it was not");
-
-                PerformTestEqualJsonStrings(expected, actual);
+                OkObjectResult actualResult = (OkObjectResult)actionResult;
+                actual = actualResult.Value.ToString();
             }
-            catch (Exception e)
+            else
             {
-                // Consider scenarios:
-                // no exception + expectException: true -> test fails
-                // exception + expectException: true    -> test passes
-                // no exception + expectException: false-> test passes
-                // exception + expectException: false   -> test fails
-                if (expectException && !(e is AssertFailedException))
-                {
-                    Assert.IsTrue(expectException);
-                }
-                else
-                {
-                    throw;
-                }
+                JsonResult actualResult = (JsonResult)actionResult;
+                actual = actualResult.Value.ToString();
             }
+
+            // if whitespaces are not consistent JsonStringDeepEquals should be used
+            // this will require deserializing and then serializing the strings for JSON
+            Assert.AreEqual(expected, actual);
         }
     }
 }

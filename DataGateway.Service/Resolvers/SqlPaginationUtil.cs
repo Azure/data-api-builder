@@ -167,6 +167,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         e is NotSupportedException
                         )
                     {
+                        Console.Error.WriteLine(e);
                         string notValidString = $"Parameter after with value {afterObject} is not a valid pagination token.";
                         throw new DatagatewayException(notValidString, 400, DatagatewayException.SubStatusCodes.BadRequest);
                     }

@@ -618,6 +618,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// it is supposed to be compared with
         /// Throws exceptions if fieldName is not a valid column for the table or if param cannot be converted to the field type
         ///</summary>
+        /// <exception cref="ArgumentException">fieldName is not a valid column of table or param does not have a valid value type</exception>
         public object ResolveParamTypeFromField(string param, string fieldName)
         {
             string type;
@@ -628,7 +629,7 @@ namespace Azure.DataGateway.Service.Resolvers
             }
             else
             {
-                throw new Exception($"{fieldName} is not a valid column of {TableName}");
+                throw new ArgumentException($"{fieldName} is not a valid column of {TableName}");
             }
 
             try
@@ -649,7 +650,7 @@ namespace Azure.DataGateway.Service.Resolvers
             }
             catch
             {
-                throw new Exception($"{param} is not a valid value for property {fieldName}");
+                throw new ArgumentException($"{param} is not a valid value for property {fieldName}");
             }
         }
 

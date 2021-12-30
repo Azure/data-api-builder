@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
@@ -81,30 +80,11 @@ namespace Azure.DataGateway.Service.Resolvers
         private enum OutputQualifier { Inserted, Deleted };
 
         /// <summary>
-        /// Converts OutputQualifier enums to strings
-        /// </summary>
-        private static string OutputQualifierResolver(OutputQualifier qualifier)
-        {
-            if (qualifier == OutputQualifier.Inserted)
-            {
-                return "Inserted";
-            }
-            else if (qualifier == OutputQualifier.Deleted)
-            {
-                return "Deleted";
-            }
-            else
-            {
-                throw new Exception("Could not determine output qualifier type");
-            }
-        }
-
-        /// <summary>
         /// Adds qualifiers (inserted or deleted) to columns in OUTPUT clause and joins them will commas.
         /// </summary>
         private static string MakeOutputColumns(List<string> columns, OutputQualifier outputQualifier)
         {
-            List<string> outputColumns = columns.Select(column => $"{OutputQualifierResolver(outputQualifier)}.{column}").ToList();
+            List<string> outputColumns = columns.Select(column => $"{outputQualifier}.{column}").ToList();
             return string.Join(", ", outputColumns);
         }
     }

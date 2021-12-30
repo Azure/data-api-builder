@@ -141,7 +141,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         string incorrectValues = $"Parameter \"after\" with values {afterJsonString} does not contain all the required" +
                                                     $"values <{string.Join(", ", primaryKeys.Select(key => $"\"{key}\""))}>";
 
-                        throw new Exception(incorrectValues);
+                        throw new ArgumentException(incorrectValues);
                     }
 
                     foreach (KeyValuePair<string, JsonElement> keyValuePair in afterDeserialized)
@@ -158,9 +158,22 @@ namespace Azure.DataGateway.Service.Resolvers
                     // keys of afterDeserialized do not correspond to the primary key
                     // values given for the primary keys are of incorrect format
 
-                    Console.Error.WriteLine(e);
-                    string notValidString = $"Parameter after with value {afterObject} is not a valid pagination token.";
-                    throw new DatagatewayException(notValidString, 400, DatagatewayException.SubStatusCodes.BadRequest);
+                    if (e is InvalidCastException ||
+                        e is ArgumentException ||
+                        e is ArgumentNullException ||
+                        e is FormatException ||
+                        e is System.Text.DecoderFallbackException ||
+                        e is JsonException ||
+                        e is NotSupportedException
+                        )
+                    {
+                        string notValidString = $"Parameter after with value {afterObject} is not a valid pagination token.";
+                        throw new DatagatewayException(notValidString, 400, DatagatewayException.SubStatusCodes.BadRequest);
+                    }
+                    else
+                    {
+                        throw;
+                    }
                 }
             }
 

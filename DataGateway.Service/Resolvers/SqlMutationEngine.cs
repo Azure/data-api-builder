@@ -69,7 +69,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryParameters = updateQueryStruct.Parameters;
                     break;
                 default:
-                    throw new Exception($"Unexpected value for MutationResolver.OperationType \"{mutationResolver.OperationType}\" found.");
+                    throw new NotSupportedException($"Unexpected value for MutationResolver.OperationType \"{mutationResolver.OperationType}\" found.");
             }
 
             Console.WriteLine(queryString);

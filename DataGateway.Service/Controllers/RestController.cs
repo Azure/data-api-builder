@@ -65,19 +65,26 @@ namespace Azure.DataGateway.Service.Controllers
                 Response.StatusCode = ex.StatusCode;
                 return new JsonResult(new
                 {
-                    StatusCode = ex.StatusCode,
                     error = new
                     {
                         code = ex.SubStatusCode.ToString(),
                         message = ex.Message,
+                        status = ex.StatusCode
                     }
                 });
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine(ex.StackTrace);
-                return StatusCode(statusCode: 500);
+                Response.StatusCode = 500;
+                return new JsonResult(new
+                {
+                    error = new
+                    {
+                        code = "InternalServerError",
+                        message = ex.Message,
+                        status = 500
+                    }
+                });
             }
         }
     }

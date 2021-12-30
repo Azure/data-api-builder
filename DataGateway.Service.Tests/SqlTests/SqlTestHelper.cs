@@ -103,8 +103,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             Task<string> expectedWorker,
             bool expectException = false,
             bool checkError = false,
-            string message = "",
-            int statusCode = 400,
+            string expectedErrorMessage = "",
+            int expectedStatusCode = 400,
             DatagatewayException.SubStatusCodes subStatusCode = DatagatewayException.SubStatusCodes.BadRequest)
         {
             try
@@ -117,11 +117,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     JsonResult actualResult = (JsonResult)actionResult;
                     JsonResult expectedResult = new(new
                     {
-                        StatusCode = statusCode,
+                        StatusCode = expectedStatusCode,
                         error = new
                         {
                             code = subStatusCode.ToString(),
-                            message = message,
+                            message = expectedErrorMessage,
                         }
                     });
                     actual = actualResult.Value.ToString();

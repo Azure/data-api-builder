@@ -72,9 +72,6 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            // results have been parsed from the dbResult so the JsonDocument can be disposed
-            // dbResult.Dispose();
-
             return JsonDocument.Parse(JsonSerializer.Serialize(connectionJson));
         }
 
@@ -162,7 +159,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     // values given for the primary keys are of incorrect format
 
                     Console.Error.WriteLine(e);
-                    string notValidString = $"Parameter after with value {afterObject} is not a valid base64 encoded json string.";
+                    string notValidString = $"Parameter after with value {afterObject} is not a valid pagination token.";
                     throw new DatagatewayException(notValidString, 400, DatagatewayException.SubStatusCodes.BadRequest);
                 }
             }

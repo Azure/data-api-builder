@@ -69,7 +69,6 @@ namespace Azure.DataGateway.Services
                     if (result.Item2.IsPaginated)
                     {
                         context.Result = SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(result.Item1, result.Item2);
-                        ;
                     }
                     else
                     {
@@ -96,10 +95,8 @@ namespace Azure.DataGateway.Services
                 // One-To-Many join.
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
-                    Console.WriteLine($"Inner {context.Selection.Field.Name.Value}");
                     PaginationMetadata parentMetadata = (PaginationMetadata)context.ScopedContextData[_contextMetadata];
                     PaginationMetadata currentMetadata = parentMetadata.Subqueries[context.Selection.Field.Name.Value];
-                    Console.WriteLine($"Inner metadata keys: {string.Join(" ", parentMetadata.Subqueries.Keys)}");
 
                     if (currentMetadata.IsPaginated)
                     {
@@ -122,9 +119,7 @@ namespace Azure.DataGateway.Services
                 // join.
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
-                    Console.WriteLine($"List {context.Selection.Field.Name.Value}");
                     PaginationMetadata parentMetadata = (PaginationMetadata)context.ScopedContextData[_contextMetadata];
-                    Console.WriteLine($"List metadata keys: {string.Join(" ", parentMetadata.Subqueries.Keys)}");
 
                     //TODO: Try to avoid additional deserialization/serialization here.
                     context.Result = JsonSerializer.Deserialize<List<JsonDocument>>(jsonElement.ToString());

@@ -254,7 +254,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (PaginationMetadata.IsPaginated)
             {
-                // process pagination fields without overringing them
+                // process pagination fields without overriding them
                 ProcessPaginationFields(queryField.SelectionSet.Selections);
 
                 // override schemaField and queryField with the schemaField and queryField of *Connection.items

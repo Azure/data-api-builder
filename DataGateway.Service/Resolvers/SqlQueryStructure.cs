@@ -535,6 +535,13 @@ namespace Azure.DataGateway.Service.Resolvers
                     SqlQueryStructure subquery = new(_ctx, subqueryParams, _metadataStoreProvider, _queryBuilder, subschemaField, field, Counter);
                     PaginationMetadata.Subqueries.Add(fieldName, subquery.PaginationMetadata);
 
+                    // pass the parameters of the subquery to the current query so upmost query has all the
+                    // parameters of the query tree and it can pass them to the database query executor
+                    foreach (KeyValuePair<string, object> parameter in subquery.Parameters)
+                    {
+                        Parameters.Add(parameter.Key, parameter.Value);
+                    }
+
                     // explicitly set to null so it not used later because this value does not reflect the schema of subquery
                     // if the subquery is paginated since it will be overriden with the schema of *Conntion.items
                     subschemaField = null;

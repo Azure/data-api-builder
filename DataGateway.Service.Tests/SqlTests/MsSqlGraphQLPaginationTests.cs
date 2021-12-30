@@ -203,11 +203,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         title
                         publisher {
                             name
-                            paginatedBooks(first: 2){
+                            paginatedBooks(first: 2, after:""" + after + @"""){
                                 items {
                                     id
                                     title
                                 }
+                                endCursor
                                 hasNextPage
                             }
                         }

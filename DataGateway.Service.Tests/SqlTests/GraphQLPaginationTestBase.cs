@@ -73,14 +73,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ""paginatedBooks"": {
                       ""items"": [
                         {
-                          ""id"": 1,
-                          ""title"": ""Awesome book""
-                        },
-                        {
                           ""id"": 2,
                           ""title"": ""Also Awesome book""
                         }
                       ],
+                      ""endCursor"": ""eyJpZCI6Mn0="",
                       ""hasNextPage"": false
                     }
                   }
@@ -100,6 +97,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                           ""title"": ""US history in a nutshell""
                         }
                       ],
+                      ""endCursor"": ""eyJpZCI6NH0="",
                       ""hasNextPage"": false
                     }
                   }

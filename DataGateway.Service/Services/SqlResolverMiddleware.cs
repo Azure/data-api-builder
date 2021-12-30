@@ -34,7 +34,8 @@ namespace Azure.DataGateway.Services
     /// </summary>
     public class SqlResolverMiddleware : ResolverMiddleware
     {
-        private readonly string _contextDataLabel = "metadata";
+        private static readonly string _contextMetadata = "metadata";
+        private static readonly string _skippedMetadataUpdateForItems = "skippedMetadataUpdateForItems";
 
         public SqlResolverMiddleware(FieldDelegate next, IQueryEngine queryEngine, IMutationEngine mutationEngine, IMetadataStoreProvider metadataStoreProvider)
             : base(next, queryEngine, mutationEngine, metadataStoreProvider) { }
@@ -49,7 +50,7 @@ namespace Azure.DataGateway.Services
 
                 Tuple<JsonDocument, PaginationMetadata> result = await _mutationEngine.ExecuteAsyncWithMetadata(context, parameters);
                 context.Result = result.Item1;
-                context.ScopedContextData = context.ScopedContextData.SetItem(_contextDataLabel, result.Item2);
+                SetNewMetadata(context, result.Item2);
             }
             else if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
             {
@@ -59,7 +60,7 @@ namespace Azure.DataGateway.Services
                 {
                     Tuple<IEnumerable<JsonDocument>, PaginationMetadata> result = await _queryEngine.ExecuteListAsyncWithMetadata(context, parameters);
                     context.Result = result.Item1;
-                    context.ScopedContextData = context.ScopedContextData.SetItem(_contextDataLabel, result.Item2);
+                    SetNewMetadata(context, result.Item2);
                 }
                 else
                 {
@@ -75,7 +76,7 @@ namespace Azure.DataGateway.Services
                         context.Result = result.Item1;
                     }
 
-                    context.ScopedContextData = context.ScopedContextData.SetItem(_contextDataLabel, result.Item2);
+                    SetNewMetadata(context, result.Item2);
                 }
             }
             else if (context.Selection.Field.Type.IsLeafType())
@@ -95,8 +96,10 @@ namespace Azure.DataGateway.Services
                 // One-To-Many join.
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
-                    PaginationMetadata parentMetadata = (PaginationMetadata)context.ScopedContextData[_contextDataLabel];
+                    Console.WriteLine($"Inner {context.Selection.Field.Name.Value}");
+                    PaginationMetadata parentMetadata = (PaginationMetadata)context.ScopedContextData[_contextMetadata];
                     PaginationMetadata currentMetadata = parentMetadata.Subqueries[context.Selection.Field.Name.Value];
+                    Console.WriteLine($"Inner metadata keys: {string.Join(" ", parentMetadata.Subqueries.Keys)}");
 
                     if (currentMetadata.IsPaginated)
                     {
@@ -108,7 +111,7 @@ namespace Azure.DataGateway.Services
                         context.Result = JsonDocument.Parse(jsonElement.ToString());
                     }
 
-                    context.ScopedContextData = context.ScopedContextData.SetItem(_contextDataLabel, currentMetadata);
+                    SetNewMetadata(context, currentMetadata);
                 }
             }
             else if (context.Selection.Type.IsListType())
@@ -119,23 +122,41 @@ namespace Azure.DataGateway.Services
                 // join.
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
-                    PaginationMetadata parentMetadata = (PaginationMetadata)context.ScopedContextData[_contextDataLabel];
+                    Console.WriteLine($"List {context.Selection.Field.Name.Value}");
+                    PaginationMetadata parentMetadata = (PaginationMetadata)context.ScopedContextData[_contextMetadata];
+                    Console.WriteLine($"List metadata keys: {string.Join(" ", parentMetadata.Subqueries.Keys)}");
 
                     //TODO: Try to avoid additional deserialization/serialization here.
                     context.Result = JsonSerializer.Deserialize<List<JsonDocument>>(jsonElement.ToString());
 
-                    if (!parentMetadata.IsPaginated)
+                    bool skippedMetadataUpdateForItems = (bool)context.ScopedContextData[_skippedMetadataUpdateForItems];
+                    if (!parentMetadata.IsPaginated || (parentMetadata.IsPaginated && skippedMetadataUpdateForItems))
                     {
-                        // fetch the next metadata object if the parent is not paginated
                         // if the parent is paginated, *Conneciton.items will be filtered as list type, but items
                         // no not have a PaginationMetadata associated with them so the dictionary look up below will fail
+                        // only override the pagination metadata if the parent query was not paginated OR
+                        // the parent query is paginated and *Connection.items have been skipped
                         PaginationMetadata currentMetadata = parentMetadata.Subqueries[context.Selection.Field.Name.Value];
-                        context.ScopedContextData = context.ScopedContextData.SetItem(_contextDataLabel, currentMetadata);
+                        SetNewMetadata(context, currentMetadata);
+                    }
+                    else
+                    {
+                        // mark that *Connection.items have been skipped
+                        context.ScopedContextData = context.ScopedContextData.SetItem(_skippedMetadataUpdateForItems, true);
                     }
                 }
             }
 
             await _next(context);
+        }
+
+        /// <summary>
+        /// Set new metadata and reset the depth that the metadata has persisted
+        /// </summary>
+        private static void SetNewMetadata(IMiddlewareContext context, PaginationMetadata metadata)
+        {
+            context.ScopedContextData = context.ScopedContextData.SetItem(_contextMetadata, metadata);
+            context.ScopedContextData = context.ScopedContextData.SetItem(_skippedMetadataUpdateForItems, false);
         }
     }
 }

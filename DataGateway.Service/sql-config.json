@@ -69,6 +69,12 @@
           "AssociativeTable": "book_author_link",
           "LeftForeignKey": "book_author_link_author_fk",
           "RightForeignKey": "book_author_link_book_fk"
+        },
+        "paginatedBooks": {
+          "RelationShipType": "ManyToMany",
+          "AssociativeTable": "book_author_link",
+          "LeftForeignKey": "book_author_link_author_fk",
+          "RightForeignKey": "book_author_link_book_fk"
         }
       }
     },

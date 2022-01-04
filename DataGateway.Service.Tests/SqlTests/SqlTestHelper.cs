@@ -84,8 +84,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="api">The REST api to be invoked.</param>
         /// <param name="entityName">The entity name.</param>
         /// <param name="primaryKeyRoute">The primary key portion of the route.</param>
-        /// <param name="expected">string represents the expected result.
-        /// </param>
+        /// <param name="expected">string represents the expected result.</param>
         /// <param name="expectedStatusCode">int represents the returned http status code</param>
         public static async Task PerformApiTest(
             Func<string, string, Task<IActionResult>> api,

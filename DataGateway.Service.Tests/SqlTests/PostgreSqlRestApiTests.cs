@@ -27,7 +27,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithQueryStringOneField",
                 @"
-                  SELECT to_jsonb(subq) AS data
+                  SELECT json_agg(to_jsonb(subq)) AS data
                   FROM (
                       SELECT id
                       FROM " + _integrationTableName + @"
@@ -37,7 +37,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithQueryStringAllFields",
                 @"
-                  SELECT to_jsonb(subq) AS data
+                  SELECT json_agg(to_jsonb(subq)) AS data
                   FROM (
                       SELECT *
                       FROM " + _integrationTableName + @"
@@ -60,7 +60,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithQueryStringMultipleFields",
                 @"
-                    SELECT to_jsonb(subq) AS data
+                    SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (
                         SELECT id, title
                         FROM " + _integrationTableName + @"

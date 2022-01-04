@@ -75,6 +75,8 @@ namespace Azure.DataGateway.Service.Controllers
             }
             catch (Exception ex)
             {
+                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine(ex.StackTrace);
                 Response.StatusCode = 500;
                 return new JsonResult(new
                 {

@@ -82,7 +82,7 @@ namespace Azure.DataGateway.Service.Controllers
                 {
                     error = new
                     {
-                        code = "InternalServerError",
+                        code = "While processing your request the server ran into an unexpected error",
                         message = ex.Message,
                         status = 500
                     }

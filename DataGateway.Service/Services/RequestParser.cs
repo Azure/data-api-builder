@@ -15,6 +15,10 @@ namespace Azure.DataGateway.Services
         /// Prefix used for specifying the fields in the query string of the URL.
         /// </summary>
         private const string FIELDS_URL = "_f";
+        /// <summary>
+        /// Prefix used for specifying the filters in the query string of the URL.
+        /// </summary>
+        private const string FILTER_URL = "$filter";
 
         /// <summary>
         /// Parses the primary key string to identify the field names composing the key
@@ -62,6 +66,9 @@ namespace Azure.DataGateway.Services
                     case FIELDS_URL:
                         CheckListForNullElement(nvc[key].Split(",").ToList());
                         context.Fields = nvc[key].Split(",").ToList();
+                        break;
+                    case FILTER_URL:
+                        //var result = ODataUriParser.ParseFilter(nvc[key], model, type);
                         break;
                     default:
                         throw new ArgumentException("Invalid Query Parameter: " + key.ToString());

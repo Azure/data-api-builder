@@ -52,12 +52,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         public static void PerformTestEqualJsonStrings(string expected, string actual)
         {
-            if (expected.Equals(actual))
-            {
-                Assert.IsTrue(JsonStringsDeepEqual(expected, actual),
-    $"\nExpected:<{expected}>\nActual:<{actual}>");
-            }
-
+            Assert.IsTrue(JsonStringsDeepEqual(expected, actual),
+            $"\nExpected:<{expected}>\nActual:<{actual}>");
         }
 
         /// <summary>
@@ -88,16 +84,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="api">The REST api to be invoked.</param>
         /// <param name="entityName">The entity name.</param>
         /// <param name="primaryKeyRoute">The primary key portion of the route.</param>
-        /// <param name="expectedWorker">
-        /// A worker to calculate the expected sql query result. A worker is used to abstract any database
-        /// specific detail from the PerformApiTest function, while still allowing the function to detect
-        /// exceptions thrown during the execution of that logic.
+        /// <param name="expected">string represents the expected result.
         /// </param>
-        /// <param name="expectException">True if we expect exceptions.</param>
-        /// <param name="checkError">bool represents if we check error condition format</param>
-        /// <param name="message">string represents the error message in the JsonResponse</param>
-        /// <param name="statusCode">int represents the returned http status code</param>
-        /// <param name="subStatusCode">enum represents the returned sub status code</param>
+        /// <param name="expectedStatusCode">int represents the returned http status code</param>
         public static async Task PerformApiTest(
             Func<string, string, Task<IActionResult>> api,
             string entityName,
@@ -109,7 +98,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string actual;
             IActionResult actionResult = await api(entityName, primaryKeyRoute);
             // OkObjectResult will throw exception if we attempt cast to JsonResult
-            if (actionResult.GetType().Name.Equals("OkObjectResult"))
+            if (actionResult is OkObjectResult)
             {
                 OkObjectResult actualResult = (OkObjectResult)actionResult;
                 Assert.AreEqual(expectedStatusCode, actualResult.StatusCode);

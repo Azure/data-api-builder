@@ -148,7 +148,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 exception: true,
                 expectedErrorMessage: "Invalid Field name: null or white space",
                 expectedStatusCode: 500,
-                expectedSubStatusCode: "InternalServerError"
+                expectedSubStatusCode: "While processing your request the server ran into an unexpected error"
             );
         }
 

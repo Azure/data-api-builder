@@ -68,7 +68,9 @@ namespace Azure.DataGateway.Services
                         context.Fields = nvc[key].Split(",").ToList();
                         break;
                     case FILTER_URL:
-                        //var result = ODataUriParser.ParseFilter(nvc[key], model, type);
+                        //FilterClause result = ODataUriParser.ParseFilter(nvc[key], model, type);
+                        // traverse resultant AST
+                        // add to context.Predicates
                         break;
                     default:
                         throw new ArgumentException("Invalid Query Parameter: " + key.ToString());

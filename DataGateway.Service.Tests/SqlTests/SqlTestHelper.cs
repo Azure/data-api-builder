@@ -107,7 +107,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         {
             string actual;
-            int statusCode;
             IActionResult actionResult = await api(entityName, primaryKeyRoute);
             // OkObjectResult will throw exception if we attempt cast to JsonResult
             if (actionResult.GetType().Name.Equals("OkObjectResult"))

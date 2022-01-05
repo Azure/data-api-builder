@@ -59,7 +59,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     break;
             }
 
-            //Setup AuthorizationService to always return Authorized.
+            // Setup AuthorizationService to always return Authorized.
             _authorizationService = new Mock<IAuthorizationService>();
             _authorizationService.Setup(x => x.AuthorizeAsync(
                 It.IsAny<ClaimsPrincipal>(),
@@ -67,7 +67,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 It.IsAny<string>()
                 ).Result).Returns(AuthorizationResult.Success);
 
-            //Setup Mock HttpContextAccess to return user as required when calling AuthorizationService.AuthorizeAsync
+            // Setup Mock HttpContextAccess to return user as required when calling AuthorizationService.AuthorizeAsync
             _httpContextAccessor = new Mock<IHttpContextAccessor>();
             _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
 
@@ -122,7 +122,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             using DbDataReader reader = await _queryExecutor.ExecuteQueryAsync(queryText, parameters: null);
 
-            // an empty result will cause an error with the json parser
+            // An empty result will cause an error with the json parser
             if (!reader.HasRows)
             {
                 throw new System.Exception("No rows to read from database result");

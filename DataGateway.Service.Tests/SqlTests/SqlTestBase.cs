@@ -129,6 +129,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="sqlQuery">string represents the query to be executed</param>
         /// <param name="controller">string represents the rest controller</param>
         /// <param name="exception">bool represents if we expect an exception</param>
+        /// <param name="expectedErrorMessage">string represents the error message in the JsonResponse</param>
+        /// <param name="expectedStatusCode">int represents the returned http status code</param>
+        /// <param name="expectedSubStatusCode">enum represents the returned sub status code</param>
         /// <returns></returns>
         protected static async Task SetupAndRunRestApiTest(
             string primaryKeyRoute,
@@ -136,16 +139,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string entity,
             string sqlQuery,
             RestController controller,
-            bool exception = false)
+            bool exception = false,
+            string expectedErrorMessage = "",
+            int expectedStatusCode = 200,
+            string expectedSubStatusCode = "BadRequest")
         {
             ConfigureRestController(controller, queryString);
+            // if an exception is expected we generate the correct error
+            string expected = exception ? RestController.ErrorResponse(expectedSubStatusCode.ToString(), expectedErrorMessage, expectedStatusCode).Value.ToString() :
+                await GetDatabaseResultAsync(sqlQuery);
 
             await SqlTestHelper.PerformApiTest(
                 controller.Find,
                 entity,
                 primaryKeyRoute,
-                GetDatabaseResultAsync(sqlQuery),
-                exception
+                expected,
+                expectedStatusCode
             );
         }
 

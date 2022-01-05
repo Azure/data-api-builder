@@ -126,7 +126,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindByIdTestWithInvalidFields)),
                 controller: _restController,
-                exception: true
+                exception: true,
+                expectedErrorMessage: "Invalid Column name: content",
+                expectedStatusCode: 400
             );
         }
 
@@ -143,7 +145,31 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithInvalidFields)),
                 controller: _restController,
-                exception: true
+                exception: true,
+                expectedErrorMessage: "Invalid Field name: null or white space",
+                expectedStatusCode: 500,
+                expectedSubStatusCode: "While processing your request the server ran into an unexpected error"
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for the correct error condition format when 
+        /// a DatagatewayException is thrown
+        /// </summary>
+        [TestMethod]
+        public async Task RestDatagatewayExceptionErrorConditionFormat()
+        {
+            string msSqlQuery = string.Empty;
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?_f=id,content",
+                entity: _integrationTableName,
+                sqlQuery: msSqlQuery,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "Invalid Column name: content",
+                expectedStatusCode: 400
             );
         }
 

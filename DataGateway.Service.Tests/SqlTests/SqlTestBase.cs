@@ -146,7 +146,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             ConfigureRestController(controller, queryString);
             // if an exception is expected we generate the correct error
-            string expected = exception ? RestController.ErrorResponse(expectedSubStatusCode.ToString(), expectedErrorMessage, expectedStatusCode).ToString() :
+            string expected = exception ? RestController.ErrorResponse(expectedSubStatusCode.ToString(), expectedErrorMessage, expectedStatusCode).Value.ToString() :
                 await GetDatabaseResultAsync(sqlQuery);
 
             await SqlTestHelper.PerformApiTest(

@@ -80,5 +80,5 @@ these queries stay minimal:
 - For Postgres use https://sqlformat.org/. Then after formatting make sure to
   remove all unnecessary double quotes, because otherwise you have to escape
   them in the multiline string.
-- For SQL Server use https://poorsql.com/, and check the "trailing commas"
-  checkbox.
+- For SQL Server use https://poorsql.com/. Edit the default formatter settings
+  by checking the "trailing commas" checkbox, and adding `\s\s\s\s` in the "indent string box".

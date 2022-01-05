@@ -77,7 +77,7 @@ namespace Azure.DataGateway.Service.Controllers
                 }
 
             }
-            catch (PrimaryKeyValidationException ex)
+            catch (DatagatewayException ex)
             {
                 return BadRequest(ex.Message);
             }

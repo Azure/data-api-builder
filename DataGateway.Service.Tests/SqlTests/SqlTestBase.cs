@@ -1,3 +1,4 @@
+using System;
 using System.Data.Common;
 using System.IO;
 using System.Security.Claims;
@@ -14,6 +15,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using Newtonsoft.Json.Linq;
 using Npgsql;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
@@ -24,9 +26,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     [TestClass]
     public abstract class SqlTestBase
     {
+        private static string _testCategory;
         protected static IQueryExecutor _queryExecutor;
         protected static IQueryBuilder _queryBuilder;
         protected static IQueryEngine _queryEngine;
+        protected static IMutationEngine _mutationEngine;
         protected static IMetadataStoreProvider _metadataStoreProvider;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
@@ -39,9 +43,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="context"></param>
         protected static async Task InitializeTestFixture(TestContext context, string tableName, string testCategory)
         {
-            IOptions<DataGatewayConfig> config = SqlTestHelper.LoadConfig($"{testCategory}IntegrationTest");
+            _testCategory = testCategory;
 
-            switch (testCategory)
+            IOptions<DataGatewayConfig> config = SqlTestHelper.LoadConfig($"{_testCategory}IntegrationTest");
+
+            switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:
                     _queryExecutor = new QueryExecutor<NpgsqlConnection>(config);
@@ -67,8 +73,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             _metadataStoreProvider = new FileMetadataStoreProvider("sql-config.json");
             _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
+            _mutationEngine = new SqlMutationEngine(_queryEngine, _metadataStoreProvider, _queryExecutor, _queryBuilder);
 
-            using DbDataReader _ = await _queryExecutor.ExecuteQueryAsync(File.ReadAllText("books.sql"), parameters: null);
+            await ResetDbStateAsync();
+        }
+
+        protected static async Task ResetDbStateAsync()
+        {
+            using DbDataReader _ = await _queryExecutor.ExecuteQueryAsync(File.ReadAllText($"{_testCategory}Books.sql"), parameters: null);
         }
 
         /// <summary>
@@ -123,12 +135,81 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             return sqlResultData.ToString();
         }
 
+        /// <summary>
+        /// Does the setup required to perform a test of the REST Api for both
+        /// MsSql and Postgress. Shared setup logic eliminates some code duplication
+        /// between MsSql and Postgress.
+        /// </summary>
+        /// <param name="primaryKeyRoute">string represents the primary key route</param>
+        /// <param name="queryString">string represents the query string provided in URL</param>
+        /// <param name="entity">string represents the name of the entity</param>
+        /// <param name="sqlQuery">string represents the query to be executed</param>
+        /// <param name="controller">string represents the rest controller</param>
+        /// <param name="exception">bool represents if we expect an exception</param>
+        /// <returns></returns>
+        protected static async Task SetupAndRunRestApiTest(
+            string primaryKeyRoute,
+            string queryString,
+            string entity,
+            string sqlQuery,
+            RestController controller,
+            bool exception = false)
+        {
+            ConfigureRestController(controller, queryString);
+
+            await SqlTestHelper.PerformApiTest(
+                controller.Find,
+                entity,
+                primaryKeyRoute,
+                GetDatabaseResultAsync(sqlQuery),
+                exception
+            );
+        }
+
         ///<summary>
         /// Add HttpContext with query to the RestController
         ///</summary>
         protected static void ConfigureRestController(RestController restController, string queryString)
         {
             restController.ControllerContext.HttpContext = GetHttpContextWithQueryString(queryString);
+        }
+
+        /// <summary>
+        /// Read the data property of the GraphQLController result
+        /// </summary>
+        /// <param name="graphQLQuery"></param>
+        /// <param name="graphQLQueryName"></param>
+        /// <param name="graphQLController"></param>
+        /// <returns>string in JSON format</returns>
+        protected static async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController)
+        {
+            using JsonDocument graphQLResult = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, graphQLController);
+            Console.WriteLine(graphQLResult.RootElement.ToString());
+            JsonElement graphQLResultData = graphQLResult.RootElement.GetProperty("data").GetProperty(graphQLQueryName);
+
+            // JsonElement.ToString() prints null values as empty strings instead of "null"
+            return graphQLResultData.GetRawText();
+        }
+
+        /// <summary>
+        /// Sends graphQL query through graphQL service, consisting of gql engine processing (resolvers, object serialization)
+        /// returning the result as a JsonDocument
+        /// </summary>
+        /// <param name="graphQLQuery"></param>
+        /// <param name="graphQLQueryName"></param>
+        /// <param name="graphQLController"></param>
+        /// <returns>JsonDocument</returns>
+        protected static async Task<JsonDocument> GetGraphQLControllerResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController)
+        {
+            string graphqlQueryJson = JObject.FromObject(new
+            {
+                query = graphQLQuery
+            }).ToString();
+
+            Console.WriteLine(graphqlQueryJson);
+
+            graphQLController.ControllerContext.HttpContext = GetHttpContextWithBody(graphqlQueryJson);
+            return await graphQLController.PostAsync();
         }
     }
 }

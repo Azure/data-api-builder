@@ -1,10 +1,7 @@
-using System;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
 {
@@ -16,7 +13,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         #region Test Fixture Setup
         private static GraphQLService _graphQLService;
         private static GraphQLController _graphQLController;
-        private static readonly string _integrationTableName = "character";
+        private static readonly string _integrationTableName = "books";
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
@@ -48,7 +45,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }";
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id) as table0 LIMIT 100";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(postgresQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
@@ -120,7 +117,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    LIMIT 100) AS subq8
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(postgresQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
@@ -211,7 +208,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    LIMIT 100) AS subq11
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(postgresQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
@@ -281,7 +278,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    LIMIT 100) AS subq10
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(postgresQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
@@ -307,7 +304,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 ) AS subq
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(postgresQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
@@ -333,7 +330,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 ) AS subq
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(postgresQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
@@ -349,37 +346,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
 
             SqlTestHelper.PerformTestEqualJsonStrings("null", actual);
-        }
-
-        #endregion
-
-        #region Query Test Helper Functions
-        /// <summary>
-        /// Sends graphQL query through graphQL service, consisting of gql engine processing (resolvers, object serialization)
-        /// returning JSON formatted result from 'data' property.
-        /// </summary>
-        /// <param name="graphQLQuery"></param>
-        /// <param name="graphQLQueryName"></param>
-        /// <returns>string in JSON format</returns>
-        public static async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName)
-        {
-            string graphqlQueryJson = JObject.FromObject(new
-            {
-                query = graphQLQuery
-            }).ToString();
-
-            Console.WriteLine(graphqlQueryJson);
-
-            _graphQLController.ControllerContext.HttpContext = GetHttpContextWithBody(graphqlQueryJson);
-            JsonDocument graphQLResult = await _graphQLController.PostAsync();
-            Console.WriteLine(graphQLResult.RootElement.ToString());
-            JsonElement graphQLResultData = graphQLResult.RootElement.GetProperty("data").GetProperty(graphQLQueryName);
-
-            // JsonElement.ToString() prints null values as empty strings instead of "null"
-            return graphQLResultData.GetRawText();
         }
 
         #endregion

@@ -12,6 +12,23 @@
       "Id": "getReview"
     }
   ],
+  "MutationResolvers": [
+    {
+      "Id": "insertBook",
+      "Table": "books",
+      "OperationType": "INSERT"
+    },
+    {
+      "Id": "editBook",
+      "Table": "books",
+      "OperationType": "UPDATE"
+    },
+    {
+      "Id": "addAuthorToBook",
+      "Table": "book_author_link",
+      "OperationType": "INSERT"
+    }
+  ],
   "GraphqlTypes": {
     "Publisher": {
       "Table": "publishers",
@@ -133,11 +150,8 @@
           "id": {
             "Type": "bigint"
           },
-          "title": {
+          "content": {
             "Type": "text"
-          },
-          "publisher_id": {
-            "Type": "bigint"
           },
           "book_id": {
             "Type": "bigint"

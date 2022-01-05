@@ -23,15 +23,10 @@ namespace Azure.DataGateway.Service.Controllers
         /// String representing the value associated with "code" for a server error
         /// </summary>
         private const string SERVER_ERROR = "While processing your request the server ran into an unexpected error";
-        /// <summary>
-        /// Integer representing the http response status code for server error
-        /// </summary>
-        private const int SERVER_ERROR_STATUS = 500;
 
         /// <summary>
         /// Constructor.
         /// </summary>
-        /// 
         public RestController(RestService restService)
         {
             _restService = restService;
@@ -100,8 +95,8 @@ namespace Azure.DataGateway.Service.Controllers
             {
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine(ex.StackTrace);
-                Response.StatusCode = SERVER_ERROR_STATUS;
-                return ErrorResponse(SERVER_ERROR, ex.Message, SERVER_ERROR_STATUS);
+                Response.StatusCode = (int)System.Net.HttpStatusCode.InternalServerError;
+                return ErrorResponse(SERVER_ERROR, ex.Message, (int)System.Net.HttpStatusCode.InternalServerError);
             }
         }
     }

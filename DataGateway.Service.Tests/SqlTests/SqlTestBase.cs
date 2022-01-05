@@ -9,7 +9,6 @@ using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -146,25 +145,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string expectedSubStatusCode = "BadRequest")
         {
             ConfigureRestController(controller, queryString);
-            string expected;
             // if an exception is expected we generate the correct error
-            if (exception)
-            {
-                JsonResult expectedResult = new(new
-                {
-                    error = new
-                    {
-                        code = expectedSubStatusCode.ToString(),
-                        message = expectedErrorMessage,
-                        status = expectedStatusCode,
-                    }
-                });
-                expected = expectedResult.Value.ToString();
-            }
-            else
-            {
-                expected = await GetDatabaseResultAsync(sqlQuery);
-            }
+            string expected = exception ? RestController.ErrorResponse(expectedSubStatusCode.ToString(), expectedErrorMessage, expectedStatusCode).ToString() :
+                await GetDatabaseResultAsync(sqlQuery);
 
             await SqlTestHelper.PerformApiTest(
                 controller.Find,

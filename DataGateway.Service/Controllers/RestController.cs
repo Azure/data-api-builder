@@ -45,7 +45,7 @@ namespace Azure.DataGateway.Service.Controllers
         /// <param name="message">string provides a message associated with this error</param>
         /// <param name="status">int provides the http response status code associated with this error</param>
         /// <returns></returns>
-        private static JsonResult ErrorResponse(string code, string message, int status)
+        public static JsonResult ErrorResponse(string code, string message, int status)
         {
             return new JsonResult(new
             {

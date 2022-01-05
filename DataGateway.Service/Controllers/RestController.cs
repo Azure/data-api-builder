@@ -19,14 +19,45 @@ namespace Azure.DataGateway.Service.Controllers
         /// Service providing REST Api executions.
         /// </summary>
         private readonly RestService _restService;
+        /// <summary>
+        /// String representing the value associated with "code" for a server error
+        /// </summary>
+        private const string SERVER_ERROR = "While processing your request the server ran into an unexpected error";
+        /// <summary>
+        /// Integer representing the http response status code for server error
+        /// </summary>
+        private const int SERVER_ERROR_STATUS = 500;
 
         /// <summary>
         /// Constructor.
         /// </summary>
+        /// 
         public RestController(RestService restService)
         {
             _restService = restService;
         }
+
+        /// <summary>
+        /// Helper function returns a JsonResult with provided arguments in a
+        /// form that complies with vNext Api guidelines.
+        /// </summary>
+        /// <param name="code">string provides a description of general error</param>
+        /// <param name="message">string provides a message associated with this error</param>
+        /// <param name="status">int provides the http response status code associated with this error</param>
+        /// <returns></returns>
+        private static JsonResult ErrorResponse(string code, string message, int status)
+        {
+            return new JsonResult(new
+            {
+                error = new
+                {
+                    code = code,
+                    message = message,
+                    status = status
+                }
+            });
+        }
+
         /// <summary>
         /// Find action serving the HttpGet verb.
         /// </summary>
@@ -63,30 +94,14 @@ namespace Azure.DataGateway.Service.Controllers
             catch (DatagatewayException ex)
             {
                 Response.StatusCode = ex.StatusCode;
-                return new JsonResult(new
-                {
-                    error = new
-                    {
-                        code = ex.SubStatusCode.ToString(),
-                        message = ex.Message,
-                        status = ex.StatusCode
-                    }
-                });
+                return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine(ex.StackTrace);
-                Response.StatusCode = 500;
-                return new JsonResult(new
-                {
-                    error = new
-                    {
-                        code = "While processing your request the server ran into an unexpected error",
-                        message = ex.Message,
-                        status = 500
-                    }
-                });
+                Response.StatusCode = SERVER_ERROR_STATUS;
+                return ErrorResponse(SERVER_ERROR, ex.Message, SERVER_ERROR_STATUS);
             }
         }
     }

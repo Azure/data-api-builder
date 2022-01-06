@@ -34,7 +34,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         /// </summary>
         /// <returns></returns>
         [TestMethod]
-        public async Task AnonymousGetRequestToAnonymousGetEntity()
+        public async Task UnauthenticatedGetRequestToAnonymousGetEntity()
         {
             //Create Unauthenticated user by NOT defining authenticationType
             ClaimsPrincipal user = new(new ClaimsIdentity());

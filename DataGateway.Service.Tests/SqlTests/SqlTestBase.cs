@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.IO;
 using System.Security.Claims;
@@ -64,7 +65,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _authorizationService.Setup(x => x.AuthorizeAsync(
                 It.IsAny<ClaimsPrincipal>(),
                 It.IsAny<object>(),
-                It.IsAny<string>()
+                It.IsAny<IEnumerable<IAuthorizationRequirement>>()
                 ).Result).Returns(AuthorizationResult.Success);
 
             // Setup Mock HttpContextAccess to return user as required when calling AuthorizationService.AuthorizeAsync

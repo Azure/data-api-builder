@@ -7,7 +7,6 @@ using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -20,13 +19,6 @@ namespace Azure.DataGateway.Service.Tests.REST
     public class FindRequestAuthorizationHandlerUnitTests
     {
         private Mock<IMetadataStoreProvider> _metadataStore;
-        private static OperationAuthorizationRequirement _isAuthenticatedRequirement;
-
-        [ClassInitialize]
-        public static void InitializeTestFixture(TestContext context)
-        {
-            _isAuthenticatedRequirement = Operations.GET;
-        }
 
         #region Positive Tests
         /// <summary>
@@ -41,7 +33,7 @@ namespace Azure.DataGateway.Service.Tests.REST
 
             SetupTable(HttpMethod.Get.ToString(), AuthorizationType.Anonymous);
 
-            bool result = await AuthorizationSuccessful(entityName: "books", user);
+            bool result = await IsAuthorizationSuccessful(entityName: "books", user);
 
             //Evaluate Result
             Assert.IsTrue(result);
@@ -59,7 +51,7 @@ namespace Azure.DataGateway.Service.Tests.REST
 
             SetupTable(HttpMethod.Get.ToString(), AuthorizationType.Authenticated);
 
-            bool result = await AuthorizationSuccessful(entityName: "books", user);
+            bool result = await IsAuthorizationSuccessful(entityName: "books", user);
 
             Assert.IsTrue(result);
         }
@@ -77,7 +69,7 @@ namespace Azure.DataGateway.Service.Tests.REST
 
             SetupTable(HttpMethod.Get.ToString(), AuthorizationType.Authenticated);
 
-            bool result = await AuthorizationSuccessful(entityName: "books", user);
+            bool result = await IsAuthorizationSuccessful(entityName: "books", user);
 
             Assert.IsFalse(result);
         }

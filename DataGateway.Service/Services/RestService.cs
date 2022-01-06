@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
@@ -56,7 +57,7 @@ namespace Azure.DataGateway.Services
             AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
                 user: _httpContextAccessor.HttpContext.User,
                 resource: context,
-                requirements: new[] {Operations.GET});
+                requirements: new[] { Operations.GET });
 
             if (authorizationResult.Succeeded)
             {
@@ -66,7 +67,7 @@ namespace Azure.DataGateway.Services
             {
                 throw new DatagatewayException(
                     message: "Unauthorized",
-                    statusCode: (int)System.Net.HttpStatusCode.Unauthorized,
+                    statusCode: (int)HttpStatusCode.Unauthorized,
                     subStatusCode: DatagatewayException.SubStatusCodes.AuthorizationCheckFailed
                 );
             }

@@ -89,7 +89,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         /// <param name="entityName">Table/Entity that is being queried.</param>
         /// <param name="user">ClaimsPrincipal / user that has authentication status defined.</param>
         /// <returns></returns>
-        private async Task<bool> AuthorizationSuccessful(string entityName, ClaimsPrincipal user)
+        private async Task<bool> IsAuthorizationSuccessful(string entityName, ClaimsPrincipal user)
         {
             FindRequestContext request = new(entityName, isList: false);
             AuthorizationHandlerContext context = new(new List<IAuthorizationRequirement> { Operations.GET }, user, request);

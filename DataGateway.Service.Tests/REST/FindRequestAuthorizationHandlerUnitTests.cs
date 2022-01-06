@@ -7,6 +7,7 @@ using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -19,12 +20,12 @@ namespace Azure.DataGateway.Service.Tests.REST
     public class FindRequestAuthorizationHandlerUnitTests
     {
         private Mock<IMetadataStoreProvider> _metadataStore;
-        private static IsAuthenticatedRequirement _isAuthenticatedRequirement;
+        private static OperationAuthorizationRequirement _isAuthenticatedRequirement;
 
         [ClassInitialize]
         public static void InitializeTestFixture(TestContext context)
         {
-            _isAuthenticatedRequirement = new();
+            _isAuthenticatedRequirement = Operations.GET;
         }
 
         #region Positive Tests
@@ -91,7 +92,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         private async Task<bool> AuthorizationSuccessful(string entityName, ClaimsPrincipal user)
         {
             FindRequestContext request = new(entityName, isList: false);
-            AuthorizationHandlerContext context = new(new List<IAuthorizationRequirement> { _isAuthenticatedRequirement }, user, request);
+            AuthorizationHandlerContext context = new(new List<IAuthorizationRequirement> { Operations.GET }, user, request);
             FindRequestAuthorizationHandler handler = new(_metadataStore.Object);
 
             await handler.HandleAsync(context);

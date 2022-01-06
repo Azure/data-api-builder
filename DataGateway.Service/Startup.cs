@@ -84,7 +84,7 @@ namespace Azure.DataGateway.Service
             services.AddAuthorization(options =>
             {
                 options.AddPolicy("AuthenticatedPolicy", policy =>
-                    policy.Requirements.Add(new IsAuthenticatedRequirement()));
+                    policy.Requirements.Add(Operations.GET));
             });
 
             services.AddSingleton<IAuthorizationHandler, FindRequestAuthorizationHandler>();

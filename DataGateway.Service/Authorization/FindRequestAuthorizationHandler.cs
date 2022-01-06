@@ -4,6 +4,7 @@ using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
 
 namespace Azure.DataGateway.Service.Authorization
 {
@@ -22,7 +23,7 @@ namespace Azure.DataGateway.Service.Authorization
     /// Checks the provided AuthorizationContext and FindRequestContext to ensure user is allowed to
     /// operate (GET, POST, etc.) on the entity (table).
     /// </summary>
-    public class FindRequestAuthorizationHandler : AuthorizationHandler<IsAuthenticatedRequirement, FindRequestContext>
+    public class FindRequestAuthorizationHandler : AuthorizationHandler<OperationAuthorizationRequirement, FindRequestContext>
     {
         private readonly IMetadataStoreProvider _configurationProvider;
 
@@ -31,7 +32,7 @@ namespace Azure.DataGateway.Service.Authorization
             _configurationProvider = metadataStoreProvider;
         }
         protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,
-                                                  IsAuthenticatedRequirement requirement,
+                                                  OperationAuthorizationRequirement requirement,
                                                   FindRequestContext resource)
         {
             //Request is validated before Authorization, so table will exist.
@@ -61,8 +62,4 @@ namespace Azure.DataGateway.Service.Authorization
             return Task.CompletedTask;
         }
     }
-
-    //Marker Interface required by ASP.NET Authorization Handler.
-    //Explanation of Marker Interface: https://stackoverflow.com/questions/1023068/what-is-the-purpose-of-a-marker-interface
-    public class IsAuthenticatedRequirement : IAuthorizationRequirement { }
 }

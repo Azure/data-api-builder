@@ -92,10 +92,10 @@
           }
         },
         "Operations": {
-          "Post": {
+          "POST": {
             "Authorization": "Authenticated"
           },
-          "Get": {
+          "GET": {
             "Authorization": "Anonymous"
           }
         }
@@ -120,7 +120,7 @@
           }
         },
         "Operations": {
-          "Get": {
+          "GET": {
             "AuthorizationType": "Authenticated"
           }
         }
@@ -139,7 +139,7 @@
           }
         },
         "Operations": {
-          "Get": {
+          "GET": {
             "AuthorizationType": "Anonymous"
           }
         }
@@ -164,7 +164,7 @@
           }
         },
         "Operations": {
-          "Get": {
+          "GET": {
             "AuthorizationType": "Anonymous"
           }
         }

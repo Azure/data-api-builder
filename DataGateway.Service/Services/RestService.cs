@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -55,7 +56,7 @@ namespace Azure.DataGateway.Services
             AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
                 user: _httpContextAccessor.HttpContext.User,
                 resource: context,
-                policyName: "AuthenticatedPolicy");
+                requirements: new[] {Operations.GET});
 
             if (authorizationResult.Succeeded)
             {
@@ -63,7 +64,11 @@ namespace Azure.DataGateway.Services
             }
             else
             {
-                throw new BadHttpRequestException(message: "Unauthorized", statusCode: 403);
+                throw new DatagatewayException(
+                    message: "Unauthorized",
+                    statusCode: 403 ,
+                    subStatusCode: DatagatewayException.SubStatusCodes.AuthorizationCheckFailed
+                    );
             }
         }
     }

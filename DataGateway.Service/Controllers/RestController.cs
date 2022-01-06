@@ -79,12 +79,14 @@ namespace Azure.DataGateway.Service.Controllers
             }
             catch (DatagatewayException ex)
             {
-                return BadRequest(ex.Message);
-            }
-            catch (BadHttpRequestException ex)
-            {
-                Console.Error.WriteLine(ex.StackTrace);
-                return new UnauthorizedResult();
+                switch (ex.StatusCode)
+                {
+                    case 401:
+                    case 403:
+                        return new UnauthorizedResult();
+                    default:
+                        return BadRequest(ex.Message);
+                }
             }
             catch (Exception ex)
             {

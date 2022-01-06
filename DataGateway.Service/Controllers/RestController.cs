@@ -21,6 +21,10 @@ namespace Azure.DataGateway.Service.Controllers
         /// Service providing REST Api executions.
         /// </summary>
         private readonly RestService _restService;
+        /// <summary>
+        /// String representing the value associated with "code" for a server error
+        /// </summary>
+        private const string SERVER_ERROR = "While processing your request the server ran into an unexpected error";
 
         /// <summary>
         /// Constructor.
@@ -29,6 +33,28 @@ namespace Azure.DataGateway.Service.Controllers
         {
             _restService = restService;
         }
+
+        /// <summary>
+        /// Helper function returns a JsonResult with provided arguments in a
+        /// form that complies with vNext Api guidelines.
+        /// </summary>
+        /// <param name="code">string provides a description of general error</param>
+        /// <param name="message">string provides a message associated with this error</param>
+        /// <param name="status">int provides the http response status code associated with this error</param>
+        /// <returns></returns>
+        public static JsonResult ErrorResponse(string code, string message, int status)
+        {
+            return new JsonResult(new
+            {
+                error = new
+                {
+                    code = code,
+                    message = message,
+                    status = status
+                }
+            });
+        }
+
         /// <summary>
         /// Find action serving the HttpGet verb.
         /// </summary>
@@ -79,20 +105,15 @@ namespace Azure.DataGateway.Service.Controllers
             }
             catch (DatagatewayException ex)
             {
-                switch (ex.StatusCode)
-                {
-                    case 401:
-                    case 403:
-                        return new UnauthorizedResult();
-                    default:
-                        return BadRequest(ex.Message);
-                }
+                Response.StatusCode = ex.StatusCode;
+                return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine(ex.StackTrace);
-                return StatusCode(statusCode: 500);
+                Response.StatusCode = (int)System.Net.HttpStatusCode.InternalServerError;
+                return ErrorResponse(SERVER_ERROR, ex.Message, (int)System.Net.HttpStatusCode.InternalServerError);
             }
         }
     }

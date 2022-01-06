@@ -66,9 +66,9 @@ namespace Azure.DataGateway.Services
             {
                 throw new DatagatewayException(
                     message: "Unauthorized",
-                    statusCode: 403 ,
+                    statusCode: (int)System.Net.HttpStatusCode.Unauthorized,
                     subStatusCode: DatagatewayException.SubStatusCodes.AuthorizationCheckFailed
-                    );
+                );
             }
         }
     }

@@ -81,11 +81,7 @@ namespace Azure.DataGateway.Service
 
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
-            services.AddAuthorization(options =>
-            {
-                options.AddPolicy("AuthenticatedPolicy", policy =>
-                    policy.Requirements.Add(Operations.GET));
-            });
+            services.AddAuthorization();
 
             services.AddSingleton<IAuthorizationHandler, FindRequestAuthorizationHandler>();
             services.AddControllers();

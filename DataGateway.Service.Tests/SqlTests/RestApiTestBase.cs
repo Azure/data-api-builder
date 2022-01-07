@@ -153,7 +153,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Tests the REST Api for the correct error condition format when 
+        /// Tests the REST Api for the correct error condition format when
         /// a DatagatewayException is thrown
         /// </summary>
         [TestMethod]

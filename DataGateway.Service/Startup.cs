@@ -1,7 +1,9 @@
 using System;
+using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.configurations;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Data.SqlClient;
@@ -76,7 +78,12 @@ namespace Azure.DataGateway.Service
 
             services.AddSingleton<GraphQLService, GraphQLService>();
             services.AddSingleton<RestService, RestService>();
+
+            //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
+            services.AddHttpContextAccessor();
             services.AddAuthorization();
+
+            services.AddSingleton<IAuthorizationHandler, FindRequestAuthorizationHandler>();
             services.AddControllers();
         }
 

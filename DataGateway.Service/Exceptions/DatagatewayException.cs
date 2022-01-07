@@ -20,7 +20,11 @@ namespace Azure.DataGateway.Service.Exceptions
             /// <summary>
             /// The entity for which an operation was requested does not exist.
             /// </summary>
-            EntityNotFound
+            EntityNotFound,
+            /// <summary>
+            /// Request failed authorization.
+            /// </summary>
+            AuthorizationCheckFailed
         }
 
         public int StatusCode { get; }

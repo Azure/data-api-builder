@@ -1,7 +1,9 @@
 using System;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -78,13 +80,28 @@ namespace Azure.DataGateway.Service.Controllers
             {
                 string queryString = HttpContext.Request.QueryString.ToString();
 
+                // Parse App Service's EasyAuth injected headers into MiddleWare usable Security Principal
+                ClaimsIdentity identity = AppServiceAuthentication.Parse(this.HttpContext);
+                if (identity != null)
+                {
+                    this.HttpContext.User = new ClaimsPrincipal(identity);
+                }
+
                 //Utilizes C#8 using syntax which does not require brackets.
                 using JsonDocument result = await _restService.ExecuteFindAsync(entityName, primaryKeyRoute, queryString);
 
-                //Clones the root element to a new JsonElement that can be
-                //safely stored beyond the lifetime of the original JsonDocument.
-                JsonElement resultElement = result.RootElement.Clone();
-                return Ok(resultElement);
+                if (result != null)
+                {
+                    //Clones the root element to a new JsonElement that can be
+                    //safely stored beyond the lifetime of the original JsonDocument.
+                    JsonElement resultElement = result.RootElement.Clone();
+                    return Ok(resultElement);
+                }
+                else
+                {
+                    return NotFound();
+                }
+
             }
             catch (DatagatewayException ex)
             {

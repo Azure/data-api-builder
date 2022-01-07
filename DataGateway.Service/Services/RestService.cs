@@ -1,7 +1,11 @@
+using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataGateway.Services
 {
@@ -12,11 +16,20 @@ namespace Azure.DataGateway.Services
     {
         private readonly IQueryEngine _queryEngine;
         private readonly IMetadataStoreProvider _metadataStoreProvider;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IAuthorizationService _authorizationService;
 
-        public RestService(IQueryEngine queryEngine, IMetadataStoreProvider metadataStoreProvider)
+        public RestService(
+            IQueryEngine queryEngine,
+            IMetadataStoreProvider metadataStoreProvider,
+            IHttpContextAccessor httpContextAccessor,
+            IAuthorizationService authorizationService
+            )
         {
             _queryEngine = queryEngine;
             _metadataStoreProvider = metadataStoreProvider;
+            _httpContextAccessor = httpContextAccessor;
+            _authorizationService = authorizationService;
         }
 
         /// <summary>
@@ -38,7 +51,26 @@ namespace Azure.DataGateway.Services
 
             RequestValidator.ValidateFindRequest(context, _metadataStoreProvider);
 
-            return await _queryEngine.ExecuteAsync(context);
+            //RequestContext is finalized for QueryBuilding and QueryExecution.
+            //Perform Authorization check prior to moving forward in request pipeline.
+            //RESTAuthorizationService
+            AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
+                user: _httpContextAccessor.HttpContext.User,
+                resource: context,
+                requirements: new[] { Operations.GET });
+
+            if (authorizationResult.Succeeded)
+            {
+                return await _queryEngine.ExecuteAsync(context);
+            }
+            else
+            {
+                throw new DatagatewayException(
+                    message: "Unauthorized",
+                    statusCode: (int)HttpStatusCode.Unauthorized,
+                    subStatusCode: DatagatewayException.SubStatusCodes.AuthorizationCheckFailed
+                );
+            }
         }
     }
 }

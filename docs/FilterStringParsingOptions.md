@@ -19,13 +19,17 @@ OData provides a parser which can handle the parsing of a $filter querystring. T
 the customers data model, including entities, column names, and types. The parser then returns an AST that can be traversed to extract
 the predicates we need for our query generation.
 
+This is the approach that was taken by the Azure Cognitive Search team, and the entry point to the code for their parser can be found here: https://msdata.visualstudio.com/Azure%20Search/_git/AzureSearch?path=/Source/Search/Product/SearchCore/Services/ODataQuery/FilterParser/FilterParser.cs
+
 ## Versions
 OData v4.0 is the most recent version and supports JSON as the recommended format. 
 
 ## Entity Data Model from JSON
 An EDM model can be created from JSON. This can be done programmatically by reading a JSON with the relevant data, and then
 using that data to build an EDM model with some sort of dynamic edm model builder. This is an approach similar to what Azure Cognitive Search
-has done. Their model builder can be found here: https://msdata.visualstudio.com/Azure%20Search/_git/AzureSearch?path=%2FSource%2FCommon%2FProduct%2FWebExtensions%2FOData%2FModelBuilder%2FDynamicODataModelBuilder.cs&_a=contents&version=GBcurrent
+has done. Their OData dynamic model builder can be found here: https://msdata.visualstudio.com/Azure%20Search/_git/AzureSearch?path=%2FSource%2FCommon%2FProduct%2FWebExtensions%2FOData%2FModelBuilder%2FDynamicODataModelBuilder.cs&_a=contents&version=GBcurrent
+
+And their Index model builder can be found here: https://msdata.visualstudio.com/Azure%20Search/_git/AzureSearch?path=/Source/Common/Product/ClusterCore/Services/OData/IndexEdmModelBuilder.cs&version=GBcurrent&_a=contents
 
 ## Entity Data Model from XML
 An EDM model can be generated automatically from properly formated edm xml files. In thise case, the relevant meta data must be populated in the xml in the correct format,

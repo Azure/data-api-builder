@@ -1,6 +1,6 @@
 # Summary
 Customers will provide information for how to filter their results by using the keyword $filter in their
-request following the MIcrosoft REST Api Guidelines
+request following the Microsoft REST Api Guidelines
 
 We want to parse the $filter querystring and use the results as a part of query generation.
 

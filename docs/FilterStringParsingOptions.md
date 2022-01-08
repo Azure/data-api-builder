@@ -42,7 +42,7 @@ Odata has other libraries beyond $filter, such as $orderby, which could prove us
 help to make understanding how to get it to work for something like $orderby easier. Other options for parsing include, $select, $expand, $search, $top, $skip, $count
 https://docs.microsoft.com/en-us/odata/odatalib/use-uri-parser
 
-# Potential Drawbacks
+## Potential Drawbacks
 If we use the OData Uri Parser then this introduces a dependancy into our service. It is possible that our spec and what the OData Uri Parser support or expect could diverge at some
 point, in which case we would need to redo whatever work we were relying on this library for. It also means any limitations that are introduced into OData will either need to be 
 patched individually by us, or not supported until they are supported in OData. We are also forced to use the patterns that OData supports in building our service, we may effect our

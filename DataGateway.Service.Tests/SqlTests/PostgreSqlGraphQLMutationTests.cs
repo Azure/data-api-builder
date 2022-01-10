@@ -215,10 +215,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             ";
 
-            using JsonDocument result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
 
             // TODO improve the error message returned by the graphql service to something more useful then smth generic
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.RootElement.ToString());
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
 
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
@@ -250,10 +250,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             ";
 
-            using JsonDocument result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
 
             // TODO improve the error message returned by the graphql service to something more useful then smth generic
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.RootElement.ToString());
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
 
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
@@ -285,8 +285,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             ";
 
-            using JsonDocument result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.RootElement.ToString(), statusCode: $"{DatagatewayException.SubStatusCodes.BadRequest}");
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DatagatewayException.SubStatusCodes.BadRequest}");
         }
 
         /// <summary>
@@ -306,8 +306,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             ";
 
-            using JsonDocument result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.RootElement.ToString(), statusCode: $"{DatagatewayException.SubStatusCodes.EntityNotFound}");
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DatagatewayException.SubStatusCodes.EntityNotFound}");
         }
         #endregion
     }

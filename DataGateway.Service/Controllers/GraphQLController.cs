@@ -21,7 +21,7 @@ namespace Azure.DataGateway.Service.Controllers
         }
 
         [HttpPost]
-        public async Task<JsonDocument> PostAsync()
+        public async Task<JsonElement> PostAsync()
         {
             string requestBody;
             using (StreamReader reader = new(this.HttpContext.Request.Body))
@@ -41,8 +41,10 @@ namespace Azure.DataGateway.Service.Controllers
                 requestProperties.Add(nameof(ClaimsPrincipal), this.HttpContext.User);
             }
 
+            // JsonElement returned so that JsonDocument is disposed when thread exits
             string resultJson = await this._schemaManager.ExecuteAsync(requestBody, requestProperties);
-            return JsonDocument.Parse(resultJson);
+            using JsonDocument jsonDoc = JsonDocument.Parse(resultJson);
+            return jsonDoc.RootElement.Clone();
         }
     }
 }

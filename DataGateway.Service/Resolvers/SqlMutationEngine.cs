@@ -40,7 +40,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="context">context of graphql mutation</param>
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result</returns>
-        public async Task<JsonElement> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
+        public async Task<JsonDocument> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             if (context.Selection.Type.IsListType())
             {
@@ -80,7 +80,7 @@ namespace Azure.DataGateway.Service.Resolvers
             // nothing to query
             if (context.Selection.Type.IsScalarType())
             {
-                return new JsonElement();
+                return null;
             }
 
             Dictionary<string, object> searchParams = await ExtractRowFromDbDataReader(dbDataReader);

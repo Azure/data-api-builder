@@ -79,12 +79,12 @@ namespace Azure.DataGateway.Service.Controllers
                 string queryString = HttpContext.Request.QueryString.ToString();
 
                 //Utilizes C#8 using syntax which does not require brackets.
-                JsonElement result = await _restService.ExecuteFindAsync(entityName, primaryKeyRoute, queryString);
+                using JsonDocument result = await _restService.ExecuteFindAsync(entityName, primaryKeyRoute, queryString);
 
                 //Clones the root element to a new JsonElement that can be
                 //safely stored beyond the lifetime of the original JsonDocument.
-                //JsonElement resultElement = result.RootElement.Clone();
-                return Ok(result);
+                JsonElement resultElement = result.RootElement.Clone();
+                return Ok(resultElement);
             }
             catch (DatagatewayException ex)
             {

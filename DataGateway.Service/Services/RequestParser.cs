@@ -2,7 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Xml;
 using Azure.DataGateway.Service.Resolvers;
+using Microsoft.Data.Edm;
+using Microsoft.Data.Edm.Csdl;
+using Microsoft.Data.OData.Query;
+using Microsoft.Data.OData.Query.SemanticAst;
 
 namespace Azure.DataGateway.Services
 {
@@ -15,6 +20,10 @@ namespace Azure.DataGateway.Services
         /// Prefix used for specifying the fields in the query string of the URL.
         /// </summary>
         private const string FIELDS_URL = "_f";
+        /// <summary>
+        /// Prefix used for specifying the filters in the query string of the URL.
+        /// </summary>
+        private const string FILTER_URL = "$filter";
 
         /// <summary>
         /// Parses the primary key string to identify the field names composing the key
@@ -62,6 +71,17 @@ namespace Azure.DataGateway.Services
                     case FIELDS_URL:
                         CheckListForNullElement(nvc[key].Split(",").ToList());
                         context.Fields = nvc[key].Split(",").ToList();
+                        break;
+                    case FILTER_URL:
+                        //string xml = File.ReadAllText("DataModel.xml");
+
+                        XmlReader reader = XmlReader.Create("DataModel.xml");
+                        IEdmModel model = EdmxReader.Parse(reader);
+                        IEdmEntityType type = (IEdmEntityType)model.FindType("books");
+                        FilterClause result = ODataUriParser.ParseFilter(nvc[key], model, type);
+
+                        // traverse resultant AST
+                        // add to context.Predicates
                         break;
                     default:
                         throw new ArgumentException("Invalid Query Parameter: " + key.ToString());

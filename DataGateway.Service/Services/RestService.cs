@@ -26,7 +26,7 @@ namespace Azure.DataGateway.Services
         /// <param name="entityName">The entity name.</param>
         /// <param name="primaryKeyRoute">The primary key route. e.g. customerName/Xyz/saleOrderId/123</param>
         /// <param name="queryString">The query string portion of the request. e.g. ?_f=customerName</param>
-        public async Task<JsonElement> ExecuteFindAsync(string entityName, string primaryKeyRoute, string queryString)
+        public async Task<JsonDocument> ExecuteFindAsync(string entityName, string primaryKeyRoute, string queryString)
         {
             FindRequestContext context = new(entityName, isList: string.IsNullOrEmpty(primaryKeyRoute));
             RequestParser.ParsePrimaryKey(primaryKeyRoute, context);

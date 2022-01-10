@@ -14,17 +14,17 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Executes the given IMiddlewareContext of the GraphQL query and
         /// expecting a single Json back.
         /// </summary>
-        public Task<JsonElement> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters, bool isPaginationQuery);
+        public Task<JsonDocument> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters, bool isPaginationQuery);
 
         /// <summary>
         /// Executes the given IMiddlewareContext of the GraphQL and expecting a
         /// list of Jsons back.
         /// </summary>
-        public Task<IEnumerable<JsonElement>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters);
+        public Task<IEnumerable<JsonDocument>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters);
 
         /// <summary>
         /// Given the FindQueryContext structure, obtains the query text and executes it against the backend.
         /// </summary>
-        public Task<JsonElement> ExecuteAsync(FindRequestContext queryStructure);
+        public Task<JsonDocument> ExecuteAsync(FindRequestContext queryStructure);
     }
 }

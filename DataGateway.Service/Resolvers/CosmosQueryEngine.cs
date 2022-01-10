@@ -31,7 +31,7 @@ namespace Azure.DataGateway.Services
         /// Executes the given IMiddlewareContext of the GraphQL query and
         /// expecting a single Json back.
         /// </summary>
-        public async Task<JsonElement> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters, bool isPaginatedQuery)
+        public async Task<JsonDocument> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters, bool isPaginatedQuery)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
@@ -89,8 +89,8 @@ namespace Azure.DataGateway.Services
                    new JProperty("nodes", jarray));
 
                 // This extra deserialize/serialization will be removed after moving to Newtonsoft from System.Text.Json
-                using JsonDocument doc = JsonDocument.Parse(res.ToString());
-                return doc.RootElement.Clone();
+                return JsonDocument.Parse(res.ToString());
+                //return doc.RootElement.Clone();
             }
 
             JObject firstItem = null;
@@ -102,11 +102,11 @@ namespace Azure.DataGateway.Services
                 firstItem = iterator.Current;
             }
 
-            using JsonDocument jsonDocument = JsonDocument.Parse(firstItem.ToString());
-            return jsonDocument.RootElement.Clone();
+            return JsonDocument.Parse(firstItem.ToString());
+            //return jsonDocument.RootElement.Clone();
         }
 
-        public async Task<IEnumerable<JsonElement>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
+        public async Task<IEnumerable<JsonDocument>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
@@ -128,7 +128,7 @@ namespace Azure.DataGateway.Services
 
             FeedIterator<JObject> resultSetIterator = container.GetItemQueryIterator<JObject>(querySpec);
 
-            List<JsonElement> resultsAsList = new();
+            List<JsonDocument> resultsAsList = new();
             while (resultSetIterator.HasMoreResults)
             {
                 FeedResponse<JObject> nextPage = await resultSetIterator.ReadNextAsync();
@@ -136,8 +136,8 @@ namespace Azure.DataGateway.Services
                 while (enumerator.MoveNext())
                 {
                     JObject item = enumerator.Current;
-                    using JsonDocument doc = JsonDocument.Parse(item.ToString());
-                    resultsAsList.Add(doc.RootElement.Clone());
+                    //using JsonDocument doc = JsonDocument.Parse(item.ToString());
+                    resultsAsList.Add(JsonDocument.Parse(item.ToString()));
                 }
             }
 
@@ -147,7 +147,7 @@ namespace Azure.DataGateway.Services
         // <summary>
         // Given the SqlQueryStructure structure, obtains the query text and executes it against the backend.
         // </summary>
-        public Task<JsonElement> ExecuteAsync(FindRequestContext queryStructure)
+        public Task<JsonDocument> ExecuteAsync(FindRequestContext queryStructure)
         {
             throw new NotImplementedException();
         }

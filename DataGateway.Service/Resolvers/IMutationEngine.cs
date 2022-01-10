@@ -16,7 +16,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="context">Middleware context of the mutation</param>
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result</returns>
-        public Task<JsonElement> ExecuteAsync(IMiddlewareContext context,
+        public Task<JsonDocument> ExecuteAsync(IMiddlewareContext context,
             IDictionary<string, object> parameters);
     }
 }

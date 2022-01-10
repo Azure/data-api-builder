@@ -57,7 +57,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="context">context of graphql mutation</param>
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result</returns>
-        public async Task<JsonElement> ExecuteAsync(IMiddlewareContext context,
+        public async Task<JsonDocument> ExecuteAsync(IMiddlewareContext context,
             IDictionary<string, object> parameters)
         {
             string graphQLMutationName = context.Selection.Field.Name.Value;
@@ -66,8 +66,9 @@ namespace Azure.DataGateway.Service.Resolvers
             // TODO: we are doing multiple round of serialization/deserialization
             // fixme
             JObject jObject = await ExecuteAsync(parameters, resolver);
-            using JsonDocument doc = JsonDocument.Parse(jObject.ToString());
-            return doc.RootElement.Clone();
+            //using JsonDocument doc = JsonDocument.Parse(jObject.ToString());
+            return JsonDocument.Parse(jObject.ToString());
+            //return doc.RootElement.Clone();
         }
     }
 }

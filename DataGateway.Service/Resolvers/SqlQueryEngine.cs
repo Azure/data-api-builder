@@ -50,7 +50,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Executes the given IMiddlewareContext of the GraphQL query and
         /// expecting a single Json back.
         /// </summary>
-        public async Task<JsonElement> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters, bool isContinuationQuery)
+        public async Task<JsonDocument> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters, bool isContinuationQuery)
         {
             SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _queryBuilder);
             return await ExecuteAsync(structure);
@@ -60,7 +60,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Executes the given IMiddlewareContext of the GraphQL and expecting a
         /// list of Jsons back.
         /// </summary>
-        public async Task<IEnumerable<JsonElement>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
+        public async Task<IEnumerable<JsonDocument>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _queryBuilder);
             Console.WriteLine(structure.ToString());
@@ -70,16 +70,16 @@ namespace Azure.DataGateway.Service.Resolvers
             //
             if (!dbDataReader.HasRows)
             {
-                return new List<JsonElement>();
+                return new List<JsonDocument>();
             }
 
-            return JsonSerializer.Deserialize<List<JsonElement>>(await GetJsonStringFromDbReader(dbDataReader));
+            return JsonSerializer.Deserialize<List<JsonDocument>>(await GetJsonStringFromDbReader(dbDataReader));
         }
 
         // <summary>
         // Given the FindRequestContext, obtains the query text and executes it against the backend. Useful for REST API scenarios.
         // </summary>
-        public async Task<JsonElement> ExecuteAsync(FindRequestContext context)
+        public async Task<JsonDocument> ExecuteAsync(FindRequestContext context)
         {
             SqlQueryStructure structure = new(context, _metadataStoreProvider, _queryBuilder);
             return await ExecuteAsync(structure);
@@ -88,7 +88,7 @@ namespace Azure.DataGateway.Service.Resolvers
         // <summary>
         // Given the SqlQueryStructure structure, obtains the query text and executes it against the backend. Useful for REST API scenarios.
         // </summary>
-        private async Task<JsonElement> ExecuteAsync(SqlQueryStructure structure)
+        private async Task<JsonDocument> ExecuteAsync(SqlQueryStructure structure)
         {
             // Open connection and execute query using _queryExecutor
             //
@@ -98,15 +98,16 @@ namespace Azure.DataGateway.Service.Resolvers
             // Parse Results into Json and return
             if (await dbDataReader.ReadAsync())
             {
-                using JsonDocument jsonDocument = JsonDocument.Parse(dbDataReader.GetString(0));
-                return jsonDocument.RootElement.Clone();
+                //using JsonDocument jsonDocument = JsonDocument.Parse(dbDataReader.GetString(0));
+                return JsonDocument.Parse(dbDataReader.GetString(0));
+                //return jsonDocument.RootElement.Clone();
             }
             else
             {
                 Console.WriteLine("Did not return enough rows in the JSON result.");
             }
 
-            return new JsonElement();
+            return null;
         }
     }
 }

@@ -78,7 +78,8 @@ namespace Azure.DataGateway.Services
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
                     //TODO: Try to avoid additional deserialization/serialization here.
-                    context.Result = JsonDocument.Parse(jsonElement.ToString());
+                    using JsonDocument doc = JsonDocument.Parse(jsonElement.ToString());
+                    context.Result = doc.RootElement.Clone();
                 }
             }
             else if (context.Selection.Type.IsListType())
@@ -116,14 +117,14 @@ namespace Azure.DataGateway.Services
 
         private static bool TryGetPropertyFromParent(IMiddlewareContext context, out JsonElement jsonElement)
         {
-            JsonDocument result = context.Parent<JsonDocument>();
+            using JsonDocument result = context.Parent<JsonDocument>();
             if (result == null)
             {
                 jsonElement = default;
                 return false;
             }
 
-            return result.RootElement.TryGetProperty(context.Selection.Field.Name.Value, out jsonElement);
+            return result.RootElement.Clone().TryGetProperty(context.Selection.Field.Name.Value, out jsonElement);
         }
 
         private static bool IsInnerObject(IMiddlewareContext context)

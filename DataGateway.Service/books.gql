@@ -3,6 +3,7 @@ type Query {
     getBook(id: Int!): Book
     getReview(id: Int!, book_id: Int!): Review
     books(first: Int, after: String): BookConnection
+    reviews(first: Int, after: String): ReviewConnection
 }
 
 type Mutation {

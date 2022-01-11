@@ -313,7 +313,7 @@ namespace Azure.DataGateway.Service.Resolvers
             // TableName, TableAlias, Columns, and _limit
             if (PaginationMetadata.IsPaginated)
             {
-                AddPaginationPredicates(queryParams);
+                AddPaginationPredicate(queryParams);
 
                 if (PaginationMetadata.RequestedEndCursor)
                 {
@@ -432,13 +432,25 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Add the predicates associated with the "after" parameter of paginated queries
         /// </summary>
-        void AddPaginationPredicates(IDictionary<string, object> queryParams)
+        void AddPaginationPredicate(IDictionary<string, object> queryParams)
         {
             IDictionary<string, object> afterJsonValues = SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata);
-            foreach (KeyValuePair<string, object> parameter in afterJsonValues)
+
+            if(!afterJsonValues.Any())
             {
-                Predicates.Add($"{QualifiedColumn(parameter.Key)} > @{MakeParamWithValue(parameter.Value)}");
+                // no need to create a predicate for pagination
+                return;
             }
+
+            List<string> pkColNames = PrimaryKey();
+            List<string> pkValues = new();
+            foreach (string pkCol in pkColNames)
+            {
+                pkValues.Add($"@{MakeParamWithValue(afterJsonValues[pkCol])}");
+            }
+
+            List<string> qualifiedPks = pkColNames.Select(pkColName => QualifiedColumn(pkColName)).ToList();
+            Predicates.Add(_queryBuilder.MakeKeysetPaginationPredicate(qualifiedPks, pkValues));
         }
 
         /// <summary>

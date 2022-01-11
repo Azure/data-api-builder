@@ -1,4 +1,5 @@
 using System.Data.Common;
+using System.Collections.Generic;
 using System.Linq;
 using Npgsql;
 
@@ -64,6 +65,20 @@ namespace Azure.DataGateway.Service.Resolvers
                     $"SET {structure.SetOperationsSql()} " +
                     $"WHERE {structure.PredicatesSql()} " +
                     $"RETURNING {structure.ReturnColumnsSql()};";
+        }
+
+        public string MakeKeysetPaginationPredicate(List<string> primaryKey, List<string> pkValues)
+        {
+            string left = string.Join(", ", primaryKey);
+            string right = string.Join(", ", pkValues);
+
+            if(primaryKey.Count > 1)
+            {
+                return $"({left}) > ({right})";
+            }
+            else {
+                return $"{left} > {right}";
+            }
         }
     }
 }

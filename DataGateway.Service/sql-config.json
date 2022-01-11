@@ -108,17 +108,25 @@
           "name": {
             "Type": "text"
           }
+        },
+        "Operations": {
+          "POST": {
+            "Authorization": "Authenticated"
+          },
+          "GET": {
+            "Authorization": "Anonymous"
+          }
         }
       },
       "books": {
-        "PrimaryKey": ["id"],
+        "PrimaryKey": [ "id" ],
         "Columns": {
           "id": {
             "Type": "bigint"
           },
           "title": {
             "Type": "text"
-          },
+            },
           "publisher_id": {
             "Type": "bigint"
           }
@@ -126,12 +134,17 @@
         "ForeignKeys": {
           "book_publisher_fk": {
             "ReferencedTable": "publishers",
-            "Columns": ["publisher_id"]
+            "Columns": [ "publisher_id" ]
+          }
+        },
+        "Operations": {
+          "GET": {
+            "AuthorizationType": "Authenticated"
           }
         }
       },
       "authors": {
-        "PrimaryKey": ["id"],
+        "PrimaryKey": [ "id" ],
         "Columns": {
           "id": {
             "Type": "bigint"
@@ -142,10 +155,15 @@
           "birthdate": {
             "Type": "text"
           }
+        },
+        "Operations": {
+          "GET": {
+            "AuthorizationType": "Anonymous"
+          }
         }
       },
       "reviews": {
-        "PrimaryKey": ["book_id", "id"],
+        "PrimaryKey": [ "book_id", "id" ],
         "Columns": {
           "id": {
             "Type": "bigint"
@@ -160,7 +178,12 @@
         "ForeignKeys": {
           "review_book_fk": {
             "ReferencedTable": "books",
-            "Columns": ["book_id"]
+            "Columns": [ "book_id" ]
+          }
+        },
+        "Operations": {
+          "GET": {
+            "AuthorizationType": "Anonymous"
           }
         }
       },

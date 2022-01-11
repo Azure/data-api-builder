@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.configurations;
 using Microsoft.AspNetCore.Mvc;
@@ -54,7 +53,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public static void PerformTestEqualJsonStrings(string expected, string actual)
         {
             Assert.IsTrue(JsonStringsDeepEqual(expected, actual),
-                $"\nExpected:<{expected}>\nActual:<{actual}>");
+            $"\nExpected:<{expected}>\nActual:<{actual}>");
         }
 
         /// <summary>
@@ -85,49 +84,34 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="api">The REST api to be invoked.</param>
         /// <param name="entityName">The entity name.</param>
         /// <param name="primaryKeyRoute">The primary key portion of the route.</param>
-        /// <param name="expectedWorker">
-        /// A worker to calculate the expected sql query result. A worker is used to abstract any database
-        /// specific detail from the PerformApiTest function, while still allowing the function to detect
-        /// exceptions thrown during the execution of that logic.
-        /// </param>
-        /// <param name="expectException">True if we expect exceptions.</param>
+        /// <param name="expected">string represents the expected result.</param>
+        /// <param name="expectedStatusCode">int represents the returned http status code</param>
         public static async Task PerformApiTest(
             Func<string, string, Task<IActionResult>> api,
             string entityName,
             string primaryKeyRoute,
-            Task<string> expectedWorker,
-            bool expectException = false)
+            string expected,
+            int expectedStatusCode)
+
         {
-
-            try
+            string actual;
+            IActionResult actionResult = await api(entityName, primaryKeyRoute);
+            // OkObjectResult will throw exception if we attempt cast to JsonResult
+            if (actionResult is OkObjectResult)
             {
-                IActionResult actionResult = await api(entityName, primaryKeyRoute);
-                OkObjectResult okResult = (OkObjectResult)actionResult;
-                JsonElement actualJson = (JsonElement)okResult.Value;
-
-                string expected = await expectedWorker;
-                string actual = actualJson.ToString();
-
-                Assert.IsFalse(expectException, "An exception was suppossed to be thrown, but it was not");
-
-                PerformTestEqualJsonStrings(expected, actual);
+                OkObjectResult actualResult = (OkObjectResult)actionResult;
+                Assert.AreEqual(expectedStatusCode, actualResult.StatusCode);
+                actual = actualResult.Value.ToString();
             }
-            catch (Exception e)
+            else
             {
-                // Consider scenarios:
-                // no exception + expectException: true -> test fails
-                // exception + expectException: true    -> test passes
-                // no exception + expectException: false-> test passes
-                // exception + expectException: false   -> test fails
-                if (expectException && !(e is AssertFailedException))
-                {
-                    Assert.IsTrue(expectException);
-                }
-                else
-                {
-                    throw;
-                }
+                JsonResult actualResult = (JsonResult)actionResult;
+                actual = actualResult.Value.ToString();
             }
+
+            // if whitespaces are not consistent JsonStringDeepEquals should be used
+            // this will require deserializing and then serializing the strings for JSON
+            Assert.AreEqual(expected, actual);
         }
     }
 }

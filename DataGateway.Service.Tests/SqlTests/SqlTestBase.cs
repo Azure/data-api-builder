@@ -193,9 +193,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <returns>string in JSON format</returns>
         protected static async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController)
         {
-            using JsonDocument graphQLResult = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, graphQLController);
-            Console.WriteLine(graphQLResult.RootElement.ToString());
-            JsonElement graphQLResultData = graphQLResult.RootElement.GetProperty("data").GetProperty(graphQLQueryName);
+            JsonElement graphQLResult = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, graphQLController);
+            Console.WriteLine(graphQLResult.ToString());
+            JsonElement graphQLResultData = graphQLResult.GetProperty("data").GetProperty(graphQLQueryName);
 
             // JsonElement.ToString() prints null values as empty strings instead of "null"
             return graphQLResultData.GetRawText();
@@ -209,7 +209,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="graphQLQueryName"></param>
         /// <param name="graphQLController"></param>
         /// <returns>JsonDocument</returns>
-        protected static async Task<JsonDocument> GetGraphQLControllerResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController)
+        protected static async Task<JsonElement> GetGraphQLControllerResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController)
         {
             string graphqlQueryJson = JObject.FromObject(new
             {

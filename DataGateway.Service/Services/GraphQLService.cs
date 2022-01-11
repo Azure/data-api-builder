@@ -96,7 +96,7 @@ namespace Azure.DataGateway.Services
 
             IQueryRequest queryRequest = CompileRequest(requestBody, requestProperties);
 
-            IExecutionResult result = await Executor.ExecuteAsync(queryRequest);
+            using IExecutionResult result = await Executor.ExecuteAsync(queryRequest);
             return result.ToJson(withIndentations: false);
         }
 

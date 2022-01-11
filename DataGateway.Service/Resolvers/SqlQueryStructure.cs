@@ -264,6 +264,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 outputType = schemaField.Type;
                 _underlyingFieldType = UnderlyingType(outputType);
                 _typeInfo = _metadataStoreProvider.GetGraphqlType(_underlyingFieldType.Name);
+
+                PaginationMetadata.Subqueries.Add("items", PaginationMetadata.MakeDummyPaginationMetadata());
             }
 
             TableName = _typeInfo.Table;
@@ -436,7 +438,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             IDictionary<string, object> afterJsonValues = SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata);
 
-            if(!afterJsonValues.Any())
+            if (!afterJsonValues.Any())
             {
                 // no need to create a predicate for pagination
                 return;
@@ -545,7 +547,15 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     IDictionary<string, object> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field);
                     SqlQueryStructure subquery = new(_ctx, subqueryParams, _metadataStoreProvider, _queryBuilder, subschemaField, field, Counter);
-                    PaginationMetadata.Subqueries.Add(fieldName, subquery.PaginationMetadata);
+
+                    if (PaginationMetadata.IsPaginated)
+                    {
+                        PaginationMetadata.Subqueries["items"].Subqueries.Add(fieldName, subquery.PaginationMetadata);
+                    }
+                    else
+                    {
+                        PaginationMetadata.Subqueries.Add(fieldName, subquery.PaginationMetadata);
+                    }
 
                     // pass the parameters of the subquery to the current query so upmost query has all the
                     // parameters of the query tree and it can pass them to the database query executor

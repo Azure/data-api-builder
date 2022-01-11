@@ -1,5 +1,5 @@
-using System.Data.Common;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 using Npgsql;
 
@@ -72,11 +72,12 @@ namespace Azure.DataGateway.Service.Resolvers
             string left = string.Join(", ", primaryKey);
             string right = string.Join(", ", pkValues);
 
-            if(primaryKey.Count > 1)
+            if (primaryKey.Count > 1)
             {
                 return $"({left}) > ({right})";
             }
-            else {
+            else
+            {
                 return $"{left} > {right}";
             }
         }

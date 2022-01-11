@@ -24,7 +24,6 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         internal static MetadataStoreProviderForTest _metadataStoreProvider;
         internal static CosmosQueryEngine _queryEngine;
         internal static CosmosMutationEngine _mutationEngine;
-        internal static IResolverMiddlewareMaker _resolverMiddlewareMaker;
         internal static GraphQLController _controller;
         internal static CosmosClient Client { get; private set; }
 
@@ -37,8 +36,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             _metadataStoreProvider.GraphqlSchema = jsonString;
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
-            _resolverMiddlewareMaker = new CosmosResolverMiddlewareMaker(_queryEngine, _mutationEngine, _metadataStoreProvider);
-            _graphQLService = new GraphQLService(_metadataStoreProvider, _resolverMiddlewareMaker);
+            _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider);
             _controller = new GraphQLController(_graphQLService);
             Client = _clientProvider.Client;
         }

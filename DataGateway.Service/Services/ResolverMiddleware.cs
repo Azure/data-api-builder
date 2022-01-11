@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
@@ -9,23 +11,12 @@ using HotChocolate.Types;
 namespace Azure.DataGateway.Services
 {
     /// <summary>
-    /// Interface for ResolverMiddleware factory
-    /// </summary>
-    public interface IResolverMiddlewareMaker
-    {
-
-        /// <summary>
-        /// Creates a ResolverMiddleware with the FieldDelegate next
-        /// </summary>
-        public ResolverMiddleware MakeWith(FieldDelegate next);
-    }
-
-    /// <summary>
     /// The resolver middleware that is used by the schema executor to resolve
     /// the queries and mutations
     /// </summary>
-    public abstract class ResolverMiddleware
+    public class ResolverMiddleware
     {
+        private static readonly string _contextMetadata = "metadata";
         internal readonly FieldDelegate _next;
         internal readonly IQueryEngine _queryEngine;
         internal readonly IMutationEngine _mutationEngine;
@@ -47,7 +38,73 @@ namespace Azure.DataGateway.Services
             _next = next;
         }
 
-        public abstract Task InvokeAsync(IMiddlewareContext context);
+        public async Task InvokeAsync(IMiddlewareContext context)
+        {
+            JsonElement jsonElement;
+            // PaginationMetadata metadata;
+            if (context.Selection.Field.Coordinate.TypeName.Value == "Mutation")
+            {
+                IDictionary<string, object> parameters = GetParametersFromContext(context);
+
+                Tuple<JsonDocument, IMetadata> result = await _mutationEngine.ExecuteAsync(context, parameters);
+                context.Result = result.Item1;
+                SetNewMetadata(context, result.Item2);
+            }
+            else if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
+            {
+                IDictionary<string, object> parameters = GetParametersFromContext(context);
+
+                if (context.Selection.Type.IsListType())
+                {
+                    Tuple<IEnumerable<JsonDocument>, IMetadata> result = await _queryEngine.ExecuteListAsync(context, parameters);
+                    context.Result = result.Item1;
+                    SetNewMetadata(context, result.Item2);
+                }
+                else
+                {
+                    Tuple<JsonDocument, IMetadata> result = await _queryEngine.ExecuteAsync(context, parameters, false);
+                    context.Result = result.Item1;
+                    SetNewMetadata(context, result.Item2);
+                }
+            }
+            else if (context.Selection.Field.Type.IsLeafType())
+            {
+                // This means this field is a scalar, so we don't need to do
+                // anything for it.
+                if (TryGetPropertyFromParent(context, out jsonElement))
+                {
+                    context.Result = jsonElement.ToString();
+                }
+            }
+            else if (IsInnerObject(context))
+            {
+                // This means it's a field that has another custom type as its
+                // type, so there is a full JSON object inside this key. For
+                // example such a JSON object could have been created by a
+                // One-To-Many join.
+                if (TryGetPropertyFromParent(context, out jsonElement))
+                {
+                    IMetadata metadata = GetMetadata(context);
+                    context.Result = _queryEngine.ResolveInnerObject(jsonElement, context.Selection.Field, ref metadata);
+                    SetNewMetadata(context, metadata);
+                }
+            }
+            else if (context.Selection.Type.IsListType())
+            {
+                // This means the field is a list and HotChocolate requires
+                // that to be returned as a List of JsonDocuments. For example
+                // such a JSON list could have been created by a One-To-Many
+                // join.
+                if (TryGetPropertyFromParent(context, out jsonElement))
+                {
+                    IMetadata metadata = GetMetadata(context);
+                    context.Result = _queryEngine.ResolveListType(jsonElement, context.Selection.Field, ref metadata);
+                    SetNewMetadata(context, metadata);
+                }
+            }
+
+            await _next(context);
+        }
 
         protected static bool TryGetPropertyFromParent(IMiddlewareContext context, out JsonElement jsonElement)
         {
@@ -110,6 +167,22 @@ namespace Azure.DataGateway.Services
         protected static IDictionary<string, object> GetParametersFromContext(IMiddlewareContext context)
         {
             return GetParametersFromSchemaAndQueryFields(context.Selection.Field, context.Selection.SyntaxNode);
+        }
+
+        /// <summary>
+        /// Get metadata from context
+        /// </summary>
+        private static IMetadata GetMetadata(IMiddlewareContext context)
+        {
+            return (IMetadata)context.ScopedContextData[_contextMetadata];
+        }
+
+        /// <summary>
+        /// Set new metadata and reset the depth that the metadata has persisted
+        /// </summary>
+        private static void SetNewMetadata(IMiddlewareContext context, IMetadata metadata)
+        {
+            context.ScopedContextData = context.ScopedContextData.SetItem(_contextMetadata, metadata);
         }
     }
 }

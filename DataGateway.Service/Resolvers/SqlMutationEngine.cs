@@ -40,7 +40,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="context">context of graphql mutation</param>
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result and its related pagination metadata</returns>
-        public async Task<Tuple<JsonDocument, PaginationMetadata>> ExecuteAsyncWithMetadata(IMiddlewareContext context, IDictionary<string, object> parameters)
+        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             if (context.Selection.Type.IsListType())
             {
@@ -94,15 +94,7 @@ namespace Azure.DataGateway.Service.Resolvers
             // delegates the querying part of the mutation to the QueryEngine
             // this allows for nested queries in muatations
             // the searchParams are used to indetify the mutated record so it can then be further queried on
-            return await _queryEngine.ExecuteAsyncWithMetadata(context, searchParams);
-        }
-
-        /// <summary>
-        /// Only used to conform to the IMutationEngine interface
-        /// </summary>
-        public Task<JsonDocument> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
-        {
-            throw new NotSupportedException();
+            return await _queryEngine.ExecuteAsync(context, searchParams, false);
         }
 
         ///<summary>

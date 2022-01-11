@@ -88,21 +88,25 @@ namespace Azure.DataGateway.Service.Resolvers
             return string.Join(", ", outputColumns);
         }
 
-        public string MakeKeysetPaginationPredicate(List<string> primaryKey, List<string> pkValues) {
-            if(primaryKey.Count > 1)
+        public string MakeKeysetPaginationPredicate(List<string> primaryKey, List<string> pkValues)
+        {
+            if (primaryKey.Count > 1)
             {
                 string result = string.Empty;
-                for(int i = 0; i < primaryKey.Count; i++)
+                for (int i = 0; i < primaryKey.Count; i++)
                 {
-                    if(i > 0)
+                    if (i > 0)
+                    {
                         result += " OR ";
+                    }
 
                     result += $"({MakePaginationInequality(primaryKey, pkValues, i)})";
                 }
 
                 return "(" + result + ")";
             }
-            else {
+            else
+            {
                 return MakePaginationInequality(primaryKey, pkValues, 0);
             }
         }
@@ -116,14 +120,15 @@ namespace Azure.DataGateway.Service.Resolvers
         /// untilIndex: 2
         /// generate <c>a = A AND b = B AND c > C</c>
         /// </summary>
-        private static string MakePaginationInequality(List<string> primaryKey, List<string> pkValues, int untilIndex) {
+        private static string MakePaginationInequality(List<string> primaryKey, List<string> pkValues, int untilIndex)
+        {
             string result = string.Empty;
-            for(int i = 0; i <= untilIndex; i++)
+            for (int i = 0; i <= untilIndex; i++)
             {
                 string op = i == untilIndex ? ">" : "=";
                 result += $"{primaryKey[i]} {op} {pkValues[i]}";
 
-                if(i < untilIndex)
+                if (i < untilIndex)
                 {
                     result += " AND ";
                 }

@@ -213,7 +213,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
               ],
               ""hasNextPage"": true,
-              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":2}")+  @"""
+              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":2}") + @"""
             }",
             ["PaginateCompositePkTable"] = @"{
               ""items"": [
@@ -512,7 +512,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Do pagination on a table with a primary key with multiple columns
         /// </summary>
         [TestMethod]
-        public async Task PaginateCompositePkTable() {
+        public async Task PaginateCompositePkTable()
+        {
             string graphQLQueryName = "reviews";
             string after = SqlPaginationUtil.Base64Encode("{\"book_id\":1,\"id\":567}");
             string graphQLQuery = @"{

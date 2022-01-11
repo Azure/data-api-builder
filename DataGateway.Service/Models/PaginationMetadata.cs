@@ -7,7 +7,7 @@ namespace Azure.DataGateway.Service.Models
     /// <summary>
     /// Holds pagination related information for the query and its subqueries
     /// </summary>
-    public class PaginationMetadata
+    public class PaginationMetadata : IMetadata
     {
         public const bool DEFAULT_PAGINATION_FLAGS_VALUE = false;
 
@@ -44,6 +44,14 @@ namespace Azure.DataGateway.Service.Models
         public PaginationMetadata(SqlQueryStructure structure)
         {
             Structure = structure;
+        }
+
+        /// <summary>
+        /// Create e pagination metadata which is not coupled with any SqlQueryStructure
+        /// </summary>
+        public static PaginationMetadata MakeDummyPaginationMetadata()
+        {
+            return new PaginationMetadata(null);
         }
     }
 }

@@ -54,9 +54,18 @@ patched individually by us, or not supported until they are supported in OData. 
 flexibility when making changes to our code.
 
 #### Known Issues
-There are a few known issues associated with OData, these include incorrect case usage causing unexpected exceptions (ie: $Filter), which has a work-around using case-insensitivity (ie: treat $Filter as $filter). Embedded $count within $filter will throw not implemented exception. Lastly, IN operator parsing breaks if the collection has a trailing comma (ie: $filter=PropertyString in ('a','b',)).
+There are a few known issues associated with OData:
+
+Incorrect case usage causing unexpected exceptions (ie: $Filter), which has a work-around using case-insensitivity (ie: treat $Filter as $filter). 
+
+Embedded $count within $filter will throw not implemented exception. 
+
+IN operator parsing breaks if the collection has a trailing comma (ie: $filter=PropertyString in ('a','b',)).
+
 https://github.com/OData/WebApi/issues/425
+
 https://github.com/OData/WebApi/issues/194
+
 https://github.com/OData/odata.net/issues/1378
 
 # Custom Parser

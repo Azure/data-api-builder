@@ -31,6 +31,7 @@ has done. Their OData dynamic model builder can be found here: https://msdata.vi
 
 And their Index model builder can be found here: https://msdata.visualstudio.com/Azure%20Search/_git/AzureSearch?path=/Source/Common/Product/ClusterCore/Services/OData/IndexEdmModelBuilder.cs&version=GBcurrent&_a=contents
 
+
 ## Entity Data Model from XML
 An EDM model can be generated automatically from properly formated edm xml files. In thise case, the relevant meta data must be populated in the xml in the correct format,
 and then an xxml reader can be created from reading this file. That reader can be used to generate an EDM model. This would require these xml files to either be pre-generated, or
@@ -52,6 +53,11 @@ point, in which case we would need to redo whatever work we were relying on this
 patched individually by us, or not supported until they are supported in OData. We are also forced to use the patterns that OData supports in building our service, we may effect our
 flexibility when making changes to our code.
 
+#### Known Issues
+There are a few known issues associated with OData, these include incorrect case usage causing unexpected exceptions (ie: $Filter), which has a work-around using case-insensitivity (ie: treat $Filter as $filter). Embedded $count within $filter will throw not implemented exception. Lastly, IN operator parsing breaks if the collection has a trailing comma (ie: $filter=PropertyString in ('a','b',)).
+https://github.com/OData/WebApi/issues/425
+https://github.com/OData/WebApi/issues/194
+https://github.com/OData/odata.net/issues/1378
 
 # Custom Parser
 Another option for parsing the $filter query string would be to write a custom parser. This would be flexible and allow us to handle parsing however we chose. It would however require

@@ -41,7 +41,7 @@ namespace Azure.DataGateway.Services
         public async Task InvokeAsync(IMiddlewareContext context)
         {
             JsonElement jsonElement;
-            // PaginationMetadata metadata;
+
             if (context.Selection.Field.Coordinate.TypeName.Value == "Mutation")
             {
                 IDictionary<string, object> parameters = GetParametersFromContext(context);
@@ -53,6 +53,7 @@ namespace Azure.DataGateway.Services
             else if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
             {
                 IDictionary<string, object> parameters = GetParametersFromContext(context);
+                bool isPaginatedQuery = _queryEngine.IsPaginatedQuery(context.Selection.Field.Name.Value);
 
                 if (context.Selection.Type.IsListType())
                 {
@@ -62,7 +63,7 @@ namespace Azure.DataGateway.Services
                 }
                 else
                 {
-                    Tuple<JsonDocument, IMetadata> result = await _queryEngine.ExecuteAsync(context, parameters, false);
+                    Tuple<JsonDocument, IMetadata> result = await _queryEngine.ExecuteAsync(context, parameters, isPaginatedQuery);
                     context.Result = result.Item1;
                     SetNewMetadata(context, result.Item2);
                 }

@@ -166,6 +166,23 @@ namespace Azure.DataGateway.Services
             return JsonSerializer.Deserialize<List<JsonDocument>>(element.ToString());
         }
 
+        /// <summary>
+        /// Identifies if a query is paginated or not by checking the IsPaginated param on the respective resolver.
+        /// </summary>
+        /// <param name="queryName the name of the query"></param>
+        /// <returns></returns>
+        public bool IsPaginatedQuery(string queryName)
+        {
+            GraphQLQueryResolver resolver = _metadataStoreProvider.GetQueryResolver(queryName);
+            if (resolver == null)
+            {
+                string message = string.Format("There is no resolver for the query: {0}", queryName);
+                throw new InvalidOperationException(message);
+            }
+
+            return resolver.IsPaginated;
+        }
+
         private static string Base64Encode(string plainText)
         {
             if (plainText == default)

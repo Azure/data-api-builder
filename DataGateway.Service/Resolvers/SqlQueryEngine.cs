@@ -131,6 +131,15 @@ namespace Azure.DataGateway.Service.Resolvers
             return JsonSerializer.Deserialize<List<JsonDocument>>(element.ToString());
         }
 
+        /// <summary>
+        /// Used to match the IQueryEngine interface
+        /// Always returns false
+        /// </summary>
+        public bool IsPaginatedQuery(string queryName)
+        {
+            return false;
+        }
+
         // <summary>
         // Given the SqlQueryStructure structure, obtains the query text and executes it against the backend. Useful for REST API scenarios.
         // </summary>

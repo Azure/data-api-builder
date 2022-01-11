@@ -45,5 +45,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Resolves a jsonElement representing a list type based on the field's schema and metadata
         /// </summary>
         public IEnumerable<JsonDocument> ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata);
+
+        /// <summary>
+        /// Holds database specific implementation to determine if query is paginated based on query name
+        /// Note: only used in Cosmos
+        /// </summary>
+        public bool IsPaginatedQuery(string queryName);
     }
 }

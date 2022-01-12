@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using Azure.DataGateway.Service.configurations;
+using Azure.DataGateway.Service.Configurations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 

@@ -29,6 +29,12 @@ namespace Azure.DataGateway.Service.Models
         /// The database type of this column
         /// </summary>
         public ColumnType Type { get; set; }
+        public bool hasDefault { get; set; }
+
+        public static bool TypesAreEqual(ColumnType type1, ColumnType type2)
+        {
+            return ResolveColumnToSystemType(type1) == ResolveColumnToSystemType(type2);
+        }
 
         /// <summary>
         /// Resolves the column type to a System.Type

@@ -658,7 +658,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         return Int64.Parse(param);
                     default:
                         // should never happen due to the config being validated for correct types
-                        return null;
+                        throw new NotSupportedException($"{type} is not supported");
                 }
             }
             catch (Exception e)

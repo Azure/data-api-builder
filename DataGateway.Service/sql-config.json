@@ -5,22 +5,22 @@
     {
       "Id": "insertBook",
       "Table": "books",
-      "OperationType": "INSERT"
+      "OperationType": "Insert"
     },
     {
       "Id": "editBook",
       "Table": "books",
-      "OperationType": "UPDATE"
+      "OperationType": "Update"
     },
     {
       "Id": "addAuthorToBook",
       "Table": "book_author_link",
-      "OperationType": "INSERT"
+      "OperationType": "Insert"
     },
     {
       "Id": "deleteBook",
       "Table": "books",
-      "OperationType": "DELETE"
+      "OperationType": "Delete"
     }
   ],
   "GraphqlTypes": {
@@ -108,7 +108,7 @@
         "PrimaryKey": ["id"],
         "Columns": {
           "id": {
-            "Type": "bigint"
+            "Type": "auto"
           },
           "name": {
             "Type": "text"
@@ -127,7 +127,7 @@
         "PrimaryKey": [ "id" ],
         "Columns": {
           "id": {
-            "Type": "bigint"
+            "Type": "auto"
           },
           "title": {
             "Type": "text"
@@ -152,7 +152,7 @@
         "PrimaryKey": [ "id" ],
         "Columns": {
           "id": {
-            "Type": "bigint"
+            "Type": "auto"
           },
           "name": {
             "Type": "text"
@@ -171,7 +171,7 @@
         "PrimaryKey": [ "book_id", "id" ],
         "Columns": {
           "id": {
-            "Type": "bigint"
+            "Type": "auto"
           },
           "content": {
             "Type": "text"

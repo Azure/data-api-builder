@@ -97,7 +97,7 @@ namespace Azure.DataGateway.Services
 
             IQueryRequest queryRequest = CompileRequest(requestBody, requestProperties);
 
-            IExecutionResult result = await Executor.ExecuteAsync(queryRequest);
+            using IExecutionResult result = await Executor.ExecuteAsync(queryRequest);
             return result.ToJson(withIndentations: false);
         }
 
@@ -126,7 +126,7 @@ namespace Azure.DataGateway.Services
         /// <returns></returns>
         private static IQueryRequest CompileRequest(string requestBody, Dictionary<string, object> requestProperties)
         {
-            JsonDocument requestBodyJson = JsonDocument.Parse(requestBody);
+            using JsonDocument requestBodyJson = JsonDocument.Parse(requestBody);
             IQueryRequestBuilder requestBuilder = QueryRequestBuilder.New()
                 .SetQuery(requestBodyJson.RootElement.GetProperty("query").GetString());
 

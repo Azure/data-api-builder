@@ -140,8 +140,8 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
                 query = graphQLQuery
             }).ToString();
             _controller.ControllerContext.HttpContext = GetHttpContextWithBody(queryJson);
-            JsonDocument graphQLResult = await _controller.PostAsync();
-            return graphQLResult.RootElement.GetProperty("data").GetProperty(queryName);
+            JsonElement graphQLResult = await _controller.PostAsync();
+            return graphQLResult.GetProperty("data").GetProperty(queryName);
         }
     }
 }

@@ -122,7 +122,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Default limit when no first param is specified for list queries
         /// </summary>
-        private const uint DEFAULT_LIST_LIMIT = 500;
+        private const uint DEFAULT_LIST_LIMIT = 100;
 
         /// <summary>
         /// The maximum number of results this query should return.
@@ -300,14 +300,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         throw new DatagatewayException($"first must be a positive integer for {schemaField.Name}", 400, DatagatewayException.SubStatusCodes.BadRequest);
                     }
 
-                    try
-                    {
-                        _limit = (uint)first;
-                    }
-                    catch
-                    {
-                        throw new DatagatewayException($"Parameter \"first\" with value {first} is too large, uint32 expected", 400, DatagatewayException.SubStatusCodes.BadRequest);
-                    }
+                    _limit = (uint)first;
                 }
             }
 

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
@@ -16,221 +15,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     [TestClass]
     public abstract class GraphQLPaginationTestBase : SqlTestBase
     {
-        protected static Dictionary<string, string> ExpectedJsonResultsPerTest { get; } = new()
-        {
-            ["RequestFullConnection"] = @"{
-              ""items"": [
-                {
-                  ""title"": ""Also Awesome book"",
-                  ""publisher"": {
-                    ""name"": ""Big Company""
-                  }
-                },
-                {
-                  ""title"": ""Great wall of china explained"",
-                  ""publisher"": {
-                    ""name"": ""Small Town Publisher""
-                  }
-                }
-              ],
-              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":3}") + @""",
-              ""hasNextPage"": true
-            }",
-            ["RequestNoParamFullConnection"] = @"{
-              ""items"": [
-                {
-                  ""id"": 1,
-                  ""title"": ""Awesome book""
-                },
-                {
-                  ""id"": 2,
-                  ""title"": ""Also Awesome book""
-                },
-                {
-                  ""id"": 3,
-                  ""title"": ""Great wall of china explained""
-                },
-                {
-                  ""id"": 4,
-                  ""title"": ""US history in a nutshell""
-                }
-              ],
-              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":4}") + @""",
-              ""hasNextPage"": false
-            }",
-            ["RequestItemsOnly"] = @"{
-              ""items"": [
-                {
-                  ""title"": ""Also Awesome book"",
-                  ""publisher_id"": 1234
-                },
-                {
-                  ""title"": ""Great wall of china explained"",
-                  ""publisher_id"": 2345
-                }
-              ]
-            }",
-            ["RequestNestedPaginationQueries"] = @"{
-              ""items"": [
-                {
-                  ""title"": ""Also Awesome book"",
-                  ""publisher"": {
-                    ""name"": ""Big Company"",
-                    ""paginatedBooks"": {
-                      ""items"": [
-                        {
-                          ""id"": 2,
-                          ""title"": ""Also Awesome book""
-                        }
-                      ],
-                      ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":2}") + @""",
-                      ""hasNextPage"": false
-                    }
-                  }
-                },
-                {
-                  ""title"": ""Great wall of china explained"",
-                  ""publisher"": {
-                    ""name"": ""Small Town Publisher"",
-                    ""paginatedBooks"": {
-                      ""items"": [
-                        {
-                          ""id"": 3,
-                          ""title"": ""Great wall of china explained""
-                        },
-                        {
-                          ""id"": 4,
-                          ""title"": ""US history in a nutshell""
-                        }
-                      ],
-                      ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":4}") + @""",
-                      ""hasNextPage"": false
-                    }
-                  }
-                }
-              ],
-              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":3}") + @""",
-              ""hasNextPage"": true
-            }",
-            ["RequestPaginatedQueryFromMutationResult"] = @"{
-              ""publisher"": {
-                ""paginatedBooks"": {
-                  ""items"": [
-                    {
-                      ""id"": 2,
-                      ""title"": ""Also Awesome book""
-                    },
-                    {
-                      ""id"": 5001,
-                      ""title"": ""Books, Pages, and Pagination. The Book""
-                    }
-                  ],
-                  ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":5001}") + @""",
-                  ""hasNextPage"": false
-                }
-              }
-            }",
-            ["RequestDeeplyNestedPaginationQueries"] = @"{
-              ""items"": [
-                {
-                  ""id"": 1,
-                  ""authors"": [
-                    {
-                      ""name"": ""Jelte"",
-                      ""paginatedBooks"": {
-                        ""items"": [
-                          {
-                            ""id"": 1,
-                            ""title"": ""Awesome book"",
-                            ""paginatedReviews"": {
-                              ""items"": [
-                                {
-                                  ""id"": 567,
-                                  ""book"": {
-                                    ""id"": 1
-                                  },
-                                  ""content"": ""Indeed a great book""
-                                },
-                                {
-                                  ""id"": 568,
-                                  ""book"": {
-                                    ""id"": 1
-                                  },
-                                  ""content"": ""I loved it""
-                                }
-                              ],
-                              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"book_id\":1,\"id\":568}") + @""",
-                              ""hasNextPage"": true
-                            }
-                          },
-                          {
-                            ""id"": 3,
-                            ""title"": ""Great wall of china explained"",
-                            ""paginatedReviews"": {
-                              ""items"": [],
-                              ""endCursor"": null,
-                              ""hasNextPage"": false
-                            }
-                          }
-                        ],
-                        ""hasNextPage"": true,
-                        ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":3}") + @"""
-                      }
-                    }
-                  ]
-                },
-                {
-                  ""id"": 2,
-                  ""authors"": [
-                    {
-                      ""name"": ""Aniruddh"",
-                      ""paginatedBooks"": {
-                        ""items"": [
-                          {
-                            ""id"": 2,
-                            ""title"": ""Also Awesome book"",
-                            ""paginatedReviews"": {
-                              ""items"": [],
-                              ""endCursor"": null,
-                              ""hasNextPage"": false
-                            }
-                          },
-                          {
-                            ""id"": 3,
-                            ""title"": ""Great wall of china explained"",
-                            ""paginatedReviews"": {
-                              ""items"": [],
-                              ""endCursor"": null,
-                              ""hasNextPage"": false
-                            }
-                          }
-                        ],
-                        ""hasNextPage"": true,
-                        ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":3}") + @"""
-                      }
-                    }
-                  ]
-                }
-              ],
-              ""hasNextPage"": true,
-              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":2}") + @"""
-            }",
-            ["PaginateCompositePkTable"] = @"{
-              ""items"": [
-                {
-                  ""id"": 568,
-                  ""content"": ""I loved it""
-                },
-                {
-                  ""id"": 569,
-                  ""content"": ""best book I read in years""
-                }
-              ],
-              ""hasNextPage"": false,
-              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"book_id\":1,\"id\":569}") + @"""
-            }"
-        };
-
         #region Test Fixture Setup
         protected static GraphQLService _graphQLService;
         protected static GraphQLController _graphQLController;
@@ -262,7 +46,24 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = ExpectedJsonResultsPerTest[nameof(RequestFullConnection)];
+            string expected = @"{
+              ""items"": [
+                {
+                  ""title"": ""Also Awesome book"",
+                  ""publisher"": {
+                    ""name"": ""Big Company""
+                  }
+                },
+                {
+                  ""title"": ""Great wall of china explained"",
+                  ""publisher"": {
+                    ""name"": ""Small Town Publisher""
+                  }
+                }
+              ],
+              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":3}") + @""",
+              ""hasNextPage"": true
+            }";
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
@@ -287,7 +88,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = ExpectedJsonResultsPerTest[nameof(RequestNoParamFullConnection)];
+            string expected = @"{
+              ""items"": [
+                {
+                  ""id"": 1,
+                  ""title"": ""Awesome book""
+                },
+                {
+                  ""id"": 2,
+                  ""title"": ""Also Awesome book""
+                },
+                {
+                  ""id"": 3,
+                  ""title"": ""Great wall of china explained""
+                },
+                {
+                  ""id"": 4,
+                  ""title"": ""US history in a nutshell""
+                }
+              ],
+              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":4}") + @""",
+              ""hasNextPage"": false
+            }";
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
@@ -310,7 +132,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = ExpectedJsonResultsPerTest[nameof(RequestItemsOnly)];
+            string expected = @"{
+              ""items"": [
+                {
+                  ""title"": ""Also Awesome book"",
+                  ""publisher_id"": 1234
+                },
+                {
+                  ""title"": ""Great wall of china explained"",
+                  ""publisher_id"": 2345
+                }
+              ]
+            }";
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
@@ -422,7 +255,48 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = ExpectedJsonResultsPerTest[nameof(RequestNestedPaginationQueries)];
+            string expected = @"{
+              ""items"": [
+                {
+                  ""title"": ""Also Awesome book"",
+                  ""publisher"": {
+                    ""name"": ""Big Company"",
+                    ""paginatedBooks"": {
+                      ""items"": [
+                        {
+                          ""id"": 2,
+                          ""title"": ""Also Awesome book""
+                        }
+                      ],
+                      ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":2}") + @""",
+                      ""hasNextPage"": false
+                    }
+                  }
+                },
+                {
+                  ""title"": ""Great wall of china explained"",
+                  ""publisher"": {
+                    ""name"": ""Small Town Publisher"",
+                    ""paginatedBooks"": {
+                      ""items"": [
+                        {
+                          ""id"": 3,
+                          ""title"": ""Great wall of china explained""
+                        },
+                        {
+                          ""id"": 4,
+                          ""title"": ""US history in a nutshell""
+                        }
+                      ],
+                      ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":4}") + @""",
+                      ""hasNextPage"": false
+                    }
+                  }
+                }
+              ],
+              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":3}") + @""",
+              ""hasNextPage"": true
+            }";
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
@@ -453,7 +327,24 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             ";
 
             string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = ExpectedJsonResultsPerTest[nameof(RequestPaginatedQueryFromMutationResult)];
+            string expected = @"{
+              ""publisher"": {
+                ""paginatedBooks"": {
+                  ""items"": [
+                    {
+                      ""id"": 2,
+                      ""title"": ""Also Awesome book""
+                    },
+                    {
+                      ""id"": 5001,
+                      ""title"": ""Books, Pages, and Pagination. The Book""
+                    }
+                  ],
+                  ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":5001}") + @""",
+                  ""hasNextPage"": false
+                }
+              }
+            }";
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
 
@@ -468,7 +359,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task RequestDeeplyNestedPaginationQueries()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode("{\"id\":1}");
             string graphQLQuery = @"{
                 books(first: 2){
                     items{
@@ -503,7 +393,91 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = ExpectedJsonResultsPerTest[nameof(RequestDeeplyNestedPaginationQueries)];
+            string expected = @"{
+              ""items"": [
+                {
+                  ""id"": 1,
+                  ""authors"": [
+                    {
+                      ""name"": ""Jelte"",
+                      ""paginatedBooks"": {
+                        ""items"": [
+                          {
+                            ""id"": 1,
+                            ""title"": ""Awesome book"",
+                            ""paginatedReviews"": {
+                              ""items"": [
+                                {
+                                  ""id"": 567,
+                                  ""book"": {
+                                    ""id"": 1
+                                  },
+                                  ""content"": ""Indeed a great book""
+                                },
+                                {
+                                  ""id"": 568,
+                                  ""book"": {
+                                    ""id"": 1
+                                  },
+                                  ""content"": ""I loved it""
+                                }
+                              ],
+                              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"book_id\":1,\"id\":568}") + @""",
+                              ""hasNextPage"": true
+                            }
+                          },
+                          {
+                            ""id"": 3,
+                            ""title"": ""Great wall of china explained"",
+                            ""paginatedReviews"": {
+                              ""items"": [],
+                              ""endCursor"": null,
+                              ""hasNextPage"": false
+                            }
+                          }
+                        ],
+                        ""hasNextPage"": true,
+                        ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":3}") + @"""
+                      }
+                    }
+                  ]
+                },
+                {
+                  ""id"": 2,
+                  ""authors"": [
+                    {
+                      ""name"": ""Aniruddh"",
+                      ""paginatedBooks"": {
+                        ""items"": [
+                          {
+                            ""id"": 2,
+                            ""title"": ""Also Awesome book"",
+                            ""paginatedReviews"": {
+                              ""items"": [],
+                              ""endCursor"": null,
+                              ""hasNextPage"": false
+                            }
+                          },
+                          {
+                            ""id"": 3,
+                            ""title"": ""Great wall of china explained"",
+                            ""paginatedReviews"": {
+                              ""items"": [],
+                              ""endCursor"": null,
+                              ""hasNextPage"": false
+                            }
+                          }
+                        ],
+                        ""hasNextPage"": true,
+                        ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":3}") + @"""
+                      }
+                    }
+                  ]
+                }
+              ],
+              ""hasNextPage"": true,
+              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":2}") + @"""
+            }";
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
@@ -528,7 +502,20 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = ExpectedJsonResultsPerTest[nameof(PaginateCompositePkTable)];
+            string expected = @"{
+              ""items"": [
+                {
+                  ""id"": 568,
+                  ""content"": ""I loved it""
+                },
+                {
+                  ""id"": 569,
+                  ""content"": ""best book I read in years""
+                }
+              ],
+              ""hasNextPage"": false,
+              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"book_id\":1,\"id\":569}") + @"""
+            }";
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }

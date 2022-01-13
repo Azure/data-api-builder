@@ -422,7 +422,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DatagatewayException.SubStatusCodes.BadRequest}");
         }
-
         #endregion
     }
 }

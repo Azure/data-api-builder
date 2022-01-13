@@ -118,6 +118,55 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// <code>Do: </code>Delete book by id
+        /// <code>Check: </code>if the mutation returned result is as expected and if book by that id has been deleted
+        /// </summary>
+        [TestMethod]
+        public async Task DeleteMutation()
+        {
+            string graphQLMutationName = "deleteBook";
+            string graphQLMutation = @"
+                mutation {
+                    deleteBook(id: 1) {
+                        title
+                        publisher_id
+                    }
+                }
+            ";
+
+            string postgresQueryForResult = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.title AS title,
+                          table0.publisher_id AS publisher_id
+                   FROM books AS table0
+                   WHERE id = 1
+                   ORDER BY id
+                   LIMIT 1) AS subq
+            ";
+
+            // query the table before deletion is performed to see if what the mutation
+            // returns is correct
+            string expected = await GetDatabaseResultAsync(postgresQueryForResult);
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+
+            string postgresQueryToVerifyDeletion = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT COUNT(*) AS COUNT
+                   FROM books AS table0
+                   WHERE id = 1) AS subq
+            ";
+
+            string dbResponse = await GetDatabaseResultAsync(postgresQueryToVerifyDeletion);
+
+            using JsonDocument result = JsonDocument.Parse(dbResponse);
+            Assert.AreEqual(result.RootElement.GetProperty("count").GetInt64(), 0);
+        }
+
+        /// <summary>
         /// <code>Do: </code>run a mutation which mutates a relationship instead of a graphql type
         /// <code>Check: </code>that the insertion of the entry in the appropriate link table was successful
         /// </summary>

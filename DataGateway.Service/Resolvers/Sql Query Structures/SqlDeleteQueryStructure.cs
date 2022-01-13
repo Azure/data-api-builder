@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using Azure.DataGateway.Service.Models;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -43,8 +42,6 @@ namespace Azure.DataGateway.Service.Resolvers
             _queryBuilder = queryBuilder;
 
             List<string> primaryKeys = _tableDefinition.PrimaryKey;
-
-            _ = _tableDefinition.Columns.Keys.ToList();
             foreach (KeyValuePair<string, object> param in mutationParams)
             {
                 if (param.Value == null)

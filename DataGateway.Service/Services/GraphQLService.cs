@@ -14,9 +14,9 @@ namespace Azure.DataGateway.Services
 {
     public class GraphQLService
     {
-        private IQueryEngine _queryEngine;
-        private IMutationEngine _mutationEngine;
-        private IMetadataStoreProvider _metadataStoreProvider;
+        private readonly IQueryEngine _queryEngine;
+        private readonly IMutationEngine _mutationEngine;
+        private readonly IMetadataStoreProvider _metadataStoreProvider;
 
         public GraphQLService(
             IQueryEngine queryEngine,

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using System.Text;
 using Microsoft.Data.SqlClient;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -80,7 +81,9 @@ namespace Azure.DataGateway.Service.Resolvers
         private enum OutputQualifier { Inserted, Deleted };
 
         /// <summary>
-        /// Adds qualifiers (inserted or deleted) to columns in OUTPUT clause and joins them will commas.
+        /// Adds qualifiers (inserted or deleted) to columns in OUTPUT clause and joins them with commas.
+        /// e.g. for columns [C1, C2, C3] and output qualifier Inserted
+        /// return Inserted.C1, Inserted.C2, Inserted.C3
         /// </summary>
         private static string MakeOutputColumns(List<string> columns, OutputQualifier outputQualifier)
         {
@@ -92,18 +95,20 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             if (primaryKey.Count > 1)
             {
-                string result = string.Empty;
+                StringBuilder result = new("(");
                 for (int i = 0; i < primaryKey.Count; i++)
                 {
                     if (i > 0)
                     {
-                        result += " OR ";
+                        result.Append(" OR ");
                     }
 
-                    result += $"({MakePaginationInequality(primaryKey, pkValues, i)})";
+                    result.Append($"({MakePaginationInequality(primaryKey, pkValues, i)})");
                 }
 
-                return "(" + result + ")";
+                result.Append(")");
+
+                return result.ToString();
             }
             else
             {

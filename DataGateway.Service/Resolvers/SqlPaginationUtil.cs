@@ -77,7 +77,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// Wrapper for CreatePaginationConnectionFromJsonElement
-        /// Disposes the JsonDocument passes to it
+        /// Disposes the JsonDocument passed to it
         /// <summary>
         public static JsonDocument CreatePaginationConnectionFromJsonDocument(JsonDocument jsonDocument, PaginationMetadata paginationMetadata)
         {
@@ -110,7 +110,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             foreach (string key in primaryKeys)
             {
-                cursorJson.Add(key, paginationMetadata.Structure.ResolveParamTypeFromField(element.GetProperty(key).ToString(), key));
+                cursorJson.Add(key, ResolveJsonElementToScalarVariable(element.GetProperty(key)));
             }
 
             return Base64Encode(JsonSerializer.Serialize(cursorJson));
@@ -146,7 +146,15 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     foreach (KeyValuePair<string, JsonElement> keyValuePair in afterDeserialized)
                     {
-                        after.Add(keyValuePair.Key, paginationMetadata.Structure.ResolveParamTypeFromField(keyValuePair.Value.ToString(), keyValuePair.Key));
+                        object value = ResolveJsonElementToScalarVariable(keyValuePair.Value);
+
+                        ColumnType columnType = paginationMetadata.Structure.GetColumnType(keyValuePair.Key);
+                        if (value.GetType() != ColumnDefinition.ResolveColumnType(columnType))
+                        {
+                            throw new ArgumentException($"After param has incorrect type {value.GetType()} for primary key column {keyValuePair.Key} with type {columnType}.");
+                        }
+
+                        after.Add(keyValuePair.Key, value);
                     }
                 }
                 catch (Exception e)
@@ -179,6 +187,27 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return after;
+        }
+
+        /// <summary>
+        /// Resolves a JsonElement representing a variable to the appropriate type
+        /// </summary>
+        /// <exception cref="ArgumentException" />
+        private static object ResolveJsonElementToScalarVariable(JsonElement element)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.String:
+                    return element.GetString();
+                case JsonValueKind.Number:
+                    return element.GetInt64();
+                case JsonValueKind.True:
+                    return true;
+                case JsonValueKind.False:
+                    return false;
+                default:
+                    throw new ArgumentException("Unexpected JsonElement value");
+            }
         }
 
         /// <summary>

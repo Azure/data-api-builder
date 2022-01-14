@@ -22,12 +22,12 @@ namespace Azure.DataGateway.Service.Models
         public bool RequestedItems { get; set; } = DEFAULT_PAGINATION_FLAGS_VALUE;
 
         /// <summary>
-        /// Shows if <c>items</c> is requested from the pagination result
+        /// Shows if <c>endCursor</c> is requested from the pagination result
         /// </summary>
         public bool RequestedEndCursor { get; set; } = DEFAULT_PAGINATION_FLAGS_VALUE;
 
         /// <summary>
-        /// Shows if <c>items</c> is requested from the pagination result
+        /// Shows if <c>hasNextPage</c> is requested from the pagination result
         /// </summary>
         public bool RequestedHasNextPage { get; set; } = DEFAULT_PAGINATION_FLAGS_VALUE;
 
@@ -47,9 +47,9 @@ namespace Azure.DataGateway.Service.Models
         }
 
         /// <summary>
-        /// Create e pagination metadata which is not coupled with any SqlQueryStructure
+        /// Create a pagination metadata which is not coupled with any SqlQueryStructure
         /// </summary>
-        public static PaginationMetadata MakeDummyPaginationMetadata()
+        public static PaginationMetadata MakeEmptyPaginationMetadata()
         {
             return new PaginationMetadata(null);
         }

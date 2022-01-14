@@ -196,6 +196,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (fieldName == "items")
                 {
                     itemsField = field;
+                    break;
                 }
             }
 
@@ -224,9 +225,15 @@ namespace Azure.DataGateway.Service.Resolvers
 
             context.Predicates.ForEach(predicate =>
             {
-                string parameterName = $"param{Counter.Next()}";
-                Parameters.Add(parameterName, ResolveParamTypeFromField(predicate.Value, predicate.Field));
-                Predicates.Add($"{QualifiedColumn(predicate.Field)} = @{parameterName}");
+                try
+                {
+                    string parameterName = MakeParamWithValue(ResolveParamTypeFromColumn(predicate.Value, predicate.Field));
+                    Predicates.Add($"{QualifiedColumn(predicate.Field)} = @{parameterName}");
+                }
+                catch (ArgumentException)
+                {
+                    throw new DatagatewayException($"Predicate field \"{predicate.Field}\" has invalid value type.", 400, DatagatewayException.SubStatusCodes.BadRequest);
+                }
             });
         }
 
@@ -265,7 +272,17 @@ namespace Azure.DataGateway.Service.Resolvers
                 _underlyingFieldType = UnderlyingType(outputType);
                 _typeInfo = _metadataStoreProvider.GetGraphqlType(_underlyingFieldType.Name);
 
-                PaginationMetadata.Subqueries.Add("items", PaginationMetadata.MakeDummyPaginationMetadata());
+                // this is required to correctly keep track of which pagination metadata
+                // refers to what section of the json
+                // for a pagiantionless chain:
+                //      getbooks > publisher > books > publisher
+                //      each new entry in the chain corresponds to a subquery so there will be
+                //      a matching pagination metadata object chain
+                // for a chain with pagination:
+                //      books > items > publisher > books > publisher
+                //      items do not have a matching subquery so the line of code below is
+                //      required to build a pagination metadata chain matching the json result
+                PaginationMetadata.Subqueries.Add("items", PaginationMetadata.MakeEmptyPaginationMetadata());
             }
 
             TableName = _typeInfo.Table;
@@ -410,16 +427,9 @@ namespace Azure.DataGateway.Service.Resolvers
         ///</summary>
         void AddPrimaryKeyPredicates(IDictionary<string, object> queryParams)
         {
-            List<string> primaryKey = PrimaryKey();
+            _ = PrimaryKey();
             foreach (KeyValuePair<string, object> parameter in queryParams)
             {
-                // do not handle non primary key query parameters for now
-                if (!primaryKey.Contains(parameter.Key))
-                {
-                    Console.WriteLine($"Skipping {parameter.Key}");
-                    continue;
-                }
-
                 Predicates.Add($"{QualifiedColumn(parameter.Key)} = @{MakeParamWithValue(parameter.Value)}");
             }
         }
@@ -449,7 +459,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        ///  Add parameter to Parameters and return the name associated it with it
+        ///  Add parameter to Parameters and return the name associated with it
         /// </summary>
         private string MakeParamWithValue(object value)
         {
@@ -543,6 +553,8 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     if (PaginationMetadata.IsPaginated)
                     {
+                        // add the subquery metadata as children of items instead of the pagination metadata
+                        // object of this structure which is associated with the pagination query itself
                         PaginationMetadata.Subqueries["items"].Subqueries.Add(fieldName, subquery.PaginationMetadata);
                     }
                     else
@@ -557,11 +569,11 @@ namespace Azure.DataGateway.Service.Resolvers
                         Parameters.Add(parameter.Key, parameter.Value);
                     }
 
-                    // explicitly set to null so it not used later because this value does not reflect the schema of subquery
-                    // if the subquery is paginated since it will be overriden with the schema of *Conntion.items
+                    // explicitly set to null so it is not used later because this value does not reflect the schema of subquery
+                    // if the subquery is paginated since it will be overridden with the schema of *Conntion.items
                     subschemaField = null;
 
-                    // use the _underlyingType from the subquery which will be overriten appropriately if the query is paginated
+                    // use the _underlyingType from the subquery which will be overridden appropriately if the query is paginated
                     ObjectType subunderlyingType = subquery._underlyingFieldType;
 
                     GraphqlType subTypeInfo = _metadataStoreProvider.GetGraphqlType(subunderlyingType.Name);
@@ -629,43 +641,54 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         ///<summary>
-        /// Resolves a string parameter to the correct type, by using the type of the field
+        /// Resolves a string parameter to the correct type, by using the type of the column
         /// it is supposed to be compared with
-        /// Throws exceptions if fieldName is not a valid column for the table or if param cannot be converted to the field type
         ///</summary>
-        /// <exception cref="ArgumentException">fieldName is not a valid column of table or param does not have a valid value type</exception>
-        public object ResolveParamTypeFromField(string param, string fieldName)
+        /// <exception cref="ArgumentException">columnName is not a valid column of table or param does not have a valid value type</exception>
+        private object ResolveParamTypeFromColumn(string param, string columnName)
         {
-            string type;
-            ColumnDefinition column;
-            if (GetTableDefinition().Columns.TryGetValue(fieldName, out column))
-            {
-                type = column.Type;
-            }
-            else
-            {
-                throw new ArgumentException($"{fieldName} is not a valid column of {TableName}");
-            }
+            ColumnType type = GetColumnType(columnName);
+            Type systemType = ColumnDefinition.ResolveColumnType(type);
 
             try
             {
-                switch (type)
+                switch (systemType.Name)
                 {
-                    case "text":
-                    case "varchar":
+                    case "String":
                         return param;
-                    case "bigint":
-                    case "int":
-                    case "smallint":
+                    case "Int64":
                         return Int64.Parse(param);
                     default:
                         // should never happen due to the config being validated for correct types
                         return null;
                 }
             }
-            catch
+            catch (Exception e)
             {
-                throw new ArgumentException($"{param} is not a valid value for property {fieldName}");
+                if (e is FormatException ||
+                    e is ArgumentNullException ||
+                    e is OverflowException)
+                {
+                    throw new ArgumentException($"Parameter \"{param}\" cannot be resolved as column \"{columnName}\" with type \"{type}\".");
+                }
+
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get column type from table underlying the query strucutre
+        /// </summary>
+        public ColumnType GetColumnType(string columnName)
+        {
+            ColumnDefinition column;
+            if (GetTableDefinition().Columns.TryGetValue(columnName, out column))
+            {
+                return column.Type;
+            }
+            else
+            {
+                throw new ArgumentException($"{columnName} is not a valid column of {TableName}");
             }
         }
 

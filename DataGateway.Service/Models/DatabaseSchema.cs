@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Service.Authorization;
 
@@ -27,7 +28,33 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// The database type of this column
         /// </summary>
-        public string Type { get; set; }
+        public ColumnType Type { get; set; }
+
+        /// <summary>
+        /// Resolves the column type to a System.Type
+        /// </summary>
+        /// <exception cref="ArgumentException"/>
+        public static Type ResolveColumnType(ColumnType type)
+        {
+            switch (type)
+            {
+                case ColumnType.Text:
+                case ColumnType.Varchar:
+                    return typeof(String);
+                case ColumnType.Bigint:
+                case ColumnType.Int:
+                case ColumnType.Smallint:
+                    return typeof(Int64);
+                default:
+                    throw new ArgumentException($"No resolver for colum type {type}");
+            }
+        }
+    }
+
+    public enum ColumnType
+    {
+        Text, Varchar,
+        Bigint, Int, Smallint
     }
 
     public class ForeignKeyDefinition

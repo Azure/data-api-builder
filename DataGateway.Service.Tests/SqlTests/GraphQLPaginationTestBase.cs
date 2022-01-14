@@ -152,7 +152,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Request only endCursor from the pagination
         /// </summary>
         /// <remarks>
-        /// This is probably not a common use case, but it necessary to test graphql's capabilites to only
+        /// This is probably not a common use case, but it is necessary to test graphql's capabilites to only
         /// selectively retreive data
         /// </remarks>
         [TestMethod]
@@ -178,7 +178,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Request only hasNextPage from the pagination
         /// </summary>
         /// <remarks>
-        /// This is probably not a common use case, but it necessary to test graphql's capabilites to only
+        /// This is probably not a common use case, but it is necessary to test graphql's capabilites to only
         /// selectively retreive data
         /// </remarks>
         [TestMethod]
@@ -589,7 +589,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task RequestInvalidAfterWithIncorrectType()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode("{ \"id\": \"Great Book\" }");
+            string after = SqlPaginationUtil.Base64Encode("{ \"id\": \"1\" }");
             string graphQLQuery = @"{
                  books(" + $"after: \"{after}\")" + @"{
                     items {

@@ -53,7 +53,6 @@ namespace Azure.DataGateway.Services
             else if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
             {
                 IDictionary<string, object> parameters = GetParametersFromContext(context);
-                bool isPaginatedQuery = _queryEngine.IsPaginatedQuery(context.Selection.Field.Name.Value);
 
                 if (context.Selection.Type.IsListType())
                 {
@@ -63,6 +62,7 @@ namespace Azure.DataGateway.Services
                 }
                 else
                 {
+                    bool isPaginatedQuery = _queryEngine.IsPaginatedQuery(context.Selection.Field.Name.Value);
                     Tuple<JsonDocument, IMetadata> result = await _queryEngine.ExecuteAsync(context, parameters, isPaginatedQuery);
                     context.Result = result.Item1;
                     SetNewMetadata(context, result.Item2);
@@ -137,6 +137,11 @@ namespace Azure.DataGateway.Services
             }
         }
 
+        /// <summary>
+        /// Extract parameters from the schema and the actual instance (query) of the field
+        /// Extracts defualt parameter values from the schema or null if no default
+        /// Overrides default values with actual values of parameters provided
+        /// </summary>
         public static IDictionary<string, object> GetParametersFromSchemaAndQueryFields(IObjectField schema, FieldNode query)
         {
             IDictionary<string, object> parameters = new Dictionary<string, object>();

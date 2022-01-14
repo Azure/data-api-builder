@@ -75,6 +75,12 @@ namespace Azure.DataGateway.Service.Resolvers
                     $"WHERE {structure.PredicatesSql()};";
         }
 
+        public string Build(SqlDeleteStructure structure)
+        {
+            return $"DELETE FROM {QuoteIdentifier(structure.TableName)} " +
+                    $"WHERE {structure.PredicatesSql()} ";
+        }
+
         /// <summary>
         /// Labels with which columns can be marked in the OUTPUT clause
         /// </summary>

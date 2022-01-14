@@ -49,6 +49,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// query.
         /// </summary>
         public string Build(SqlUpdateStructure structure);
+        /// Builds the query specific to the target database for the given
+        /// SqlDeleteStructure object which holds the major components of the
+        /// query.
+        /// </summary>
+        public string Build(SqlDeleteStructure structure);
         /// <summary>
         /// Simply a quoted version of the identifier "data". This identifier
         /// is commonly used throughout the query.

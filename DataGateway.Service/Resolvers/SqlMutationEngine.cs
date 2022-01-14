@@ -56,6 +56,8 @@ namespace Azure.DataGateway.Service.Resolvers
             string queryString;
             Dictionary<string, object> queryParameters;
 
+            Tuple<JsonDocument, IMetadata> result = new(null, null);
+
             switch (mutationResolver.OperationType)
             {
                 case "INSERT":
@@ -68,6 +70,13 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryString = updateQueryStruct.ToString();
                     queryParameters = updateQueryStruct.Parameters;
                     break;
+                case "DELETE":
+                    // compute the mutation result before removing the element
+                    result = await _queryEngine.ExecuteAsync(context, parameters, false);
+                    SqlDeleteStructure deleteStructure = new(tableName, tableDefinition, parameters, _queryBuilder);
+                    queryString = deleteStructure.ToString();
+                    queryParameters = deleteStructure.Parameters;
+                    break;
                 default:
                     throw new NotSupportedException($"Unexpected value for MutationResolver.OperationType \"{mutationResolver.OperationType}\" found.");
             }
@@ -76,25 +85,20 @@ namespace Azure.DataGateway.Service.Resolvers
 
             using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, queryParameters);
 
-            // scalar type return for mutation not supported / not useful
-            // nothing to query
-            if (context.Selection.Type.IsScalarType())
+            if (!context.Selection.Type.IsScalarType() && mutationResolver.OperationType != "DELETE")
             {
-                return null;
+                Dictionary<string, object> searchParams = await ExtractRowFromDbDataReader(dbDataReader);
+
+                if (searchParams == null)
+                {
+                    string searchedPK = '<' + string.Join(", ", tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
+                    throw new DatagatewayException($"Could not find entity with {searchedPK}", 404, DatagatewayException.SubStatusCodes.EntityNotFound);
+                }
+
+                result = await _queryEngine.ExecuteAsync(context, searchParams, false);
             }
 
-            Dictionary<string, object> searchParams = await ExtractRowFromDbDataReader(dbDataReader);
-
-            if (searchParams == null)
-            {
-                string searchedPK = '<' + string.Join(", ", tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
-                throw new DatagatewayException($"Could not find entity with {searchedPK}", 404, DatagatewayException.SubStatusCodes.EntityNotFound);
-            }
-
-            // delegates the querying part of the mutation to the QueryEngine
-            // this allows for nested queries in muatations
-            // the searchParams are used to indetify the mutated record so it can then be further queried on
-            return await _queryEngine.ExecuteAsync(context, searchParams, false);
+            return result;
         }
 
         ///<summary>

@@ -10,6 +10,7 @@ type Mutation {
     editBook(id: Int!, title: String, publisher_id: Int): Book
     insertBook(title: String!, publisher_id: Int!): Book
     addAuthorToBook(author_id: Int!, book_id: Int!): Boolean
+    deleteBook(id: Int!): Book
 }
 
 type Publisher {

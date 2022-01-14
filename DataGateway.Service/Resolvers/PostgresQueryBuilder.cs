@@ -81,5 +81,11 @@ namespace Azure.DataGateway.Service.Resolvers
                 return $"{left} > {right}";
             }
         }
+
+        public string Build(SqlDeleteStructure structure)
+        {
+            return $"DELETE FROM {QuoteIdentifier(structure.TableName)} " +
+                    $"WHERE {structure.PredicatesSql()} ";
+        }
     }
 }

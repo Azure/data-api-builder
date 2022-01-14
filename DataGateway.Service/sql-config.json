@@ -16,6 +16,11 @@
       "Id": "addAuthorToBook",
       "Table": "book_author_link",
       "OperationType": "INSERT"
+    },
+    {
+      "Id": "deleteBook",
+      "Table": "books",
+      "OperationType": "DELETE"
     }
   ],
   "GraphqlTypes": {

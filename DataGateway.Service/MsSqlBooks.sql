@@ -41,22 +41,26 @@ CREATE TABLE book_author_link(
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
-REFERENCES publishers (id);
+REFERENCES publishers (id)
+ON DELETE CASCADE;
 
 ALTER TABLE reviews
 ADD CONSTRAINT review_book_fk
 FOREIGN KEY (book_id)
-REFERENCES books (id);
+REFERENCES books (id)
+ON DELETE CASCADE;
 
 ALTER TABLE book_author_link
 ADD CONSTRAINT book_author_link_book_fk
 FOREIGN KEY (book_id)
-REFERENCES books (id);
+REFERENCES books (id)
+ON DELETE CASCADE;
 
 ALTER TABLE book_author_link
 ADD CONSTRAINT book_author_link_author_fk
 FOREIGN KEY (author_id)
-REFERENCES authors (id);
+REFERENCES authors (id)
+ON DELETE CASCADE;
 
 SET IDENTITY_INSERT publishers ON
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher');

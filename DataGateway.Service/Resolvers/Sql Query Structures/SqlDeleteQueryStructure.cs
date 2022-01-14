@@ -79,7 +79,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Create the SQL code which will indetify which rows will be deletedd
+        /// Create the SQL code which will identify which rows will be deleted
         /// DELETE FROM ... WHERE {PredicatesSql}
         /// </summary>
         public string PredicatesSql()

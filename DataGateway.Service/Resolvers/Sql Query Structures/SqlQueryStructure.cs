@@ -427,7 +427,6 @@ namespace Azure.DataGateway.Service.Resolvers
         ///</summary>
         void AddPrimaryKeyPredicates(IDictionary<string, object> queryParams)
         {
-            _ = PrimaryKey();
             foreach (KeyValuePair<string, object> parameter in queryParams)
             {
                 Predicates.Add($"{QualifiedColumn(parameter.Key)} = @{MakeParamWithValue(parameter.Value)}");

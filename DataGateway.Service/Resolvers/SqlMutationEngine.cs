@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
+using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
@@ -93,12 +94,61 @@ namespace Azure.DataGateway.Service.Resolvers
 
             // delegates the querying part of the mutation to the QueryEngine
             // this allows for nested queries in muatations
-            // the searchParams are used to indetify the mutated record so it can then be further queried on
+            // the searchParams are used to identify the mutated record so it can then be further queried on
             return await _queryEngine.ExecuteAsync(context, searchParams, false);
         }
 
+        /// <summary>
+        /// Executes the mutation query and returns result as JSON object asynchronously.
+        /// </summary>
+        /// <param name="context">context of graphql mutation</param>
+        /// <param name="parameters">parameters in the mutation query.</param>
+        /// <returns>JSON object result</returns>
+        public async Task<JsonDocument> ExecuteAsync(RequestContext context)
+        {
+            TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(context.EntityName);
+
+            string queryString;
+            Dictionary<string, object> queryParameters;
+
+            switch (context.OperationType)
+            {
+                case Operation.Create:
+                    SqlInsertStructure insertQueryStruct =
+                        new(context.EntityName, tableDefinition, context.FieldValuePairs, _queryBuilder);
+                    queryString = insertQueryStruct.ToString();
+                    queryParameters = insertQueryStruct.Parameters;
+                    break;
+                default:
+                    throw new DatagatewayException(
+                        message: $"Unexpected DML operation \" {context.OperationType}\" requested.",
+                        statusCode: (int)HttpStatusCode.BadRequest,
+                        subStatusCode: DatagatewayException.SubStatusCodes.BadRequest)
+                    ;
+            }
+
+            Console.WriteLine(queryString);
+
+            using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, queryParameters);
+
+            context.FieldValuePairs = await ExtractRowFromDbDataReader(dbDataReader);
+
+            if (context.FieldValuePairs == null)
+            {
+                throw new DatagatewayException(
+                    message: $"Could not perform the given request on entity {context.EntityName}",
+                    statusCode: (int)HttpStatusCode.InternalServerError,
+                    subStatusCode: DatagatewayException.SubStatusCodes.DatabaseOperationFailed);
+            }
+
+            // delegates the querying part of the mutation to the QueryEngine
+            // this allows for nested queries in muatations
+            // the searchParams are used to identify the mutated record so it can then be further queried on
+            return await _queryEngine.ExecuteAsync(context);
+        }
+
         ///<summary>
-        /// Extracts a single row from DbDataReader and format it so it can be used as a paramter to a query execution
+        /// Extracts a single row from DbDataReader and format it so it can be used as a parameter to a query execution
         ///</summary>
         ///<returns>A dictionary representating the row in <c>ColumnName: Value</c> format, null if no row was found</returns>
         private static async Task<Dictionary<string, object>> ExtractRowFromDbDataReader(DbDataReader dbDataReader)

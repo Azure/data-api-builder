@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Text.Json;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
@@ -32,7 +34,7 @@ namespace Azure.DataGateway.Service.Services
             }
 
             int primaryKeysInSchema = tableDefinition.PrimaryKey.Count;
-            int primaryKeysInRequest = context.Predicates.Count;
+            int primaryKeysInRequest = context.FieldValuePairs.Count;
 
             if (primaryKeysInRequest == 0)
             {
@@ -49,21 +51,21 @@ namespace Azure.DataGateway.Service.Services
             //is added to a list of validated columns. If a column has already
             //been checked and comes up again, the request contains duplicates.
             HashSet<string> validatedColumns = new();
-            foreach (RestPredicate predicate in context.Predicates)
+            foreach (string primaryKey in context.FieldValuePairs.Keys)
             {
-                if (validatedColumns.Contains(predicate.Field))
+                if (validatedColumns.Contains(primaryKey))
                 {
                     throw new DatagatewayException(message: "The request is invalid.", statusCode: 400, DatagatewayException.SubStatusCodes.BadRequest);
 
                 }
 
-                if (!tableDefinition.PrimaryKey.Contains(predicate.Field))
+                if (!tableDefinition.PrimaryKey.Contains(primaryKey))
                 {
                     throw new DatagatewayException(message: "The request is invalid.", statusCode: 400, DatagatewayException.SubStatusCodes.BadRequest);
                 }
                 else
                 {
-                    validatedColumns.Add(predicate.Field);
+                    validatedColumns.Add(primaryKey);
                 }
             }
         }
@@ -74,24 +76,64 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="context">Request context containing the insert operation fields and their values.</param>
         /// <param name="configurationProvider">Configuration provider that enables referencing DB schema in config.</param>
         /// <exception cref="DatagatewayException"></exception>
-        public static void ValidateInsertRequest(InsertRequestContext context, IMetadataStoreProvider configurationProvider)
+        public static JsonElement ValidatePostRequest(string queryString, string requestBody)
+        {
+            if (!string.IsNullOrEmpty(queryString))
+            {
+                throw new DatagatewayException(
+                    message: "Query string for POST requests is an invalid url.",
+                    statusCode: (int)HttpStatusCode.BadRequest,
+                    subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+            }
+
+            JsonElement insertPayloadRoot = new();
+
+            if (!string.IsNullOrEmpty(requestBody))
+            {
+                using JsonDocument insertPayload = JsonDocument.Parse(requestBody);
+
+                if (insertPayload.RootElement.ValueKind == JsonValueKind.Array)
+                {
+                    throw new NotSupportedException("InsertMany operations are not yet supported.");
+                }
+                else
+                {
+                    insertPayloadRoot = insertPayload.RootElement.Clone();
+                }
+            }
+
+            return insertPayloadRoot;
+        }
+
+        /// <summary>
+        /// Validates an InsertOne request by ensuring each field is one of the columns in the table.
+        /// </summary>
+        /// <param name="context">Request context containing the insert operation fields and their values.</param>
+        /// <param name="configurationProvider">Configuration provider that enables referencing DB schema in config.</param>
+        /// <exception cref="DatagatewayException"></exception>
+        public static void ValidateRequestContext(InsertRequestContext context, IMetadataStoreProvider configurationProvider)
         {
             TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, configurationProvider);
 
-            List<string> fieldsInRequest = new((List<string>)context.FieldValuePairs.Keys);
+            List<string> fieldsInRequest = new(context.FieldValuePairs.Keys);
             foreach (string field in fieldsInRequest)
             {
                 if (!tableDefinition.Columns.ContainsKey(field))
                 {
-                    // TO DO : If the request header contains x-ms-must-match custom header,
+                    // TO DO: If the request header contains x-ms-must-match custom header,
                     // this should throw an error instead.
                     context.FieldValuePairs.Remove(field);
                 }
             }
+
+            // Note: if the field value pairs do not contain values for all the primary keys,
+            // either they need to be auto-generated or the database would throw error.
+            // It is possible to throw exception here before going to the database,
+            // if we know the unspecified primary keys cannot be autogenerated.
         }
 
         /// <summary>
-        /// Tries to get the t request by ensuring each field is one of the columns in the table.
+        /// Tries to get the request by ensuring each field is one of the columns in the table.
         /// </summary>
         /// <param name="entityName">Request context containing the insert operation fields and their values.</param>
         /// <param name="configurationProvider">Configuration provider that enables referencing DB schema in config.</param>

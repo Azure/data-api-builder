@@ -37,11 +37,8 @@ namespace Azure.DataGateway.Services
 
                 for (int primaryKeyIndex = 0; primaryKeyIndex < primaryKeyValues.Length; primaryKeyIndex += 2)
                 {
-                    RestPredicate predicate = new(
-                            primaryKeyValues[primaryKeyIndex],
-                            primaryKeyValues[primaryKeyIndex + 1]
-                            );
-                    context.Predicates.Add(predicate);
+                    context.FieldValuePairs.Add(primaryKeyValues[primaryKeyIndex],
+                        primaryKeyValues[primaryKeyIndex + 1]);
                 }
             }
         }

@@ -156,11 +156,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Generate the structure for a SQL query based on FindRequestContext,
         /// which is created by a FindById or FindMany REST request.
         /// </summary>
-        public SqlQueryStructure(FindRequestContext context, IMetadataStoreProvider metadataStoreProvider, IQueryBuilder queryBuilder) : this(metadataStoreProvider, queryBuilder, new IncrementingInteger())
+        public SqlQueryStructure(RequestContext context, IMetadataStoreProvider metadataStoreProvider, IQueryBuilder queryBuilder) : this(metadataStoreProvider, queryBuilder, new IncrementingInteger())
         {
             TableName = context.EntityName;
             TableAlias = TableName;
-            IsListQuery = context.IsListQuery;
+            IsListQuery = context.IsMany;
 
             context.Fields.ForEach(fieldName => AddColumn(fieldName));
             if (Columns.Count == 0)
@@ -172,12 +172,12 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            context.Predicates.ForEach(predicate =>
+            foreach(KeyValuePair<string, object> predicate in context.FieldValuePairs)
             {
                 string parameterName = $"param{Counter.Next()}";
-                Parameters.Add(parameterName, ResolveParamTypeFromField(predicate.Value, predicate.Field));
-                Predicates.Add($"{QualifiedColumn(predicate.Field)} = @{parameterName}");
-            });
+                Parameters.Add(parameterName, ResolveParamTypeFromField(predicate.Value.ToString(), predicate.Key));
+                Predicates.Add($"{QualifiedColumn(predicate.Key)} = @{parameterName}");
+            }
         }
 
         /// <summary>

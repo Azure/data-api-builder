@@ -1,17 +1,19 @@
 using System;
+using System.IO;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataGateway.Service.Controllers
 {
     /// <summary>
     /// Controller to serve REST Api requests for the route /entityName.
+    /// This controller should adhere to the
+    /// <see href="https://github.com/Microsoft/api-guidelines/blob/vNext/Guidelines.md">Microsoft REST API Guidelines</see>.
     /// </summary>
     [ApiController]
     [Route("{entityName}")]
@@ -78,8 +80,6 @@ namespace Azure.DataGateway.Service.Controllers
         {
             try
             {
-                string queryString = HttpContext.Request.QueryString.ToString();
-
                 // Parse App Service's EasyAuth injected headers into MiddleWare usable Security Principal
                 ClaimsIdentity identity = AppServiceAuthentication.Parse(this.HttpContext);
                 if (identity != null)
@@ -88,12 +88,71 @@ namespace Azure.DataGateway.Service.Controllers
                 }
 
                 //Utilizes C#8 using syntax which does not require brackets.
-                using JsonDocument result = await _restService.ExecuteFindAsync(entityName, primaryKeyRoute, queryString);
+                using JsonDocument result = await _restService.ExecuteFindAsync(entityName, primaryKeyRoute);
 
                 if (result != null)
                 {
                     //Clones the root element to a new JsonElement that can be
                     //safely stored beyond the lifetime of the original JsonDocument.
+                    JsonElement resultElement = result.RootElement.Clone();
+                    return Ok(resultElement);
+                }
+                else
+                {
+                    return NotFound();
+                }
+
+            }
+            catch (DatagatewayException ex)
+            {
+                Response.StatusCode = ex.StatusCode;
+                return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine(ex.StackTrace);
+                Response.StatusCode = (int)System.Net.HttpStatusCode.InternalServerError;
+                return ErrorResponse(SERVER_ERROR, ex.Message, (int)System.Net.HttpStatusCode.InternalServerError);
+            }
+        }
+
+        /// <summary>
+        /// Insert action serving the HttpPost verb.
+        /// </summary>
+        /// <param name="entityName">The name of the entity.</param>
+        /// Expected URL template is of the following form:
+        /// CosmosDb: URL template: /<entityName>
+        /// MsSql/PgSql: URL template: /<entityName>
+        /// URL MUST NOT contain a queryString
+        /// URL example: /SalesOrders/ </param>
+        [HttpPost]
+        [Produces("application/json")]
+        public async Task<IActionResult> Insert(
+            string entityName)
+        {
+            try
+            {
+                // Parse App Service's EasyAuth injected headers into MiddleWare usable Security Principal
+                ClaimsIdentity identity = AppServiceAuthentication.Parse(this.HttpContext);
+                if (identity != null)
+                {
+                    this.HttpContext.User = new ClaimsPrincipal(identity);
+                }
+
+                string requestBody;
+                using (StreamReader reader = new(this.HttpContext.Request.Body))
+                {
+                    requestBody = await reader.ReadToEndAsync();
+                }
+
+                // Utilizes C#8 using syntax which does not require brackets.
+                using JsonDocument result = await _restService.ExecuteInsertAsync(entityName, requestBody);
+
+                if (result != null)
+                {
+                    // Clones the root element to a new JsonElement that can be
+                    // safely stored beyond the lifetime of the original JsonDocument.
                     JsonElement resultElement = result.RootElement.Clone();
                     return Ok(resultElement);
                 }

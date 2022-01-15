@@ -25,6 +25,6 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Given the FindQueryContext structure, obtains the query text and executes it against the backend.
         /// </summary>
-        public Task<JsonDocument> ExecuteAsync(FindRequestContext queryStructure);
+        public Task<JsonDocument> ExecuteAsync(RequestContext queryStructure);
     }
 }

@@ -120,6 +120,56 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// <code>Do: </code>Delete book by id
+        /// <code>Check: </code>if the mutation returned result is as expected and if book by that id has been deleted
+        /// </summary>
+        [TestMethod]
+        public async Task DeleteMutation()
+        {
+            string graphQLMutationName = "deleteBook";
+            string graphQLMutation = @"
+                mutation {
+                    deleteBook(id: 1) {
+                        title
+                        publisher_id
+                    }
+                }
+            ";
+
+            string msSqlQueryForResult = @"
+                SELECT TOP 1 [title],
+                    [publisher_id]
+                FROM [books]
+                WHERE [books].[id] = 1
+                ORDER BY [books].[id]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            // query the table before deletion is performed to see if what the mutation
+            // returns is correct
+            string expected = await GetDatabaseResultAsync(msSqlQueryForResult);
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+
+            string msSqlQueryToVerifyDeletion = @"
+                SELECT COUNT(*) AS count
+                FROM [books]
+                WHERE [id] = 1
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            string dbResponse = await GetDatabaseResultAsync(msSqlQueryToVerifyDeletion);
+
+            using JsonDocument result = JsonDocument.Parse(dbResponse);
+            Assert.AreEqual(result.RootElement.GetProperty("count").GetInt64(), 0);
+        }
+
+        /// <summary>
         /// <code>Do: </code>run a mutation which mutates a relationship instead of a graphql type
         /// <code>Check: </code>that the insertion of the entry in the appropriate link table was successful
         /// </summary>

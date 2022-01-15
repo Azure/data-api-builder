@@ -68,5 +68,16 @@ namespace Azure.DataGateway.Service.Resolvers
             JObject jObject = await ExecuteAsync(parameters, resolver);
             return JsonDocument.Parse(jObject.ToString());
         }
+
+        /// <summary>
+        /// Executes the mutation query and returns result as JSON object asynchronously.
+        /// </summary>
+        /// <param name="context">Middleware context of the mutation</param>
+        /// <param name="parameters">parameters in the mutation query.</param>
+        /// <returns>JSON object result</returns>
+        public Task<JsonDocument> ExecuteAsync(RequestContext context)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

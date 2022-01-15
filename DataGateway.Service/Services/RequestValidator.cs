@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Net;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
@@ -20,11 +21,7 @@ namespace Azure.DataGateway.Service.Services
         /// <exception cref="DatagatewayException"></exception>
         public static void ValidateFindRequest(FindRequestContext context, IMetadataStoreProvider configurationProvider)
         {
-            TableDefinition tableDefinition = configurationProvider.GetTableDefinition(context.EntityName);
-            if (tableDefinition == null)
-            {
-                throw new DatagatewayException(message: "TableDefinition for Entity:" + context.EntityName + " does not exist.", statusCode: 400, DatagatewayException.SubStatusCodes.BadRequest);
-            }
+            TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, configurationProvider);
 
             foreach (string field in context.Fields)
             {
@@ -70,5 +67,49 @@ namespace Azure.DataGateway.Service.Services
                 }
             }
         }
+
+        /// <summary>
+        /// Validates an InsertOne request by ensuring each field is one of the columns in the table.
+        /// </summary>
+        /// <param name="context">Request context containing the insert operation fields and their values.</param>
+        /// <param name="configurationProvider">Configuration provider that enables referencing DB schema in config.</param>
+        /// <exception cref="DatagatewayException"></exception>
+        public static void ValidateInsertRequest(InsertRequestContext context, IMetadataStoreProvider configurationProvider)
+        {
+            TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, configurationProvider);
+
+            List<string> fieldsInRequest = new((List<string>)context.FieldValuePairs.Keys);
+            foreach (string field in fieldsInRequest)
+            {
+                if (!tableDefinition.Columns.ContainsKey(field))
+                {
+                    // TO DO : If the request header contains x-ms-must-match custom header,
+                    // this should throw an error instead.
+                    context.FieldValuePairs.Remove(field);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Tries to get the t request by ensuring each field is one of the columns in the table.
+        /// </summary>
+        /// <param name="entityName">Request context containing the insert operation fields and their values.</param>
+        /// <param name="configurationProvider">Configuration provider that enables referencing DB schema in config.</param>
+        /// <exception cref="DatagatewayException"></exception>
+
+        private static TableDefinition TryGetTableDefinition(string entityName, IMetadataStoreProvider configurationProvider)
+        {
+            TableDefinition tableDefinition = configurationProvider.GetTableDefinition(entityName);
+            if (tableDefinition == null)
+            {
+                throw new DatagatewayException(
+                    message: $"TableDefinition for Entity: {entityName} does not exist.",
+                    statusCode: (int)HttpStatusCode.BadRequest,
+                    subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+            }
+
+            return tableDefinition;
+        }
+
     }
 }

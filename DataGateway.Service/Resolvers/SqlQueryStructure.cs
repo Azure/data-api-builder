@@ -133,7 +133,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Generate the structure for a SQL query based on GraphQL query
         /// information.
         /// </summary>
-        public SqlQueryStructure(IResolverContext ctx, IDictionary<String, object> queryParams, IMetadataStoreProvider metadataStoreProvider, IQueryBuilder queryBuilder)
+        public SqlQueryStructure(IResolverContext ctx, IDictionary<string, object> queryParams, IMetadataStoreProvider metadataStoreProvider, IQueryBuilder queryBuilder)
             // This constructor simply forwards to the more general constructor
             // that is used to create GraphQL queries. We give it some values
             // that make sense for the outermost query.

@@ -87,7 +87,7 @@ namespace Azure.DataGateway.Services
         /// <param name="requestBody">GraphQL request body</param>
         /// <param name="requestProperties">key/value pairs of properties to be used in GraphQL library pipeline</param>
         /// <returns></returns>
-        public async Task<string> ExecuteAsync(String requestBody, Dictionary<string, object> requestProperties)
+        public async Task<string> ExecuteAsync(string requestBody, Dictionary<string, object> requestProperties)
         {
             if (Executor == null)
             {

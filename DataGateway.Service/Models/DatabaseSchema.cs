@@ -19,7 +19,7 @@ namespace Azure.DataGateway.Service.Models
         public List<string> PrimaryKey { get; set; } = new();
         public Dictionary<string, ColumnDefinition> Columns { get; set; } = new();
         public Dictionary<string, ForeignKeyDefinition> ForeignKeys { get; set; } = new();
-        public Dictionary<string, AuthorizationRule> Operations { get; set; } = new();
+        public Dictionary<string, AuthorizationRule> HttpVerbs { get; set; } = new();
     }
 
     public class ColumnDefinition

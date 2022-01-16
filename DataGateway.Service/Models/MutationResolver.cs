@@ -11,9 +11,4 @@ namespace Azure.DataGateway.Service.Models
         public string Fields { get; set; }
         public string Table { get; set; }
     }
-
-    public enum Operation
-    {
-        Upsert, Delete, Create
-    }
 }

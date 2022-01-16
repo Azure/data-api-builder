@@ -1,7 +1,5 @@
-using System.Net.Http;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
@@ -20,28 +18,30 @@ namespace Azure.DataGateway.Service.Authorization
     }
 
     /// <summary>
-    /// Checks the provided AuthorizationContext and FindRequestContext to ensure user is allowed to
+    /// Checks the provided AuthorizationContext and the RequestContext to ensure user is allowed to
     /// operate (GET, POST, etc.) on the entity (table).
     /// </summary>
-    public class FindRequestAuthorizationHandler : AuthorizationHandler<OperationAuthorizationRequirement, FindRequestContext>
+    public class RequestAuthorizationHandler : AuthorizationHandler<OperationAuthorizationRequirement, RequestContext>
     {
         private readonly IMetadataStoreProvider _configurationProvider;
 
-        public FindRequestAuthorizationHandler(IMetadataStoreProvider metadataStoreProvider)
+        public RequestAuthorizationHandler(IMetadataStoreProvider metadataStoreProvider)
         {
             _configurationProvider = metadataStoreProvider;
         }
         protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,
                                                   OperationAuthorizationRequirement requirement,
-                                                  FindRequestContext resource)
+                                                  RequestContext resource)
         {
             //Request is validated before Authorization, so table will exist.
             TableDefinition tableDefinition = _configurationProvider.GetTableDefinition(resource.EntityName);
 
+            string requestedOperation = resource.HttpVerb.Name;
+
             //Check current operation against tableDefinition supported operations.
-            if (tableDefinition.Operations.ContainsKey(HttpMethod.Get.ToString()))
+            if (tableDefinition.HttpVerbs.ContainsKey(requestedOperation))
             {
-                switch (tableDefinition.Operations[HttpMethod.Get.ToString()].AuthorizationType)
+                switch (tableDefinition.HttpVerbs[requestedOperation].AuthorizationType)
                 {
                     case AuthorizationType.Anonymous:
                         context.Succeed(requirement);

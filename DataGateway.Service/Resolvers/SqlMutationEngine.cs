@@ -117,7 +117,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             switch (context.OperationType)
             {
-                case Operation.Create:
+                case Operation.Insert:
                     SqlInsertStructure insertQueryStruct =
                         new(context.EntityName, tableDefinition, context.FieldValuePairs, _queryBuilder);
                     queryString = insertQueryStruct.ToString();

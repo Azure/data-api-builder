@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using HotChocolate.Resolvers;
+using Azure.DataGateway.Service.Models;
 
 namespace Azure.DataGateway.Service.Resolvers
 {

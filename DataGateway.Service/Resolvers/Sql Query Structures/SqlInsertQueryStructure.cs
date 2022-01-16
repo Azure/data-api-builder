@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Azure.DataGateway.Service.Models;
@@ -60,6 +61,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     continue;
                 }
 
+                Columns.Add(QuoteIdentifier(param.Key));
+
                 PopulateColumnsAndParams(param.Key, param.Value);
             }
 
@@ -76,8 +79,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 IEnumerable<string> columnsToBeAdded = allColumns.Except(tableDefinition.PrimaryKey);
                 foreach (string column in columnsToBeAdded)
                 {
-                    // Using empty string as the default value.
-                    PopulateColumnsAndParams(column, string.Empty);
+                    // Using null as the default value.
+                    PopulateColumnsAndParams(column, value: null);
                 }
             }
 
@@ -85,13 +88,24 @@ namespace Azure.DataGateway.Service.Resolvers
             ReturnColumns = _tableDefinition.PrimaryKey.Select(primaryKey => QuoteIdentifier(primaryKey)).ToList();
         }
 
+        /// <summary>
+        /// Populate the column names in the Columns, create parameter and add its value
+        /// into the Parameters dictionary.
+        /// </summary>
         private void PopulateColumnsAndParams(string columnName, object value)
         {
             Columns.Add(QuoteIdentifier(columnName));
 
             string paramName = $"param{Counter.Next()}";
             Values.Add($"@{paramName}");
-            Parameters.Add(paramName, value);
+            if (value != null)
+            {
+                Parameters.Add(paramName, GetParamValueBasedOnColumnType(columnName, value.ToString()));
+            }
+            else
+            {
+                Parameters.Add(paramName, value: null);
+            }
         }
 
         /// <summary>
@@ -139,6 +153,27 @@ namespace Azure.DataGateway.Service.Resolvers
         public override string ToString()
         {
             return _queryBuilder.Build(this);
+        }
+
+        ///<summary>
+        /// Resolves a string parameter to the correct type, by using the type of the field
+        /// it is supposed to be compared with
+        ///</summary>
+        object GetParamValueBasedOnColumnType(string columnName, string param)
+        {
+            string type = _tableDefinition.Columns.GetValueOrDefault(columnName).Type;
+            switch (type)
+            {
+                case "text":
+                case "varchar":
+                    return param;
+                case "bigint":
+                case "int":
+                case "smallint":
+                    return long.Parse(param);
+                default:
+                    throw new Exception($"Type of field \"{type}\" could not be determined");
+            }
         }
     }
 }

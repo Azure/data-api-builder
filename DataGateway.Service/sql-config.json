@@ -113,7 +113,7 @@
           },
           "title": {
             "Type": "text"
-            },
+          },
           "publisher_id": {
             "Type": "bigint"
           }
@@ -124,9 +124,12 @@
             "Columns": [ "publisher_id" ]
           }
         },
-        "Operations": {
+        "HttpVerbs": {
           "GET": {
             "AuthorizationType": "Authenticated"
+          },
+          "POST": {
+            "AuthorizationType": "Anonymous"
           }
         }
       },
@@ -143,7 +146,7 @@
             "Type": "text"
           }
         },
-        "Operations": {
+        "HttpVerbs": {
           "GET": {
             "AuthorizationType": "Anonymous"
           }
@@ -168,7 +171,7 @@
             "Columns": [ "book_id" ]
           }
         },
-        "Operations": {
+        "HttpVerbs": {
           "GET": {
             "AuthorizationType": "Anonymous"
           }

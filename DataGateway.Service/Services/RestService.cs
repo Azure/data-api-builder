@@ -23,12 +23,14 @@ namespace Azure.DataGateway.Services
 
         public RestService(
             IQueryEngine queryEngine,
+            IMutationEngine mutationEngine,
             IMetadataStoreProvider metadataStoreProvider,
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationService authorizationService
             )
         {
             _queryEngine = queryEngine;
+            _mutationEngine = mutationEngine;
             _metadataStoreProvider = metadataStoreProvider;
             _httpContextAccessor = httpContextAccessor;
             _authorizationService = authorizationService;
@@ -61,7 +63,7 @@ namespace Azure.DataGateway.Services
             AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
                 user: _httpContextAccessor.HttpContext.User,
                 resource: context,
-                requirements: new[] { Operations.GET });
+                requirements: new[] { HttpRestVerbs.GET });
 
             if (authorizationResult.Succeeded)
             {
@@ -88,7 +90,11 @@ namespace Azure.DataGateway.Services
 
             JsonElement insertPayloadRoot = RequestValidator.ValidatePostRequest(queryString, requestBody);
 
-            InsertRequestContext context = new(entityName, insertPayloadRoot, Operation.Create);
+            InsertRequestContext context = new(entityName,
+                insertPayloadRoot,
+                HttpRestVerbs.POST,
+                Operation.Insert);
+
             RequestValidator.ValidateRequestContext(context, _metadataStoreProvider);
 
             // RequestContext is finalized for QueryBuilding and QueryExecution.
@@ -97,7 +103,7 @@ namespace Azure.DataGateway.Services
             AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
                 user: _httpContextAccessor.HttpContext.User,
                 resource: context,
-                requirements: new[] { Operations.POST });
+                requirements: new[] { HttpRestVerbs.POST });
 
             if (authorizationResult.Succeeded)
             {

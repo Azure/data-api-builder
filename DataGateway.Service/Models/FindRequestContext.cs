@@ -1,4 +1,4 @@
-namespace Azure.DataGateway.Service.Resolvers
+namespace Azure.DataGateway.Service.Models
 {
     /// <summary>
     /// FindRequestContext provides the major components of a REST query
@@ -14,9 +14,9 @@ namespace Azure.DataGateway.Service.Resolvers
             EntityName = entityName;
             Fields = new();
             FieldValuePairs = new();
-
             IsMany = isList;
-            // OperationType = 
+            HttpVerb = HttpRestVerbs.GET;
+            OperationType = Operation.Find;
         }
     }
 }

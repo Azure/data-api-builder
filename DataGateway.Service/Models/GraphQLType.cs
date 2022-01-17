@@ -15,6 +15,11 @@ namespace Azure.DataGateway.Service.Models
         /// Metadata required to resolve specific fields of the GraphQL type.
         /// </summary>
         public Dictionary<string, GraphqlField> Fields { get; set; } = new();
+
+        /// <summary>
+        /// Shows if the type is a *Connection pagination result type
+        /// </summary>
+        public bool IsPaginationType { get; set; }
     }
 
     public enum GraphqlRelationshipType

@@ -39,8 +39,8 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         /// <param name="context">context of graphql mutation</param>
         /// <param name="parameters">parameters in the mutation query.</param>
-        /// <returns>JSON object result</returns>
-        public async Task<JsonDocument> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
+        /// <returns>JSON object result and its related pagination metadata</returns>
+        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             if (context.Selection.Type.IsListType())
             {
@@ -56,7 +56,7 @@ namespace Azure.DataGateway.Service.Resolvers
             string queryString;
             Dictionary<string, object> queryParameters;
 
-            JsonDocument result = null;
+            Tuple<JsonDocument, IMetadata> result = new(null, null);
 
             switch (mutationResolver.OperationType)
             {
@@ -78,7 +78,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryParameters = deleteStructure.Parameters;
                     break;
                 default:
-                    throw new Exception($"Unexpected value for MutationResolver.OperationType \"{mutationResolver.OperationType}\" found.");
+                    throw new NotSupportedException($"Unexpected value for MutationResolver.OperationType \"{mutationResolver.OperationType}\" found.");
             }
 
             Console.WriteLine(queryString);

@@ -1,5 +1,7 @@
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -44,7 +46,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string graphQLQueryName = "getBooks";
             string graphQLQuery = @"{
-                getBooks(first: 123) {
+                getBooks(first: 100) {
                     id
                     title
                 }
@@ -349,6 +351,77 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings("null", actual);
         }
 
+        /// <sumary>
+        /// Test if first param successfully limits list quries
+        /// </summary>
+        [TestMethod]
+        public async Task TestFirstParamForListQueries()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(first: 1) {
+                    title
+                    publisher {
+                        name
+                        books(first: 3) {
+                            title
+                        }
+                    }
+                }
+            }";
+
+            string msSqlQuery = @"
+                SELECT TOP 1 [table0].[title] AS [title],
+                    JSON_QUERY([table1_subq].[data]) AS [publisher]
+                FROM [books] AS [table0]
+                OUTER APPLY (
+                    SELECT TOP 1 [table1].[name] AS [name],
+                        JSON_QUERY(COALESCE([table2_subq].[data], '[]')) AS [books]
+                    FROM [publishers] AS [table1]
+                    OUTER APPLY (
+                        SELECT TOP 3 [table2].[title] AS [title]
+                        FROM [books] AS [table2]
+                        WHERE [table1].[id] = [table2].[publisher_id]
+                        ORDER BY [id]
+                        FOR JSON PATH,
+                            INCLUDE_NULL_VALUES
+                        ) AS [table2_subq]([data])
+                    WHERE [table0].[publisher_id] = [table1].[id]
+                    ORDER BY [id]
+                    FOR JSON PATH,
+                        INCLUDE_NULL_VALUES,
+                        WITHOUT_ARRAY_WRAPPER
+                    ) AS [table1_subq]([data])
+                WHERE 1 = 1
+                ORDER BY [id]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        #endregion
+
+        #region Negative Tests
+
+        [TestMethod]
+        public async Task TestInvalidFirstParamQuery()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(first: -1) {
+                    id
+                    title
+                }
+            }";
+
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DatagatewayException.SubStatusCodes.BadRequest}");
+        }
         #endregion
     }
 }

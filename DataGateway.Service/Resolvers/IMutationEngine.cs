@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Models;
 using HotChocolate.Resolvers;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -15,8 +17,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         /// <param name="context">Middleware context of the mutation</param>
         /// <param name="parameters">parameters in the mutation query.</param>
-        /// <returns>JSON object result</returns>
-        public Task<JsonDocument> ExecuteAsync(IMiddlewareContext context,
-            IDictionary<string, object> parameters);
+        /// <returns>JSON object result and a metadata object required to resolve the result</returns>
+        public Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters);
     }
 }

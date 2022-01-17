@@ -16,10 +16,11 @@ namespace Azure.DataGateway.Services
     /// </summary>
     public class ResolverMiddleware
     {
-        private readonly FieldDelegate _next;
-        private readonly IQueryEngine _queryEngine;
-        private readonly IMutationEngine _mutationEngine;
-        private readonly IMetadataStoreProvider _metadataStoreProvider;
+        private static readonly string _contextMetadata = "metadata";
+        internal readonly FieldDelegate _next;
+        internal readonly IQueryEngine _queryEngine;
+        internal readonly IMutationEngine _mutationEngine;
+        internal readonly IMetadataStoreProvider _metadataStoreProvider;
 
         public ResolverMiddleware(FieldDelegate next,
             IQueryEngine queryEngine,
@@ -40,24 +41,31 @@ namespace Azure.DataGateway.Services
         public async Task InvokeAsync(IMiddlewareContext context)
         {
             JsonElement jsonElement;
+
             if (context.Selection.Field.Coordinate.TypeName.Value == "Mutation")
             {
                 IDictionary<string, object> parameters = GetParametersFromContext(context);
 
-                context.Result = await _mutationEngine.ExecuteAsync(context, parameters);
+                Tuple<JsonDocument, IMetadata> result = await _mutationEngine.ExecuteAsync(context, parameters);
+                context.Result = result.Item1;
+                SetNewMetadata(context, result.Item2);
             }
             else if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
             {
                 IDictionary<string, object> parameters = GetParametersFromContext(context);
-                bool isPaginatedQuery = IsPaginatedQuery(context.Selection.Field.Name.Value);
 
                 if (context.Selection.Type.IsListType())
                 {
-                    context.Result = await _queryEngine.ExecuteListAsync(context, parameters);
+                    Tuple<IEnumerable<JsonDocument>, IMetadata> result = await _queryEngine.ExecuteListAsync(context, parameters);
+                    context.Result = result.Item1;
+                    SetNewMetadata(context, result.Item2);
                 }
                 else
                 {
-                    context.Result = await _queryEngine.ExecuteAsync(context, parameters, isPaginatedQuery);
+                    bool isPaginatedQuery = _queryEngine.IsPaginatedQuery(context.Selection.Field.Name.Value);
+                    Tuple<JsonDocument, IMetadata> result = await _queryEngine.ExecuteAsync(context, parameters, isPaginatedQuery);
+                    context.Result = result.Item1;
+                    SetNewMetadata(context, result.Item2);
                 }
             }
             else if (context.Selection.Field.Type.IsLeafType())
@@ -77,8 +85,9 @@ namespace Azure.DataGateway.Services
                 // One-To-Many join.
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
-                    //TODO: Try to avoid additional deserialization/serialization here.
-                    context.Result = JsonDocument.Parse(jsonElement.ToString());
+                    IMetadata metadata = GetMetadata(context);
+                    context.Result = _queryEngine.ResolveInnerObject(jsonElement, context.Selection.Field, ref metadata);
+                    SetNewMetadata(context, metadata);
                 }
             }
             else if (context.Selection.Type.IsListType())
@@ -89,32 +98,16 @@ namespace Azure.DataGateway.Services
                 // join.
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
-                    //TODO: Try to avoid additional deserialization/serialization here.
-                    context.Result = JsonSerializer.Deserialize<List<JsonDocument>>(jsonElement.ToString());
+                    IMetadata metadata = GetMetadata(context);
+                    context.Result = _queryEngine.ResolveListType(jsonElement, context.Selection.Field, ref metadata);
+                    SetNewMetadata(context, metadata);
                 }
             }
 
             await _next(context);
         }
 
-        /// <summary>
-        /// Identifies if a query is paginated or not by checking the IsPaginated param on the respective resolver.
-        /// </summary>
-        /// <param name="queryName the name of the query"></param>
-        /// <returns></returns>
-        private bool IsPaginatedQuery(string queryName)
-        {
-            GraphQLQueryResolver resolver = _metadataStoreProvider.GetQueryResolver(queryName);
-            if (resolver == null)
-            {
-                string message = string.Format("There is no resolver for the query: {0}", queryName);
-                throw new InvalidOperationException(message);
-            }
-
-            return resolver.IsPaginated;
-        }
-
-        private static bool TryGetPropertyFromParent(IMiddlewareContext context, out JsonElement jsonElement)
+        protected static bool TryGetPropertyFromParent(IMiddlewareContext context, out JsonElement jsonElement)
         {
             JsonDocument result = context.Parent<JsonDocument>();
             if (result == null)
@@ -126,7 +119,7 @@ namespace Azure.DataGateway.Services
             return result.RootElement.TryGetProperty(context.Selection.Field.Name.Value, out jsonElement);
         }
 
-        private static bool IsInnerObject(IMiddlewareContext context)
+        protected static bool IsInnerObject(IMiddlewareContext context)
         {
             return context.Selection.Field.Type.IsObjectType() && context.Parent<JsonDocument>() != default;
         }
@@ -144,12 +137,17 @@ namespace Azure.DataGateway.Services
             }
         }
 
-        private static IDictionary<string, object> GetParametersFromContext(IMiddlewareContext context)
+        /// <summary>
+        /// Extract parameters from the schema and the actual instance (query) of the field
+        /// Extracts defualt parameter values from the schema or null if no default
+        /// Overrides default values with actual values of parameters provided
+        /// </summary>
+        public static IDictionary<string, object> GetParametersFromSchemaAndQueryFields(IObjectField schema, FieldNode query)
         {
             IDictionary<string, object> parameters = new Dictionary<string, object>();
 
             // Fill the parameters dictionary with the default argument values
-            IFieldCollection<IInputField> availableArguments = context.Selection.Field.Arguments;
+            IFieldCollection<IInputField> availableArguments = schema.Arguments;
             foreach (IInputField argument in availableArguments)
             {
                 if (argument.DefaultValue == null)
@@ -163,13 +161,34 @@ namespace Azure.DataGateway.Services
             }
 
             // Overwrite the default values with the passed in arguments
-            IReadOnlyList<ArgumentNode> passedArguments = context.Selection.SyntaxNode.Arguments;
+            IReadOnlyList<ArgumentNode> passedArguments = query.Arguments;
             foreach (ArgumentNode argument in passedArguments)
             {
                 parameters[argument.Name.Value] = ArgumentValue(argument.Value);
             }
 
             return parameters;
+        }
+
+        protected static IDictionary<string, object> GetParametersFromContext(IMiddlewareContext context)
+        {
+            return GetParametersFromSchemaAndQueryFields(context.Selection.Field, context.Selection.SyntaxNode);
+        }
+
+        /// <summary>
+        /// Get metadata from context
+        /// </summary>
+        private static IMetadata GetMetadata(IMiddlewareContext context)
+        {
+            return (IMetadata)context.ScopedContextData[_contextMetadata];
+        }
+
+        /// <summary>
+        /// Set new metadata and reset the depth that the metadata has persisted
+        /// </summary>
+        private static void SetNewMetadata(IMiddlewareContext context, IMetadata metadata)
+        {
+            context.ScopedContextData = context.ScopedContextData.SetItem(_contextMetadata, metadata);
         }
     }
 }

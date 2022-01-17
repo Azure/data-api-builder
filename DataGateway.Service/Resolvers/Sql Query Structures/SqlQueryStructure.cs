@@ -227,7 +227,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 try
                 {
-                    string parameterName = MakeParamWithValue(ResolveParamTypeFromColumn(predicate.Value, predicate.Field));
+                    string parameterName = MakeParamWithValue(GetParamAsColumnSystemType(predicate.Value, predicate.Field));
                     Predicates.Add($"{QualifiedColumn(predicate.Field)} = @{parameterName}");
                 }
                 catch (ArgumentException)
@@ -274,7 +274,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 // this is required to correctly keep track of which pagination metadata
                 // refers to what section of the json
-                // for a pagiantionless chain:
+                // for a paginationless chain:
                 //      getbooks > publisher > books > publisher
                 //      each new entry in the chain corresponds to a subquery so there will be
                 //      a matching pagination metadata object chain
@@ -640,14 +640,13 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         ///<summary>
-        /// Resolves a string parameter to the correct type, by using the type of the column
-        /// it is supposed to be compared with
+        /// Get the value of the parameter cast as the type of the column this parameter is associated with
         ///</summary>
         /// <exception cref="ArgumentException">columnName is not a valid column of table or param does not have a valid value type</exception>
-        private object ResolveParamTypeFromColumn(string param, string columnName)
+        private object GetParamAsColumnSystemType(string param, string columnName)
         {
             ColumnType type = GetColumnType(columnName);
-            Type systemType = ColumnDefinition.ResolveColumnType(type);
+            Type systemType = ColumnDefinition.ResolveColumnToSystemType(type);
 
             try
             {

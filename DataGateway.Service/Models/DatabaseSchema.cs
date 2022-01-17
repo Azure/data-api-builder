@@ -34,7 +34,7 @@ namespace Azure.DataGateway.Service.Models
         /// Resolves the column type to a System.Type
         /// </summary>
         /// <exception cref="ArgumentException"/>
-        public static Type ResolveColumnType(ColumnType type)
+        public static Type ResolveColumnToSystemType(ColumnType type)
         {
             switch (type)
             {

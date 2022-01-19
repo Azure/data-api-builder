@@ -646,7 +646,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private object GetParamAsColumnSystemType(string param, string columnName)
         {
             ColumnType type = GetColumnType(columnName);
-            Type systemType = ColumnDefinition.ResolveColumnToSystemType(type);
+            Type systemType = ColumnDefinition.ResolveColumnTypeToSystemType(type);
 
             try
             {

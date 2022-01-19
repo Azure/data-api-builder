@@ -93,7 +93,7 @@ namespace Azure.DataGateway.Service
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            // validate the configurarion after the services have been built
+            // validate the configuration after the services have been built
             // but before the application is built
             app.ApplicationServices.GetService<IConfigValidator>().ValidateConfig();
 

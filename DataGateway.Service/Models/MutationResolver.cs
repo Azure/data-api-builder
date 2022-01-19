@@ -12,6 +12,7 @@ namespace Azure.DataGateway.Service.Models
 
     public enum MutationOperation
     {
+        None,
         // Cosmos Operations
         Upsert, Delete, Create,
 

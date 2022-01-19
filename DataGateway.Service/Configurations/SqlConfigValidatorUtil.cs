@@ -214,10 +214,7 @@ namespace Azure.DataGateway.Service.Configurations
         {
             if (!ExistsTableWithName(tableName))
             {
-                // note that this is not an issue with the config, this is an issue with the
-                // logic of how the config is being validate, this function should be called
-                // with valid table names
-                throw new ArgumentException("Invalid table name was provided");
+                throw new ArgumentException("Invalid table name was provided.");
             }
 
             return _config.DatabaseSchema.Tables[tableName];
@@ -232,24 +229,91 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Returns if type is paginated or not
+        /// Check if the list has duplicates
         /// </summary>
-        private bool IsPaginatedType(string typeName)
+        private static IEnumerable<string> GetDuplicates(IEnumerable<string> enumerable)
         {
-            return _config.GraphqlTypes[typeName].IsPaginationType;
+            HashSet<string> distinct = new(enumerable);
+            List<string> duplicates = new();
+
+            foreach (string elem in enumerable)
+            {
+                if (distinct.Contains(elem))
+                {
+                    distinct.Remove(elem);
+                }
+                else
+                {
+                    duplicates.Add(elem);
+                }
+            }
+
+            return duplicates.Distinct();
         }
 
         /// <summary>
-        /// Gets innermost type of Type
+        /// Checks if the type is a nested list type
+        /// e.g. [[Book]], [[[Book!]!]!]!
         /// </summary>
-        private static string InnerType(ITypeNode type)
+        private static bool IsNestedListType(ITypeNode type)
         {
-            while (type.ToString() != type.InnerType().ToString())
+            return IsListType(InnerType(type));
+        }
+
+        /// <summary>
+        /// Checks if the type is a list of pagination type
+        /// e.g.
+        /// [BookConnection] -> true
+        /// [[BookConnection]] -> false (list of lists, not list of pagination type)
+        /// </summary>
+        private bool IsListOfPaginationType(ITypeNode type)
+        {
+            return IsListType(type) && IsPaginationType(InnerType(type));
+        }
+
+        /// <summary>
+        /// Checks if the given type name is the name of a pagination type
+        /// </summary>
+        private bool IsPaginationTypeName(string typeName)
+        {
+            GraphqlType type;
+            if (_config.GraphqlTypes.TryGetValue(typeName, out type))
             {
-                type = type.InnerType();
+                return type.IsPaginationType;
             }
 
-            return type.ToString();
+            return false;
+        }
+
+        /// <summary>
+        /// Returns if type is a pagination type or not
+        /// </summary>
+        private bool IsPaginationType(ITypeNode type)
+        {
+            return IsPaginationTypeName(type.NullableType().ToString());
+        }
+
+        /// <summary>
+        /// Gets inner type from ITypeNode in string format
+        /// </summary>
+        private static string InnerTypeStr(ITypeNode type)
+        {
+            return InnerType(type).ToString();
+        }
+
+        /// <summary>
+        /// Gets inner type from ITypeNode
+        /// </summary>
+        /// <remarks>
+        /// Go one level deep (if possible) while ignoring non nullability (!)
+        /// e.g.
+        /// Book, Book!, [Book], [Book!], [Book]!, [Book!]! -> Book
+        /// [[Book]!]!, [[Book]]
+        /// </remarks>
+        private static ITypeNode InnerType(ITypeNode type)
+        {
+            // ITypeNode.InnerType returns the same type if no inner type
+            return type.NullableType().InnerType().NullableType();
         }
 
         /// <summary>
@@ -259,7 +323,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// The build in IsListType function of ITypeNode will
         /// return false for [Book]! so that needs to be addressed
         /// with this custom function
-        /// </remakrs>
+        /// </remarks>
         private static bool IsListType(ITypeNode type)
         {
             return type.NullableType().IsListType();
@@ -267,12 +331,47 @@ namespace Azure.DataGateway.Service.Configurations
 
         /// <summary>
         /// Checks if a ITypeNode is a custom type
-        /// Does it by checking if its inner types corresponds to any of the
-        /// types extracted from the schema
+        /// Checks if the nullable type is declared in the GQL Schema
         /// </summary>
         private bool IsCustomType(ITypeNode type)
         {
-            return _types.ContainsKey(InnerType(type));
+            return _types.ContainsKey(type.NullableType().ToString());
+        }
+
+        /// <summary>
+        /// Checks if the ITypeNode is a list of custom types
+        /// e.g.
+        /// [Book!] -> true
+        /// [BookConnection] -> true    (pagination types also qualify as custom)
+        /// </summary>
+        public bool IsListOfCustomType(ITypeNode type)
+        {
+            return IsListType(type) && IsCustomType(InnerType(type));
+        }
+
+        /// <summary>
+        /// Checks if the inner type of a given type is a custom type
+        /// </summary>
+        private bool IsInnerTypeCustom(ITypeNode type)
+        {
+            return IsCustomType(InnerType(type));
+        }
+
+        /// <summary>
+        /// Check if list the elements of a list type are nullable
+        /// e.g.
+        /// Book    ->   false (not list)
+        /// [Book]  ->   true
+        /// [Book!] ->   false
+        /// </summary>
+        private static bool AreListElementsNullable(ITypeNode type)
+        {
+            if (IsListType(type))
+            {
+                return !type.NullableType().InnerType().IsNonNullType();
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -292,7 +391,7 @@ namespace Azure.DataGateway.Service.Configurations
 
         /// <summary>
         /// Checks if ITypeNode is scalar type which means
-        /// it is not a custom type or a list type
+        /// it is not a custom type nor a list type
         /// </summary>
         private bool IsScalarType(ITypeNode type)
         {
@@ -309,6 +408,7 @@ namespace Azure.DataGateway.Service.Configurations
             {
                 string fieldName = nameFieldPair.Key;
                 FieldDefinitionNode field = nameFieldPair.Value;
+
                 if (IsScalarType(field.Type))
                 {
                     scalarFields.Add(fieldName, field);
@@ -321,6 +421,9 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Returns the non scalar fields from a dictionary of fields
         /// </summary>
+        /// <remarks>
+        /// Note that [String] is also considered non
+        /// </remarks>
         private Dictionary<string, FieldDefinitionNode> GetNonScalarFields(Dictionary<string, FieldDefinitionNode> fields)
         {
             Dictionary<string, FieldDefinitionNode> nonScalarFields = new();
@@ -340,12 +443,9 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Checks if a GraphQL type is equal to a ColumnType
         /// </summary>
-        private static bool GraphQLTypesEqualsColumnType(ITypeNode gqlType, ColumnType columnType)
+        private static bool GraphQLTypeEqualsColumnType(ITypeNode gqlType, ColumnType columnType)
         {
-            // column types cannot be list types so the only expected difference between
-            // the gqlType.ToString() and GetGraphQLTypeForColumn(columnType) is that the
-            // string version of the gqlType might include ! so InnerType is applied.
-            return GetGraphQLTypeForColumnType(columnType) == InnerType(gqlType) && !IsListType(gqlType);
+            return GetGraphQLTypeForColumnType(columnType) == gqlType.NullableType().ToString();
         }
 
         /// <summary>
@@ -353,14 +453,12 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private static string GetGraphQLTypeForColumnType(ColumnType type)
         {
-            switch (type)
+            Type systemType = ColumnDefinition.ResolveColumnTypeToSystemType(type);
+            switch (systemType.Name)
             {
-                case ColumnType.Text:
-                case ColumnType.Varchar:
+                case "String":
                     return "String";
-                case ColumnType.Bigint:
-                case ColumnType.Int:
-                case ColumnType.Smallint:
+                case "Int64":
                     return "Int";
                 default:
                     throw new ArgumentException($"ColumnType {type} not handled by case. Please add a case resolving " +
@@ -369,32 +467,28 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Get the columns which are expected to be unmatched with the type schema fields from table columns
-        /// That will include columns which have other purposes like being part of the foreign key or the primary key
+        /// Get columns used in the primary key and foreign keys of the table
         /// </summary>
-        private static IEnumerable<string> GetExpectedUnMatchedColumns(TableDefinition table)
+        private static IEnumerable<string> GetPkAndFkColumns(TableDefinition table)
         {
-            List<string> excpectedUnmatchedColumns = new();
+            List<string> columns = new();
 
-            excpectedUnmatchedColumns.AddRange(table.PrimaryKey);
+            columns.AddRange(table.PrimaryKey);
 
             foreach (KeyValuePair<string, ForeignKeyDefinition> nameFKPair in table.ForeignKeys)
             {
                 ForeignKeyDefinition foreignKey = nameFKPair.Value;
-                excpectedUnmatchedColumns.AddRange(foreignKey.Columns);
+                columns.AddRange(foreignKey.Columns);
             }
 
-            return excpectedUnmatchedColumns;
+            return columns;
         }
 
         /// <summary>
-        /// Get the scalar fields which are excpected to unmatched with the table columns of the underlying
-        /// table of the type
+        /// Get the config GhraphqlTypes.Fields for a graphql schema type
         /// </summary>
-        private IEnumerable<string> GetExcpectedUnMatchedScalarFields(ObjectTypeDefinitionNode type)
+        private IEnumerable<string> GetConfigFieldsForGqlType(ObjectTypeDefinitionNode type)
         {
-            // if there are scalar fields which have an equivalent GraphqlType.Field, they don't need
-            // to match a table column
             return _config.GraphqlTypes[type.Name.Value].Fields.Keys;
         }
 
@@ -440,6 +534,15 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
+        /// Gets a foreign key by name from the table
+        /// </summary>
+        /// <exception cref="KeyNotFoundException" />
+        private ForeignKeyDefinition GetFkFromTable(string tableName, string fkName)
+        {
+            return _config.DatabaseSchema.Tables[tableName].ForeignKeys[fkName];
+        }
+
+        /// <summary>
         /// Gets mutation resolvers from config
         /// </summary>
         private List<MutationResolver> GetMutationResolvers()
@@ -470,6 +573,14 @@ namespace Azure.DataGateway.Service.Configurations
         private Dictionary<string, FieldDefinitionNode> GetQueries()
         {
             return _queries;
+        }
+
+        /// <summary>
+        /// Check if GraphQL schema has mutations
+        /// </summary>
+        private bool SchemaHasMutations()
+        {
+            return _mutations.Count > 0;
         }
     }
 }

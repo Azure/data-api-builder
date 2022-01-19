@@ -92,10 +92,10 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateConfigHasGraphQLTypes()
         {
-            if (_config.GraphqlTypes == null)
+            if (_config.GraphqlTypes == null || _config.GraphqlTypes.Count == 0)
             {
                 throw new ConfigValidationException(
-                    $"Config must have a \"GraphQLTypes\" element.",
+                    $"Config must have a non empty \"GraphQLTypes\" element.",
                     _configValidationStack
                 );
             }
@@ -107,10 +107,26 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateConfigHasMutationResolvers()
         {
-            if (_config.MutationResolvers == null && _mutations.Count > 0)
+            if (_config.MutationResolvers == null || _config.MutationResolvers.Count == 0)
             {
                 throw new ConfigValidationException(
-                    $"Config must have a \"MutationResolvers\" element",
+                    $"Config must have a non empty \"MutationResolvers\" element to resolve " +
+                    "GraphQL mutations.",
+                    _configValidationStack
+                );
+            }
+        }
+
+        /// <summary>
+        /// Validate that the config has "MutationResolvers" element
+        /// Called when there are no mutations in the schema
+        /// </summary>
+        private void ValidateNoMutationResolvers()
+        {
+            if (_config.MutationResolvers != null)
+            {
+                throw new ConfigValidationException(
+                    "Config doesn't need a \"MutationResolvers\" element. No mutations in the schema.",
                     _configValidationStack
                 );
             }
@@ -121,10 +137,10 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateDatabaseHasTables()
         {
-            if (_config.DatabaseSchema.Tables == null)
+            if (_config.DatabaseSchema.Tables == null || _config.DatabaseSchema.Tables.Count == 0)
             {
                 throw new ConfigValidationException(
-                    "Database schema must have a \"Tables\" element",
+                    "Database schema must have a non empty \"Tables\" element.",
                     _configValidationStack
                 );
             }
@@ -135,11 +151,27 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateTableHasColumns(TableDefinition table)
         {
-            if (table.Columns == null)
+            if (table.Columns == null || table.Columns.Count == 0)
             {
                 throw new ConfigValidationException(
-                    "Table must have a \"Columns\" element.",
+                    "Table must have a non \"Columns\" element.",
                     _configValidationStack);
+            }
+        }
+
+        /// <summary>
+        /// Validate that all columns have a type specified
+        /// </summary>
+        private void ValidateTableColumnsHaveType(TableDefinition table)
+        {
+            IEnumerable<string> colsWithoutType = table.Columns.Keys.Where(colName => table.Columns[colName].Type == ColumnType.None);
+            if (colsWithoutType.Any())
+            {
+                throw new ConfigValidationException(
+                    $"All columns must have a type. Columns [{string.Join(", ", colsWithoutType)}] " +
+                    $"don't have a \"Type\" whose value is not {ColumnType.None}.",
+                    _configValidationStack
+                );
             }
         }
 
@@ -148,27 +180,60 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateTableHasPrimaryKey(TableDefinition table)
         {
-            if (table.PrimaryKey == null)
+            if (table.PrimaryKey == null || table.PrimaryKey.Count == 0)
             {
                 throw new ConfigValidationException(
-                    "Table must have a \"PrimaryKey\" element.",
+                    "Table must have a non empty \"PrimaryKey\" element.",
                     _configValidationStack);
             }
         }
 
         /// <summary>
-        /// Validate table has primary key
+        /// Validate that all primary key columns are unique
         /// </summary>
-        private void ValidateTablePrimaryKey(TableDefinition table)
+        private void ValidateNoDuplicatePkColumns(TableDefinition table)
         {
-            foreach (string primaryKey in table.PrimaryKey)
+            IEnumerable<string> duplicatePkCols = GetDuplicates(table.PrimaryKey);
+
+            if (duplicatePkCols.Any())
             {
-                if (!table.Columns.ContainsKey(primaryKey))
-                {
-                    throw new ConfigValidationException(
-                        $"No column found in table corresponding to primary key column \"{primaryKey}\".",
-                        _configValidationStack);
-                }
+                throw new ConfigValidationException(
+                    "All primary key columns must be unique. Found duplicate columns " +
+                    $"[{string.Join(", ", duplicatePkCols)}].",
+                    _configValidationStack
+                );
+            }
+        }
+
+        /// <summary>
+        /// Validate that the primary key columns match columns of the table
+        /// </summary>
+        private void ValidatePkColsMatchTableCols(TableDefinition table)
+        {
+            IEnumerable<string> unmatchedPks = table.PrimaryKey.Except(table.Columns.Keys);
+
+            if (unmatchedPks.Any())
+            {
+                throw new ConfigValidationException(
+                    $"Primary Key columns [{string.Join(", ", unmatchedPks)}] do not have equivalent columns " +
+                    "in the table.",
+                    _configValidationStack
+                );
+            }
+        }
+
+        /// <summary>
+        /// Validate that both IsAutoGenerated and HasDefault are not set to true for a colum
+        /// since IsAutoGenerated implies HasDefault so no need to increase verbosity in the
+        /// config by specifying both each time a column in IsAutoGenerated
+        /// </summary>
+        private void ValidateNoAutoGeneratedAndHasDefault(ColumnDefinition column)
+        {
+            if (column.IsAutoGenerated == true && column.HasDefault == true)
+            {
+                throw new ConfigValidationException(
+                    "No need to specify both \"IsAutoGenerated\" and \"HasDefault\". Auto generated implies has default.",
+                    _configValidationStack);
             }
         }
 
@@ -177,10 +242,10 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         public void ValidateForeignKeyHasRefTable(ForeignKeyDefinition foreignKey)
         {
-            if (foreignKey.ReferencedTable == null)
+            if (string.IsNullOrEmpty(foreignKey.ReferencedTable))
             {
                 throw new ConfigValidationException(
-                    "Foreign key must have a \"ReferencedTable\" element.",
+                    "Foreign key must have a non empty string \"ReferencedTable\" element.",
                     _configValidationStack);
             }
         }
@@ -188,26 +253,12 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate foreign key referenced table
         /// </summary>
-        private void ValidateForeignKeyRefTableExists(string refTableName)
+        private void ValidateForeignKeyRefTableExists(ForeignKeyDefinition foreignKey)
         {
-            if (!ExistsTableWithName(refTableName))
+            if (!ExistsTableWithName(foreignKey.ReferencedTable))
             {
                 throw new ConfigValidationException(
-                    $"Referenced table \"{refTableName}\" does not exit in the database schema.",
-                    _configValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Validate that the referenced table of the foreign key has a primary key
-        /// </summary>
-        private void ValidateFKRefTabHasPk(string refTableName)
-        {
-            TableDefinition refTable = GetTableWithName(refTableName);
-            if (refTable.PrimaryKey == null)
-            {
-                throw new ConfigValidationException(
-                    $"Referenced table \"{refTableName}\" must have a primary key.",
+                    $"Referenced table \"{foreignKey.ReferencedTable}\" does not exit in the database schema.",
                     _configValidationStack);
             }
         }
@@ -217,9 +268,25 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateForeignKeyHasColumns(ForeignKeyDefinition foreignKey)
         {
-            if (foreignKey.Columns == null)
+            if (foreignKey.Columns == null || foreignKey.Columns.Count == 0)
             {
-                throw new ConfigValidationException("Foreign key must have columns", _configValidationStack);
+                throw new ConfigValidationException("Foreign key must have a non empty \"Columns\" element.", _configValidationStack);
+            }
+        }
+
+        /// <summary>
+        /// Validate that the foreign key columns have unique names amongst themselves
+        /// </summary>
+        private void ValidateNoDuplicateFkColumns(ForeignKeyDefinition foreignKey)
+        {
+            IEnumerable<string> duplicateCols = GetDuplicates(foreignKey.Columns);
+
+            if (duplicateCols.Any())
+            {
+                throw new ConfigValidationException(
+                    $"Foreign key columns must be unique amongst themselves. Duplicate columns " +
+                    $"[{string.Join(", ", duplicateCols)}] found.",
+                    _configValidationStack);
             }
         }
 
@@ -240,25 +307,17 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validates that the foreign key column has a matching column in the table the foreign key
+        /// Validates that the foreign key columns have matching columns in the table the foreign key
         /// belongs to
         /// </summary>
-        private void ValidateFKColumnHasMatchingTableColumn(string fkColumnName, TableDefinition table)
+        private void ValidateFKColumnsHaveMatchingTableColumns(ForeignKeyDefinition foreignKey, TableDefinition table)
         {
-            if (!table.Columns.ContainsKey(fkColumnName))
-            {
-                throw new ConfigValidationException(
-                    $"Table does not contain column for foreign key column \"{fkColumnName}\".",
-                    _configValidationStack);
-            }
-        }
+            IEnumerable<string> unmatchedFkCols = foreignKey.Columns.Except(table.Columns.Keys);
 
-        private void ValidateRefTableHasColumns(string refTableName)
-        {
-            if (GetTableWithName(refTableName).Columns == null)
+            if (unmatchedFkCols.Any())
             {
                 throw new ConfigValidationException(
-                    $"Referenced table \"{refTableName}\" does not have \"Columns\" element.",
+                    $"Table does not contain columns for foreign key columns [{string.Join(", ", unmatchedFkCols)}].",
                     _configValidationStack
                 );
             }
@@ -330,7 +389,7 @@ namespace Azure.DataGateway.Service.Configurations
 
         /// <summary>
         /// Validate that config fields are matched to a schema field and that
-        /// there is no unmatched non scalar schema field unmatched to a config field
+        /// there is no non scalar schema field not matched to a config field
         /// </summary>
         private void ValidateConfigFieldsMatchSchemaFields(
             Dictionary<string, GraphqlField> configFields,
@@ -341,17 +400,17 @@ namespace Azure.DataGateway.Service.Configurations
             // note that scalar fields can be matched to table columns so they don't
             // need to match a config field
             Dictionary<string, FieldDefinitionNode> nonScalarFields = GetNonScalarFields(schemaFields);
-            IEnumerable<string> unmatchedSchemaNonScalarFields = nonScalarFields.Keys.Except(configFields.Keys);
+            IEnumerable<string> unmatchedNonScalarSchemaFields = nonScalarFields.Keys.Except(configFields.Keys);
 
-            if (unmatchedConfigFields.Any() || unmatchedSchemaNonScalarFields.Any())
+            if (unmatchedConfigFields.Any() || unmatchedNonScalarSchemaFields.Any())
             {
                 string unmatchedConFieldsMessage =
                     unmatchedConfigFields.Any() ?
                     $"[{string.Join(", ", unmatchedConfigFields)}] fields don't match any field in the schema. "
                     : string.Empty;
                 string unmatchedSchFieldsMessage =
-                    unmatchedSchemaNonScalarFields.Any() ?
-                    $"[{string.Join(", ", unmatchedSchemaNonScalarFields)}] schema fields are not matched by any config fields."
+                    unmatchedNonScalarSchemaFields.Any() ?
+                    $"[{string.Join(", ", unmatchedNonScalarSchemaFields)}] schema fields are not matched by any config fields."
                     : string.Empty;
 
                 throw new ConfigValidationException(
@@ -360,6 +419,55 @@ namespace Azure.DataGateway.Service.Configurations
                     unmatchedConFieldsMessage +
                     unmatchedSchFieldsMessage,
                     _configValidationStack
+                );
+            }
+        }
+
+        /// <summary>
+        /// Validate that the fields of a schema type no have invalid return types
+        /// </summary>
+        /// <remarks>
+        /// Nested list types and lists of *Connection types are considered invalid
+        /// </remarks>
+        private void ValidateSchemaFieldsReturnTypes(Dictionary<string, FieldDefinitionNode> fieldDefinitions)
+        {
+            List<string> nestedListFields = new();
+            List<string> listOfPgTypeFields = new();
+
+            foreach (KeyValuePair<string, FieldDefinitionNode> nameFieldPair in fieldDefinitions)
+            {
+                string fieldName = nameFieldPair.Key;
+                FieldDefinitionNode field = nameFieldPair.Value;
+
+                if (IsNestedListType(field.Type))
+                {
+                    nestedListFields.Add(fieldName);
+                }
+                else if (IsListOfPaginationType(field.Type))
+                {
+                    listOfPgTypeFields.Add(fieldName);
+                }
+            }
+
+            if (nestedListFields.Any() || listOfPgTypeFields.Any())
+            {
+                string nestedListMessage =
+                    nestedListFields.Any() ?
+                    $"Fields [{string.Join(", ", nestedListFields)}] must not have a nested " +
+                    "list as a return type. "
+                    : string.Empty;
+
+                string listOfPgTypeMessage =
+                    listOfPgTypeFields.Any() ?
+                    $"Fields [{string.Join(", ", listOfPgTypeFields)}] must have a list of " +
+                    "*Connection types as a return type."
+                    : string.Empty;
+
+                throw new ConfigValidationException(
+                    "Found fields with invalid return types. " +
+                    nestedListMessage +
+                    listOfPgTypeMessage,
+                    _schemaValidationStack
                 );
             }
         }
@@ -387,10 +495,10 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidatePaginationFieldsHaveNoArguments(
             Dictionary<string, FieldDefinitionNode> typeFields,
-            List<string> paginationields)
+            List<string> paginationFieldNames)
         {
             List<string> fieldsWithArguments = new();
-            foreach (string fieldName in paginationields)
+            foreach (string fieldName in paginationFieldNames)
             {
                 if (GetArgumentFromField(typeFields[fieldName]).Count > 0)
                 {
@@ -401,7 +509,7 @@ namespace Azure.DataGateway.Service.Configurations
             if (fieldsWithArguments.Any())
             {
                 throw new ConfigValidationException(
-                    $"[{string.Join(", ", fieldsWithArguments)}] field of a pagination type must not have arguments",
+                    $"[{string.Join(", ", fieldsWithArguments)}] field of a pagination type must not have arguments.",
                     _schemaValidationStack);
             }
         }
@@ -412,10 +520,15 @@ namespace Azure.DataGateway.Service.Configurations
         private void ValidateItemsFieldType(FieldDefinitionNode itemsField)
         {
             ITypeNode itemsType = itemsField.Type;
-            if (!IsListType(itemsType) || !IsCustomType(itemsType))
+            if (!IsListType(itemsType) ||
+                !IsInnerTypeCustom(itemsType) ||
+                !itemsType.IsNonNullType() ||
+                AreListElementsNullable(itemsType) ||
+                IsPaginationType(InnerType(itemsType)))
             {
                 throw new ConfigValidationException(
-                    "\"items\" must return a list type of non scalars",
+                    "\"items\" must return a non nullable list type of non nullable custom types " +
+                    "\"[CustomType!]!\" where CustomType is not a pagination type.",
                     _schemaValidationStack);
             }
         }
@@ -426,10 +539,12 @@ namespace Azure.DataGateway.Service.Configurations
         private void ValidateEndCursorFieldType(FieldDefinitionNode endCursorField)
         {
             ITypeNode endCursorFieldType = endCursorField.Type;
-            if (IsListType(endCursorFieldType) || InnerType(endCursorFieldType) != "String")
+            if (IsListType(endCursorFieldType) ||
+                InnerTypeStr(endCursorFieldType) != "String" ||
+                endCursorFieldType.IsNonNullType())
             {
                 throw new ConfigValidationException(
-                    "\"endCursor\" must return a \"String\" type",
+                    "\"endCursor\" must return a nullable \"String\" type.",
                     _schemaValidationStack);
             }
         }
@@ -440,10 +555,12 @@ namespace Azure.DataGateway.Service.Configurations
         private void ValidateHasNextPageFieldType(FieldDefinitionNode hasNextPageField)
         {
             ITypeNode hasNextPageFieldType = hasNextPageField.Type;
-            if (IsListType(hasNextPageFieldType) || InnerType(hasNextPageFieldType) != "Boolean")
+            if (IsListType(hasNextPageFieldType) ||
+                InnerTypeStr(hasNextPageFieldType) != "Boolean" ||
+                !hasNextPageFieldType.IsNonNullType())
             {
                 throw new ConfigValidationException(
-                    "\"hasNextPage\" must return a \"Boolean\" type",
+                    "\"hasNextPage\" must return a non nullable \"Boolean!\" type.",
                     _schemaValidationStack);
             }
         }
@@ -454,12 +571,12 @@ namespace Azure.DataGateway.Service.Configurations
         private void ValidatePaginationTypeName(string paginationTypeName)
         {
             FieldDefinitionNode itemsField = GetTypeFields(paginationTypeName)["items"];
-            string paginationUnderlyingType = InnerType(itemsField.Type);
+            string paginationUnderlyingType = InnerTypeStr(itemsField.Type);
             string expectedTypeName = $"{paginationUnderlyingType}Connection";
             if (paginationTypeName != expectedTypeName)
             {
                 throw new ConfigValidationException(
-                    $"Pagination type on \"{paginationUnderlyingType}\" must be called \"{expectedTypeName}\"",
+                    $"Pagination type on \"{paginationUnderlyingType}\" must be called \"{expectedTypeName}\".",
                     _schemaValidationStack);
             }
         }
@@ -469,10 +586,10 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateGraphQLTypeHasTable(GraphqlType type)
         {
-            if (type.Table == null)
+            if (string.IsNullOrEmpty(type.Table))
             {
                 throw new ConfigValidationException(
-                    "This type must contain a \"Table\" element",
+                    "This type must contain a non empty string \"Table\" element.",
                     _configValidationStack);
             }
         }
@@ -497,7 +614,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateGraphQLTypeHasFields(GraphqlType type)
         {
-            if (type.Fields == null)
+            if (type.Fields == null || type.Fields.Count == 0)
             {
                 throw new ConfigValidationException(
                     "Type must have \"Fields\" element.",
@@ -513,7 +630,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// So each table column should either:
         /// <list type="bullet">
         /// <item> match in name and type to a field </item>
-        /// <item> have structural significance (pk, fk) </item>
+        /// <item> be part of the primary or foreign key </item>
         /// </list>
         /// Each scalar field should either:
         /// <list type="bullet">
@@ -527,22 +644,26 @@ namespace Azure.DataGateway.Service.Configurations
             Dictionary<string, ColumnDefinition> tableColumns = table.Columns;
             Dictionary<string, FieldDefinitionNode> scalarFields = GetScalarFields(GetTypeFields(typeName));
 
-            IEnumerable<string> unmatchedTableColumns = tableColumns.Keys.Except(scalarFields.Keys);
-            unmatchedTableColumns = unmatchedTableColumns.Except(GetExpectedUnMatchedColumns(table));
+            IEnumerable<string> unmatchedTableColumns = tableColumns.Keys
+                                                            .Except(scalarFields.Keys)
+                                                            .Except(GetPkAndFkColumns(table));
 
-            IEnumerable<string> unmatchedScalarFields = scalarFields.Keys.Except(tableColumns.Keys);
-            unmatchedScalarFields = unmatchedScalarFields.Except(GetExcpectedUnMatchedScalarFields(_types[typeName]));
+            IEnumerable<string> unmatchedScalarFields = scalarFields.Keys
+                                                            .Except(tableColumns.Keys)
+                                                            .Except(GetConfigFieldsForGqlType(_types[typeName]));
 
             if (unmatchedTableColumns.Any() || unmatchedScalarFields.Any())
             {
                 string unmatchedFieldsMessage =
                     unmatchedScalarFields.Any() ?
-                    $"Fields [{string.Join(", ", unmatchedScalarFields)}] are not matched. " :
+                    $"Fields [{string.Join(", ", unmatchedScalarFields)}] are neither matched to columns nor " +
+                    $"match to type fields in the config. " :
                     string.Empty;
 
                 string unmatchedColumnsMessage =
                     unmatchedTableColumns.Any() ?
-                    $"Columns [{string.Join(", ", unmatchedTableColumns)}] are not matched." :
+                    $"Columns [{string.Join(", ", unmatchedTableColumns)}] are neither matched to fields nor " +
+                    $"serve as primary key or foreign key columns in table \"{tableName}\"." :
                     string.Empty;
 
                 throw new ConfigValidationException(
@@ -573,7 +694,7 @@ namespace Azure.DataGateway.Service.Configurations
                 ColumnType columnType = tableColumns[matchedName].Type;
                 ITypeNode fieldType = typeFields[matchedName].Type;
 
-                if (!GraphQLTypesEqualsColumnType(fieldType, columnType))
+                if (!GraphQLTypeEqualsColumnType(fieldType, columnType))
                 {
                     mismatchedFieldColumnTypeMessages.Add(
                         $"Column \"{matchedName}\" with type \"{columnType}\" doesn't match field " +
@@ -587,20 +708,6 @@ namespace Azure.DataGateway.Service.Configurations
                     "There are mismatched types between some type fields and some columns of the types's underlying table in " +
                     $"{PrettyPrintValidationStack(tableColumnPosition)}. {string.Join(" ", mismatchedFieldColumnTypeMessages)}",
                     _schemaValidationStack
-                );
-            }
-        }
-
-        /// <summary>
-        /// Validate that field does not have a pagination list type e.g. [BookConnection]
-        /// </summary>
-        private void ValidateFieldTypeIsNotPaginationListType(FieldDefinitionNode field)
-        {
-            if (IsPaginatedType(InnerType(field.Type)) && field.Type.IsListType())
-            {
-                throw new ConfigValidationException(
-                    $"Field cannot return a list of pagination type \"{InnerType(field.Type)}\".",
-                    _configValidationStack
                 );
             }
         }
@@ -679,6 +786,97 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
+        /// Throw a config validation exception to inform that 1-to-1 relationships
+        /// are not supported
+        /// </summary>
+        private void OneToOneNotSupported()
+        {
+            throw new ConfigValidationException(
+                "Releationship type OneToOne is not supported yet.",
+                _configValidationStack
+            );
+        }
+
+        /// <summary>
+        /// Validate that the returned type is not nullable
+        /// </summary>
+        private void ValidateReturnedTypeIsNotNullable(FieldDefinitionNode field)
+        {
+            if (!field.Type.IsNonNullType())
+            {
+                throw new ConfigValidationException(
+                    $"The type returned by this field must not be nullable.",
+                    _schemaValidationStack);
+            }
+        }
+
+        /// <summary>
+        /// Validate that the returned type is nullable
+        /// </summary>
+        private void ValidateReturnedTypeIsNullable(FieldDefinitionNode field)
+        {
+            if (field.Type.IsNonNullType())
+            {
+                throw new ConfigValidationException(
+                    $"The type returned by this field must be nullable.",
+                    _schemaValidationStack);
+            }
+        }
+
+        /// <summary>
+        /// Validate that field does return a pagination type
+        /// </summary>
+        private void ValidateReturnTypeNotPagination(GraphqlField field, FieldDefinitionNode fieldDefinition)
+        {
+            if (IsPaginationType(fieldDefinition.Type))
+            {
+                throw new ConfigValidationException(
+                    $"{field.RelationshipType} field must not return a pagination " +
+                    $"type \"{fieldDefinition.Type.ToString()}\".",
+                    _configValidationStack
+                );
+            }
+        }
+
+        /// <summary>
+        /// Validate that the field returns a list of custom type
+        /// </summary>
+        private void ValidateFieldReturnsListOfCustomType(
+            FieldDefinitionNode fieldDefinition,
+            bool listNullabe = true,
+            bool listElemsNullable = true)
+        {
+            ITypeNode type = fieldDefinition.Type;
+            if (!IsListOfCustomType(type) ||
+                listNullabe == type.IsNonNullType() ||
+                listElemsNullable != AreListElementsNullable(type))
+            {
+                string listLabel = listNullabe ? "nullable" : "non nullable";
+                string elemLabel = listElemsNullable ? "nullable" : "non nullable";
+
+                throw new ConfigValidationException(
+                    $"Field must return a {listLabel} list of {elemLabel} custom type.",
+                    _schemaValidationStack);
+            }
+        }
+
+        /// <summary>
+        /// Validate that the field returns a custom type
+        /// </summary>
+        private void ValidateFieldReturnsCustomType(FieldDefinitionNode fieldDefinition, bool typeNullable = true)
+        {
+            ITypeNode type = fieldDefinition.Type;
+            if (!IsCustomType(type) || typeNullable == type.IsNonNullType())
+            {
+                string typeLabel = typeNullable ? "nullable" : "non nullable";
+                throw new ConfigValidationException(
+                    $"Field must return a {typeLabel} custom type.",
+                    _schemaValidationStack
+                );
+            }
+        }
+
+        /// <summary>
         /// Make sure the field has no association table
         /// </summary>
         private void ValidateNoAssociationTable(GraphqlField field)
@@ -699,22 +897,7 @@ namespace Azure.DataGateway.Service.Configurations
             if (string.IsNullOrEmpty(field.AssociativeTable))
             {
                 throw new ConfigValidationException(
-                    $"Must have Associative Table in {field.RelationshipType} field.",
-                    _configValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Validates if field has either one left foreign key or only right foreign key
-        /// Both and neither result in an exception
-        /// </summary>
-        private void ValidateLeftXOrRightForeignKey(GraphqlField field)
-        {
-            if (HasLeftForeignKey(field) ^ HasRightForeignKey(field))
-            {
-                throw new ConfigValidationException(
-                    $"{field.RelationshipType} field must have either only one left foreign key or " +
-                    "only one right foreign key.",
+                    $"Must have a non empty string Associative Table in {field.RelationshipType} field.",
                     _configValidationStack);
             }
         }
@@ -796,6 +979,38 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
+        /// Validate that the reference table of the right foreign key refers to type table
+        /// </summary>
+        private void ValidateRightFkRefTableIsTypeTable(ForeignKeyDefinition rightFk, string type)
+        {
+            string typeTable = GetTypeTable(type);
+            if (rightFk.ReferencedTable != typeTable)
+            {
+                throw new ConfigValidationException(
+                    $"Right foreign key's referenced table \"{rightFk.ReferencedTable}\" does not " +
+                    $"refer to the type table \"{typeTable}\" of type \"{typeTable}\".",
+                    _configValidationStack
+                );
+            }
+        }
+
+        /// <summary>
+        /// Validate that the reference table of the left foreign key refers to the returned type's table
+        /// </summary>
+        private void ValidateLeftFkRefTableIsReturnedTypeTable(ForeignKeyDefinition rightFk, string returnedType)
+        {
+            string returnedTypeTable = GetTypeTable(returnedType);
+            if (rightFk.ReferencedTable != returnedTypeTable)
+            {
+                throw new ConfigValidationException(
+                    $"Left foreign key's referenced table \"{rightFk.ReferencedTable}\" does not refer " +
+                    $"to the type table \"{returnedTypeTable}\" of the returned type \"{returnedTypeTable}\".",
+                    _configValidationStack
+                );
+            }
+        }
+
+        /// <summary>
         /// Validate that the field's associative table exists
         /// </summary>
         private void ValidateAssociativeTableExists(GraphqlField field)
@@ -827,6 +1042,17 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
+        /// Throw a config validation exception to inform that none relationships
+        /// are not supported
+        /// </summary>
+        private void RelationshipNoneNotSupported()
+        {
+            throw new ConfigValidationException(
+                "Relationship type none not supported.",
+                _configValidationStack);
+        }
+
+        /// <summary>
         /// Validate that Config.GraphqlTypes has already been validated
         /// </summary>
         private void ValidateGraphQLTypesIsValidated()
@@ -843,12 +1069,13 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateNoMissingIds(IEnumerable<string> ids)
         {
-            int nullCount = ids.Count(id => id == null);
+            int missingIdsCount = ids.Count(id => string.IsNullOrEmpty(id));
 
-            if (nullCount > 0)
+            if (missingIdsCount > 0)
             {
                 throw new ConfigValidationException(
-                    $"{nullCount} mutation ids missing. All mutation resolvers must have an \"Id\" element.",
+                    $"{missingIdsCount} mutation ids missing. All mutation resolvers must " +
+                    "have a non empty string \"Id\" element.",
                     _configValidationStack
                 );
             }
@@ -857,10 +1084,9 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate that all mutation resolver ids are unique
         /// </summary>
-        private void ValidateNoDuplicateIds(IEnumerable<string> ids)
+        private void ValidateNoDuplicateMutIds(IEnumerable<string> ids)
         {
-            Func<string, int> idCount = id => ids.Count(_id => _id == id);
-            IEnumerable<string> duplicateIds = ids.Where(id => idCount(id) > 1).Distinct();
+            IEnumerable<string> duplicateIds = GetDuplicates(ids);
 
             if (duplicateIds.Any())
             {
@@ -908,7 +1134,7 @@ namespace Azure.DataGateway.Service.Configurations
             if (string.IsNullOrEmpty(resolver.Table))
             {
                 throw new ConfigValidationException(
-                    "Mutation resolver must have a \"Table\" element.",
+                    "Mutation resolver must have a non empty string \"Table\" element.",
                     _configValidationStack);
             }
         }
@@ -946,7 +1172,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate that the mutation does not return a list type
         /// </summary>
-        private void ValidateMutHasNotListType(FieldDefinitionNode mutation)
+        private void ValidateMutReturnTypeIsNotListType(FieldDefinitionNode mutation)
         {
             if (IsListType(mutation.Type))
             {
@@ -962,7 +1188,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateMutReturnTypeMatchesTable(string resolverTable, FieldDefinitionNode mutation)
         {
-            if (IsCustomType(mutation.Type) && resolverTable != GetTypeTable(InnerType(mutation.Type)))
+            if (resolverTable != GetTypeTable(InnerTypeStr(mutation.Type)))
             {
                 throw new ConfigValidationException(
                     $"Mutation return type {mutation.Type.ToString()} does not match the type " +
@@ -1006,10 +1232,10 @@ namespace Azure.DataGateway.Service.Configurations
 
                 ColumnDefinition matchedCol = table.Columns[argName];
 
-                if (!GraphQLTypesEqualsColumnType(argument.Type, matchedCol.Type))
+                if (!GraphQLTypeEqualsColumnType(argument.Type, matchedCol.Type))
                 {
                     typeMismatchMessages.Add(
-                        $"Argument \"{argName}\" with type \"{InnerType(argument.Type)}\" does not match " +
+                        $"Argument \"{argName}\" with type \"{InnerTypeStr(argument.Type)}\" does not match " +
                         $"the type of \"{argName}\" in table \"{tableName}\" with type \"{matchedCol.Type}\"");
                 }
             }
@@ -1033,56 +1259,71 @@ namespace Azure.DataGateway.Service.Configurations
         /// type support in the database.
         /// </remarks>
         private void ValidateArgNullabilityInInsertMut(
+            TableDefinition table,
             Dictionary<string, InputValueDefinitionNode> mutArguments)
         {
-            List<string> cannotBeNullableArgs = new();
+            List<string> shouldBeNullable = new();
+            List<string> shouldBeNonNullable = new();
             foreach (KeyValuePair<string, InputValueDefinitionNode> nameArgPair in mutArguments)
             {
                 string argName = nameArgPair.Key;
                 InputValueDefinitionNode argument = nameArgPair.Value;
 
-                if (!argument.Type.IsNonNullType())
+                if (table.Columns[argName].HasDefault && argument.Type.IsNonNullType())
                 {
-                    cannotBeNullableArgs.Add(argName);
+                    shouldBeNullable.Add(argName);
+                }
+                else if (!argument.Type.IsNonNullType())
+                {
+                    shouldBeNonNullable.Add(argName);
                 }
             }
 
-            if (cannotBeNullableArgs.Any())
+            if (shouldBeNullable.Any() || shouldBeNonNullable.Any())
             {
+                string shouldBeNullableMsg =
+                    shouldBeNullable.Any() ?
+                    $"Arguments [{string.Join(", ", shouldBeNullable)}] must be nullable. "
+                    : string.Empty;
+
+                string shouldBeNonNullableMsg =
+                    shouldBeNonNullable.Any() ?
+                    $"Arguments [{string.Join(", ", shouldBeNonNullable)}] must not be nullable."
+                    : string.Empty;
+
                 throw new ConfigValidationException(
-                    $"The arguments [{string.Join(", ", cannotBeNullableArgs)}] cannot be null in an " +
-                    "insert mutation. All arguments must be non nullable.",
+                    $"Insert mutation arguments have incorrent nullability. " +
+                    shouldBeNullableMsg +
+                    shouldBeNonNullableMsg,
                     _schemaValidationStack
                 );
             }
         }
 
         /// <summary>
-        /// Validate there is no missing arguments in insert mutation
+        /// Validate there insert mutation has the correct args
         /// </summary>
         /// <remarks>
         /// In the current implemetation,
-        /// all but autogenerated columns can must be added as arguments
+        /// all but autogenerated columns must be added as arguments
         /// </remarks>
-        private void ValidateNoMissingArgsInInsertMut(
+        private void ValidateInsertMutHasCorrectArgs(
             TableDefinition table,
-            Dictionary<string, InputValueDefinitionNode> mutArguments)
+            Dictionary<string, InputValueDefinitionNode> mutArgs)
         {
-            List<string> requiredNonArgColumns = new();
-            foreach (string column in table.Columns.Keys)
+            List<string> requiredArguments = new();
+            foreach (KeyValuePair<string, ColumnDefinition> nameColumnPair in table.Columns)
             {
-                if (!mutArguments.ContainsKey(column) && !table.Columns[column].hasDefault)
+                string columnName = nameColumnPair.Key;
+                ColumnDefinition column = nameColumnPair.Value;
+
+                if (!column.IsAutoGenerated)
                 {
-                    requiredNonArgColumns.Add(column);
+                    requiredArguments.Add(columnName);
                 }
             }
 
-            if (requiredNonArgColumns.Any())
-            {
-                throw new ConfigValidationException(
-                    $"Insert mutation missing argument/s [{string.Join(", ", requiredNonArgColumns)}] required to perform insertion.",
-                    _schemaValidationStack);
-            }
+            ValidateFieldHasRequiredArguments(mutArgs.Keys, requiredArguments);
         }
 
         /// <summary>
@@ -1095,7 +1336,7 @@ namespace Azure.DataGateway.Service.Configurations
             TableDefinition table,
             Dictionary<string, InputValueDefinitionNode> mutArguments)
         {
-            List<string> cannotBeNullableArgs = new();
+            List<string> shouldNotBeNullable = new();
             foreach (KeyValuePair<string, InputValueDefinitionNode> nameArgPair in mutArguments)
             {
                 string argName = nameArgPair.Key;
@@ -1103,14 +1344,14 @@ namespace Azure.DataGateway.Service.Configurations
 
                 if (!argument.Type.IsNonNullType() && table.PrimaryKey.Contains(argName))
                 {
-                    cannotBeNullableArgs.Add(argName);
+                    shouldNotBeNullable.Add(argName);
                 }
             }
 
-            if (cannotBeNullableArgs.Any())
+            if (shouldNotBeNullable.Any())
             {
                 throw new ConfigValidationException(
-                    $"The arguments [{string.Join(", ", cannotBeNullableArgs)}] cannot be null in an " +
+                    $"The arguments [{string.Join(", ", shouldNotBeNullable)}] cannot be null in an " +
                     "update mutation. All primary key arguments must be non nullable.",
                     _schemaValidationStack
                 );
@@ -1118,57 +1359,35 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate there is no missing arguments in update mutation
+        /// Validate that none of the provided field arguments are nullable
         /// </summary>
-        /// <remarks>
-        /// In the current implemetation,
-        /// all primary key columns are required
-        /// and at least one non primary key column
-        /// </remarks>
-        private void ValidateNoMissingArgsInUpdateMut(
-            string tableName,
-            TableDefinition table,
-            Dictionary<string, InputValueDefinitionNode> mutArguments)
+        private void ValidateFieldArgumentsAreNonNullable(Dictionary<string, InputValueDefinitionNode> arguments)
         {
-            IEnumerable<string> missingPkArgs = table.PrimaryKey.Except(mutArguments.Keys);
-            IEnumerable<string> nonPkColumns = table.Columns.Keys.Except(table.PrimaryKey);
-            IEnumerable<string> nonPkColArgs = mutArguments.Keys.Intersect(nonPkColumns);
+            IEnumerable<string> nullableArgs = arguments.Keys.Where(argName => !arguments[argName].Type.IsNonNullType());
 
-            if (missingPkArgs.Any() || !nonPkColArgs.Any())
+            if (nullableArgs.Any())
             {
-                string missingPkArgsMessage =
-                    missingPkArgs.Any() ?
-                    $"Missing [{string.Join(", ", missingPkArgs)}] arguments representing the " +
-                    $"primary key columns of the table \"{tableName}\" associated with the mutation. "
-                    : string.Empty;
-                string noNonPkArgsMessage =
-                    !nonPkColArgs.Any() ?
-                    $"Mutation has no non primary key arguments. At least one non primary key argument " +
-                    $"[{string.Join(", ", nonPkColumns)}] must be present."
-                    : string.Empty;
-
                 throw new ConfigValidationException(
-                    $"Missing arguments from update mutation. " +
-                    missingPkArgsMessage +
-                    noNonPkArgsMessage,
+                    $"Field arguments [{string.Join(", ", nullableArgs)}] must not be nullable.",
                     _schemaValidationStack
                 );
             }
         }
 
         /// <summary>
-        /// Validate there are no queries which return a scalar type
+        /// Validate there are no queries which return a type with a scalar inner type
+        /// types with inner type scalar: String, String!, [String!]!
         /// </summary>
-        private void ValidateNoScalarTypeQueries(Dictionary<string, FieldDefinitionNode> queries)
+        private void ValidateNoScalarInnerTypeQueries(Dictionary<string, FieldDefinitionNode> queries)
         {
             IEnumerable<string> queryNames = queries.Keys;
-            IEnumerable<string> scalarTypeQueries = queryNames.Where(name => IsScalarType(queries[name].Type));
+            IEnumerable<string> scalarTypeQueries = queryNames.Where(name => IsScalarType(InnerType(queries[name].Type)));
 
             if (scalarTypeQueries.Any())
             {
                 throw new ConfigValidationException(
                     $"Query fields [{string.Join(", ", scalarTypeQueries)}] have invalid return types. " +
-                    "There is no support for queries returning scalar types.",
+                    "There is no support for queries returning scalar types or list of scalar types.",
                     _schemaValidationStack
                 );
             }

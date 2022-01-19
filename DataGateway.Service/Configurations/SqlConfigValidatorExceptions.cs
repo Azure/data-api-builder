@@ -713,6 +713,26 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
+        /// Validate scalar type fields nullability
+        /// </summary>
+        /// <remarks>
+        /// Currently it validates that all scalar type fields are non nullable.
+        /// This will have to change when nullable database types are supported
+        /// </remarks>
+        private void ValidateScalarFieldNullability(string typeName)
+        {
+            Dictionary<string, FieldDefinitionNode> scalarFields = GetScalarFields(GetTypeFields(typeName));
+            IEnumerable<string> nullableScalarFields = scalarFields.Keys.Where(fieldName => !scalarFields[fieldName].Type.IsNonNullType());
+
+            if (nullableScalarFields.Any())
+            {
+                throw new ConfigValidationException(
+                    $"Fields [{string.Join(", ", nullableScalarFields)}] should return a non nullable type.",
+                    _schemaValidationStack);
+            }
+        }
+
+        /// <summary>
         /// Validate if argument names match required arguments
         /// </summary>
         private void ValidateFieldHasRequiredArguments(IEnumerable<string> fieldArgumentNames, IEnumerable<string> requiredArguments)
@@ -800,28 +820,17 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate that the returned type is not nullable
+        /// Validate the nullability of the return type of the field
         /// </summary>
-        private void ValidateReturnedTypeIsNotNullable(FieldDefinitionNode field)
+        private void ValidateReturnTypeNullability(FieldDefinitionNode field, bool returnsNullable)
         {
-            if (!field.Type.IsNonNullType())
+            if (field.Type.IsNonNullType() == returnsNullable)
             {
+                string label = returnsNullable ? "nullable" : "non nullable";
                 throw new ConfigValidationException(
-                    $"The type returned by this field must not be nullable.",
-                    _schemaValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Validate that the returned type is nullable
-        /// </summary>
-        private void ValidateReturnedTypeIsNullable(FieldDefinitionNode field)
-        {
-            if (field.Type.IsNonNullType())
-            {
-                throw new ConfigValidationException(
-                    $"The type returned by this field must be nullable.",
-                    _schemaValidationStack);
+                    $"The type returned from this field must be {label}.",
+                    _schemaValidationStack
+                );
             }
         }
 

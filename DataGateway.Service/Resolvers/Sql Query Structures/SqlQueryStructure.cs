@@ -302,7 +302,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 IsListQuery = outputType.IsListType();
             }
 
-            if (IsListQuery)
+            if (IsListQuery && queryParams.ContainsKey("first"))
             {
                 // parse first parameter for all list queries
                 object firstObject = queryParams["first"];

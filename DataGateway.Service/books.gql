@@ -2,6 +2,7 @@ type Query {
     getBooks(first: Int = 100): [Book!]!
     getBook(id: Int!): Book
     getReview(id: Int!, book_id: Int!): Review
+    getReviews: [Review!]!
     books(first: Int, after: String): BookConnection!
     reviews(first: Int, after: String): ReviewConnection!
 }
@@ -14,16 +15,16 @@ type Mutation {
 }
 
 type Publisher {
-    id: Int
-    name: String
+    id: Int!
+    name: String!
     books(first: Int = 100): [Book!]!
     paginatedBooks(first: Int, after: String): BookConnection!
 }
 
 type Book {
-    id: Int
-    title: String
-    publisher_id: Int
+    id: Int!
+    title: String!
+    publisher_id: Int!
     publisher: Publisher!
     reviews(first: Int = 100): [Review!]!
     paginatedReviews(first: Int, after: String): ReviewConnection!
@@ -32,16 +33,16 @@ type Book {
 }
 
 type Author {
-    id: Int
-    name: String
-    birthdate: String
+    id: Int!
+    name: String!
+    birthdate: String!
     books(first: Int = 100): [Book!]!
     paginatedBooks(first: Int, after: String): BookConnection!
 }
 
 type Review {
-    id: Int
-    content: String
+    id: Int!
+    content: String!
     book: Book!
 }
 

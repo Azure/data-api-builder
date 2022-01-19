@@ -285,6 +285,7 @@ namespace Azure.DataGateway.Service.Configurations
             string[] tableColumnsPath = new[] { "DatabaseSchema", "Tables", typeTable, "Columns" };
             ValidateTableColumnsMatchScalarFields(typeTable, typeName, MakeConfigPosition(tableColumnsPath));
             ValidateTableColumnTypesMatchScalarFieldTypes(typeTable, typeName, MakeConfigPosition(tableColumnsPath));
+            ValidateScalarFieldNullability(typeName);
         }
 
         /// <summary>
@@ -389,7 +390,7 @@ namespace Azure.DataGateway.Service.Configurations
         {
             if (IsPaginationType(fieldDefinition.Type))
             {
-                ValidateReturnedTypeIsNotNullable(fieldDefinition);
+                ValidateReturnTypeNullability(fieldDefinition, returnsNullable: false);
                 ValidatePaginationTypeFieldArguments(fieldDefinition);
                 returnedType = InnerTypeStr(GetTypeFields(returnedType)["items"].Type);
             }
@@ -431,7 +432,7 @@ namespace Azure.DataGateway.Service.Configurations
         {
             if (IsPaginationType(fieldDefinition.Type))
             {
-                ValidateReturnedTypeIsNotNullable(fieldDefinition);
+                ValidateReturnTypeNullability(fieldDefinition, returnsNullable: false);
                 ValidatePaginationTypeFieldArguments(fieldDefinition);
                 returnedType = InnerTypeStr(GetTypeFields(returnedType)["items"].Type);
             }
@@ -528,6 +529,7 @@ namespace Azure.DataGateway.Service.Configurations
 
             ValidateInsertMutHasCorrectArgs(table, mutArgs);
             ValidateArgNullabilityInInsertMut(table, mutArgs);
+            ValidateReturnTypeNullability(mutation, returnsNullable: true);
         }
 
         /// <summary>
@@ -548,6 +550,7 @@ namespace Azure.DataGateway.Service.Configurations
             ValidateMutArgsMatchTableColumns(resolver.Table, table, mutArgs);
             ValidateMutArgTypesMatchTableColTypes(resolver.Table, table, mutArgs);
             ValidateArgNullabilityInUpdateMut(table, mutArgs);
+            ValidateReturnTypeNullability(mutation, returnsNullable: true);
         }
 
         /// <summary>
@@ -568,6 +571,7 @@ namespace Azure.DataGateway.Service.Configurations
             ValidateFieldHasRequiredArguments(mutArgs.Keys, table.PrimaryKey);
             ValidateMutArgTypesMatchTableColTypes(resolver.Table, table, mutArgs);
             ValidateFieldArgumentsAreNonNullable(mutArgs);
+            ValidateReturnTypeNullability(mutation, returnsNullable: true);
         }
 
         /// <summary>
@@ -594,7 +598,7 @@ namespace Azure.DataGateway.Service.Configurations
 
                 if (IsPaginationType(queryField.Type))
                 {
-                    ValidateReturnedTypeIsNotNullable(queryField);
+                    ValidateReturnTypeNullability(queryField, returnsNullable: false);
                     ValidatePaginationTypeFieldArguments(queryField);
                 }
                 else if (IsListType(queryField.Type))
@@ -604,7 +608,7 @@ namespace Azure.DataGateway.Service.Configurations
                 }
                 else if (IsCustomType(queryField.Type))
                 {
-                    ValidateReturnedTypeIsNullable(queryField);
+                    ValidateReturnTypeNullability(queryField, returnsNullable: true);
                     ValidateNonListCustomTypeQueryFieldArgs(queryField);
                 }
 

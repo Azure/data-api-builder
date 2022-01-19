@@ -14,9 +14,12 @@ namespace Azure.DataGateway.Service.Models
     {
         None,
         // Cosmos Operations
-        Upsert, Delete, Create,
+        Upsert, Create,
 
         // Sql Operations
-        Insert, Update
+        Insert, Update,
+
+        // Shared
+        Delete
     }
 }

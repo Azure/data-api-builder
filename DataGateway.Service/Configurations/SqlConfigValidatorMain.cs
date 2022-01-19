@@ -204,6 +204,10 @@ namespace Azure.DataGateway.Service.Configurations
 
             ValidateTypesMatchSchemaTypes(types);
 
+            // Field validation relies on valid pagination types so
+            // this must be validated first
+            ValidatePaginationTypes(types);
+
             foreach (KeyValuePair<string, GraphqlType> nameTypePair in types)
             {
                 string typeName = nameTypePair.Key;
@@ -212,11 +216,7 @@ namespace Azure.DataGateway.Service.Configurations
                 ConfigStepInto(typeName);
                 SchemaStepInto(typeName);
 
-                if (IsPaginationTypeName(typeName))
-                {
-                    ValidatePaginationTypeSchema(typeName);
-                }
-                else
+                if (!IsPaginationTypeName(typeName))
                 {
                     ValidateGraphQLTypeHasTable(type);
 
@@ -236,6 +236,26 @@ namespace Azure.DataGateway.Service.Configurations
             ConfigStepOutOf("GraphQLTypes");
 
             SetGraphQLTypesValidated(true);
+        }
+
+        /// <summary>
+        /// Validate pagination types
+        /// </summary>
+        private void ValidatePaginationTypes(Dictionary<string, GraphqlType> types)
+        {
+            foreach (string typeName in types.Keys)
+            {
+                ConfigStepInto(typeName);
+                SchemaStepInto(typeName);
+
+                if (IsPaginationTypeName(typeName))
+                {
+                    ValidatePaginationTypeSchema(typeName);
+                }
+
+                ConfigStepOutOf(typeName);
+                SchemaStepOutOf(typeName);
+            }
         }
 
         ///<summary>

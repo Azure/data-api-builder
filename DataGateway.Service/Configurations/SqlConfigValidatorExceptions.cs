@@ -527,7 +527,7 @@ namespace Azure.DataGateway.Service.Configurations
                 IsPaginationType(InnerType(itemsType)))
             {
                 throw new ConfigValidationException(
-                    "\"items\" must return a non nullable list type of non nullable custom types " +
+                    "\"items\" must return a non nullable list type of non nullable custom type " +
                     "\"[CustomType!]!\" where CustomType is not a pagination type.",
                     _schemaValidationStack);
             }

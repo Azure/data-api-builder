@@ -311,11 +311,17 @@ namespace Azure.DataGateway.Service.Configurations
                 ITypeNode fieldType = fieldDefinition.Type;
                 string returnedType = InnerTypeStr(fieldType);
 
+                List<GraphqlRelationshipType> validRelationshipTypes = new()
+                {
+                    GraphqlRelationshipType.ManyToMany,
+                    GraphqlRelationshipType.OneToMany,
+                    GraphqlRelationshipType.ManyToOne
+                };
+
+                ValidateRelationshipType(field, validRelationshipTypes);
+
                 switch (field.RelationshipType)
                 {
-                    case GraphqlRelationshipType.OneToOne:
-                        OneToOneNotSupported();
-                        break;
                     case GraphqlRelationshipType.OneToMany:
                         ValidateOneToManyField(field, fieldDefinition, typeName, returnedType);
                         break;
@@ -324,9 +330,6 @@ namespace Azure.DataGateway.Service.Configurations
                         break;
                     case GraphqlRelationshipType.ManyToMany:
                         ValidateManyToManyField(field, fieldDefinition, typeName, returnedType);
-                        break;
-                    case GraphqlRelationshipType.None:
-                        RelationshipNoneNotSupported();
                         break;
                 }
 

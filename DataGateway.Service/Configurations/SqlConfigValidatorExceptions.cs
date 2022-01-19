@@ -786,15 +786,17 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Throw a config validation exception to inform that 1-to-1 relationships
-        /// are not supported
+        /// Validate that the field has a valid relationship type
         /// </summary>
-        private void OneToOneNotSupported()
+        private void ValidateRelationshipType(GraphqlField field, List<GraphqlRelationshipType> validRelationshipTypes)
         {
-            throw new ConfigValidationException(
-                "Releationship type OneToOne is not supported yet.",
-                _configValidationStack
-            );
+            if (!validRelationshipTypes.Contains(field.RelationshipType))
+            {
+                throw new ConfigValidationException(
+                    $"{field.RelationshipType} is not a valid/supported relationship type.",
+                    _configValidationStack
+                );
+            }
         }
 
         /// <summary>
@@ -1039,17 +1041,6 @@ namespace Azure.DataGateway.Service.Configurations
                     _configValidationStack
                 );
             }
-        }
-
-        /// <summary>
-        /// Throw a config validation exception to inform that none relationships
-        /// are not supported
-        /// </summary>
-        private void RelationshipNoneNotSupported()
-        {
-            throw new ConfigValidationException(
-                "Relationship type none not supported.",
-                _configValidationStack);
         }
 
         /// <summary>

@@ -122,10 +122,9 @@ namespace Azure.DataGateway.Service.Controllers
         /// </summary>
         /// <param name="entityName">The name of the entity.</param>
         /// Expected URL template is of the following form:
-        /// CosmosDb: URL template: /<entityName>
-        /// MsSql/PgSql: URL template: /<entityName>
+        /// CosmosDb/MsSql/PgSql: URL template: /<entityName>
         /// URL MUST NOT contain a queryString
-        /// URL example: /SalesOrders/ </param>
+        /// URL example: /SalesOrders </param>
         [HttpPost]
         [Produces("application/json")]
         public async Task<IActionResult> Insert(

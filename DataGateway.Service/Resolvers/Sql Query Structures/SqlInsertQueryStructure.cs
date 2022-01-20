@@ -61,8 +61,6 @@ namespace Azure.DataGateway.Service.Resolvers
                     continue;
                 }
 
-                Columns.Add(QuoteIdentifier(param.Key));
-
                 PopulateColumnsAndParams(param.Key, param.Value);
             }
 

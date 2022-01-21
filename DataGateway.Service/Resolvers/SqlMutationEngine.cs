@@ -52,46 +52,28 @@ namespace Azure.DataGateway.Service.Resolvers
             MutationResolver mutationResolver = _metadataStoreProvider.GetMutationResolver(graphqlMutationName);
 
             string tableName = mutationResolver.Table;
-            TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(tableName);
-
-            string queryString;
-            Dictionary<string, object> queryParameters;
 
             Tuple<JsonDocument, IMetadata> result = new(null, null);
 
-            switch (mutationResolver.OperationType)
+            if (mutationResolver.OperationType == Operation.Delete)
             {
-                case "INSERT":
-                    SqlInsertStructure insertQueryStruct = new(tableName, tableDefinition, parameters, _queryBuilder);
-                    queryString = insertQueryStruct.ToString();
-                    queryParameters = insertQueryStruct.Parameters;
-                    break;
-                case "UPDATE":
-                    SqlUpdateStructure updateQueryStruct = new(tableName, tableDefinition, parameters, _queryBuilder);
-                    queryString = updateQueryStruct.ToString();
-                    queryParameters = updateQueryStruct.Parameters;
-                    break;
-                case "DELETE":
-                    // compute the mutation result before removing the element
-                    result = await _queryEngine.ExecuteAsync(context, parameters, false);
-                    SqlDeleteStructure deleteStructure = new(tableName, tableDefinition, parameters, _queryBuilder);
-                    queryString = deleteStructure.ToString();
-                    queryParameters = deleteStructure.Parameters;
-                    break;
-                default:
-                    throw new NotSupportedException($"Unexpected value for MutationResolver.OperationType \"{mutationResolver.OperationType}\" found.");
+                // compute the mutation result before removing the element
+                result = await _queryEngine.ExecuteAsync(context, parameters, false);
             }
 
-            Console.WriteLine(queryString);
+            using DbDataReader dbDataReader =
+                await PerformMutationOperation(
+                    tableName,
+                    mutationResolver.OperationType,
+                    parameters);
 
-            using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, queryParameters);
-
-            if (!context.Selection.Type.IsScalarType() && mutationResolver.OperationType != "DELETE")
+            if (!context.Selection.Type.IsScalarType() && mutationResolver.OperationType != Operation.Delete)
             {
                 Dictionary<string, object> searchParams = await ExtractRowFromDbDataReader(dbDataReader);
 
                 if (searchParams == null)
                 {
+                    TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(tableName);
                     string searchedPK = '<' + string.Join(", ", tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
                     throw new DatagatewayException($"Could not find entity with {searchedPK}", 404, DatagatewayException.SubStatusCodes.EntityNotFound);
                 }
@@ -110,30 +92,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>JSON object result</returns>
         public async Task<JsonDocument> ExecuteAsync(RequestContext context)
         {
-            TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(context.EntityName);
-
-            string queryString;
-            Dictionary<string, object> queryParameters;
-
-            switch (context.OperationType)
-            {
-                case Operation.Insert:
-                    SqlInsertStructure insertQueryStruct =
-                        new(context.EntityName, tableDefinition, context.FieldValuePairsInBody, _queryBuilder);
-                    queryString = insertQueryStruct.ToString();
-                    queryParameters = insertQueryStruct.Parameters;
-                    break;
-                default:
-                    throw new DatagatewayException(
-                        message: $"Unexpected DML operation \" {context.OperationType}\" requested.",
-                        statusCode: (int)HttpStatusCode.BadRequest,
-                        subStatusCode: DatagatewayException.SubStatusCodes.BadRequest)
-                    ;
-            }
-
-            Console.WriteLine(queryString);
-
-            using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, queryParameters);
+            using DbDataReader dbDataReader =
+                await PerformMutationOperation(
+                    context.EntityName,
+                    context.OperationType,
+                    context.FieldValuePairsInBody);
 
             // Reuse the same context as a FindRequestContext to return the results after the mutation operation.
             context.PrimaryKeyValuePairs = await ExtractRowFromDbDataReader(dbDataReader);
@@ -150,6 +113,42 @@ namespace Azure.DataGateway.Service.Resolvers
             // this allows for nested queries in muatations
             // the searchParams are used to identify the mutated record so it can then be further queried on
             return await _queryEngine.ExecuteAsync(context);
+        }
+
+        private async Task<DbDataReader> PerformMutationOperation(
+            string tableName,
+            Operation operationType,
+            IDictionary<string, object> parameters)
+        {
+            TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(tableName);
+
+            string queryString;
+            Dictionary<string, object> queryParameters;
+
+            switch (operationType)
+            {
+                case Operation.Insert:
+                    SqlInsertStructure insertQueryStruct = new(tableName, tableDefinition, parameters, _queryBuilder);
+                    queryString = insertQueryStruct.ToString();
+                    queryParameters = insertQueryStruct.Parameters;
+                    break;
+                case Operation.Update:
+                    SqlUpdateStructure updateQueryStruct = new(tableName, tableDefinition, parameters, _queryBuilder);
+                    queryString = updateQueryStruct.ToString();
+                    queryParameters = updateQueryStruct.Parameters;
+                    break;
+                case Operation.Delete:
+                    SqlDeleteStructure deleteStructure = new(tableName, tableDefinition, parameters, _queryBuilder);
+                    queryString = deleteStructure.ToString();
+                    queryParameters = deleteStructure.Parameters;
+                    break;
+                default:
+                    throw new NotSupportedException($"Unexpected mutation operation \" {operationType}\" requested.");
+            }
+
+            Console.WriteLine(queryString);
+
+            return await _queryExecutor.ExecuteQueryAsync(queryString, queryParameters);
         }
 
         ///<summary>

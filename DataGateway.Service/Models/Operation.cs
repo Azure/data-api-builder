@@ -14,7 +14,7 @@ namespace Azure.DataGateway.Service.Models
         Upsert, Create,
 
         // Sql operations
-        Insert
+        Insert, Update
     }
 
     /// <summary>

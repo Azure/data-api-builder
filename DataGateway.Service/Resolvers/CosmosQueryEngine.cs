@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using HotChocolate.Resolvers;
+using HotChocolate.Types;
 using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json.Linq;
 
@@ -31,7 +32,7 @@ namespace Azure.DataGateway.Services
         /// Executes the given IMiddlewareContext of the GraphQL query and
         /// expecting a single Json back.
         /// </summary>
-        public async Task<JsonDocument> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters, bool isPaginatedQuery)
+        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters, bool isPaginatedQuery)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
@@ -89,7 +90,7 @@ namespace Azure.DataGateway.Services
                    new JProperty("nodes", jarray));
 
                 // This extra deserialize/serialization will be removed after moving to Newtonsoft from System.Text.Json
-                return JsonDocument.Parse(res.ToString());
+                return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(res.ToString()), null);
             }
 
             JObject firstItem = null;
@@ -103,10 +104,10 @@ namespace Azure.DataGateway.Services
 
             JsonDocument jsonDocument = JsonDocument.Parse(firstItem.ToString());
 
-            return jsonDocument;
+            return new Tuple<JsonDocument, IMetadata>(jsonDocument, null);
         }
 
-        public async Task<IEnumerable<JsonDocument>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
+        public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
@@ -140,7 +141,7 @@ namespace Azure.DataGateway.Services
                 }
             }
 
-            return resultsAsList;
+            return new Tuple<IEnumerable<JsonDocument>, IMetadata>(resultsAsList, null);
         }
 
         // <summary>
@@ -149,6 +150,37 @@ namespace Azure.DataGateway.Services
         public Task<JsonDocument> ExecuteAsync(RequestContext queryStructure)
         {
             throw new NotImplementedException();
+        }
+
+        /// <inheritdoc />
+        public JsonDocument ResolveInnerObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        {
+            //TODO: Try to avoid additional deserialization/serialization here.
+            return JsonDocument.Parse(element.ToString());
+        }
+
+        /// <inheritdoc />
+        public IEnumerable<JsonDocument> ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        {
+            //TODO: Try to avoid additional deserialization/serialization here.
+            return JsonSerializer.Deserialize<List<JsonDocument>>(element.ToString());
+        }
+
+        /// <summary>
+        /// Identifies if a query is paginated or not by checking the IsPaginated param on the respective resolver.
+        /// </summary>
+        /// <param name="queryName the name of the query"></param>
+        /// <returns></returns>
+        public bool IsPaginatedQuery(string queryName)
+        {
+            GraphQLQueryResolver resolver = _metadataStoreProvider.GetQueryResolver(queryName);
+            if (resolver == null)
+            {
+                string message = string.Format("There is no resolver for the query: {0}", queryName);
+                throw new InvalidOperationException(message);
+            }
+
+            return resolver.IsPaginated;
         }
 
         private static string Base64Encode(string plainText)

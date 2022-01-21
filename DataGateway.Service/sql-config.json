@@ -1,17 +1,6 @@
 {
   "GraphQLSchema": "",
   "GraphQLSchemaFile": "books.gql",
-  "QueryResolvers": [
-    {
-      "Id": "getBooks"
-    },
-    {
-      "Id": "getBook"
-    },
-    {
-      "Id": "getReview"
-    }
-  ],
   "MutationResolvers": [
     {
       "Id": "insertBook",
@@ -41,6 +30,10 @@
         "books": {
           "RelationshipType": "OneToMany",
           "RightForeignKey": "book_publisher_fk"
+        },
+        "paginatedBooks": {
+          "RelationshipType": "OneToMany",
+          "RightForeignKey": "book_publisher_fk"
         }
       }
     },
@@ -55,7 +48,17 @@
           "RelationshipType": "OneToMany",
           "RightForeignKey": "review_book_fk"
         },
+        "paginatedReviews":{
+          "RelationshipType": "OneToMany",
+          "RightForeignKey": "review_book_fk"
+        },
         "authors": {
+          "RelationShipType": "ManyToMany",
+          "AssociativeTable": "book_author_link",
+          "LeftForeignKey": "book_author_link_book_fk",
+          "RightForeignKey": "book_author_link_author_fk"
+        },
+        "paginatedAuthors": {
           "RelationShipType": "ManyToMany",
           "AssociativeTable": "book_author_link",
           "LeftForeignKey": "book_author_link_book_fk",
@@ -71,6 +74,12 @@
           "AssociativeTable": "book_author_link",
           "LeftForeignKey": "book_author_link_author_fk",
           "RightForeignKey": "book_author_link_book_fk"
+        },
+        "paginatedBooks": {
+          "RelationShipType": "ManyToMany",
+          "AssociativeTable": "book_author_link",
+          "LeftForeignKey": "book_author_link_author_fk",
+          "RightForeignKey": "book_author_link_book_fk"
         }
       }
     },
@@ -82,6 +91,15 @@
           "LeftForeignKey": "review_book_fk"
         }
       }
+    },
+    "BookConnection": {
+     "IsPaginationType": true
+    },
+    "AuthorConnection": {
+    "IsPaginationType": true
+    },
+    "ReviewConnection": {
+    "IsPaginationType": true
     }
   },
   "DatabaseSchema": {

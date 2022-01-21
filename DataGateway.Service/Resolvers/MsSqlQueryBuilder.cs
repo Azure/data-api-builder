@@ -1,7 +1,7 @@
-using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using System.Text;
 using Microsoft.Data.SqlClient;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -87,31 +87,65 @@ namespace Azure.DataGateway.Service.Resolvers
         private enum OutputQualifier { Inserted, Deleted };
 
         /// <summary>
-        /// Converts OutputQualifier enums to strings
+        /// Adds qualifiers (inserted or deleted) to columns in OUTPUT clause and joins them with commas.
+        /// e.g. for columns [C1, C2, C3] and output qualifier Inserted
+        /// return Inserted.C1, Inserted.C2, Inserted.C3
         /// </summary>
-        private static string OutputQualifierResolver(OutputQualifier qualifier)
+        private static string MakeOutputColumns(List<string> columns, OutputQualifier outputQualifier)
         {
-            if (qualifier == OutputQualifier.Inserted)
+            List<string> outputColumns = columns.Select(column => $"{outputQualifier}.{column}").ToList();
+            return string.Join(", ", outputColumns);
+        }
+
+        public string MakeKeysetPaginationPredicate(List<string> primaryKey, List<string> pkValues)
+        {
+            if (primaryKey.Count > 1)
             {
-                return "Inserted";
-            }
-            else if (qualifier == OutputQualifier.Deleted)
-            {
-                return "Deleted";
+                StringBuilder result = new("(");
+                for (int i = 0; i < primaryKey.Count; i++)
+                {
+                    if (i > 0)
+                    {
+                        result.Append(" OR ");
+                    }
+
+                    result.Append($"({MakePaginationInequality(primaryKey, pkValues, i)})");
+                }
+
+                result.Append(")");
+
+                return result.ToString();
             }
             else
             {
-                throw new Exception("Could not determine output qualifier type");
+                return MakePaginationInequality(primaryKey, pkValues, 0);
             }
         }
 
         /// <summary>
-        /// Adds qualifiers (inserted or deleted) to columns in OUTPUT clause and joins them will commas.
+        /// Create an inequality where all primary key columns up to untilIndex are equilized to the
+        /// respective pkValue, and the primary key colum at untilIndex has to be greater than its pkValue
+        /// E.g. for
+        /// primaryKey: [a, b, c, d, e, f]
+        /// pkValues: [A, B, C, D, E, F]
+        /// untilIndex: 2
+        /// generate <c>a = A AND b = B AND c > C</c>
         /// </summary>
-        private static string MakeOutputColumns(List<string> columns, OutputQualifier outputQualifier)
+        private static string MakePaginationInequality(List<string> primaryKey, List<string> pkValues, int untilIndex)
         {
-            List<string> outputColumns = columns.Select(column => $"{OutputQualifierResolver(outputQualifier)}.{column}").ToList();
-            return string.Join(", ", outputColumns);
+            string result = string.Empty;
+            for (int i = 0; i <= untilIndex; i++)
+            {
+                string op = i == untilIndex ? ">" : "=";
+                result += $"{primaryKey[i]} {op} {pkValues[i]}";
+
+                if (i < untilIndex)
+                {
+                    result += " AND ";
+                }
+            }
+
+            return result;
         }
     }
 }

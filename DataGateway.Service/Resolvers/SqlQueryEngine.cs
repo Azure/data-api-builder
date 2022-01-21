@@ -4,9 +4,10 @@ using System.Data.Common;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
 using HotChocolate.Resolvers;
-using Azure.DataGateway.Service.Models;
+using HotChocolate.Types;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -49,19 +50,31 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// Executes the given IMiddlewareContext of the GraphQL query and
-        /// expecting a single Json back.
+        /// expecting a single Json and its related pagination metadata back.
         /// </summary>
-        public async Task<JsonDocument> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters, bool isContinuationQuery)
+        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters, bool isPaginated)
         {
             SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _queryBuilder);
-            return await ExecuteAsync(structure);
+
+            if (structure.PaginationMetadata.IsPaginated)
+            {
+                return new Tuple<JsonDocument, IMetadata>(
+                    SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(await ExecuteAsync(structure), structure.PaginationMetadata),
+                    structure.PaginationMetadata);
+            }
+            else
+            {
+                return new Tuple<JsonDocument, IMetadata>(
+                    await ExecuteAsync(structure),
+                    structure.PaginationMetadata);
+            }
         }
 
         /// <summary>
         /// Executes the given IMiddlewareContext of the GraphQL and expecting a
-        /// list of Jsons back.
+        /// list of Jsons and the relevant pagination metadata back.
         /// </summary>
-        public async Task<IEnumerable<JsonDocument>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
+        public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _queryBuilder);
             Console.WriteLine(structure.ToString());
@@ -71,10 +84,13 @@ namespace Azure.DataGateway.Service.Resolvers
             //
             if (!dbDataReader.HasRows)
             {
-                return new List<JsonDocument>();
+                return new Tuple<IEnumerable<JsonDocument>, IMetadata>(new List<JsonDocument>(), null);
             }
 
-            return JsonSerializer.Deserialize<List<JsonDocument>>(await GetJsonStringFromDbReader(dbDataReader));
+            return new Tuple<IEnumerable<JsonDocument>, IMetadata>(
+                JsonSerializer.Deserialize<List<JsonDocument>>(await GetJsonStringFromDbReader(dbDataReader)),
+                structure.PaginationMetadata
+            );
         }
 
         // <summary>
@@ -84,6 +100,44 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             SqlQueryStructure structure = new(context, _metadataStoreProvider, _queryBuilder);
             return await ExecuteAsync(structure);
+        }
+
+        /// <inheritdoc />
+        public JsonDocument ResolveInnerObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        {
+            PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
+            PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
+            metadata = currentMetadata;
+
+            if (currentMetadata.IsPaginated)
+            {
+                return SqlPaginationUtil.CreatePaginationConnectionFromJsonElement(element, currentMetadata);
+            }
+            else
+            {
+                //TODO: Try to avoid additional deserialization/serialization here.
+                return JsonDocument.Parse(element.ToString());
+            }
+        }
+
+        /// <inheritdoc />
+        public IEnumerable<JsonDocument> ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        {
+            PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
+            PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
+            metadata = currentMetadata;
+
+            //TODO: Try to avoid additional deserialization/serialization here.
+            return JsonSerializer.Deserialize<List<JsonDocument>>(element.ToString());
+        }
+
+        /// <summary>
+        /// Used to match the IQueryEngine interface
+        /// Always returns false
+        /// </summary>
+        public bool IsPaginatedQuery(string queryName)
+        {
+            return false;
         }
 
         // <summary>

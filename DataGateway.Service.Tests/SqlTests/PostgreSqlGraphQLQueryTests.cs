@@ -1,5 +1,7 @@
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -38,7 +40,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string graphQLQueryName = "getBooks";
             string graphQLQuery = @"{
-                getBooks(first: 123) {
+                getBooks(first: 100) {
                     id
                     title
                 }
@@ -349,6 +351,78 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
 
             SqlTestHelper.PerformTestEqualJsonStrings("null", actual);
+        }
+
+        /// <sumary>
+        /// Test if first param successfully limits list quries
+        /// </summary>
+        [TestMethod]
+        public async Task TestFirstParamForListQueries()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(first: 1) {
+                    title
+                    publisher {
+                        name
+                        books(first: 3) {
+                            title
+                        }
+                    }
+                }
+            }";
+
+            string postgresQuery = @"
+                SELECT COALESCE(jsonb_agg(to_jsonb(subq5)), '[]') AS DATA
+                FROM
+                  (SELECT table0.title AS title,
+                          table1_subq.data AS publisher
+                   FROM books AS table0
+                   LEFT OUTER JOIN LATERAL
+                     (SELECT to_jsonb(subq4) AS DATA
+                      FROM
+                        (SELECT table1.name AS name,
+                                table2_subq.data AS books
+                         FROM publishers AS table1
+                         LEFT OUTER JOIN LATERAL
+                           (SELECT COALESCE(jsonb_agg(to_jsonb(subq3)), '[]') AS DATA
+                            FROM
+                              (SELECT table2.title AS title
+                               FROM books AS table2
+                               WHERE table1.id = table2.publisher_id
+                               ORDER BY id
+                               LIMIT 3) AS subq3) AS table2_subq ON TRUE
+                         WHERE table0.publisher_id = table1.id
+                         ORDER BY id
+                         LIMIT 1) AS subq4) AS table1_subq ON TRUE
+                   WHERE 1 = 1
+                   ORDER BY id
+                   LIMIT 1) AS subq5
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        #endregion
+
+        #region Negative Tests
+
+        [TestMethod]
+        public async Task TestInvalidFirstParamQuery()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(first: -1) {
+                    id
+                    title
+                }
+            }";
+
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DatagatewayException.SubStatusCodes.BadRequest}");
         }
 
         #endregion

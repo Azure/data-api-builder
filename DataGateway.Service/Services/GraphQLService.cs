@@ -16,9 +16,10 @@ namespace Azure.DataGateway.Services
     {
         private readonly IQueryEngine _queryEngine;
         private readonly IMutationEngine _mutationEngine;
-        private IMetadataStoreProvider _metadataStoreProvider;
+        private readonly IMetadataStoreProvider _metadataStoreProvider;
 
-        public GraphQLService(IQueryEngine queryEngine,
+        public GraphQLService(
+            IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
             IMetadataStoreProvider metadataStoreProvider)
         {

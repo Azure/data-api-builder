@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -15,6 +16,12 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="ident">The unquoted identifier to be enclosed.</param>
         /// <returns>The quoted identifier.</returns>
         public string QuoteIdentifier(string ident);
+
+        /// <summary>
+        /// Create the optimal keyset pagination predicate for the database type
+        /// given the primary key and the primary column values needed to create the predicate
+        /// </summary>
+        public string MakeKeysetPaginationPredicate(List<string> primaryKey, List<string> pkValues);
 
         /// <summary>
         /// Wrap a column that corresponds to a subquery in whatever SQL that

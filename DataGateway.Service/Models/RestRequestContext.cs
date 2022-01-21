@@ -4,10 +4,10 @@ using Microsoft.AspNetCore.Authorization.Infrastructure;
 namespace Azure.DataGateway.Service.Models
 {
     /// <summary>
-    /// RequestContext defining the properties that each REST API request operations have
+    /// RestRequestContext defining the properties that each REST API request operations have
     /// in common.
     /// </summary>
-    public abstract class RequestContext
+    public abstract class RestRequestContext
     {
         /// <summary>
         /// The target Entity on which the request needs to be operated upon.

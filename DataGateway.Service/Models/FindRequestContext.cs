@@ -4,7 +4,7 @@ namespace Azure.DataGateway.Service.Models
     /// FindRequestContext provides the major components of a REST query
     /// corresponding to the FindById or FindMany operations.
     /// </summary>
-    public class FindRequestContext : RequestContext
+    public class FindRequestContext : RestRequestContext
     {
         /// <summary>
         /// Constructor.

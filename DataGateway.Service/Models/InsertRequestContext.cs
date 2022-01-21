@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authorization.Infrastructure;
 
 namespace Azure.DataGateway.Service.Models
 {
-    public class InsertRequestContext : RequestContext
+    public class InsertRequestContext : RestRequestContext
     {
         /// <summary>
         /// Constructor.

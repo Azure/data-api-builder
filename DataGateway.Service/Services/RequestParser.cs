@@ -22,8 +22,8 @@ namespace Azure.DataGateway.Services
         /// and their values.
         /// </summary>
         /// <param name="primaryKeyRoute">The primary key route. e.g. tablename/{saleOrderId/123/customerName/Xyz/}.</param>
-        /// <param name="context">The RequestContext holding the major components of the query.</param>
-        public static void ParsePrimaryKey(string primaryKeyRoute, RequestContext context)
+        /// <param name="context">The RestRequestContext holding the major components of the query.</param>
+        public static void ParsePrimaryKey(string primaryKeyRoute, RestRequestContext context)
         {
             if (!string.IsNullOrWhiteSpace(primaryKeyRoute))
             {
@@ -57,11 +57,11 @@ namespace Azure.DataGateway.Services
         /// <summary>
         /// ParseQueryString is a helper function used to parse the query String provided
         /// in the URL of the http request. It parses and saves the values that are needed to
-        /// later generate queries in the given RequestContext.
+        /// later generate queries in the given RestRequestContext.
         /// </summary>
         /// <param name="nvc">NameValueCollection representing query params from the URL's query string.</param>
-        /// <param name="context">The RequestContext holding the major components of the query.</param>
-        public static void ParseQueryString(NameValueCollection nvc, RequestContext context)
+        /// <param name="context">The RestRequestContext holding the major components of the query.</param>
+        public static void ParseQueryString(NameValueCollection nvc, RestRequestContext context)
         {
             foreach (string key in nvc.Keys)
             {

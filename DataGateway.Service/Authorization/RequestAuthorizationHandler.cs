@@ -18,10 +18,10 @@ namespace Azure.DataGateway.Service.Authorization
     }
 
     /// <summary>
-    /// Checks the provided AuthorizationContext and the RequestContext to ensure user is allowed to
+    /// Checks the provided AuthorizationContext and the RestRequestContext to ensure user is allowed to
     /// operate (GET, POST, etc.) on the entity (table).
     /// </summary>
-    public class RequestAuthorizationHandler : AuthorizationHandler<OperationAuthorizationRequirement, RequestContext>
+    public class RequestAuthorizationHandler : AuthorizationHandler<OperationAuthorizationRequirement, RestRequestContext>
     {
         private readonly IMetadataStoreProvider _configurationProvider;
 
@@ -31,7 +31,7 @@ namespace Azure.DataGateway.Service.Authorization
         }
         protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,
                                                   OperationAuthorizationRequirement requirement,
-                                                  RequestContext resource)
+                                                  RestRequestContext resource)
         {
             //Request is validated before Authorization, so table will exist.
             TableDefinition tableDefinition = _configurationProvider.GetTableDefinition(resource.EntityName);

@@ -207,7 +207,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Generate the structure for a SQL query based on FindRequestContext,
         /// which is created by a FindById or FindMany REST request.
         /// </summary>
-        public SqlQueryStructure(RequestContext context, IMetadataStoreProvider metadataStoreProvider, IQueryBuilder queryBuilder) :
+        public SqlQueryStructure(RestRequestContext context, IMetadataStoreProvider metadataStoreProvider, IQueryBuilder queryBuilder) :
             this(metadataStoreProvider, queryBuilder, new IncrementingInteger())
         {
             TableName = context.EntityName;

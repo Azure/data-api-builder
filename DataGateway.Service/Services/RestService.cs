@@ -40,7 +40,7 @@ namespace Azure.DataGateway.Services
         }
 
         /// <summary>
-        /// Invokes the request parser to identify major components of the RequestContext
+        /// Invokes the request parser to identify major components of the RestRequestContext
         /// and executes the given operation.
         /// </summary>
         /// <param name="entityName">The entity name.</param>
@@ -59,7 +59,7 @@ namespace Azure.DataGateway.Services
                 requestBody = await reader.ReadToEndAsync();
             }
 
-            RequestContext context;
+            RestRequestContext context;
             switch (operationType)
             {
                 case Operation.Find:
@@ -91,7 +91,7 @@ namespace Azure.DataGateway.Services
 
             RequestValidator.ValidateRequestContext(context, _metadataStoreProvider);
 
-            // RequestContext is finalized for QueryBuilding and QueryExecution.
+            // RestRequestContext is finalized for QueryBuilding and QueryExecution.
             // Perform Authorization check prior to moving forward in request pipeline.
             // RESTAuthorizationService
             AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(

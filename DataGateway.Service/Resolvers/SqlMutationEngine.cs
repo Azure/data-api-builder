@@ -90,7 +90,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="context">context of REST mutation request.</param>
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result</returns>
-        public async Task<JsonDocument> ExecuteAsync(RequestContext context)
+        public async Task<JsonDocument> ExecuteAsync(RestRequestContext context)
         {
             using DbDataReader dbDataReader =
                 await PerformMutationOperation(

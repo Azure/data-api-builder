@@ -22,7 +22,7 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="context">Request context containing the REST operation fields and their values.</param>
         /// <param name="configurationProvider">Configuration provider that enables referencing DB schema in config.</param>
         /// <exception cref="DatagatewayException"></exception>
-        public static void ValidateRequestContext(RequestContext context, IMetadataStoreProvider configurationProvider)
+        public static void ValidateRequestContext(RestRequestContext context, IMetadataStoreProvider configurationProvider)
         {
             TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, configurationProvider);
 
@@ -62,7 +62,7 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="context">Request context containing the primary keys and their values.</param>
         /// <param name="configurationProvider">Configuration provider that enables referencing DB schema in config.</param>
         /// <exception cref="DatagatewayException"></exception>
-        public static void ValidatePrimaryKey(RequestContext context, IMetadataStoreProvider configurationProvider)
+        public static void ValidatePrimaryKey(RestRequestContext context, IMetadataStoreProvider configurationProvider)
         {
             TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, configurationProvider);
 

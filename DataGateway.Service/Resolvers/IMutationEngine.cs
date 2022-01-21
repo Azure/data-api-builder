@@ -24,9 +24,8 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Executes the mutation query and returns result as JSON object asynchronously.
         /// </summary>
-        /// <param name="context">Middleware context of the mutation</param>
-        /// <param name="parameters">parameters in the mutation query.</param>
+        /// <param name="context">context of REST mutation request.</param>
         /// <returns>JSON object result</returns>
-        public Task<JsonDocument> ExecuteAsync(RequestContext context);
+        public Task<JsonDocument> ExecuteAsync(RestRequestContext context);
     }
 }

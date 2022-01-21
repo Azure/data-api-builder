@@ -207,7 +207,8 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Generate the structure for a SQL query based on FindRequestContext,
         /// which is created by a FindById or FindMany REST request.
         /// </summary>
-        public SqlQueryStructure(RequestContext context, IMetadataStoreProvider metadataStoreProvider, IQueryBuilder queryBuilder) : this(metadataStoreProvider, queryBuilder, new IncrementingInteger())
+        public SqlQueryStructure(RequestContext context, IMetadataStoreProvider metadataStoreProvider, IQueryBuilder queryBuilder) :
+            this(metadataStoreProvider, queryBuilder, new IncrementingInteger())
         {
             TableName = context.EntityName;
             TableAlias = TableName;
@@ -225,23 +226,13 @@ namespace Azure.DataGateway.Service.Resolvers
 
             foreach (KeyValuePair<string, object> predicate in context.PrimaryKeyValuePairs)
             {
-                string parameterName = $"param{Counter.Next()}";
-                Parameters.Add(parameterName, ResolveParamTypeFromField(predicate.Value.ToString(), predicate.Key));
-                Predicates.Add($"{QualifiedColumn(predicate.Key)} = @{parameterName}");
+                PopulateParamsAndPredicates(predicate);
             }
 
             foreach (KeyValuePair<string, object> predicate in context.FieldValuePairsInBody)
             {
-                try
-                {
-                    string parameterName = MakeParamWithValue(GetParamAsColumnSystemType(predicate.Value, predicate.Field));
-                    Predicates.Add($"{QualifiedColumn(predicate.Field)} = @{parameterName}");
-                }
-                catch (ArgumentException)
-                {
-                    throw new DatagatewayException($"Predicate field \"{predicate.Field}\" has invalid value type.", 400, DatagatewayException.SubStatusCodes.BadRequest);
-                }
-            });
+                PopulateParamsAndPredicates(predicate);
+            };
         }
 
         /// <summary>
@@ -462,6 +453,34 @@ namespace Azure.DataGateway.Service.Resolvers
 
             List<string> qualifiedPks = pkColNames.Select(pkColName => QualifiedColumn(pkColName)).ToList();
             Predicates.Add(_queryBuilder.MakeKeysetPaginationPredicate(qualifiedPks, pkValues));
+        }
+
+        /// <summary>
+        ///  Given the predicate key value pair, populates the Parameters and Predicates properties.
+        /// </summary>
+        /// <param name="predicate">The key value pair representing a predicate.</param>
+        private void PopulateParamsAndPredicates(KeyValuePair<string, object> predicate)
+        {
+            try
+            {
+                string parameterName;
+                if (predicate.Value != null)
+                {
+                    parameterName = MakeParamWithValue(
+                        GetParamAsColumnSystemType(predicate.Value.ToString(), predicate.Key));
+                }
+                else
+                {
+                    parameterName = MakeParamWithValue(value: null);
+                }
+
+                Predicates.Add($"{QualifiedColumn(predicate.Key)} = @{parameterName}");
+            }
+            catch (ArgumentException)
+            {
+                throw new DatagatewayException($"Predicate field \"{predicate.Key}\" " +
+                    $"has invalid value type.", 400, DatagatewayException.SubStatusCodes.BadRequest);
+            }
         }
 
         /// <summary>

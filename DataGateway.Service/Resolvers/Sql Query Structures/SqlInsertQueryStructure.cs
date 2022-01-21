@@ -87,23 +87,27 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Populate the column names in the Columns, create parameter and add its value
-        /// into the Parameters dictionary.
+        /// Populates the column name in Columns, creates parameter
+        /// and adds its value to Values.
         /// </summary>
+        /// <param name="columnName">The name of the column.</param>
+        /// <param name="value">The value of the column.</param>
         private void PopulateColumnsAndParams(string columnName, object value)
         {
             Columns.Add(QuoteIdentifier(columnName));
-
-            string paramName = $"param{Counter.Next()}";
-            Values.Add($"@{paramName}");
+            string paramName;
             if (value != null)
             {
-                Parameters.Add(paramName, GetParamValueBasedOnColumnType(columnName, value.ToString()));
+                paramName = MakeParamWithValue(
+                    GetParamAsColumnSystemType(value.ToString(), columnName));
             }
             else
             {
-                Parameters.Add(paramName, value: null);
+                paramName = MakeParamWithValue(value: null);
             }
+
+            Values.Add($"@{paramName}");
+
         }
 
         /// <summary>
@@ -153,24 +157,65 @@ namespace Azure.DataGateway.Service.Resolvers
             return _queryBuilder.Build(this);
         }
 
-        ///<summary>
-        /// Resolves a string parameter to the correct type, by using the type of the field
-        /// it is supposed to be compared with
-        ///</summary>
-        object GetParamValueBasedOnColumnType(string columnName, string param)
+        /// <summary>
+        ///  Adds parameter to Parameters and returns the name associated with it
+        /// </summary>
+        /// <param name="value">The value of the parameter to be made.</param>
+        private string MakeParamWithValue(object value)
         {
-            string type = _tableDefinition.Columns.GetValueOrDefault(columnName).Type;
-            switch (type)
+            string paramName = $"param{Counter.Next()}";
+            Parameters.Add(paramName, value);
+            return paramName;
+        }
+
+        ///<summary>
+        /// Gets the value of the parameter cast as the type of the column this parameter is associated with
+        ///</summary>
+        /// <exception cref="ArgumentException">columnName is not a valid column of table or param does not have a valid value type</exception>
+        public object GetParamAsColumnSystemType(string param, string columnName)
+        {
+            ColumnType type = GetColumnType(columnName);
+            Type systemType = ColumnDefinition.ResolveColumnToSystemType(type);
+
+            try
             {
-                case "text":
-                case "varchar":
-                    return param;
-                case "bigint":
-                case "int":
-                case "smallint":
-                    return long.Parse(param);
-                default:
-                    throw new Exception($"Type of field \"{type}\" could not be determined");
+                switch (systemType.Name)
+                {
+                    case "String":
+                        return param;
+                    case "Int64":
+                        return long.Parse(param);
+                    default:
+                        // should never happen due to the config being validated for correct types
+                        return null;
+                }
+            }
+            catch (Exception e)
+            {
+                if (e is FormatException ||
+                    e is ArgumentNullException ||
+                    e is OverflowException)
+                {
+                    throw new ArgumentException($"Parameter \"{param}\" cannot be resolved as column \"{columnName}\" with type \"{type}\".");
+                }
+
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets column type from table underlying the insert strucutre
+        /// </summary>
+        public ColumnType GetColumnType(string columnName)
+        {
+            ColumnDefinition column;
+            if (_tableDefinition.Columns.TryGetValue(columnName, out column))
+            {
+                return column.Type;
+            }
+            else
+            {
+                throw new ArgumentException($"{columnName} is not a valid column of {TableName}");
             }
         }
     }

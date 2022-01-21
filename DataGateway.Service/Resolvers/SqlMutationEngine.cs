@@ -105,7 +105,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Executes the mutation query and returns result as JSON object asynchronously.
         /// </summary>
-        /// <param name="context">context of graphql mutation</param>
+        /// <param name="context">context of REST mutation request</param>
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result</returns>
         public async Task<JsonDocument> ExecuteAsync(RequestContext context)
@@ -119,7 +119,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 case Operation.Insert:
                     SqlInsertStructure insertQueryStruct =
-                        new(context.EntityName, tableDefinition, context.FieldValuePairs, _queryBuilder);
+                        new(context.EntityName, tableDefinition, context.FieldValuePairsInBody, _queryBuilder);
                     queryString = insertQueryStruct.ToString();
                     queryParameters = insertQueryStruct.Parameters;
                     break;
@@ -135,9 +135,10 @@ namespace Azure.DataGateway.Service.Resolvers
 
             using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, queryParameters);
 
-            context.FieldValuePairs = await ExtractRowFromDbDataReader(dbDataReader);
-
-            if (context.FieldValuePairs == null)
+            // Reuse the same context as a FindRequestContext to return the results after the mutation operation.
+            context.PrimaryKeyValuePairs = await ExtractRowFromDbDataReader(dbDataReader);
+            context.FieldValuePairsInBody = null;
+            if (context.PrimaryKeyValuePairs == null)
             {
                 throw new DatagatewayException(
                     message: $"Could not perform the given request on entity {context.EntityName}",

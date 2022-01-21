@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
@@ -16,16 +17,33 @@ namespace Azure.DataGateway.Service.Models
             Operation operationType)
         {
             EntityName = entityName;
-            Fields = new();
+            FieldsToBeReturned = new();
+            PrimaryKeyValuePairs = new();
             HttpVerb = httpVerb;
             OperationType = operationType;
             if (!string.IsNullOrEmpty(insertPayloadRoot.ToString()))
             {
-                FieldValuePairs = JsonSerializer.Deserialize<Dictionary<string, object>>(insertPayloadRoot.ToString());
+                try
+                {
+                    FieldValuePairsInBody = JsonSerializer.Deserialize<Dictionary<string, object>>(insertPayloadRoot.ToString());
+                }
+                catch(ArgumentNullException)
+                {
+                    FieldValuePairsInBody = new();
+                }
+                catch(JsonException)
+                {
+                    throw new DatagatewayException(
+                        message: 
+                        )
+                }
+                catch(NotSupportedException)
+                {
+
+                }
             }
             else
             {
-                FieldValuePairs = new();
             }
 
             // We don't support InsertMany as yet.

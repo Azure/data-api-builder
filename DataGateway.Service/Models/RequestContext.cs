@@ -17,12 +17,19 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Field names of the entity that are queried in the request.
         /// </summary>
-        public List<string> Fields { get; set; }
+        public List<string> FieldsToBeReturned { get; set; }
+
+        /// <summary>
+        /// Dictionary of primary key and their values specified in the request
+        /// Based on the operation type, this property may or may not be populated.
+        /// </summary>
+        public virtual Dictionary<string, object> PrimaryKeyValuePairs { get; set; }
 
         /// <summary>
         /// Dictionary of field names and their values given in the request.
+        /// Based on the operation type, this property may or may not be populated.
         /// </summary>
-        public Dictionary<string, object> FieldValuePairs { get; set; }
+        public virtual Dictionary<string, object> FieldValuePairsInBody { get; set; }
 
         /// <summary>
         /// Is the result supposed to be multiple values or not.

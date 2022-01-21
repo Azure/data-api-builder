@@ -20,7 +20,8 @@ namespace Azure.DataGateway.Service.Models
         public List<string> FieldsToBeReturned { get; set; }
 
         /// <summary>
-        /// Dictionary of primary key and their values specified in the request
+        /// Dictionary of primary key and their values specified in the request.
+        /// When there are multiple values, that means its a composite primary key.
         /// Based on the operation type, this property may or may not be populated.
         /// </summary>
         public virtual Dictionary<string, object> PrimaryKeyValuePairs { get; set; }
@@ -42,7 +43,7 @@ namespace Azure.DataGateway.Service.Models
         public OperationAuthorizationRequirement HttpVerb { get; set; }
 
         /// <summary>
-        /// The type of operation this request is.
+        /// The database engine operation type this request is.
         /// </summary>
         public Operation OperationType { get; set; }
     }

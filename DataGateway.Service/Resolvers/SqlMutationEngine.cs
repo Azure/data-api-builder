@@ -78,7 +78,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     throw new DatagatewayException($"Could not find entity with {searchedPK}", 404, DatagatewayException.SubStatusCodes.EntityNotFound);
                 }
 
-                result = await _queryEngine.ExecuteAsync(context, searchParams, false);
+                result = await _queryEngine.ExecuteAsync(context, searchParams, isPaginationQuery: false);
             }
 
             return result;

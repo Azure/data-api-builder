@@ -5,11 +5,11 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Azure.DataGateway.Service.Models;
 
 namespace Azure.DataGateway.Services
 {

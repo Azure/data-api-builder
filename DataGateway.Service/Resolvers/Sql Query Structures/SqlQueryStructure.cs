@@ -162,7 +162,7 @@ namespace Azure.DataGateway.Service.Resolvers
             TableAlias = TableName;
             IsListQuery = context.IsMany;
 
-            context.Fields.ForEach(fieldName => AddColumn(fieldName));
+            context.FieldsToBeReturned.ForEach(fieldName => AddColumn(fieldName));
             if (Columns.Count == 0)
             {
                 TableDefinition tableDefinition = GetTableDefinition();
@@ -172,7 +172,14 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            foreach(KeyValuePair<string, object> predicate in context.FieldValuePairs)
+            foreach (KeyValuePair<string, object> predicate in context.PrimaryKeyValuePairs)
+            {
+                string parameterName = $"param{Counter.Next()}";
+                Parameters.Add(parameterName, ResolveParamTypeFromField(predicate.Value.ToString(), predicate.Key));
+                Predicates.Add($"{QualifiedColumn(predicate.Key)} = @{parameterName}");
+            }
+
+            foreach (KeyValuePair<string, object> predicate in context.FieldValuePairsInBody)
             {
                 string parameterName = $"param{Counter.Next()}";
                 Parameters.Add(parameterName, ResolveParamTypeFromField(predicate.Value.ToString(), predicate.Key));

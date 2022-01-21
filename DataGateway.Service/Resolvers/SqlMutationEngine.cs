@@ -87,7 +87,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Executes the mutation query and returns result as JSON object asynchronously.
         /// </summary>
-        /// <param name="context">context of REST mutation request</param>
+        /// <param name="context">context of REST mutation request.</param>
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result</returns>
         public async Task<JsonDocument> ExecuteAsync(RequestContext context)
@@ -100,7 +100,6 @@ namespace Azure.DataGateway.Service.Resolvers
 
             // Reuse the same context as a FindRequestContext to return the results after the mutation operation.
             context.PrimaryKeyValuePairs = await ExtractRowFromDbDataReader(dbDataReader);
-            context.FieldValuePairsInBody = null;
             if (context.PrimaryKeyValuePairs == null)
             {
                 throw new DatagatewayException(
@@ -108,6 +107,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     statusCode: (int)HttpStatusCode.InternalServerError,
                     subStatusCode: DatagatewayException.SubStatusCodes.DatabaseOperationFailed);
             }
+
+            context.OperationType = Operation.Find;
 
             // delegates the querying part of the mutation to the QueryEngine
             // this allows for nested queries in muatations

@@ -31,10 +31,10 @@ namespace Azure.DataGateway.Service.Models
             {
                 FieldValuePairsInBody = new();
             }
-            catch(JsonException ex)
+            catch(JsonException)
             {
                 throw new DatagatewayException(
-                    message: ex.Message,
+                    message: "The request body is not in a valid JSON format.",
                     statusCode: (int)HttpStatusCode.BadRequest,
                     subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
             }

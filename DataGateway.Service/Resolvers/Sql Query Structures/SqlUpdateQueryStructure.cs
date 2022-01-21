@@ -8,51 +8,27 @@ namespace Azure.DataGateway.Service.Resolvers
     ///<summary>
     /// Wraps all the required data and logic to write a SQL UPDATE query
     ///</summary>
-    public class SqlUpdateStructure
+    public class SqlUpdateStructure : BaseSqlQueryStructure
     {
-        /// <summary>
-        /// The name of the table the qeury will be applied on
-        /// </summary>
-        public string TableName { get; }
-
-        /// <summary>
-        /// Predicates used to select the row to be updated
-        /// </summary>
-        public List<string> Predicates { get; }
-
         /// <summary>
         /// Updates to be applied to selected row
         /// </summary>
-        public List<string> UpdateOperations { get; }
-
+        public List<Predicate> UpdateOperations { get; }
         /// <summary>
-        /// Columns which will be returned from the updated row
+        /// The updated columns that the update will return
         /// </summary>
         public List<string> ReturnColumns { get; }
 
-        /// <summary>
-        /// Parameters required to execute the query
-        /// </summary>
-        public Dictionary<string, object> Parameters { get; }
-
-        /// <summary>
-        /// Used to assign unique parameter names
-        /// </summary>
-        public IncrementingInteger Counter { get; }
-
         private readonly TableDefinition _tableDefinition;
-        private readonly IQueryBuilder _queryBuilder;
 
-        public SqlUpdateStructure(string tableName, TableDefinition tableDefinition, IDictionary<string, object> mutationParams, IQueryBuilder queryBuilder)
+        public SqlUpdateStructure(string tableName, TableDefinition tableDefinition, IDictionary<string, object> mutationParams)
+        : base()
         {
             TableName = tableName;
-            Predicates = new();
             UpdateOperations = new();
-            Parameters = new();
-            Counter = new();
 
             _tableDefinition = tableDefinition;
-            _queryBuilder = queryBuilder;
+            ReturnColumns = _tableDefinition.PrimaryKey;
 
             List<string> primaryKeys = _tableDefinition.PrimaryKey;
             List<string> columns = _tableDefinition.Columns.Keys.ToList();
@@ -63,15 +39,21 @@ namespace Azure.DataGateway.Service.Resolvers
                     continue;
                 }
 
+                Predicate predicate = new(
+                    new PredicateOperand(new Column(null, param.Key)),
+                    new PredicateOperand($"@{MakeParamWithValue(param.Value)}"),
+                    PredicateOperation.Equals
+                );
+
                 // primary keys used as predicates
                 if (primaryKeys.Contains(param.Key))
                 {
-                    Predicates.Add($"{QuoteIdentifier(param.Key)} = @{MakeParamWithValue(param.Value)}");
+                    Predicates.Add(predicate);
                 }
                 // use columns to determine values to edit
                 else if (columns.Contains(param.Key))
                 {
-                    UpdateOperations.Add($"{QuoteIdentifier(param.Key)} = @{MakeParamWithValue(param.Value)}");
+                    UpdateOperations.Add(predicate);
                 }
             }
 
@@ -79,71 +61,6 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 throw new DatagatewayException("Update mutation does not update any values", 400, DatagatewayException.SubStatusCodes.BadRequest);
             }
-
-            // return primary key so the updated row can be identified
-            ReturnColumns = primaryKeys.Select(primaryKey => QuoteIdentifier(primaryKey)).ToList();
-        }
-
-        /// <summary>
-        ///  Add parameter to Parameters and return the name associated it with it
-        /// </summary>
-        private string MakeParamWithValue(object value)
-        {
-            string paramName = $"param{Counter.Next()}";
-            Parameters.Add(paramName, value);
-            return paramName;
-        }
-
-        /// <summary>
-        /// QuoteIdentifier simply forwards to the QuoteIdentifier
-        /// implementation of the querybuilder that this query structure uses.
-        /// So it wrapse the string in double quotes for Postgres and square
-        /// brackets for MSSQL.
-        /// </summary>
-        private string QuoteIdentifier(string ident)
-        {
-            return _queryBuilder.QuoteIdentifier(ident);
-        }
-
-        /// <summary>
-        /// Create the SQL code which will indetify which rows will be updated
-        /// UPDATE ... SET ... WHERE {PredicatesSql}
-        /// </summary>
-        public string PredicatesSql()
-        {
-            if (Predicates.Count == 0)
-            {
-                return "1 = 1";
-            }
-
-            return string.Join(" AND ", Predicates);
-        }
-
-        /// <summary>
-        /// Create the SQL code which will define the updates applied to the rows
-        /// UPDATE ... SET {SetOperationsSql} WHERE ...
-        /// </summary>
-        public string SetOperationsSql()
-        {
-            return string.Join(", ", UpdateOperations);
-        }
-
-        /// <summary>
-        /// Returns quote identified column names seperated by commas
-        /// Used by Postgres like
-        /// UPDATE ... SET ... WHERE ... RETURNING {ReturnColumnsSql}
-        /// </summary>
-        public string ReturnColumnsSql()
-        {
-            return string.Join(", ", ReturnColumns);
-        }
-
-        /// <summary>
-        /// Converts the query structure to the actual query string.
-        /// </summary>
-        public override string ToString()
-        {
-            return _queryBuilder.Build(this);
         }
     }
 }

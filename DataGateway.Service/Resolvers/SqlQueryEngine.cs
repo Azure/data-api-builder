@@ -54,7 +54,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters, bool isPaginated)
         {
-            SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _queryBuilder);
+            SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider);
 
             if (structure.PaginationMetadata.IsPaginated)
             {
@@ -76,9 +76,10 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _queryBuilder);
-            Console.WriteLine(structure.ToString());
-            using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(structure.ToString(), structure.Parameters);
+            SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider);
+            string queryString = _queryBuilder.Build(structure);
+            Console.WriteLine(queryString);
+            using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, structure.Parameters);
 
             // Parse Results into Json and return
             //
@@ -98,7 +99,7 @@ namespace Azure.DataGateway.Service.Resolvers
         // </summary>
         public async Task<JsonDocument> ExecuteAsync(FindRequestContext context)
         {
-            SqlQueryStructure structure = new(context, _metadataStoreProvider, _queryBuilder);
+            SqlQueryStructure structure = new(context, _metadataStoreProvider);
             return await ExecuteAsync(structure);
         }
 
@@ -147,8 +148,9 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             // Open connection and execute query using _queryExecutor
             //
-            Console.WriteLine(structure.ToString());
-            using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(structure.ToString(), structure.Parameters);
+            string queryString = _queryBuilder.Build(structure);
+            Console.WriteLine(queryString);
+            using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, structure.Parameters);
             JsonDocument jsonDocument = null;
 
             // Parse Results into Json and return

@@ -1,6 +1,7 @@
-using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using System.Text;
+using Azure.DataGateway.Service.Models;
 using Npgsql;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -8,71 +9,83 @@ namespace Azure.DataGateway.Service.Resolvers
     /// <summary>
     /// Modifies a query that returns regular rows to return JSON for Postgres
     /// </summary>
-    public class PostgresQueryBuilder : IQueryBuilder
+    public class PostgresQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
     {
         private static DbCommandBuilder _builder = new NpgsqlCommandBuilder();
 
-        public string DataIdent { get; } = "\"data\"";
-
-        public string QuoteIdentifier(string ident)
+        /// <inheritdoc />
+        protected override string QuoteIdentifier(string ident)
         {
             return _builder.QuoteIdentifier(ident);
         }
 
-        public string WrapSubqueryColumn(string column, SqlQueryStructure subquery)
-        {
-            return column;
-        }
-
+        /// <inheritdoc />
         public string Build(SqlQueryStructure structure)
         {
-            string fromSql = structure.TableSql();
+            string fromSql = $"{QuoteIdentifier(structure.TableName)} AS {QuoteIdentifier(structure.TableAlias)}{Build(structure.Joins)}";
             fromSql += string.Join("", structure.JoinQueries.Select(x => $" LEFT OUTER JOIN LATERAL ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)} ON TRUE"));
 
-            string query = $"SELECT {structure.ColumnsSql()}"
+            string keysetPagPredicate =
+                structure.PaginationMetadata.PaginationPredicate != null ?
+                $" AND {Build(structure.PaginationMetadata.PaginationPredicate)}"
+                : string.Empty;
+
+            string query = $"SELECT {Build(structure.Columns)}"
                 + $" FROM {fromSql}"
-                + $" WHERE {structure.PredicatesSql()}"
-                + $" ORDER BY {structure.OrderBySql()}"
+                + $" WHERE {Build(structure.Predicates)}{keysetPagPredicate}"
+                + $" ORDER BY {Build(structure.PrimaryKeyAsColumns())}"
                 + $" LIMIT {structure.Limit()}";
 
             string subqueryName = QuoteIdentifier($"subq{structure.Counter.Next()}");
 
-            string start;
+            StringBuilder result = new();
             if (structure.IsListQuery)
             {
-                start = $"SELECT COALESCE(jsonb_agg(to_jsonb({subqueryName})), '[]') AS {DataIdent} FROM (";
+                result.Append($"SELECT COALESCE(jsonb_agg(to_jsonb({subqueryName})), '[]') ");
             }
             else
             {
-                start = $"SELECT to_jsonb({subqueryName}) AS {DataIdent} FROM (";
+                result.Append($"SELECT to_jsonb({subqueryName}) ");
             }
 
-            string end = $") AS {subqueryName}";
-            query = $"{start} {query} {end}";
-            return query;
+            result.Append($"AS {QuoteIdentifier(SqlQueryStructure.DATA_IDENT)} FROM ( ");
+            result.Append(query);
+            result.Append($" ) AS {subqueryName}");
+
+            return result.ToString();
         }
 
+        /// <inheritdoc />
         public string Build(SqlInsertStructure structure)
         {
-            return $"INSERT INTO {QuoteIdentifier(structure.TableName)} {structure.ColumnsSql()} " +
-                    $"VALUES {structure.ValuesSql()} " +
-                    $"RETURNING {structure.ReturnColumnsSql()};";
+            return $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
+                    $"VALUES ({string.Join(", ", (structure.Values))}) " +
+                    $"RETURNING {Build(structure.ReturnColumns)};";
         }
 
+        /// <inheritdoc />
         public string Build(SqlUpdateStructure structure)
         {
             return $"UPDATE {QuoteIdentifier(structure.TableName)} " +
-                    $"SET {structure.SetOperationsSql()} " +
-                    $"WHERE {structure.PredicatesSql()} " +
-                    $"RETURNING {structure.ReturnColumnsSql()};";
+                    $"SET {Build(structure.UpdateOperations, ", ")} " +
+                    $"WHERE {Build(structure.Predicates)} " +
+                    $"RETURNING {Build(structure.ReturnColumns)};";
         }
 
-        public string MakeKeysetPaginationPredicate(List<string> primaryKey, List<string> pkValues)
+        /// <inheritdoc />
+        public string Build(SqlDeleteStructure structure)
         {
-            string left = string.Join(", ", primaryKey);
-            string right = string.Join(", ", pkValues);
+            return $"DELETE FROM {QuoteIdentifier(structure.TableName)} " +
+                    $"WHERE {Build(structure.Predicates)}";
+        }
 
-            if (primaryKey.Count > 1)
+        /// <inheritdoc />
+        protected override string Build(KeysetPaginationPredicate predicate)
+        {
+            string left = Build(predicate.PrimaryKey);
+            string right = string.Join(", ", predicate.Values);
+
+            if (predicate.PrimaryKey.Count > 1)
             {
                 return $"({left}) > ({right})";
             }
@@ -80,12 +93,6 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 return $"{left} > {right}";
             }
-        }
-
-        public string Build(SqlDeleteStructure structure)
-        {
-            return $"DELETE FROM {QuoteIdentifier(structure.TableName)} " +
-                    $"WHERE {structure.PredicatesSql()} ";
         }
     }
 }

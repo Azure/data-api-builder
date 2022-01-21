@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Text;
+using Azure.DataGateway.Service.Models;
 using Microsoft.Data.SqlClient;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -9,46 +11,40 @@ namespace Azure.DataGateway.Service.Resolvers
     /// <summary>
     /// Class for building MsSql queries.
     /// </summary>
-    public class MsSqlQueryBuilder : IQueryBuilder
+    public class MsSqlQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
     {
         private const string FOR_JSON_SUFFIX = " FOR JSON PATH, INCLUDE_NULL_VALUES";
         private const string WITHOUT_ARRAY_WRAPPER_SUFFIX = "WITHOUT_ARRAY_WRAPPER";
 
         private static DbCommandBuilder _builder = new SqlCommandBuilder();
 
-        public string DataIdent { get; } = "[data]";
-
-        /// <summary>
-        /// Enclose the given string within [] specific for MsSql.
-        /// </summary>
-        /// <param name="ident">The unquoted identifier to be enclosed.</param>
-        /// <returns>The quoted identifier.</returns>
-        public string QuoteIdentifier(string ident)
+        /// <inheritdoc />
+        protected override string QuoteIdentifier(string ident)
         {
             return _builder.QuoteIdentifier(ident);
         }
 
-        public string WrapSubqueryColumn(string column, SqlQueryStructure subquery)
-        {
-            if (subquery.IsListQuery)
-            {
-                return $"JSON_QUERY (COALESCE({column}, '[]'))";
-            }
-
-            return $"JSON_QUERY ({column})";
-        }
-
+        /// <inheritdoc />
         public string Build(SqlQueryStructure structure)
         {
-            string fromSql = structure.TableSql();
+            string dataIdent = QuoteIdentifier(SqlQueryStructure.DATA_IDENT);
+            string fromSql = $"{QuoteIdentifier(structure.TableName)} AS {QuoteIdentifier(structure.TableAlias)}{Build(structure.Joins)}";
+            ;
+
             fromSql += string.Join(
                     "",
                     structure.JoinQueries.Select(
-                        x => $" OUTER APPLY ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)}({DataIdent})"));
-            string query = $"SELECT TOP {structure.Limit()} {structure.ColumnsSql()}"
+                        x => $" OUTER APPLY ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)}({dataIdent})"));
+
+            string keysetPagPredicate =
+                structure.PaginationMetadata.PaginationPredicate != null ?
+                $" AND {Build(structure.PaginationMetadata.PaginationPredicate)}"
+                : string.Empty;
+
+            string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)}"
                 + $" FROM {fromSql}"
-                + $" WHERE {structure.PredicatesSql()}"
-                + $" ORDER BY {structure.OrderBySql()}";
+                + $" WHERE {Build(structure.Predicates)}{keysetPagPredicate}"
+                + $" ORDER BY {Build(structure.PrimaryKeyAsColumns())}";
 
             query += FOR_JSON_SUFFIX;
             if (!structure.IsListQuery)
@@ -59,26 +55,29 @@ namespace Azure.DataGateway.Service.Resolvers
             return query;
         }
 
+        /// <inheritdoc />
         public string Build(SqlInsertStructure structure)
         {
 
-            return $"INSERT INTO {QuoteIdentifier(structure.TableName)} {structure.ColumnsSql()} " +
+            return $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
                     $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
-                    $"VALUES {structure.ValuesSql()};";
+                    $"VALUES ({string.Join(", ", structure.Values)});";
         }
 
+        /// <inheritdoc />
         public string Build(SqlUpdateStructure structure)
         {
             return $"UPDATE {QuoteIdentifier(structure.TableName)} " +
-                    $"SET {structure.SetOperationsSql()} " +
+                    $"SET {Build(structure.UpdateOperations, ", ")} " +
                     $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
-                    $"WHERE {structure.PredicatesSql()};";
+                    $"WHERE {Build(structure.Predicates)};";
         }
 
+        /// <inheritdoc />
         public string Build(SqlDeleteStructure structure)
         {
             return $"DELETE FROM {QuoteIdentifier(structure.TableName)} " +
-                    $"WHERE {structure.PredicatesSql()} ";
+                    $"WHERE {Build(structure.Predicates)} ";
         }
 
         /// <summary>
@@ -91,25 +90,26 @@ namespace Azure.DataGateway.Service.Resolvers
         /// e.g. for columns [C1, C2, C3] and output qualifier Inserted
         /// return Inserted.C1, Inserted.C2, Inserted.C3
         /// </summary>
-        private static string MakeOutputColumns(List<string> columns, OutputQualifier outputQualifier)
+        private string MakeOutputColumns(List<string> columns, OutputQualifier outputQualifier)
         {
-            List<string> outputColumns = columns.Select(column => $"{outputQualifier}.{column}").ToList();
+            List<string> outputColumns = columns.Select(column => $"{outputQualifier}.{QuoteIdentifier(column)}").ToList();
             return string.Join(", ", outputColumns);
         }
 
-        public string MakeKeysetPaginationPredicate(List<string> primaryKey, List<string> pkValues)
+        /// <inheritdoc />
+        protected override string Build(KeysetPaginationPredicate predicate)
         {
-            if (primaryKey.Count > 1)
+            if (predicate.PrimaryKey.Count > 1)
             {
                 StringBuilder result = new("(");
-                for (int i = 0; i < primaryKey.Count; i++)
+                for (int i = 0; i < predicate.PrimaryKey.Count; i++)
                 {
                     if (i > 0)
                     {
                         result.Append(" OR ");
                     }
 
-                    result.Append($"({MakePaginationInequality(primaryKey, pkValues, i)})");
+                    result.Append($"({MakePaginationInequality(predicate.PrimaryKey, predicate.Values, i)})");
                 }
 
                 result.Append(")");
@@ -118,7 +118,7 @@ namespace Azure.DataGateway.Service.Resolvers
             }
             else
             {
-                return MakePaginationInequality(primaryKey, pkValues, 0);
+                return MakePaginationInequality(predicate.PrimaryKey, predicate.Values, 0);
             }
         }
 
@@ -131,21 +131,51 @@ namespace Azure.DataGateway.Service.Resolvers
         /// untilIndex: 2
         /// generate <c>a = A AND b = B AND c > C</c>
         /// </summary>
-        private static string MakePaginationInequality(List<string> primaryKey, List<string> pkValues, int untilIndex)
+        private string MakePaginationInequality(List<Column> primaryKey, List<string> pkValues, int untilIndex)
         {
-            string result = string.Empty;
+            StringBuilder result = new();
             for (int i = 0; i <= untilIndex; i++)
             {
                 string op = i == untilIndex ? ">" : "=";
-                result += $"{primaryKey[i]} {op} {pkValues[i]}";
+                result.Append($"{Build(primaryKey[i])} {op} {pkValues[i]}");
 
                 if (i < untilIndex)
                 {
-                    result += " AND ";
+                    result.Append(" AND ");
                 }
             }
 
-            return result;
+            return result.ToString();
+        }
+
+        /// <summary>
+        /// Add a JSON_QUERY wrapper on the column
+        /// </summary>
+        private string WrapSubqueryColumn(LabelledColumn column, SqlQueryStructure subquery)
+        {
+            string builtColumn = Build(column as Column);
+            if (subquery.IsListQuery)
+            {
+                return $"JSON_QUERY (COALESCE({builtColumn}, '[]'))";
+            }
+
+            return $"JSON_QUERY ({builtColumn})";
+        }
+
+        /// <summary>
+        /// Build columns and wrap columns which represent join subqueries
+        /// </summary>
+        private string WrappedColumns(SqlQueryStructure structure)
+        {
+            Func<LabelledColumn, bool> isJoinColumn = c => structure.JoinQueries.ContainsKey(c.TableAlias);
+            Func<LabelledColumn, SqlQueryStructure> getJoinSubquery = c => structure.JoinQueries[c.TableAlias];
+
+            return string.Join(", ",
+                structure.Columns.Select(
+                    c => isJoinColumn(c) ?
+                        WrapSubqueryColumn(c, getJoinSubquery(c)) + $" AS {QuoteIdentifier(c.Label)}" :
+                        Build(c)
+            ));
         }
     }
 }

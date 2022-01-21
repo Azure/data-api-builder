@@ -41,6 +41,11 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
         public Dictionary<string, PaginationMetadata> Subqueries { get; set; } = new();
 
+        /// <summary>
+        /// Holds the keyset pagination predicate for a SqlQueryStructure
+        /// </summary>
+        public KeysetPaginationPredicate PaginationPredicate { get; set; }
+
         public PaginationMetadata(SqlQueryStructure structure)
         {
             Structure = structure;

@@ -61,20 +61,20 @@ namespace Azure.DataGateway.Service.Resolvers
             switch (mutationResolver.OperationType)
             {
                 case "INSERT":
-                    SqlInsertStructure insertQueryStruct = new(tableName, tableDefinition, parameters, _queryBuilder);
-                    queryString = insertQueryStruct.ToString();
+                    SqlInsertStructure insertQueryStruct = new(tableName, tableDefinition, parameters);
+                    queryString = _queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
                     break;
                 case "UPDATE":
-                    SqlUpdateStructure updateQueryStruct = new(tableName, tableDefinition, parameters, _queryBuilder);
-                    queryString = updateQueryStruct.ToString();
+                    SqlUpdateStructure updateQueryStruct = new(tableName, tableDefinition, parameters);
+                    queryString = _queryBuilder.Build(updateQueryStruct);
                     queryParameters = updateQueryStruct.Parameters;
                     break;
                 case "DELETE":
                     // compute the mutation result before removing the element
                     result = await _queryEngine.ExecuteAsync(context, parameters, false);
-                    SqlDeleteStructure deleteStructure = new(tableName, tableDefinition, parameters, _queryBuilder);
-                    queryString = deleteStructure.ToString();
+                    SqlDeleteStructure deleteStructure = new(tableName, tableDefinition, parameters);
+                    queryString = _queryBuilder.Build(deleteStructure);
                     queryParameters = deleteStructure.Parameters;
                     break;
                 default:

@@ -1,6 +1,9 @@
+using System;
+using System.IO;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Web;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
@@ -37,25 +40,56 @@ namespace Azure.DataGateway.Services
         }
 
         /// <summary>
-        /// Invokes the request parser to identify major components of the FindRequestContext
-        /// and executes the find query.
+        /// Invokes the request parser to identify major components of the RequestContext
+        /// and executes the given operation.
         /// </summary>
         /// <param name="entityName">The entity name.</param>
+        /// <param name="operationType">The kind of operation to execute.</param>
         /// <param name="primaryKeyRoute">The primary key route. e.g. customerName/Xyz/saleOrderId/123</param>
-        /// <param name="queryString">The query string portion of the request. e.g. ?_f=customerName</param>
-        public async Task<JsonDocument> ExecuteFindAsync(string entityName, string primaryKeyRoute)
+        public async Task<JsonDocument> ExecuteAsync(
+            string    entityName,
+            Operation operationType,
+            string    primaryKeyRoute)
         {
-            string queryString = _httpContextAccessor.HttpContext.Request.QueryString.ToString();
+            string queryString = GetHttpContext().Request.QueryString.ToString();
 
-            FindRequestContext context = new(entityName, isList: string.IsNullOrEmpty(primaryKeyRoute));
-            RequestParser.ParsePrimaryKey(primaryKeyRoute, context);
+            string requestBody = string.Empty;
+            using (StreamReader reader = new(GetHttpContext().Request.Body))
+            {
+                requestBody = await reader.ReadToEndAsync();
+            }
+
+            RequestContext context;
+            switch (operationType)
+            {
+                case Operation.Find:
+                     context = new FindRequestContext(entityName, isList: string.IsNullOrEmpty(primaryKeyRoute));
+                     break;
+                case Operation.Insert:
+                    JsonElement insertPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);
+                    context = new InsertRequestContext(entityName,
+                        insertPayloadRoot,
+                        HttpRestVerbs.POST,
+                        operationType);
+                    break;
+                default:
+                    throw new NotSupportedException("This operation is not yet supported.");
+            }
+
+            if (!string.IsNullOrEmpty(primaryKeyRoute))
+            {
+                // After parsing primary key, the context will be populated with the
+                // correct PrimaryKeyValuePairs.
+                RequestParser.ParsePrimaryKey(primaryKeyRoute, context);
+                RequestValidator.ValidatePrimaryKey(context, _metadataStoreProvider);
+            }
 
             if (!string.IsNullOrEmpty(queryString))
             {
-                RequestParser.ParseQueryString(System.Web.HttpUtility.ParseQueryString(queryString), context);
+                RequestParser.ParseQueryString(HttpUtility.ParseQueryString(queryString), context);
             }
 
-            RequestValidator.ValidateFindRequest(context, _metadataStoreProvider);
+            RequestValidator.ValidateRequestContext(context, _metadataStoreProvider);
 
             // RequestContext is finalized for QueryBuilding and QueryExecution.
             // Perform Authorization check prior to moving forward in request pipeline.
@@ -63,11 +97,19 @@ namespace Azure.DataGateway.Services
             AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
                 user: _httpContextAccessor.HttpContext.User,
                 resource: context,
-                requirements: new[] { HttpRestVerbs.GET });
+                requirements: new[] { context.HttpVerb });
 
             if (authorizationResult.Succeeded)
             {
-                return await _queryEngine.ExecuteAsync(context);
+                switch (operationType)
+                {
+                    case Operation.Find:
+                        return await _queryEngine.ExecuteAsync(context);
+                    case Operation.Insert:
+                        return await _mutationEngine.ExecuteAsync(context);
+                    default:
+                        throw new NotSupportedException("This operation is not yet supported.");
+                }
             }
             else
             {
@@ -79,44 +121,9 @@ namespace Azure.DataGateway.Services
             }
         }
 
-        /// <summary>
-        /// Invokes the request parser to identify major components of the InsertRequestContext
-        /// and executes the insert operation.
-        /// </summary>
-        /// <param name="entityName">The entity name.</param>
-        public async Task<JsonDocument> ExecuteInsertAsync(string entityName, string requestBody)
+        private HttpContext GetHttpContext()
         {
-            string queryString = _httpContextAccessor.HttpContext.Request.QueryString.ToString();
-
-            JsonElement insertPayloadRoot = RequestValidator.ValidatePostRequest(queryString, requestBody);
-
-            InsertRequestContext context = new(entityName,
-                insertPayloadRoot,
-                HttpRestVerbs.POST,
-                Operation.Insert);
-
-            RequestValidator.ValidateRequestContext(context, _metadataStoreProvider);
-
-            // RequestContext is finalized for QueryBuilding and QueryExecution.
-            // Perform Authorization check prior to moving forward in request pipeline.
-            // RESTAuthorizationService
-            AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
-                user: _httpContextAccessor.HttpContext.User,
-                resource: context,
-                requirements: new[] { HttpRestVerbs.POST });
-
-            if (authorizationResult.Succeeded)
-            {
-                return await _mutationEngine.ExecuteAsync(context);
-            }
-            else
-            {
-                throw new DatagatewayException(
-                    message: "Unauthorized",
-                    statusCode: (int)HttpStatusCode.Unauthorized,
-                    subStatusCode: DatagatewayException.SubStatusCodes.AuthorizationCheckFailed
-                );
-            }
+            return _httpContextAccessor.HttpContext;
         }
     }
 }

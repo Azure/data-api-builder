@@ -47,9 +47,9 @@ namespace Azure.DataGateway.Services
         /// <param name="operationType">The kind of operation to execute.</param>
         /// <param name="primaryKeyRoute">The primary key route. e.g. customerName/Xyz/saleOrderId/123</param>
         public async Task<JsonDocument> ExecuteAsync(
-            string    entityName,
+            string entityName,
             Operation operationType,
-            string    primaryKeyRoute)
+            string primaryKeyRoute)
         {
             string queryString = GetHttpContext().Request.QueryString.ToString();
 
@@ -63,8 +63,8 @@ namespace Azure.DataGateway.Services
             switch (operationType)
             {
                 case Operation.Find:
-                     context = new FindRequestContext(entityName, isList: string.IsNullOrEmpty(primaryKeyRoute));
-                     break;
+                    context = new FindRequestContext(entityName, isList: string.IsNullOrEmpty(primaryKeyRoute));
+                    break;
                 case Operation.Insert:
                     JsonElement insertPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);
                     context = new InsertRequestContext(entityName,

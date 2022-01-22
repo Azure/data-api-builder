@@ -83,8 +83,8 @@ namespace Azure.DataGateway.Service.Services
 
             if (missingKeys.Any())
             {
-                    throw new DatagatewayException(
-                        message: $"The request is invalid since the primary keys: " +
+                 throw new DatagatewayException(
+                   message: $"The request is invalid since the primary keys: " +
                         string.Join(", ", missingKeys) +
                         " requested were not found in the entity definition.",
                         statusCode: 400,

@@ -182,7 +182,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             restController.ControllerContext.HttpContext = GetHttpContextWithQueryString(queryString);
 
             // Set the mock context accessor's request same as the controller's request.
-            _httpContextAccessor.Setup(x => x.HttpContext.Request).Returns(restController.ControllerContext.HttpContext.Request); 
+            _httpContextAccessor.Setup(x => x.HttpContext.Request).Returns(restController.ControllerContext.HttpContext.Request);
         }
 
         /// <summary>

@@ -58,7 +58,10 @@ namespace Azure.DataGateway.Service.Resolvers
             if (mutationResolver.OperationType == Operation.Delete)
             {
                 // compute the mutation result before removing the element
-                result = await _queryEngine.ExecuteAsync(context, parameters, false);
+                result = await _queryEngine.ExecuteAsync(
+                    context,
+                    parameters,
+                    isPaginationQuery: false);
             }
 
             using DbDataReader dbDataReader =
@@ -78,7 +81,10 @@ namespace Azure.DataGateway.Service.Resolvers
                     throw new DatagatewayException($"Could not find entity with {searchedPK}", 404, DatagatewayException.SubStatusCodes.EntityNotFound);
                 }
 
-                result = await _queryEngine.ExecuteAsync(context, searchParams, isPaginationQuery: false);
+                result = await _queryEngine.ExecuteAsync(
+                    context,
+                    searchParams,
+                    isPaginationQuery: false);
             }
 
             return result;

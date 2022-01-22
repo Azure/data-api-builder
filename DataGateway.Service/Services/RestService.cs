@@ -72,6 +72,9 @@ namespace Azure.DataGateway.Services
                         HttpRestVerbs.POST,
                         operationType);
                     break;
+                case Operation.Delete:
+                    context = new DeleteRequestContext(entityName, isList: false);
+                    break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
             }
@@ -106,6 +109,8 @@ namespace Azure.DataGateway.Services
                     case Operation.Find:
                         return await _queryEngine.ExecuteAsync(context);
                     case Operation.Insert:
+                        return await _mutationEngine.ExecuteAsync(context);
+                    case Operation.Delete:
                         return await _mutationEngine.ExecuteAsync(context);
                     default:
                         throw new NotSupportedException("This operation is not yet supported.");

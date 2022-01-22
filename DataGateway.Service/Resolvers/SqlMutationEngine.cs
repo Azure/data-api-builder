@@ -108,6 +108,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     subStatusCode: DatagatewayException.SubStatusCodes.DatabaseOperationFailed);
             }
 
+            //Only perform the following operation if DELETE was not performed.
+            //Deleted item will result in 0 results. 
             context.OperationType = Operation.Find;
 
             // delegates the querying part of the mutation to the QueryEngine

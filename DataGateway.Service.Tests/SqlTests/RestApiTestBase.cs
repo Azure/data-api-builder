@@ -121,7 +121,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task FindByIdTestWithInvalidFields()
         {
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/567/book_id/1",
+                primaryKeyRoute: "id/5671",
                 queryString: "?_f=id,content",
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindByIdTestWithInvalidFields)),
@@ -168,7 +168,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: msSqlQuery,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: "Invalid Column name: content",
+                expectedErrorMessage: "Invalid Column name requested: content",
                 expectedStatusCode: 400
             );
         }

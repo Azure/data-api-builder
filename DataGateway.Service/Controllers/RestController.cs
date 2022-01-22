@@ -103,6 +103,19 @@ namespace Azure.DataGateway.Service.Controllers
                 primaryKeyRoute: null);
         }
 
+        [HttpDelete]
+        [Route("{*primaryKeyRoute}")]
+        [Produces("application/json")]
+        public async Task<IActionResult> Delete(
+            string entityName,
+            string primaryKeyRoute)
+        {
+            return await HandleOperation(
+                entityName,
+                Operation.Delete,
+                primaryKeyRoute);
+        }
+
         /// <summary>
         /// Handle the given operation.
         /// </summary>

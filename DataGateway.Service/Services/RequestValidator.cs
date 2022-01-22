@@ -26,8 +26,6 @@ namespace Azure.DataGateway.Service.Services
         {
             TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, configurationProvider);
 
-            List<string> fieldsInRequest = new(context.FieldValuePairsInBody.Keys);
-
             foreach (string field in context.FieldsToBeReturned)
             {
                 if (!tableDefinition.Columns.ContainsKey(field))
@@ -38,6 +36,7 @@ namespace Azure.DataGateway.Service.Services
                 }
             }
 
+            List<string> fieldsInRequest = new(context.FieldValuePairsInBody.Keys);
             foreach (string field in fieldsInRequest)
             {
                 if (!tableDefinition.Columns.ContainsKey(field))

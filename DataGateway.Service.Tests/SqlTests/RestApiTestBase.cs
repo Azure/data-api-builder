@@ -127,7 +127,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: GetQuery(nameof(FindByIdTestWithInvalidFields)),
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: "Invalid Column name: content",
+                expectedErrorMessage: "Invalid Column name requested: content",
                 expectedStatusCode: 400
             );
         }

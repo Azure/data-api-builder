@@ -60,6 +60,10 @@ When manually testing the API with postman, this is the beginning of the uri tha
 
 For example, to invoke a FindMany on the Table "Books" and retrieve the "id" and "title" we would have a uri of `https://localhost:5001/books/?_f=id,title`
 
+To see how the code flows, set a breakpoint in the controller which is associated with the particular DatabaseType that you are using, ie: after line 75 in `RestController.cs`
+
+This is a good entry point for debugging if you are not sure where in the service your problem is located.
+
 #### __Codestyle__
 We use dotnet format to enforce code conventions. It is run automatically in CI, so if you forget your PR cannot be merged. You can copy paste the following commands to install a git pre-commit hook. This will cause a commit to fail if you forgot to run dotnet format. If you have run on save enabled in your editor this is not necessary.
 

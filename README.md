@@ -4,21 +4,8 @@
 DataGateway provides a consistent, productive abstraction for building GraphQL and REST API applications with data. Powered by Azure Databases, DataGateway provides modern access patterns to the database, allowing developers to use REST or GraphQL and providing developer experiences that meet developers where they are. 
 
 
-## Contributing
+## Configure and Run
 
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.
-
-When you submit a pull request, a CLA bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
-
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
-
-### Build and Run
 Clone the repository with your prefered method or locally navigate to where you'd like the repository to be and clone with the following command, make sure you replace `<directory name>` 
 
 ```
@@ -50,7 +37,7 @@ In these files you need to modify the value for `ConnectionString` for the proje
 
 Once you have your connection strings properly formatted you can build and run the project. In Visul Studio this can be done by selecting the type of database you wish to connect when you run build and run the project from within Visual Studio.
 
-To build and run the project from the command line, first build with project from the root director with `dotnet build Azure.DataGateway.Service.sln --configuration Debug` and then run the project with `dotnet run ...`
+To build and run the project from the command line you need to set the Data Type, and then can use the dotnet run command. For example `ASPNETCORE_ENVIRONMENT=PostgreSql dotnet watch run --project DataGateway.Service` would build and run the project for PostregreSql.
 
 Once the project is running you can test the API with a tool like postman (https://www.postman.com/). Files are included that will automatically populate your database with useful tables. The tests that are built into the project use these tables for validation as well. To do so, execute the SQL contained in MsSqlBooks.sql located in the DataGateway.Service directory.
 
@@ -64,38 +51,10 @@ To see how the code flows, set a breakpoint in the controller which is associate
 
 This is a good entry point for debugging if you are not sure where in the service your problem is located.
 
-#### __Codestyle__
-We use dotnet format to enforce code conventions. It is run automatically in CI, so if you forget your PR cannot be merged. You can copy paste the following commands to install a git pre-commit hook. This will cause a commit to fail if you forgot to run dotnet format. If you have run on save enabled in your editor this is not necessary.
+### Contributing
 
-```
-cat > .git/hooks/pre-commit << __EOF__
-#!/bin/bash
-set -euo pipefail
+If you wish to contribute to this project please see [Contributing.md](https://github.com/Azure/hawaii-gql/blob/main/CONTRIBUTING.md)
 
-get_files() {
-    git diff --cached --name-only --diff-filter=ACMR |\\
-        grep '\.cs$'
-}
-
-if [ "\$(get_files)" = '' ]; then
-    exit 0
-fi
-
-get_files |
-    xargs dotnet format Azure.DataGateway.Service.sln \\
-        --check \\
-        --fix-whitespace --fix-style warn --fix-analyzers warn \\
-        --include \\
-    || {
-        get_files |
-            xargs dotnet format Azure.DataGateway.Service.sln \\
-                --fix-whitespace --fix-style warn --fix-analyzers warn \\
-                --include
-        exit 1
-}
-__EOF__
-chmod +x .git/hooks/pre-commit
-```
 
 ## Trademarks
 

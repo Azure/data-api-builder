@@ -10,51 +10,6 @@ using HotChocolate.Types;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
-
-    /// <summary>
-    /// IncrementingInteger provides a simple API to have an ever incrementing
-    /// integer. The main usecase is so we can create aliases that are unique
-    /// within a query, this integer serves as a unique part of their name.
-    /// </summary>
-    public class IncrementingInteger
-    {
-        private ulong _integer;
-        public IncrementingInteger()
-        {
-            _integer = 0;
-        }
-
-        /// <summary>
-        /// Get the next integer from this sequence of integers. The first
-        /// integer that is returned is 0.
-        /// </summary>
-        public ulong Next()
-        {
-            return _integer++;
-        }
-
-    }
-
-    /// <summary>
-    /// A simple class that is used to hold the information about joins that
-    /// are part of an SQL query.
-    /// <summary>
-    public class SqlJoinStructure
-    {
-        /// <summary>
-        /// The name of the table that is joined with.
-        /// </summary>
-        public string TableName { get; set; }
-        /// <summary>
-        /// The alias of the table that is joined with.
-        /// </summary>
-        public string TableAlias { get; set; }
-        /// <summary>
-        /// The predicates that are part of the ON clause of the join.
-        /// </summary>
-        public List<string> Predicates { get; set; }
-    }
-
     /// <summary>
     /// SqlQueryStructure is an intermediate representation of a SQL query.
     /// This intermediate structure can be used to generate a Postgres or MSSQL
@@ -62,24 +17,15 @@ namespace Azure.DataGateway.Service.Resolvers
     /// query. However, it only supports the very limited set of SQL constructs
     /// that we are needed to represent a GraphQL query or REST request as SQL.
     /// </summary>
-    public class SqlQueryStructure
+    public class SqlQueryStructure : BaseSqlQueryStructure
     {
+        public const string DATA_IDENT = "data";
+
         /// <summary>
         /// All tables that should be in the FROM clause of the query. The key
         /// is the alias of the table and the value is the actual table name.
         /// </summary>
         public List<SqlJoinStructure> Joins { get; }
-
-        /// <summary>
-        /// The columns which the query selects. The keys are the alias of this
-        /// column.
-        /// </summary>
-        public Dictionary<string, string> Columns { get; }
-
-        /// <summary>
-        /// Predicates that should filter the result set of the query.
-        /// </summary>
-        public List<string> Predicates { get; }
 
         /// <summary>
         /// The subqueries with which this query should be joined. The key are
@@ -88,31 +34,9 @@ namespace Azure.DataGateway.Service.Resolvers
         public Dictionary<string, SqlQueryStructure> JoinQueries { get; }
 
         /// <summary>
-        /// The name of the main table to be queried.
-        /// </summary>
-        public string TableName { get; }
-
-        /// <summary>
-        /// The alias of the main table to be queried.
-        /// </summary>
-        public string TableAlias { get; }
-
-        /// <summary>
-        /// Counter.Next() can be used to get a unique integer within this
-        /// query, which can be used to create unique aliases, parameters or
-        /// other identifiers.
-        /// </summary>
-        public IncrementingInteger Counter { get; }
-
-        /// <summary>
         /// Is the result supposed to be a list or not.
         /// </summary>
         public bool IsListQuery { get; set; }
-
-        /// <summary>
-        /// Parameters values required to execute the qeury.
-        /// </summary>
-        public Dictionary<string, object> Parameters { get; set; }
 
         /// <summary>
         /// Hold the pagination metadata for the query
@@ -141,23 +65,21 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         ObjectType _underlyingFieldType;
         private readonly IMetadataStoreProvider _metadataStoreProvider;
-        private readonly IQueryBuilder _queryBuilder;
-
         private readonly GraphqlType _typeInfo;
+        private List<Column> _primaryKey;
 
         /// <summary>
         /// Generate the structure for a SQL query based on GraphQL query
         /// information.
         /// Only use as constructor for the outermost queries not subqueries
         /// </summary>
-        public SqlQueryStructure(IResolverContext ctx, IDictionary<String, object> queryParams, IMetadataStoreProvider metadataStoreProvider, IQueryBuilder queryBuilder)
+        public SqlQueryStructure(IResolverContext ctx, IDictionary<String, object> queryParams, IMetadataStoreProvider metadataStoreProvider)
             // This constructor simply forwards to the more general constructor
             // that is used to create GraphQL queries. We give it some values
             // that make sense for the outermost query.
             : this(ctx,
                 queryParams,
                 metadataStoreProvider,
-                queryBuilder,
                 ctx.Selection.Field,
                 ctx.Selection.SyntaxNode,
                 // The outermost query is where we start, so this can define
@@ -207,7 +129,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Generate the structure for a SQL query based on FindRequestContext,
         /// which is created by a FindById or FindMany REST request.
         /// </summary>
-        public SqlQueryStructure(FindRequestContext context, IMetadataStoreProvider metadataStoreProvider, IQueryBuilder queryBuilder) : this(metadataStoreProvider, queryBuilder, new IncrementingInteger())
+        public SqlQueryStructure(FindRequestContext context, IMetadataStoreProvider metadataStoreProvider) : this(metadataStoreProvider, new IncrementingInteger())
         {
             TableName = context.EntityName;
             TableAlias = TableName;
@@ -228,7 +150,11 @@ namespace Azure.DataGateway.Service.Resolvers
                 try
                 {
                     string parameterName = MakeParamWithValue(GetParamAsColumnSystemType(predicate.Value, predicate.Field));
-                    Predicates.Add($"{QualifiedColumn(predicate.Field)} = @{parameterName}");
+                    Predicates.Add(new Predicate(
+                        new PredicateOperand(new Column(TableAlias, predicate.Field)),
+                        PredicateOperation.Equal,
+                        new PredicateOperand($"@{parameterName}")
+                    ));
                 }
                 catch (ArgumentException)
                 {
@@ -246,11 +172,10 @@ namespace Azure.DataGateway.Service.Resolvers
                 IResolverContext ctx,
                 IDictionary<string, object> queryParams,
                 IMetadataStoreProvider metadataStoreProvider,
-                IQueryBuilder queryBuilder,
                 IObjectField schemaField,
                 FieldNode queryField,
                 IncrementingInteger counter
-        ) : this(metadataStoreProvider, queryBuilder, counter)
+        ) : this(metadataStoreProvider, counter)
         {
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
@@ -330,7 +255,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (PaginationMetadata.RequestedEndCursor)
                 {
                     // add the primary keys in the selected columns if they are missing
-                    IEnumerable<string> extraNeededColumns = PrimaryKey().Except(Columns.Keys);
+                    IEnumerable<string> extraNeededColumns = PrimaryKey().Except(Columns.Select(c => c.Label));
 
                     foreach (string column in extraNeededColumns)
                     {
@@ -356,17 +281,12 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Private constructor that is used as a base by all public
         /// constructors.
         /// </summary>
-        private SqlQueryStructure(IMetadataStoreProvider metadataStoreProvider, IQueryBuilder queryBuilder, IncrementingInteger counter)
+        private SqlQueryStructure(IMetadataStoreProvider metadataStoreProvider, IncrementingInteger counter) : base(counter)
         {
-            Columns = new();
             JoinQueries = new();
-            Predicates = new();
-            Parameters = new();
             Joins = new();
             PaginationMetadata = new(this);
             _metadataStoreProvider = metadataStoreProvider;
-            _queryBuilder = queryBuilder;
-            Counter = counter;
         }
 
         /// <summary>
@@ -390,38 +310,6 @@ namespace Azure.DataGateway.Service.Resolvers
             return UnderlyingType(type.InnerType());
         }
 
-        /// <summary>
-        /// Given an unquoted column name, return a quoted qualified column
-        /// name for the table that is queried in this query. Quoting takes
-        /// into account the database (double quotes for Postgres and square
-        /// brackets for MSSQL).
-        /// </summary>
-        public string QualifiedColumn(string columnName)
-        {
-            return QualifiedColumn(TableAlias, columnName);
-        }
-
-        /// <summary>
-        /// Given an unquoted table alias and unquoted column name, return a
-        /// quoted qualified column name. Quoting takes into account the
-        /// database (double quotes for Postgres and square brackets for
-        /// MSSQL).
-        /// </summary>
-        public string QualifiedColumn(string tableAlias, string columnName)
-        {
-            return $"{QuoteIdentifier(tableAlias)}.{QuoteIdentifier(columnName)}";
-        }
-
-        /// <summary>
-        /// Given an unquoted column, add a column of the queried table to the
-        /// columns of the result of this query.
-        /// </summary>
-        public void AddColumn(string columnName)
-        {
-            string column = QualifiedColumn(columnName);
-            Columns.Add(columnName, column);
-        }
-
         ///<summary>
         /// Adds predicates for the primary keys in the paramters of the graphql query
         ///</summary>
@@ -429,7 +317,11 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             foreach (KeyValuePair<string, object> parameter in queryParams)
             {
-                Predicates.Add($"{QualifiedColumn(parameter.Key)} = @{MakeParamWithValue(parameter.Value)}");
+                Predicates.Add(new Predicate(
+                    new PredicateOperand(new Column(TableAlias, parameter.Key)),
+                    PredicateOperation.Equal,
+                    new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
+                ));
             }
         }
 
@@ -446,25 +338,14 @@ namespace Azure.DataGateway.Service.Resolvers
                 return;
             }
 
-            List<string> pkColNames = PrimaryKey();
+            List<Column> primaryKey = PrimaryKeyAsColumns();
             List<string> pkValues = new();
-            foreach (string pkCol in pkColNames)
+            foreach (Column column in primaryKey)
             {
-                pkValues.Add($"@{MakeParamWithValue(afterJsonValues[pkCol])}");
+                pkValues.Add($"@{MakeParamWithValue(afterJsonValues[column.ColumnName])}");
             }
 
-            List<string> qualifiedPks = pkColNames.Select(pkColName => QualifiedColumn(pkColName)).ToList();
-            Predicates.Add(_queryBuilder.MakeKeysetPaginationPredicate(qualifiedPks, pkValues));
-        }
-
-        /// <summary>
-        ///  Add parameter to Parameters and return the name associated with it
-        /// </summary>
-        private string MakeParamWithValue(object value)
-        {
-            string paramName = $"param{Counter.Next()}";
-            Parameters.Add(paramName, value);
-            return paramName;
+            PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(primaryKey, pkValues);
         }
 
         /// <summary>
@@ -472,7 +353,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// the columns of the right table. The columns are compared in order,
         /// thus the lists should be the same length.
         /// </summary>
-        public IEnumerable<string> CreateJoinPredicates(
+        public IEnumerable<Predicate> CreateJoinPredicates(
                 string leftTableAlias,
                 List<string> leftColumnNames,
                 string rightTableAlias,
@@ -481,9 +362,13 @@ namespace Azure.DataGateway.Service.Resolvers
             return leftColumnNames.Zip(rightColumnNames,
                     (leftColumnName, rightColumnName) =>
                     {
-                        string leftColumn = QualifiedColumn(leftTableAlias, leftColumnName);
-                        string rightColumn = QualifiedColumn(rightTableAlias, rightColumnName);
-                        return $"{leftColumn} = {rightColumn}";
+                        Column leftColumn = new(leftTableAlias, leftColumnName);
+                        Column rightColumn = new(rightTableAlias, rightColumnName);
+                        return new Predicate(
+                            new PredicateOperand(leftColumn),
+                            PredicateOperation.Equal,
+                            new PredicateOperand(rightColumn)
+                        );
                     }
                 );
         }
@@ -548,7 +433,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     IObjectField subschemaField = _underlyingFieldType.Fields[fieldName];
 
                     IDictionary<string, object> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field);
-                    SqlQueryStructure subquery = new(_ctx, subqueryParams, _metadataStoreProvider, _queryBuilder, subschemaField, field, Counter);
+                    SqlQueryStructure subquery = new(_ctx, subqueryParams, _metadataStoreProvider, subschemaField, field, Counter);
 
                     if (PaginationMetadata.IsPaginated)
                     {
@@ -633,8 +518,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     string subqueryAlias = $"{subtableAlias}_subq";
                     JoinQueries.Add(subqueryAlias, subquery);
-                    string column = _queryBuilder.WrapSubqueryColumn($"{QuoteIdentifier(subqueryAlias)}.{_queryBuilder.DataIdent}", subquery);
-                    Columns.Add(fieldName, column);
+                    Columns.Add(new LabelledColumn(subqueryAlias, DATA_IDENT, fieldName));
                 }
             }
         }
@@ -699,25 +583,6 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// QuoteIdentifier simply forwards to the QuoteIdentifier
-        /// implementation of the querybuilder that this query structure uses.
-        /// So it wrapse the string in double quotes for Postgres and square
-        /// brackets for MSSQL.
-        /// </summary>
-        public string QuoteIdentifier(string ident)
-        {
-            return _queryBuilder.QuoteIdentifier(ident);
-        }
-
-        /// <summary>
-        /// Converts the query structure to the actual query string.
-        /// </summary>
-        public override string ToString()
-        {
-            return _queryBuilder.Build(this);
-        }
-
-        /// <summary>
         /// The maximum number of results this query should return.
         /// </summary>
         public uint Limit()
@@ -733,86 +598,38 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Create the SQL code to select the columns defined in Columns for
-        /// selection in the SELECT clause. So the {ColumnsSql} bit in this
-        /// example:
-        /// SELECT {ColumnsSql} FROM ... WHERE ...
+        /// Exposes the primary key of the underlying table of the structure
+        /// as a list of Column
         /// </summary>
-        public string ColumnsSql()
+        public List<Column> PrimaryKeyAsColumns()
         {
-            return string.Join(", ", Columns.Select(
-                        x => $"{x.Value} AS {QuoteIdentifier(x.Key)}"));
-        }
-
-        /// <summary>
-        /// Create the SQL code to define the main table of the query as well
-        /// as the tables it joins with. So the {TableSql} bit in this example:
-        /// SELECT ... FROM {TableSql} WHERE ...
-        /// </summary>
-        public string TableSql()
-        {
-            string tableSql = $"{QuoteIdentifier(TableName)} AS {QuoteIdentifier(TableAlias)}";
-            string joinSql = string.Join(
-                    "",
-                    Joins.Select(x =>
-                           $" INNER JOIN {QuoteIdentifier(x.TableName)}"
-                           + $" AS {QuoteIdentifier(x.TableAlias)}"
-                           + $" ON {PredicatesSql(x.Predicates)}"
-                        )
-                    );
-
-            return tableSql + joinSql;
-        }
-
-        /// <summary>
-        /// Convert a list of predicates to a valid predicate string. This
-        /// string can be used in WHERE or ON clauses of the query.
-        /// </summary>
-        static string PredicatesSql(List<string> predicates)
-        {
-            if (predicates.Count() == 0)
+            if (_primaryKey == null)
             {
-                // By always returning a valid predicate we don't have to
-                // handle the edge case of not having a predicate in other
-                // parts of the code. For example, this way we can add a WHERE
-                // clause to the query unconditionally. Any half-decent SQL
-                // engine will ignore this predicate during execution, because
-                // of basic constant optimizations.
-                return "1 = 1";
+                _primaryKey = new();
+
+                foreach (string column in PrimaryKey())
+                {
+                    _primaryKey.Add(new Column(TableAlias, column));
+                }
             }
 
-            return string.Join(" AND ", predicates);
+            return _primaryKey;
         }
 
         /// <summary>
-        /// Create the SQL code to filter the rows in the WHERE clause. So the
-        /// {PredicatesSql} bit in this example:
-        /// SELECT ... FROM ... WHERE {PredicatesSql}
-        /// </summary>
-        public string PredicatesSql()
-        {
-            return PredicatesSql(Predicates);
-        }
-        /// <summary>
-        /// Create the SQL code to that should be included in the ORDER BY
-        /// section to order the results as intended. So the {OrderBySql} bit
-        /// in this example:
-        /// SELECT ... FROM ... WHERE ... ORDER BY {OrderBySql}
-        ///
-        /// NOTE: Currently all queries are ordered by their primary key.
-        /// </summary>
-        public string OrderBySql()
-        {
-            return string.Join(", ", PrimaryKey().Select(
-                        x => QuoteIdentifier(x)));
-        }
-
-        /// <summary>
-        /// Exposes the primary key of the underlying table of the structure
+        /// Get primary key as list of string
         /// </summary>
         public List<string> PrimaryKey()
         {
             return GetTableDefinition().PrimaryKey;
+        }
+
+        /// <summary>
+        /// Adds a labelled column to this query's columns
+        /// </summary>
+        protected void AddColumn(string columnName)
+        {
+            Columns.Add(new LabelledColumn(TableAlias, columnName, columnName));
         }
     }
 }

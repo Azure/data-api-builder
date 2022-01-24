@@ -149,7 +149,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         object value = ResolveJsonElementToScalarVariable(keyValuePair.Value);
 
                         ColumnType columnType = paginationMetadata.Structure.GetColumnType(keyValuePair.Key);
-                        if (value.GetType() != ColumnDefinition.ResolveColumnToSystemType(columnType))
+                        if (value.GetType() != ColumnDefinition.ResolveColumnTypeToSystemType(columnType))
                         {
                             throw new ArgumentException($"After param has incorrect type {value.GetType()} for primary key column {keyValuePair.Key} with type {columnType}.");
                         }

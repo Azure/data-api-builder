@@ -2,7 +2,7 @@ using System;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 
-namespace Azure.DataGateway.Service.configurations
+namespace Azure.DataGateway.Service.Configurations
 {
     /// <summary>
     /// The different type of databases this app supports.

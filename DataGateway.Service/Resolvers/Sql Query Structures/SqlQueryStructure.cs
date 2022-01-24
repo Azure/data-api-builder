@@ -227,7 +227,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 IsListQuery = outputType.IsListType();
             }
 
-            if (IsListQuery)
+            if (IsListQuery && queryParams.ContainsKey("first"))
             {
                 // parse first parameter for all list queries
                 object firstObject = queryParams["first"];
@@ -530,7 +530,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private object GetParamAsColumnSystemType(string param, string columnName)
         {
             ColumnType type = GetColumnType(columnName);
-            Type systemType = ColumnDefinition.ResolveColumnToSystemType(type);
+            Type systemType = ColumnDefinition.ResolveColumnTypeToSystemType(type);
 
             try
             {
@@ -542,7 +542,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         return Int64.Parse(param);
                     default:
                         // should never happen due to the config being validated for correct types
-                        return null;
+                        throw new NotSupportedException($"{type} is not supported");
                 }
             }
             catch (Exception e)

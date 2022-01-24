@@ -2,8 +2,9 @@ type Query {
     getBooks(first: Int = 100): [Book!]!
     getBook(id: Int!): Book
     getReview(id: Int!, book_id: Int!): Review
-    books(first: Int, after: String): BookConnection
-    reviews(first: Int, after: String): ReviewConnection
+    getReviews: [Review!]!
+    books(first: Int, after: String): BookConnection!
+    reviews(first: Int, after: String): ReviewConnection!
 }
 
 type Mutation {
@@ -14,51 +15,51 @@ type Mutation {
 }
 
 type Publisher {
-    id: Int
-    name: String
+    id: Int!
+    name: String!
     books(first: Int = 100): [Book!]!
-    paginatedBooks(first: Int, after: String): BookConnection
+    paginatedBooks(first: Int, after: String): BookConnection!
 }
 
 type Book {
-    id: Int
-    title: String
-    publisher_id: Int
+    id: Int!
+    title: String!
+    publisher_id: Int!
     publisher: Publisher!
     reviews(first: Int = 100): [Review!]!
-    paginatedReviews(first: Int, after: String): ReviewConnection
+    paginatedReviews(first: Int, after: String): ReviewConnection!
     authors(first: Int = 100): [Author!]!
-    paginatedAuthors(first: Int, after: String): AuthorConnection
+    paginatedAuthors(first: Int, after: String): AuthorConnection!
 }
 
 type Author {
-    id: Int
-    name: String
-    birthdate: String
+    id: Int!
+    name: String!
+    birthdate: String!
     books(first: Int = 100): [Book!]!
-    paginatedBooks(first: Int, after: String): BookConnection
+    paginatedBooks(first: Int, after: String): BookConnection!
 }
 
 type Review {
-    id: Int
-    content: String
-    book: Book
+    id: Int!
+    content: String!
+    book: Book!
 }
 
 type BookConnection {
-    items: [Book]
+    items: [Book!]!
     endCursor: String
-    hasNextPage: Boolean
+    hasNextPage: Boolean!
 }
 
 type ReviewConnection {
-    items: [Review]
+    items: [Review!]!
     endCursor: String
-    hasNextPage: Boolean
+    hasNextPage: Boolean!
 }
 
 type AuthorConnection {
-    items: [Author]
+    items: [Author!]!
     endCursor: String
-    hasNextPage: Boolean
+    hasNextPage: Boolean!
 }

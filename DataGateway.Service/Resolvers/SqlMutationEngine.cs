@@ -60,17 +60,17 @@ namespace Azure.DataGateway.Service.Resolvers
 
             switch (mutationResolver.OperationType)
             {
-                case "INSERT":
+                case MutationOperation.Insert:
                     SqlInsertStructure insertQueryStruct = new(tableName, tableDefinition, parameters, _queryBuilder);
                     queryString = insertQueryStruct.ToString();
                     queryParameters = insertQueryStruct.Parameters;
                     break;
-                case "UPDATE":
+                case MutationOperation.Update:
                     SqlUpdateStructure updateQueryStruct = new(tableName, tableDefinition, parameters, _queryBuilder);
                     queryString = updateQueryStruct.ToString();
                     queryParameters = updateQueryStruct.Parameters;
                     break;
-                case "DELETE":
+                case MutationOperation.Delete:
                     // compute the mutation result before removing the element
                     result = await _queryEngine.ExecuteAsync(context, parameters, false);
                     SqlDeleteStructure deleteStructure = new(tableName, tableDefinition, parameters, _queryBuilder);
@@ -85,7 +85,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, queryParameters);
 
-            if (!context.Selection.Type.IsScalarType() && mutationResolver.OperationType != "DELETE")
+            if (!context.Selection.Type.IsScalarType() && mutationResolver.OperationType != MutationOperation.Delete)
             {
                 Dictionary<string, object> searchParams = await ExtractRowFromDbDataReader(dbDataReader);
 

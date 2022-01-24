@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.configurations;
+using Azure.DataGateway.Service.Configurations;
 using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Resolvers

@@ -53,6 +53,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "FindTestWithInvalidFields",
                 $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
                 $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "InsertOneTest",
+                $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
+                $"WHERE [id] = 5001 AND [title] = 'My New Book' " +
+                $"AND [publisher_id] = 1234 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
         #region Test Fixture Setup

@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -107,6 +108,27 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: GetQuery(nameof(FindTestWithPrimaryKeyContainingForeignKey)),
                 controller: _restController
             );
+        }
+
+        [TestMethod]
+        public async Task InsertOneTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: null,
+                    queryString: null,
+                    entity: "books",
+                    sqlQuery: GetQuery(nameof(InsertOneTest)),
+                    controller: _restController,
+                    operationType: Operation.Insert,
+                    requestBody: requestBody
+                );
+            ;
         }
 
         #endregion

@@ -100,8 +100,20 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         FROM " + _integrationTableName + @"
                     ) AS subq
                 "
+            },
+            {
+                "InsertOneTest",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 5001
+                    ) AS subq
+                "
             }
         };
+
         #region Test Fixture Setup
 
         /// <summary>

@@ -19,7 +19,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public List<string> Values { get; }
 
         /// <summary>
-        /// The updated columns that the update will return
+        /// The inserted columns that the insert will return
         /// </summary>
         public List<string> ReturnColumns { get; }
 

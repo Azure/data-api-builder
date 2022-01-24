@@ -46,7 +46,7 @@ namespace Azure.DataGateway.Service.Models
     /// </summary>
     public enum PredicateOperation
     {
-        Equals, GreaterThan, SmallerThan
+        Equal, GreaterThan, LessThan, GreaterThanOrEqual, LessThanOrEqual
     }
 
     /// <summary>
@@ -131,7 +131,7 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
         public PredicateOperation Op { get; }
 
-        public Predicate(PredicateOperand left, PredicateOperand right, PredicateOperation op)
+        public Predicate(PredicateOperand left, PredicateOperation op, PredicateOperand right)
         {
             Left = left;
             Right = right;
@@ -151,7 +151,7 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
         public List<Column> PrimaryKey { get; }
         /// <summary>
-        /// List of values to compary the primary key with
+        /// List of values to compare the primary key with
         /// to create the pagination predicate
         /// </summary>
         public List<string> Values { get; }
@@ -189,7 +189,7 @@ namespace Azure.DataGateway.Service.Models
 
     /// <summary>
     /// A simple class that is used to hold the information about joins that
-    /// are part of an SQL query.
+    /// are part of a SQL query.
     /// <summary>
     public class SqlJoinStructure
     {

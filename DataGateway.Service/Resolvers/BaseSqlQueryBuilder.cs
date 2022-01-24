@@ -5,6 +5,10 @@ using Azure.DataGateway.Service.Models;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
+    /// <summary>
+    /// Base builder class for sql databases which contains shared
+    /// methods for building query strucutres like Colum, LabelledColumn, Predicate etc
+    /// </summary>
     public abstract class BaseSqlQueryBuilder
     {
         /// <summary>
@@ -53,7 +57,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Build each column and join by ", " separator
+        /// Build each labelled column and join by ", " separator
         /// </summary>
         protected string Build(List<LabelledColumn> columns)
         {
@@ -86,12 +90,16 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             switch (op)
             {
-                case PredicateOperation.Equals:
+                case PredicateOperation.Equal:
                     return "=";
                 case PredicateOperation.GreaterThan:
                     return ">";
-                case PredicateOperation.SmallerThan:
+                case PredicateOperation.LessThan:
                     return "<";
+                case PredicateOperation.GreaterThanOrEqual:
+                    return ">=";
+                case PredicateOperation.LessThanOrEqual:
+                    return "<=";
                 default:
                     throw new ArgumentException($"Cannot build unknown predicate operation {op}.");
             }
@@ -109,14 +117,8 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Build and join predicates with separator (" AND " by default)
         /// </summary>
-        /// <returns>"1 = 1" if no predicates were provided</returns>
         protected string Build(List<Predicate> predicates, string separator = " AND ")
         {
-            if (predicates.Count == 0)
-            {
-                return "1 = 1";
-            }
-
             return string.Join(separator, predicates.Select(p => Build(p)));
         }
 
@@ -145,6 +147,22 @@ namespace Azure.DataGateway.Service.Resolvers
         protected string Build(List<string> columns)
         {
             return string.Join(", ", columns.Select(c => QuoteIdentifier(c)));
+        }
+
+        /// <summary>
+        /// Join predicate strings while ignoring empty or null predicates
+        /// </summary>
+        /// <returns>returns "1 = 1" if no valid predicates</returns>
+        public string JoinPredicateStrings(params string[] predicateStrings)
+        {
+            IEnumerable<string> validPredicates = predicateStrings.Where(s => !string.IsNullOrEmpty(s));
+
+            if (validPredicates.Count() == 0)
+            {
+                return "1 = 1";
+            }
+
+            return string.Join(" AND ", validPredicates);
         }
     }
 }

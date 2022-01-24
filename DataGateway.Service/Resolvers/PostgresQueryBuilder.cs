@@ -25,14 +25,13 @@ namespace Azure.DataGateway.Service.Resolvers
             string fromSql = $"{QuoteIdentifier(structure.TableName)} AS {QuoteIdentifier(structure.TableAlias)}{Build(structure.Joins)}";
             fromSql += string.Join("", structure.JoinQueries.Select(x => $" LEFT OUTER JOIN LATERAL ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)} ON TRUE"));
 
-            string keysetPagPredicate =
-                structure.PaginationMetadata.PaginationPredicate != null ?
-                $" AND {Build(structure.PaginationMetadata.PaginationPredicate)}"
-                : string.Empty;
+            string predicates = JoinPredicateStrings(
+                                    Build(structure.Predicates),
+                                    Build(structure.PaginationMetadata.PaginationPredicate));
 
             string query = $"SELECT {Build(structure.Columns)}"
                 + $" FROM {fromSql}"
-                + $" WHERE {Build(structure.Predicates)}{keysetPagPredicate}"
+                + $" WHERE {predicates}"
                 + $" ORDER BY {Build(structure.PrimaryKeyAsColumns())}"
                 + $" LIMIT {structure.Limit()}";
 
@@ -82,6 +81,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <inheritdoc />
         protected override string Build(KeysetPaginationPredicate predicate)
         {
+            if (predicate == null)
+            {
+                return string.Empty;
+            }
+
             string left = Build(predicate.PrimaryKey);
             string right = string.Join(", ", predicate.Values);
 

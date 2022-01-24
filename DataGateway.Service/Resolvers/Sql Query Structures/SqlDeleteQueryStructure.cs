@@ -26,11 +26,10 @@ namespace Azure.DataGateway.Service.Resolvers
                 // primary keys used as predicates
                 if (primaryKeys.Contains(param.Key))
                 {
-                    // Predicates.Add($"{QuoteIdentifier(param.Key)} = @{MakeParamWithValue(param.Value)}");
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(TableName, param.Key)),
-                        new PredicateOperand($"@{MakeParamWithValue(param.Value)}"),
-                        PredicateOperation.Equals
+                        PredicateOperation.Equal,
+                        new PredicateOperand($"@{MakeParamWithValue(param.Value)}")
                     ));
                 }
             }

@@ -41,8 +41,8 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 Predicate predicate = new(
                     new PredicateOperand(new Column(null, param.Key)),
-                    new PredicateOperand($"@{MakeParamWithValue(param.Value)}"),
-                    PredicateOperation.Equals
+                    PredicateOperation.Equal,
+                    new PredicateOperand($"@{MakeParamWithValue(param.Value)}")
                 );
 
                 // primary keys used as predicates

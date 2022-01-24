@@ -152,8 +152,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     string parameterName = MakeParamWithValue(GetParamAsColumnSystemType(predicate.Value, predicate.Field));
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(TableAlias, predicate.Field)),
-                        new PredicateOperand($"@{parameterName}"),
-                        PredicateOperation.Equals
+                        PredicateOperation.Equal,
+                        new PredicateOperand($"@{parameterName}")
                     ));
                 }
                 catch (ArgumentException)
@@ -319,8 +319,8 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 Predicates.Add(new Predicate(
                     new PredicateOperand(new Column(TableAlias, parameter.Key)),
-                    new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}"),
-                    PredicateOperation.Equals
+                    PredicateOperation.Equal,
+                    new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
                 ));
             }
         }
@@ -366,8 +366,8 @@ namespace Azure.DataGateway.Service.Resolvers
                         Column rightColumn = new(rightTableAlias, rightColumnName);
                         return new Predicate(
                             new PredicateOperand(leftColumn),
-                            new PredicateOperand(rightColumn),
-                            PredicateOperation.Equals
+                            PredicateOperation.Equal,
+                            new PredicateOperand(rightColumn)
                         );
                     }
                 );

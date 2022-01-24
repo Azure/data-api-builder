@@ -36,14 +36,13 @@ namespace Azure.DataGateway.Service.Resolvers
                     structure.JoinQueries.Select(
                         x => $" OUTER APPLY ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)}({dataIdent})"));
 
-            string keysetPagPredicate =
-                structure.PaginationMetadata.PaginationPredicate != null ?
-                $" AND {Build(structure.PaginationMetadata.PaginationPredicate)}"
-                : string.Empty;
+            string predicates = JoinPredicateStrings(
+                                    Build(structure.Predicates),
+                                    Build(structure.PaginationMetadata.PaginationPredicate));
 
             string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)}"
                 + $" FROM {fromSql}"
-                + $" WHERE {Build(structure.Predicates)}{keysetPagPredicate}"
+                + $" WHERE {predicates}"
                 + $" ORDER BY {Build(structure.PrimaryKeyAsColumns())}";
 
             query += FOR_JSON_SUFFIX;
@@ -99,6 +98,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <inheritdoc />
         protected override string Build(KeysetPaginationPredicate predicate)
         {
+            if (predicate == null)
+            {
+                return string.Empty;
+            }
+
             if (predicate.PrimaryKey.Count > 1)
             {
                 StringBuilder result = new("(");

@@ -62,12 +62,12 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 case MutationOperation.Insert:
                     SqlInsertStructure insertQueryStruct = new(tableName, tableDefinition, parameters);
-                    queryString = insertQueryStruct.ToString();
+                    queryString = _queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
                     break;
                 case MutationOperation.Update:
                     SqlUpdateStructure updateQueryStruct = new(tableName, tableDefinition, parameters);
-                    queryString = updateQueryStruct.ToString();
+                    queryString = _queryBuilder.Build(updateQueryStruct);
                     queryParameters = updateQueryStruct.Parameters;
                     break;
                 case MutationOperation.Delete:

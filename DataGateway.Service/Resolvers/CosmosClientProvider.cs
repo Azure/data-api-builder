@@ -1,4 +1,4 @@
-using Azure.DataGateway.Service.configurations;
+using Azure.DataGateway.Service.Configurations;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Fluent;
 using Microsoft.Extensions.Options;

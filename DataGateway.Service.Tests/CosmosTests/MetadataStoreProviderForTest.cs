@@ -51,5 +51,10 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         {
             throw new System.NotImplementedException();
         }
+
+        public ResolverConfig GetResolvedConfig()
+        {
+            throw new System.NotImplementedException();
+        }
     }
 }

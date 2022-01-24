@@ -136,17 +136,17 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 case Operation.Insert:
                     SqlInsertStructure insertQueryStruct = new(tableName, tableDefinition, parameters, _queryBuilder);
-                    queryString = insertQueryStruct.ToString();
+                    queryString = _queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
                     break;
                 case Operation.Update:
                     SqlUpdateStructure updateQueryStruct = new(tableName, tableDefinition, parameters, _queryBuilder);
-                    queryString = updateQueryStruct.ToString();
+                    queryString = _queryBuilder.Build(updateQueryStruct);
                     queryParameters = updateQueryStruct.Parameters;
                     break;
                 case Operation.Delete:
                     SqlDeleteStructure deleteStructure = new(tableName, tableDefinition, parameters, _queryBuilder);
-                    queryString = deleteStructure.ToString();
+                    queryString = _queryBuilder.Build(deleteStructure);
                     queryParameters = deleteStructure.Parameters;
                     break;
                 default:

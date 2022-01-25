@@ -123,9 +123,9 @@ namespace Azure.DataGateway.Service.Controllers
         /// <param name="primaryKeyRoute">The string identifying the primary key route
         /// Its value could be null depending on the kind of operation.</param>
         private async Task<IActionResult> HandleOperation(
-            string    entityName,
+            string entityName,
             Operation operationType,
-            string    primaryKeyRoute = null)
+            string primaryKeyRoute = null)
         {
             try
             {

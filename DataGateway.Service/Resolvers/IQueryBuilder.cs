@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace Azure.DataGateway.Service.Resolvers
 {
     // <summary>
@@ -9,28 +7,6 @@ namespace Azure.DataGateway.Service.Resolvers
     // </summary>
     public interface IQueryBuilder
     {
-        /// <summary>
-        /// Enclose the given string in the delimiters that are used to quote
-        /// identifiers, e.g. double quotes.
-        /// </summary>
-        /// <param name="ident">The unquoted identifier to be enclosed.</param>
-        /// <returns>The quoted identifier.</returns>
-        public string QuoteIdentifier(string ident);
-
-        /// <summary>
-        /// Create the optimal keyset pagination predicate for the database type
-        /// given the primary key and the primary column values needed to create the predicate
-        /// </summary>
-        public string MakeKeysetPaginationPredicate(List<string> primaryKey, List<string> pkValues);
-
-        /// <summary>
-        /// Wrap a column that corresponds to a subquery in whatever SQL that
-        /// is necassary to select it as a JSON Field.
-        /// </summary>
-        /// <param name="column">The column that corresponds to a subquery</param>
-        /// <param name="subquery">The subquery that the column corresponds to</param>
-        /// <returns>The wrapped column.</returns>
-        public string WrapSubqueryColumn(string column, SqlQueryStructure subquery);
         /// <summary>
         /// Builds the query specific to the target database for the given
         /// SqlQueryStructure object which holds the major components of the
@@ -54,10 +30,5 @@ namespace Azure.DataGateway.Service.Resolvers
         /// query.
         /// </summary>
         public string Build(SqlDeleteStructure structure);
-        /// <summary>
-        /// Simply a quoted version of the identifier "data". This identifier
-        /// is commonly used throughout the query.
-        /// </summary>
-        public string DataIdent { get; }
     }
 }

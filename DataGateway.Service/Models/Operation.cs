@@ -7,6 +7,7 @@ namespace Azure.DataGateway.Service.Models
     /// </summary>
     public enum Operation
     {
+        None,
         // Common Operations
         Find, Delete,
 

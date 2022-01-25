@@ -26,8 +26,6 @@ namespace Azure.DataGateway.Service.Services
         {
             TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, configurationProvider);
 
-            List<string> fieldsInRequest = new(context.FieldValuePairsInBody.Keys);
-
             foreach (string field in context.FieldsToBeReturned)
             {
                 if (!tableDefinition.Columns.ContainsKey(field))
@@ -38,6 +36,7 @@ namespace Azure.DataGateway.Service.Services
                 }
             }
 
+            List<string> fieldsInRequest = new(context.FieldValuePairsInBody.Keys);
             foreach (string field in fieldsInRequest)
             {
                 if (!tableDefinition.Columns.ContainsKey(field))
@@ -83,8 +82,8 @@ namespace Azure.DataGateway.Service.Services
 
             if (missingKeys.Any())
             {
-                    throw new DatagatewayException(
-                        message: $"The request is invalid since the primary keys: " +
+                throw new DatagatewayException(
+                    message: $"The request is invalid since the primary keys: " +
                         string.Join(", ", missingKeys) +
                         " requested were not found in the entity definition.",
                         statusCode: 400,

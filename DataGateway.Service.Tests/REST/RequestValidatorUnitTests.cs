@@ -213,7 +213,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             FindRequestContext findRequestContext,
             IMetadataStoreProvider metadataStore,
             bool expectsException,
-            int  statusCode = 400,
+            int statusCode = 400,
             DatagatewayException.SubStatusCodes subStatusCode = DatagatewayException.SubStatusCodes.BadRequest)
         {
             try

@@ -58,7 +58,10 @@ namespace Azure.DataGateway.Service.Resolvers
             if (mutationResolver.OperationType == Operation.Delete)
             {
                 // compute the mutation result before removing the element
-                result = await _queryEngine.ExecuteAsync(context, parameters, false);
+                result = await _queryEngine.ExecuteAsync(
+                    context,
+                    parameters,
+                    isPaginationQuery: false);
             }
 
             using DbDataReader dbDataReader =
@@ -78,7 +81,10 @@ namespace Azure.DataGateway.Service.Resolvers
                     throw new DatagatewayException($"Could not find entity with {searchedPK}", 404, DatagatewayException.SubStatusCodes.EntityNotFound);
                 }
 
-                result = await _queryEngine.ExecuteAsync(context, searchParams, isPaginationQuery: false);
+                result = await _queryEngine.ExecuteAsync(
+                    context,
+                    searchParams,
+                    isPaginationQuery: false);
             }
 
             return result;
@@ -145,31 +151,33 @@ namespace Azure.DataGateway.Service.Resolvers
             return await _queryEngine.ExecuteAsync(context);
         }
 
+        /// <summary>
+        /// Performs the given mutation operation type on the table and
+        /// returns result as JSON object asynchronously.
+        /// </summary>
         private async Task<DbDataReader> PerformMutationOperation(
             string tableName,
             Operation operationType,
             IDictionary<string, object> parameters)
         {
-            TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(tableName);
-
             string queryString;
             Dictionary<string, object> queryParameters;
 
             switch (operationType)
             {
                 case Operation.Insert:
-                    SqlInsertStructure insertQueryStruct = new(tableName, tableDefinition, parameters, _queryBuilder);
-                    queryString = insertQueryStruct.ToString();
+                    SqlInsertStructure insertQueryStruct = new(tableName, _metadataStoreProvider, parameters);
+                    queryString = _queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
                     break;
                 case Operation.Update:
-                    SqlUpdateStructure updateQueryStruct = new(tableName, tableDefinition, parameters, _queryBuilder);
-                    queryString = updateQueryStruct.ToString();
+                    SqlUpdateStructure updateQueryStruct = new(tableName, _metadataStoreProvider, parameters);
+                    queryString = _queryBuilder.Build(updateQueryStruct);
                     queryParameters = updateQueryStruct.Parameters;
                     break;
                 case Operation.Delete:
-                    SqlDeleteStructure deleteStructure = new(tableName, tableDefinition, parameters, _queryBuilder);
-                    queryString = deleteStructure.ToString();
+                    SqlDeleteStructure deleteStructure = new(tableName, _metadataStoreProvider, parameters);
+                    queryString = _queryBuilder.Build(deleteStructure);
                     queryParameters = deleteStructure.Parameters;
                     break;
                 default:

@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -25,7 +26,7 @@ namespace Azure.DataGateway.Service.Controllers
         /// <summary>
         /// String representing the value associated with "code" for a server error
         /// </summary>
-        private const string SERVER_ERROR = "While processing your request the server ran into an unexpected error";
+        public const string SERVER_ERROR = "While processing your request the server ran into an unexpected error.";
 
         /// <summary>
         /// Constructor.
@@ -39,8 +40,8 @@ namespace Azure.DataGateway.Service.Controllers
         /// Helper function returns a JsonResult with provided arguments in a
         /// form that complies with vNext Api guidelines.
         /// </summary>
-        /// <param name="code">string provides a description of general error</param>
-        /// <param name="message">string provides a message associated with this error</param>
+        /// <param name="code">One of a server-defined set of error codes.</param>
+        /// <param name="message">string provides a message associated with this error.</param>
         /// <param name="status">int provides the http response status code associated with this error</param>
         /// <returns></returns>
         public static JsonResult ErrorResponse(string code, string message, int status)
@@ -152,8 +153,11 @@ namespace Azure.DataGateway.Service.Controllers
             {
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine(ex.StackTrace);
-                Response.StatusCode = (int)System.Net.HttpStatusCode.InternalServerError;
-                return ErrorResponse(SERVER_ERROR, ex.Message, (int)System.Net.HttpStatusCode.InternalServerError);
+                Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                return ErrorResponse(
+                    DatagatewayException.SubStatusCodes.UnexpectedError.ToString(),
+                    SERVER_ERROR,
+                    (int)HttpStatusCode.InternalServerError);
             }
         }
     }

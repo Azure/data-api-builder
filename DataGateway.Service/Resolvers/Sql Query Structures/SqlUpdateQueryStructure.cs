@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -14,24 +15,23 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Updates to be applied to selected row
         /// </summary>
         public List<Predicate> UpdateOperations { get; }
+
         /// <summary>
         /// The updated columns that the update will return
         /// </summary>
         public List<string> ReturnColumns { get; }
 
-        private readonly TableDefinition _tableDefinition;
-
-        public SqlUpdateStructure(string tableName, TableDefinition tableDefinition, IDictionary<string, object> mutationParams)
-        : base()
+        public SqlUpdateStructure(string tableName, IMetadataStoreProvider metadataStore, IDictionary<string, object> mutationParams)
+        : base(metadataStore)
         {
             TableName = tableName;
             UpdateOperations = new();
+            TableDefinition tableDefinition = GetTableDefinition();
 
-            _tableDefinition = tableDefinition;
-            ReturnColumns = _tableDefinition.PrimaryKey;
+            ReturnColumns = tableDefinition.PrimaryKey;
 
-            List<string> primaryKeys = _tableDefinition.PrimaryKey;
-            List<string> columns = _tableDefinition.Columns.Keys.ToList();
+            List<string> primaryKeys = tableDefinition.PrimaryKey;
+            List<string> columns = tableDefinition.Columns.Keys.ToList();
             foreach (KeyValuePair<string, object> param in mutationParams)
             {
                 if (param.Value == null)

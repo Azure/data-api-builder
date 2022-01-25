@@ -64,7 +64,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// comment on UnderlyingType to understand what an underlying type is.
         /// </summary>
         ObjectType _underlyingFieldType;
-        private readonly IMetadataStoreProvider _metadataStoreProvider;
+
         private readonly GraphqlType _typeInfo;
         private List<Column> _primaryKey;
 
@@ -154,7 +154,7 @@ namespace Azure.DataGateway.Service.Resolvers
             foreach (KeyValuePair<string, object> predicate in context.FieldValuePairsInBody)
             {
                 PopulateParamsAndPredicates(predicate);
-            };
+            }
         }
 
         /// <summary>
@@ -175,7 +175,7 @@ namespace Azure.DataGateway.Service.Resolvers
             IOutputType outputType = schemaField.Type;
             _underlyingFieldType = UnderlyingType(outputType);
 
-            _typeInfo = _metadataStoreProvider.GetGraphqlType(_underlyingFieldType.Name);
+            _typeInfo = MetadataStoreProvider.GetGraphqlType(_underlyingFieldType.Name);
             PaginationMetadata.IsPaginated = _typeInfo.IsPaginationType;
 
             if (PaginationMetadata.IsPaginated)
@@ -189,7 +189,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 outputType = schemaField.Type;
                 _underlyingFieldType = UnderlyingType(outputType);
-                _typeInfo = _metadataStoreProvider.GetGraphqlType(_underlyingFieldType.Name);
+                _typeInfo = MetadataStoreProvider.GetGraphqlType(_underlyingFieldType.Name);
 
                 // this is required to correctly keep track of which pagination metadata
                 // refers to what section of the json
@@ -275,12 +275,12 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Private constructor that is used as a base by all public
         /// constructors.
         /// </summary>
-        private SqlQueryStructure(IMetadataStoreProvider metadataStoreProvider, IncrementingInteger counter) : base(counter)
+        private SqlQueryStructure(IMetadataStoreProvider metadataStoreProvider, IncrementingInteger counter)
+            : base(metadataStoreProvider, counter)
         {
             JoinQueries = new();
             Joins = new();
             PaginationMetadata = new(this);
-            _metadataStoreProvider = metadataStoreProvider;
         }
 
         /// <summary>
@@ -307,7 +307,7 @@ namespace Azure.DataGateway.Service.Resolvers
         ///<summary>
         /// Adds predicates for the primary keys in the paramters of the graphql query
         ///</summary>
-        void AddPrimaryKeyPredicates(IDictionary<string, object> queryParams)
+        private void AddPrimaryKeyPredicates(IDictionary<string, object> queryParams)
         {
             foreach (KeyValuePair<string, object> parameter in queryParams)
             {
@@ -337,15 +337,16 @@ namespace Azure.DataGateway.Service.Resolvers
             foreach (Column column in primaryKey)
             {
                 pkValues.Add($"@{MakeParamWithValue(afterJsonValues[column.ColumnName])}");
-
-                PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(primaryKey, pkValues);
             }
 
-            /// <summary>
-            ///  Given the predicate key value pair, populates the Parameters and Predicates properties.
-            /// </summary>
-            /// <param name="predicate">The key value pair representing a predicate.</param>
-            private void PopulateParamsAndPredicates(KeyValuePair<string, object> predicate)
+            PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(primaryKey, pkValues);
+        }
+
+        /// <summary>
+        ///  Given the predicate key value pair, populates the Parameters and Predicates properties.
+        /// </summary>
+        /// <param name="predicate">The key value pair representing a predicate.</param>
+        private void PopulateParamsAndPredicates(KeyValuePair<string, object> predicate)
         {
             try
             {
@@ -360,23 +361,16 @@ namespace Azure.DataGateway.Service.Resolvers
                     parameterName = MakeParamWithValue(value: null);
                 }
 
-                Predicates.Add($"{QualifiedColumn(predicate.Key)} = @{parameterName}");
+                Predicates.Add(new Predicate(
+                        new PredicateOperand(new Column(TableAlias, predicate.Key)),
+                        PredicateOperation.Equal,
+                        new PredicateOperand($"@{parameterName}")));
             }
             catch (ArgumentException)
             {
                 throw new DatagatewayException($"Predicate field \"{predicate.Key}\" " +
                     $"has invalid value type.", 400, DatagatewayException.SubStatusCodes.BadRequest);
             }
-        }
-
-        /// <summary>
-        ///  Add parameter to Parameters and return the name associated with it
-        /// </summary>
-        private string MakeParamWithValue(object value)
-        {
-            string paramName = $"param{Counter.Next()}";
-            Parameters.Add(paramName, value);
-            return paramName;
         }
 
         /// <summary>
@@ -464,7 +458,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     IObjectField subschemaField = _underlyingFieldType.Fields[fieldName];
 
                     IDictionary<string, object> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field);
-                    SqlQueryStructure subquery = new(_ctx, subqueryParams, _metadataStoreProvider, subschemaField, field, Counter);
+                    SqlQueryStructure subquery = new(_ctx, subqueryParams, MetadataStoreProvider, subschemaField, field, Counter);
 
                     if (PaginationMetadata.IsPaginated)
                     {
@@ -491,8 +485,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     // use the _underlyingType from the subquery which will be overridden appropriately if the query is paginated
                     ObjectType subunderlyingType = subquery._underlyingFieldType;
 
-                    GraphqlType subTypeInfo = _metadataStoreProvider.GetGraphqlType(subunderlyingType.Name);
-                    TableDefinition subTableDefinition = _metadataStoreProvider.GetTableDefinition(subTypeInfo.Table);
+                    GraphqlType subTypeInfo = MetadataStoreProvider.GetGraphqlType(subunderlyingType.Name);
+                    TableDefinition subTableDefinition = MetadataStoreProvider.GetTableDefinition(subTypeInfo.Table);
                     GraphqlField fieldInfo = _typeInfo.Fields[fieldName];
 
                     string subtableAlias = subquery.TableAlias;
@@ -519,7 +513,7 @@ namespace Azure.DataGateway.Service.Resolvers
                             string associativeTableName = fieldInfo.AssociativeTable;
                             string associativeTableAlias = CreateTableAlias();
 
-                            TableDefinition associativeTableDefinition = _metadataStoreProvider.GetTableDefinition(associativeTableName);
+                            TableDefinition associativeTableDefinition = MetadataStoreProvider.GetTableDefinition(associativeTableName);
                             subquery.Predicates.AddRange(CreateJoinPredicates(
                                 TableAlias,
                                 PrimaryKey(),
@@ -552,65 +546,6 @@ namespace Azure.DataGateway.Service.Resolvers
                     Columns.Add(new LabelledColumn(subqueryAlias, DATA_IDENT, fieldName));
                 }
             }
-        }
-
-        ///<summary>
-        /// Get the value of the parameter cast as the type of the column this parameter is associated with
-        ///</summary>
-        /// <exception cref="ArgumentException">columnName is not a valid column of table or param does not have a valid value type</exception>
-        private object GetParamAsColumnSystemType(string param, string columnName)
-        {
-            ColumnType type = GetColumnType(columnName);
-            Type systemType = ColumnDefinition.ResolveColumnTypeToSystemType(type);
-
-            try
-            {
-                switch (systemType.Name)
-                {
-                    case "String":
-                        return param;
-                    case "Int64":
-                        return Int64.Parse(param);
-                    default:
-                        // should never happen due to the config being validated for correct types
-                        throw new NotSupportedException($"{type} is not supported");
-                }
-            }
-            catch (Exception e)
-            {
-                if (e is FormatException ||
-                    e is ArgumentNullException ||
-                    e is OverflowException)
-                {
-                    throw new ArgumentException($"Parameter \"{param}\" cannot be resolved as column \"{columnName}\" with type \"{type}\".");
-                }
-
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Get column type from table underlying the query strucutre
-        /// </summary>
-        public ColumnType GetColumnType(string columnName)
-        {
-            ColumnDefinition column;
-            if (GetTableDefinition().Columns.TryGetValue(columnName, out column))
-            {
-                return column.Type;
-            }
-            else
-            {
-                throw new ArgumentException($"{columnName} is not a valid column of {TableName}");
-            }
-        }
-
-        /// <summary>
-        /// Returns the TableDefinition for the the table of this query.
-        /// </summary>
-        private TableDefinition GetTableDefinition()
-        {
-            return _metadataStoreProvider.GetTableDefinition(TableName);
         }
 
         /// <summary>

@@ -122,30 +122,32 @@ namespace Azure.DataGateway.Service.Resolvers
             return await _queryEngine.ExecuteAsync(context);
         }
 
+        /// <summary>
+        /// Performs the given mutation operation type on the table and
+        /// returns result as JSON object asynchronously.
+        /// </summary>
         private async Task<DbDataReader> PerformMutationOperation(
             string tableName,
             Operation operationType,
             IDictionary<string, object> parameters)
         {
-            TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(tableName);
-
             string queryString;
             Dictionary<string, object> queryParameters;
 
             switch (operationType)
             {
                 case Operation.Insert:
-                    SqlInsertStructure insertQueryStruct = new(tableName, tableDefinition, parameters, _queryBuilder);
+                    SqlInsertStructure insertQueryStruct = new(tableName, _metadataStoreProvider, parameters);
                     queryString = _queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
                     break;
                 case Operation.Update:
-                    SqlUpdateStructure updateQueryStruct = new(tableName, tableDefinition, parameters, _queryBuilder);
+                    SqlUpdateStructure updateQueryStruct = new(tableName, _metadataStoreProvider, parameters);
                     queryString = _queryBuilder.Build(updateQueryStruct);
                     queryParameters = updateQueryStruct.Parameters;
                     break;
                 case Operation.Delete:
-                    SqlDeleteStructure deleteStructure = new(tableName, tableDefinition, parameters, _queryBuilder);
+                    SqlDeleteStructure deleteStructure = new(tableName, _metadataStoreProvider, parameters);
                     queryString = _queryBuilder.Build(deleteStructure);
                     queryParameters = deleteStructure.Parameters;
                     break;

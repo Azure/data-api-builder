@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -37,12 +39,40 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public IncrementingInteger Counter { get; }
 
-        public BaseSqlQueryStructure(IncrementingInteger counter = null)
+        protected IMetadataStoreProvider MetadataStoreProvider { get; }
+
+        public BaseSqlQueryStructure(IMetadataStoreProvider metadataStore,
+            IncrementingInteger counter = null)
         {
             Columns = new();
             Predicates = new();
             Parameters = new();
+            MetadataStoreProvider = metadataStore;
             Counter = counter ?? new IncrementingInteger();
+        }
+
+        /// <summary>
+        /// Get column type from table underlying the query strucutre
+        /// </summary>
+        public ColumnType GetColumnType(string columnName)
+        {
+            ColumnDefinition column;
+            if (GetTableDefinition().Columns.TryGetValue(columnName, out column))
+            {
+                return column.Type;
+            }
+            else
+            {
+                throw new ArgumentException($"{columnName} is not a valid column of {TableName}");
+            }
+        }
+
+        /// <summary>
+        /// Returns the TableDefinition for the the table of this query.
+        /// </summary>
+        protected TableDefinition GetTableDefinition()
+        {
+            return MetadataStoreProvider.GetTableDefinition(TableName);
         }
 
         /// <summary>
@@ -54,5 +84,42 @@ namespace Azure.DataGateway.Service.Resolvers
             Parameters.Add(paramName, value);
             return paramName;
         }
+
+        ///<summary>
+        /// Gets the value of the parameter cast as the type of the column this parameter is associated with
+        ///</summary>
+        /// <exception cref="ArgumentException">columnName is not a valid column of table or param
+        /// does not have a valid value type</exception>
+        protected object GetParamAsColumnSystemType(string param, string columnName)
+        {
+            ColumnType type = GetColumnType(columnName);
+            Type systemType = ColumnDefinition.ResolveColumnTypeToSystemType(type);
+
+            try
+            {
+                switch (systemType.Name)
+                {
+                    case "String":
+                        return param;
+                    case "Int64":
+                        return long.Parse(param);
+                    default:
+                        // should never happen due to the config being validated for correct types
+                        throw new NotSupportedException($"{type} is not supported");
+                }
+            }
+            catch (Exception e)
+            {
+                if (e is FormatException ||
+                    e is ArgumentNullException ||
+                    e is OverflowException)
+                {
+                    throw new ArgumentException($"Parameter \"{param}\" cannot be resolved as column \"{columnName}\" with type \"{type}\".");
+                }
+
+                throw;
+            }
+        }
+
     }
 }

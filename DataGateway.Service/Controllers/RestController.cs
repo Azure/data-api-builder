@@ -145,10 +145,20 @@ namespace Azure.DataGateway.Service.Controllers
 
                 if (result != null)
                 {
+                    JsonElement resultElement = result.RootElement.Clone();
                     // Clones the root element to a new JsonElement that can be
                     // safely stored beyond the lifetime of the original JsonDocument.
-                    JsonElement resultElement = result.RootElement.Clone();
-                    return Ok(resultElement);
+                    switch (operationType)
+                    {
+                        case Operation.Find:
+                            return Ok(resultElement);
+                        case Operation.Insert:
+                            return new CreatedResult(location: string.Empty, resultElement);
+                        case Operation.Delete:
+                            return new NoContentResult();
+                        default:
+                            return NotFound();
+                    }
                 }
                 else
                 {

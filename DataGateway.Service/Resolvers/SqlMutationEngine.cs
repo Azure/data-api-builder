@@ -92,16 +92,43 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>JSON object result</returns>
         public async Task<JsonDocument> ExecuteAsync(RestRequestContext context)
         {
+
+            //create result object to be populated by different operations
+            Dictionary<string, object> parameters;
+            if(context.OperationType == Operation.Delete)
+            {
+                //send the primary key parameters
+                //if operation successful return HTTP 200 success
+                //if operation failed (no item to delete) return HTTP 404 not found
+                //if operation failed (not authorized) return HTTP 403 forbidden
+                parameters = new(context.PrimaryKeyValuePairs);
+            }
+            else
+            {
+                parameters = new(context.FieldValuePairsInBody);
+            }
+
             using DbDataReader dbDataReader =
                 await PerformMutationOperation(
                     context.EntityName,
                     context.OperationType,
-                    context.FieldValuePairsInBody);
+                    parameters);
 
+            //Records affected tells us that item was successfully deleted.
+            if (dbDataReader.RecordsAffected > 0)
+            {
+                return JsonSerializer.SerializeToDocument(value: "{}", inputType: typeof(string));
+            }
             // Reuse the same context as a FindRequestContext to return the results after the mutation operation.
             context.PrimaryKeyValuePairs = await ExtractRowFromDbDataReader(dbDataReader);
+
             if (context.PrimaryKeyValuePairs == null)
             {
+                if(context.OperationType == Operation.Delete)
+                {
+                    return null;
+                }
+
                 throw new DatagatewayException(
                     message: $"Could not perform the given request on entity {context.EntityName}",
                     statusCode: (int)HttpStatusCode.InternalServerError,
@@ -113,7 +140,7 @@ namespace Azure.DataGateway.Service.Resolvers
             context.OperationType = Operation.Find;
 
             // delegates the querying part of the mutation to the QueryEngine
-            // this allows for nested queries in muatations
+            // this allows for nested queries in mutations
             // the searchParams are used to identify the mutated record so it can then be further queried on
             return await _queryEngine.ExecuteAsync(context);
         }

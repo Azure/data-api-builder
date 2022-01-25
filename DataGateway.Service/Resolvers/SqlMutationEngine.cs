@@ -103,10 +103,7 @@ namespace Azure.DataGateway.Service.Resolvers
             Dictionary<string, object> parameters;
             if(context.OperationType == Operation.Delete)
             {
-                //send the primary key parameters
-                //if operation successful return HTTP 200 success
-                //if operation failed (no item to delete) return HTTP 404 not found
-                //if operation failed (not authorized) return HTTP 403 forbidden
+                //DeleteOne based off primary key in request.
                 parameters = new(context.PrimaryKeyValuePairs);
             }
             else
@@ -119,30 +116,32 @@ namespace Azure.DataGateway.Service.Resolvers
                     context.EntityName,
                     context.OperationType,
                     parameters);
-
-            //Records affected tells us that item was successfully deleted.
-            if (dbDataReader.RecordsAffected > 0)
+            
+            if(context.OperationType == Operation.Delete)
             {
-                return JsonSerializer.SerializeToDocument(value: "{}", inputType: typeof(string));
+                //Records affected tells us that item was successfully deleted.
+                //No records affected happens for a DELETE request on nonexistant object
+                if (dbDataReader.RecordsAffected > 0)
+                {
+                    return JsonSerializer.SerializeToDocument(value: "{}", inputType: typeof(string));
+                }
+                else
+                {
+                    return null;
+                }
             }
+
             // Reuse the same context as a FindRequestContext to return the results after the mutation operation.
             context.PrimaryKeyValuePairs = await ExtractRowFromDbDataReader(dbDataReader);
 
             if (context.PrimaryKeyValuePairs == null)
             {
-                if(context.OperationType == Operation.Delete)
-                {
-                    return null;
-                }
-
                 throw new DatagatewayException(
                     message: $"Could not perform the given request on entity {context.EntityName}",
                     statusCode: (int)HttpStatusCode.InternalServerError,
                     subStatusCode: DatagatewayException.SubStatusCodes.DatabaseOperationFailed);
             }
 
-            //Only perform the following operation if DELETE was not performed.
-            //Deleted item will result in 0 results. 
             context.OperationType = Operation.Find;
 
             // delegates the querying part of the mutation to the QueryEngine

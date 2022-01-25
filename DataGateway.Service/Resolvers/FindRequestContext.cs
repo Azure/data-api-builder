@@ -16,10 +16,14 @@ namespace Azure.DataGateway.Service.Resolvers
         /// The value to which the field is compared.
         /// </summary>
         public string Value { get; set; }
-        public RestPredicate(string field, string value)
+
+        public bool IsLookUp { get; set; }
+
+        public RestPredicate(string field, string value, bool isLookUp)
         {
             Field = field;
             Value = value;
+            IsLookUp = isLookUp;
         }
     }
 

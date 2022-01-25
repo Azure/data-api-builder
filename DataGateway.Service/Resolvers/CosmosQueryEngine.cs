@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using HotChocolate.Resolvers;
@@ -148,7 +150,56 @@ namespace Azure.DataGateway.Services
         // </summary>
         public Task<JsonDocument> ExecuteAsync(FindRequestContext queryStructure)
         {
-            throw new NotImplementedException();
+            return LookupById(queryStructure);
+        }
+
+        private async Task<JsonDocument> LookupById(FindRequestContext queryStructure)
+        {
+            TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(queryStructure.EntityName);
+
+            if (tableDefinition == null)
+            {
+                throw new DatagatewayException(message: "TableDefinition for Entity:" + queryStructure.EntityName + " not found", statusCode: 400, DatagatewayException.SubStatusCodes.BadRequest);
+            }
+
+            // for now we only support 
+            if (tableDefinition.PrimaryKey.Count != queryStructure.Predicates.Count)
+            {
+                throw new DatagatewayException(message: "TableDefinition for Entity:" + queryStructure.EntityName + " not found", statusCode: 400, DatagatewayException.SubStatusCodes.BadRequest);
+            }
+
+            // id, partitionKey is a pair. for now we are not supporting the hierarchical partition key
+            // TODO: assume TableDefinition is validated as per above in the config loading phase.
+
+            System.Diagnostics.Debug.Assert(tableDefinition.PrimaryKey.Count <= 2);
+            System.Diagnostics.Debug.Assert(tableDefinition.PrimaryKey.Count >= 1);
+
+            PartitionKey partitionKey = new(queryStructure.Predicates[queryStructure.Predicates.Count - 1].Value);
+            Container container = this._clientProvider.Client.GetDatabase(tableDefinition.DatabaseName).GetContainer(tableDefinition.ContainerName);
+
+            using (ResponseMessage responseMessage = await container.ReadItemStreamAsync(queryStructure.Predicates[0].Value, partitionKey))
+            {
+                // Item stream operations do not throw exceptions for better performance
+                if (responseMessage.IsSuccessStatusCode)
+                {
+
+                    // TODO: we don't support column push down for point read operation in cosmos db.
+
+                    return JsonDocument.Parse(responseMessage.Content);
+                }
+                else
+                {
+                    if (responseMessage.StatusCode.Equals(HttpStatusCode.NotFound))
+                    {
+                        throw new DatagatewayException(message: "not found", statusCode: 404, DatagatewayException.SubStatusCodes.EntityNotFound);
+
+                    }
+                    else
+                    {
+                        throw new DatagatewayException(message: responseMessage.ErrorMessage, statusCode: 500, DatagatewayException.SubStatusCodes.EntityNotFound);
+                    }
+                }
+            }
         }
 
         private static string Base64Encode(string plainText)

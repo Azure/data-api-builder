@@ -40,7 +40,7 @@ namespace Azure.DataGateway.Services
                     RestPredicate predicate = new(
                             primaryKeyValues[primaryKeyIndex],
                             primaryKeyValues[primaryKeyIndex + 1]
-                            );
+                            , true);
                     context.Predicates.Add(predicate);
                 }
             }

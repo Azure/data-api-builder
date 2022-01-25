@@ -41,6 +41,18 @@
       "containerName": "planet",
       "operationType": "UPSERT"
     }
-  ]
+  ],
+  "DatabaseSchema" : {
+     "Tables" : {
+        "mytable" : {
+            "DatabaseName": "testdb",
+            "ContainerName": "testcol2",
+	     "PrimaryKey" : [ "id", "pk" ],
+             "Columns" : { "id" : { "Type" : "String" } },
+             "ForeignKeys" : {}
+	  }
+     }
+
+  }
 }
 

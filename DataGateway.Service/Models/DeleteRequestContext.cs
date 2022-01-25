@@ -1,8 +1,8 @@
 namespace Azure.DataGateway.Service.Models
 {
     /// <summary>
-    /// FindRequestContext provides the major components of a REST query
-    /// corresponding to the FindById or FindMany operations.
+    /// DeleteRequestContext provides the major components of a REST query
+    /// corresponding to the DeleteById or DeleteMany operations.
     /// </summary>
     public class DeleteRequestContext : RestRequestContext
     {

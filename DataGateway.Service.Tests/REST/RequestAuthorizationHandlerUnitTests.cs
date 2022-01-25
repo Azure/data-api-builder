@@ -12,7 +12,7 @@ using Moq;
 namespace Azure.DataGateway.Service.Tests.REST
 {
     /// <summary>
-    /// Tests that the FindRequestAuthorizationHandler issues correct AuthZ decisions for REST endpoints.
+    /// Tests that the RequestAuthorizationHandler issues correct AuthZ decisions for REST endpoints.
     /// </summary>
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class RequestAuthorizationHandlerUnitTests

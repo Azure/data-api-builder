@@ -71,6 +71,9 @@ namespace Azure.DataGateway.Services
                         insertPayloadRoot,
                         HttpRestVerbs.POST,
                         operationType);
+                    RequestValidator.ValidateInsertRequestContext(
+                        (InsertRequestContext)context,
+                        _metadataStoreProvider);
                     break;
                 case Operation.Delete:
                     context = new DeleteRequestContext(entityName, isList: false);

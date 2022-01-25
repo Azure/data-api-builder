@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
@@ -64,7 +65,8 @@ namespace Azure.DataGateway.Service.Resolvers
             }
             else
             {
-                paramName = MakeParamWithValue(value: null);
+                // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
+                throw new NotSupportedException($"Unexpected value for column \"{columnName}\" provided.");
             }
 
             Values.Add($"@{paramName}");

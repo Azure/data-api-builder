@@ -358,7 +358,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
                 else
                 {
-                    parameterName = MakeParamWithValue(value: null);
+                    // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
+                    throw new NotSupportedException($"Unexpected value for column \"{predicate.Key}\" provided.");
                 }
 
                 Predicates.Add(new Predicate(

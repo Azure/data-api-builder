@@ -71,6 +71,9 @@ namespace Azure.DataGateway.Services
                         insertPayloadRoot,
                         HttpRestVerbs.POST,
                         operationType);
+                    RequestValidator.ValidateInsertRequestContext(
+                        (InsertRequestContext)context,
+                        _metadataStoreProvider);
                     break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");

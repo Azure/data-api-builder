@@ -25,6 +25,11 @@ In order to properly connect to your database you will need to modify the connec
 
 In these files you need to modify the value for `ConnectionString` for the project to be able to connect the service to your database. These connection strings will be specific to the instance of the database that you are running. Example connection strings are provided for assistance.
 
+#### CosmosDB
+```
+"ConnectionString": "AccountEndpoint=https://anicosmostest.documents.azure.com:443/;AccountKey=REPLACEME"
+```
+
 #### MsSql
 ```
 "ConnectionString": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=USERNAME;Password=PASSWORD;MultipleActiveResultSets=False;Connection Timeout=5;"

@@ -85,7 +85,8 @@ namespace Azure.DataGateway.Service.Tests.REST
         #region Negative Tests
         /// <summary>
         /// Simulated client request contains matching number of Primary Key columns,
-        /// but defines column that is NOT a primary key.
+        /// but defines column that is NOT a primary key. We verify that the correct
+        /// status code and sub status code is a part of the DatagatewayException thrown.
         /// </summary>
         [TestMethod]
         public void RequestWithInvalidPrimaryKeyTest()
@@ -98,26 +99,11 @@ namespace Azure.DataGateway.Service.Tests.REST
             string primaryKeyRoute = "name/Catch22";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
-            PerformTest(findRequestContext, _metadataStore.Object, expectsException: true);
-        }
-
-        /// <summary>
-        /// Simulated client request contains matching number of Primary Key columns,
-        /// but defines column that is NOT a primary key. We verify that the correct
-        /// status code and sub status code is a part of the DatagatewayException thrown.
-        /// </summary>
-        [TestMethod]
-        public void RequestBadWithValidCodesTest()
-        {
-            string[] primaryKeys = new string[] { "id" };
-            TableDefinition tableDef = new();
-            tableDef.PrimaryKey = new(primaryKeys);
-            _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
-            string primaryKeyRoute = "name/Catch22";
-            RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
-
-            PerformTest(findRequestContext, _metadataStore.Object, expectsException: true, statusCode: 400, subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+            PerformTest(findRequestContext,
+                _metadataStore.Object,
+                expectsException: true,
+                statusCode: 400,
+                subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
         }
 
         /// <summary>

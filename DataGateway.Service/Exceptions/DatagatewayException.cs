@@ -24,7 +24,11 @@ namespace Azure.DataGateway.Service.Exceptions
             /// <summary>
             /// Request failed authorization.
             /// </summary>
-            AuthorizationCheckFailed
+            AuthorizationCheckFailed,
+            /// <summary>
+            /// Unexpected error.
+            /// </summary>,
+            UnexpectedError
         }
 
         public int StatusCode { get; }

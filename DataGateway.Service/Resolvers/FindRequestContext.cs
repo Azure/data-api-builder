@@ -21,6 +21,13 @@ namespace Azure.DataGateway.Service.Resolvers
         /// The operation used in comparison
         /// </summary>
         public PredicateOperation Op { get; set; }
+
+        /// <summary>
+        /// Constructs a new RestPredicate with the provided arguments.
+        /// </summary>
+        /// <param name="field">The field is what is compared.</param>
+        /// <param name="value">The value is what we compare field against.</param>
+        /// <param name="op">The operation used to do the comparison.</param>
         public RestPredicate(string field, string value, PredicateOperation op = PredicateOperation.Equal)
         {
             Field = field;

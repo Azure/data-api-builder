@@ -10,12 +10,13 @@ namespace Azure.DataGateway.Service.Services
     /// </summary>
     public class EdmModelBuilder
     {
+        private const string DEFAULT_NAME = "default";
         private readonly EdmModel _model = new();
         private EdmEntityContainer _defaultContainer;
 
         public EdmModelBuilder()
         {
-            _defaultContainer = new EdmEntityContainer("default_namespace", "default_container");
+            _defaultContainer = new EdmEntityContainer(DEFAULT_NAME, DEFAULT_NAME);
             _model.AddElement(_defaultContainer);
 
         }
@@ -30,17 +31,12 @@ namespace Azure.DataGateway.Service.Services
         /// Add the entity types found in the schema to the model
         /// </summary>
         /// <param name="schema">Schema represents the Database Schema</param>
-        /// <param name="nullable">Represents if a type is nullable</param>
         /// <returns>this model builder</returns>
-        public EdmModelBuilder BuildEntityTypes(
-            DatabaseSchema schema,
-            bool nullable)
+        public EdmModelBuilder BuildEntityTypes(DatabaseSchema schema)
         {
             foreach (string entityName in schema.Tables.Keys)
             {
-                EdmEntityType newEntity = new("default", entityName);
-                string primaryKey = string.Empty;
-                EdmPrimitiveTypeKind keyType = EdmPrimitiveTypeKind.None;
+                EdmEntityType newEntity = new(DEFAULT_NAME, entityName);
 
                 // each column represents a property of the current entity we are adding
                 foreach (string column in schema.Tables[entityName].Columns.Keys)
@@ -48,20 +44,29 @@ namespace Azure.DataGateway.Service.Services
                     // need to convert our column type to an Edm type
                     ColumnType columnType = schema.Tables[entityName].Columns[column].Type;
                     System.Type systemType = ColumnDefinition.ResolveColumnTypeToSystemType(columnType);
-                    EdmPrimitiveTypeKind type = systemType == System.Type.GetType(nameof(Int64)) ? EdmPrimitiveTypeKind.Int64 :
-                        systemType == System.Type.GetType(nameof(String)) ? EdmPrimitiveTypeKind.String :
+                    EdmPrimitiveTypeKind type = EdmPrimitiveTypeKind.None;
+
+                    if (systemType == System.Type.GetType(nameof(String)))
+                    {
+                        type = EdmPrimitiveTypeKind.String;
+                    }
+                    else if (systemType == System.Type.GetType(nameof(Int64)))
+                    {
+                        type = EdmPrimitiveTypeKind.Int64;
+                    }
+                    else
+                    {
                         throw new ArgumentException($"No resolver for colum type {columnType}");
+                    }
+
                     newEntity.AddStructuralProperty(column, type);
-                    // save the information on the key
+
                     if (column.Equals(schema.Tables[column].PrimaryKey.ToString()))
                     {
-                        primaryKey = column;
-                        keyType = type;
+                        // entity is a structured type that needs a key, we add it here
+                        newEntity.AddKeys(newEntity.AddStructuralProperty(column, type, isNullable: false));
                     }
                 }
-
-                // entity is a structured type that needs a key, we add it here
-                newEntity.AddKeys(newEntity.AddStructuralProperty(primaryKey, keyType, isNullable: false));
 
                 // add this entity to our model
                 _model.AddElement(newEntity);
@@ -77,12 +82,11 @@ namespace Azure.DataGateway.Service.Services
         /// <returns>this model builder</returns>
         public EdmModelBuilder BuildEntitySets(DatabaseSchema schema)
         {
-
             // Entity set is a collection of the same entity, if we think of an entity as a row of data
             // that has a key, then an entity set can be thought of as a table made up of those rows
             foreach (string entityName in schema.Tables.Keys)
             {
-                _defaultContainer.AddEntitySet(entityName, new EdmEntityType("default", entityName));
+                _defaultContainer.AddEntitySet(entityName, new EdmEntityType(DEFAULT_NAME, entityName));
             }
 
             return this;

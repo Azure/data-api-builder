@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
@@ -359,7 +360,10 @@ namespace Azure.DataGateway.Service.Resolvers
                 else
                 {
                     // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
-                    throw new NotSupportedException($"Unexpected value for column \"{predicate.Key}\" provided.");
+                    throw new DatagatewayException(
+                        message: $"Unexpected value for column \"{predicate.Key}\" provided.",
+                        statusCode: (int)HttpStatusCode.BadRequest,
+                        subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
                 }
 
                 Predicates.Add(new Predicate(

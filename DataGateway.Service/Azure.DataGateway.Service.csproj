@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
@@ -28,6 +28,10 @@
   <ItemGroup>
     <!-- extends watching group to include .json and .gql files -->
     <Watch Include="**\*.json;**\*.gql" Exclude="obj\**\*;bin\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Watch Remove="appsettings.PostgreSqlIntegrationTest.overrides.json" />
   </ItemGroup>
 
   <ItemGroup>

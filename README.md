@@ -44,7 +44,10 @@ Once you have your connection strings properly formatted you can build and run t
 
 To build and run the project from the command line you need to set the Data Type, and then can use the dotnet run command. For example `ASPNETCORE_ENVIRONMENT=PostgreSql dotnet watch run --project DataGateway.Service` would build and run the project for PostregreSql.
 
-Once the project is running you can test the API with a tool like postman (https://www.postman.com/). Files are included that will automatically populate your database with useful tables. The tests that are built into the project use these tables for validation as well. To do so, execute the SQL contained in MsSqlBooks.sql located in the DataGateway.Service directory.
+Once the project is running you can test the API with a tool like postman (https://www.postman.com/). Files are included that will automatically populate your database with useful tables. The tests that are built into the project use these tables for validation as well. To do so, execute the SQL contained in `MsSqlBooks.sql` located in the `DataGateway.Service` directory.
+
+Please note that if you edit the `MsSqlBooks.sql`file, you need to edit the runtime configuration and graphql schema files accordingly. The runtime configuration file is `sql-config.json` and the GraphQL schema file is `books.gql`
+
 
 When testing out the API, take note of the service root uri displayed in the window that pops up, ie: `Now listening on: https://localhost:5001`
 

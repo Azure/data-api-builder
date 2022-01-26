@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
-using Azure.DataGateway.Services;
 using Microsoft.OData.Edm;
 
 namespace Azure.DataGateway.Service.Services
@@ -18,16 +17,11 @@ namespace Azure.DataGateway.Service.Services
         private EdmModelBuilder _builder;
         private IEdmModel _model;
 
-        public FilterParser(IMetadataStoreProvider metadataStoreProvider)
+        public FilterParser(DatabaseSchema schema)
         {
-            _schema = metadataStoreProvider.GetResolvedConfig().DatabaseSchema;
+            _schema = schema;
             _builder = new();
-
-            // should we use dependancy injection here to avoid recreating the model?
-            _model = _builder
-                .BuildEntityTypes(_schema, nullable: false)
-                .BuildEntitySets(_schema)
-                .GetModel();
+            _model = _builder.BuildModel(_schema).GetModel();
         }
 
         public List<RestPredicate> Parse()

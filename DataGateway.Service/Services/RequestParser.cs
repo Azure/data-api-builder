@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using Azure.DataGateway.Service.Resolvers;
-using Azure.DataGateway.Service.Services;
 
 namespace Azure.DataGateway.Services
 {
@@ -65,9 +64,8 @@ namespace Azure.DataGateway.Services
                         context.Fields = nvc[key].Split(",").ToList();
                         break;
                     case FILTER_URL:
-                        FilterParser parser = new(metadataStoreProvider);
                         // not yet implemented
-                        context.Predicates = parser.Parse();
+                        context.Predicates = metadataStoreProvider.GetParser().Parse();
                         break;
                     default:
                         throw new ArgumentException("Invalid Query Parameter: " + key.ToString());

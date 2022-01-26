@@ -12,14 +12,6 @@ namespace Azure.DataGateway.Service.Services
     {
         private const string DEFAULT_NAME = "default";
         private readonly EdmModel _model = new();
-        private EdmEntityContainer _defaultContainer;
-
-        public EdmModelBuilder()
-        {
-            _defaultContainer = new EdmEntityContainer(DEFAULT_NAME, DEFAULT_NAME);
-            _model.AddElement(_defaultContainer);
-
-        }
 
 #pragma warning disable CA1024 // EdmModelBuilders are recommended to have GetModel method
         public IEdmModel GetModel()
@@ -28,11 +20,21 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
+        /// Build the model from the provided schema.
+        /// </summary>
+        /// <param name="schema">DatabaseSchema that reresents the relevant schema.</param>
+        /// <returns></returns>
+        public EdmModelBuilder BuildModel(DatabaseSchema schema)
+        {
+            return BuildEntityTypes(schema).BuildEntitySets(schema);
+        }
+
+        /// <summary>
         /// Add the entity types found in the schema to the model
         /// </summary>
         /// <param name="schema">Schema represents the Database Schema</param>
         /// <returns>this model builder</returns>
-        public EdmModelBuilder BuildEntityTypes(DatabaseSchema schema)
+        private EdmModelBuilder BuildEntityTypes(DatabaseSchema schema)
         {
             foreach (string entityName in schema.Tables.Keys)
             {
@@ -80,13 +82,24 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="schema">Schema represents the Database Schema</param>
         /// <returns>this model builder</returns>
-        public EdmModelBuilder BuildEntitySets(DatabaseSchema schema)
+        private EdmModelBuilder BuildEntitySets(DatabaseSchema schema)
         {
+            EdmEntityContainer container;
+            if (!_model.ExistsContainer(DEFAULT_NAME))
+            {
+                container = new(DEFAULT_NAME, DEFAULT_NAME);
+                _model.AddElement(container);
+            }
+            else
+            {
+                container = _model.EntityContainer as EdmEntityContainer;
+            }
+
             // Entity set is a collection of the same entity, if we think of an entity as a row of data
             // that has a key, then an entity set can be thought of as a table made up of those rows
             foreach (string entityName in schema.Tables.Keys)
             {
-                _defaultContainer.AddEntitySet(entityName, new EdmEntityType(DEFAULT_NAME, entityName));
+                container.AddEntitySet(entityName, new EdmEntityType(DEFAULT_NAME, entityName));
             }
 
             return this;

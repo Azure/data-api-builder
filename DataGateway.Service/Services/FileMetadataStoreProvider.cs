@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Services;
 using Microsoft.Extensions.Options;
 
@@ -58,6 +59,7 @@ namespace Azure.DataGateway.Service
     public class FileMetadataStoreProvider : IMetadataStoreProvider
     {
         private ResolverConfig _config;
+        private readonly FilterParser _parser;
 
         /// <summary>
         /// Stores query resolvers contained in configuration file.
@@ -99,6 +101,8 @@ namespace Azure.DataGateway.Service
             {
                 _mutationResolvers.Add(resolver.Id, resolver);
             }
+
+            _parser = new(_config.DatabaseSchema);
         }
         /// <summary>
         /// Reads generated JSON configuration file with GraphQL Schema
@@ -152,6 +156,11 @@ namespace Azure.DataGateway.Service
         public ResolverConfig GetResolvedConfig()
         {
             return _config;
+        }
+
+        public FilterParser GetParser()
+        {
+            return _parser;
         }
     }
 }

@@ -1,5 +1,6 @@
 using Azure.DataGateway.Service;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Services;
 
 namespace Azure.DataGateway.Services
 {
@@ -37,5 +38,11 @@ namespace Azure.DataGateway.Services
         /// Returns the resolved config
         /// </summary>
         ResolverConfig GetResolvedConfig();
+
+        /// <summary>
+        /// Returns the Filter Parser
+        /// </summary>
+        /// <returns></returns>
+        FilterParser GetParser();
     }
 }

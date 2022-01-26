@@ -41,6 +41,8 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0-preview.3.21201.4" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="Npgsql" Version="5.0.10" />
+    <PackageReference Include="Microsoft.OData.Edm" Version="7.9.4" />
+    <PackageReference Include="Microsoft.OData.Core" Version="7.9.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectCapability Include="CSharp;Managed;ClassDesigner" />

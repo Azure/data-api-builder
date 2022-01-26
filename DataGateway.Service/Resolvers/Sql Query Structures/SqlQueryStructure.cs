@@ -152,7 +152,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     string parameterName = MakeParamWithValue(GetParamAsColumnSystemType(predicate.Value, predicate.Field));
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(TableAlias, predicate.Field)),
-                        PredicateOperation.Equal,
+                        predicate.Op,
                         new PredicateOperand($"@{parameterName}")
                     ));
                 }

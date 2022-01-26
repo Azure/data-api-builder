@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Azure.DataGateway.Service.Models;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -16,10 +17,15 @@ namespace Azure.DataGateway.Service.Resolvers
         /// The value to which the field is compared.
         /// </summary>
         public string Value { get; set; }
-        public RestPredicate(string field, string value)
+        /// <summary>
+        /// The operation used in comparison
+        /// </summary>
+        public PredicateOperation Op { get; set; }
+        public RestPredicate(string field, string value, PredicateOperation op = PredicateOperation.Equal)
         {
             Field = field;
             Value = value;
+            Op = op;
         }
     }
 

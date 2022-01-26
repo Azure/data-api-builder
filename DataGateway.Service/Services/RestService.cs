@@ -46,7 +46,7 @@ namespace Azure.DataGateway.Services
 
             if (!string.IsNullOrEmpty(queryString))
             {
-                RequestParser.ParseQueryString(System.Web.HttpUtility.ParseQueryString(queryString), context);
+                RequestParser.ParseQueryString(System.Web.HttpUtility.ParseQueryString(queryString), context, _metadataStoreProvider);
             }
 
             RequestValidator.ValidateFindRequest(context, _metadataStoreProvider);

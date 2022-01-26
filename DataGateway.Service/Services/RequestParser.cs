@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using Azure.DataGateway.Service.Resolvers;
+using Azure.DataGateway.Service.Services;
 
 namespace Azure.DataGateway.Services
 {
@@ -15,7 +16,7 @@ namespace Azure.DataGateway.Services
         /// Prefix used for specifying the fields in the query string of the URL.
         /// </summary>
         private const string FIELDS_URL = "_f";
-
+        private const string FILTER_URL = "$filter";
         /// <summary>
         /// Parses the primary key string to identify the field names composing the key
         /// and their values.
@@ -53,7 +54,7 @@ namespace Azure.DataGateway.Services
         /// </summary>
         /// <param name="nvc">NameValueCollection representing query params from the URL's query string.</param>
         /// <param name="queryStructure">The FindRequestContext holding the major components of the query.</param>
-        public static void ParseQueryString(NameValueCollection nvc, FindRequestContext context)
+        public static void ParseQueryString(NameValueCollection nvc, FindRequestContext context, IMetadataStoreProvider metadataStoreProvider)
         {
             foreach (string key in nvc.Keys)
             {
@@ -62,6 +63,11 @@ namespace Azure.DataGateway.Services
                     case FIELDS_URL:
                         CheckListForNullElement(nvc[key].Split(",").ToList());
                         context.Fields = nvc[key].Split(",").ToList();
+                        break;
+                    case FILTER_URL:
+                        FilterParser parser = new(metadataStoreProvider);
+                        // not yet implemented
+                        context.Predicates = parser.Parse();
                         break;
                     default:
                         throw new ArgumentException("Invalid Query Parameter: " + key.ToString());

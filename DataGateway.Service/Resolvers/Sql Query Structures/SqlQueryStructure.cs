@@ -371,10 +371,12 @@ namespace Azure.DataGateway.Service.Resolvers
                         PredicateOperation.Equal,
                         new PredicateOperand($"@{parameterName}")));
             }
-            catch (ArgumentException)
+            catch (ArgumentException ex)
             {
-                throw new DatagatewayException($"Predicate field \"{predicate.Key}\" " +
-                    $"has invalid value type.", 400, DatagatewayException.SubStatusCodes.BadRequest);
+                throw new DatagatewayException(
+                  message: ex.Message,
+                  statusCode: (int)HttpStatusCode.BadRequest,
+                  subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
             }
         }
 

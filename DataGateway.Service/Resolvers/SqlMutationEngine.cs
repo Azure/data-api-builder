@@ -98,27 +98,27 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>JSON object result</returns>
         public async Task<JsonDocument> ExecuteAsync(RestRequestContext context)
         {
-            using DbDataReader dbDataReader =
+            try
+            {
+                using DbDataReader dbDataReader =
                 await PerformMutationOperation(
                     context.EntityName,
                     context.OperationType,
                     context.FieldValuePairsInBody);
-
-            // Reuse the same context as a FindRequestContext to return the results after the mutation operation.
-            context.PrimaryKeyValuePairs = await ExtractRowFromDbDataReader(dbDataReader);
-            if (context.PrimaryKeyValuePairs == null)
+                context.PrimaryKeyValuePairs = await ExtractRowFromDbDataReader(dbDataReader);
+            }
+            catch (DbException)
             {
                 throw new DatagatewayException(
-                    message: $"Could not perform the given request on entity {context.EntityName}",
+                    message: $"Could not perform the given mutation on entity {context.EntityName}.",
                     statusCode: (int)HttpStatusCode.InternalServerError,
                     subStatusCode: DatagatewayException.SubStatusCodes.DatabaseOperationFailed);
             }
 
+            // Reuse the same context as a FindRequestContext to return the results after the mutation operation.
             context.OperationType = Operation.Find;
 
             // delegates the querying part of the mutation to the QueryEngine
-            // this allows for nested queries in muatations
-            // the searchParams are used to identify the mutated record so it can then be further queried on
             return await _queryEngine.ExecuteAsync(context);
         }
 

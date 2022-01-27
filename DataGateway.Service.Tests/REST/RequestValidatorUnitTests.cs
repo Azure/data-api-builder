@@ -240,8 +240,11 @@ namespace Azure.DataGateway.Service.Tests.REST
 
             foreach (string key in primaryKeys)
             {
-                primaryKeyRoute.Append($"{key}/1/{key}/1");
+                primaryKeyRoute.Append($"{key}/1/{key}/1/");
             }
+
+            // Remove the trailing slash
+            primaryKeyRoute.Remove(primaryKeyRoute.Length - 1, 1);
 
             try
             {

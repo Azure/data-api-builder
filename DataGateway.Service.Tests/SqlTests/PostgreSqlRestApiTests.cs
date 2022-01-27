@@ -100,8 +100,20 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         FROM " + _integrationTableName + @"
                     ) AS subq
                 "
+            },
+            {
+                "InsertOneTest",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 5001
+                    ) AS subq
+                "
             }
         };
+
         #region Test Fixture Setup
 
         /// <summary>
@@ -114,7 +126,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             await InitializeTestFixture(context, RestApiTestBase._integrationTableName, TestCategory.POSTGRESQL);
 
-            _restService = new RestService(_queryEngine, _metadataStoreProvider, _httpContextAccessor.Object, _authorizationService.Object);
+            _restService = new RestService(_queryEngine,
+                _mutationEngine,
+                _metadataStoreProvider,
+                _httpContextAccessor.Object,
+                _authorizationService.Object);
             _restController = new RestController(_restService);
         }
 

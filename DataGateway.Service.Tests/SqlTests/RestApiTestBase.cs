@@ -2,6 +2,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -111,6 +112,29 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             );
         }
 
+        /// <summary>
+        /// Tests the InsertOne functionality with a REST POST request.
+        /// </summary>
+        [TestMethod]
+        public async Task InsertOneTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: null,
+                    queryString: null,
+                    entity: "books",
+                    sqlQuery: GetQuery(nameof(InsertOneTest)),
+                    controller: _restController,
+                    operationType: Operation.Insert,
+                    requestBody: requestBody
+                );
+        }
+
         #endregion
 
         #region Negative Tests
@@ -123,13 +147,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task FindByIdTestWithInvalidFields()
         {
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/567/book_id/1",
+                primaryKeyRoute: "id/5671",
                 queryString: "?_f=id,content",
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindByIdTestWithInvalidFields)),
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: "Invalid Column name: content",
+                expectedErrorMessage: "Invalid Column name requested: content",
                 expectedStatusCode: 400
             );
         }
@@ -170,7 +194,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: msSqlQuery,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: "Invalid Column name: content",
+                expectedErrorMessage: "Invalid Column name requested: content",
                 expectedStatusCode: 400
             );
         }

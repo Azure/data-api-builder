@@ -53,8 +53,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "FindTestWithInvalidFields",
                 $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
                 $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "InsertOneTest",
+                // This query is the query for the result we get back from the database
+                // after the insert operation. Not the query that we generate to perform
+                // the insertion.
+                $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
+                $"WHERE [id] = 5001 AND [title] = 'My New Book' " +
+                $"AND [publisher_id] = 1234 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
+
         #region Test Fixture Setup
 
         /// <summary>
@@ -68,7 +79,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await InitializeTestFixture(context, RestApiTestBase._integrationTableName, TestCategory.MSSQL);
 
             // Setup REST Components
-            _restService = new RestService(_queryEngine, _metadataStoreProvider, _httpContextAccessor.Object, _authorizationService.Object);
+            _restService = new RestService(_queryEngine,
+                _mutationEngine,
+                _metadataStoreProvider,
+                _httpContextAccessor.Object,
+                _authorizationService.Object);
             _restController = new RestController(_restService);
         }
 

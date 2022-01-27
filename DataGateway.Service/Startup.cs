@@ -86,7 +86,7 @@ namespace Azure.DataGateway.Service
             services.AddHttpContextAccessor();
             services.AddAuthorization();
 
-            services.AddSingleton<IAuthorizationHandler, FindRequestAuthorizationHandler>();
+            services.AddSingleton<IAuthorizationHandler, RequestAuthorizationHandler>();
             services.AddControllers();
         }
 

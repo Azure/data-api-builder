@@ -1,5 +1,9 @@
+using System;
 using System.Collections.Generic;
+using System.Net;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -23,30 +27,59 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<string> ReturnColumns { get; }
 
-        private readonly TableDefinition _tableDefinition;
-
-        public SqlInsertStructure(string tableName, TableDefinition tableDefinition, IDictionary<string, object> mutationParams)
-        : base()
+        public SqlInsertStructure(string tableName, IMetadataStoreProvider metadataStore, IDictionary<string, object> mutationParams)
+        : base(metadataStore)
         {
             TableName = tableName;
             InsertColumns = new();
             Values = new();
 
-            _tableDefinition = tableDefinition;
-            ReturnColumns = _tableDefinition.PrimaryKey;
+            TableDefinition tableDefinition = GetTableDefinition();
+
+            // return primary key so the inserted row can be identified
+            ReturnColumns = tableDefinition.PrimaryKey;
 
             foreach (KeyValuePair<string, object> param in mutationParams)
             {
-                if (param.Value == null)
+                PopulateColumnsAndParams(param.Key, param.Value);
+            }
+        }
+
+        /// <summary>
+        /// Populates the column name in Columns, creates parameter
+        /// and adds its value to Values.
+        /// </summary>
+        /// <param name="columnName">The name of the column.</param>
+        /// <param name="value">The value of the column.</param>
+        private void PopulateColumnsAndParams(string columnName, object value)
+        {
+            InsertColumns.Add(columnName);
+            string paramName;
+
+            try
+            {
+                if (value != null)
                 {
-                    continue;
+                    paramName = MakeParamWithValue(
+                        GetParamAsColumnSystemType(value.ToString(), columnName));
+                }
+                else
+                {
+                    // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
+                    throw new DatagatewayException(
+                        message: $"Unexpected value for column \"{columnName}\" provided.",
+                        statusCode: (int)HttpStatusCode.BadRequest,
+                        subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
                 }
 
-                InsertColumns.Add(param.Key);
-
-                string paramName = $"param{Counter.Next()}";
                 Values.Add($"@{paramName}");
-                Parameters.Add(paramName, param.Value);
+            }
+            catch (ArgumentException ex)
+            {
+                throw new DatagatewayException(
+                    message: ex.Message,
+                    statusCode: (int)HttpStatusCode.BadRequest,
+                    subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
             }
         }
     }

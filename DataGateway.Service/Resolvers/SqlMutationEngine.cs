@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
+using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
@@ -51,58 +52,116 @@ namespace Azure.DataGateway.Service.Resolvers
             MutationResolver mutationResolver = _metadataStoreProvider.GetMutationResolver(graphqlMutationName);
 
             string tableName = mutationResolver.Table;
-            TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(tableName);
-
-            string queryString;
-            Dictionary<string, object> queryParameters;
 
             Tuple<JsonDocument, IMetadata> result = new(null, null);
 
-            switch (mutationResolver.OperationType)
+            if (mutationResolver.OperationType == Operation.Delete)
             {
-                case MutationOperation.Insert:
-                    SqlInsertStructure insertQueryStruct = new(tableName, tableDefinition, parameters);
-                    queryString = _queryBuilder.Build(insertQueryStruct);
-                    queryParameters = insertQueryStruct.Parameters;
-                    break;
-                case MutationOperation.Update:
-                    SqlUpdateStructure updateQueryStruct = new(tableName, tableDefinition, parameters);
-                    queryString = _queryBuilder.Build(updateQueryStruct);
-                    queryParameters = updateQueryStruct.Parameters;
-                    break;
-                case MutationOperation.Delete:
-                    // compute the mutation result before removing the element
-                    result = await _queryEngine.ExecuteAsync(context, parameters, false);
-                    SqlDeleteStructure deleteStructure = new(tableName, tableDefinition, parameters);
-                    queryString = _queryBuilder.Build(deleteStructure);
-                    queryParameters = deleteStructure.Parameters;
-                    break;
-                default:
-                    throw new NotSupportedException($"Unexpected value for MutationResolver.OperationType \"{mutationResolver.OperationType}\" found.");
+                // compute the mutation result before removing the element
+                result = await _queryEngine.ExecuteAsync(
+                    context,
+                    parameters,
+                    isPaginationQuery: false);
             }
 
-            Console.WriteLine(queryString);
+            using DbDataReader dbDataReader =
+                await PerformMutationOperation(
+                    tableName,
+                    mutationResolver.OperationType,
+                    parameters);
 
-            using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, queryParameters);
-
-            if (!context.Selection.Type.IsScalarType() && mutationResolver.OperationType != MutationOperation.Delete)
+            if (!context.Selection.Type.IsScalarType() && mutationResolver.OperationType != Operation.Delete)
             {
                 Dictionary<string, object> searchParams = await ExtractRowFromDbDataReader(dbDataReader);
 
                 if (searchParams == null)
                 {
+                    TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(tableName);
                     string searchedPK = '<' + string.Join(", ", tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
                     throw new DatagatewayException($"Could not find entity with {searchedPK}", 404, DatagatewayException.SubStatusCodes.EntityNotFound);
                 }
 
-                result = await _queryEngine.ExecuteAsync(context, searchParams, false);
+                result = await _queryEngine.ExecuteAsync(
+                    context,
+                    searchParams,
+                    isPaginationQuery: false);
             }
 
             return result;
         }
 
+        /// <summary>
+        /// Executes the mutation query and returns result as JSON object asynchronously.
+        /// </summary>
+        /// <param name="context">context of REST mutation request.</param>
+        /// <param name="parameters">parameters in the mutation query.</param>
+        /// <returns>JSON object result</returns>
+        public async Task<JsonDocument> ExecuteAsync(RestRequestContext context)
+        {
+            try
+            {
+                using DbDataReader dbDataReader =
+                await PerformMutationOperation(
+                    context.EntityName,
+                    context.OperationType,
+                    context.FieldValuePairsInBody);
+                context.PrimaryKeyValuePairs = await ExtractRowFromDbDataReader(dbDataReader);
+            }
+            catch (DbException)
+            {
+                throw new DatagatewayException(
+                    message: $"Could not perform the given mutation on entity {context.EntityName}.",
+                    statusCode: (int)HttpStatusCode.InternalServerError,
+                    subStatusCode: DatagatewayException.SubStatusCodes.DatabaseOperationFailed);
+            }
+
+            // Reuse the same context as a FindRequestContext to return the results after the mutation operation.
+            context.OperationType = Operation.Find;
+
+            // delegates the querying part of the mutation to the QueryEngine
+            return await _queryEngine.ExecuteAsync(context);
+        }
+
+        /// <summary>
+        /// Performs the given mutation operation type on the table and
+        /// returns result as JSON object asynchronously.
+        /// </summary>
+        private async Task<DbDataReader> PerformMutationOperation(
+            string tableName,
+            Operation operationType,
+            IDictionary<string, object> parameters)
+        {
+            string queryString;
+            Dictionary<string, object> queryParameters;
+
+            switch (operationType)
+            {
+                case Operation.Insert:
+                    SqlInsertStructure insertQueryStruct = new(tableName, _metadataStoreProvider, parameters);
+                    queryString = _queryBuilder.Build(insertQueryStruct);
+                    queryParameters = insertQueryStruct.Parameters;
+                    break;
+                case Operation.Update:
+                    SqlUpdateStructure updateQueryStruct = new(tableName, _metadataStoreProvider, parameters);
+                    queryString = _queryBuilder.Build(updateQueryStruct);
+                    queryParameters = updateQueryStruct.Parameters;
+                    break;
+                case Operation.Delete:
+                    SqlDeleteStructure deleteStructure = new(tableName, _metadataStoreProvider, parameters);
+                    queryString = _queryBuilder.Build(deleteStructure);
+                    queryParameters = deleteStructure.Parameters;
+                    break;
+                default:
+                    throw new NotSupportedException($"Unexpected mutation operation \" {operationType}\" requested.");
+            }
+
+            Console.WriteLine(queryString);
+
+            return await _queryExecutor.ExecuteQueryAsync(queryString, queryParameters);
+        }
+
         ///<summary>
-        /// Extracts a single row from DbDataReader and format it so it can be used as a paramter to a query execution
+        /// Extracts a single row from DbDataReader and format it so it can be used as a parameter to a query execution
         ///</summary>
         ///<returns>A dictionary representating the row in <c>ColumnName: Value</c> format, null if no row was found</returns>
         private static async Task<Dictionary<string, object>> ExtractRowFromDbDataReader(DbDataReader dbDataReader)

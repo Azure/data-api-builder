@@ -147,7 +147,7 @@ namespace Azure.DataGateway.Services
         // <summary>
         // Given the SqlQueryStructure structure, obtains the query text and executes it against the backend.
         // </summary>
-        public Task<JsonDocument> ExecuteAsync(FindRequestContext queryStructure)
+        public Task<JsonDocument> ExecuteAsync(RestRequestContext queryStructure)
         {
             throw new NotImplementedException();
         }

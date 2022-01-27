@@ -68,5 +68,15 @@ namespace Azure.DataGateway.Service.Resolvers
             JObject jObject = await ExecuteAsync(parameters, resolver);
             return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(jObject.ToString()), null);
         }
+
+        /// <summary>
+        /// Executes the mutation query and returns result as JSON object asynchronously.
+        /// </summary>
+        /// <param name="context">context of REST mutation request.</param>
+        /// <returns>JSON object result</returns>
+        public Task<JsonDocument> ExecuteAsync(RestRequestContext context)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

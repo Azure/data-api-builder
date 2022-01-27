@@ -26,6 +26,10 @@ namespace Azure.DataGateway.Service.Exceptions
             /// </summary>
             AuthorizationCheckFailed,
             /// <summary>
+            /// The requested operation failed on the database.
+            /// </summary>
+            DatabaseOperationFailed,
+            /// <summary>
             /// Unexpected error.
             /// </summary>,
             UnexpectedError

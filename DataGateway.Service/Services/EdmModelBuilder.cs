@@ -48,11 +48,11 @@ namespace Azure.DataGateway.Service.Services
                     System.Type systemType = ColumnDefinition.ResolveColumnTypeToSystemType(columnType);
                     EdmPrimitiveTypeKind type = EdmPrimitiveTypeKind.None;
 
-                    if (systemType == System.Type.GetType(nameof(String)))
+                    if (systemType.GetType() == typeof(String))
                     {
                         type = EdmPrimitiveTypeKind.String;
                     }
-                    else if (systemType == System.Type.GetType(nameof(Int64)))
+                    else if (systemType.GetType() == typeof(Int64))
                     {
                         type = EdmPrimitiveTypeKind.Int64;
                     }

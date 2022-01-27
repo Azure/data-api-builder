@@ -112,6 +112,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             );
         }
 
+        /// <summary>
+        /// Tests the InsertOne functionality with a REST POST request.
+        /// </summary>
         [TestMethod]
         public async Task InsertOneTest()
         {
@@ -130,7 +133,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.Insert,
                     requestBody: requestBody
                 );
-            ;
         }
 
         #endregion

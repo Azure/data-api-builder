@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using System.Text;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -228,17 +229,23 @@ namespace Azure.DataGateway.Service.Tests.REST
             }
         }
 
+        /// <summary>
+        /// Tries to parse a primary key route that contains duplicates.
+        /// Expectation is that this should always throw bad request exception.
+        /// </summary>
         private static void PerformDuplicatePrimaryKeysTest(string[] primaryKeys)
         {
-            TableDefinition tableDef = new();
-            tableDef.PrimaryKey = new(primaryKeys);
-            _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
-            string primaryKeyRoute = "id/1/id/1";
+            StringBuilder primaryKeyRoute = new();
+
+            foreach (string key in primaryKeys)
+            {
+                primaryKeyRoute.Append($"{key}/1/{key}/1");
+            }
 
             try
             {
-                RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
+                RequestParser.ParsePrimaryKey(primaryKeyRoute.ToString(), findRequestContext);
 
                 Assert.Fail();
             }

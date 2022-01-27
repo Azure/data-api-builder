@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
@@ -358,7 +359,11 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
                 else
                 {
-                    parameterName = MakeParamWithValue(value: null);
+                    // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
+                    throw new DatagatewayException(
+                        message: $"Unexpected value for column \"{predicate.Key}\" provided.",
+                        statusCode: (int)HttpStatusCode.BadRequest,
+                        subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
                 }
 
                 Predicates.Add(new Predicate(
@@ -366,10 +371,12 @@ namespace Azure.DataGateway.Service.Resolvers
                         PredicateOperation.Equal,
                         new PredicateOperand($"@{parameterName}")));
             }
-            catch (ArgumentException)
+            catch (ArgumentException ex)
             {
-                throw new DatagatewayException($"Predicate field \"{predicate.Key}\" " +
-                    $"has invalid value type.", 400, DatagatewayException.SubStatusCodes.BadRequest);
+                throw new DatagatewayException(
+                  message: ex.Message,
+                  statusCode: (int)HttpStatusCode.BadRequest,
+                  subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
             }
         }
 

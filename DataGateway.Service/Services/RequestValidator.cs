@@ -173,16 +173,18 @@ namespace Azure.DataGateway.Service.Services
 
         private static TableDefinition TryGetTableDefinition(string entityName, IMetadataStoreProvider configurationProvider)
         {
-            TableDefinition tableDefinition = configurationProvider.GetTableDefinition(entityName);
-            if (tableDefinition == null)
+            try
+            {
+                TableDefinition tableDefinition = configurationProvider.GetTableDefinition(entityName);
+                return tableDefinition;
+            }
+            catch (KeyNotFoundException)
             {
                 throw new DatagatewayException(
-                    message: $"TableDefinition for Entity: {entityName} does not exist.",
+                    message: $"TableDefinition for entity: {entityName} does not exist.",
                     statusCode: (int)HttpStatusCode.BadRequest,
                     subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
             }
-
-            return tableDefinition;
         }
 
     }

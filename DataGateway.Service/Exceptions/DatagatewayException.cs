@@ -28,7 +28,11 @@ namespace Azure.DataGateway.Service.Exceptions
             /// <summary>
             /// The requested operation failed on the database.
             /// </summary>
-            DatabaseOperationFailed
+            DatabaseOperationFailed,
+            /// <summary>
+            /// Unexpected error.
+            /// </summary>,
+            UnexpectedError
         }
 
         public int StatusCode { get; }

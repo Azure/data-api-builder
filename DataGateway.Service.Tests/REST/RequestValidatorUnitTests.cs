@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using System.Text;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -85,7 +86,8 @@ namespace Azure.DataGateway.Service.Tests.REST
         #region Negative Tests
         /// <summary>
         /// Simulated client request contains matching number of Primary Key columns,
-        /// but defines column that is NOT a primary key.
+        /// but defines column that is NOT a primary key. We verify that the correct
+        /// status code and sub status code is a part of the DatagatewayException thrown.
         /// </summary>
         [TestMethod]
         public void RequestWithInvalidPrimaryKeyTest()
@@ -98,26 +100,11 @@ namespace Azure.DataGateway.Service.Tests.REST
             string primaryKeyRoute = "name/Catch22";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
-            PerformTest(findRequestContext, _metadataStore.Object, expectsException: true);
-        }
-
-        /// <summary>
-        /// Simulated client request contains matching number of Primary Key columns,
-        /// but defines column that is NOT a primary key. We verify that the correct
-        /// status code and sub status code is a part of the DatagatewayException thrown.
-        /// </summary>
-        [TestMethod]
-        public void RequestBadWithValidCodesTest()
-        {
-            string[] primaryKeys = new string[] { "id" };
-            TableDefinition tableDef = new();
-            tableDef.PrimaryKey = new(primaryKeys);
-            _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
-            string primaryKeyRoute = "name/Catch22";
-            RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
-
-            PerformTest(findRequestContext, _metadataStore.Object, expectsException: true, statusCode: 400, subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+            PerformTest(findRequestContext,
+                _metadataStore.Object,
+                expectsException: true,
+                statusCode: 400,
+                subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
         }
 
         /// <summary>
@@ -242,17 +229,26 @@ namespace Azure.DataGateway.Service.Tests.REST
             }
         }
 
+        /// <summary>
+        /// Tries to parse a primary key route that contains duplicates.
+        /// Expectation is that this should always throw bad request exception.
+        /// </summary>
         private static void PerformDuplicatePrimaryKeysTest(string[] primaryKeys)
         {
-            TableDefinition tableDef = new();
-            tableDef.PrimaryKey = new(primaryKeys);
-            _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
-            string primaryKeyRoute = "id/1/id/1";
+            StringBuilder primaryKeyRoute = new();
+
+            foreach (string key in primaryKeys)
+            {
+                primaryKeyRoute.Append($"{key}/1/{key}/1/");
+            }
+
+            // Remove the trailing slash
+            primaryKeyRoute.Remove(primaryKeyRoute.Length - 1, 1);
 
             try
             {
-                RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
+                RequestParser.ParsePrimaryKey(primaryKeyRoute.ToString(), findRequestContext);
 
                 Assert.Fail();
             }

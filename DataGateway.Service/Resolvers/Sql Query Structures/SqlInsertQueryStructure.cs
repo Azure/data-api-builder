@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Net;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
 
@@ -39,11 +41,6 @@ namespace Azure.DataGateway.Service.Resolvers
 
             foreach (KeyValuePair<string, object> param in mutationParams)
             {
-                if (param.Value == null)
-                {
-                    continue;
-                }
-
                 PopulateColumnsAndParams(param.Key, param.Value);
             }
         }
@@ -58,18 +55,32 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             InsertColumns.Add(columnName);
             string paramName;
-            if (value != null)
-            {
-                paramName = MakeParamWithValue(
-                    GetParamAsColumnSystemType(value.ToString(), columnName));
-            }
-            else
-            {
-                paramName = MakeParamWithValue(value: null);
-            }
 
-            Values.Add($"@{paramName}");
+            try
+            {
+                if (value != null)
+                {
+                    paramName = MakeParamWithValue(
+                        GetParamAsColumnSystemType(value.ToString(), columnName));
+                }
+                else
+                {
+                    // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
+                    throw new DatagatewayException(
+                        message: $"Unexpected value for column \"{columnName}\" provided.",
+                        statusCode: (int)HttpStatusCode.BadRequest,
+                        subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+                }
 
+                Values.Add($"@{paramName}");
+            }
+            catch (ArgumentException ex)
+            {
+                throw new DatagatewayException(
+                    message: ex.Message,
+                    statusCode: (int)HttpStatusCode.BadRequest,
+                    subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+            }
         }
     }
 }

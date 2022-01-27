@@ -1,5 +1,7 @@
+using System.Net;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -110,6 +112,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             );
         }
 
+        /// <summary>
+        /// Tests the InsertOne functionality with a REST POST request.
+        /// </summary>
         [TestMethod]
         public async Task InsertOneTest()
         {
@@ -128,7 +133,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.Insert,
                     requestBody: requestBody
                 );
-            ;
         }
 
         #endregion
@@ -168,9 +172,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: GetQuery(nameof(FindTestWithInvalidFields)),
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: "Invalid Field name: null or white space",
-                expectedStatusCode: 500,
-                expectedSubStatusCode: "While processing your request the server ran into an unexpected error"
+                expectedErrorMessage: RestController.SERVER_ERROR,
+                expectedStatusCode: (int)HttpStatusCode.InternalServerError,
+                expectedSubStatusCode: DatagatewayException.SubStatusCodes.UnexpectedError.ToString()
             );
         }
 

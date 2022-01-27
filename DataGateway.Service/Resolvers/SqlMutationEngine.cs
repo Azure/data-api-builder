@@ -137,11 +137,12 @@ namespace Azure.DataGateway.Service.Resolvers
             if (context.PrimaryKeyValuePairs == null)
             {
                 throw new DatagatewayException(
-                    message: $"Could not perform the given request on entity {context.EntityName}",
+                    message: $"Could not perform the given mutation on entity {context.EntityName}.",
                     statusCode: (int)HttpStatusCode.InternalServerError,
                     subStatusCode: DatagatewayException.SubStatusCodes.DatabaseOperationFailed);
             }
 
+            // Reuse the same context as a FindRequestContext to return the results after the mutation operation.
             context.OperationType = Operation.Find;
 
             // delegates the querying part of the mutation to the QueryEngine

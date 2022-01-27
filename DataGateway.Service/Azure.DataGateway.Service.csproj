@@ -31,11 +31,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Watch Remove="appsettings.PostgreSqlIntegrationTest.overrides.json" />
-  </ItemGroup>
-
-  <ItemGroup>
-
     <PackageReference Include="HotChocolate" Version="12.3.0" />
     <PackageReference Include="HotChocolate.AspNetCore" Version="12.3.0" />
     <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="12.3.0" />

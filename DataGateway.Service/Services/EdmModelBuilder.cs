@@ -10,7 +10,8 @@ namespace Azure.DataGateway.Service.Services
     /// </summary>
     public class EdmModelBuilder
     {
-        private const string DEFAULT_NAME = "default";
+        private const string DEFAULT_NAMESPACE = "default_namespace";
+        private const string DEFAULT_CONTAINER_NAME = "default_container";
         private readonly EdmModel _model = new();
 
 #pragma warning disable CA1024 // EdmModelBuilders are recommended to have GetModel method
@@ -38,7 +39,7 @@ namespace Azure.DataGateway.Service.Services
         {
             foreach (string entityName in schema.Tables.Keys)
             {
-                EdmEntityType newEntity = new(DEFAULT_NAME, entityName);
+                EdmEntityType newEntity = new(DEFAULT_NAMESPACE, entityName);
 
                 // each column represents a property of the current entity we are adding
                 foreach (string column in schema.Tables[entityName].Columns.Keys)
@@ -84,22 +85,14 @@ namespace Azure.DataGateway.Service.Services
         /// <returns>this model builder</returns>
         private EdmModelBuilder BuildEntitySets(DatabaseSchema schema)
         {
-            EdmEntityContainer container;
-            if (!_model.ExistsContainer(DEFAULT_NAME))
-            {
-                container = new(DEFAULT_NAME, DEFAULT_NAME);
-                _model.AddElement(container);
-            }
-            else
-            {
-                container = _model.EntityContainer as EdmEntityContainer;
-            }
+            EdmEntityContainer container = new(DEFAULT_NAMESPACE, DEFAULT_CONTAINER_NAME);
+            _model.AddElement(container);
 
             // Entity set is a collection of the same entity, if we think of an entity as a row of data
             // that has a key, then an entity set can be thought of as a table made up of those rows
             foreach (string entityName in schema.Tables.Keys)
             {
-                container.AddEntitySet(entityName, new EdmEntityType(DEFAULT_NAME, entityName));
+                container.AddEntitySet(entityName, new EdmEntityType(DEFAULT_NAMESPACE, entityName));
             }
 
             return this;

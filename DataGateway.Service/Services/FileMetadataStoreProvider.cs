@@ -59,7 +59,7 @@ namespace Azure.DataGateway.Service
     public class FileMetadataStoreProvider : IMetadataStoreProvider
     {
         private ResolverConfig _config;
-        private readonly FilterParser _parser;
+        private readonly FilterParser _filterParser;
 
         /// <summary>
         /// Stores query resolvers contained in configuration file.
@@ -102,7 +102,7 @@ namespace Azure.DataGateway.Service
                 _mutationResolvers.Add(resolver.Id, resolver);
             }
 
-            _parser = new(_config.DatabaseSchema);
+            _filterParser = new(_config.DatabaseSchema);
         }
         /// <summary>
         /// Reads generated JSON configuration file with GraphQL Schema
@@ -158,9 +158,9 @@ namespace Azure.DataGateway.Service
             return _config;
         }
 
-        public FilterParser GetParser()
+        public FilterParser GetFilterParser()
         {
-            return _parser;
+            return _filterParser;
         }
     }
 }

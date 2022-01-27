@@ -43,6 +43,6 @@ namespace Azure.DataGateway.Services
         /// Returns the Filter Parser
         /// </summary>
         /// <returns></returns>
-        FilterParser GetParser();
+        FilterParser GetFilterParser();
     }
 }

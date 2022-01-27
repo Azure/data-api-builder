@@ -14,14 +14,13 @@ namespace Azure.DataGateway.Service.Services
     public class FilterParser
     {
         private DatabaseSchema _schema;
-        private EdmModelBuilder _builder;
         private IEdmModel _model;
 
         public FilterParser(DatabaseSchema schema)
         {
             _schema = schema;
-            _builder = new();
-            _model = _builder.BuildModel(_schema).GetModel();
+            EdmModelBuilder builder = new();
+            _model = builder.BuildModel(_schema).GetModel();
         }
 
         public List<RestPredicate> Parse()

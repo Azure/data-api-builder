@@ -44,7 +44,7 @@ Once you have your connection strings properly formatted you can build and run t
 
 To build and run the project from the command line you need to set the Database Type, and then can use the dotnet run command. For example `ASPNETCORE_ENVIRONMENT=PostgreSql dotnet watch run --project DataGateway.Service` would build and run the project for PostregreSql.
 
-When the project finishes building and starts to run there should be a browser that opens with Banana Cake Pop running. If the service is running successfully you should see a green dot on the left side of the window with the endpoint's address. From this window you can create and execute queries using GraphQL. For more information on using Bana Cake Pop to test GraphQL queries, please see `https://chillicream.com/docs/bananacakepop`
+When the project finishes building and starts to run there should be a browser that opens with Banana Cake Pop running. You will need to provide the endpoint uri on the left side of the window, which is `https://localhost:5001/graphql`. If the service is running successfully you should see a green dot on that same side of the window with the endpoint's address. From this window you can create and execute queries using GraphQL. For more information on using Bana Cake Pop to test GraphQL queries, please see `https://chillicream.com/docs/bananacakepop`
 
 Likewise, once the project is running you can test the API with a tool like postman (https://www.postman.com/). Files are included that will automatically populate your database with useful tables. The tests that are built into the project use these tables for validation as well. To do so, execute the SQL contained in `MsSqlBooks.sql` located in the `DataGateway.Service` directory.
 

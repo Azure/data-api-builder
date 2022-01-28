@@ -95,7 +95,7 @@ namespace Azure.DataGateway.Services
                 RequestParser.ParseQueryString(HttpUtility.ParseQueryString(queryString), context);
             }
 
-            //at this point for DELETE, the primary key should be populated in teh Request context. 
+            //at this point for DELETE, the primary key should be populated in the Request context. 
             RequestValidator.ValidateRequestContext(context, _metadataStoreProvider);
 
             // RestRequestContext is finalized for QueryBuilding and QueryExecution.

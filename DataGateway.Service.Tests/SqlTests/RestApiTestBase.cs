@@ -182,7 +182,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     controller: _restController,
                     operationType: Operation.Delete,
                     requestBody: null,
-                    exception: true,
+                    exception: false,
                     expectedErrorMessage: "Not Found",
                     expectedStatusCode: (int)HttpStatusCode.NotFound,
                     expectedSubStatusCode: DatagatewayException.SubStatusCodes.EntityNotFound.ToString()

@@ -130,15 +130,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             // An empty result will cause an error with the json parser
             if (!reader.HasRows)
             {
-                // Delete operations do not return rows, only the number of records affected.
-                if (reader.RecordsAffected > 0)
-                {
-                    result = string.Empty;
-                }
-                else
-                {
-                    throw new System.Exception("No rows to read from database result and no records affected.");
-                }
+                // Find and Delete queries have empty result sets.
+                // Delete operation will return number of records affected.
+                result = string.Empty;
             }
             else
             {

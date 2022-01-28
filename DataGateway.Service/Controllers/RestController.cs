@@ -176,11 +176,7 @@ namespace Azure.DataGateway.Service.Controllers
                 }
                 else
                 {
-                    throw new DatagatewayException(
-                        message: "Not Found",
-                        statusCode: (int)HttpStatusCode.NotFound,
-                        subStatusCode: DatagatewayException.SubStatusCodes.EntityNotFound
-                    );
+                    return NotFound();
                 }
 
             }

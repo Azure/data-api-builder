@@ -1,10 +1,8 @@
 using System;
 using System.IO;
-using System.Net;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -144,9 +142,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     break;
                 case NotFoundResult notFoundResult:
                     Assert.AreEqual(expectedStatusCode, notFoundResult.StatusCode);
-                    actual = RestController.ErrorResponse(
-                        DatagatewayException.SubStatusCodes.EntityNotFound.ToString(),
-                        message: "Not Found", (int)HttpStatusCode.NotFound).Value.ToString();
+                    actual = string.Empty;
                     break;
                 default:
                     JsonResult actualResult = (JsonResult)actionResult;

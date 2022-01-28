@@ -157,8 +157,7 @@ namespace Azure.DataGateway.Service.Controllers
                     // Clones the root element to a new JsonElement that can be
                     // safely stored beyond the lifetime of the original JsonDocument.
                     JsonElement resultElement = result.RootElement.Clone();
-                    // Clones the root element to a new JsonElement that can be
-                    // safely stored beyond the lifetime of the original JsonDocument.
+
                     switch (operationType)
                     {
                         case Operation.Find:
@@ -168,16 +167,16 @@ namespace Azure.DataGateway.Service.Controllers
                         case Operation.Delete:
                             return new NoContentResult();
                         default:
-                            throw new DatagatewayException(
-                                message: "Not Found",
-                                statusCode: (int)HttpStatusCode.NotFound,
-                                subStatusCode: DatagatewayException.SubStatusCodes.EntityNotFound
-                            );
+                            throw new NotSupportedException($"Unsupported Operation: \" {operationType}\".");
                     }
                 }
                 else
                 {
-                    return NotFound();
+                    throw new DatagatewayException(
+                        message: "Not Found",
+                        statusCode: (int)HttpStatusCode.NotFound,
+                        subStatusCode: DatagatewayException.SubStatusCodes.EntityNotFound
+                    );
                 }
 
             }

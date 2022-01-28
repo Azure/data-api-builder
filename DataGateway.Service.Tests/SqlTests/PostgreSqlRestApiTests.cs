@@ -111,6 +111,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         WHERE id = 5001
                     ) AS subq
                 "
+            },
+            {
+                "DeleteOneTest",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 5
+                    ) AS subq
+                "
+            },
+            {
+                "DeleteNonExistentTest",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 7
+                    ) AS subq
+                "
             }
         };
 

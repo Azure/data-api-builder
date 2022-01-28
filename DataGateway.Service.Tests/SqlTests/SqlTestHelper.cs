@@ -1,8 +1,10 @@
 using System;
 using System.IO;
+using System.Net;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -102,6 +104,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case Operation.Insert:
                     actionResult = await controller.Insert(entityName);
                     break;
+                case Operation.Delete:
+                    actionResult = await controller.Delete(entityName, primaryKeyRoute);
+                    break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
             }
@@ -121,17 +126,31 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             int expectedStatusCode)
         {
             string actual;
-            // OkObjectResult will throw exception if we attempt cast to JsonResult
-            if (actionResult is OkObjectResult)
+            switch (actionResult)
             {
-                OkObjectResult actualResult = (OkObjectResult)actionResult;
-                Assert.AreEqual(expectedStatusCode, actualResult.StatusCode);
-                actual = actualResult.Value.ToString();
-            }
-            else
-            {
-                JsonResult actualResult = (JsonResult)actionResult;
-                actual = actualResult.Value.ToString();
+                // OkObjectResult will throw exception if we attempt cast to JsonResult
+                case OkObjectResult okResult:
+                    Assert.AreEqual(expectedStatusCode, okResult.StatusCode);
+                    actual = okResult.Value.ToString();
+                    break;
+                case CreatedResult createdResult:
+                    Assert.AreEqual(expectedStatusCode, createdResult.StatusCode);
+                    actual = createdResult.Value.ToString();
+                    break;
+                case NoContentResult noContentResult:
+                    Assert.AreEqual(expectedStatusCode, noContentResult.StatusCode);
+                    actual = string.Empty;
+                    break;
+                case NotFoundResult notFoundResult:
+                    Assert.AreEqual(expectedStatusCode, notFoundResult.StatusCode);
+                    actual = RestController.ErrorResponse(
+                        DatagatewayException.SubStatusCodes.EntityNotFound.ToString(),
+                        message: "Not Found", (int)HttpStatusCode.NotFound).Value.ToString();
+                    break;
+                default:
+                    JsonResult actualResult = (JsonResult)actionResult;
+                    actual = actualResult.Value.ToString();
+                    break;
             }
 
             // if whitespaces are not consistent JsonStringDeepEquals should be used

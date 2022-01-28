@@ -98,10 +98,9 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>JSON object result</returns>
         public async Task<JsonDocument> ExecuteAsync(RestRequestContext context)
         {
-
             //create result object to be populated by different operations
             Dictionary<string, object> parameters;
-            if(context.OperationType == Operation.Delete)
+            if (context.OperationType == Operation.Delete)
             {
                 //DeleteOne based off primary key in request.
                 parameters = new(context.PrimaryKeyValuePairs);
@@ -111,30 +110,30 @@ namespace Azure.DataGateway.Service.Resolvers
                 parameters = new(context.FieldValuePairsInBody);
             }
 
-            using DbDataReader dbDataReader =
+            try
+            {
+                using DbDataReader dbDataReader =
                 await PerformMutationOperation(
                     context.EntityName,
                     context.OperationType,
                     parameters);
-            
-            if(context.OperationType == Operation.Delete)
-            {
-                //Records affected tells us that item was successfully deleted.
-                //No records affected happens for a DELETE request on nonexistant object
-                if (dbDataReader.RecordsAffected > 0)
+                context.PrimaryKeyValuePairs = await ExtractRowFromDbDataReader(dbDataReader);
+
+                if (context.OperationType == Operation.Delete)
                 {
-                    return JsonSerializer.SerializeToDocument(value: "{}", inputType: typeof(string));
-                }
-                else
-                {
-                    return null;
+                    //Records affected tells us that item was successfully deleted.
+                    //No records affected happens for a DELETE request on nonexistant object
+                    if (dbDataReader.RecordsAffected > 0)
+                    {
+                        return JsonDocument.Parse("{}");
+                    }
+                    else
+                    {
+                        return null;
+                    }
                 }
             }
-
-            // Reuse the same context as a FindRequestContext to return the results after the mutation operation.
-            context.PrimaryKeyValuePairs = await ExtractRowFromDbDataReader(dbDataReader);
-
-            if (context.PrimaryKeyValuePairs == null)
+            catch (DbException)
             {
                 throw new DatagatewayException(
                     message: $"Could not perform the given mutation on entity {context.EntityName}.",
@@ -146,8 +145,6 @@ namespace Azure.DataGateway.Service.Resolvers
             context.OperationType = Operation.Find;
 
             // delegates the querying part of the mutation to the QueryEngine
-            // this allows for nested queries in mutations
-            // the searchParams are used to identify the mutated record so it can then be further queried on
             return await _queryEngine.ExecuteAsync(context);
         }
 

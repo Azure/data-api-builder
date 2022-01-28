@@ -191,7 +191,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         operationType);
 
             // if an exception is expected we generate the correct error
-            // The expected result should be a Query the confirms the result state
+            // The expected result should be a Query that confirms the result state
             // of the Operation performed for the test. However:
             // Initial DELETE request results in 204 no content, no exception thrown.
             // Subsequent DELETE requests result in 404, which results in an exception.

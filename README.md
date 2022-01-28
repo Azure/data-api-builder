@@ -27,7 +27,7 @@ In these files you need to modify the value for `ConnectionString` for the proje
 
 #### CosmosDB
 ```
-"ConnectionString": "AccountEndpoint=https://anicosmostest.documents.azure.com:443/;AccountKey=REPLACEME"
+"ConnectionString": "AccountEndpoint=https://cosmostest.documents.azure.com:443/;AccountKey=REPLACEME"
 ```
 
 #### MsSql

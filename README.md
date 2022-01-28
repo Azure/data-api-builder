@@ -27,7 +27,7 @@ In these files you need to modify the value for `ConnectionString` for the proje
 
 #### CosmosDB
 ```
-"ConnectionString": "AccountEndpoint=https://anicosmostest.documents.azure.com:443/;AccountKey=REPLACEME"
+"ConnectionString": "AccountEndpoint=https://cosmostest.documents.azure.com:443/;AccountKey=REPLACEME"
 ```
 
 #### MsSql
@@ -42,7 +42,7 @@ In these files you need to modify the value for `ConnectionString` for the proje
 
 Once you have your connection strings properly formatted you can build and run the project. In Visul Studio this can be done by selecting the type of database you wish to connect when you run build and run the project from within Visual Studio.
 
-To build and run the project from the command line you need to set the Data Type, and then can use the dotnet run command. For example `ASPNETCORE_ENVIRONMENT=PostgreSql dotnet watch run --project DataGateway.Service` would build and run the project for PostregreSql.
+To build and run the project from the command line you need to set the Database Type, and then can use the dotnet run command. For example `ASPNETCORE_ENVIRONMENT=PostgreSql dotnet watch run --project DataGateway.Service` would build and run the project for PostregreSql.
 
 When the project finishes building and starts to run there should be a browser that opens with Banana Cake Pop running. If the service is running successfully you should see a green dot on the left side of the window with the endpoint's address. From this window you can create and execute queries using GraphQL.
 
@@ -55,7 +55,7 @@ When testing out the API, take note of the service root uri displayed in the win
 
 When manually testing the API with postman, this is the beginning of the uri that will contain your request. You must also include the route, and any desired query strings (for more information on the formatting guidelines we conform to see: https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md).
 
-For example, to invoke a FindMany on the Table "Books" and retrieve the "id" and "title" we would have a uri of `https://localhost:5001/books/?_f=id,title`
+For example, to invoke a FindMany on the Table "Books" and retrieve the "id" and "title" we would have do a GET request on uri `https://localhost:5001/books/?_f=id,title`
 
 To see how the code flows, set a breakpoint in the controller which is associated with the particular DatabaseType that you are using, ie: after line 75 in `RestController.cs`
 

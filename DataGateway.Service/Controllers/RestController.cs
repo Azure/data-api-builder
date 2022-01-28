@@ -146,6 +146,8 @@ namespace Azure.DataGateway.Service.Controllers
 
                 if (result != null)
                 {
+                    // Clones the root element to a new JsonElement that can be
+                    // safely stored beyond the lifetime of the original JsonDocument.
                     JsonElement resultElement = result.RootElement.Clone();
                     // Clones the root element to a new JsonElement that can be
                     // safely stored beyond the lifetime of the original JsonDocument.
@@ -158,7 +160,11 @@ namespace Azure.DataGateway.Service.Controllers
                         case Operation.Delete:
                             return new NoContentResult();
                         default:
-                            return NotFound();
+                            throw new DatagatewayException(
+                                message: "Not Found",
+                                statusCode: (int)HttpStatusCode.NotFound,
+                                subStatusCode: DatagatewayException.SubStatusCodes.EntityNotFound
+                            );
                     }
                 }
                 else

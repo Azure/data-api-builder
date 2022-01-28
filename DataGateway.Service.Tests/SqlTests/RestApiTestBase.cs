@@ -131,13 +131,63 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     sqlQuery: GetQuery(nameof(InsertOneTest)),
                     controller: _restController,
                     operationType: Operation.Insert,
-                    requestBody: requestBody
+                    requestBody: requestBody,
+                    expectedStatusCode: 201
+                );
+        }
+
+        /// <summary>
+        /// DeleteOne operates on a single entity with target object
+        /// identified in the primaryKeyRoute. No requestBody is used
+        /// for this type of request.
+        /// sqlQuery represents the query used to get 'expected' result while
+        /// the remaining parameters are used to get the 'actual' result
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task DeleteOneTest()
+        {
+            //expected status code 204
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/5",
+                    queryString: null,
+                    entity: "books",
+                    sqlQuery: GetQuery(nameof(DeleteOneTest)),
+                    controller: _restController,
+                    operationType: Operation.Delete,
+                    requestBody: null,
+                    expectedStatusCode: (int)HttpStatusCode.NoContent
                 );
         }
 
         #endregion
 
         #region Negative Tests
+        /// <summary>
+        /// DeleteOne operates on a single entity with target object
+        /// identified in the primaryKeyRoute. No requestBody is used
+        /// for this type of request.
+        /// sqlQuery represents the query used to get 'expected' result while
+        /// the remaining parameters are used to get the 'actual' result
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task DeleteNonExistentTest()
+        {//expected status code 404
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/7",
+                    queryString: null,
+                    entity: "books",
+                    sqlQuery: GetQuery(nameof(DeleteNonExistentTest)),
+                    controller: _restController,
+                    operationType: Operation.Delete,
+                    requestBody: null,
+                    exception: true,
+                    expectedErrorMessage: "Not Found",
+                    expectedStatusCode: (int)HttpStatusCode.NotFound,
+                    expectedSubStatusCode: DatagatewayException.SubStatusCodes.EntityNotFound.ToString()
+                );
+        }
 
         /// <summary>
         /// Tests the REST Api for FindById operation with a query string

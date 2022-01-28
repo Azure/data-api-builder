@@ -107,6 +107,10 @@ namespace Azure.DataGateway.Service.Controllers
         /// Delete action serving the HttpDelete verb.
         /// </summary>
         /// <param name="entityName">The name of the entity.</param>
+        /// <param name="primaryKeyRoute">The string representing the primary key route
+        /// which gets it content from the route attribute {*primaryKeyRoute}.
+        /// asterisk(*) here is a wild-card/catch all i.e it matches the rest of the route after {entityName}.
+        /// primary_key = [shard_value/]id_key_value
         /// Expected URL template is of the following form:
         /// MsSql/PgSql: URL template: /<entityName>/[<primary_key_column_name>/<primary_key_value>
         /// URL MUST NOT contain a queryString

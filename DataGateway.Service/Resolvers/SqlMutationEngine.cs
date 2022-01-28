@@ -98,11 +98,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>JSON object result</returns>
         public async Task<JsonDocument> ExecuteAsync(RestRequestContext context)
         {
-            //create result object to be populated by different operations
+            // create result object to be populated by different operations
             Dictionary<string, object> parameters;
             if (context.OperationType == Operation.Delete)
             {
-                //DeleteOne based off primary key in request.
+                // DeleteOne based off primary key in request.
                 parameters = new(context.PrimaryKeyValuePairs);
             }
             else
@@ -121,8 +121,8 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 if (context.OperationType == Operation.Delete)
                 {
-                    //Records affected tells us that item was successfully deleted.
-                    //No records affected happens for a DELETE request on nonexistant object
+                    // Records affected tells us that item was successfully deleted.
+                    // No records affected happens for a DELETE request on nonexistent object
                     if (dbDataReader.RecordsAffected > 0)
                     {
                         return JsonDocument.Parse("{}");

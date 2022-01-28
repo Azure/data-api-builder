@@ -53,7 +53,7 @@ When testing out the API, take note of the service root uri displayed in the win
 
 When manually testing the API with postman, this is the beginning of the uri that will contain your request. You must also include the route, and any desired query strings (for more information on the formatting guidelines we conform to see: https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md).
 
-For example, to invoke a FindMany on the Table "Books" and retrieve the "id" and "title" we would have a uri of `https://localhost:5001/books/?_f=id,title`
+For example, to invoke a FindMany on the Table "Books" and retrieve the "id" and "title" we would have do a GET request on uri `https://localhost:5001/books/?_f=id,title`
 
 To see how the code flows, set a breakpoint in the controller which is associated with the particular DatabaseType that you are using, ie: after line 75 in `RestController.cs`
 

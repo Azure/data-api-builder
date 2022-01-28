@@ -127,7 +127,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: null,
                     queryString: null,
-                    entity: "books",
+                    entity: _integrationTableName,
                     sqlQuery: GetQuery(nameof(InsertOneTest)),
                     controller: _restController,
                     operationType: Operation.Insert,
@@ -151,7 +151,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/5",
                     queryString: null,
-                    entity: "books",
+                    entity: _integrationTableName,
                     sqlQuery: GetQuery(nameof(DeleteOneTest)),
                     controller: _restController,
                     operationType: Operation.Delete,
@@ -177,7 +177,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/7",
                     queryString: null,
-                    entity: "books",
+                    entity: _integrationTableName,
                     sqlQuery: GetQuery(nameof(DeleteNonExistentTest)),
                     controller: _restController,
                     operationType: Operation.Delete,

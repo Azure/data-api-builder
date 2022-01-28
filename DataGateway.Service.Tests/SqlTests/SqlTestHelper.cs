@@ -137,6 +137,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     Assert.AreEqual(expectedStatusCode, createdResult.StatusCode);
                     actual = createdResult.Value.ToString();
                     break;
+                // NoContentResult does not have value property for messages
                 case NoContentResult noContentResult:
                     Assert.AreEqual(expectedStatusCode, noContentResult.StatusCode);
                     actual = string.Empty;

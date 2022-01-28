@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Azure.DataGateway.Service.Models;
 using Microsoft.OData.Edm;
 
@@ -62,13 +63,24 @@ namespace Azure.DataGateway.Service.Services
                         throw new ArgumentException($"No resolver for colum type {columnType}");
                     }
 
-                    newEntity.AddStructuralProperty(column, type);
-
-                    if (column.Equals(schema.Tables[column].PrimaryKey.ToString()))
+                    // if key is a single column we have type information and can add
+                    if (column.Equals(GetPrimaryKeyFromList(schema.Tables[entityName].PrimaryKey)))
                     {
                         // entity is a structured type that needs a key, we add it here
                         newEntity.AddKeys(newEntity.AddStructuralProperty(column, type, isNullable: false));
                     }
+                    else
+                    {
+                        // not a key just add the property
+                        newEntity.AddStructuralProperty(column, type);
+                    }
+                }
+
+                // if the key is not a single column we add it here as concatenation of columns making up key
+                // need to change? what is type of composite key? For now adding as type None
+                if (schema.Tables[entityName].PrimaryKey.Count > 1)
+                {
+                    newEntity.AddKeys(newEntity.AddStructuralProperty(GetPrimaryKeyFromList(schema.Tables[entityName].PrimaryKey), EdmPrimitiveTypeKind.None, isNullable: false));
                 }
 
                 // add this entity to our model
@@ -96,6 +108,17 @@ namespace Azure.DataGateway.Service.Services
             }
 
             return this;
+        }
+
+        private static string GetPrimaryKeyFromList(List<string> keyList)
+        {
+            string primaryKey = string.Empty;
+            foreach (string keyPart in keyList)
+            {
+                primaryKey += keyPart;
+            }
+
+            return primaryKey;
         }
     }
 }

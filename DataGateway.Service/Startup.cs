@@ -1,6 +1,6 @@
 using System;
 using Azure.DataGateway.Service.Authorization;
-using Azure.DataGateway.Service.configurations;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -56,6 +56,7 @@ namespace Azure.DataGateway.Service
                     services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
                     services.AddSingleton<IQueryEngine, CosmosQueryEngine>();
                     services.AddSingleton<IMutationEngine, CosmosMutationEngine>();
+                    services.AddSingleton<IConfigValidator, CosmosConfigValidator>();
                     break;
                 case DatabaseType.MsSql:
                     services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
@@ -63,6 +64,7 @@ namespace Azure.DataGateway.Service
                     services.AddSingleton<IQueryBuilder, MsSqlQueryBuilder>();
                     services.AddSingleton<IQueryEngine, SqlQueryEngine>();
                     services.AddSingleton<IMutationEngine, SqlMutationEngine>();
+                    services.AddSingleton<IConfigValidator, SqlConfigValidator>();
                     break;
                 case DatabaseType.PostgreSql:
                     services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
@@ -70,6 +72,7 @@ namespace Azure.DataGateway.Service
                     services.AddSingleton<IQueryBuilder, PostgresQueryBuilder>();
                     services.AddSingleton<IQueryEngine, SqlQueryEngine>();
                     services.AddSingleton<IMutationEngine, SqlMutationEngine>();
+                    services.AddSingleton<IConfigValidator, SqlConfigValidator>();
                     break;
                 default:
                     throw new NotSupportedException(String.Format("The provided DatabaseType value: {0} is currently not supported." +
@@ -83,13 +86,17 @@ namespace Azure.DataGateway.Service
             services.AddHttpContextAccessor();
             services.AddAuthorization();
 
-            services.AddSingleton<IAuthorizationHandler, FindRequestAuthorizationHandler>();
+            services.AddSingleton<IAuthorizationHandler, RequestAuthorizationHandler>();
             services.AddControllers();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            // validate the configuration after the services have been built
+            // but before the application is built
+            app.ApplicationServices.GetService<IConfigValidator>().ValidateConfig();
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();

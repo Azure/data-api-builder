@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Azure.DataGateway.Service.configurations;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
 using Microsoft.Extensions.Options;
@@ -147,6 +147,11 @@ namespace Azure.DataGateway.Service
             }
 
             return typeInfo;
+        }
+
+        public ResolverConfig GetResolvedConfig()
+        {
+            return _config;
         }
     }
 }

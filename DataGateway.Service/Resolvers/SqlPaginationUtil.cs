@@ -106,11 +106,11 @@ namespace Azure.DataGateway.Service.Resolvers
         private static string MakeCursorFromJsonElement(JsonElement element, PaginationMetadata paginationMetadata)
         {
             Dictionary<string, object> cursorJson = new();
-            List<string> primaryKeys = paginationMetadata.Structure.PrimaryKey();
+            List<string> primaryKey = paginationMetadata.Structure.PrimaryKey();
 
-            foreach (string key in primaryKeys)
+            foreach (string column in primaryKey)
             {
-                cursorJson.Add(key, ResolveJsonElementToScalarVariable(element.GetProperty(key)));
+                cursorJson.Add(column, ResolveJsonElementToScalarVariable(element.GetProperty(column)));
             }
 
             return Base64Encode(JsonSerializer.Serialize(cursorJson));
@@ -123,7 +123,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             Dictionary<string, object> after = new();
             Dictionary<string, JsonElement> afterDeserialized = new();
-            List<string> primaryKeys = paginationMetadata.Structure.PrimaryKey();
+            List<string> primaryKey = paginationMetadata.Structure.PrimaryKey();
 
             object afterObject = queryParams["after"];
             string afterJsonString;
@@ -136,10 +136,10 @@ namespace Azure.DataGateway.Service.Resolvers
                     afterJsonString = Base64Decode(afterPlainText);
                     afterDeserialized = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(afterJsonString);
 
-                    if (!ListsAreEqual(afterDeserialized.Keys.ToList(), primaryKeys))
+                    if (!ListsAreEqual(afterDeserialized.Keys.ToList(), primaryKey))
                     {
                         string incorrectValues = $"Parameter \"after\" with values {afterJsonString} does not contain all the required" +
-                                                    $"values <{string.Join(", ", primaryKeys.Select(key => $"\"{key}\""))}>";
+                                                    $"values <{string.Join(", ", primaryKey.Select(c => $"\"{c}\""))}>";
 
                         throw new ArgumentException(incorrectValues);
                     }
@@ -149,7 +149,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         object value = ResolveJsonElementToScalarVariable(keyValuePair.Value);
 
                         ColumnType columnType = paginationMetadata.Structure.GetColumnType(keyValuePair.Key);
-                        if (value.GetType() != ColumnDefinition.ResolveColumnToSystemType(columnType))
+                        if (value.GetType() != ColumnDefinition.ResolveColumnTypeToSystemType(columnType))
                         {
                             throw new ArgumentException($"After param has incorrect type {value.GetType()} for primary key column {keyValuePair.Key} with type {columnType}.");
                         }

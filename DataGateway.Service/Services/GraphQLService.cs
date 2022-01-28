@@ -17,6 +17,7 @@ namespace Azure.DataGateway.Services
         private readonly IQueryEngine _queryEngine;
         private readonly IMutationEngine _mutationEngine;
         private readonly IMetadataStoreProvider _metadataStoreProvider;
+        public ISchema Schema { private set; get; }
 
         public GraphQLService(
             IQueryEngine queryEngine,
@@ -32,7 +33,7 @@ namespace Azure.DataGateway.Services
 
         public void ParseAsync(String data)
         {
-            ISchema schema = SchemaBuilder.New()
+            Schema = SchemaBuilder.New()
                .AddDocumentFromString(data)
                .AddAuthorizeDirectiveType()
                .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine, _metadataStoreProvider))
@@ -73,7 +74,7 @@ namespace Azure.DataGateway.Services
             // Sadly IRequestExecutorBuilder.Configure is internal, so we also
             // inline that one here too
             Executor = builder.Services
-                .Configure(builder.Name, (RequestExecutorSetup o) => o.Schema = schema)
+                .Configure(builder.Name, (RequestExecutorSetup o) => o.Schema = Schema)
                 .BuildServiceProvider()
                 .GetRequiredService<IRequestExecutorResolver>()
                 .GetRequestExecutorAsync()
@@ -88,7 +89,7 @@ namespace Azure.DataGateway.Services
         /// <param name="requestBody">GraphQL request body</param>
         /// <param name="requestProperties">key/value pairs of properties to be used in GraphQL library pipeline</param>
         /// <returns></returns>
-        public async Task<string> ExecuteAsync(String requestBody, Dictionary<string, object> requestProperties)
+        public async Task<string> ExecuteAsync(string requestBody, Dictionary<string, object> requestProperties)
         {
             if (Executor == null)
             {

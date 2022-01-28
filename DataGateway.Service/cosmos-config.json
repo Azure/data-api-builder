@@ -39,7 +39,7 @@
       "id": "addPlanet",
       "databaseName": "graphqldb",
       "containerName": "planet",
-      "operationType": "UPSERT"
+      "operationType": "Upsert"
     }
   ]
 }

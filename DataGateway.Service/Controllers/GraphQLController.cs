@@ -20,7 +20,7 @@ namespace Azure.DataGateway.Service.Controllers
             _schemaManager = schemaManager;
         }
 
-        // We return JsonElement here instead of JsonDocument here
+        // We return JsonElement instead of JsonDocument here
         // in order to dispose of the JsonDocument. We clone the root
         // element of the JsonDocument and return this JsonElement.
         [HttpPost]

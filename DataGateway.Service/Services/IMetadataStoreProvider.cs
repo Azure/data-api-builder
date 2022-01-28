@@ -1,3 +1,4 @@
+using Azure.DataGateway.Service;
 using Azure.DataGateway.Service.Models;
 
 namespace Azure.DataGateway.Services
@@ -31,5 +32,10 @@ namespace Azure.DataGateway.Services
         /// name.
         /// </summary>
         GraphqlType GetGraphqlType(string name);
+
+        /// <summary>
+        /// Returns the resolved config
+        /// </summary>
+        ResolverConfig GetResolvedConfig();
     }
 }

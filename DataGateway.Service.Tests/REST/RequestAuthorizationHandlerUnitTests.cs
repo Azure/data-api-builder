@@ -4,7 +4,6 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -13,10 +12,10 @@ using Moq;
 namespace Azure.DataGateway.Service.Tests.REST
 {
     /// <summary>
-    /// Tests that the FindRequestAuthorizationHandler issues correct AuthZ decisions for REST endpoints.
+    /// Tests that the RequestAuthorizationHandler issues correct AuthZ decisions for REST endpoints.
     /// </summary>
     [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class FindRequestAuthorizationHandlerUnitTests
+    public class RequestAuthorizationHandlerUnitTests
     {
         private Mock<IMetadataStoreProvider> _metadataStore;
 
@@ -84,8 +83,8 @@ namespace Azure.DataGateway.Service.Tests.REST
         private async Task<bool> IsAuthorizationSuccessful(string entityName, ClaimsPrincipal user)
         {
             FindRequestContext request = new(entityName, isList: false);
-            AuthorizationHandlerContext context = new(new List<IAuthorizationRequirement> { Operations.GET }, user, request);
-            FindRequestAuthorizationHandler handler = new(_metadataStore.Object);
+            AuthorizationHandlerContext context = new(new List<IAuthorizationRequirement> { HttpRestVerbs.GET }, user, request);
+            RequestAuthorizationHandler handler = new(_metadataStore.Object);
 
             await handler.HandleAsync(context);
 
@@ -95,12 +94,12 @@ namespace Azure.DataGateway.Service.Tests.REST
         /// <summary>
         /// Create Test method table definition with operation and authorization rules defined.
         /// </summary>
-        /// <param name="httpOperation">Allowed Http Operations for table,</param>
+        /// <param name="httpOperation">Allowed Http HttpVerbs for table,</param>
         /// <param name="authZType">AuthorizationType for Http Operation for table.</param>
         private void SetupTable(string httpOperation, AuthorizationType authZType)
         {
             TableDefinition table = new();
-            table.Operations.Add(httpOperation, CreateAuthZRule(authZType));
+            table.HttpVerbs.Add(httpOperation, CreateAuthZRule(authZType));
 
             _metadataStore = new Mock<IMetadataStoreProvider>();
             _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(table);

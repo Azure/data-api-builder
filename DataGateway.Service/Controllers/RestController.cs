@@ -62,7 +62,7 @@ namespace Azure.DataGateway.Service.Controllers
         /// </summary>
         /// <param name="entityName">The name of the entity.</param>
         /// <param name="primaryKeyRoute">The string representing the primary key route
-        /// which gets it content from the route attribute {*primaryKeyRoute}.
+        /// which gets its content from the route attribute {*primaryKeyRoute}.
         /// asterisk(*) here is a wild-card/catch all i.e it matches the rest of the route after {entityName}.
         /// primary_key = [shard_value/]id_key_value
         /// primaryKeyRoute will be empty for FindOne or FindMany
@@ -108,7 +108,7 @@ namespace Azure.DataGateway.Service.Controllers
         /// </summary>
         /// <param name="entityName">The name of the entity.</param>
         /// <param name="primaryKeyRoute">The string representing the primary key route
-        /// which gets it content from the route attribute {*primaryKeyRoute}.
+        /// which gets its content from the route attribute {*primaryKeyRoute}.
         /// asterisk(*) here is a wild-card/catch all i.e it matches the rest of the route after {entityName}.
         /// primary_key = [shard_value/]id_key_value
         /// Expected URL template is of the following form:

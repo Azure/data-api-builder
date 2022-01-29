@@ -99,7 +99,7 @@ namespace Azure.DataGateway.Service.Services
             // that has a key, then an entity set can be thought of as a table made up of those rows
             foreach (string entityName in schema.Tables.Keys)
             {
-                container.AddEntitySet(entityName, _entities[DEFAULT_NAMESPACE + entityName]);
+                container.AddEntitySet(name: entityName, _entities[DEFAULT_NAMESPACE + entityName]);
             }
 
             return this;

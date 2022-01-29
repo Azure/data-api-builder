@@ -86,7 +86,7 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
-        /// Add the entity sets contained within the schema to container
+        /// Add the entity sets contained within the schema to container.
         /// </summary>
         /// <param name="schema">Schema represents the Database Schema</param>
         /// <returns>this model builder</returns>

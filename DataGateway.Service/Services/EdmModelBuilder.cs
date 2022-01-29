@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Azure.DataGateway.Service.Models;
 using Microsoft.OData.Edm;
 
@@ -12,6 +13,7 @@ namespace Azure.DataGateway.Service.Services
     {
         private const string DEFAULT_NAMESPACE = "default_namespace";
         private const string DEFAULT_CONTAINER_NAME = "default_container";
+        private readonly Dictionary<string, EdmEntityType> _entities;
         private readonly EdmModel _model = new();
 
 #pragma warning disable CA1024 // EdmModelBuilders are recommended to have GetModel method
@@ -40,6 +42,7 @@ namespace Azure.DataGateway.Service.Services
             foreach (string entityName in schema.Tables.Keys)
             {
                 EdmEntityType newEntity = new(DEFAULT_NAMESPACE, entityName);
+                _entities.Add(DEFAULT_NAMESPACE + entityName, newEntity);
 
                 // each column represents a property of the current entity we are adding
                 foreach (string column in schema.Tables[entityName].Columns.Keys)
@@ -76,6 +79,7 @@ namespace Azure.DataGateway.Service.Services
 
                 // add this entity to our model
                 _model.AddElement(newEntity);
+
             }
 
             return this;
@@ -95,7 +99,7 @@ namespace Azure.DataGateway.Service.Services
             // that has a key, then an entity set can be thought of as a table made up of those rows
             foreach (string entityName in schema.Tables.Keys)
             {
-                container.AddEntitySet(entityName, new EdmEntityType(DEFAULT_NAMESPACE, entityName));
+                container.AddEntitySet(entityName, _entities[DEFAULT_NAMESPACE + entityName]);
             }
 
             return this;

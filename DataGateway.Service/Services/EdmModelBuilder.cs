@@ -24,7 +24,7 @@ namespace Azure.DataGateway.Service.Services
         /// Build the model from the provided schema.
         /// </summary>
         /// <param name="schema">DatabaseSchema that reresents the relevant schema.</param>
-        /// <returns></returns>
+        /// <returns>An EdmModelBuilder that can be used to get a model.</returns>
         public EdmModelBuilder BuildModel(DatabaseSchema schema)
         {
             return BuildEntityTypes(schema).BuildEntitySets(schema);

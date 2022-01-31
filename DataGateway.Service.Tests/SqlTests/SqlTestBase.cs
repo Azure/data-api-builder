@@ -132,7 +132,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 // Find and Delete queries have empty result sets.
                 // Delete operation will return number of records affected.
-                result = string.Empty;
+                result = null;
             }
             else
             {
@@ -188,11 +188,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             // The expected result should be a Query that confirms the result state
             // of the Operation performed for the test. However:
             // Initial DELETE request results in 204 no content, no exception thrown.
-            // Subsequent DELETE requests result in 404, which results in an exception.
+            // Subsequent DELETE requests result in 404, which result in an exception.
             string expected;
             if (operationType == Operation.Delete && actionResult is NoContentResult)
             {
-                expected = string.Empty;
+                expected = null;
             }
             else
             {

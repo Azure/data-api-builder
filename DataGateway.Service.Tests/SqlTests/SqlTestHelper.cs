@@ -116,7 +116,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Verifies the ActionResult is as expected with the expected status code.
         /// </summary>
         /// <param name="actionResult">The action result of the operation to verify.</param>
-        /// <param name="expected">string represents the expected result.</param>
+        /// <param name="expected">string represents the expected result. This value can be null for NoContent or NotFound
+        /// results of operations like GET and DELETE</param>
         /// <param name="expectedStatusCode">int represents the returned http status code</param>
         public static void VerifyResult(
             IActionResult actionResult,
@@ -138,11 +139,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 // NoContentResult does not have value property for messages
                 case NoContentResult noContentResult:
                     Assert.AreEqual(expectedStatusCode, noContentResult.StatusCode);
-                    actual = string.Empty;
+                    actual = null;
                     break;
                 case NotFoundResult notFoundResult:
                     Assert.AreEqual(expectedStatusCode, notFoundResult.StatusCode);
-                    actual = string.Empty;
+                    actual = null;
                     break;
                 default:
                     JsonResult actualResult = (JsonResult)actionResult;

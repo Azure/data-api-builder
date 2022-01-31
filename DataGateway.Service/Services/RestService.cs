@@ -77,6 +77,7 @@ namespace Azure.DataGateway.Services
                     break;
                 case Operation.Delete:
                     context = new DeleteRequestContext(entityName, isList: false);
+                    RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                     break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");

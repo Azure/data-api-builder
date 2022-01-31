@@ -123,6 +123,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     // Records affected tells us that item was successfully deleted.
                     // No records affected happens for a DELETE request on nonexistent object
+                    // Returning empty JSON result triggers a NoContent result in calling REST service.
                     if (dbDataReader.RecordsAffected > 0)
                     {
                         return JsonDocument.Parse("{}");

@@ -140,8 +140,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// DeleteOne operates on a single entity with target object
         /// identified in the primaryKeyRoute. No requestBody is used
         /// for this type of request.
-        /// sqlQuery represents the query used to get 'expected' result while
-        /// the remaining parameters are used to get the 'actual' result
+        /// sqlQuery is not used because we are confirming the NoContent result
+        /// of a successful delete operation.
         /// </summary>
         /// <returns></returns>
         [TestMethod]
@@ -152,7 +152,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     primaryKeyRoute: "id/5",
                     queryString: null,
                     entity: _integrationTableName,
-                    sqlQuery: GetQuery(nameof(DeleteOneTest)),
+                    sqlQuery: null,
                     controller: _restController,
                     operationType: Operation.Delete,
                     requestBody: null,
@@ -164,11 +164,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         #region Negative Tests
         /// <summary>
-        /// DeleteOne operates on a single entity with target object
-        /// identified in the primaryKeyRoute. No requestBody is used
-        /// for this type of request.
-        /// sqlQuery represents the query used to get 'expected' result while
-        /// the remaining parameters are used to get the 'actual' result
+        /// DeleteNonExistent operates on a single entity with target object
+        /// identified in the primaryKeyRoute.
+        /// sqlQuery represents the query used to get 'expected' result of zero items.
         /// </summary>
         /// <returns></returns>
         [TestMethod]
@@ -186,6 +184,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     expectedErrorMessage: "Not Found",
                     expectedStatusCode: (int)HttpStatusCode.NotFound,
                     expectedSubStatusCode: DatagatewayException.SubStatusCodes.EntityNotFound.ToString()
+                );
+        }
+
+        /// <summary>
+        /// DeleteWithInvalidPrimaryKey operates on a single entity with target object
+        /// identified in the primaryKeyRoute. No sqlQuery value is provided as this request
+        /// should fail prior to querying the database.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task DeleteWithInvalidPrimaryKeyTest()
+        {//expected status code 404
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "title/7",
+                    queryString: null,
+                    entity: _integrationTableName,
+                    sqlQuery: null,
+                    controller: _restController,
+                    operationType: Operation.Delete,
+                    requestBody: null,
+                    exception: true,
+                    expectedErrorMessage: "The request is invalid since the primary keys: title requested were not found in the entity definition.",
+                    expectedStatusCode: (int)HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DatagatewayException.SubStatusCodes.BadRequest.ToString()
                 );
         }
 

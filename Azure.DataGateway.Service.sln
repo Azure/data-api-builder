@@ -22,8 +22,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Configs", "Configs", "{EFA9
 		DataGateway.Service\appsettings.Test.json = DataGateway.Service\appsettings.Test.json
 		DataGateway.Service\config.json = DataGateway.Service\config.json
 		DataGateway.Service\cosmos-config.json = DataGateway.Service\cosmos-config.json
-		DataGateway.Service\mssql-config.json = DataGateway.Service\mssql-config.json
-		DataGateway.Service\postgresql-config.json = DataGateway.Service\postgresql-config.json
+		DataGateway.Service\sql-config.json = DataGateway.Service\sql-config.json
 		DataGateway.Service\schema.gql = DataGateway.Service\schema.gql
 	EndProjectSection
 EndProject

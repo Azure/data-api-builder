@@ -61,13 +61,12 @@ steps:
       $date=$(Get-Date -format yyyyMMdd-HHmmss)
       Write-Host "##vso[task.setvariable variable=BuildDate]$date"
 
-# Build a docker image and push it to the container registry. This is a temporary location until
-# we close on where we want these images to live.
+# Build a docker image and push it to the container registry.
 - task: Docker@2
-  displayName: "Build and push docker image to docker hub"
+  displayName: "Build and push docker image to Azure Container Registry"
   inputs:
-    containerRegistry: 'CosmosDB-GraphQL-TempDockerHub'
-    repository: 'matrembl/graphql'
+    containerRegistry: 'CosmosDB GraphQL/Hawaii'
+    repository: 'hawaii'
     command: 'buildAndPush'
     Dockerfile: '**/Dockerfile'
     tags: '$(BuildDate)-$(Build.SourceVersion)' # Use build date and commitId as the tag for the image

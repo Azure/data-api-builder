@@ -107,8 +107,10 @@ namespace Azure.DataGateway.Service.Resolvers
                     context.FieldValuePairsInBody);
                 context.PrimaryKeyValuePairs = await ExtractRowFromDbDataReader(dbDataReader);
             }
-            catch (DbException)
+            catch (DbException ex)
             {
+                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine(ex.StackTrace);
                 throw new DatagatewayException(
                     message: $"Could not perform the given mutation on entity {context.EntityName}.",
                     statusCode: (int)HttpStatusCode.InternalServerError,

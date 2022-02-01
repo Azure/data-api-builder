@@ -63,7 +63,7 @@ REFERENCES authors (id)
 ON DELETE CASCADE;
 
 SET IDENTITY_INSERT publishers ON
-INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher');
+INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd');
 SET IDENTITY_INSERT publishers OFF
 
 SET IDENTITY_INSERT authors ON
@@ -71,7 +71,7 @@ INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (1
 SET IDENTITY_INSERT authors OFF
 
 SET IDENTITY_INSERT books ON
-INSERT INTO books(id, title, publisher_id) VALUES (1, 'Awesome book', 1234), (2, 'Also Awesome book', 1234), (3, 'Great wall of china explained', 2345), (4, 'US history in a nutshell', 2345);
+INSERT INTO books(id, title, publisher_id) VALUES (1, 'Awesome book', 1234), (2, 'Also Awesome book', 1234), (3, 'Great wall of china explained', 2345), (4, 'US history in a nutshell', 2345), (5, 'Chernobyl Diaries', 2323), (6, 'The Palace Door', 2324);
 SET IDENTITY_INSERT books OFF
 
 INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 123), (3, 124), (4, 123), (4, 124);

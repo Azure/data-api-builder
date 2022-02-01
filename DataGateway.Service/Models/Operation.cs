@@ -29,6 +29,9 @@ namespace Azure.DataGateway.Service.Models
 
         public static OperationAuthorizationRequirement GET =
             new() { Name = nameof(GET) };
+
+        public static OperationAuthorizationRequirement DELETE =
+            new() { Name = nameof(DELETE) };
     }
 }
 

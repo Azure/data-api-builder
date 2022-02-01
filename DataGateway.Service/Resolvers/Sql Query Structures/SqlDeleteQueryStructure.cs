@@ -13,25 +13,13 @@ namespace Azure.DataGateway.Service.Resolvers
         : base(metadataStore)
         {
             TableName = tableName;
-            TableDefinition tableDefinition = GetTableDefinition();
-
-            List<string> primaryKeys = tableDefinition.PrimaryKey;
             foreach (KeyValuePair<string, object> param in mutationParams)
             {
-                if (param.Value == null)
-                {
-                    continue;
-                }
-
-                // primary keys used as predicates
-                if (primaryKeys.Contains(param.Key))
-                {
-                    Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(TableName, param.Key)),
-                        PredicateOperation.Equal,
-                        new PredicateOperand($"@{MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString(), param.Key))}")
-                    ));
-                }
+                Predicates.Add(new Predicate(
+                    new PredicateOperand(new Column(TableName, param.Key)),
+                    PredicateOperation.Equal,
+                    new PredicateOperand($"@{MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString(), param.Key))}")
+                ));
             }
         }
     }

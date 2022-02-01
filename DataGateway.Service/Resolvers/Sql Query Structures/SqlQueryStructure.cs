@@ -351,20 +351,8 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             try
             {
-                string parameterName;
-                if (predicate.Value != null)
-                {
-                    parameterName = MakeParamWithValue(
+                string parameterName = MakeParamWithValue(
                         GetParamAsColumnSystemType(predicate.Value.ToString(), predicate.Key));
-                }
-                else
-                {
-                    // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
-                    throw new DatagatewayException(
-                        message: $"Unexpected value for column \"{predicate.Key}\" provided.",
-                        statusCode: (int)HttpStatusCode.BadRequest,
-                        subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
-                }
 
                 Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(TableAlias, predicate.Key)),

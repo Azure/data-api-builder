@@ -58,19 +58,8 @@ namespace Azure.DataGateway.Service.Resolvers
 
             try
             {
-                if (value != null)
-                {
-                    paramName = MakeParamWithValue(
-                        GetParamAsColumnSystemType(value.ToString(), columnName));
-                }
-                else
-                {
-                    // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
-                    throw new DatagatewayException(
-                        message: $"Unexpected value for column \"{columnName}\" provided.",
-                        statusCode: (int)HttpStatusCode.BadRequest,
-                        subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
-                }
+                paramName = MakeParamWithValue(
+                    GetParamAsColumnSystemType(value.ToString(), columnName));
 
                 Values.Add($"@{paramName}");
             }

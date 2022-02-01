@@ -105,9 +105,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 {
                   ""id"": 4,
                   ""title"": ""US history in a nutshell""
+                },
+                {
+                  ""id"": 5,
+                  ""title"": ""Chernobyl Diaries""
+                },
+                {
+                  ""id"": 6,
+                  ""title"": ""The Palace Door""
                 }
               ],
-              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":4}") + @""",
+              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":6}") + @""",
               ""hasNextPage"": false
             }";
 

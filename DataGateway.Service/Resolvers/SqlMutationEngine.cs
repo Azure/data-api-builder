@@ -98,14 +98,41 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>JSON object result</returns>
         public async Task<JsonDocument> ExecuteAsync(RestRequestContext context)
         {
+            // create result object to be populated by different operations
+            Dictionary<string, object> parameters;
+            if (context.OperationType == Operation.Delete)
+            {
+                // DeleteOne based off primary key in request.
+                parameters = new(context.PrimaryKeyValuePairs);
+            }
+            else
+            {
+                parameters = new(context.FieldValuePairsInBody);
+            }
+
             try
             {
                 using DbDataReader dbDataReader =
                 await PerformMutationOperation(
                     context.EntityName,
                     context.OperationType,
-                    context.FieldValuePairsInBody);
+                    parameters);
                 context.PrimaryKeyValuePairs = await ExtractRowFromDbDataReader(dbDataReader);
+
+                if (context.OperationType == Operation.Delete)
+                {
+                    // Records affected tells us that item was successfully deleted.
+                    // No records affected happens for a DELETE request on nonexistent object
+                    // Returning empty JSON result triggers a NoContent result in calling REST service.
+                    if (dbDataReader.RecordsAffected > 0)
+                    {
+                        return JsonDocument.Parse("{}");
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
             }
             catch (DbException ex)
             {

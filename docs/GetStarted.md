@@ -5,23 +5,44 @@ N.B. This section only applies if you want to use a prebuilt image, if you want 
 
 N.B. You might not have access to the container registry where the image is hosted. Reach out to someone on the team for us to give you permissions.
 
-1. Pull the docker image:
+1. You will need to login to the ACR:
 
 ```bash
-az acr login --name hawaiiacr.azurecr.io
-docker pull hawaiiacr.azurecr.io/hawaii:20220131-203326-458a6fa2c135ab7893c47ec11d30736fb066d9b9 # Note to update to the correct tag
+az acr login --name hawaiiacr
 ```
 
-2. Update the config.json and the appsettings.json files with your connection strings and the resolvers
+2. update the configuration files for your environment:
 
-3. Launch the docker container and map the config.json and appsettings.json files. The command should look something like this (depending on the path to your appsettings and config files, and the image you are using):
+Update the config.json and the appsettings.json files for your chosen environment.
+
+## Running the container with docker compose
+This is the easiest way.
+
+3. Choose a docker-compose-*.yml file based on your environment (cosmos, sql, postgres)
+
 
 ```bash
-docker run --mount type=bind,source="$(pwd)\DataGateway.Service\appsettings.json",target="/App/appsettings.json" --mount type=bind,source="$(pwd)\DataGateway.Service\config.json",target="/App/config.json" -d -p 5000:5000 hawaiiacr.azurecr.io/hawaii:20220131-203326-458a6fa2c135ab7893c47ec11d30736fb066d9b9
+docker compose -f "./docker-compose.yml" up
+```
+
+4 Your container should be accessible at localhost:5000
+
+## Running the container manually
+
+3. Pull the docker image
+
+```bash
+docker pull hawaiiacr.azurecr.io/hawaii:latest # Note to use the desired tag here.
+```
+
+4. Launch the docker container and map the config.json and appsettings.json files. The command should look something like this (depending on the path to your appsettings and config files, and the image you are using):
+
+```bash
+docker run --mount type=bind,source="$(pwd)\DataGateway.Service\appsettings.json",target="/App/appsettings.json" --mount type=bind,source="$(pwd)\DataGateway.Service\config.json",target="/App/config.json" -d -p 5000:5000 hawaiiacr.azurecr.io/hawaii:latest
 # Note to update to the correct tag
 ```
 
-4. The container should be accessible at localhost:5000
+5. The container should be accessible at localhost:5000
 
 # Build and deploy as Docker Container
 
@@ -33,7 +54,7 @@ Navigate to the root folder.
 On Windows you need to do this in a WSL terminal and run
 
 ```bash
-dotnet build DataGateway.Service/Azure.DataGateway.Service.sln
+dotnet build Azure.DataGateway.Service.sln -c Release
 ```
 
 build a docker image
@@ -74,5 +95,5 @@ docker login hawaiiacr.azurecr.io
 Push the retagged image
 
 ```bash
-docker push hawaiiacr.azurecr.io/hawaii
+docker push hawaiiacr.azurecr.io/hawaii:<yourTag>
 ```

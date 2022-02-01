@@ -7,5 +7,5 @@ FROM mcr.microsoft.com/dotnet/sdk:5.0
 COPY DataGateway.Service/bin/Release/net5.0 /App
 WORKDIR /App
 ENV ASPNETCORE_URLS=http://+:5000
-ENTRYPOINT ["dotnet", "DataGateway.Service.dll"]
+ENTRYPOINT ["dotnet", "Azure.DataGateway.Service.dll"]
 

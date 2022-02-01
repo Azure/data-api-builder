@@ -70,3 +70,4 @@ steps:
     command: 'buildAndPush'
     Dockerfile: '**/Dockerfile'
     tags: '$(BuildDate)-$(Build.SourceVersion)' # Use build date and commitId as the tag for the image
+    

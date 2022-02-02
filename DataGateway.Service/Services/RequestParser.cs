@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using Azure.DataGateway.Service.Resolvers;
+using Azure.DataGateway.Service.Services;
 
 namespace Azure.DataGateway.Services
 {
@@ -53,7 +54,7 @@ namespace Azure.DataGateway.Services
         /// </summary>
         /// <param name="nvc">NameValueCollection representing query params from the URL's query string.</param>
         /// <param name="queryStructure">The FindRequestContext holding the major components of the query.</param>
-        public static void ParseQueryString(NameValueCollection nvc, FindRequestContext context, IMetadataStoreProvider metadataStoreProvider)
+        public static void ParseQueryString(NameValueCollection nvc, FindRequestContext context, FilterParser filterParser)
         {
             foreach (string key in nvc.Keys)
             {
@@ -65,7 +66,7 @@ namespace Azure.DataGateway.Services
                         break;
                     case FILTER_URL:
                         // not yet implemented
-                        context.Predicates = metadataStoreProvider.GetFilterParser().Parse();
+                        context.Predicates = filterParser.Parse();
                         break;
                     default:
                         throw new ArgumentException("Invalid Query Parameter: " + key.ToString());

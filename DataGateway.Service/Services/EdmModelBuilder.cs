@@ -74,7 +74,7 @@ namespace Azure.DataGateway.Service.Services
                     else
                     {
                         // not a key just add the property
-                        newEntity.AddStructuralProperty(column, type);
+                        newEntity.AddStructuralProperty(column, type, isNullable: true);
                     }
                 }
 

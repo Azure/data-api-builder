@@ -7,3 +7,4 @@ services:
     volumes:
       - "./DataGateway.Service/appsettings.cosmos.json:/App/appsettings.json"
       - "./DataGateway.Service/cosmos-config.json:/App/config.json"
+      - "./DataGateway.Service/schema.gql:/App/schema.gql"

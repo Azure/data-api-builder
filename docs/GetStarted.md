@@ -44,6 +44,11 @@ docker run --mount type=bind,source="$(pwd)\DataGateway.Service\appsettings.json
 
 5. The container should be accessible at localhost:5000
 
+## Managing the Pipeline
+The pipeline has permissions to push to this ACR through this service connection in ADO: https://msdata.visualstudio.com/CosmosDB/_settings/adminservices?resourceId=6565800e-5e71-4e19-a610-6013655382b5.
+
+To push to a different container registry, we need to add a new service connection to the registry and modify the docker task in the build-pipeline.yml file to point to the new registry.
+
 # Build and deploy as Docker Container
 
 ## Build Image
@@ -83,17 +88,24 @@ To push the built image to the hawaiiacr ACR, do the following
 Tag the image correctly
 
 ```bash
-docker tag hawaii hawaiiacr.azurecr.io/hawaii:<yourTag>
+docker tag hawaii hawaiiacr.azurecr.io/hawaii/<yourBranch>:<yourTag>
+```
+
+Choose something meaningful when tagging your images. This will make it easier to understand what each image is.
+For example, on a user branch, one could use the branch name with the commit id (or a date).
+
+```bash
+docker tag hawaii hawaiiacr.azurecr.io/hawaii/docker-registry:a046756c97d49347d0fc8584ecc5050029ed5840
 ```
 
 Login to the ACR with the correct credentials
 
 ```bash
-docker login hawaiiacr.azurecr.io
+az acr login --name hawaiiacr
 ```
 
 Push the retagged image
 
 ```bash
-docker push hawaiiacr.azurecr.io/hawaii:<yourTag>
+docker push hawaiiacr.azurecr.io/hawaii/<yourBranch>:<yourTag>
 ```

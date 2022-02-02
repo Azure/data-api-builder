@@ -1,9 +1,0 @@
-version: "3.9"
-services:
-  hawaii:
-    image: "hawaiiacr.azurecr.io/hawaii:latest"
-    ports:
-      - "5000:5000"
-    volumes:
-      - "./DataGateway.Service/appsettings.json:/App/appsettings.json"
-      - "./DataGateway.Service/config.json:/App/config.json"

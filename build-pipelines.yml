@@ -66,8 +66,7 @@ steps:
   displayName: "Build and push docker image to Azure Container Registry"
   inputs:
     containerRegistry: 'CosmosDB GraphQL/Hawaii'
-    repository: 'hawaii'
+    repository: 'hawaii/$(Build.SourceBranch)'
     command: 'buildAndPush'
     Dockerfile: '**/Dockerfile'
     tags: '$(BuildDate)-$(Build.SourceVersion)' # Use build date and commitId as the tag for the image
-    

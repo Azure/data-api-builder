@@ -1,7 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
+    <Configurations>Debug;Release;Docker</Configurations>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,11 +13,12 @@
 
   <!--
     Set the CopyToOutputDirectory action based on the configuration.
-    In Debug, we'll copy the config, appsettings, sql and gql files, but not in release configuration since we don't want them to end up in the docker image.
+    In Debug/Release, we'll copy the config, appsettings, sql and gql files, but not in Docker configuration since we don't want them to end up in the docker image.
   -->
   <PropertyGroup>
     <CopyToOutputDirectoryAction Condition="'$(Configuration)' == 'Debug'">PreserveNewest</CopyToOutputDirectoryAction>
-    <CopyToOutputDirectoryAction Condition="'$(Configuration)' == 'Release'">Never</CopyToOutputDirectoryAction>
+    <CopyToOutputDirectoryAction Condition="'$(Configuration)' == 'Release'">PreserveNewest</CopyToOutputDirectoryAction>
+    <CopyToOutputDirectoryAction Condition="'$(Configuration)'=='Docker'">Never</CopyToOutputDirectoryAction>
   </PropertyGroup>
 
 

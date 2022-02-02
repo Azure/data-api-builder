@@ -6,7 +6,7 @@ FROM mcr.microsoft.com/dotnet/sdk:5.0 as build
 
 WORKDIR /src
 COPY ["DataGateway.Service/", "./"]
-RUN dotnet build "./Azure.DataGateway.Service.csproj" -c Release -o /out
+RUN dotnet build "./Azure.DataGateway.Service.csproj" -c Docker -o /out
 
 FROM mcr.microsoft.com/dotnet/aspnet:5.0 as runtime
 

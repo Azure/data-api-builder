@@ -56,13 +56,7 @@ To push to a different container registry, we need to add a new service connecti
 Ensure you have docker running, with Linux containers chosen.
 Navigate to the root folder.
 
-On Windows you need to do this in a WSL terminal and run
-
-```bash
-dotnet build Azure.DataGateway.Service.sln -c Release
-```
-
-build a docker image
+On Windows you need to do this in a WSL terminal and run this to build a docker image
 
 ```bash
 docker build -t hawaii -f Dockerfile .

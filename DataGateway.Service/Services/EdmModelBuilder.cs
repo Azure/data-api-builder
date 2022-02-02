@@ -13,7 +13,9 @@ namespace Azure.DataGateway.Service.Services
     {
         private const string DEFAULT_NAMESPACE = "default_namespace";
         private const string DEFAULT_CONTAINER_NAME = "default_container";
-        private readonly Dictionary<string, EdmEntityType> _entities;
+        private const string INTEGER = "Int64";
+        private const string STRING = "String";
+        private readonly Dictionary<string, EdmEntityType> _entities = new();
         private readonly EdmModel _model = new();
 
 #pragma warning disable CA1024 // EdmModelBuilders are recommended to have GetModel method
@@ -42,27 +44,26 @@ namespace Azure.DataGateway.Service.Services
             foreach (string entityName in schema.Tables.Keys)
             {
                 EdmEntityType newEntity = new(DEFAULT_NAMESPACE, entityName);
-                _entities.Add(DEFAULT_NAMESPACE + entityName, newEntity);
+                string newEntityKey = DEFAULT_NAMESPACE + entityName;
+                _entities.Add(newEntityKey, newEntity);
 
                 // each column represents a property of the current entity we are adding
                 foreach (string column in schema.Tables[entityName].Columns.Keys)
                 {
                     // need to convert our column type to an Edm type
                     ColumnType columnType = schema.Tables[entityName].Columns[column].Type;
-                    System.Type systemType = ColumnDefinition.ResolveColumnTypeToSystemType(columnType);
+                    string systemTypeName = ColumnDefinition.ResolveColumnTypeToSystemType(columnType).Name;
                     EdmPrimitiveTypeKind type = EdmPrimitiveTypeKind.None;
-
-                    if (systemType.GetType() == typeof(String))
+                    switch (systemTypeName)
                     {
-                        type = EdmPrimitiveTypeKind.String;
-                    }
-                    else if (systemType.GetType() == typeof(Int64))
-                    {
-                        type = EdmPrimitiveTypeKind.Int64;
-                    }
-                    else
-                    {
-                        throw new ArgumentException($"No resolver for colum type {columnType}");
+                        case STRING:
+                            type = EdmPrimitiveTypeKind.String;
+                            break;
+                        case INTEGER:
+                            type = EdmPrimitiveTypeKind.Int64;
+                            break;
+                        default:
+                            throw new ArgumentException($"No resolver for column type {columnType}");
                     }
 
                     // if column is in our list of keys we add as a key to entity

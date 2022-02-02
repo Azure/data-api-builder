@@ -65,7 +65,7 @@ namespace Azure.DataGateway.Services
                         break;
                     case FILTER_URL:
                         // not yet implemented
-                        context.Predicates = metadataStoreProvider.GetParser().Parse();
+                        context.Predicates = metadataStoreProvider.GetFilterParser().Parse();
                         break;
                     default:
                         throw new ArgumentException("Invalid Query Parameter: " + key.ToString());

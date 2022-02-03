@@ -13,8 +13,6 @@ namespace Azure.DataGateway.Service.Services
     {
         private const string DEFAULT_NAMESPACE = "default_namespace";
         private const string DEFAULT_CONTAINER_NAME = "default_container";
-        private const string INTEGER = "Int64";
-        private const string STRING = "String";
         private readonly Dictionary<string, EdmEntityType> _entities = new();
         private readonly EdmModel _model = new();
 
@@ -54,16 +52,17 @@ namespace Azure.DataGateway.Service.Services
                     ColumnType columnType = schema.Tables[entityName].Columns[column].Type;
                     string systemTypeName = ColumnDefinition.ResolveColumnTypeToSystemType(columnType).Name;
                     EdmPrimitiveTypeKind type = EdmPrimitiveTypeKind.None;
-                    switch (systemTypeName)
+                    if (systemTypeName == typeof(string).Name)
                     {
-                        case STRING:
-                            type = EdmPrimitiveTypeKind.String;
-                            break;
-                        case INTEGER:
-                            type = EdmPrimitiveTypeKind.Int64;
-                            break;
-                        default:
-                            throw new ArgumentException($"No resolver for column type {columnType}");
+                        type = EdmPrimitiveTypeKind.String;
+                    }
+                    else if (systemTypeName == typeof(Int64).Name)
+                    {
+                        type = EdmPrimitiveTypeKind.Int64;
+                    }
+                    else
+                    {
+                        throw new ArgumentException($"No resolver for column type {columnType}");
                     }
 
                     // if column is in our list of keys we add as a key to entity

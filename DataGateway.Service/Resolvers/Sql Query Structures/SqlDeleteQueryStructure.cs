@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -8,14 +9,13 @@ namespace Azure.DataGateway.Service.Resolvers
     ///</summary>
     public class SqlDeleteStructure : BaseSqlQueryStructure
     {
-        private readonly TableDefinition _tableDefinition;
-        public SqlDeleteStructure(string tableName, TableDefinition tableDefinition, IDictionary<string, object> mutationParams)
-        : base()
+        public SqlDeleteStructure(string tableName, IMetadataStoreProvider metadataStore, IDictionary<string, object> mutationParams)
+        : base(metadataStore)
         {
             TableName = tableName;
-            _tableDefinition = tableDefinition;
+            TableDefinition tableDefinition = GetTableDefinition();
 
-            List<string> primaryKeys = _tableDefinition.PrimaryKey;
+            List<string> primaryKeys = tableDefinition.PrimaryKey;
             foreach (KeyValuePair<string, object> param in mutationParams)
             {
                 if (param.Value == null)
@@ -29,7 +29,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(TableName, param.Key)),
                         PredicateOperation.Equal,
-                        new PredicateOperand($"@{MakeParamWithValue(param.Value)}")
+                        new PredicateOperand($"@{MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString(), param.Key))}")
                     ));
                 }
             }

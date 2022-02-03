@@ -1157,7 +1157,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Check if the mutation resolver operation is a valid/supported for sql (pg and mssql)
         /// </summary>
-        private void ValidateMutResolverOperation(MutationOperation op, List<MutationOperation> supportedOperations)
+        private void ValidateMutResolverOperation(Operation op, List<Operation> supportedOperations)
         {
             if (!supportedOperations.Contains(op))
             {

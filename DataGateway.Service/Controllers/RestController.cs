@@ -6,13 +6,14 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataGateway.Service.Controllers
 {
     /// <summary>
     /// Controller to serve REST Api requests for the route /entityName.
+    /// This controller should adhere to the
+    /// <see href="https://github.com/Microsoft/api-guidelines/blob/vNext/Guidelines.md">Microsoft REST API Guidelines</see>.
     /// </summary>
     [ApiController]
     [Route("{entityName}")]
@@ -61,7 +62,7 @@ namespace Azure.DataGateway.Service.Controllers
         /// </summary>
         /// <param name="entityName">The name of the entity.</param>
         /// <param name="primaryKeyRoute">The string representing the primary key route
-        /// which gets it content from the route attribute {*primaryKeyRoute}.
+        /// which gets its content from the route attribute {*primaryKeyRoute}.
         /// asterisk(*) here is a wild-card/catch all i.e it matches the rest of the route after {entityName}.
         /// primary_key = [shard_value/]id_key_value
         /// primaryKeyRoute will be empty for FindOne or FindMany
@@ -77,10 +78,70 @@ namespace Azure.DataGateway.Service.Controllers
             string entityName,
             string primaryKeyRoute)
         {
+            return await HandleOperation(
+                entityName,
+                Operation.Find,
+                primaryKeyRoute);
+        }
+
+        /// <summary>
+        /// Insert action serving the HttpPost verb.
+        /// </summary>
+        /// <param name="entityName">The name of the entity.</param>
+        /// Expected URL template is of the following form:
+        /// CosmosDb/MsSql/PgSql: URL template: /<entityName>
+        /// URL MUST NOT contain a queryString
+        /// URL example: /SalesOrders </param>
+        [HttpPost]
+        [Produces("application/json")]
+        public async Task<IActionResult> Insert(
+            string entityName)
+        {
+            return await HandleOperation(
+                entityName,
+                Operation.Insert,
+                primaryKeyRoute: null);
+        }
+
+        /// <summary>
+        /// Delete action serving the HttpDelete verb.
+        /// </summary>
+        /// <param name="entityName">The name of the entity.</param>
+        /// <param name="primaryKeyRoute">The string representing the primary key route
+        /// which gets its content from the route attribute {*primaryKeyRoute}.
+        /// asterisk(*) here is a wild-card/catch all i.e it matches the rest of the route after {entityName}.
+        /// primary_key = [shard_value/]id_key_value
+        /// Expected URL template is of the following form:
+        /// MsSql/PgSql: URL template: /<entityName>/[<primary_key_column_name>/<primary_key_value>
+        /// URL MUST NOT contain a queryString
+        /// URL example: /Books </param>
+        [HttpDelete]
+        [Route("{*primaryKeyRoute}")]
+        [Produces("application/json")]
+        public async Task<IActionResult> Delete(
+            string entityName,
+            string primaryKeyRoute)
+        {
+            return await HandleOperation(
+                entityName,
+                Operation.Delete,
+                primaryKeyRoute);
+        }
+
+        /// <summary>
+        /// Handle the given operation.
+        /// </summary>
+        /// <param name="entityName">The name of the entity.</param>
+        /// <param name="operationType">The kind of operation to handle.</param>
+        /// <param name="primaryKeyRoute">The string identifying the primary key route
+        /// Its value could be null depending on the kind of operation.</param>
+        private async Task<IActionResult> HandleOperation(
+            string entityName,
+            Operation operationType,
+            string primaryKeyRoute = null)
+        {
             try
             {
-                string queryString = HttpContext.Request.QueryString.ToString();
-
                 // Parse App Service's EasyAuth injected headers into MiddleWare usable Security Principal
                 ClaimsIdentity identity = AppServiceAuthentication.Parse(this.HttpContext);
                 if (identity != null)
@@ -88,19 +149,37 @@ namespace Azure.DataGateway.Service.Controllers
                     this.HttpContext.User = new ClaimsPrincipal(identity);
                 }
 
-                //Utilizes C#8 using syntax which does not require brackets.
-                using JsonDocument result = await _restService.ExecuteFindAsync(entityName, primaryKeyRoute, queryString);
+                // Utilizes C#8 using syntax which does not require brackets.
+                using JsonDocument result
+                    = await _restService.ExecuteAsync(
+                            entityName,
+                            operationType,
+                            primaryKeyRoute);
 
                 if (result != null)
                 {
-                    //Clones the root element to a new JsonElement that can be
-                    //safely stored beyond the lifetime of the original JsonDocument.
+                    // Clones the root element to a new JsonElement that can be
+                    // safely stored beyond the lifetime of the original JsonDocument.
                     JsonElement resultElement = result.RootElement.Clone();
-                    return Ok(resultElement);
+
+                    switch (operationType)
+                    {
+                        case Operation.Find:
+                            return Ok(resultElement);
+                        case Operation.Insert:
+                            return new CreatedResult(location: string.Empty, resultElement);
+                        case Operation.Delete:
+                            return new NoContentResult();
+                        default:
+                            throw new NotSupportedException($"Unsupported Operation: \" {operationType}\".");
+                    }
                 }
                 else
                 {
-                    return NotFound();
+                    throw new DatagatewayException(
+                        message: $"Not Found",
+                        statusCode: (int)HttpStatusCode.NotFound,
+                        subStatusCode: DatagatewayException.SubStatusCodes.EntityNotFound);
                 }
 
             }

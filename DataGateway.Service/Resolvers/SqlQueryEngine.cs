@@ -97,7 +97,7 @@ namespace Azure.DataGateway.Service.Resolvers
         // <summary>
         // Given the FindRequestContext, obtains the query text and executes it against the backend. Useful for REST API scenarios.
         // </summary>
-        public async Task<JsonDocument> ExecuteAsync(FindRequestContext context)
+        public async Task<JsonDocument> ExecuteAsync(RestRequestContext context)
         {
             SqlQueryStructure structure = new(context, _metadataStoreProvider);
             return await ExecuteAsync(structure);

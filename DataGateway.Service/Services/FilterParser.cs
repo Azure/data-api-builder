@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Service.Resolvers;
 using Microsoft.OData.Edm;
 
 namespace Azure.DataGateway.Service.Services
@@ -16,6 +15,11 @@ namespace Azure.DataGateway.Service.Services
 
         public FilterParser(DatabaseSchema schema)
         {
+            if (schema is null)
+            {
+                return;
+            }
+
             EdmModelBuilder builder = new();
             _model = builder.BuildModel(schema).GetModel();
         }
@@ -24,7 +28,7 @@ namespace Azure.DataGateway.Service.Services
         /// Parses the filter clause.
         /// </summary>
         /// <returns>A list of rest predicates to be used in query generation.</returns>
-        public List<RestPredicate> Parse()
+        public Dictionary<string, Tuple<object, PredicateOperation>> Parse()
         {
             throw new NotImplementedException();
         }

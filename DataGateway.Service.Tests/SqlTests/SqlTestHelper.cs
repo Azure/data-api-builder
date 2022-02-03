@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
@@ -77,36 +79,76 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Performs the test by calling the given api, on the entity name,
-        /// primaryKeyRoute and queryString. Uses the sql query string to get the result
-        /// from database and asserts the results match.
+        /// Performs test on the given entity name by calling the correct Api based on the
+        /// operation type passed for the given primaryKeyRoute (if any).
         /// </summary>
-        /// <param name="api">The REST api to be invoked.</param>
+        /// <param name="controller">The REST controller with the request context.</param>
         /// <param name="entityName">The entity name.</param>
         /// <param name="primaryKeyRoute">The primary key portion of the route.</param>
-        /// <param name="expected">string represents the expected result.</param>
-        /// <param name="expectedStatusCode">int represents the returned http status code</param>
-        public static async Task PerformApiTest(
-            Func<string, string, Task<IActionResult>> api,
+        /// <param name="operationType">The operation type to be tested.</param>
+        public static async Task<IActionResult> PerformApiTest(
+            RestController controller,
             string entityName,
             string primaryKeyRoute,
-            string expected,
-            int expectedStatusCode)
+            Operation operationType = Operation.Find)
 
         {
-            string actual;
-            IActionResult actionResult = await api(entityName, primaryKeyRoute);
-            // OkObjectResult will throw exception if we attempt cast to JsonResult
-            if (actionResult is OkObjectResult)
+            IActionResult actionResult;
+            switch (operationType)
             {
-                OkObjectResult actualResult = (OkObjectResult)actionResult;
-                Assert.AreEqual(expectedStatusCode, actualResult.StatusCode);
-                actual = actualResult.Value.ToString();
+                case Operation.Find:
+                    actionResult = await controller.Find(entityName, primaryKeyRoute);
+                    break;
+                case Operation.Insert:
+                    actionResult = await controller.Insert(entityName);
+                    break;
+                case Operation.Delete:
+                    actionResult = await controller.Delete(entityName, primaryKeyRoute);
+                    break;
+                default:
+                    throw new NotSupportedException("This operation is not yet supported.");
             }
-            else
+
+            return actionResult;
+        }
+
+        /// <summary>
+        /// Verifies the ActionResult is as expected with the expected status code.
+        /// </summary>
+        /// <param name="actionResult">The action result of the operation to verify.</param>
+        /// <param name="expected">string represents the expected result. This value can be null for NoContent or NotFound
+        /// results of operations like GET and DELETE</param>
+        /// <param name="expectedStatusCode">int represents the returned http status code</param>
+        public static void VerifyResult(
+            IActionResult actionResult,
+            string expected,
+            int expectedStatusCode)
+        {
+            string actual;
+            switch (actionResult)
             {
-                JsonResult actualResult = (JsonResult)actionResult;
-                actual = actualResult.Value.ToString();
+                // OkObjectResult will throw exception if we attempt cast to JsonResult
+                case OkObjectResult okResult:
+                    Assert.AreEqual(expectedStatusCode, okResult.StatusCode);
+                    actual = okResult.Value.ToString();
+                    break;
+                case CreatedResult createdResult:
+                    Assert.AreEqual(expectedStatusCode, createdResult.StatusCode);
+                    actual = createdResult.Value.ToString();
+                    break;
+                // NoContentResult does not have value property for messages
+                case NoContentResult noContentResult:
+                    Assert.AreEqual(expectedStatusCode, noContentResult.StatusCode);
+                    actual = null;
+                    break;
+                case NotFoundResult notFoundResult:
+                    Assert.AreEqual(expectedStatusCode, notFoundResult.StatusCode);
+                    actual = null;
+                    break;
+                default:
+                    JsonResult actualResult = (JsonResult)actionResult;
+                    actual = actualResult.Value.ToString();
+                    break;
             }
 
             // if whitespaces are not consistent JsonStringDeepEquals should be used

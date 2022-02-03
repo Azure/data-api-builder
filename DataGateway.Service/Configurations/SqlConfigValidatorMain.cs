@@ -479,24 +479,24 @@ namespace Azure.DataGateway.Service.Configurations
                 ValidateMutResolverTableExists(resolver.Table);
 
                 // the rest of the mutation operations are only valid for cosmos
-                List<MutationOperation> supportedOperations = new()
+                List<Operation> supportedOperations = new()
                 {
-                    MutationOperation.Insert,
-                    MutationOperation.Update,
-                    MutationOperation.Delete
+                    Operation.Insert,
+                    Operation.Update,
+                    Operation.Delete
                 };
 
                 ValidateMutResolverOperation(resolver.OperationType, supportedOperations);
 
                 switch (resolver.OperationType)
                 {
-                    case MutationOperation.Insert:
+                    case Operation.Insert:
                         ValidateInsertMutationSchema(resolver);
                         break;
-                    case MutationOperation.Update:
+                    case Operation.Update:
                         ValidateUpdateMutationSchema(resolver);
                         break;
-                    case MutationOperation.Delete:
+                    case Operation.Delete:
                         ValidateDeleteMutationSchema(resolver);
                         break;
                 }

@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service.Models
         public virtual Dictionary<string, object> PrimaryKeyValuePairs { get; set; }
 
         /// <summary>
-        /// Dictionary of field names and their values given in the request query string.
+        /// Dictionary of field names and their associated values and ops given in the request query string.
         /// Based on the operation type, this property may or may not be populated.
         /// </summary>
         public Dictionary<string, Tuple<object, PredicateOperation>> FieldValuePairsInQuery { get; set; }

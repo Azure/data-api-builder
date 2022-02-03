@@ -402,7 +402,11 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (predicate.Value != null)
                 {
                     parameterName = MakeParamWithValue(
-                        GetParamAsColumnSystemType(predicate.Value.ToString(), predicate.Key));
+                        GetParamAsColumnSystemType(predicate.Value.Item1.ToString(), predicate.Key));
+                    Predicates.Add(new Predicate(
+                        new PredicateOperand(new Column(TableAlias, predicate.Key)),
+                        predicate.Value.Item2,
+                        new PredicateOperand($"@{parameterName}")));
                 }
                 else
                 {
@@ -412,11 +416,6 @@ namespace Azure.DataGateway.Service.Resolvers
                         statusCode: (int)HttpStatusCode.BadRequest,
                         subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
                 }
-
-                Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(TableAlias, predicate.Key)),
-                        predicate.Value.Item2,
-                        new PredicateOperand($"@{parameterName}")));
             }
             catch (ArgumentException ex)
             {

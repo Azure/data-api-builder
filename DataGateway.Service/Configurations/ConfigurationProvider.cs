@@ -12,6 +12,7 @@ namespace Azure.DataGateway.Service.Configurations
         Cosmos,
         MsSql,
         PostgreSql,
+        MySql
     }
 
     /// <summary>

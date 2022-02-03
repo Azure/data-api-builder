@@ -590,19 +590,19 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Get primary key as list of string
-        /// </summary>
-        public List<string> PrimaryKey()
-        {
-            return GetTableDefinition().PrimaryKey;
-        }
-
-        /// <summary>
         /// Adds a labelled column to this query's columns
         /// </summary>
         protected void AddColumn(string columnName)
         {
             Columns.Add(new LabelledColumn(TableAlias, columnName, columnName));
+        }
+
+        /// <summary>
+        /// Check if the column belongs to one of the subqueries
+        /// </summary>
+        public bool IsSubqueryColumn(Column column)
+        {
+            return JoinQueries.ContainsKey(column.TableAlias);
         }
     }
 }

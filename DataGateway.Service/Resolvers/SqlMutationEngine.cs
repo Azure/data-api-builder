@@ -217,6 +217,11 @@ namespace Azure.DataGateway.Service.Resolvers
                 return null;
             }
 
+            foreach (KeyValuePair<string, object> param in row)
+            {
+                Console.WriteLine(param.Key + " " + param.Value);
+            }
+
             return row;
         }
     }

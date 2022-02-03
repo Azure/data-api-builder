@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using MySqlConnector;
 using Npgsql;
 
 namespace Azure.DataGateway.Service
@@ -70,6 +71,14 @@ namespace Azure.DataGateway.Service
                     services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
                     services.AddSingleton<IQueryExecutor, QueryExecutor<NpgsqlConnection>>();
                     services.AddSingleton<IQueryBuilder, PostgresQueryBuilder>();
+                    services.AddSingleton<IQueryEngine, SqlQueryEngine>();
+                    services.AddSingleton<IMutationEngine, SqlMutationEngine>();
+                    services.AddSingleton<IConfigValidator, SqlConfigValidator>();
+                    break;
+                case DatabaseType.MySql:
+                    services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
+                    services.AddSingleton<IQueryExecutor, QueryExecutor<MySqlConnection>>();
+                    services.AddSingleton<IQueryBuilder, MySqlQueryBuilder>();
                     services.AddSingleton<IQueryEngine, SqlQueryEngine>();
                     services.AddSingleton<IMutationEngine, SqlMutationEngine>();
                     services.AddSingleton<IConfigValidator, SqlConfigValidator>();

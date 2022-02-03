@@ -74,7 +74,7 @@ namespace Azure.DataGateway.Services
                         break;
                     case FILTER_URL:
                         // not yet implemented
-                        context.FieldValuePairsInQuery = filterParser.Parse();
+                        context.FieldValuePairsInUrl = filterParser.Parse();
                         break;
                     default:
                         throw new ArgumentException("Invalid Query Parameter: " + key.ToString());

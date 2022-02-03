@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
+    <Configurations>Debug;Release;Docker</Configurations>
   </PropertyGroup>
 
   <ItemGroup>
@@ -10,20 +11,41 @@
     <None Remove="books.sql" />
   </ItemGroup>
 
+  <!--
+    Set the CopyToOutputDirectory action based on the configuration.
+    In Debug/Release, we'll copy the config, appsettings, sql and gql files, but not in Docker configuration since we don't want them to end up in the docker image.
+  -->
+  <PropertyGroup>
+    <CopyToOutputDirectoryAction Condition="'$(Configuration)' == 'Debug'">PreserveNewest</CopyToOutputDirectoryAction>
+    <CopyToOutputDirectoryAction Condition="'$(Configuration)' == 'Release'">PreserveNewest</CopyToOutputDirectoryAction>
+    <CopyToOutputDirectoryAction Condition="'$(Configuration)'=='Docker'">Never</CopyToOutputDirectoryAction>
+  </PropertyGroup>
+
+
   <ItemGroup>
     <Content Include="schema.gql">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
     </Content>
     <Content Include="books.gql">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
     </Content>
     <Content Include="MsSqlBooks.sql">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
     </Content>
     <Content Include="PostgreSqlBooks.sql">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="*config.json">
+      <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
+    </Content>
+    <Content Update="appsettings*.json">
+      <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 
   <ItemGroup>
     <!-- extends watching group to include .json and .gql files -->
@@ -46,10 +68,4 @@
   <ItemGroup>
     <ProjectCapability Include="CSharp;Managed;ClassDesigner" />
   </ItemGroup>
-  <ItemGroup>
-    <Content Update="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
 </Project>

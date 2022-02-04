@@ -24,7 +24,7 @@ namespace Azure.DataGateway.Service.Models
             EntityName = entityName;
             FieldsToBeReturned = new();
             PrimaryKeyValuePairs = new();
-            FieldValuePairsInUrl = new();
+            RestPredicatesInUrl = new();
             HttpVerb = httpVerb;
             OperationType = operationType;
             if (!string.IsNullOrEmpty(insertPayloadRoot.ToString()))

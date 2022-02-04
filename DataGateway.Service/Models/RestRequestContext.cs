@@ -32,7 +32,7 @@ namespace Azure.DataGateway.Service.Models
         /// the predicate operation is the sort of comparison done.
         /// Based on the operation type, this property may or may not be populated.
         /// </summary>
-        public virtual List<RestPredicates> RestPredicatesInUrl { get; set; }
+        public virtual List<RestPredicate> RestPredicatesInUrl { get; set; }
 
         /// <summary>
         /// Dictionary of field names and their values given in the request body.

@@ -76,7 +76,7 @@ namespace Azure.DataGateway.Services
                         // build the filter query string that OData wants to see
                         // ?$filter=<filter clause using microsoft api guidelines>
                         string filterQueryString = "?" + FILTER_URL + "=" + nvc[key];
-                        context.FieldValuePairsInUrl = filterParser.Parse(filterQueryString, context.EntityName + "/");
+                        context.RestPredicatesInUrl = filterParser.Parse(filterQueryString, context.EntityName + "/");
                         break;
                     default:
                         throw new ArgumentException("Invalid Query Parameter: " + key.ToString());

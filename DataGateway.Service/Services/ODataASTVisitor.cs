@@ -6,13 +6,20 @@ using Microsoft.OData.UriParser;
 public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
     where TSource : class
 {
-    Dictionary<string, Tuple<object, PredicateOperation>> _predicates = new();
-    object _value;
-    PredicateOperation _op;
+    List<RestPredicate> _predicates = new();
+    RestPredicate _current = new();
     public override TSource Visit(BinaryOperatorNode nodeIn)
     {
+        if (nodeIn.OperatorKind == Microsoft.OData.UriParser.BinaryOperatorKind.And
+            || nodeIn.OperatorKind == Microsoft.OData.UriParser.BinaryOperatorKind.Or)
+        {
+            _current.Lop = GetLogicalOperation(nodeIn.OperatorKind.ToString());
+        }
+        else
+        {
+            _current.Op = GetPredicateOperation(nodeIn.OperatorKind.ToString());
+        }
 
-        _op = GetPredicateOperation(nodeIn.OperatorKind.ToString());
         nodeIn.Right.Accept(this);
         nodeIn.Left.Accept(this);
         return null;
@@ -20,20 +27,20 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
 
     public override TSource Visit(SingleValuePropertyAccessNode nodeIn)
     {
-        string field = nodeIn.Property.Name;
-        Tuple<object, PredicateOperation> valueAndOp = new(_value, _op);
-        //We are finished, add current to collection.
-        _predicates.Add(field, valueAndOp);
+        _current.Field = nodeIn.Property.Name;
+        //We are finished, add current to collection, and create new RestPredicate
+        _predicates.Add(_current);
+        _current = new();
         return null;
     }
 
     public override TSource Visit(ConstantNode nodeIn)
     {
-        _value = nodeIn.LiteralText;
+        _current.Value = nodeIn.LiteralText;
         return null;
     }
 
-    public Dictionary<string, Tuple<object, PredicateOperation>> TryAndGetRestPredicates()
+    public List<RestPredicate> TryAndGetRestPredicates()
     {
         return _predicates;
     }
@@ -57,14 +64,23 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
             case "LessThanOrEqual":
                 return PredicateOperation.LessThanOrEqual;
                 break;
-            case "And":
-                return PredicateOperation.And;
-                break;
-            case "Or":
-                return PredicateOperation.Or;
-                break;
             default:
                 throw new ArgumentException($"Uknown Predicate Operation of {op}");
+
+        }
+    }
+    public LogicalOperation GetLogicalOperation(string op)
+    {
+        switch (op)
+        {
+            case "And":
+                return LogicalOperation.And;
+                break;
+            case "Or":
+                return LogicalOperation.Or;
+                break;
+            default:
+                throw new ArgumentException($"Uknown Logical Operation of {op}");
 
         }
     }

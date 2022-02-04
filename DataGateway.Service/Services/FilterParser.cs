@@ -26,7 +26,7 @@ namespace Azure.DataGateway.Service.Services
         /// Parses the filter clause.
         /// </summary>
         /// <returns>A list of rest predicates to be used in query generation.</returns>
-        public Dictionary<string, Tuple<object, PredicateOperation>> Parse(string filterQueryString, string resourcePath)
+        public List<RestPredicate> Parse(string filterQueryString, string resourcePath)
         {
             // this is not proper Uri format
             // find out what we need for relative uri format and match

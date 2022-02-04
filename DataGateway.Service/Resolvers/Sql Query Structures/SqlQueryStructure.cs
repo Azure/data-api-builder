@@ -157,14 +157,10 @@ namespace Azure.DataGateway.Service.Resolvers
                 PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
             }
 
-            if (context.FieldValuePairsInUrl is not null)
+            foreach (KeyValuePair<string, Tuple<object, PredicateOperation>> predicate in context.FieldValuePairsInUrl)
             {
-                foreach (KeyValuePair<string, Tuple<object, PredicateOperation>> predicate in context.FieldValuePairsInUrl)
-                {
-                    PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value.Item1, op: predicate.Value.Item2);
-                }
+                PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value.Item1, op: predicate.Value.Item2);
             }
-
         }
 
         /// <summary>

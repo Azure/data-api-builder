@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Service.Models;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Services
@@ -12,9 +13,7 @@ namespace Azure.DataGateway.Service.Services
     /// </summary>
     public class FilterParser
     {
-#pragma warning disable IDE0052 // Supressed temporarily until Parse() is implemented
         private IEdmModel _model;
-#pragma warning restore IDE0052 // Remove unread private members
 
         public FilterParser(DatabaseSchema schema)
         {
@@ -27,9 +26,19 @@ namespace Azure.DataGateway.Service.Services
         /// Parses the filter clause.
         /// </summary>
         /// <returns>A list of rest predicates to be used in query generation.</returns>
-        public Dictionary<string, Tuple<object, PredicateOperation>> Parse()
+        public Dictionary<string, Tuple<object, PredicateOperation>> Parse(string filterQueryString, string resourcePath)
         {
-            throw new NotImplementedException();
+            // this is not proper Uri format
+            // find out what we need for relative uri format and match
+            //Uri relativeUri = new(queryString);
+            //
+            Uri serviceRoot = new("https://localhost:5001/");
+            Uri fullUri = new(serviceRoot + resourcePath + filterQueryString);
+            ODataUriParser parser = new(_model, serviceRoot, fullUri);
+            FilterClause filterClause = parser.ParseFilter();
+            ODataASTVisitor<object> visitor = new();
+            filterClause.Expression.Accept(visitor);
+            return visitor.TryAndGetRestPredicates();
         }
     }
 }

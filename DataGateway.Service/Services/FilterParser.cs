@@ -11,7 +11,9 @@ namespace Azure.DataGateway.Service.Services
     /// </summary>
     public class FilterParser
     {
+#pragma warning disable IDE0052 // Supressed temporarily until Parse() is implemented
         private IEdmModel _model;
+#pragma warning restore IDE0052 // Remove unread private members
 
         public FilterParser(DatabaseSchema schema)
         {

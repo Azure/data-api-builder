@@ -34,7 +34,7 @@ steps:
     command: custom
     custom: format
     projects: '$(solution)'
-    arguments: '--check --fix-whitespace --fix-style warn --fix-analyzers warn'
+    arguments: '--verify-no-changes'
 
 - task: DotNetCoreCLI@2
   displayName: Build

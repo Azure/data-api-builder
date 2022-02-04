@@ -6,14 +6,55 @@
 trigger:
 - main
 
-pool:
-  vmImage: ubuntu-latest
+jobs:
+- job: linux
+  pool:
+    vmImage: 'ubuntu-latest'
+  variables:
+      solution: '**/*.sln'
+      buildPlatform: 'Any CPU'
+      buildConfiguration: 'Release'
+      DataGatewayConfig.DatabaseConnection.ConnectionString: $(ConnectionStringMySql)
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+  steps:
+  - task: NuGetToolInstaller@1
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+  - task: NuGetCommand@2
+    displayName: Restore NuGet packages
+    inputs:
+      restoreSolution: '$(solution)'
+
+  - task: DockerInstaller@0
+    displayName: Docker Installer
+    inputs:
+      dockerVersion: 17.09.0-ce
+      releaseType: stable
+
+  - bash: |
+      docker run --name mysql-container -p 3306:3306 \
+      -e MYSQL_ROOT_PASSWORD=$(MySqlPassword) \
+      -e MYSQL_DATABASE=$(TestDatabaseName) \
+      -d mysql
+    condition: eq( variables['Agent.OS'], 'Linux' )
+    displayName: Get and Start Ubuntu MySql Image Docker
+
+  - task: FileTransform@1
+    displayName: 'Generate appsettings.MySqlIntegrationTest.json'
+    inputs:
+      folderPath: '$(System.DefaultWorkingDirectory)'
+      fileType: 'json'
+      targetFiles: 'DataGateway.Service/appsettings.MySqlIntegrationTest.json'
+
+  - task: DotNetCoreCLI@2
+    displayName: Build
+    inputs:
+      command: build
+      projects: '**/*.csproj'
+      arguments: '--configuration $(buildConfiguration)' # Update this to match your need
+
+  - task: DotNetCoreCLI@2
+    displayName: 'Run MySql Integration Tests'
+    inputs:
+      command: test
+      arguments: '--filter "TestCategory=MySql" --configuration $(buildConfiguration)'
+      projects: '**/*Tests/*.csproj'

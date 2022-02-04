@@ -70,14 +70,3 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
     }
 
 }
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace Azure.DataGateway.Service.Services
-{
-    public class ODataASTVisitor
-    {
-    }
-}

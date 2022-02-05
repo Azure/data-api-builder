@@ -80,9 +80,29 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
+        /// Avoid redundant check, wrap the sequence in a transaction,
+        /// and protect the first table access with appropriate locking.
+        /// </summary>
+        /// <param name="structure"></param>
+        /// <returns></returns>
+        public string Build(SqlUpsertQueryStructure structure)
+        {
+            return $"UPDATE { QuoteIdentifier(structure.TableName)} " +
+                $"WITH(UPDLOCK, SERIALIZABLE) SET {Build(structure.UpdateOperations, ", ")} " +
+                $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
+                $"WHERE {Build(structure.Predicates)} " +
+                $"IF @@ROWCOUNT = 0 " +
+                $"BEGIN; " +
+                $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
+                $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
+                $"VALUES ({string.Join(", ", structure.Values)}) " +
+                $"END;";
+        }
+
+        /// <summary>
         /// Labels with which columns can be marked in the OUTPUT clause
         /// </summary>
-        private enum OutputQualifier { Inserted, Deleted };
+        private enum OutputQualifier { Inserted, Deleted, };
 
         /// <summary>
         /// Adds qualifiers (inserted or deleted) to columns in OUTPUT clause and joins them with commas.

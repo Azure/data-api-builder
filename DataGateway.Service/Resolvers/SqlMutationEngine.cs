@@ -104,6 +104,13 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 // DeleteOne based off primary key in request.
                 parameters = new(context.PrimaryKeyValuePairs);
+            }else if(context.OperationType == Operation.Upsert)
+            {
+                parameters = new(context.PrimaryKeyValuePairs);
+                foreach(KeyValuePair<string, object> pair in context.FieldValuePairsInBody)
+                {
+                    parameters.Add(pair.Key, pair.Value);
+                }
             }
             else
             {
@@ -112,6 +119,15 @@ namespace Azure.DataGateway.Service.Resolvers
 
             try
             {
+/*                if (context.OperationType == Operation.Upsert)
+                {
+                    int result = await PerformMutationOperationNonQuery(
+                        context.EntityName,
+                        context.OperationType,
+                        parameters);
+                    return null;
+                }*/
+
                 using DbDataReader dbDataReader =
                 await PerformMutationOperation(
                     context.EntityName,
@@ -133,6 +149,10 @@ namespace Azure.DataGateway.Service.Resolvers
                         return null;
                     }
                 }
+                if(context.OperationType == Operation.Upsert)
+                {
+                    return JsonDocument.Parse(JsonSerializer.Serialize(context.PrimaryKeyValuePairs));
+                }
             }
             catch (DbException ex)
             {
@@ -142,6 +162,11 @@ namespace Azure.DataGateway.Service.Resolvers
                     message: $"Could not perform the given mutation on entity {context.EntityName}.",
                     statusCode: (int)HttpStatusCode.InternalServerError,
                     subStatusCode: DatagatewayException.SubStatusCodes.DatabaseOperationFailed);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine(ex.StackTrace);
             }
 
             // Reuse the same context as a FindRequestContext to return the results after the mutation operation.
@@ -180,6 +205,11 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryString = _queryBuilder.Build(deleteStructure);
                     queryParameters = deleteStructure.Parameters;
                     break;
+                case Operation.Upsert:
+                    SqlUpsertQueryStructure upsertStructure = new(tableName, _metadataStoreProvider, parameters);
+                    queryString = _queryBuilder.Build(upsertStructure);
+                    queryParameters = upsertStructure.Parameters;
+                    break;
                 default:
                     throw new NotSupportedException($"Unexpected mutation operation \" {operationType}\" requested.");
             }
@@ -197,19 +227,25 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             Dictionary<string, object> row = new();
 
-            if (await dbDataReader.ReadAsync())
+            do
             {
-                if (dbDataReader.HasRows)
+                while (await dbDataReader.ReadAsync())
                 {
-                    DataTable schemaTable = dbDataReader.GetSchemaTable();
-
-                    foreach (DataRow schemaRow in schemaTable.Rows)
+                    if (dbDataReader.HasRows)
                     {
-                        string columnName = (string)schemaRow["ColumnName"];
-                        row.Add(columnName, dbDataReader[columnName]);
+                        DataTable schemaTable = dbDataReader.GetSchemaTable();
+
+                        foreach (DataRow schemaRow in schemaTable.Rows)
+                        {
+                            string columnName = (string)schemaRow["ColumnName"];
+                            object[] values = new object[4];
+                            dbDataReader.GetValues(values);
+                            row.Add(columnName, dbDataReader[columnName]);
+                        }
                     }
                 }
-            }
+                
+            } while (await dbDataReader.NextResultAsync());
 
             // no row was read
             if (row.Count == 0)
@@ -218,6 +254,33 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return row;
+        }
+
+        /// <summary>
+        /// Performs the given mutation operation type on the table and
+        /// returns result as JSON object asynchronously.
+        /// </summary>
+        private async Task<int> PerformMutationOperationNonQuery(
+            string tableName,
+            Operation operationType,
+            IDictionary<string, object> parameters)
+        {
+            string queryString;
+            Dictionary<string, object> queryParameters;
+
+            switch (operationType)
+            {
+                case Operation.Upsert:
+                    SqlUpsertQueryStructure upsertStructure = new(tableName, _metadataStoreProvider, parameters);
+                    queryString = _queryBuilder.Build(upsertStructure);
+                    queryParameters = upsertStructure.Parameters;
+                    break;
+                default:
+                    throw new NotSupportedException($"Unexpected mutation operation \" {operationType}\" requested.");
+            }
+
+            Console.WriteLine(queryString);
+            return await _queryExecutor.ExecuteNonQueryAsync(queryString, queryParameters);
         }
     }
 }

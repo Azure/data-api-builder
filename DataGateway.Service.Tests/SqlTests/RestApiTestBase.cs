@@ -160,9 +160,89 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 );
         }
 
+        /// <summary>
+        /// Tests the PutOne functionality with a REST PUT request
+        /// with item that exists, resulting in potentially destructive update.
+        /// </summary>
+        [TestMethod]
+        public async Task PutOne_ExistsTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""The Hobbit Returns to The Shire"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/7",
+                    queryString: null,
+                    entity: _integrationTableName,
+                    sqlQuery: GetQuery(nameof(PutOne_ExistsTest)),
+                    controller: _restController,
+                    operationType: Operation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: 201
+                );
+        }
+
+        /// <summary>
+        /// Tests the PutOne functionality with a REST PUT request
+        /// with item that does NOT exist, results in insert.
+        /// </summary>
+        [TestMethod]
+        public async Task PutOne_NotExistsTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""The Hobbit Returns to The Shire"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/8",
+                    queryString: null,
+                    entity: _integrationTableName,
+                    sqlQuery: GetQuery(nameof(PutOne_NotExistsTest)),
+                    controller: _restController,
+                    operationType: Operation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: 201
+                );
+        }
+
         #endregion
 
         #region Negative Tests
+        /// <summary>
+        /// Tests the PutOne functionality with a REST PUT request
+        /// with item that does NOT exist, AND parameters incorrectly match schema, results in BadRequest.
+        /// sqlQuery represents the query used to get 'expected' result of zero items.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task PutOne_NotExists_BadReqTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""The Hobbit Returns to The Shire"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/7",
+                    queryString: null,
+                    entity: _integrationTableName,
+                    sqlQuery: GetQuery(nameof(DeleteNonExistentTest)),
+                    controller: _restController,
+                    operationType: Operation.Delete,
+                    requestBody: requestBody,
+                    exception: true,
+                    expectedErrorMessage: "Bad Request",
+                    expectedStatusCode: (int)HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DatagatewayException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
+
         /// <summary>
         /// DeleteNonExistent operates on a single entity with target object
         /// identified in the primaryKeyRoute.

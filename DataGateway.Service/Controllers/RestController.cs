@@ -128,6 +128,19 @@ namespace Azure.DataGateway.Service.Controllers
                 primaryKeyRoute);
         }
 
+        [HttpPut]
+        [Route("{*primaryKeyRoute}")]
+        [Produces("application/json")]
+        public async Task<IActionResult> Put(
+            string entityName,
+            string primaryKeyRoute)
+        {
+            return await HandleOperation(
+                entityName,
+                Operation.Upsert,
+                primaryKeyRoute);
+        }
+
         /// <summary>
         /// Handle the given operation.
         /// </summary>
@@ -170,6 +183,8 @@ namespace Azure.DataGateway.Service.Controllers
                             return new CreatedResult(location: string.Empty, resultElement);
                         case Operation.Delete:
                             return new NoContentResult();
+                        case Operation.Upsert:
+                            return new CreatedResult(location: string.Empty, resultElement);
                         default:
                             throw new NotSupportedException($"Unsupported Operation: \" {operationType}\".");
                     }

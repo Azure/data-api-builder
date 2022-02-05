@@ -40,6 +40,12 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
         return null;
     }
 
+    public override TSource Visit(ConvertNode nodeIn)
+    {
+        nodeIn.Source.Accept(this);
+        return null;
+    }
+
     public List<RestPredicate> TryAndGetRestPredicates()
     {
         return _predicates;

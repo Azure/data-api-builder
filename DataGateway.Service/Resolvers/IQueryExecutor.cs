@@ -17,7 +17,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>DbDataReader object for reading the result set.</returns>
         public Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object> parameters);
 
-        public Task<int> ExecuteNonQueryAsync(string sqltext, IDictionary<string, object> parameters);
+        public Task<DbDataReader> ExecuteNonQueryAsync(string sqltext, IDictionary<string, object> parameters);
 
     }
 }

@@ -40,6 +40,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public IncrementingInteger Counter { get; }
 
         protected IMetadataStoreProvider MetadataStoreProvider { get; }
+        protected Dictionary<string, string> ColumnToParam { get; }
 
         public BaseSqlQueryStructure(IMetadataStoreProvider metadataStore,
             IncrementingInteger counter = null)
@@ -49,6 +50,7 @@ namespace Azure.DataGateway.Service.Resolvers
             Parameters = new();
             MetadataStoreProvider = metadataStore;
             Counter = counter ?? new IncrementingInteger();
+            ColumnToParam = new();
         }
 
         /// <summary>

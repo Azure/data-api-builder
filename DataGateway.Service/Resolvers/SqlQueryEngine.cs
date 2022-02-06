@@ -166,19 +166,5 @@ namespace Azure.DataGateway.Service.Resolvers
 
             return jsonDocument;
         }
-
-        // <summary>
-        // Given the SqlQueryStructure structure, obtains the query text and executes it against the backend. Useful for REST API scenarios.
-        // </summary>
-        private async Task<int> ExecuteNonQueryAsync(SqlQueryStructure structure)
-        {
-            // Open connection and execute query using _queryExecutor
-            //
-            string queryString = _queryBuilder.Build(structure);
-            Console.WriteLine(queryString);
-            int result = await _queryExecutor.ExecuteNonQueryAsync(queryString, structure.Parameters);
-
-            return result;
-        }
     }
 }

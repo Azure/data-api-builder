@@ -98,35 +98,22 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>JSON object result</returns>
         public async Task<JsonDocument> ExecuteAsync(RestRequestContext context)
         {
-            // create result object to be populated by different operations
-            Dictionary<string, object> parameters;
-            if (context.OperationType == Operation.Delete)
-            {
-                // DeleteOne based off primary key in request.
-                parameters = new(context.PrimaryKeyValuePairs);
-            }else if(context.OperationType == Operation.Upsert)
-            {
-                parameters = new(context.PrimaryKeyValuePairs);
-                foreach(KeyValuePair<string, object> pair in context.FieldValuePairsInBody)
-                {
-                    parameters.Add(pair.Key, pair.Value);
-                }
-            }
-            else
-            {
-                parameters = new(context.FieldValuePairsInBody);
-            }
+            // directly call Perform mutation operation which shoudl return JSON Document, not data reader.
+
+            Dictionary<string, object> parameters = PrepareParameters(context);
 
             try
             {
-/*                if (context.OperationType == Operation.Upsert)
+                if (context.OperationType == Operation.Upsert)
                 {
-                    int result = await PerformMutationOperationNonQuery(
+                    using DbDataReader dbDataReader2 =
+                        await PerformMutationOperationNonQuery(
                         context.EntityName,
                         context.OperationType,
                         parameters);
-                    return null;
-                }*/
+                    Dictionary<string,object> result = await ExtractChangesFromDbDataReader(dbDataReader2);
+                    return JsonDocument.Parse(JsonSerializer.Serialize(result));
+                }
 
                 using DbDataReader dbDataReader =
                 await PerformMutationOperation(
@@ -148,10 +135,6 @@ namespace Azure.DataGateway.Service.Resolvers
                     {
                         return null;
                     }
-                }
-                if(context.OperationType == Operation.Upsert)
-                {
-                    return JsonDocument.Parse(JsonSerializer.Serialize(context.PrimaryKeyValuePairs));
                 }
             }
             catch (DbException ex)
@@ -227,6 +210,39 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             Dictionary<string, object> row = new();
 
+            if (await dbDataReader.ReadAsync())
+            {
+                if (dbDataReader.HasRows)
+                {
+                    DataTable schemaTable = dbDataReader.GetSchemaTable();
+
+                    foreach (DataRow schemaRow in schemaTable.Rows)
+                    {
+                        string columnName = (string)schemaRow["ColumnName"];
+                        row.Add(columnName, dbDataReader[columnName]);
+                    }
+                }
+            }
+
+            // no row was read
+            if (row.Count == 0)
+            {
+                return null;
+            }
+
+            return row;
+        }
+
+        ///<summary>
+        /// Processes multiple result sets from DbDataReader and format it so it can be used as a parameter to a query execution
+        ///</summary>
+        ///<returns>A dictionary representing the full object modified or inserted.</returns>
+        private static async Task<Dictionary<string, object>> ExtractChangesFromDbDataReader(DbDataReader dbDataReader)
+        {
+            Dictionary<string, object> row = new();
+
+            // Do-While because first result set needs to be checked
+            // as calling dbReader.NextResultAsync() would skip to next result set.
             do
             {
                 while (await dbDataReader.ReadAsync())
@@ -238,8 +254,6 @@ namespace Azure.DataGateway.Service.Resolvers
                         foreach (DataRow schemaRow in schemaTable.Rows)
                         {
                             string columnName = (string)schemaRow["ColumnName"];
-                            object[] values = new object[4];
-                            dbDataReader.GetValues(values);
                             row.Add(columnName, dbDataReader[columnName]);
                         }
                     }
@@ -257,10 +271,10 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Performs the given mutation operation type on the table and
+        /// Performs the given mutation operation type on the table in a Transaction and
         /// returns result as JSON object asynchronously.
         /// </summary>
-        private async Task<int> PerformMutationOperationNonQuery(
+        private async Task<DbDataReader> PerformMutationOperationNonQuery(
             string tableName,
             Operation operationType,
             IDictionary<string, object> parameters)
@@ -281,6 +295,33 @@ namespace Azure.DataGateway.Service.Resolvers
 
             Console.WriteLine(queryString);
             return await _queryExecutor.ExecuteNonQueryAsync(queryString, queryParameters);
+        }
+
+        private static Dictionary<string, object> PrepareParameters(RestRequestContext context)
+        {
+            Dictionary<string, object> parameters;
+
+            if (context.OperationType == Operation.Delete)
+            {
+                // DeleteOne based off primary key in request.
+                parameters = new(context.PrimaryKeyValuePairs);
+            }
+            else if (context.OperationType == Operation.Upsert)
+            {
+                //Combine both PrimaryKey/Field ValuePairs
+                //because we create both an insert and an update statement.
+                parameters = new(context.PrimaryKeyValuePairs);
+                foreach (KeyValuePair<string, object> pair in context.FieldValuePairsInBody)
+                {
+                    parameters.Add(pair.Key, pair.Value);
+                }
+            }
+            else
+            {
+                parameters = new(context.FieldValuePairsInBody);
+            }
+
+            return parameters;
         }
     }
 }

@@ -51,10 +51,10 @@ namespace Azure.DataGateway.Service.Resolvers
 
             TableDefinition tableDefinition = GetTableDefinition();
 
-            //All columns will be returned whether upsert results in UPDATE or DELETE
+            //All columns will be returned whether upsert results in UPDATE or INSERT
             ReturnColumns = tableDefinition.Columns.Keys.ToList();
 
-            //Populate columns:values
+            //Populates the UpsertQueryStructure with UPDATE and INSERT column:value metadata
             PopulateColumns(mutationParams, tableDefinition);
 
             if (UpdateOperations.Count == 0)
@@ -69,30 +69,35 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             List<string> primaryKeys = tableDefinition.PrimaryKey;
             List<string> schemaColumns = tableDefinition.Columns.Keys.ToList();
+
             foreach (KeyValuePair<string, object> param in mutationParams)
             {
                 //User supplied parameters can be null unless PRIMARY KEY or nonNullable field-> this should
                 //be covered by the request validator though. 
-               // if (param.Value == null)
+                // if (param.Value == null)
                 //{
-                    //Insert doesn't use predicates, so we can not use them here.
-                    //don't need to add the param column name to insert, since it will take default value
-                    //and if NOT NULLABLE, then we'd receive a db error anyway. (do we want to throw
-                    //exception here instead of allowing a database call to proceed/further processing?
+                //Insert doesn't use predicates, so we can not use them here.
+                //don't need to add the param column name to insert, since it will take default value
+                //and if NOT NULLABLE, then we'd receive a db error anyway. (do we want to throw
+                //exception here instead of allowing a database call to proceed/further processing?
 
-                    //Update will accept a null, as it will overwrite the existing column value.
-                    // if column is not nullable, then we fail. 
+                //Update will accept a null, as it will overwrite the existing column value.
+                // if column is not nullable, then we fail. 
 
-                    //we are guaranteed that a PK field will not be null.
-                    //so this would be a null value on a column to update
-                    //continue;
+                //we are guaranteed that a PK field will not be null.
+                //so this would be a null value on a column to update
+                //continue;
                 //}
 
-                //create a predicate for UPDATE Operations. 
+                //Create Parameter and mapping to column for downstream logic to utilize.
+                string paramIdentifier = MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString(), param.Key));
+                ColumnToParam.Add(param.Key, paramIdentifier);
+
+                //create a predicate for UPDATE Operations.
                 Predicate predicate = new(
                     new PredicateOperand(new Column(null, param.Key)),
                     PredicateOperation.Equal,
-                    new PredicateOperand($"@{MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString(), param.Key))}")
+                    new PredicateOperand($"@{paramIdentifier}")
                 );
 
                 //We are guaranteed by the RequestValidator, that a primary key column is in the URL, not body.
@@ -171,9 +176,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (value != null)
                 {
                     //Check parameter Dictionary/List
-                    paramName = MakeParamWithValue(
-                        GetParamAsColumnSystemType(value.ToString(), columnName));
-                    //paramName = GetParamAsColumnSystemType(value.ToString(), columnName);
+                    paramName = ColumnToParam[columnName];
                 }
                 else
                 {

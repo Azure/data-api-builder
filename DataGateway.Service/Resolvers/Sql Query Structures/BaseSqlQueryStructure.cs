@@ -40,6 +40,11 @@ namespace Azure.DataGateway.Service.Resolvers
         public IncrementingInteger Counter { get; }
 
         protected IMetadataStoreProvider MetadataStoreProvider { get; }
+        /// <summary>
+        /// Maps a column name to the created parameter name to avoid creating
+        /// duplicate parameters. Useful in Upsert where an Insert and Update
+        /// structure are both created.
+        /// </summary>
         protected Dictionary<string, string> ColumnToParam { get; }
 
         public BaseSqlQueryStructure(IMetadataStoreProvider metadataStore,

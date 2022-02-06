@@ -80,7 +80,6 @@ namespace Azure.DataGateway.Services
                     RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                     break;
                 case Operation.Upsert:
-                    //Validate the upsert request: all columns defined are part of schema
                     JsonElement upsertPayloadRoot = RequestValidator.ValidateUpsertRequest(primaryKeyRoute, requestBody);
                     context = new UpsertRequestContext(entityName, upsertPayloadRoot, HttpRestVerbs.PUT, operationType);
                     RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _metadataStoreProvider);

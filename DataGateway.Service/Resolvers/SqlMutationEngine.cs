@@ -98,7 +98,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>JSON object result</returns>
         public async Task<JsonDocument> ExecuteAsync(RestRequestContext context)
         {
-            // directly call Perform mutation operation which shoudl return JSON Document, not data reader.
+            // directly call Perform mutation operation which should return JSON Document, not data reader.
 
             Dictionary<string, object> parameters = PrepareParameters(context);
 
@@ -234,7 +234,10 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         ///<summary>
-        /// Processes multiple result sets from DbDataReader and format it so it can be used as a parameter to a query execution
+        /// Processes multiple result sets from DbDataReader and format it so it can be used as a parameter to a query execution.
+        /// In upsert:
+        /// result set #1: result of the UPDATE operation.
+        /// result set #2: result of the INSERT operation.
         ///</summary>
         ///<returns>A dictionary representing the full object modified or inserted.</returns>
         private static async Task<Dictionary<string, object>> ExtractChangesFromDbDataReader(DbDataReader dbDataReader)
@@ -308,8 +311,8 @@ namespace Azure.DataGateway.Service.Resolvers
             }
             else if (context.OperationType == Operation.Upsert)
             {
-                //Combine both PrimaryKey/Field ValuePairs
-                //because we create both an insert and an update statement.
+                // Combine both PrimaryKey/Field ValuePairs
+                // because we create both an insert and an update statement.
                 parameters = new(context.PrimaryKeyValuePairs);
                 foreach (KeyValuePair<string, object> pair in context.FieldValuePairsInBody)
                 {

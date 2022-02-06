@@ -88,7 +88,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public string Build(SqlUpsertQueryStructure structure)
         {
             return $"UPDATE { QuoteIdentifier(structure.TableName)} " +
-                $"WITH(UPDLOCK, SERIALIZABLE) SET {Build(structure.UpdateOperations, ", ")} " +
+                $"WITH(UPDLOCK) SET {Build(structure.UpdateOperations, ", ")} " +
                 $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
                 $"WHERE {Build(structure.Predicates)} " +
                 $"IF @@ROWCOUNT = 0 " +

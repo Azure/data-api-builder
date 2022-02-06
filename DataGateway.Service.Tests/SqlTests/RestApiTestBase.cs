@@ -165,7 +165,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// with item that exists, resulting in potentially destructive update.
         /// </summary>
         [TestMethod]
-        public async Task PutOne_ExistsTest()
+        public async Task PutOne_Update_Test()
         {
             string requestBody = @"
             {
@@ -177,7 +177,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     primaryKeyRoute: "id/7",
                     queryString: null,
                     entity: _integrationTableName,
-                    sqlQuery: GetQuery(nameof(PutOne_ExistsTest)),
+                    sqlQuery: GetQuery(nameof(PutOne_Update_Test)),
                     controller: _restController,
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
@@ -190,7 +190,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// with item that does NOT exist, results in insert.
         /// </summary>
         [TestMethod]
-        public async Task PutOne_NotExistsTest()
+        public async Task PutOne_Insert_Test()
         {
             string requestBody = @"
             {
@@ -199,10 +199,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/8",
+                    primaryKeyRoute: "id/1000",
                     queryString: null,
                     entity: _integrationTableName,
-                    sqlQuery: GetQuery(nameof(PutOne_NotExistsTest)),
+                    sqlQuery: GetQuery(nameof(PutOne_Insert_Test)),
                     controller: _restController,
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
@@ -220,24 +220,23 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </summary>
         /// <returns></returns>
         [TestMethod]
-        public async Task PutOne_NotExists_BadReqTest()
+        public async Task PutOne_Insert_BadReq_Test()
         {
             string requestBody = @"
             {
-                ""title"": ""The Hobbit Returns to The Shire"",
-                ""publisher_id"": 1234
+                ""title"": ""The Hobbit Returns to The Shire""
             }";
 
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/7",
                     queryString: null,
                     entity: _integrationTableName,
-                    sqlQuery: GetQuery(nameof(DeleteNonExistentTest)),
+                    sqlQuery: GetQuery(nameof(PutOne_Insert_BadReq_Test)),
                     controller: _restController,
-                    operationType: Operation.Delete,
+                    operationType: Operation.Upsert,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: "Bad Request",
+                    expectedErrorMessage: "Invalid request body. Either insufficient or unnecessary values for fields supplied.",
                     expectedStatusCode: (int)HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DatagatewayException.SubStatusCodes.BadRequest.ToString()
                 );

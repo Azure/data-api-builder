@@ -108,7 +108,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     FROM (
                         SELECT id, title, publisher_id
                         FROM " + _integrationTableName + @"
-                        WHERE id = 5001
+                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
                     ) AS subq
                 "
             },

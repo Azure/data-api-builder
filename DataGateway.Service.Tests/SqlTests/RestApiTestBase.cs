@@ -17,6 +17,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static RestService _restService;
         protected static RestController _restController;
         protected static readonly string _integrationTableName = "books";
+        protected const int STARTING_ID_FOR_TEST_INSERTS = 5001;
 
         public abstract string GetQuery(string key);
 
@@ -124,6 +125,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 ""publisher_id"": 1234
             }";
 
+            string expectedLocationHeader = $"/id/{STARTING_ID_FOR_TEST_INSERTS}";
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: null,
                     queryString: null,
@@ -132,7 +134,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     controller: _restController,
                     operationType: Operation.Insert,
                     requestBody: requestBody,
-                    expectedStatusCode: 201
+                    expectedStatusCode: 201,
+                    expectedLocationHeader: expectedLocationHeader
                 );
         }
 

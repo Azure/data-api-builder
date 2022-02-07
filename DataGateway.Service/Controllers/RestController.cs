@@ -191,12 +191,18 @@ namespace Azure.DataGateway.Service.Controllers
                 }
                 else
                 {
-                    throw new DatagatewayException(
-                        message: $"Not Found",
-                        statusCode: (int)HttpStatusCode.NotFound,
-                        subStatusCode: DatagatewayException.SubStatusCodes.EntityNotFound);
+                    switch (operationType)
+                    {
+                        case Operation.Upsert:
+                            // Empty result set indicates an Update successfully occurred.
+                            return new NoContentResult();
+                        default:
+                            throw new DatagatewayException(
+                                message: $"Not Found",
+                                statusCode: (int)HttpStatusCode.NotFound,
+                                subStatusCode: DatagatewayException.SubStatusCodes.EntityNotFound);
+                    }
                 }
-
             }
             catch (DatagatewayException ex)
             {

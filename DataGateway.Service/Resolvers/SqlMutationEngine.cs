@@ -98,8 +98,6 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>JSON object result</returns>
         public async Task<JsonDocument> ExecuteAsync(RestRequestContext context)
         {
-            // directly call Perform mutation operation which should return JSON Document, not data reader.
-
             Dictionary<string, object> parameters = PrepareParameters(context);
 
             try
@@ -111,8 +109,17 @@ namespace Azure.DataGateway.Service.Resolvers
                         context.EntityName,
                         context.OperationType,
                         parameters);
-                    Dictionary<string,object> result = await ExtractChangesFromDbDataReader(dbDataReader2);
-                    return JsonDocument.Parse(JsonSerializer.Serialize(result));
+                    Tuple<bool, Dictionary<string,object>> recordUpdated = await ExtractChangesFromDbDataReader(dbDataReader2);
+
+                    // If the record was not updated, then an Insert occurred.
+                    if (!recordUpdated.Item1)
+                    {
+                        string resultString = JsonSerializer.Serialize(recordUpdated.Item2);
+                        return JsonDocument.Parse(resultString);
+                    }
+
+                    // If record was updated, null signals upstream controller to return HTTP 204 No Content
+                    return null;
                 }
 
                 using DbDataReader dbDataReader =
@@ -188,11 +195,6 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryString = _queryBuilder.Build(deleteStructure);
                     queryParameters = deleteStructure.Parameters;
                     break;
-                case Operation.Upsert:
-                    SqlUpsertQueryStructure upsertStructure = new(tableName, _metadataStoreProvider, parameters);
-                    queryString = _queryBuilder.Build(upsertStructure);
-                    queryParameters = upsertStructure.Parameters;
-                    break;
                 default:
                     throw new NotSupportedException($"Unexpected mutation operation \" {operationType}\" requested.");
             }
@@ -240,16 +242,21 @@ namespace Azure.DataGateway.Service.Resolvers
         /// result set #2: result of the INSERT operation.
         ///</summary>
         ///<returns>A dictionary representing the full object modified or inserted.</returns>
-        private static async Task<Dictionary<string, object>> ExtractChangesFromDbDataReader(DbDataReader dbDataReader)
+        private static async Task<Tuple<bool,Dictionary<string, object>>> ExtractChangesFromDbDataReader(DbDataReader dbDataReader)
         {
             Dictionary<string, object> row = new();
 
             // Do-While because first result set needs to be checked
             // as calling dbReader.NextResultAsync() would skip to next result set.
+            int resultSetsFound = 0;
             do
             {
+                // Result sets incremented here since dbDataReader.ReadAsync() may have no rows to read from
+                // due to an emtpy result set.
+                resultSetsFound++;
+
                 while (await dbDataReader.ReadAsync())
-                {
+                {                   
                     if (dbDataReader.HasRows)
                     {
                         DataTable schemaTable = dbDataReader.GetSchemaTable();
@@ -264,13 +271,14 @@ namespace Azure.DataGateway.Service.Resolvers
                 
             } while (await dbDataReader.NextResultAsync());
 
-            // no row was read
-            if (row.Count == 0)
+            bool updateOccurred = true;
+            // Two result sets indicates Update failed and Insert performed instead.
+            if (resultSetsFound > 1)
             {
-                return null;
+                updateOccurred = false;
             }
 
-            return row;
+            return new Tuple<bool, Dictionary<string, object>>(updateOccurred, new(row));
         }
 
         /// <summary>

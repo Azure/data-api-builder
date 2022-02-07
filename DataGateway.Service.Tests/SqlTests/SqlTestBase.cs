@@ -13,6 +13,7 @@ using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
@@ -159,6 +160,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="expectedErrorMessage">string represents the error message in the JsonResponse</param>
         /// <param name="expectedStatusCode">int represents the returned http status code</param>
         /// <param name="expectedSubStatusCode">enum represents the returned sub status code</param>
+        /// <param name="expectedLocationHeader">The expected location header in the response (if any)</param>
         /// <returns></returns>
         protected static async Task SetupAndRunRestApiTest(
             string primaryKeyRoute,
@@ -171,12 +173,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             bool exception = false,
             string expectedErrorMessage = "",
             int expectedStatusCode = 200,
-            string expectedSubStatusCode = "BadRequest")
+            string expectedSubStatusCode = "BadRequest",
+            string expectedLocationHeader = null)
         {
             ConfigureRestController(
                 controller,
                 queryString,
                 requestBody);
+
+            if (expectedLocationHeader != null)
+            {
+                expectedLocationHeader =
+                    UriHelper.GetEncodedUrl(controller.HttpContext.Request) + expectedLocationHeader;
+            }
 
             IActionResult actionResult = await SqlTestHelper.PerformApiTest(
                         controller,
@@ -203,7 +212,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     await GetDatabaseResultAsync(sqlQuery);
             }
 
-            SqlTestHelper.VerifyResult(actionResult, expected, expectedStatusCode);
+            SqlTestHelper.VerifyResult(
+                actionResult,
+                expected,
+                expectedStatusCode,
+                expectedLocationHeader);
 
         }
 

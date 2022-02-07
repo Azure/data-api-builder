@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using HotChocolate.Resolvers;
@@ -18,6 +19,7 @@ namespace Azure.DataGateway.Services
     {
         private readonly CosmosClientProvider _clientProvider;
         private readonly IMetadataStoreProvider _metadataStoreProvider;
+        private readonly CosmosQueryBuilder _queryBuilder;
 
         // <summary>
         // Constructor.
@@ -26,6 +28,7 @@ namespace Azure.DataGateway.Services
         {
             this._clientProvider = clientProvider;
             this._metadataStoreProvider = metadataStoreProvider;
+            this._queryBuilder = new CosmosQueryBuilder();
         }
 
         /// <summary>
@@ -46,24 +49,20 @@ namespace Azure.DataGateway.Services
             QueryRequestOptions queryRequestOptions = new();
             string requestContinuation = null;
 
-            QueryDefinition querySpec = new(resolver.ParametrizedQuery);
+            CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider, isPaginatedQuery);
+            string queryString = _queryBuilder.Build(structure);
 
-            if (parameters != null)
+            QueryDefinition querySpec = new(queryString);
+
+            foreach (KeyValuePair<string, object> parameterEntry in structure.Parameters)
             {
-                foreach (KeyValuePair<string, object> parameterEntry in parameters)
-                {
-                    querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
-                }
+                querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
             }
 
-            if (parameters.TryGetValue("first", out object maxSize))
+            if (isPaginatedQuery)
             {
-                queryRequestOptions.MaxItemCount = Convert.ToInt32(maxSize);
-            }
-
-            if (parameters.TryGetValue("after", out object after))
-            {
-                requestContinuation = Base64Decode(after as string);
+                queryRequestOptions.MaxItemCount = (int?)structure.MaxItemCount;
+                requestContinuation = Base64Decode(structure.Continuation);
             }
 
             FeedResponse<JObject> firstPage = await container.GetItemQueryIterator<JObject>(querySpec, requestContinuation, queryRequestOptions).ReadNextAsync();
@@ -87,7 +86,7 @@ namespace Azure.DataGateway.Services
                 JObject res = new(
                    new JProperty("endCursor", Base64Encode(responseContinuation)),
                    new JProperty("hasNextPage", responseContinuation != null),
-                   new JProperty("nodes", jarray));
+                   new JProperty("items", jarray));
 
                 // This extra deserialize/serialization will be removed after moving to Newtonsoft from System.Text.Json
                 return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(res.ToString()), null);

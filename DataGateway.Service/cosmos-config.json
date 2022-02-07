@@ -5,8 +5,7 @@
     {
       "id": "characterById",
       "databaseName": "graphqldb",
-      "containerName": "character",
-      "parametrizedQuery": "select * FROM c WHERE c.id = @id"
+      "containerName": "character"
     },
     {
       "id": "characterList",
@@ -17,8 +16,7 @@
     {
       "id": "planetById",
       "databaseName": "graphqldb",
-      "containerName": "planet",
-      "parametrizedQuery": "select * FROM c WHERE c.id = @id"
+      "containerName": "planet"
     },
     {
       "id": "planetList",
@@ -30,8 +28,7 @@
       "id": "planets",
       "isPaginated": true,
       "databaseName": "graphqldb",
-      "containerName": "planet",
-      "parametrizedQuery": "select * FROM c"
+      "containerName": "planet"
     }
   ],
   "MutationResolvers": [
@@ -41,6 +38,11 @@
       "containerName": "planet",
       "operationType": "Upsert"
     }
-  ]
+  ],
+  "GraphqlTypes": {
+    "Planet": {
+      "Table": "planet"
+    }
+  }
 }
 

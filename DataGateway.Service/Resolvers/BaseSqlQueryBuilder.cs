@@ -27,7 +27,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// If TableAlias is null
         /// {ColumnName}
         /// </summary>
-        protected string Build(Column column)
+        protected virtual string Build(Column column)
         {
             if (column.TableAlias != null)
             {

@@ -14,7 +14,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         public static readonly string PlanetListQuery = @"{planetList{ id, name}}";
         public static readonly string PlanetConnectionQueryStringFormat = @"
             {{planets (first: {0}, after: {1}){{
-                 nodes{{ id  name }}
+                 items{{ id  name }}
                  endCursor
                  hasNextPage
                 }}
@@ -33,6 +33,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             CreateItems(DATABASE_NAME, _containerName, 10);
             RegisterQueryResolver("planetList", DATABASE_NAME, _containerName);
             RegisterQueryResolver("planets", DATABASE_NAME, _containerName, isPaginated: true);
+            RegisterQueryResolver("planetById", DATABASE_NAME, _containerName, isPaginated: false);
         }
 
         [TestMethod]
@@ -73,7 +74,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
                 JsonElement page = await ExecuteGraphQLRequestAsync("planets", paginatedQuery);
                 JsonElement continuation = page.GetProperty("endCursor");
                 continuationToken = continuation.ToString();
-                totalElementsFromPaginatedQuery += page.GetProperty("nodes").GetArrayLength();
+                totalElementsFromPaginatedQuery += page.GetProperty("items").GetArrayLength();
             } while (!string.IsNullOrEmpty(continuationToken));
 
             // Validate results

@@ -38,6 +38,15 @@ namespace Azure.DataGateway.Services
                 for (int primaryKeyIndex = 0; primaryKeyIndex < primaryKeyValues.Length; primaryKeyIndex += 2)
                 {
                     string primaryKey = primaryKeyValues[primaryKeyIndex];
+
+                    if (string.IsNullOrWhiteSpace(primaryKeyValues[primaryKeyIndex + 1]))
+                    {
+                        throw new DatagatewayException(
+                            message: "The request is invalid since it contains a primary key with no value specified.",
+                            statusCode: 400,
+                            DatagatewayException.SubStatusCodes.BadRequest);
+                    }
+
                     if (!context.PrimaryKeyValuePairs.ContainsKey(primaryKey))
                     {
                         context.PrimaryKeyValuePairs.Add(primaryKeyValues[primaryKeyIndex],

@@ -78,8 +78,6 @@ namespace Azure.DataGateway.Service.Resolvers
                         DbParameter parameter = cmd.CreateParameter();
                         parameter.ParameterName = "@" + parameterEntry.Key;
                         parameter.Value = parameterEntry.Value ?? DBNull.Value;
-                        // INSERT, UPDATE operations should output changed values from params as well.
-                        //parameter.Direction = ParameterDirection.InputOutput;
                         cmd.Parameters.Add(parameter);
                     }
                 }
@@ -97,15 +95,15 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     transaction.Rollback();
                 }
-                catch (Exception ex2)
+                catch (Exception rollbackException)
                 {
                     // This catch block will handle any errors that may have occurred
                     // on the server that would cause the rollback to fail, such as
                     // a closed connection.
-                    Console.WriteLine("Rollback Exception Type: {0}", ex2.GetType());
-                    Console.WriteLine("  Message: {0}", ex2.Message);
+                    Console.WriteLine("Rollback Exception Type: {0}", rollbackException.GetType());
+                    Console.WriteLine("  Message: {0}", rollbackException.Message);
                     throw new DatagatewayException(
-                        message: "transaction issue",
+                        message: "Mutation Transaction Error",
                         statusCode: 500,
                         subStatusCode: DatagatewayException.SubStatusCodes.DatabaseOperationFailed);
                 }

@@ -45,7 +45,7 @@ namespace Azure.DataGateway.Service.Models
                 FieldValuePairsInBody = new();
             }
 
-            // We don't support InsertMany as yet.
+            // We don't support UpsertMany as yet.
             IsMany = false;
         }
     }

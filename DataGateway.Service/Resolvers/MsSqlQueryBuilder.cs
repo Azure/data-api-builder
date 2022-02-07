@@ -102,7 +102,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Labels with which columns can be marked in the OUTPUT clause
         /// </summary>
-        private enum OutputQualifier { Inserted, Deleted, };
+        private enum OutputQualifier { Inserted, Deleted };
 
         /// <summary>
         /// Adds qualifiers (inserted or deleted) to columns in OUTPUT clause and joins them with commas.

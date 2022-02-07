@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
@@ -128,6 +129,28 @@ namespace Azure.DataGateway.Services
                     subStatusCode: DatagatewayException.SubStatusCodes.AuthorizationCheckFailed
                 );
             }
+        }
+
+        /// <summary>
+        /// For the given entity, constructs the primary key route
+        /// using the primary key names from metadata and their values from the JsonElement
+        /// representing one instance of the entity.
+        /// </summary>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="entity">A Json element representing one instance of the entity.</param>
+        /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
+        public string ConstructPrimaryKeyRoute(string entityName, JsonElement entity)
+        {
+            TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(entityName);
+            StringBuilder primaryKeyRoute = new();
+            foreach(string primaryKey in tableDefinition.PrimaryKey)
+            {
+                primaryKeyRoute.Append(primaryKey);
+                primaryKeyRoute.Append("/");
+                primaryKeyRoute.Append(entity.GetProperty(primaryKey).ToString());
+            }
+
+            return primaryKeyRoute.ToString();
         }
 
         private HttpContext GetHttpContext()

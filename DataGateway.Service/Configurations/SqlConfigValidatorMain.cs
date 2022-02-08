@@ -224,9 +224,15 @@ namespace Azure.DataGateway.Service.Configurations
                     tableToType.Add(type.Table, typeName);
 
                     ValidateGraphQLTypeTableMatchesSchema(typeName, type.Table);
+                    Dictionary<string, FieldDefinitionNode> fieldDefinitions = GetTypeFields(typeName);
+                    ValidateSchemaFieldsReturnTypes(fieldDefinitions);
+                    bool hasNonScalarFields = HasAnyNonScalarFieldInGraphQLType(fieldDefinitions);
 
-                    ValidateGraphQLTypeHasFields(type);
-                    ValidateGraphQLTypeFields(typeName, type);
+                    if (hasNonScalarFields)
+                    {
+                        ValidateGraphQLTypeHasFields(type);
+                        ValidateGraphQLTypeFields(typeName, type);
+                    }
                 }
 
                 ConfigStepOutOf(typeName);
@@ -280,7 +286,9 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate that the scalar fields of the type match the table associated with the type
         /// </summary>
-        private void ValidateGraphQLTypeTableMatchesSchema(string typeName, string typeTable)
+        private void ValidateGraphQLTypeTableMatchesSchema(
+            string typeName,
+            string typeTable)
         {
             string[] tableColumnsPath = new[] { "DatabaseSchema", "Tables", typeTable, "Columns" };
             ValidateTableColumnsMatchScalarFields(typeTable, typeName, MakeConfigPosition(tableColumnsPath));
@@ -298,7 +306,6 @@ namespace Azure.DataGateway.Service.Configurations
             Dictionary<string, FieldDefinitionNode> fieldDefinitions = GetTypeFields(typeName);
 
             ValidateConfigFieldsMatchSchemaFields(type.Fields, fieldDefinitions);
-            ValidateSchemaFieldsReturnTypes(fieldDefinitions);
 
             foreach (KeyValuePair<string, GraphqlField> nameFieldPair in type.Fields)
             {

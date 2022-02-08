@@ -121,6 +121,9 @@
           },
           "GET": {
             "Authorization": "Anonymous"
+          },
+          "DELETE": {
+            "Authorization": "Authenticated"
           }
         }
       },
@@ -150,6 +153,9 @@
           },
           "POST": {
             "AuthorizationType": "Anonymous"
+          },
+          "DELETE": {
+            "Authorization": "Authenticated"
           }
         }
       },

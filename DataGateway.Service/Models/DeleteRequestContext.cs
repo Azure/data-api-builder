@@ -1,15 +1,15 @@
 namespace Azure.DataGateway.Service.Models
 {
     /// <summary>
-    /// FindRequestContext provides the major components of a REST query
-    /// corresponding to the FindById or FindMany operations.
+    /// DeleteRequestContext provides the major components of a REST query
+    /// corresponding to the DeleteById or DeleteMany operations.
     /// </summary>
-    public class FindRequestContext : RestRequestContext
+    public class DeleteRequestContext : RestRequestContext
     {
         /// <summary>
         /// Constructor.
         /// </summary>
-        public FindRequestContext(string entityName, bool isList)
+        public DeleteRequestContext(string entityName, bool isList)
         {
             EntityName = entityName;
             FieldsToBeReturned = new();
@@ -17,8 +17,8 @@ namespace Azure.DataGateway.Service.Models
             FieldValuePairsInBody = new();
             FieldValuePairsInUrl = new();
             IsMany = isList;
-            HttpVerb = HttpRestVerbs.GET;
-            OperationType = Operation.Find;
+            HttpVerb = HttpRestVerbs.DELETE;
+            OperationType = Operation.Delete;
         }
     }
 }

@@ -102,6 +102,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case Operation.Insert:
                     actionResult = await controller.Insert(entityName);
                     break;
+                case Operation.Delete:
+                    actionResult = await controller.Delete(entityName, primaryKeyRoute);
+                    break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
             }
@@ -113,7 +116,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Verifies the ActionResult is as expected with the expected status code.
         /// </summary>
         /// <param name="actionResult">The action result of the operation to verify.</param>
-        /// <param name="expected">string represents the expected result.</param>
+        /// <param name="expected">string represents the expected result. This value can be null for NoContent or NotFound
+        /// results of operations like GET and DELETE</param>
         /// <param name="expectedStatusCode">int represents the returned http status code</param>
         public static void VerifyResult(
             IActionResult actionResult,
@@ -121,17 +125,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             int expectedStatusCode)
         {
             string actual;
-            // OkObjectResult will throw exception if we attempt cast to JsonResult
-            if (actionResult is OkObjectResult)
+            switch (actionResult)
             {
-                OkObjectResult actualResult = (OkObjectResult)actionResult;
-                Assert.AreEqual(expectedStatusCode, actualResult.StatusCode);
-                actual = actualResult.Value.ToString();
-            }
-            else
-            {
-                JsonResult actualResult = (JsonResult)actionResult;
-                actual = actualResult.Value.ToString();
+                // OkObjectResult will throw exception if we attempt cast to JsonResult
+                case OkObjectResult okResult:
+                    Assert.AreEqual(expectedStatusCode, okResult.StatusCode);
+                    actual = okResult.Value.ToString();
+                    break;
+                case CreatedResult createdResult:
+                    Assert.AreEqual(expectedStatusCode, createdResult.StatusCode);
+                    actual = createdResult.Value.ToString();
+                    break;
+                // NoContentResult does not have value property for messages
+                case NoContentResult noContentResult:
+                    Assert.AreEqual(expectedStatusCode, noContentResult.StatusCode);
+                    actual = null;
+                    break;
+                case NotFoundResult notFoundResult:
+                    Assert.AreEqual(expectedStatusCode, notFoundResult.StatusCode);
+                    actual = null;
+                    break;
+                default:
+                    JsonResult actualResult = (JsonResult)actionResult;
+                    actual = actualResult.Value.ToString();
+                    break;
             }
 
             // if whitespaces are not consistent JsonStringDeepEquals should be used

@@ -117,21 +117,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Sends raw SQL query to database engine to retrieve expected result in JSON format.
         /// </summary>
-        /// <param name="queryText">raw database query</param>
+        /// <param name="queryText">raw database query, typically a SELECT</param>
         /// <returns>string in JSON format</returns>
-        protected static async Task<string> GetDatabaseResultAsync(string queryText)
+        protected static async Task<string> GetDatabaseResultAsync(
+            string queryText,
+            Operation operationType = Operation.Find)
         {
+            string result;
+
             using DbDataReader reader = await _queryExecutor.ExecuteQueryAsync(queryText, parameters: null);
 
             // An empty result will cause an error with the json parser
             if (!reader.HasRows)
             {
-                throw new System.Exception("No rows to read from database result");
+                // Find and Delete queries have empty result sets.
+                // Delete operation will return number of records affected.
+                result = null;
+            }
+            else
+            {
+                using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader));
+                result = sqlResult.RootElement.ToString();
             }
 
-            using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader));
-
-            return sqlResult.RootElement.ToString();
+            return result;
         }
 
         /// <summary>
@@ -145,6 +154,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="sqlQuery">string represents the query to be executed</param>
         /// <param name="controller">string represents the rest controller</param>
         /// <param name="operationType">The operation type to be tested.</param>
+        /// <param name="requestBody">string represents JSON data used in mutation operations</param>
         /// <param name="exception">bool represents if we expect an exception</param>
         /// <param name="expectedErrorMessage">string represents the error message in the JsonResponse</param>
         /// <param name="expectedStatusCode">int represents the returned http status code</param>
@@ -175,11 +185,23 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         operationType);
 
             // if an exception is expected we generate the correct error
-            string expected = exception ?
-                RestController.ErrorResponse(
-                    expectedSubStatusCode.ToString(),
-                    expectedErrorMessage, expectedStatusCode).Value.ToString() :
-                await GetDatabaseResultAsync(sqlQuery);
+            // The expected result should be a Query that confirms the result state
+            // of the Operation performed for the test. However:
+            // Initial DELETE request results in 204 no content, no exception thrown.
+            // Subsequent DELETE requests result in 404, which result in an exception.
+            string expected;
+            if (operationType == Operation.Delete && actionResult is NoContentResult)
+            {
+                expected = null;
+            }
+            else
+            {
+                expected = exception ?
+                    RestController.ErrorResponse(
+                        expectedSubStatusCode.ToString(),
+                        expectedErrorMessage, expectedStatusCode).Value.ToString() :
+                    await GetDatabaseResultAsync(sqlQuery);
+            }
 
             SqlTestHelper.VerifyResult(actionResult, expected, expectedStatusCode);
 

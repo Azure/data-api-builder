@@ -75,6 +75,10 @@ namespace Azure.DataGateway.Services
                         (InsertRequestContext)context,
                         _metadataStoreProvider);
                     break;
+                case Operation.Delete:
+                    context = new DeleteRequestContext(entityName, isList: false);
+                    RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
+                    break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
             }
@@ -89,9 +93,10 @@ namespace Azure.DataGateway.Services
 
             if (!string.IsNullOrEmpty(queryString))
             {
-                RequestParser.ParseQueryString(HttpUtility.ParseQueryString(queryString), context);
+                RequestParser.ParseQueryString(HttpUtility.ParseQueryString(queryString), context, _metadataStoreProvider.GetFilterParser());
             }
 
+            // At this point for DELETE, the primary key should be populated in the Request context. 
             RequestValidator.ValidateRequestContext(context, _metadataStoreProvider);
 
             // RestRequestContext is finalized for QueryBuilding and QueryExecution.
@@ -109,6 +114,7 @@ namespace Azure.DataGateway.Services
                     case Operation.Find:
                         return await _queryEngine.ExecuteAsync(context);
                     case Operation.Insert:
+                    case Operation.Delete:
                         return await _mutationEngine.ExecuteAsync(context);
                     default:
                         throw new NotSupportedException("This operation is not yet supported.");

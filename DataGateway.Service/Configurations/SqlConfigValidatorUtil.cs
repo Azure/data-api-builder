@@ -399,6 +399,26 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
+        /// Checks if the given GraphQL typename has at least 1 non scalar
+        /// field type which means it is either a custom type or a list type
+        /// </summary>
+        private bool HasAnyNonScalarFieldInGraphQLType(Dictionary<string, FieldDefinitionNode> fieldDefinitions)
+        {
+            bool hasNonScalarField = false;
+            foreach (KeyValuePair<string, FieldDefinitionNode> nameFieldPair in fieldDefinitions)
+            {
+                FieldDefinitionNode field = nameFieldPair.Value;
+
+                if (!IsScalarType(field.Type))
+                {
+                    hasNonScalarField = true;
+                }
+            }
+
+            return hasNonScalarField;
+        }
+
+        /// <summary>
         /// Returns the scalar fields from a dictionary of fields
         /// </summary>
         private Dictionary<string, FieldDefinitionNode> GetScalarFields(Dictionary<string, FieldDefinitionNode> fields)
@@ -485,7 +505,7 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Get the config GhraphqlTypes.Fields for a graphql schema type
+        /// Get the config GraphqlTypes.Fields for a graphql schema type
         /// </summary>
         private IEnumerable<string> GetConfigFieldsForGqlType(ObjectTypeDefinitionNode type)
         {

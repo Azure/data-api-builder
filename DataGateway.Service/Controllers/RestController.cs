@@ -206,6 +206,8 @@ namespace Azure.DataGateway.Service.Controllers
             }
             catch (DatagatewayException ex)
             {
+                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine(ex.StackTrace);
                 Response.StatusCode = ex.StatusCode;
                 return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
             }

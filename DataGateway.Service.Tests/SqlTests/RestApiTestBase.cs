@@ -181,7 +181,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     controller: _restController,
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
-                    expectedStatusCode: 201
+                    expectedStatusCode: 204
                 );
         }
 
@@ -252,7 +252,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task DeleteNonExistentTest()
         {//expected status code 404
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/7",
+                    primaryKeyRoute: "id/1000",
                     queryString: null,
                     entity: _integrationTableName,
                     sqlQuery: GetQuery(nameof(DeleteNonExistentTest)),

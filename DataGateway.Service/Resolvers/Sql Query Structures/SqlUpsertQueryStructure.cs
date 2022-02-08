@@ -127,7 +127,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 // ArgumentException thrown from GetParamAsColumnSystemType()
                 throw new DatagatewayException(
                     message: ex.Message,
-                    statusCode: (int) HttpStatusCode.BadRequest,
+                    statusCode: (int)HttpStatusCode.BadRequest,
                     subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
             }
         }

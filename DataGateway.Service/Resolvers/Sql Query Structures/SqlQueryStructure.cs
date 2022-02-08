@@ -159,7 +159,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             foreach (RestPredicate predicate in context.RestPredicatesInUrl)
             {
-                PopulateParamsAndPredicates(predicate.Field, predicate.Value, predicate.Op);
+                PopulateParamsAndPredicates(predicate.Field, predicate.Value, predicate.Op, predicate.Lop);
             }
         }
 
@@ -355,7 +355,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="field">The string representing a field.</param>
         /// <param name="value">The value associated with a given field.</param>
         /// <param name="op">The predicate operation representing the comparison between field and value.</param>
-        private void PopulateParamsAndPredicates(string field, object value, PredicateOperation op = PredicateOperation.Equal)
+        private void PopulateParamsAndPredicates(string field, object value, PredicateOperation op = PredicateOperation.Equal, LogicalOperation lop = LogicalOperation.And)
         {
             try
             {
@@ -367,7 +367,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(TableAlias, field)),
                         op,
-                        new PredicateOperand($"@{parameterName}")));
+                        new PredicateOperand($"@{parameterName}"),
+                        lop));
                 }
                 else
                 {

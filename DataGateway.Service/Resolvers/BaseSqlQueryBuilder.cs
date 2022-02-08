@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Azure.DataGateway.Service.Models;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -100,8 +101,26 @@ namespace Azure.DataGateway.Service.Resolvers
                     return ">=";
                 case PredicateOperation.LessThanOrEqual:
                     return "<=";
+                case PredicateOperation.NotEqual:
+                    return "!=";
                 default:
                     throw new ArgumentException($"Cannot build unknown predicate operation {op}.");
+            }
+        }
+
+        /// <summary>
+        /// Resolves a predicate logical operation enum to string
+        /// </summary>
+        protected string Build(LogicalOperation op)
+        {
+            switch (op)
+            {
+                case LogicalOperation.And:
+                    return "AND";
+                case LogicalOperation.Or:
+                    return "OR";
+                default:
+                    throw new ArgumentException($"Cannot build unknown predicate logical operation {op}.");
             }
         }
 
@@ -112,6 +131,24 @@ namespace Azure.DataGateway.Service.Resolvers
         protected string Build(Predicate predicate)
         {
             return $"{Build(predicate.Left)} {Build(predicate.Op)} {Build(predicate.Right)}";
+        }
+
+        /// <summary>
+        /// Build and join predicates with logical op as seperator
+        /// </summary>
+        protected string Build(List<Predicate> predicates)
+        {
+            StringBuilder sb = new();
+            foreach (Predicate p in predicates)
+            {
+                sb.Append(Build(p));
+                if (p != predicates.Last<Predicate>())
+                {
+                    sb.Append($" {Build(p.Lop)} ");
+                }
+            }
+
+            return sb.ToString();
         }
 
         /// <summary>
@@ -162,6 +199,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 return "1 = 1";
             }
 
+            //foreach (string predicate 
             return string.Join(" AND ", validPredicates);
         }
     }

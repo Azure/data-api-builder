@@ -69,22 +69,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Tests the REST Api for Find operation with a query string with multiple fields
-        /// including the field names. Only returns fields designated in the query string.
-        /// </summary>
-        [TestMethod]
-        public async Task FindTestWithQueryStringMultipleFields()
-        {
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: string.Empty,
-                queryString: "?_f=id,title",
-                entity: _integrationTableName,
-                sqlQuery: GetQuery(nameof(FindTestWithQueryStringMultipleFields)),
-                controller: _restController
-            );
-        }
-
-        /// <summary>
         /// Tests the REST Api for Find operation with an empty query string
         /// including the field names.
         /// </summary>
@@ -96,6 +80,54 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 queryString: string.Empty,
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithQueryStringAllFields)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with a single filter
+        /// checking equality.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterQueryStringOneFilter()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id eq 1",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringOneFilter)),
+                controller: _restController);
+
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with a filter query string with multiple
+        /// comparisons connected with AND.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterQueryStringMultipleAndFilters()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id lt 4 and id gt 1 and title ne 'Awesome book'",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringMultipleAndFilters)),
+                controller: _restController);
+
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with a filter query string with multiple
+        /// comparisons connected with OR.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterQueryStringMultipleOrFilters()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id eq 1 or id eq 2 or id eq 3",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringMultipleOrFilters)),
                 controller: _restController
             );
         }

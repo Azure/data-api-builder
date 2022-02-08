@@ -46,7 +46,7 @@ namespace Azure.DataGateway.Service.Models
     /// </summary>
     public enum PredicateOperation
     {
-        Equal, GreaterThan, LessThan, GreaterThanOrEqual, LessThanOrEqual
+        Equal, GreaterThan, LessThan, GreaterThanOrEqual, LessThanOrEqual, NotEqual
     }
 
     /// <summary>
@@ -138,12 +138,17 @@ namespace Azure.DataGateway.Service.Models
         /// Enum representing the operator of the expression
         /// </summary>
         public PredicateOperation Op { get; }
+        /// <summary>
+        /// Enum representing the logical operator of the expression
+        /// </summary>
+        public LogicalOperation Lop { get; }
 
-        public Predicate(PredicateOperand left, PredicateOperation op, PredicateOperand right)
+        public Predicate(PredicateOperand left, PredicateOperation op, PredicateOperand right, LogicalOperation lop = LogicalOperation.And)
         {
             Left = left;
             Right = right;
             Op = op;
+            Lop = lop;
         }
     }
 

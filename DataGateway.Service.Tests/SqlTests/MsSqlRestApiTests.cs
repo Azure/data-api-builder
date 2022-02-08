@@ -40,6 +40,24 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTestWithFilterQueryStringOneFilter",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE id = 1" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFilterQueryStringMultipleAndFilters",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE id < 4 AND id > 1 AND title != 'Awesome book' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFilterQueryStringMultipleOrFilters",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE id = 1 OR id = 2 OR id = 3" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindTestWithPrimaryKeyContainingForeignKey",
                 $"SELECT [id], [content] FROM reviews " +
                 $"WHERE id = 567 AND book_id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"

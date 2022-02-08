@@ -69,6 +69,39 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "FindTestWithFilterQueryStringOneFilter",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE id = 1
+                      ORDER BY id
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFilterQueryStringMultipleAndFilters",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE id < 4 AND id > 1 AND title != 'Awesome book'
+                      ORDER BY id
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFilterQueryStringMultipleOrFilters",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE id = 1 OR id = 2 OR id = 3
+                      ORDER BY id
+                  ) AS subq"
+            },
+            {
                 "FindTestWithPrimaryKeyContainingForeignKey",
                 @"
                     SELECT to_jsonb(subq) AS data

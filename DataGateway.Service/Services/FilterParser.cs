@@ -28,13 +28,8 @@ namespace Azure.DataGateway.Service.Services
         /// <returns>A list of rest predicates to be used in query generation.</returns>
         public List<RestPredicate> Parse(string filterQueryString, string resourcePath)
         {
-            // this is not proper Uri format
-            // find out what we need for relative uri format and match
-            //Uri relativeUri = new(queryString);
-            //
-            Uri serviceRoot = new("https://localhost:5001/");
-            Uri fullUri = new(serviceRoot + resourcePath + filterQueryString);
-            ODataUriParser parser = new(_model, serviceRoot, fullUri);
+            Uri relativeUri = new(resourcePath + filterQueryString, UriKind.Relative);
+            ODataUriParser parser = new(_model, relativeUri);
             FilterClause filterClause = parser.ParseFilter();
             ODataASTVisitor<object> visitor = new();
             filterClause.Expression.Accept(visitor);

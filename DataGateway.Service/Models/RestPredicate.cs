@@ -29,6 +29,8 @@ namespace Azure.DataGateway.Service.Models
         /// <param name="field">The field is what is compared.</param>
         /// <param name="value">The value is what we compare field against.</param>
         /// <param name="op">The operation used to do the comparison.</param>
+        /// <param name="lop">The operation used to do logical comparisons.</param>
+        /// 
         public RestPredicate(string field = "", string value = "", PredicateOperation op = PredicateOperation.Equal, LogicalOperation lop = LogicalOperation.And)
         {
             Field = field;

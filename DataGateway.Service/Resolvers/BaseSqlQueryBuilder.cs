@@ -199,7 +199,6 @@ namespace Azure.DataGateway.Service.Resolvers
                 return "1 = 1";
             }
 
-            //foreach (string predicate 
             return string.Join(" AND ", validPredicates);
         }
     }

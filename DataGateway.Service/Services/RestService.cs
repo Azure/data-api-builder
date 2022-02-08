@@ -143,7 +143,7 @@ namespace Azure.DataGateway.Services
         {
             TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(entityName);
             StringBuilder primaryKeyRoute = new();
-            foreach(string primaryKey in tableDefinition.PrimaryKey)
+            foreach (string primaryKey in tableDefinition.PrimaryKey)
             {
                 primaryKeyRoute.Append(primaryKey);
                 primaryKeyRoute.Append("/");

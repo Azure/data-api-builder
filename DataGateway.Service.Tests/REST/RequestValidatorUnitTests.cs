@@ -294,10 +294,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 RequestParser.ParsePrimaryKey(primaryKeyRoute.ToString(), findRequestContext);
 
                 //If expecting an exception, the code should not reach this point.
-                if (expectsException)
-                {
-                    Assert.Fail();
-                }
+                Assert.IsFalse(expectsException, "No exception thrown when exception expected.");
             }
             catch (DatagatewayException ex)
             {

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Service.Models;
 using Microsoft.OData.Edm;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -18,7 +17,6 @@ namespace Azure.DataGateway.Service.Services
 
         public FilterParser(DatabaseSchema schema)
         {
-            Assert.IsNotNull(schema);
             EdmModelBuilder builder = new();
             _model = builder.BuildModel(schema).GetModel();
         }

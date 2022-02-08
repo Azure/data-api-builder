@@ -27,9 +27,8 @@ namespace Azure.DataGateway.Service.Models
         public virtual Dictionary<string, object> PrimaryKeyValuePairs { get; set; }
 
         /// <summary>
-        /// Dictionary of field names and a tuple which holds the associated value and
-        /// predicate operation. Where value is the value compared to the field and
-        /// the predicate operation is the sort of comparison done.
+        /// List of RestPredicates. These represent the filtering to be applied in
+        /// a WHERE clause.
         /// Based on the operation type, this property may or may not be populated.
         /// </summary>
         public virtual List<RestPredicate> RestPredicatesInUrl { get; set; }

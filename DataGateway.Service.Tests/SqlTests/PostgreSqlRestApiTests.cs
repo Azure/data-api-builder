@@ -7,7 +7,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Azure.DataGateway.Service.Tests.SqlTests
 {
 
-    [TestClass, TestCategory(TestCategory.POSTGRESQL)]
+    //[TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class PostgreSqlRestApiTests : RestApiTestBase
     {
         protected static Dictionary<string, string> _queryMap = new()
@@ -143,7 +143,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// MSTest decorator.
         /// </summary>
         /// <param name="context"></param>
-        [ClassInitialize]
+        // [ClassInitialize]
         public static async Task InitializeTestFixture(TestContext context)
         {
             await InitializeTestFixture(context, RestApiTestBase._integrationTableName, TestCategory.POSTGRESQL);

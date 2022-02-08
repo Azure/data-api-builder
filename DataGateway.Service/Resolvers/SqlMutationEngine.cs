@@ -109,7 +109,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         context.EntityName,
                         context.OperationType,
                         parameters);
-                    Tuple<bool, Dictionary<string,object>> recordUpdated = await ExtractChangesFromDbDataReader(dbDataReader2);
+                    Tuple<bool, Dictionary<string, object>> recordUpdated = await ExtractChangesFromDbDataReader(dbDataReader2);
 
                     // If the record was not updated, then an Insert occurred.
                     if (!recordUpdated.Item1)
@@ -242,7 +242,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// result set #2: result of the INSERT operation.
         ///</summary>
         ///<returns>A dictionary representing the full object modified or inserted.</returns>
-        private static async Task<Tuple<bool,Dictionary<string, object>>> ExtractChangesFromDbDataReader(DbDataReader dbDataReader)
+        private static async Task<Tuple<bool, Dictionary<string, object>>> ExtractChangesFromDbDataReader(DbDataReader dbDataReader)
         {
             Dictionary<string, object> row = new();
 
@@ -256,7 +256,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 resultSetsFound++;
 
                 while (await dbDataReader.ReadAsync())
-                {                   
+                {
                     if (dbDataReader.HasRows)
                     {
                         DataTable schemaTable = dbDataReader.GetSchemaTable();
@@ -268,7 +268,6 @@ namespace Azure.DataGateway.Service.Resolvers
                         }
                     }
                 }
-                
             } while (await dbDataReader.NextResultAsync());
 
             bool updateOccurred = true;

@@ -412,8 +412,7 @@ namespace Azure.DataGateway.Service.Configurations
             {
                 FieldDefinitionNode field = nameFieldPair.Value;
 
-                if (IsCustomType(field.Type) || IsListOfCustomType(field.Type)
-                    || IsPaginationType(field.Type))
+                if (IsInnerTypeCustom(field.Type))
                 {
                     hasAnyCustomField = true;
                     break;

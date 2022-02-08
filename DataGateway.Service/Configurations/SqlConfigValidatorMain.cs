@@ -226,7 +226,7 @@ namespace Azure.DataGateway.Service.Configurations
                     ValidateGraphQLTypeTableMatchesSchema(typeName, type.Table);
                     Dictionary<string, FieldDefinitionNode> fieldDefinitions = GetTypeFields(typeName);
                     ValidateSchemaFieldsReturnTypes(fieldDefinitions);
-                    bool hasNonScalarFields = HasAnyNonScalarFieldInGraphQLType(fieldDefinitions);
+                    bool hasNonScalarFields = HasAnyCustomFieldInGraphQLType(fieldDefinitions);
 
                     if (hasNonScalarFields)
                     {

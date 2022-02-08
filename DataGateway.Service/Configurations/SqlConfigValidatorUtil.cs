@@ -399,23 +399,28 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Checks if the given GraphQL typename has at least 1 non scalar
-        /// field type which means it is either a custom type or a list type
+        /// Checks if the given GraphQL typename has at least 1 custom
+        /// field type which means it is either
+        /// - a custom type or
+        /// - a list of custom type or
+        /// - a pagination type.
         /// </summary>
-        private bool HasAnyNonScalarFieldInGraphQLType(Dictionary<string, FieldDefinitionNode> fieldDefinitions)
+        private bool HasAnyCustomFieldInGraphQLType(Dictionary<string, FieldDefinitionNode> fieldDefinitions)
         {
-            bool hasNonScalarField = false;
+            bool hasAnyCustomField = false;
             foreach (KeyValuePair<string, FieldDefinitionNode> nameFieldPair in fieldDefinitions)
             {
                 FieldDefinitionNode field = nameFieldPair.Value;
 
-                if (!IsScalarType(field.Type))
+                if (IsCustomType(field.Type) || IsListOfCustomType(field.Type)
+                    || IsPaginationType(field.Type))
                 {
-                    hasNonScalarField = true;
+                    hasAnyCustomField = true;
+                    break;
                 }
             }
 
-            return hasNonScalarField;
+            return hasAnyCustomField;
         }
 
         /// <summary>

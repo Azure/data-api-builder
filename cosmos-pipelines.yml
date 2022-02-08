@@ -13,7 +13,7 @@ strategy:
     mac:
       imageName: "macOS-latest"
     windows:
-      imageName: "windows-latest"
+      imageName: "windows-2022"
   maxParallel: 3
 
 pool:

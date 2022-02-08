@@ -30,8 +30,8 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             if (IsPaginated)
             {
-                SelectionSetNode selectionSet = ((FieldNode)_context.Selection.SyntaxNode.SelectionSet.Selections[0]).SelectionSet;
-                Columns.AddRange(selectionSet.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.ToString())));
+                FieldNode fieldNode = ExtractItemsQueryField(_context.Selection.SyntaxNode);
+                Columns.AddRange(fieldNode.SelectionSet.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.ToString())));
             }
             else
             {
@@ -62,6 +62,5 @@ namespace Azure.DataGateway.Service.Resolvers
                 ));
             }
         }
-
     }
 }

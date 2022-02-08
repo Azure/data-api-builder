@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
+using HotChocolate.Language;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -119,6 +120,28 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Extracts the *Connection.items query field from the *Connection query field
+        /// </summary>
+        /// <returns> The query field or null if **Conneciton.items is not requested in the query</returns>
+        internal static FieldNode ExtractItemsQueryField(FieldNode connectionQueryField)
+        {
+            FieldNode itemsField = null;
+            foreach (ISelectionNode node in connectionQueryField.SelectionSet.Selections)
+            {
+                FieldNode field = node as FieldNode;
+                string fieldName = field.Name.Value;
+
+                if (fieldName == "items")
+                {
+                    itemsField = field;
+                    break;
+                }
+            }
+
+            return itemsField;
         }
 
     }

@@ -46,6 +46,11 @@ namespace Azure.DataGateway.Service
         /// </summary>
         private string WrappedColumns(CosmosQueryStructure structure)
         {
+            if (!structure.Columns.Any())
+            {
+                return "*";
+            }
+
             return string.Join(", ",
                 structure.Columns.Select(
                     c => _containerAlias + "." + c.Label

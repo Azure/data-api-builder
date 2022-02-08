@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Text;
@@ -35,8 +36,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             _metadataStoreProvider = new MetadataStoreProviderForTest();
             string jsonString = File.ReadAllText("schema.gql");
             _metadataStoreProvider.GraphqlSchema = jsonString;
-            _metaStoreProvider = new FileMetadataStoreProvider("cosmos-config.json");
-            _queryEngine = new CosmosQueryEngine(_clientProvider, _metaStoreProvider);
+            _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
             _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider);
             _controller = new GraphQLController(_graphQLService);
@@ -49,15 +49,19 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         /// <param name="dbName">the database name</param>
         /// <param name="containerName">the container name</param>
         /// <param name="numItems">number of items to be created</param>
-        internal static void CreateItems(string dbName, string containerName, int numItems)
+        internal static List<string> CreateItems(string dbName, string containerName, int numItems)
         {
+            List<String> idList = new();
             for (int i = 0; i < numItems; i++)
             {
                 string uid = Guid.NewGuid().ToString();
+                idList.Add(uid);
                 dynamic sourceItem = TestHelper.GetItem(uid);
                 Client.GetContainer(dbName, containerName)
                     .CreateItemAsync(sourceItem, new PartitionKey(uid)).Wait();
             }
+
+            return idList;
         }
 
         private static DefaultHttpContext GetHttpContextWithBody(string data)

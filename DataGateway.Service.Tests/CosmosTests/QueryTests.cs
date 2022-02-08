@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -10,7 +11,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
     {
         private static readonly string _containerName = Guid.NewGuid().ToString();
 
-        public static readonly string PlanetByIdQuery = @"{planetById{ id, name}}";
+        public static readonly string PlanetByIdQueryFormat = @"{{planetById (id: {0}){{ id, name}} }}";
         public static readonly string PlanetListQuery = @"{planetList{ id, name}}";
         public static readonly string PlanetConnectionQueryStringFormat = @"
             {{planets (first: {0}, after: {1}){{
@@ -19,6 +20,8 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
                  hasNextPage
                 }}
             }}";
+
+        private static List<string> _idList;
 
         /// <summary>
         /// Executes once for the test class.
@@ -30,7 +33,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             Init(context);
             Client.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
             Client.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
-            CreateItems(DATABASE_NAME, _containerName, 10);
+            _idList = CreateItems(DATABASE_NAME, _containerName, 10);
             RegisterQueryResolver("planetList", DATABASE_NAME, _containerName);
             RegisterQueryResolver("planets", DATABASE_NAME, _containerName, isPaginated: true);
             RegisterQueryResolver("planetById", DATABASE_NAME, _containerName, isPaginated: false);
@@ -40,7 +43,8 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         public async Task TestSimpleQuery()
         {
             // Run query
-            JsonElement response = await ExecuteGraphQLRequestAsync("planetById", PlanetByIdQuery);
+            string query = string.Format(PlanetByIdQueryFormat, arg0: "\"" + _idList[0] + "\"");
+            JsonElement response = await ExecuteGraphQLRequestAsync("planetById", query);
 
             // Validate results
             Assert.IsFalse(response.ToString().Contains("Error"));

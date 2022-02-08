@@ -105,28 +105,6 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Extracts the *Connection.items query field from the *Connection query field
-        /// </summary>
-        /// <returns> The query field or null if **Conneciton.items is not requested in the query</returns>
-        private static FieldNode ExtractItemsQueryField(FieldNode connectionQueryField)
-        {
-            FieldNode itemsField = null;
-            foreach (ISelectionNode node in connectionQueryField.SelectionSet.Selections)
-            {
-                FieldNode field = node as FieldNode;
-                string fieldName = field.Name.Value;
-
-                if (fieldName == "items")
-                {
-                    itemsField = field;
-                    break;
-                }
-            }
-
-            return itemsField;
-        }
-
-        /// <summary>
         /// Generate the structure for a SQL query based on FindRequestContext,
         /// which is created by a FindById or FindMany REST request.
         /// </summary>

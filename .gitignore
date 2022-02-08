@@ -11,6 +11,7 @@ appsettings.*.json
 !appsettings.Test.json
 !appsettings.MsSqlIntegrationTest.json
 !appsettings.PostgreSqlIntegrationTest.json
+!appsettings.MySqlIntegrationTest.json
 !appsettings.*.example.json
 
 *.cd

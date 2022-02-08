@@ -142,7 +142,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Populates the column name in Columns, creates parameter
+        /// Populates the column name in Columns, gets created parameter
         /// and adds its value to Values.
         /// </summary>
         /// <param name="columnName">The name of the column.</param>
@@ -152,31 +152,21 @@ namespace Azure.DataGateway.Service.Resolvers
             InsertColumns.Add(columnName);
             string paramName;
 
-            try
+            if (value != null)
             {
-                if (value != null)
-                {
-                    //Check parameter Dictionary/List
-                    paramName = ColumnToParam[columnName];
-                }
-                else
-                {
-                    // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
-                    throw new DatagatewayException(
-                        message: $"Unexpected value for column \"{columnName}\" provided.",
-                        statusCode: (int)HttpStatusCode.BadRequest,
-                        subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
-                }
-
-                Values.Add($"@{paramName}");
+                //Check parameter Dictionary/List
+                paramName = ColumnToParam[columnName];
             }
-            catch (ArgumentException ex)
+            else
             {
+                // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
                 throw new DatagatewayException(
-                    message: ex.Message,
+                    message: $"Unexpected value for column \"{columnName}\" provided.",
                     statusCode: (int)HttpStatusCode.BadRequest,
                     subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
             }
+
+            Values.Add($"@{paramName}");
         }
     }
 }

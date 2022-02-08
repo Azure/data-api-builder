@@ -355,6 +355,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="field">The string representing a field.</param>
         /// <param name="value">The value associated with a given field.</param>
         /// <param name="op">The predicate operation representing the comparison between field and value.</param>
+        /// <param name="lop">The logical operation representing the comparison with other predicates.</param>
         private void PopulateParamsAndPredicates(string field, object value, PredicateOperation op = PredicateOperation.Equal, LogicalOperation lop = LogicalOperation.And)
         {
             try

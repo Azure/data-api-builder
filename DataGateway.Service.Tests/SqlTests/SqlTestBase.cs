@@ -8,10 +8,12 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -85,31 +87,29 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// returns httpcontext with body consisting of the given data.
-        /// </summary>
-        /// <param name="data">The data to be put in the request body e.g. GraphQLQuery</param>
-        /// <returns>The http context with given data as stream of utf-8 bytes.</returns>
-        protected static DefaultHttpContext GetHttpContextWithBody(string data)
-        {
-            MemoryStream stream = new(Encoding.UTF8.GetBytes(data));
-            DefaultHttpContext httpContext = new()
-            {
-                Request = { Body = stream, ContentLength = stream.Length }
-            };
-            return httpContext;
-        }
-
-        /// <summary>
-        /// Constructs an http context with request consisting of the given query string.
+        /// Constructs an http context with request consisting of the given query string and/or body data.
         /// </summary>
         /// <param name="queryStringUrl">query</param>
-        /// <returns>The http context with request consisting of the given query string.</returns>
-        protected static DefaultHttpContext GetHttpContextWithQueryString(string queryStringUrl)
+        /// <param name="bodyData">The data to be put in the request body e.g. GraphQLQuery</param>
+        /// <returns>The http context with request consisting of the given query string (if any)
+        /// and request body (if any) as a stream of utf-8 bytes.</returns>
+        protected static DefaultHttpContext GetRequestHttpContext(
+            string queryStringUrl = null,
+            string bodyData = null)
         {
-            DefaultHttpContext httpContext = new()
+            DefaultHttpContext httpContext = new();
+
+            if (!string.IsNullOrEmpty(queryStringUrl))
             {
-                Request = { QueryString = new(queryStringUrl) }
-            };
+                httpContext.Request.QueryString = new(queryStringUrl);
+            }
+
+            if (!string.IsNullOrEmpty(bodyData))
+            {
+                MemoryStream stream = new(Encoding.UTF8.GetBytes(bodyData));
+                httpContext.Request.Body = stream;
+                httpContext.Request.ContentLength = stream.Length;
+            }
 
             return httpContext;
         }
@@ -117,21 +117,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Sends raw SQL query to database engine to retrieve expected result in JSON format.
         /// </summary>
-        /// <param name="queryText">raw database query</param>
+        /// <param name="queryText">raw database query, typically a SELECT</param>
         /// <returns>string in JSON format</returns>
-        protected static async Task<string> GetDatabaseResultAsync(string queryText)
+        protected static async Task<string> GetDatabaseResultAsync(
+            string queryText,
+            Operation operationType = Operation.Find)
         {
+            string result;
+
             using DbDataReader reader = await _queryExecutor.ExecuteQueryAsync(queryText, parameters: null);
 
             // An empty result will cause an error with the json parser
             if (!reader.HasRows)
             {
-                throw new System.Exception("No rows to read from database result");
+                // Find and Delete queries have empty result sets.
+                // Delete operation will return number of records affected.
+                result = null;
+            }
+            else
+            {
+                using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader));
+                result = sqlResult.RootElement.ToString();
             }
 
-            using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader));
-
-            return sqlResult.RootElement.ToString();
+            return result;
         }
 
         /// <summary>
@@ -144,6 +153,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="entity">string represents the name of the entity</param>
         /// <param name="sqlQuery">string represents the query to be executed</param>
         /// <param name="controller">string represents the rest controller</param>
+        /// <param name="operationType">The operation type to be tested.</param>
+        /// <param name="requestBody">string represents JSON data used in mutation operations</param>
         /// <param name="exception">bool represents if we expect an exception</param>
         /// <param name="expectedErrorMessage">string represents the error message in the JsonResponse</param>
         /// <param name="expectedStatusCode">int represents the returned http status code</param>
@@ -155,31 +166,65 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string entity,
             string sqlQuery,
             RestController controller,
+            Operation operationType = Operation.Find,
+            string requestBody = null,
             bool exception = false,
             string expectedErrorMessage = "",
             int expectedStatusCode = 200,
             string expectedSubStatusCode = "BadRequest")
         {
-            ConfigureRestController(controller, queryString);
-            // if an exception is expected we generate the correct error
-            string expected = exception ? RestController.ErrorResponse(expectedSubStatusCode.ToString(), expectedErrorMessage, expectedStatusCode).Value.ToString() :
-                await GetDatabaseResultAsync(sqlQuery);
+            ConfigureRestController(
+                controller,
+                queryString,
+                requestBody);
 
-            await SqlTestHelper.PerformApiTest(
-                controller.Find,
-                entity,
-                primaryKeyRoute,
-                expected,
-                expectedStatusCode
-            );
+            IActionResult actionResult = await SqlTestHelper.PerformApiTest(
+                        controller,
+                        entity,
+                        primaryKeyRoute,
+                        operationType);
+
+            // if an exception is expected we generate the correct error
+            // The expected result should be a Query that confirms the result state
+            // of the Operation performed for the test. However:
+            // Initial DELETE request results in 204 no content, no exception thrown.
+            // Subsequent DELETE requests result in 404, which result in an exception.
+            string expected;
+            if (operationType == Operation.Delete && actionResult is NoContentResult)
+            {
+                expected = null;
+            }
+            else
+            {
+                expected = exception ?
+                    RestController.ErrorResponse(
+                        expectedSubStatusCode.ToString(),
+                        expectedErrorMessage, expectedStatusCode).Value.ToString() :
+                    await GetDatabaseResultAsync(sqlQuery);
+            }
+
+            SqlTestHelper.VerifyResult(actionResult, expected, expectedStatusCode);
+
         }
 
-        ///<summary>
-        /// Add HttpContext with query to the RestController
-        ///</summary>
-        protected static void ConfigureRestController(RestController restController, string queryString)
+        /// <summary>
+        /// Add HttpContext with query and body(if any) to the RestController
+        /// </summary>
+        /// <param name="restController">The controller to configure.</param>
+        /// <param name="queryString">The query string in the url.</param>
+        /// <param name="requestBody">The data to be put in the request body.</param>
+        protected static void ConfigureRestController(
+            RestController restController,
+            string queryString,
+            string requestBody = null)
         {
-            restController.ControllerContext.HttpContext = GetHttpContextWithQueryString(queryString);
+            restController.ControllerContext.HttpContext =
+                GetRequestHttpContext(
+                    queryString,
+                    bodyData: requestBody);
+
+            // Set the mock context accessor's request same as the controller's request.
+            _httpContextAccessor.Setup(x => x.HttpContext.Request).Returns(restController.ControllerContext.HttpContext.Request);
         }
 
         /// <summary>
@@ -216,7 +261,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             Console.WriteLine(graphqlQueryJson);
 
-            graphQLController.ControllerContext.HttpContext = GetHttpContextWithBody(graphqlQueryJson);
+            graphQLController.ControllerContext.HttpContext =
+                GetRequestHttpContext(
+                    queryStringUrl: null,
+                    bodyData: graphqlQueryJson);
+
             return await graphQLController.PostAsync();
         }
     }

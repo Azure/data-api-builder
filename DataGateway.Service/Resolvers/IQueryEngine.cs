@@ -32,9 +32,9 @@ namespace Azure.DataGateway.Service.Resolvers
         public Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters);
 
         /// <summary>
-        /// Given the FindQueryContext structure, obtains the query text and executes it against the backend.
+        /// Given the RestRequestContext structure, obtains the query text and executes it against the backend.
         /// </summary>
-        public Task<JsonDocument> ExecuteAsync(FindRequestContext queryStructure);
+        public Task<JsonDocument> ExecuteAsync(RestRequestContext queryStructure);
 
         /// <summary>
         /// Resolves a jsonElement representing an inner object based on the field's schema and metadata

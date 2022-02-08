@@ -2,6 +2,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -111,9 +112,104 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             );
         }
 
+        /// <summary>
+        /// Tests the InsertOne functionality with a REST POST request.
+        /// </summary>
+        [TestMethod]
+        public async Task InsertOneTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: null,
+                    queryString: null,
+                    entity: _integrationTableName,
+                    sqlQuery: GetQuery(nameof(InsertOneTest)),
+                    controller: _restController,
+                    operationType: Operation.Insert,
+                    requestBody: requestBody,
+                    expectedStatusCode: 201
+                );
+        }
+
+        /// <summary>
+        /// DeleteOne operates on a single entity with target object
+        /// identified in the primaryKeyRoute. No requestBody is used
+        /// for this type of request.
+        /// sqlQuery is not used because we are confirming the NoContent result
+        /// of a successful delete operation.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task DeleteOneTest()
+        {
+            //expected status code 204
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/5",
+                    queryString: null,
+                    entity: _integrationTableName,
+                    sqlQuery: null,
+                    controller: _restController,
+                    operationType: Operation.Delete,
+                    requestBody: null,
+                    expectedStatusCode: (int)HttpStatusCode.NoContent
+                );
+        }
+
         #endregion
 
         #region Negative Tests
+        /// <summary>
+        /// DeleteNonExistent operates on a single entity with target object
+        /// identified in the primaryKeyRoute.
+        /// sqlQuery represents the query used to get 'expected' result of zero items.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task DeleteNonExistentTest()
+        {//expected status code 404
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/7",
+                    queryString: null,
+                    entity: _integrationTableName,
+                    sqlQuery: GetQuery(nameof(DeleteNonExistentTest)),
+                    controller: _restController,
+                    operationType: Operation.Delete,
+                    requestBody: null,
+                    exception: true,
+                    expectedErrorMessage: "Not Found",
+                    expectedStatusCode: (int)HttpStatusCode.NotFound,
+                    expectedSubStatusCode: DatagatewayException.SubStatusCodes.EntityNotFound.ToString()
+                );
+        }
+
+        /// <summary>
+        /// DeleteWithInvalidPrimaryKey operates on a single entity with target object
+        /// identified in the primaryKeyRoute. No sqlQuery value is provided as this request
+        /// should fail prior to querying the database.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task DeleteWithInvalidPrimaryKeyTest()
+        {//expected status code 404
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "title/7",
+                    queryString: null,
+                    entity: _integrationTableName,
+                    sqlQuery: null,
+                    controller: _restController,
+                    operationType: Operation.Delete,
+                    requestBody: null,
+                    exception: true,
+                    expectedErrorMessage: "The request is invalid since the primary keys: title requested were not found in the entity definition.",
+                    expectedStatusCode: (int)HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DatagatewayException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
 
         /// <summary>
         /// Tests the REST Api for FindById operation with a query string
@@ -123,13 +219,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task FindByIdTestWithInvalidFields()
         {
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/567/book_id/1",
+                primaryKeyRoute: "id/5671",
                 queryString: "?_f=id,content",
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindByIdTestWithInvalidFields)),
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: "Invalid Column name: content",
+                expectedErrorMessage: "Invalid Column name requested: content",
                 expectedStatusCode: 400
             );
         }
@@ -170,7 +266,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: msSqlQuery,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: "Invalid Column name: content",
+                expectedErrorMessage: "Invalid Column name requested: content",
                 expectedStatusCode: 400
             );
         }

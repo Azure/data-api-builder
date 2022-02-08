@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
-using Azure.DataGateway.Service.Resolvers;
+using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Services;
 
 namespace Azure.DataGateway.Services
 {
@@ -15,16 +17,14 @@ namespace Azure.DataGateway.Services
         /// Prefix used for specifying the fields in the query string of the URL.
         /// </summary>
         private const string FIELDS_URL = "_f";
-
+        private const string FILTER_URL = "$filter";
         /// <summary>
         /// Parses the primary key string to identify the field names composing the key
         /// and their values.
-        /// Adds the an equality comparison between the keyname and the given
-        /// value to the list of predicates.
         /// </summary>
-        /// <param name="queryByPrimaryKey">The primary key route. e.g. tablename/{saleOrderId/123/customerName/Xyz/}.</param>
-        /// <param name="queryStructure">The FindRequestContext holding the major components of the query.</param>
-        public static void ParsePrimaryKey(string primaryKeyRoute, FindRequestContext context)
+        /// <param name="primaryKeyRoute">The primary key route. e.g. tablename/{saleOrderId/123/customerName/Xyz/}.</param>
+        /// <param name="context">The RestRequestContext holding the major components of the query.</param>
+        public static void ParsePrimaryKey(string primaryKeyRoute, RestRequestContext context)
         {
             if (!string.IsNullOrWhiteSpace(primaryKeyRoute))
             {
@@ -32,16 +32,25 @@ namespace Azure.DataGateway.Services
 
                 if (primaryKeyValues.Length % 2 != 0)
                 {
-                    throw new NotImplementedException("Support for url template with implicit primary key field names is not yet added.");
+                    throw new NotImplementedException("Support for url template with implicit primary key" +
+                        " field names is not yet added.");
                 }
 
                 for (int primaryKeyIndex = 0; primaryKeyIndex < primaryKeyValues.Length; primaryKeyIndex += 2)
                 {
-                    RestPredicate predicate = new(
-                            primaryKeyValues[primaryKeyIndex],
-                            primaryKeyValues[primaryKeyIndex + 1]
-                            );
-                    context.Predicates.Add(predicate);
+                    string primaryKey = primaryKeyValues[primaryKeyIndex];
+                    if (!context.PrimaryKeyValuePairs.ContainsKey(primaryKey))
+                    {
+                        context.PrimaryKeyValuePairs.Add(primaryKeyValues[primaryKeyIndex],
+                            primaryKeyValues[primaryKeyIndex + 1]);
+                    }
+                    else
+                    {
+                        throw new DatagatewayException(
+                            message: "The request is invalid since it contains duplicate primary keys.",
+                            statusCode: 400,
+                            DatagatewayException.SubStatusCodes.BadRequest);
+                    }
                 }
             }
         }
@@ -49,11 +58,11 @@ namespace Azure.DataGateway.Services
         /// <summary>
         /// ParseQueryString is a helper function used to parse the query String provided
         /// in the URL of the http request. It parses and saves the values that are needed to
-        /// later generate queries in the given FindRequestContext.
+        /// later generate queries in the given RestRequestContext.
         /// </summary>
         /// <param name="nvc">NameValueCollection representing query params from the URL's query string.</param>
-        /// <param name="queryStructure">The FindRequestContext holding the major components of the query.</param>
-        public static void ParseQueryString(NameValueCollection nvc, FindRequestContext context)
+        /// <param name="context">The RestRequestContext holding the major components of the query.</param>
+        public static void ParseQueryString(NameValueCollection nvc, RestRequestContext context, FilterParser filterParser)
         {
             foreach (string key in nvc.Keys)
             {
@@ -61,7 +70,11 @@ namespace Azure.DataGateway.Services
                 {
                     case FIELDS_URL:
                         CheckListForNullElement(nvc[key].Split(",").ToList());
-                        context.Fields = nvc[key].Split(",").ToList();
+                        context.FieldsToBeReturned = nvc[key].Split(",").ToList();
+                        break;
+                    case FILTER_URL:
+                        // not yet implemented
+                        context.FieldValuePairsInUrl = filterParser.Parse();
                         break;
                     default:
                         throw new ArgumentException("Invalid Query Parameter: " + key.ToString());

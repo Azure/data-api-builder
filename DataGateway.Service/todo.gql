@@ -1,0 +1,24 @@
+type Query {
+    getTodos(first: Int = 100): [Todo!]!
+    getTodo(id: Int!): Todo
+    todos(first: Int, after: String): TodoConnection!    
+}
+
+type Mutation {
+    editTodo(id: Int!, title: String, publisher_id: Int): Todo
+    insertTodo(title: String!, publisher_id: Int!): Todo    
+    deleteTodo(id: Int!): Todo
+}
+
+type Todo {
+    id: Int!
+    title: String!
+    completed: Int!
+    owner: String!
+}
+
+type TodoConnection {
+    items: [Todo!]!
+    endCursor: String
+    hasNextPage: Boolean!
+}

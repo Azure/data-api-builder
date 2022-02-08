@@ -8,7 +8,7 @@
       // Use IntelliSense to find out which attributes exist for C# debugging
       // Use hover for the description of the existing attributes
       // For further information visit https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md
-      "name": ".NET Core Launch (web)",
+      "name": ".NET Core Launch (MSSQL)",
       "type": "coreclr",
       "request": "launch",
       "justMyCode": false,
@@ -25,7 +25,7 @@
         "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
       },
       "env": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "MsSql"
       },
       "sourceFileMap": {
         "/Views": "${workspaceFolder}/Views"

@@ -108,22 +108,6 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Resolves a predicate logical operation enum to string
-        /// </summary>
-        protected string Build(LogicalOperation op)
-        {
-            switch (op)
-            {
-                case LogicalOperation.And:
-                    return "AND";
-                case LogicalOperation.Or:
-                    return "OR";
-                default:
-                    throw new ArgumentException($"Cannot build unknown predicate logical operation {op}.");
-            }
-        }
-
-        /// <summary>
         /// Build left and right predicate operand and resolve the predicate operator into
         /// {OperandLeft} {Operator} {OperandRight}
         /// </summary>

@@ -50,14 +50,6 @@ namespace Azure.DataGateway.Service.Models
     }
 
     /// <summary>
-    /// Represents the logical operations a predicate can have
-    /// </summary>
-    public enum LogicalOperation
-    {
-        And, Or
-    }
-
-    /// <summary>
     /// Operand of Predicate
     /// Can be initialized and resolved both as Column and as String
     /// </summary>
@@ -138,10 +130,6 @@ namespace Azure.DataGateway.Service.Models
         /// Enum representing the operator of the expression
         /// </summary>
         public PredicateOperation Op { get; }
-        /// <summary>
-        /// Enum representing the logical operator of the expression
-        /// </summary>
-        public LogicalOperation Lop { get; }
 
         public Predicate(PredicateOperand left, PredicateOperation op, PredicateOperand right)
         {

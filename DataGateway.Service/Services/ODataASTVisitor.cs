@@ -48,6 +48,21 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
     }
 
     /// <summary>
+    /// Represents visint a UnaryNode, which is what holds unary
+    /// operators such as NOT.
+    /// </summary>
+    /// <param name="nodeIn">The node visisted.</param>
+    /// <returns></returns>
+    public override TSource Visit(UnaryOperatorNode nodeIn)
+    {
+        _filterPredicateBuilder.Append("(");
+        _filterPredicateBuilder.Append($"{GetFilterPredicateOperator(nodeIn.OperatorKind.ToString())} ");
+        nodeIn.Operand.Accept(this);
+        _filterPredicateBuilder.Append(")");
+        return null;
+    }
+
+    /// <summary>
     /// Represents visiting a SingleValuePropertyAccessNode, which is what
     /// holds a field name in the AST.
     /// </summary>
@@ -123,6 +138,8 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
                 return "AND";
             case "Or":
                 return "OR";
+            case "Not":
+                return "NOT";
             default:
                 throw new ArgumentException($"Uknown Predicate Operation of {op}");
         }

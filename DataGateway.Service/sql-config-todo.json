@@ -44,6 +44,14 @@
           "owner": {
             "Type": "text"
           }
+        },
+        "HttpVerbs": {
+          "GET": {
+            "AuthorizationType": "Anonymous"
+          },
+          "POST": {
+            "AuthorizationType": "Anonymous"
+          }
         }
       }
     }

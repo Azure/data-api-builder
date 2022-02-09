@@ -1,7 +1,6 @@
-type Query {
-    getTodos(first: Int = 100): [Todo!]!
-    getTodo(id: Int!): Todo
-    todos(first: Int, after: String): TodoConnection!    
+type Query {        
+    todo_by_pk(id: Int!): Todo  
+    todo(first: Int, after: String): TodoConnection!    
 }
 
 type Mutation {

@@ -5,8 +5,8 @@ type Query {
 }
 
 type Mutation {
-    editTodo(id: Int!, title: String, publisher_id: Int): Todo
-    insertTodo(title: String!, publisher_id: Int!): Todo    
+    editTodo(id: Int!, title: String, completed: Int, owner: String): Todo
+    insertTodo(title: String!, completed: Int!, owner: String!): Todo    
     deleteTodo(id: Int!): Todo
 }
 

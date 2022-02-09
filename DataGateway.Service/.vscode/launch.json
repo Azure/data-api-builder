@@ -18,12 +18,6 @@
       "args": [],
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false,
-      // Enable launching a web browser when ASP.NET Core starts. For more information: https://aka.ms/VSCode-CS-LaunchJson-WebBrowser
-      "serverReadyAction": {
-        "action": "openExternally",
-        "uriFormat": "%s/graphql",
-        "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
-      },
       "env": {
         "ASPNETCORE_ENVIRONMENT": "MsSql"
       },

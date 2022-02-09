@@ -1,6 +1,6 @@
 using System;
-using System.Collections.Generic;
-using Azure.DataGateway.Service.Models;
+using System.Text;
+using Azure.DataGateway.Service.Resolvers;
 using Microsoft.OData.UriParser;
 
 /// <summary>
@@ -10,8 +10,15 @@ using Microsoft.OData.UriParser;
 public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
     where TSource : class
 {
-    List<RestPredicate> _predicates = new();
-    RestPredicate _current = new();
+    StringBuilder _filterPredicateBuilder = new();
+    SqlQueryStructure _struct;
+    string _left;
+    string _op;
+
+    public ODataASTVisitor(SqlQueryStructure structure)
+    {
+        _struct = structure;
+    }
 
     /// <summary>
     /// Represents visiting a BinaryOperatorNode, which will hold either
@@ -21,44 +28,22 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
     /// <returns></returns>
     public override TSource Visit(BinaryOperatorNode nodeIn)
     {
-        // If the node we currently visit is a logical operator we need to check its children
-        if (nodeIn.OperatorKind == Microsoft.OData.UriParser.BinaryOperatorKind.And
-            || nodeIn.OperatorKind == Microsoft.OData.UriParser.BinaryOperatorKind.Or)
+        // In order traversal but add parens to maintain order of logical operations
+        if (IsLogicalNode(nodeIn))
         {
-            // first save logical op
-            _current.Lop = GetLogicalOperation(nodeIn.OperatorKind.ToString());
-
-            // child could be another logical op, in which case we recursively call on the other child first
-            if (IsLogicalNode(nodeIn.Left))
-            {
-                nodeIn.Right.Accept(this);
-                nodeIn.Left.Accept(this);
-                return null;
-            }
-            else if (IsLogicalNode(nodeIn.Right))
-            {
-                nodeIn.Left.Accept(this);
-                nodeIn.Right.Accept(this);
-                return null;
-            }
-
-            // Parent is logical operator both children are not, so we save parent's logical op for left child
-            LogicalOperation tempOp = _current.Lop;
-            // right child already has parent's logical op
-            nodeIn.Right.Accept(this);
-            _current.Lop = tempOp;
+            _filterPredicateBuilder.Append("(");
             nodeIn.Left.Accept(this);
-            return null;
+            _filterPredicateBuilder.Append($" {GetFilterPredicateOperator(nodeIn.OperatorKind.ToString())} ");
+            nodeIn.Right.Accept(this);
+            _filterPredicateBuilder.Append(")");
         }
         else
         {
-            // not a logical op so save the predicate op
-            _current.Op = GetPredicateOperation(nodeIn.OperatorKind.ToString());
+            nodeIn.Left.Accept(this);
+            _op = GetFilterPredicateOperator(nodeIn.OperatorKind.ToString());
+            nodeIn.Right.Accept(this);
         }
 
-        // not a logical op so just call accept on children
-        nodeIn.Right.Accept(this);
-        nodeIn.Left.Accept(this);
         return null;
     }
 
@@ -70,22 +55,22 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
     /// <returns></returns>
     public override TSource Visit(SingleValuePropertyAccessNode nodeIn)
     {
-        _current.Field = nodeIn.Property.Name;
-        // we call right then left, so field name comes when we are done, add to list and create new _current
-        _predicates.Add(_current);
-        _current = new();
+        // save left to paramaterize later
+        _left = nodeIn.Property.Name;
         return null;
     }
 
     /// <summary>
     /// Represents visiting a ConstantNode, which is what
-    /// holds a value in the AST.
+    /// holds a value in the AST. 
     /// </summary>
     /// <param name="nodeIn">The node visited.</param>
     /// <returns></returns>
     public override TSource Visit(ConstantNode nodeIn)
     {
-        _current.Value = nodeIn.Value.ToString();
+        // This node is last node that forms a given predicate, so we parameterize here.
+        string paramName = _struct.MakeParamWithValue(_struct.GetParamAsColumnSystemType(nodeIn.Value.ToString(), _left));
+        _filterPredicateBuilder.Append($"{_left} {_op} @{paramName}");
         return null;
     }
 
@@ -103,55 +88,43 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
     }
 
     /// <summary>
-    /// Gets and returns _predicates
+    /// Returns the string representation of the filter predicates
+    /// that will make up the filter of the query.
     /// </summary>
-    /// <returns>List of Rest Predicates.</returns>
-    public List<RestPredicate> TryAndGetRestPredicates()
+    /// <returns>String representing filter predicates.</returns>
+    public string TryAndGetFindPredicates()
     {
-        return _predicates;
+        return _filterPredicateBuilder.ToString();
     }
 
     /// <summary>
-    /// Helper function to return the predicate operation associated with a given string.
+    /// Return the correct string for the operator that will be a part of the filter predicates
+    /// that will make up the filter of the query.
     /// </summary>
-    /// <param name="op">The string representing the predicate operation to return.</param>
-    /// <returns>Predicate operation that represents the string provided.</returns>
-    public PredicateOperation GetPredicateOperation(string op)
+    /// <param name="op">The op we will translate.</param>
+    /// <returns>The string which is a translation of the op.</returns>
+    public string GetFilterPredicateOperator(string op)
     {
         switch (op)
         {
             case "Equal":
-                return PredicateOperation.Equal;
+                return "=";
             case "GreaterThan":
-                return PredicateOperation.GreaterThan;
+                return ">";
             case "GreaterThanOrEqual":
-                return PredicateOperation.GreaterThanOrEqual;
+                return ">=";
             case "LessThan":
-                return PredicateOperation.LessThan;
+                return "<";
             case "LessThanOrEqual":
-                return PredicateOperation.LessThanOrEqual;
+                return "<=";
             case "NotEqual":
-                return PredicateOperation.NotEqual;
+                return "!=";
+            case "And":
+                return "AND";
+            case "Or":
+                return "OR";
             default:
                 throw new ArgumentException($"Uknown Predicate Operation of {op}");
-        }
-    }
-
-    /// <summary>
-    /// Helper function to return the logical operation associated with a given string.
-    /// </summary>
-    /// <param name="op">The string representing the logical operation to return.</param>
-    /// <returns>Logical operation that represents the string provided.</returns>
-    public LogicalOperation GetLogicalOperation(string op)
-    {
-        switch (op)
-        {
-            case "And":
-                return LogicalOperation.And;
-            case "Or":
-                return LogicalOperation.Or;
-            default:
-                throw new ArgumentException($"Uknown Logical Operation of {op}");
         }
     }
 

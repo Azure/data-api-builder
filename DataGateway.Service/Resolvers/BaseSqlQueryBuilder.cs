@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Azure.DataGateway.Service.Models;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -131,24 +130,6 @@ namespace Azure.DataGateway.Service.Resolvers
         protected string Build(Predicate predicate)
         {
             return $"{Build(predicate.Left)} {Build(predicate.Op)} {Build(predicate.Right)}";
-        }
-
-        /// <summary>
-        /// Build and join predicates with logical op as seperator
-        /// </summary>
-        protected string Build(List<Predicate> predicates)
-        {
-            StringBuilder sb = new();
-            foreach (Predicate p in predicates)
-            {
-                sb.Append(Build(p));
-                if (p != predicates.Last<Predicate>())
-                {
-                    sb.Append($" {Build(p.Lop)} ");
-                }
-            }
-
-            return sb.ToString();
         }
 
         /// <summary>

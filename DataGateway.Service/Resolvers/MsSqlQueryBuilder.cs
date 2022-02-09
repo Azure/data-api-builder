@@ -37,6 +37,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         x => $" OUTER APPLY ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)}({dataIdent})"));
 
             string predicates = JoinPredicateStrings(
+                                    structure.FilterPredicates,
                                     Build(structure.Predicates),
                                     Build(structure.PaginationMetadata.PaginationPredicate));
 

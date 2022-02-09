@@ -29,6 +29,10 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<Predicate> Predicates { get; }
         /// <summary>
+        /// FindPredicates represent the WHERE Clause in our query.
+        /// </summary>
+        public string FilterPredicates { get; set; }
+        /// <summary>
         /// Parameters values required to execute the query.
         /// </summary>
         public Dictionary<string, object> Parameters { get; set; }
@@ -78,7 +82,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         ///  Add parameter to Parameters and return the name associated with it
         /// </summary>
-        protected string MakeParamWithValue(object value)
+        public string MakeParamWithValue(object value)
         {
             string paramName = $"param{Counter.Next()}";
             Parameters.Add(paramName, value);
@@ -90,7 +94,7 @@ namespace Azure.DataGateway.Service.Resolvers
         ///</summary>
         /// <exception cref="ArgumentException">columnName is not a valid column of table or param
         /// does not have a valid value type</exception>
-        protected object GetParamAsColumnSystemType(string param, string columnName)
+        public object GetParamAsColumnSystemType(string param, string columnName)
         {
             ColumnType type = GetColumnType(columnName);
             Type systemType = ColumnDefinition.ResolveColumnTypeToSystemType(type);

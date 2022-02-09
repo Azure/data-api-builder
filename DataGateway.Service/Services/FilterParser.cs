@@ -1,6 +1,8 @@
 using System;
-using System.Collections.Generic;
+using System.Net;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -28,14 +30,18 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="filterQueryString">Represents the $filter part of the query string</param>
         /// <param name="resourcePath">Represents the resource path, in our case the entity name.</param>
         /// <returns>A list of rest predicates to be used in query generation.</returns>
-        public List<RestPredicate> Parse(string filterQueryString, string resourcePath)
+        public FilterClause GetFilterClause(string filterQueryString, string resourcePath)
         {
-            Uri relativeUri = new(resourcePath + filterQueryString, UriKind.Relative);
-            ODataUriParser parser = new(_model, relativeUri);
-            FilterClause filterClause = parser.ParseFilter();
-            ODataASTVisitor<object> visitor = new();
-            filterClause.Expression.Accept(visitor);
-            return visitor.TryAndGetRestPredicates();
+            try
+            {
+                Uri relativeUri = new(resourcePath + filterQueryString, UriKind.Relative);
+                ODataUriParser parser = new(_model, relativeUri);
+                return parser.ParseFilter();
+            }
+            catch (ODataException e)
+            {
+                throw new DatagatewayException(e.Message, ((int)HttpStatusCode.BadRequest), DatagatewayException.SubStatusCodes.BadRequest);
+            }
         }
     }
 }

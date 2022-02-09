@@ -15,7 +15,6 @@ namespace Azure.DataGateway.Service.Models
             FieldsToBeReturned = new();
             PrimaryKeyValuePairs = new();
             FieldValuePairsInBody = new();
-            RestPredicatesInUrl = new();
             IsMany = isList;
             HttpVerb = HttpRestVerbs.DELETE;
             OperationType = Operation.Delete;

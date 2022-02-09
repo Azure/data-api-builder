@@ -73,10 +73,10 @@ namespace Azure.DataGateway.Services
                         context.FieldsToBeReturned = nvc[key].Split(",").ToList();
                         break;
                     case FILTER_URL:
-                        // build the filter query string that OData wants to see
+                        // save the AST that represents the filter for the query
                         // ?$filter=<filter clause using microsoft api guidelines>
                         string filterQueryString = "?" + FILTER_URL + "=" + nvc[key];
-                        context.RestPredicatesInUrl = filterParser.Parse(filterQueryString, context.EntityName + "/");
+                        context.FilterClauseInUrl = filterParser.GetFilterClause(filterQueryString, context.EntityName + "/");
                         break;
                     default:
                         throw new ArgumentException("Invalid Query Parameter: " + key.ToString());

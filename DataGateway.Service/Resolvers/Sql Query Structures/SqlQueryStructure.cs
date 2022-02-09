@@ -136,6 +136,7 @@ namespace Azure.DataGateway.Service.Resolvers
             TableName = context.EntityName;
             TableAlias = TableName;
             IsListQuery = context.IsMany;
+            FilterPredicates = string.Empty;
 
             context.FieldsToBeReturned.ForEach(fieldName => AddColumn(fieldName));
             if (Columns.Count == 0)
@@ -157,10 +158,13 @@ namespace Azure.DataGateway.Service.Resolvers
                 PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
             }
 
-            foreach (RestPredicate predicate in context.RestPredicatesInUrl)
+            if (context.FilterClauseInUrl is not null)
             {
-                PopulateParamsAndPredicates(predicate.Field, predicate.Value, predicate.Op, predicate.Lop);
+                ODataASTVisitor<object> visitor = new(this);
+                context.FilterClauseInUrl.Expression.Accept(visitor);
+                FilterPredicates = visitor.TryAndGetFindPredicates();
             }
+
         }
 
         /// <summary>
@@ -355,8 +359,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="field">The string representing a field.</param>
         /// <param name="value">The value associated with a given field.</param>
         /// <param name="op">The predicate operation representing the comparison between field and value.</param>
-        /// <param name="lop">The logical operation representing the comparison with other predicates.</param>
-        private void PopulateParamsAndPredicates(string field, object value, PredicateOperation op = PredicateOperation.Equal, LogicalOperation lop = LogicalOperation.And)
+        private void PopulateParamsAndPredicates(string field, object value, PredicateOperation op = PredicateOperation.Equal)
         {
             try
             {
@@ -368,8 +371,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(TableAlias, field)),
                         op,
-                        new PredicateOperand($"@{parameterName}"),
-                        lop));
+                        new PredicateOperand($"@{parameterName}")
+                        ));
                 }
                 else
                 {

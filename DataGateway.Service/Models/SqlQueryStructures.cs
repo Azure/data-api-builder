@@ -143,12 +143,11 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
         public LogicalOperation Lop { get; }
 
-        public Predicate(PredicateOperand left, PredicateOperation op, PredicateOperand right, LogicalOperation lop = LogicalOperation.And)
+        public Predicate(PredicateOperand left, PredicateOperation op, PredicateOperand right)
         {
             Left = left;
             Right = right;
             Op = op;
-            Lop = lop;
         }
     }
 

@@ -28,8 +28,7 @@ namespace Azure.DataGateway.Service.Models
         public virtual Dictionary<string, object> PrimaryKeyValuePairs { get; set; }
 
         /// <summary>
-        /// List of RestPredicates. These represent the filtering to be applied in
-        /// a WHERE clause.
+        /// AST that represents the filter part of the query.
         /// Based on the operation type, this property may or may not be populated.
         /// </summary>
         public virtual FilterClause FilterClauseInUrl { get; set; }

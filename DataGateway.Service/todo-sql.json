@@ -51,6 +51,15 @@
           },
           "POST": {
             "AuthorizationType": "Anonymous"
+          },
+          "PUT": {
+            "AuthorizationType": "Anonymous"
+          },
+          "PATCH": {
+            "AuthorizationType": "Anonymous"
+          },
+          "DELETE": {
+            "AuthorizationType": "Anonymous"
           }
         }
       }

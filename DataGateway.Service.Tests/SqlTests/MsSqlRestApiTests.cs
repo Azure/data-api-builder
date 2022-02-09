@@ -46,6 +46,24 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTestWithFilterQueryStringSingleNotFilter",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE NOT (id < 3)" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFilterQueryStringSingleAndFilter",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE id < 3 AND id > 1" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFilterQueryStringSingleOrFilter",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE id < 3 OR id > 4" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindTestWithFilterQueryStringMultipleAndFilters",
                 $"SELECT * FROM { _integrationTableName } " +
                 $"WHERE id < 4 AND id > 1 AND title != 'Awesome book' " +
@@ -55,6 +73,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "FindTestWithFilterQueryStringMultipleOrFilters",
                 $"SELECT * FROM { _integrationTableName } " +
                 $"WHERE id = 1 OR id = 2 OR id = 3" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFilterQueryStringMultipleAndOrFilters",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE (id > 2 AND id < 4) OR title = 'Awesome book'" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFilterQueryStringMultipleNotAndOrFilters",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE (NOT (id < 3) OR id < 4) OR NOT (title = 'Awesome book')" +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {

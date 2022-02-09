@@ -99,7 +99,51 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController);
 
         }
-
+        /// <summary>
+        /// Tests the REST Api for Find operation with a single not and filter
+        /// comparisons connected with OR.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterQueryStringSingleNotFilter()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=not (id lt 3)",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringSingleNotFilter)),
+                controller: _restController
+            );
+        }
+        /// <summary>
+        /// Tests the REST Api for Find operation with two filters separated with AND
+        /// comparisons connected with OR.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterQueryStringSingleAndFilter()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id lt 3 and id gt 1",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringSingleAndFilter)),
+                controller: _restController
+            );
+        }
+        /// <summary>
+        /// Tests the REST Api for Find operation with two filters separated with OR
+        /// comparisons connected with OR.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterQueryStringSingleOrFilter()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id lt 3 or id gt 4",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringSingleOrFilter)),
+                controller: _restController
+            );
+        }
         /// <summary>
         /// Tests the REST Api for Find operation with a filter query string with multiple
         /// comparisons connected with AND.
@@ -128,6 +172,38 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 queryString: "?$filter=id eq 1 or id eq 2 or id eq 3",
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringMultipleOrFilters)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with a filter query string with multiple
+        /// comparisons connected with AND and those comparisons connected with OR.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterQueryStringMultipleAndOrFilters()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=(id gt 2 and id lt 4) or (title eq 'Awesome book')",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringMultipleAndOrFilters)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with a filter query string with multiple
+        /// comparisons connected with AND OR and including NOT.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterQueryStringMultipleNotAndOrFilters()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=(not (id lt 3) or id lt 4) or not (title eq 'Awesome book')",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringMultipleNotAndOrFilters)),
                 controller: _restController
             );
         }

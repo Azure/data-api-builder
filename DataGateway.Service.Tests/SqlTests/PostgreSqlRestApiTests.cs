@@ -80,6 +80,39 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ) AS subq"
             },
             {
+                "FindTestWithFilterQueryStringSingleNotFilter",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE NOT (id < 3)
+                      ORDER BY id
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFilterQueryStringSingleAndFilter",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE id < 3 AND id > 1
+                      ORDER BY id
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFilterQueryStringSingleOrFilter",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE id < 3 OR id > 4
+                      ORDER BY id
+                  ) AS subq"
+            },
+            {
                 "FindTestWithFilterQueryStringMultipleAndFilters",
                 @"
                   SELECT json_agg(to_jsonb(subq)) AS data
@@ -98,6 +131,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                       SELECT *
                       FROM " + _integrationTableName + @"
                       WHERE id = 1 OR id = 2 OR id = 3
+                      ORDER BY id
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFilterQueryStringMultipleAndOrFilters",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE (id > 2 AND id < 4) OR (title = 'Awesome book')
+                      ORDER BY id
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFilterQueryStringMultipleNotAndOrFilters",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE (NOT (id < 3) OR id < 4) OR NOT (title = 'Awesome book')
                       ORDER BY id
                   ) AS subq"
             },

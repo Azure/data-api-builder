@@ -29,7 +29,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<Predicate> Predicates { get; }
         /// <summary>
-        /// FindPredicates represent the WHERE Clause in our query.
+        /// FilterPredicates represent the filters in the Where Clause in our query.
         /// </summary>
         public string FilterPredicates { get; set; }
         /// <summary>

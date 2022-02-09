@@ -112,7 +112,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Make the predicate to select the element selected by the SqlInsertStructure
+        /// Make the predicate to select the element inserted by the SqlInsertStructure
         /// </summary>
         private string MakeInsertWhere(SqlInsertStructure structure)
         {

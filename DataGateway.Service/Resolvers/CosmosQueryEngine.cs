@@ -44,7 +44,7 @@ namespace Azure.DataGateway.Services
             Container container = this._clientProvider.Client.GetDatabase(resolver.DatabaseName).GetContainer(resolver.ContainerName);
 
             QueryRequestOptions queryRequestOptions = new();
-            string requestContinuation = null;
+            string? requestContinuation = null;
 
             QueryDefinition querySpec = new(resolver.ParametrizedQuery);
 
@@ -54,16 +54,16 @@ namespace Azure.DataGateway.Services
                 {
                     querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
                 }
-            }
 
-            if (parameters.TryGetValue("first", out object maxSize))
-            {
-                queryRequestOptions.MaxItemCount = Convert.ToInt32(maxSize);
-            }
+                if (parameters.TryGetValue("first", out object? maxSize))
+                {
+                    queryRequestOptions.MaxItemCount = Convert.ToInt32(maxSize);
+                }
 
-            if (parameters.TryGetValue("after", out object after))
-            {
-                requestContinuation = Base64Decode(after as string);
+                if (parameters.TryGetValue("after", out object? after))
+                {
+                    requestContinuation = Base64Decode((string)after);
+                }
             }
 
             FeedResponse<JObject> firstPage = await container.GetItemQueryIterator<JObject>(querySpec, requestContinuation, queryRequestOptions).ReadNextAsync();
@@ -78,7 +78,7 @@ namespace Azure.DataGateway.Services
                     jarray.Add(item);
                 }
 
-                string responseContinuation = firstPage.ContinuationToken;
+                string? responseContinuation = firstPage.ContinuationToken;
                 if (string.IsNullOrEmpty(responseContinuation))
                 {
                     responseContinuation = null;
@@ -93,14 +93,18 @@ namespace Azure.DataGateway.Services
                 return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(res.ToString()), null);
             }
 
-            JObject firstItem = null;
-
-            IEnumerator<JObject> iterator = firstPage.GetEnumerator();
-
-            while (iterator.MoveNext() && firstItem == null)
+            static JObject FindFirstItem(IEnumerator<JObject> iterator)
             {
-                firstItem = iterator.Current;
+                JObject? firstItem;
+                if (iterator.MoveNext() && (firstItem = iterator.Current) == null)
+                {
+                    return FindFirstItem(iterator);
+                }
+
+                return iterator.Current;
             }
+
+            JObject firstItem = FindFirstItem(firstPage.GetEnumerator());
 
             JsonDocument jsonDocument = JsonDocument.Parse(firstItem.ToString());
 
@@ -183,7 +187,7 @@ namespace Azure.DataGateway.Services
             return resolver.IsPaginated;
         }
 
-        private static string Base64Encode(string plainText)
+        private static string Base64Encode(string? plainText)
         {
             if (plainText == default)
             {

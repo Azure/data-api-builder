@@ -93,3 +93,5 @@ these queries stay minimal:
   them in the multiline string.
 - For SQL Server use https://poorsql.com/. Edit the default formatter settings
   by checking the "trailing commas" checkbox, and adding `\s\s\s\s` in the "indent string box".
+- For MySql use https://poorsql.com/ with the same configuration as SQL Server (above) and set
+  the max line width to 100.

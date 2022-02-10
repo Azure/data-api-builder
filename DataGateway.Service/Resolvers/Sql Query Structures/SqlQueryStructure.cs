@@ -149,12 +149,17 @@ namespace Azure.DataGateway.Service.Resolvers
 
             foreach (KeyValuePair<string, object> predicate in context.PrimaryKeyValuePairs)
             {
-                PopulateParamsAndPredicates(predicate);
+                PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
             }
 
             foreach (KeyValuePair<string, object> predicate in context.FieldValuePairsInBody)
             {
-                PopulateParamsAndPredicates(predicate);
+                PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
+            }
+
+            foreach (KeyValuePair<string, Tuple<object, PredicateOperation>> predicate in context.FieldValuePairsInUrl)
+            {
+                PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value.Item1, op: predicate.Value.Item2);
             }
         }
 
@@ -344,32 +349,34 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        ///  Given the predicate key value pair, populates the Parameters and Predicates properties.
+        ///  Given the predicate key value pair, where value includes the Predicte Operation as well as the value associated with the field,
+        ///  populates the Parameters and Predicates properties.
         /// </summary>
-        /// <param name="predicate">The key value pair representing a predicate.</param>
-        private void PopulateParamsAndPredicates(KeyValuePair<string, object> predicate)
+        /// <param name="field">The string representing a field.</param>
+        /// <param name="value">The value associated with a given field.</param>
+        /// <param name="op">The predicate operation representing the comparison between field and value.</param>
+        private void PopulateParamsAndPredicates(string field, object value, PredicateOperation op = PredicateOperation.Equal)
         {
             try
             {
                 string parameterName;
-                if (predicate.Value != null)
+                if (value != null)
                 {
                     parameterName = MakeParamWithValue(
-                        GetParamAsColumnSystemType(predicate.Value.ToString(), predicate.Key));
+                        GetParamAsColumnSystemType(value.ToString(), field));
+                    Predicates.Add(new Predicate(
+                        new PredicateOperand(new Column(TableAlias, field)),
+                        op,
+                        new PredicateOperand($"@{parameterName}")));
                 }
                 else
                 {
                     // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
                     throw new DatagatewayException(
-                        message: $"Unexpected value for column \"{predicate.Key}\" provided.",
+                        message: $"Unexpected value for column \"{field}\" provided.",
                         statusCode: (int)HttpStatusCode.BadRequest,
                         subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
                 }
-
-                Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(TableAlias, predicate.Key)),
-                        PredicateOperation.Equal,
-                        new PredicateOperand($"@{parameterName}")));
             }
             catch (ArgumentException ex)
             {

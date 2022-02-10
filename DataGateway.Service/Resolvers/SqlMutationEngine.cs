@@ -102,32 +102,27 @@ namespace Azure.DataGateway.Service.Resolvers
 
             try
             {
-                if (context.OperationType == Operation.Upsert)
-                {
-                    using DbDataReader dbUpsertDataReader =
-                        await PerformMutationOperation(
-                        context.EntityName,
-                        context.OperationType,
-                        parameters);
-                    Tuple<bool, Dictionary<string, object>> recordUpdated = await ExtractChangesFromDbDataReader(dbUpsertDataReader);
-
-                    // If the record was not updated, then an Insert occurred.
-                    if (!recordUpdated.Item1)
-                    {
-                        string resultString = JsonSerializer.Serialize(recordUpdated.Item2);
-                        return JsonDocument.Parse(resultString);
-                    }
-
-                    // If record was updated, null signals upstream controller to return HTTP 204 No Content
-                    return null;
-                }
-
                 using DbDataReader dbDataReader =
                 await PerformMutationOperation(
                     context.EntityName,
                     context.OperationType,
                     parameters);
-                context.PrimaryKeyValuePairs = await ExtractRowFromDbDataReader(dbDataReader);
+
+                Dictionary<string, object> resultRecord = new();
+                resultRecord = await ExtractRowFromDbDataReader(dbDataReader);
+
+                string jsonResultString = null;
+
+                /// Processes a second result set from DbDataReader if it exists.
+                /// In upsert:
+                /// result set #1: result of the UPDATE operation.
+                /// result set #2: result of the INSERT operation.
+                if (await dbDataReader.NextResultAsync())
+                {
+                    // Since no first result set exists, we overwrite Dictionary here.
+                    resultRecord = await ExtractRowFromDbDataReader(dbDataReader);
+                    jsonResultString = JsonSerializer.Serialize(resultRecord);
+                }
 
                 if (context.OperationType == Operation.Delete)
                 {
@@ -136,13 +131,20 @@ namespace Azure.DataGateway.Service.Resolvers
                     // Returning empty JSON result triggers a NoContent result in calling REST service.
                     if (dbDataReader.RecordsAffected > 0)
                     {
-                        return JsonDocument.Parse("{}");
-                    }
-                    else
-                    {
-                        return null;
+                        jsonResultString = "{}";
                     }
                 }
+                else if(context.OperationType == Operation.Insert || context.OperationType == Operation.Update)
+                {
+                    jsonResultString = JsonSerializer.Serialize(resultRecord);
+                }
+
+                if (jsonResultString == null)
+                {
+                    return null;
+                }
+
+                return JsonDocument.Parse(jsonResultString);
             }
             catch (DbException ex)
             {
@@ -157,13 +159,11 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine(ex.StackTrace);
+                throw new DatagatewayException(
+                    message: $"Could not perform the given mutation on entity {context.EntityName}.",
+                    statusCode: (int)HttpStatusCode.InternalServerError,
+                    subStatusCode: DatagatewayException.SubStatusCodes.DatabaseOperationFailed);
             }
-
-            // Reuse the same context as a FindRequestContext to return the results after the mutation operation.
-            context.OperationType = Operation.Find;
-
-            // delegates the querying part of the mutation to the QueryEngine
-            return await _queryEngine.ExecuteAsync(context);
         }
 
         /// <summary>
@@ -238,51 +238,6 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return row;
-        }
-
-        ///<summary>
-        /// Processes multiple result sets from DbDataReader and format it so it can be used as a parameter to a query execution.
-        /// In upsert:
-        /// result set #1: result of the UPDATE operation.
-        /// result set #2: result of the INSERT operation.
-        ///</summary>
-        ///<returns>A dictionary representing the full object modified or inserted.</returns>
-        private static async Task<Tuple<bool, Dictionary<string, object>>> ExtractChangesFromDbDataReader(DbDataReader dbDataReader)
-        {
-            Dictionary<string, object> row = new();
-
-            // Do-While because first result set needs to be checked
-            // as calling dbReader.NextResultAsync() would skip to next result set.
-            int resultSetsFound = 0;
-            do
-            {
-                // Result sets incremented here since dbDataReader.ReadAsync() may have no rows to read from
-                // due to an empty result set.
-                resultSetsFound++;
-
-                while (await dbDataReader.ReadAsync())
-                {
-                    if (dbDataReader.HasRows)
-                    {
-                        DataTable schemaTable = dbDataReader.GetSchemaTable();
-
-                        foreach (DataRow schemaRow in schemaTable.Rows)
-                        {
-                            string columnName = (string)schemaRow["ColumnName"];
-                            row.Add(columnName, dbDataReader[columnName]);
-                        }
-                    }
-                }
-            } while (await dbDataReader.NextResultAsync());
-
-            bool updateOccurred = true;
-            // Two result sets indicates Update failed and Insert performed instead.
-            if (resultSetsFound > 1)
-            {
-                updateOccurred = false;
-            }
-
-            return new Tuple<bool, Dictionary<string, object>>(updateOccurred, row);
         }
 
         private static Dictionary<string, object> PrepareParameters(RestRequestContext context)

@@ -40,12 +40,6 @@ namespace Azure.DataGateway.Service.Resolvers
         public IncrementingInteger Counter { get; }
 
         protected IMetadataStoreProvider MetadataStoreProvider { get; }
-        /// <summary>
-        /// Maps a column name to the created parameter name to avoid creating
-        /// duplicate parameters. Useful in Upsert where an Insert and Update
-        /// structure are both created.
-        /// </summary>
-        protected Dictionary<string, string> ColumnToParam { get; }
 
         public BaseSqlQueryStructure(IMetadataStoreProvider metadataStore,
             IncrementingInteger counter = null)
@@ -55,7 +49,6 @@ namespace Azure.DataGateway.Service.Resolvers
             Parameters = new();
             MetadataStoreProvider = metadataStore;
             Counter = counter ?? new IncrementingInteger();
-            ColumnToParam = new();
         }
 
         /// <summary>
@@ -83,8 +76,9 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        ///  Add parameter to Parameters and return the name associated with it
+        ///  Add parameter to Parameters and return the name associated with it.
         /// </summary>
+        /// <param name="value">Value to be assigned to parameter, which can be null for nullable columns.</param>
         protected string MakeParamWithValue(object value)
         {
             string paramName = $"param{Counter.Next()}";

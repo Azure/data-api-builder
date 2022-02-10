@@ -29,7 +29,9 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<Predicate> Predicates { get; }
         /// <summary>
-        /// FilterPredicates represent the filters in the Where Clause in our query.
+        /// FilterPredicates is a string that represents the filter portion of our query
+        /// in the WHERE Clause. This is generated specifically from the $filter portion
+        /// of the query string.
         /// </summary>
         public string FilterPredicates { get; set; }
         /// <summary>

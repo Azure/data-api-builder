@@ -370,8 +370,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(TableAlias, field)),
                         op,
-                        new PredicateOperand($"@{parameterName}")
-                        ));
+                        new PredicateOperand($"@{parameterName}")));
                 }
                 else
                 {

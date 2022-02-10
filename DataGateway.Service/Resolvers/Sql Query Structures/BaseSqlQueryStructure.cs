@@ -96,7 +96,7 @@ namespace Azure.DataGateway.Service.Resolvers
         ///</summary>
         /// <exception cref="ArgumentException">columnName is not a valid column of table or param
         /// does not have a valid value type</exception>
-        public object GetParamAsColumnSystemType(string param, string columnName)
+        protected object GetParamAsColumnSystemType(string param, string columnName)
         {
             ColumnType type = GetColumnType(columnName);
             Type systemType = ColumnDefinition.ResolveColumnTypeToSystemType(type);

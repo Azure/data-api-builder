@@ -23,6 +23,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<string> Values { get; }
 
+        /// <summary>
+        /// The inserted columns that the insert will return
+        /// </summary>
+        public List<string> ReturnColumns { get; }
+
         public SqlInsertStructure(string tableName, IMetadataStoreProvider metadataStore, IDictionary<string, object> mutationParams)
         : base(metadataStore)
         {

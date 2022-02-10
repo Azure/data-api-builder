@@ -46,6 +46,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTestWithFilterQueryStringValueFirstOneFilter",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE id = 1" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindTestWithFilterQueryStringSingleNotFilter",
                 $"SELECT * FROM { _integrationTableName } " +
                 $"WHERE NOT (id < 3)" +

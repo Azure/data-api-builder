@@ -12,7 +12,8 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
 {
     StringBuilder _filterPredicateBuilder = new();
     SqlQueryStructure _struct;
-    string _left;
+    string _field;
+    string _value;
     string _op;
 
     public ODataASTVisitor(SqlQueryStructure structure)
@@ -42,6 +43,9 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
             nodeIn.Left.Accept(this);
             _op = GetFilterPredicateOperator(nodeIn.OperatorKind.ToString());
             nodeIn.Right.Accept(this);
+            // At this point we have everything we need to paramaterize and save the predicate
+            string paramName = _struct.MakeParamWithValue(_struct.GetParamAsColumnSystemType(_value, _field));
+            _filterPredicateBuilder.Append($"{_field} {_op} @{paramName}");
         }
 
         return null;
@@ -70,8 +74,8 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
     /// <returns></returns>
     public override TSource Visit(SingleValuePropertyAccessNode nodeIn)
     {
-        // save left to paramaterize later
-        _left = nodeIn.Property.Name;
+        // save field to paramaterize later
+        _field = nodeIn.Property.Name;
         return null;
     }
 
@@ -83,9 +87,7 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
     /// <returns></returns>
     public override TSource Visit(ConstantNode nodeIn)
     {
-        // This node is last node that forms a given predicate, so we parameterize here.
-        string paramName = _struct.MakeParamWithValue(_struct.GetParamAsColumnSystemType(nodeIn.Value.ToString(), _left));
-        _filterPredicateBuilder.Append($"{_left} {_op} @{paramName}");
+        _value = nodeIn.Value.ToString();
         return null;
     }
 

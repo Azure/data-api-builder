@@ -80,6 +80,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ) AS subq"
             },
             {
+                "FindTestWithFilterQueryStringValueFirstOneFilter",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE id = 1
+                      ORDER BY id
+                  ) AS subq"
+            },
+            {
                 "FindTestWithFilterQueryStringSingleNotFilter",
                 @"
                   SELECT json_agg(to_jsonb(subq)) AS data

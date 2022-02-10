@@ -99,6 +99,23 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController);
 
         }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with a single filter where
+        /// value comes first.
+        /// checking equality.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterQueryStringValueFirstOneFilter()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=1 eq id",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringValueFirstOneFilter)),
+                controller: _restController);
+
+        }
         /// <summary>
         /// Tests the REST Api for Find operation with a single not and filter
         /// comparisons connected with OR.

@@ -106,7 +106,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     actionResult = await controller.Delete(entityName, primaryKeyRoute);
                     break;
                 case Operation.Upsert:
-                    actionResult = await controller.Put(entityName, primaryKeyRoute);
+                    actionResult = await controller.Upsert(entityName, primaryKeyRoute);
                     break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");

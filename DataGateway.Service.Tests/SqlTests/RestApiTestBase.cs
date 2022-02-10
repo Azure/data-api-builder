@@ -85,8 +85,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Tests the REST Api for Find operation with a single filter
-        /// checking equality.
+        /// Tests the REST Api for Find operation with a single equals filter.
         /// </summary>
         [TestMethod]
         public async Task FindTestWithFilterQueryStringOneFilter()
@@ -101,9 +100,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Tests the REST Api for Find operation with a single filter where
+        /// Tests the REST Api for Find operation with a single equals filter where
         /// value comes first.
-        /// checking equality.
         /// </summary>
         [TestMethod]
         public async Task FindTestWithFilterQueryStringValueFirstOneFilter()
@@ -113,6 +111,76 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 queryString: "?$filter=1 eq id",
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringValueFirstOneFilter)),
+                controller: _restController);
+
+        }
+        /// <summary>
+        /// Tests the REST Api for Find operation with a single greater than filter.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterQueryOneGtFilter()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id gt 3",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryOneGtFilter)),
+                controller: _restController);
+
+        }
+        /// <summary>
+        /// Tests the REST Api for Find operation with a single greater than or equal filter.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterQueryOneGeFilter()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id ge 3",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryOneGeFilter)),
+                controller: _restController);
+
+        }
+        /// <summary>
+        /// Tests the REST Api for Find operation with a single less than filter.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterQueryOneLtFilter()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id lt 3",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryOneLtFilter)),
+                controller: _restController);
+
+        }
+        /// <summary>
+        /// Tests the REST Api for Find operation with a single less than or equal filter.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterQueryOneLeFilter()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id le 3",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryOneLeFilter)),
+                controller: _restController);
+
+        }
+        /// <summary>
+        /// Tests the REST Api for Find operation with a single not equal filter.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterQueryOneNeFilter()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id ne 3",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryOneNeFilter)),
                 controller: _restController);
 
         }

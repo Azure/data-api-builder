@@ -91,6 +91,61 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ) AS subq"
             },
             {
+                "FindTestWithFilterQueryOneGtFilter",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE id > 3
+                      ORDER BY id
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFilterQueryOneGeFilter",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE id >= 3
+                      ORDER BY id
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFilterQueryOneLtFilter",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE id < 3
+                      ORDER BY id
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFilterQueryOneLeFilter",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE id <= 3
+                      ORDER BY id
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFilterQueryOneNeFilter",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE id != 3
+                      ORDER BY id
+                  ) AS subq"
+            },
+            {
                 "FindTestWithFilterQueryStringSingleNotFilter",
                 @"
                   SELECT json_agg(to_jsonb(subq)) AS data

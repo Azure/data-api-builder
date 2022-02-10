@@ -52,6 +52,36 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTestWithFilterQueryOneGtFilter",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE id > 3" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFilterQueryOneGeFilter",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE id >= 3" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFilterQueryOneLtFilter",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE id < 3" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFilterQueryOneLeFilter",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE id <= 3" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFilterQueryOneNeFilter",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE id != 3" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindTestWithFilterQueryStringSingleNotFilter",
                 $"SELECT * FROM { _integrationTableName } " +
                 $"WHERE NOT (id < 3)" +

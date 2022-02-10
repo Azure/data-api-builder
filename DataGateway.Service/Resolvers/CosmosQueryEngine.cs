@@ -187,7 +187,7 @@ namespace Azure.DataGateway.Services
             return resolver.IsPaginated;
         }
 
-        private static string Base64Encode(string? plainText)
+        private static string? Base64Encode(string? plainText)
         {
             if (plainText == default)
             {
@@ -198,7 +198,7 @@ namespace Azure.DataGateway.Services
             return System.Convert.ToBase64String(plainTextBytes);
         }
 
-        private static string Base64Decode(string base64EncodedData)
+        private static string? Base64Decode(string base64EncodedData)
         {
             if (base64EncodedData == default)
             {
@@ -208,6 +208,5 @@ namespace Azure.DataGateway.Services
             byte[] base64EncodedBytes = System.Convert.FromBase64String(base64EncodedData);
             return System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
         }
-
     }
 }

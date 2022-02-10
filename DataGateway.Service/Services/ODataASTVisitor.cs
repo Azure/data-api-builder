@@ -1,20 +1,15 @@
 using System;
-using System.Text;
 using Azure.DataGateway.Service.Resolvers;
+using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
 
 /// <summary>
 /// This class is a visitor for an AST generated when parsing a $filter query string
 /// with the OData Uri Parser.
 /// </summary>
-public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
-    where TSource : class
+public class ODataASTVisitor : QueryNodeVisitor<string>
 {
-    private StringBuilder _filterPredicateBuilder = new();
     private SqlQueryStructure _struct;
-    private string _field;
-    private string _value;
-    private string _op;
 
     public ODataASTVisitor(SqlQueryStructure structure)
     {
@@ -26,29 +21,13 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
     /// a Predicate operation (eq, gt, lt, etc), or a Logical operaton (And, Or).
     /// </summary>
     /// <param name="nodeIn">The node visited.</param>
-    /// <returns></returns>
-    public override TSource Visit(BinaryOperatorNode nodeIn)
+    /// <returns>String concatenation of (left op right)</returns>
+    public override string Visit(BinaryOperatorNode nodeIn)
     {
         // In order traversal but add parens to maintain order of logical operations
-        if (IsLogicalNode(nodeIn))
-        {
-            _filterPredicateBuilder.Append("(");
-            nodeIn.Left.Accept(this);
-            _filterPredicateBuilder.Append($" {GetFilterPredicateOperator(nodeIn.OperatorKind)} ");
-            nodeIn.Right.Accept(this);
-            _filterPredicateBuilder.Append(")");
-        }
-        else
-        {
-            nodeIn.Left.Accept(this);
-            _op = GetFilterPredicateOperator(nodeIn.OperatorKind);
-            nodeIn.Right.Accept(this);
-            // At this point we have everything we need to paramaterize and save the predicate
-            string paramName = _struct.MakeParamWithValue(_struct.GetParamAsColumnSystemType(_value, _field));
-            _filterPredicateBuilder.Append($"{_field} {_op} @{paramName}");
-        }
-
-        return null;
+        string left = nodeIn.Left.Accept(this);
+        string right = nodeIn.Right.Accept(this);
+        return "(" + left + " " + GetFilterPredicateOperator(nodeIn.OperatorKind) + " " + right + ")";
     }
 
     /// <summary>
@@ -56,14 +35,11 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
     /// operators such as NOT.
     /// </summary>
     /// <param name="nodeIn">The node visisted.</param>
-    /// <returns></returns>
-    public override TSource Visit(UnaryOperatorNode nodeIn)
+    /// <returns>String concatenation of (op children)</returns>
+    public override string Visit(UnaryOperatorNode nodeIn)
     {
-        _filterPredicateBuilder.Append("(");
-        _filterPredicateBuilder.Append($"{GetFilterPredicateOperator(nodeIn.OperatorKind)} ");
-        nodeIn.Operand.Accept(this);
-        _filterPredicateBuilder.Append(")");
-        return null;
+        string children = nodeIn.Operand.Accept(this);
+        return "(" + GetFilterPredicateOperator(nodeIn.OperatorKind) + " " + children + ")";
     }
 
     /// <summary>
@@ -71,12 +47,10 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
     /// holds a field name in the AST.
     /// </summary>
     /// <param name="nodeIn">The node visited.</param>
-    /// <returns></returns>
-    public override TSource Visit(SingleValuePropertyAccessNode nodeIn)
+    /// <returns>String representing the Field name</returns>
+    public override string Visit(SingleValuePropertyAccessNode nodeIn)
     {
-        // save field to paramaterize later
-        _field = nodeIn.Property.Name;
-        return null;
+        return nodeIn.Property.Name;
     }
 
     /// <summary>
@@ -84,11 +58,11 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
     /// holds a value in the AST. 
     /// </summary>
     /// <param name="nodeIn">The node visited.</param>
-    /// <returns></returns>
-    public override TSource Visit(ConstantNode nodeIn)
+    /// <returns>String representing param that holds given value.</returns>
+    public override string Visit(ConstantNode nodeIn)
     {
-        _value = nodeIn.Value.ToString();
-        return null;
+        string name = nodeIn.TypeReference.ShortQualifiedName();
+        return "@" + _struct.MakeParamWithValue(GetParamWithSystemType(nodeIn.Value.ToString(), name));
     }
 
     /// <summary>
@@ -97,21 +71,42 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
     /// </summary>
     /// <param name="nodeIn">The node visited.</param>
     /// <returns></returns>
-    public override TSource Visit(ConvertNode nodeIn)
+    public override string Visit(ConvertNode nodeIn)
     {
         // call accept on source to keep traversing AST.
-        nodeIn.Source.Accept(this);
-        return null;
+        return nodeIn.Source.Accept(this);
     }
 
-    /// <summary>
-    /// Returns the string representation of the filter predicates
-    /// that will make up the filter of the query.
-    /// </summary>
-    /// <returns>String representing filter predicates.</returns>
-    public string GetFindPredicates()
+    ///<summary>
+    /// Gets the value of the parameter cast as the type the edm model associated to this parameter
+    ///</summary>
+    /// <exception cref="ArgumentException">Param is not valid for given EdmType</exception>
+    public object GetParamWithSystemType(string param, string edmType)
     {
-        return _filterPredicateBuilder.ToString();
+        try
+        {
+            switch (edmType)
+            {
+                case "String":
+                    return param;
+                case "Int64":
+                    return long.Parse(param);
+                default:
+                    // should never happen due to the config being validated for correct types
+                    throw new NotSupportedException($"{edmType} is not supported");
+            }
+        }
+        catch (Exception e)
+        {
+            if (e is FormatException ||
+                e is ArgumentNullException ||
+                e is OverflowException)
+            {
+                throw new ArgumentException($"Parameter \"{param}\" cannot be resolved as type \"{edmType}\".");
+            }
+
+            throw;
+        }
     }
 
     /// <summary>
@@ -160,29 +155,5 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
             default:
                 throw new ArgumentException($"Uknown Predicate Operation of {op}");
         }
-    }
-
-    /// <summary>
-    /// Checks if the kind of the provided node is consistent with a logical operation.
-    /// </summary>
-    /// <param name="node">The node to check.</param>
-    /// <returns>Bool representing if the node is a kind of logical operation.</returns>
-    public bool IsLogicalNode(SingleValueNode node)
-    {
-        // Node is a BinaryOperatorNode so we just check the OperatorKind
-        if (node is BinaryOperatorNode)
-        {
-            BinaryOperatorNode bNode = (BinaryOperatorNode)node;
-            return bNode.OperatorKind == BinaryOperatorKind.And
-                || bNode.OperatorKind == BinaryOperatorKind.Or;
-        }
-        // Node is a convert node so we must check source instead
-        else if (node is ConvertNode)
-        {
-            ConvertNode cNode = (ConvertNode)node;
-            return IsLogicalNode(cNode.Source);
-        }
-
-        return false;
     }
 }

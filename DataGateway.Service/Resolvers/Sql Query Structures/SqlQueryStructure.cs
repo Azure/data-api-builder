@@ -160,9 +160,8 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (context.FilterClauseInUrl is not null)
             {
-                ODataASTVisitor<object> visitor = new(this);
-                context.FilterClauseInUrl.Expression.Accept(visitor);
-                FilterPredicates = visitor.GetFindPredicates();
+                ODataASTVisitor visitor = new(this);
+                FilterPredicates = context.FilterClauseInUrl.Expression.Accept<string>(visitor);
             }
 
         }

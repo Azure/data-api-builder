@@ -29,7 +29,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="filterQueryString">Represents the $filter part of the query string</param>
         /// <param name="resourcePath">Represents the resource path, in our case the entity name.</param>
-        /// <returns>A list of rest predicates to be used in query generation.</returns>
+        /// <returns>An AST FilterClause that represents the filter portion of the WHERE clause.</returns>
         public FilterClause GetFilterClause(string filterQueryString, string resourcePath)
         {
             try

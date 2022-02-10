@@ -137,7 +137,6 @@ namespace Azure.DataGateway.Service.Services
             if (!string.IsNullOrEmpty(requestBody))
             {
                 insertPayloadRoot = GetInsertPayload(requestBody);
-                
             }
 
             return insertPayloadRoot;

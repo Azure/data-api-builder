@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
@@ -37,7 +38,8 @@ namespace Azure.DataGateway.Service.Resolvers
             TableDefinition tableDefinition = GetTableDefinition();
 
             // return primary key so the inserted row can be identified
-            ReturnColumns = tableDefinition.PrimaryKey;
+            //ReturnColumns = tableDefinition.PrimaryKey;
+            ReturnColumns = tableDefinition.Columns.Keys.ToList<string>();
 
             foreach (KeyValuePair<string, object> param in mutationParams)
             {

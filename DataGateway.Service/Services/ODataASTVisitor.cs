@@ -34,14 +34,14 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
         {
             _filterPredicateBuilder.Append("(");
             nodeIn.Left.Accept(this);
-            _filterPredicateBuilder.Append($" {GetFilterPredicateOperator(nodeIn.OperatorKind.ToString())} ");
+            _filterPredicateBuilder.Append($" {GetFilterPredicateOperator(nodeIn.OperatorKind)} ");
             nodeIn.Right.Accept(this);
             _filterPredicateBuilder.Append(")");
         }
         else
         {
             nodeIn.Left.Accept(this);
-            _op = GetFilterPredicateOperator(nodeIn.OperatorKind.ToString());
+            _op = GetFilterPredicateOperator(nodeIn.OperatorKind);
             nodeIn.Right.Accept(this);
             // At this point we have everything we need to paramaterize and save the predicate
             string paramName = _struct.MakeParamWithValue(_struct.GetParamAsColumnSystemType(_value, _field));
@@ -60,7 +60,7 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
     public override TSource Visit(UnaryOperatorNode nodeIn)
     {
         _filterPredicateBuilder.Append("(");
-        _filterPredicateBuilder.Append($"{GetFilterPredicateOperator(nodeIn.OperatorKind.ToString())} ");
+        _filterPredicateBuilder.Append($"{GetFilterPredicateOperator(nodeIn.OperatorKind)} ");
         nodeIn.Operand.Accept(this);
         _filterPredicateBuilder.Append(")");
         return null;
@@ -115,32 +115,47 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
     }
 
     /// <summary>
-    /// Return the correct string for the operator that will be a part of the filter predicates
+    /// Return the correct string for the binary operator that will be a part of the filter predicates
     /// that will make up the filter of the query.
     /// </summary>
     /// <param name="op">The op we will translate.</param>
     /// <returns>The string which is a translation of the op.</returns>
-    public string GetFilterPredicateOperator(string op)
+    public string GetFilterPredicateOperator(BinaryOperatorKind op)
     {
         switch (op)
         {
-            case "Equal":
+            case BinaryOperatorKind.Equal:
                 return "=";
-            case "GreaterThan":
+            case BinaryOperatorKind.GreaterThan:
                 return ">";
-            case "GreaterThanOrEqual":
+            case BinaryOperatorKind.GreaterThanOrEqual:
                 return ">=";
-            case "LessThan":
+            case BinaryOperatorKind.LessThan:
                 return "<";
-            case "LessThanOrEqual":
+            case BinaryOperatorKind.LessThanOrEqual:
                 return "<=";
-            case "NotEqual":
+            case BinaryOperatorKind.NotEqual:
                 return "!=";
-            case "And":
+            case BinaryOperatorKind.And:
                 return "AND";
-            case "Or":
+            case BinaryOperatorKind.Or:
                 return "OR";
-            case "Not":
+            default:
+                throw new ArgumentException($"Uknown Predicate Operation of {op}");
+        }
+    }
+
+    /// <summary>
+    /// Return the correct string for the unary operator that will be a part of the filter predicates
+    /// that will make up the filter of the query.
+    /// </summary>
+    /// <param name="op">The op we will translate.</param>
+    /// <returns>The string which is a translation of the op.</returns>
+    public string GetFilterPredicateOperator(UnaryOperatorKind op)
+    {
+        switch (op)
+        {
+            case UnaryOperatorKind.Not:
                 return "NOT";
             default:
                 throw new ArgumentException($"Uknown Predicate Operation of {op}");

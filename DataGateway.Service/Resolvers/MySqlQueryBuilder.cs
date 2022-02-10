@@ -129,10 +129,6 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     selections.Add($"LAST_INSERT_ID() AS {quotedColName}");
                 }
-                else if (structure.GetColumnDefinition(colName).HasDefault)
-                {
-                    selections.Add($"DEFAULT({quotedColName} AS {quotedColName})");
-                }
             }
 
             return string.Join(", ", selections);

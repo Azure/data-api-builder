@@ -35,6 +35,9 @@
     <Content Include="PostgreSqlBooks.sql">
       <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
     </Content>
+    <Content Include="MySqlBooks.sql">
+        <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -43,9 +46,6 @@
     </Content>
     <Content Update="appsettings*.json">
       <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
-    </Content>
-    <Content Include="MySqlBooks.sql">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 

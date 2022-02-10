@@ -8,7 +8,7 @@ using MySqlConnector;
 namespace Azure.DataGateway.Service.Resolvers
 {
     /// <summary>
-    /// Modifies a query that returns regular rows to return JSON for Postgres
+    /// Modifies a query that returns regular rows to return JSON for MySql
     /// </summary>
     public class MySqlQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
     {
@@ -86,9 +86,9 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Makes the parameters for the JSON_OBJECT function from a list of labelled columns
         /// Format for table columns is:
-        ///     "label1", subqueryName.label1, "label2", subqueryName.label1
+        ///     "label1", subqueryName.label1, "label2", subqueryName.label2
         /// Format for subquery columns is:
-        ///     "label1", JSON_UNQUOTE(subqueryName.label1), "label2", JSON_UNQUOTE(subqueryName.label1)
+        ///     "label1", JSON_EXTRACT(subqueryName.label1, '$'), "label2", JSON_EXTRACT(subqueryName.label2, '$')
         /// </summary>
         private string MakeJsonObjectParams(SqlQueryStructure structure, string subqueryName)
         {

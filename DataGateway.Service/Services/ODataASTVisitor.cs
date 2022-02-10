@@ -61,8 +61,7 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
     /// <returns>String representing param that holds given value.</returns>
     public override string Visit(ConstantNode nodeIn)
     {
-        string name = nodeIn.TypeReference.ShortQualifiedName();
-        return "@" + _struct.MakeParamWithValue(GetParamWithSystemType(nodeIn.Value.ToString(), name));
+        return "@" + _struct.MakeParamWithValue(GetParamWithSystemType(nodeIn.Value.ToString(), nodeIn.TypeReference));
     }
 
     /// <summary>
@@ -81,15 +80,15 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
     /// Gets the value of the parameter cast as the type the edm model associated to this parameter
     ///</summary>
     /// <exception cref="ArgumentException">Param is not valid for given EdmType</exception>
-    public object GetParamWithSystemType(string param, string edmType)
+    private static object GetParamWithSystemType(string param, IEdmTypeReference edmType)
     {
         try
         {
-            switch (edmType)
+            switch (edmType.PrimitiveKind())
             {
-                case "String":
+                case EdmPrimitiveTypeKind.String:
                     return param;
-                case "Int64":
+                case EdmPrimitiveTypeKind.Int64:
                     return long.Parse(param);
                 default:
                     // should never happen due to the config being validated for correct types
@@ -115,7 +114,7 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
     /// </summary>
     /// <param name="op">The op we will translate.</param>
     /// <returns>The string which is a translation of the op.</returns>
-    public string GetFilterPredicateOperator(BinaryOperatorKind op)
+    private static string GetFilterPredicateOperator(BinaryOperatorKind op)
     {
         switch (op)
         {

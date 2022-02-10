@@ -145,7 +145,7 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
     /// </summary>
     /// <param name="op">The op we will translate.</param>
     /// <returns>The string which is a translation of the op.</returns>
-    public string GetFilterPredicateOperator(UnaryOperatorKind op)
+    private static string GetFilterPredicateOperator(UnaryOperatorKind op)
     {
         switch (op)
         {

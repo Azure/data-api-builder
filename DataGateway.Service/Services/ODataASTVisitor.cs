@@ -10,11 +10,11 @@ using Microsoft.OData.UriParser;
 public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
     where TSource : class
 {
-    StringBuilder _filterPredicateBuilder = new();
-    SqlQueryStructure _struct;
-    string _field;
-    string _value;
-    string _op;
+    private StringBuilder _filterPredicateBuilder = new();
+    private SqlQueryStructure _struct;
+    private string _field;
+    private string _value;
+    private string _op;
 
     public ODataASTVisitor(SqlQueryStructure structure)
     {
@@ -109,7 +109,7 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
     /// that will make up the filter of the query.
     /// </summary>
     /// <returns>String representing filter predicates.</returns>
-    public string TryAndGetFindPredicates()
+    public string GetFindPredicates()
     {
         return _filterPredicateBuilder.ToString();
     }
@@ -173,8 +173,8 @@ public class ODataASTVisitor<TSource> : QueryNodeVisitor<TSource>
         if (node is BinaryOperatorNode)
         {
             BinaryOperatorNode bNode = (BinaryOperatorNode)node;
-            return bNode.OperatorKind == Microsoft.OData.UriParser.BinaryOperatorKind.And
-            || bNode.OperatorKind == Microsoft.OData.UriParser.BinaryOperatorKind.Or;
+            return bNode.OperatorKind == BinaryOperatorKind.And
+                || bNode.OperatorKind == BinaryOperatorKind.Or;
         }
         // Node is a convert node so we must check source instead
         else if (node is ConvertNode)

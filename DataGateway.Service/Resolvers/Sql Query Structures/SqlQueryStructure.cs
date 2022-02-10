@@ -162,7 +162,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 ODataASTVisitor<object> visitor = new(this);
                 context.FilterClauseInUrl.Expression.Accept(visitor);
-                FilterPredicates = visitor.TryAndGetFindPredicates();
+                FilterPredicates = visitor.GetFindPredicates();
             }
 
         }

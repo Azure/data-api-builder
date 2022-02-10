@@ -104,12 +104,12 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 if (context.OperationType == Operation.Upsert)
                 {
-                    using DbDataReader dbDataReader2 =
-                        await PerformMutationOperationNonQuery(
+                    using DbDataReader dbUpsertDataReader =
+                        await PerformMutationOperation(
                         context.EntityName,
                         context.OperationType,
                         parameters);
-                    Tuple<bool, Dictionary<string, object>> recordUpdated = await ExtractChangesFromDbDataReader(dbDataReader2);
+                    Tuple<bool, Dictionary<string, object>> recordUpdated = await ExtractChangesFromDbDataReader(dbUpsertDataReader);
 
                     // If the record was not updated, then an Insert occurred.
                     if (!recordUpdated.Item1)
@@ -195,6 +195,11 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryString = _queryBuilder.Build(deleteStructure);
                     queryParameters = deleteStructure.Parameters;
                     break;
+                case Operation.Upsert:
+                    SqlUpsertQueryStructure upsertStructure = new(tableName, _metadataStoreProvider, parameters);
+                    queryString = _queryBuilder.Build(upsertStructure);
+                    queryParameters = upsertStructure.Parameters;
+                    break;
                 default:
                     throw new NotSupportedException($"Unexpected mutation operation \" {operationType}\" requested.");
             }
@@ -252,7 +257,7 @@ namespace Azure.DataGateway.Service.Resolvers
             do
             {
                 // Result sets incremented here since dbDataReader.ReadAsync() may have no rows to read from
-                // due to an emtpy result set.
+                // due to an empty result set.
                 resultSetsFound++;
 
                 while (await dbDataReader.ReadAsync())
@@ -277,34 +282,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 updateOccurred = false;
             }
 
-            return new Tuple<bool, Dictionary<string, object>>(updateOccurred, new(row));
-        }
-
-        /// <summary>
-        /// Performs the given mutation operation type on the table in a Transaction and
-        /// returns result as JSON object asynchronously.
-        /// </summary>
-        private async Task<DbDataReader> PerformMutationOperationNonQuery(
-            string tableName,
-            Operation operationType,
-            IDictionary<string, object> parameters)
-        {
-            string queryString;
-            Dictionary<string, object> queryParameters;
-
-            switch (operationType)
-            {
-                case Operation.Upsert:
-                    SqlUpsertQueryStructure upsertStructure = new(tableName, _metadataStoreProvider, parameters);
-                    queryString = _queryBuilder.Build(upsertStructure);
-                    queryParameters = upsertStructure.Parameters;
-                    break;
-                default:
-                    throw new NotSupportedException($"Unexpected mutation operation \" {operationType}\" requested.");
-            }
-
-            Console.WriteLine(queryString);
-            return await _queryExecutor.ExecuteNonQueryAsync(queryString, queryParameters);
+            return new Tuple<bool, Dictionary<string, object>>(updateOccurred, row);
         }
 
         private static Dictionary<string, object> PrepareParameters(RestRequestContext context)

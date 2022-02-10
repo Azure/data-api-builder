@@ -131,7 +131,7 @@ namespace Azure.DataGateway.Service.Controllers
         [HttpPut]
         [Route("{*primaryKeyRoute}")]
         [Produces("application/json")]
-        public async Task<IActionResult> Put(
+        public async Task<IActionResult> Upsert(
             string entityName,
             string primaryKeyRoute)
         {

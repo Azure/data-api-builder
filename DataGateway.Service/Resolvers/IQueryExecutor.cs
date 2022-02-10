@@ -16,8 +16,5 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="parameters">The parameters used to execute the SQL text.</param>
         /// <returns>DbDataReader object for reading the result set.</returns>
         public Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object> parameters);
-
-        public Task<DbDataReader> ExecuteNonQueryAsync(string sqltext, IDictionary<string, object> parameters);
-
     }
 }

@@ -9,12 +9,12 @@ using Azure.DataGateway.Services;
 namespace Azure.DataGateway.Service.Resolvers
 {
     ///<summary>
-    /// Wraps all the required data and logic to write a SQL UPDATE query
+    /// Wraps all the required data and logic to write a SQL query resembling an UPSERT operation.
     ///</summary>
     public class SqlUpsertQueryStructure : BaseSqlQueryStructure
     {
         /// <summary>
-        /// Column names to insert into the given columns
+        /// Names of columns that will be populated with values during the insert operation.
         /// </summary>
         public List<string> InsertColumns { get; }
 
@@ -59,7 +59,10 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (UpdateOperations.Count == 0)
             {
-                throw new DatagatewayException("Update mutation does not update any values", 400, DatagatewayException.SubStatusCodes.BadRequest);
+                throw new DatagatewayException(
+                    message: "Update mutation does not update any values",
+                    statusCode: (int) HttpStatusCode.BadRequest,
+                    subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
             }
         }
 
@@ -137,7 +140,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Adds result of (TableDefinition.Columns minus MutationFields) to UpdateOperations with null values
         /// There will not be any columns leftover that are PK, since they are handled in request validation.
         /// </summary>
-        /// <param name="columns"></param>
+        /// <param name="leftoverSchemaColumns"></param>
         private void AddNullifiedUnspecifiedFields(List<string> leftoverSchemaColumns)
         {
             //result of adding (TableDefinition.Columns - MutationFields) to UpdateOperations

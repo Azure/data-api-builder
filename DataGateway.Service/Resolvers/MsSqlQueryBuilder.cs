@@ -87,7 +87,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns></returns>
         public string Build(SqlUpsertQueryStructure structure)
         {
-            return $"UPDATE { QuoteIdentifier(structure.TableName)} " +
+            return $"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;BEGIN TRANSACTION; UPDATE { QuoteIdentifier(structure.TableName)} " +
                 $"WITH(UPDLOCK) SET {Build(structure.UpdateOperations, ", ")} " +
                 $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
                 $"WHERE {Build(structure.Predicates)} " +
@@ -96,7 +96,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
                 $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
                 $"VALUES ({string.Join(", ", structure.Values)}) " +
-                $"END;";
+                $"END; COMMIT TRANSACTION";
         }
 
         /// <summary>

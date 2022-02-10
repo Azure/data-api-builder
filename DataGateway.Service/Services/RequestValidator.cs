@@ -95,16 +95,7 @@ namespace Azure.DataGateway.Service.Services
 
             if (!string.IsNullOrEmpty(requestBody))
             {
-                using JsonDocument insertPayload = JsonDocument.Parse(requestBody);
-
-                if (insertPayload.RootElement.ValueKind == JsonValueKind.Array)
-                {
-                    throw new NotSupportedException("InsertMany operations are not yet supported.");
-                }
-                else
-                {
-                    insertPayloadRoot = insertPayload.RootElement.Clone();
-                }
+                insertPayloadRoot = GetInsertPayload(requestBody);
             }
 
             return insertPayloadRoot;
@@ -127,7 +118,7 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
-        /// Validates the primarykeyroute is populated with respect to a Delete operation.
+        /// Validates the primarykeyroute is populated with respect to an Upsert operation.
         /// </summary>
         /// <param name="primaryKeyRoute">Primary key route from the url.</param>
         /// <exception cref="DatagatewayException"></exception>
@@ -145,16 +136,8 @@ namespace Azure.DataGateway.Service.Services
 
             if (!string.IsNullOrEmpty(requestBody))
             {
-                using JsonDocument insertPayload = JsonDocument.Parse(requestBody);
-
-                if (insertPayload.RootElement.ValueKind == JsonValueKind.Array)
-                {
-                    throw new NotSupportedException("InsertMany operations are not yet supported.");
-                }
-                else
-                {
-                    insertPayloadRoot = insertPayload.RootElement.Clone();
-                }
+                insertPayloadRoot = GetInsertPayload(requestBody);
+                
             }
 
             return insertPayloadRoot;
@@ -292,5 +275,24 @@ namespace Azure.DataGateway.Service.Services
             }
         }
 
+        /// <summary>
+        /// Creates a JSON payload from a string.
+        /// </summary>
+        /// <param name="requestBody">JSON string representation of request body</param>
+        /// <returns></returns>
+        /// <exception cref="NotSupportedException"></exception>
+        private static JsonElement GetInsertPayload(string requestBody)
+        {
+            using JsonDocument insertPayload = JsonDocument.Parse(requestBody);
+
+            if (insertPayload.RootElement.ValueKind == JsonValueKind.Array)
+            {
+                throw new NotSupportedException("UpsertMany operations are not yet supported.");
+            }
+            else
+            {
+                return insertPayload.RootElement.Clone();
+            }
+        }
     }
 }

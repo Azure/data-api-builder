@@ -76,7 +76,15 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        ///  Add parameter to Parameters and return the name associated with it.
+        /// Get primary key as list of string
+        /// </summary>
+        public List<string> PrimaryKey()
+        {
+            return GetTableDefinition().PrimaryKey;
+        }
+
+        /// <summary>
+        ///  Add parameter to Parameters and return the name associated with it
         /// </summary>
         /// <param name="value">Value to be assigned to parameter, which can be null for nullable columns.</param>
         protected string MakeParamWithValue(object value)

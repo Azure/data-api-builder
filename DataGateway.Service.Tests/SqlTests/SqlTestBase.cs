@@ -18,6 +18,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using MySqlConnector;
 using Newtonsoft.Json.Linq;
 using Npgsql;
 
@@ -59,6 +60,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case TestCategory.MSSQL:
                     _queryExecutor = new QueryExecutor<SqlConnection>(config);
                     _queryBuilder = new MsSqlQueryBuilder();
+                    break;
+                case TestCategory.MYSQL:
+                    _queryExecutor = new QueryExecutor<MySqlConnection>(config);
+                    _queryBuilder = new MySqlQueryBuilder();
                     break;
             }
 

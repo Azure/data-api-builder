@@ -501,13 +501,13 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     GraphQLType subTypeInfo = MetadataStoreProvider.GetGraphqlType(subunderlyingType.Name);
                     TableDefinition subTableDefinition = MetadataStoreProvider.GetTableDefinition(subTypeInfo.Table);
-                    GraphqlField fieldInfo = _typeInfo.Fields[fieldName];
+                    GraphQLField fieldInfo = _typeInfo.Fields[fieldName];
 
                     string subtableAlias = subquery.TableAlias;
 
                     switch (fieldInfo.RelationshipType)
                     {
-                        case GraphqlRelationshipType.ManyToOne:
+                        case GraphQLRelationshipType.ManyToOne:
                             subquery.Predicates.AddRange(CreateJoinPredicates(
                                 TableAlias,
                                 GetTableDefinition().ForeignKeys[fieldInfo.LeftForeignKey].Columns,
@@ -515,7 +515,7 @@ namespace Azure.DataGateway.Service.Resolvers
                                 subTableDefinition.PrimaryKey
                             ));
                             break;
-                        case GraphqlRelationshipType.OneToMany:
+                        case GraphQLRelationshipType.OneToMany:
                             subquery.Predicates.AddRange(CreateJoinPredicates(
                                 TableAlias,
                                 PrimaryKey(),
@@ -523,7 +523,7 @@ namespace Azure.DataGateway.Service.Resolvers
                                 subTableDefinition.ForeignKeys[fieldInfo.RightForeignKey].Columns
                             ));
                             break;
-                        case GraphqlRelationshipType.ManyToMany:
+                        case GraphQLRelationshipType.ManyToMany:
                             string associativeTableName = fieldInfo.AssociativeTable;
                             string associativeTableAlias = CreateTableAlias();
 
@@ -549,7 +549,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                             break;
 
-                        case GraphqlRelationshipType.None:
+                        case GraphQLRelationshipType.None:
                             throw new NotSupportedException("Cannot do a join when there is no relationship");
                         default:
                             throw new NotImplementedException("OneToOne and ManyToMany relationships are not yet implemented");

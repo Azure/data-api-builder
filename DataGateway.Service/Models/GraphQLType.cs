@@ -5,24 +5,17 @@ namespace Azure.DataGateway.Service.Models
     /// <summary>
     /// Metadata required to resolve a specific GraphQL type.
     /// </summary>
-    public class GraphQLType
+    /// <param name="Table">The name of the table that this GraphQL type corresponds to.</param>
+    /// <param name="IsPaginationType">Shows if the type is a *Connection pagination result type</param>
+    public record GraphQLType(string Table, bool IsPaginationType)
     {
-        /// <summary>
-        /// The name of the table that this GraphQL type corresponds to.
-        /// </summary>
-        public string Table { get; set; }
         /// <summary>
         /// Metadata required to resolve specific fields of the GraphQL type.
         /// </summary>
-        public Dictionary<string, GraphqlField> Fields { get; set; } = new();
-
-        /// <summary>
-        /// Shows if the type is a *Connection pagination result type
-        /// </summary>
-        public bool IsPaginationType { get; set; }
+        public Dictionary<string, GraphQLField> Fields { get; init; } = new();
     }
 
-    public enum GraphqlRelationshipType
+    public enum GraphQLRelationshipType
     {
         None,
         OneToOne,
@@ -34,19 +27,18 @@ namespace Azure.DataGateway.Service.Models
     /// <summary>
     /// Metadata required to resolve a specific field of a GraphQL type.
     /// </summary>
-    public class GraphqlField
+    public record GraphQLField
     {
         /// <summary>
         /// The kind of relationship that links the type that this field is
         /// part of and the type that this field has.
         /// </summary>
-        public GraphqlRelationshipType RelationshipType { get; set; } = GraphqlRelationshipType.None;
-
+        public GraphQLRelationshipType RelationshipType { get; init; } = GraphQLRelationshipType.None;
         /// <summary>
         /// The name of the associative table is used to link the two types in
         /// a ManyToMany relationship.
         /// </summary>
-        public string AssociativeTable { get; set; }
+        public string AssociativeTable { get; init; } = null!;
 
         /// <summary>
         /// The name of the foreign key that should be used to do the join on
@@ -60,7 +52,7 @@ namespace Azure.DataGateway.Service.Models
         ///    is part of.
         /// 3. For OneToMany this field should not be set.
         /// </summary>
-        public string LeftForeignKey { get; set; }
+        public string LeftForeignKey { get; init; } = null!;
 
         /// <summary>
         /// The name of the foreign key that should be used to do the join on
@@ -74,6 +66,6 @@ namespace Azure.DataGateway.Service.Models
         ///    that this field has.
         /// 3. For ManyToOne this field should not be set.
         /// </summary>
-        public string RightForeignKey { get; set; }
+        public string RightForeignKey { get; init; } = null!;
     }
 }

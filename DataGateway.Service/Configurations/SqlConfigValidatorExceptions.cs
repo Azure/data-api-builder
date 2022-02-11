@@ -402,7 +402,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// there is no non scalar schema field not matched to a config field
         /// </summary>
         private void ValidateConfigFieldsMatchSchemaFields(
-            Dictionary<string, GraphqlField> configFields,
+            Dictionary<string, GraphQLField> configFields,
             Dictionary<string, FieldDefinitionNode> schemaFields)
         {
             IEnumerable<string> unmatchedConfigFields = configFields.Keys.Except(schemaFields.Keys);
@@ -818,7 +818,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate that the field has a valid relationship type
         /// </summary>
-        private void ValidateRelationshipType(GraphqlField field, List<GraphqlRelationshipType> validRelationshipTypes)
+        private void ValidateRelationshipType(GraphQLField field, List<GraphQLRelationshipType> validRelationshipTypes)
         {
             if (!validRelationshipTypes.Contains(field.RelationshipType))
             {
@@ -847,7 +847,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate that field does return a pagination type
         /// </summary>
-        private void ValidateReturnTypeNotPagination(GraphqlField field, FieldDefinitionNode fieldDefinition)
+        private void ValidateReturnTypeNotPagination(GraphQLField field, FieldDefinitionNode fieldDefinition)
         {
             if (IsPaginationType(fieldDefinition.Type))
             {
@@ -900,7 +900,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Make sure the field has no association table
         /// </summary>
-        private void ValidateNoAssociationTable(GraphqlField field)
+        private void ValidateNoAssociationTable(GraphQLField field)
         {
             if (!string.IsNullOrEmpty(field.AssociativeTable))
             {
@@ -913,7 +913,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Make sure the field has an association table
         /// </summary>
-        private void ValidateHasAssociationTable(GraphqlField field)
+        private void ValidateHasAssociationTable(GraphQLField field)
         {
             if (string.IsNullOrEmpty(field.AssociativeTable))
             {
@@ -926,7 +926,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validates that field has only left foreign key
         /// </summary>
-        private void ValidateHasOnlyLeftForeignKey(GraphqlField field)
+        private void ValidateHasOnlyLeftForeignKey(GraphQLField field)
         {
             if (!HasLeftForeignKey(field) || HasRightForeignKey(field))
             {
@@ -939,7 +939,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validates that field has only right foreign key
         /// </summary>
-        private void ValidateHasOnlyRightForeignKey(GraphqlField field)
+        private void ValidateHasOnlyRightForeignKey(GraphQLField field)
         {
             if (HasLeftForeignKey(field) || !HasRightForeignKey(field))
             {
@@ -952,7 +952,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validates that the field has both left and right foreign keys
         /// </summary>
-        private void ValidateHasBothLeftAndRightFK(GraphqlField field)
+        private void ValidateHasBothLeftAndRightFK(GraphQLField field)
         {
             if (!HasLeftForeignKey(field) || !HasRightForeignKey(field))
             {
@@ -967,7 +967,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// Validate that the left foreign key of the field is a foreign key of the
         /// table of the type that this field belongs to
         /// </summary>
-        private void ValidateLeftForeignKey(GraphqlField field, string type)
+        private void ValidateLeftForeignKey(GraphQLField field, string type)
         {
             string typeTable = GetTypeTable(type);
             if (!TableContainsForeignKey(typeTable, field.LeftForeignKey))
@@ -985,7 +985,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// Validate that the right foreign key of the field is a foreign key of the
         /// table of the type that this field returns
         /// </summary>
-        private void ValidateRightForeignKey(GraphqlField field, string returnedType)
+        private void ValidateRightForeignKey(GraphQLField field, string returnedType)
         {
             string returnedTypeTable = GetTypeTable(returnedType);
             if (!TableContainsForeignKey(returnedTypeTable, field.RightForeignKey))
@@ -1034,7 +1034,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate that the field's associative table exists
         /// </summary>
-        private void ValidateAssociativeTableExists(GraphqlField field)
+        private void ValidateAssociativeTableExists(GraphQLField field)
         {
             if (!ExistsTableWithName(field.AssociativeTable))
             {
@@ -1049,7 +1049,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate the left and right foreign keys for many to many field
         /// </summary>
-        private void ValidateLeftAndRightFkForM2MField(GraphqlField field)
+        private void ValidateLeftAndRightFkForM2MField(GraphQLField field)
         {
             if (!TableContainsForeignKey(field.AssociativeTable, field.LeftForeignKey) ||
                 !TableContainsForeignKey(field.AssociativeTable, field.RightForeignKey))

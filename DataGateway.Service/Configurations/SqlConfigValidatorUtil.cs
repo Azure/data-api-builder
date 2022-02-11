@@ -512,7 +512,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Check that GraphQLType.Field has only a left foreign key
         /// </summary>
-        private static bool HasLeftForeignKey(GraphqlField field)
+        private static bool HasLeftForeignKey(GraphQLField field)
         {
             return !string.IsNullOrEmpty(field.LeftForeignKey);
         }
@@ -520,7 +520,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Check that GraphQLType.Field has only a right foreign key
         /// </summary>
-        private static bool HasRightForeignKey(GraphqlField field)
+        private static bool HasRightForeignKey(GraphQLField field)
         {
             return !string.IsNullOrEmpty(field.RightForeignKey);
         }

@@ -308,10 +308,10 @@ namespace Azure.DataGateway.Service.Configurations
 
             ValidateConfigFieldsMatchSchemaFields(type.Fields, fieldDefinitions);
 
-            foreach (KeyValuePair<string, GraphqlField> nameFieldPair in type.Fields)
+            foreach (KeyValuePair<string, GraphQLField> nameFieldPair in type.Fields)
             {
                 string fieldName = nameFieldPair.Key;
-                GraphqlField field = nameFieldPair.Value;
+                GraphQLField field = nameFieldPair.Value;
 
                 ConfigStepInto(fieldName);
                 SchemaStepInto(fieldName);
@@ -320,24 +320,24 @@ namespace Azure.DataGateway.Service.Configurations
                 ITypeNode fieldType = fieldDefinition.Type;
                 string returnedType = InnerTypeStr(fieldType);
 
-                List<GraphqlRelationshipType> validRelationshipTypes = new()
+                List<GraphQLRelationshipType> validRelationshipTypes = new()
                 {
-                    GraphqlRelationshipType.ManyToMany,
-                    GraphqlRelationshipType.OneToMany,
-                    GraphqlRelationshipType.ManyToOne
+                    GraphQLRelationshipType.ManyToMany,
+                    GraphQLRelationshipType.OneToMany,
+                    GraphQLRelationshipType.ManyToOne
                 };
 
                 ValidateRelationshipType(field, validRelationshipTypes);
 
                 switch (field.RelationshipType)
                 {
-                    case GraphqlRelationshipType.OneToMany:
+                    case GraphQLRelationshipType.OneToMany:
                         ValidateOneToManyField(field, fieldDefinition, typeName, returnedType);
                         break;
-                    case GraphqlRelationshipType.ManyToOne:
+                    case GraphQLRelationshipType.ManyToOne:
                         ValidateManyToOneField(field, fieldDefinition, typeName, returnedType);
                         break;
-                    case GraphqlRelationshipType.ManyToMany:
+                    case GraphQLRelationshipType.ManyToMany:
                         ValidateManyToManyField(field, fieldDefinition, typeName, returnedType);
                         break;
                 }
@@ -394,7 +394,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate field with One-To-Many relationship to the type that owns it
         /// </summary>
-        private void ValidateOneToManyField(GraphqlField field, FieldDefinitionNode fieldDefinition, string type, string returnedType)
+        private void ValidateOneToManyField(GraphQLField field, FieldDefinitionNode fieldDefinition, string type, string returnedType)
         {
             if (IsPaginationType(fieldDefinition.Type))
             {
@@ -419,7 +419,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate field with Many-To-One relationship to the type that owns it
         /// </summary>
-        private void ValidateManyToOneField(GraphqlField field, FieldDefinitionNode fieldDefinition, string type, string returnedType)
+        private void ValidateManyToOneField(GraphQLField field, FieldDefinitionNode fieldDefinition, string type, string returnedType)
         {
             ValidateReturnTypeNotPagination(field, fieldDefinition);
             ValidateFieldReturnsCustomType(fieldDefinition, typeNullable: false);
@@ -436,7 +436,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate field with Many-To-Many relationship to the type that owns it
         /// </summary>
-        private void ValidateManyToManyField(GraphqlField field, FieldDefinitionNode fieldDefinition, string type, string returnedType)
+        private void ValidateManyToManyField(GraphQLField field, FieldDefinitionNode fieldDefinition, string type, string returnedType)
         {
             if (IsPaginationType(fieldDefinition.Type))
             {

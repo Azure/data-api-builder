@@ -247,7 +247,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     FROM (
                         SELECT *
                         FROM " + _integrationTableName + @"
-                        WHERE (NOT (id < 3) OR (id < 4) or NOT (title = 'Awesome book')
+                        WHERE (NOT (id < 3) OR (id < 4) or NOT (title = 'Awesome book'))
                         ORDER BY id
                     ) AS subq
                 "

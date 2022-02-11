@@ -40,51 +40,69 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
-                "FindTestWithFilterQueryStringOneFilter",
+                "FindTestWithFilterQueryStringOneEqFilter",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE id = 1" +
+                $"WHERE id = 1 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
-                "FindTestWithFilterQueryStringValueFirstOneFilter",
+                "FindTestWithFilterQueryStringValueFirstOneEqFilter",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE id = 1" +
+                $"WHERE id = 2 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithFilterQueryOneGtFilter",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE id > 3" +
+                $"WHERE id > 3 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithFilterQueryOneGeFilter",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE id >= 3" +
+                $"WHERE id >= 4 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithFilterQueryOneLtFilter",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE id < 3" +
+                $"WHERE id < 5 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithFilterQueryOneLeFilter",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE id <= 3" +
+                $"WHERE id <= 4 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithFilterQueryOneNeFilter",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE id != 3" +
+                $"WHERE id != 3 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
-                "FindTestWithFilterQueryStringSingleNotFilter",
+                "FindTestWithFilterQueryOneNotFilter",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE NOT (id < 3)" +
+                $"WHERE NOT (id < 2) " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFilterQueryOneRightNullEqFilter",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE NOT (title IS NULL) " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFilterQueryOneLeftNullNeFilter",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE title IS NOT NULL " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFilterQueryOneLeftNullRightNullGtFilter",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE NULL > NULL" +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {

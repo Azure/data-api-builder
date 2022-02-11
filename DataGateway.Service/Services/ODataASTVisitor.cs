@@ -27,7 +27,7 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
         // In order traversal but add parens to maintain order of logical operations
         string left = nodeIn.Left.Accept(this);
         string right = nodeIn.Right.Accept(this);
-        return "(" + left + " " + GetFilterPredicateOperator(nodeIn.OperatorKind) + " " + right + ")";
+        return CreateResult(nodeIn.OperatorKind, left, right);
     }
 
     /// <summary>
@@ -61,6 +61,11 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
     /// <returns>String representing param that holds given value.</returns>
     public override string Visit(ConstantNode nodeIn)
     {
+        if (nodeIn.TypeReference is null)
+        {
+            return null;
+        }
+
         return "@" + _struct.MakeParamWithValue(GetParamWithSystemType(nodeIn.Value.ToString(), nodeIn.TypeReference));
     }
 
@@ -105,6 +110,47 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
             }
 
             throw;
+        }
+    }
+
+    private static string CreateResult(BinaryOperatorKind op, string left, string right)
+    {
+        if (left is null && right is null)
+        {
+            return CreateNullResult(op);
+        }
+        else if (left is null)
+        {
+            return CreateNullResult(op, left: right);
+        }
+        else if (right is null)
+        {
+            return CreateNullResult(op, left);
+        }
+        else
+        {
+            return "(" + left + " " + GetFilterPredicateOperator(op) + " " + right + ")";
+        }
+    }
+
+    private static string CreateNullResult(BinaryOperatorKind op, string left = "NULL")
+    {
+        switch (op)
+        {
+            case BinaryOperatorKind.Equal:
+                return $"({left} IS NULL)";
+            case BinaryOperatorKind.NotEqual:
+                return $"({left} IS NOT NULL)";
+            case BinaryOperatorKind.GreaterThan:
+                return $"({left} > NULL)";
+            case BinaryOperatorKind.GreaterThanOrEqual:
+                return $"({left} >= NULL)";
+            case BinaryOperatorKind.LessThan:
+                return $"({left} < NULL)";
+            case BinaryOperatorKind.LessThanOrEqual:
+                return $"({left} <= NULL)";
+            default:
+                throw new NotSupportedException($"{op} is not supported with types NULL and NULL");
         }
     }
 

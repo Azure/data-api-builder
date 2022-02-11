@@ -85,117 +85,71 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Tests the REST Api for Find operation with a single equals filter.
+        /// Tests the REST Api for Find operation with a single filter, executes
+        /// a test for all of the comparison operators and the unary NOT operator.
         /// </summary>
         [TestMethod]
-        public async Task FindTestWithFilterQueryStringOneFilter()
+        public async Task FindTestsWithFilterQueryStringOneOpFilter()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id eq 1",
                 entity: _integrationTableName,
-                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringOneFilter)),
+                sqlQuery: GetQuery("FindTestWithFilterQueryStringOneEqFilter"),
                 controller: _restController);
-
-        }
-
-        /// <summary>
-        /// Tests the REST Api for Find operation with a single equals filter where
-        /// value comes first.
-        /// </summary>
-        [TestMethod]
-        public async Task FindTestWithFilterQueryStringValueFirstOneFilter()
-        {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$filter=1 eq id",
+                queryString: "?$filter=2 eq id",
                 entity: _integrationTableName,
-                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringValueFirstOneFilter)),
+                sqlQuery: GetQuery("FindTestWithFilterQueryStringValueFirstOneEqFilter"),
                 controller: _restController);
-
-        }
-        /// <summary>
-        /// Tests the REST Api for Find operation with a single greater than filter.
-        /// </summary>
-        [TestMethod]
-        public async Task FindTestWithFilterQueryOneGtFilter()
-        {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id gt 3",
                 entity: _integrationTableName,
-                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryOneGtFilter)),
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneGtFilter"),
                 controller: _restController);
-
-        }
-        /// <summary>
-        /// Tests the REST Api for Find operation with a single greater than or equal filter.
-        /// </summary>
-        [TestMethod]
-        public async Task FindTestWithFilterQueryOneGeFilter()
-        {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$filter=id ge 3",
+                queryString: "?$filter=id ge 4",
                 entity: _integrationTableName,
-                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryOneGeFilter)),
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneGeFilter"),
                 controller: _restController);
-
-        }
-        /// <summary>
-        /// Tests the REST Api for Find operation with a single less than filter.
-        /// </summary>
-        [TestMethod]
-        public async Task FindTestWithFilterQueryOneLtFilter()
-        {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$filter=id lt 3",
+                queryString: "?$filter=id lt 5",
                 entity: _integrationTableName,
-                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryOneLtFilter)),
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneLtFilter"),
                 controller: _restController);
-
-        }
-        /// <summary>
-        /// Tests the REST Api for Find operation with a single less than or equal filter.
-        /// </summary>
-        [TestMethod]
-        public async Task FindTestWithFilterQueryOneLeFilter()
-        {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$filter=id le 3",
+                queryString: "?$filter=id le 4",
                 entity: _integrationTableName,
-                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryOneLeFilter)),
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneLeFilter"),
                 controller: _restController);
-
-        }
-        /// <summary>
-        /// Tests the REST Api for Find operation with a single not equal filter.
-        /// </summary>
-        [TestMethod]
-        public async Task FindTestWithFilterQueryOneNeFilter()
-        {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id ne 3",
                 entity: _integrationTableName,
-                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryOneNeFilter)),
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneNeFilter"),
                 controller: _restController);
-
-        }
-        /// <summary>
-        /// Tests the REST Api for Find operation with a single not and filter
-        /// comparisons connected with OR.
-        /// </summary>
-        [TestMethod]
-        public async Task FindTestWithFilterQueryStringSingleNotFilter()
-        {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$filter=not (id lt 3)",
+                queryString: "?$filter=not (id lt 2)",
                 entity: _integrationTableName,
-                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringSingleNotFilter)),
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneNotFilter"),
+                controller: _restController);
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=not (title eq null)",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneRightNullEqFilter"),
+                controller: _restController);
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=null ne title",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneLeftNullNeFilter"),
                 controller: _restController
             );
         }

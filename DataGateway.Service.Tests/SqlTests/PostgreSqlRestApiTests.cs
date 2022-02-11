@@ -69,7 +69,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
-                "FindTestWithFilterQueryStringOneFilter",
+                "FindTestWithFilterQueryStringOneEqFilter",
                 @"
                   SELECT json_agg(to_jsonb(subq)) AS data
                   FROM (
@@ -80,13 +80,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ) AS subq"
             },
             {
-                "FindTestWithFilterQueryStringValueFirstOneFilter",
+                "FindTestWithFilterQueryStringValueFirstOneEqFilter",
                 @"
                   SELECT json_agg(to_jsonb(subq)) AS data
                   FROM (
                       SELECT *
                       FROM " + _integrationTableName + @"
-                      WHERE id = 1
+                      WHERE id = 2
                       ORDER BY id
                   ) AS subq"
             },
@@ -108,7 +108,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   FROM (
                       SELECT *
                       FROM " + _integrationTableName + @"
-                      WHERE id >= 3
+                      WHERE id >= 4
                       ORDER BY id
                   ) AS subq"
             },
@@ -119,7 +119,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   FROM (
                       SELECT *
                       FROM " + _integrationTableName + @"
-                      WHERE id < 3
+                      WHERE id < 5
                       ORDER BY id
                   ) AS subq"
             },
@@ -130,7 +130,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   FROM (
                       SELECT *
                       FROM " + _integrationTableName + @"
-                      WHERE id <= 3
+                      WHERE id <= 4
                       ORDER BY id
                   ) AS subq"
             },
@@ -146,13 +146,46 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ) AS subq"
             },
             {
-                "FindTestWithFilterQueryStringSingleNotFilter",
+                "FindTestWithFilterQueryOneNotFilter",
                 @"
                   SELECT json_agg(to_jsonb(subq)) AS data
                   FROM (
                       SELECT *
                       FROM " + _integrationTableName + @"
-                      WHERE NOT (id < 3)
+                      WHERE not (id < 2)
+                      ORDER BY id
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFilterQueryOneRightNullEqFilter",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE NOT (title IS NULL)
+                      ORDER BY id
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFilterQueryOneLeftNullNeFilter",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE title IS NOT NULL
+                      ORDER BY id
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFilterQueryOneLeftNullRightNullGtFilter",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE NULL > NULL
                       ORDER BY id
                   ) AS subq"
             },

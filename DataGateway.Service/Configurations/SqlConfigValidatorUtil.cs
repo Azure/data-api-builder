@@ -17,17 +17,14 @@ namespace Azure.DataGateway.Service.Configurations
         /// If no path is passed, make starting stack,
         /// add the path to the stack otherwise
         /// </summary>
-        private static Stack<string> MakeConfigPosition(IEnumerable<string> path = null)
+        private static Stack<string> MakeConfigPosition(IEnumerable<string> path)
         {
             Stack<string> configStack = new();
             configStack.Push("Config");
 
-            if (path != null)
+            foreach (string pathElement in path)
             {
-                foreach (string pathElement in path)
-                {
-                    configStack.Push(pathElement);
-                }
+                configStack.Push(pathElement);
             }
 
             return configStack;
@@ -38,17 +35,14 @@ namespace Azure.DataGateway.Service.Configurations
         /// If no path is passed, make starting stack,
         /// add the path to the stack otherwise
         /// </summary>
-        private static Stack<string> MakeSchemaPosition(IEnumerable<string> path = null)
+        private static Stack<string> MakeSchemaPosition(IEnumerable<string> path)
         {
             Stack<string> schemaStack = new();
             schemaStack.Push("GQL Schema");
 
-            if (path != null)
+            foreach (string pathElement in path)
             {
-                foreach (string pathElement in path)
-                {
-                    schemaStack.Push(pathElement);
-                }
+                schemaStack.Push(pathElement);
             }
 
             return schemaStack;

@@ -64,8 +64,8 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private SqlConfigValidator()
         {
-            _configValidationStack = MakeConfigPosition();
-            _schemaValidationStack = MakeSchemaPosition();
+            _configValidationStack = MakeConfigPosition(Enumerable.Empty<string>());
+            _schemaValidationStack = MakeSchemaPosition(Enumerable.Empty<string>());
             _types = new();
             _mutations = new();
             _queries = new();

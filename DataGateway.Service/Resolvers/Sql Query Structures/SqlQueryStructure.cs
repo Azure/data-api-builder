@@ -536,16 +536,16 @@ namespace Azure.DataGateway.Service.Resolvers
                             ));
 
                             subquery.Joins.Add(new SqlJoinStructure
-                            {
-                                TableName = associativeTableName,
-                                TableAlias = associativeTableAlias,
-                                Predicates = CreateJoinPredicates(
+                            (
+                                associativeTableName,
+                                associativeTableAlias,
+                                CreateJoinPredicates(
                                         associativeTableAlias,
                                         associativeTableDefinition.ForeignKeys[fieldInfo.RightForeignKey].Columns,
                                         subtableAlias,
                                         subTableDefinition.PrimaryKey
                                     ).ToList()
-                            });
+                            ));
 
                             break;
 

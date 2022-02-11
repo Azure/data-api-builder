@@ -32,17 +32,22 @@ namespace Azure.DataGateway.Service.Configurations
         /// Sets the config and schema for the validator
         /// </summary>
         public SqlConfigValidator(IMetadataStoreProvider metadataStoreProvider, GraphQLService graphQLService)
-            : this()
         {
+            _configValidationStack = MakeConfigPosition(Enumerable.Empty<string>());
+            _schemaValidationStack = MakeSchemaPosition(Enumerable.Empty<string>());
+            _types = new();
+            _mutations = new();
+            _queries = new();
+            _dbSchemaIsValidated = false;
+            _graphQLTypesAreValidated = false;
+
             _config = metadataStoreProvider.GetResolvedConfig();
             _schema = graphQLService.Schema;
 
             foreach (IDefinitionNode node in _schema.ToDocument().Definitions)
             {
-                if (node is ObjectTypeDefinitionNode)
+                if (node is ObjectTypeDefinitionNode objectTypeDef)
                 {
-                    ObjectTypeDefinitionNode objectTypeDef = (ObjectTypeDefinitionNode)node;
-
                     if (objectTypeDef.Name.ToString() == "Mutation")
                     {
                         _mutations = GetObjTypeDefFields(objectTypeDef);
@@ -57,20 +62,6 @@ namespace Azure.DataGateway.Service.Configurations
                     }
                 }
             }
-        }
-
-        /// <summary>
-        /// Private constructor used by public constructor to initialize all the members
-        /// </summary>
-        private SqlConfigValidator()
-        {
-            _configValidationStack = MakeConfigPosition(Enumerable.Empty<string>());
-            _schemaValidationStack = MakeSchemaPosition(Enumerable.Empty<string>());
-            _types = new();
-            _mutations = new();
-            _queries = new();
-            _dbSchemaIsValidated = false;
-            _graphQLTypesAreValidated = false;
         }
 
         /// <summary>

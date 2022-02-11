@@ -57,7 +57,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
 
             return $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
-                    $"OUTPUT {MakeOutputColumns(structure.PrimaryKey(), OutputQualifier.Inserted)} " +
+                    $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
                     $"VALUES ({string.Join(", ", structure.Values)});";
         }
 

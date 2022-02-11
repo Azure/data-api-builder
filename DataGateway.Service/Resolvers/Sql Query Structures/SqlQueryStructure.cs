@@ -66,7 +66,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         ObjectType _underlyingFieldType;
 
-        private readonly GraphqlType _typeInfo;
+        private readonly GraphQLType _typeInfo;
         private List<Column> _primaryKey;
 
         /// <summary>
@@ -499,7 +499,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     // use the _underlyingType from the subquery which will be overridden appropriately if the query is paginated
                     ObjectType subunderlyingType = subquery._underlyingFieldType;
 
-                    GraphqlType subTypeInfo = MetadataStoreProvider.GetGraphqlType(subunderlyingType.Name);
+                    GraphQLType subTypeInfo = MetadataStoreProvider.GetGraphqlType(subunderlyingType.Name);
                     TableDefinition subTableDefinition = MetadataStoreProvider.GetTableDefinition(subTypeInfo.Table);
                     GraphqlField fieldInfo = _typeInfo.Fields[fieldName];
 

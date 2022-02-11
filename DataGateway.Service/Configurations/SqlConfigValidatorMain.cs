@@ -200,7 +200,7 @@ namespace Azure.DataGateway.Service.Configurations
 
             ConfigStepInto("GraphQLTypes");
 
-            Dictionary<string, GraphqlType> types = GetGraphQLTypes();
+            Dictionary<string, GraphQLType> types = GetGraphQLTypes();
             Dictionary<string, string> tableToType = new();
 
             ValidateTypesMatchSchemaTypes(types);
@@ -209,10 +209,10 @@ namespace Azure.DataGateway.Service.Configurations
             // this must be validated first
             ValidatePaginationTypes(types);
 
-            foreach (KeyValuePair<string, GraphqlType> nameTypePair in types)
+            foreach (KeyValuePair<string, GraphQLType> nameTypePair in types)
             {
                 string typeName = nameTypePair.Key;
-                GraphqlType type = nameTypePair.Value;
+                GraphQLType type = nameTypePair.Value;
 
                 ConfigStepInto(typeName);
                 SchemaStepInto(typeName);
@@ -248,7 +248,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate pagination types
         /// </summary>
-        private void ValidatePaginationTypes(Dictionary<string, GraphqlType> types)
+        private void ValidatePaginationTypes(Dictionary<string, GraphQLType> types)
         {
             foreach (string typeName in types.Keys)
             {
@@ -300,7 +300,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate GraphQLType fields
         /// </summary>
-        private void ValidateGraphQLTypeFields(string typeName, GraphqlType type)
+        private void ValidateGraphQLTypeFields(string typeName, GraphQLType type)
         {
             ConfigStepInto("Fields");
 

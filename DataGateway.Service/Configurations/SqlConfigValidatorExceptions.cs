@@ -83,7 +83,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateConfigHasGraphQLTypes()
         {
-            if (_config.GraphqlTypes == null || _config.GraphqlTypes.Count == 0)
+            if (_config.GraphQLTypes == null || _config.GraphQLTypes.Count == 0)
             {
                 throw new ConfigValidationException(
                     $"Config must have a non empty \"GraphQLTypes\" element.",
@@ -371,7 +371,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate that the GraphQLType in the config match the types in the schema
         /// </summary>
-        private void ValidateTypesMatchSchemaTypes(Dictionary<string, GraphqlType> types)
+        private void ValidateTypesMatchSchemaTypes(Dictionary<string, GraphQLType> types)
         {
             IEnumerable<string> unmatchedConfigTypes = types.Keys.Except(_types.Keys);
             IEnumerable<string> unmatchedSchemaTypes = _types.Keys.Except(types.Keys);
@@ -594,7 +594,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate graphQLType has table
         /// </summary>
-        private void ValidateGraphQLTypeHasTable(GraphqlType type)
+        private void ValidateGraphQLTypeHasTable(GraphQLType type)
         {
             if (string.IsNullOrEmpty(type.Table))
             {
@@ -607,7 +607,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate that type does not share an underlying table with any other type
         /// </summary>
-        private void ValidateGQLTypeTableIsUnique(GraphqlType type, Dictionary<string, string> tableToType)
+        private void ValidateGQLTypeTableIsUnique(GraphQLType type, Dictionary<string, string> tableToType)
         {
             if (tableToType.ContainsKey(type.Table))
             {
@@ -622,7 +622,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate the GraphQLType has a "fields" element
         /// </summary>
-        private void ValidateGraphQLTypeHasFields(GraphqlType type)
+        private void ValidateGraphQLTypeHasFields(GraphQLType type)
         {
             if (type.Fields == null || type.Fields.Count == 0)
             {

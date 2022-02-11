@@ -184,9 +184,9 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Gets graphql types from config
         /// </summmary>
-        private Dictionary<string, GraphqlType> GetGraphQLTypes()
+        private Dictionary<string, GraphQLType> GetGraphQLTypes()
         {
-            return _config.GraphqlTypes;
+            return _config.GraphQLTypes;
         }
 
         /// <summary>
@@ -270,8 +270,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private bool IsPaginationTypeName(string typeName)
         {
-            GraphqlType type;
-            if (_config.GraphqlTypes.TryGetValue(typeName, out type))
+            if (_config.GraphQLTypes.TryGetValue(typeName, out GraphQLType? type))
             {
                 return type.IsPaginationType;
             }
@@ -507,7 +506,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private IEnumerable<string> GetConfigFieldsForGqlType(ObjectTypeDefinitionNode type)
         {
-            return _config.GraphqlTypes[type.Name.Value].Fields.Keys;
+            return _config.GraphQLTypes[type.Name.Value].Fields.Keys;
         }
 
         /// <summary>

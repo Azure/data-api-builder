@@ -44,7 +44,7 @@ namespace Azure.DataGateway.Service
         /// A list containing metadata required to resolve the different
         /// types in the GraphQL schema. See GraphqlType for details.
         /// </summary>
-        public Dictionary<string, GraphqlType> GraphqlTypes { get; set; } = new();
+        public Dictionary<string, GraphQLType> GraphQLTypes { get; set; } = new();
 
         /// <summary>
         /// A JSON encoded version of the information that resolvers need about
@@ -143,9 +143,9 @@ namespace Azure.DataGateway.Service
             return metadata;
         }
 
-        public GraphqlType GetGraphqlType(string name)
+        public GraphQLType GetGraphqlType(string name)
         {
-            if (!_config.GraphqlTypes.TryGetValue(name, out GraphqlType typeInfo))
+            if (!_config.GraphQLTypes.TryGetValue(name, out GraphQLType typeInfo))
             {
                 throw new KeyNotFoundException($"Table Definition for {name} does not exist.");
             }

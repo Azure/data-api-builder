@@ -49,7 +49,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             QueryResolvers.Add(queryResolver.Id, queryResolver);
         }
 
-        public GraphqlType GetGraphqlType(string name)
+        public GraphQLType GetGraphqlType(string name)
         {
             throw new System.NotImplementedException();
         }

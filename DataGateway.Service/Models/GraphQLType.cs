@@ -5,7 +5,7 @@ namespace Azure.DataGateway.Service.Models
     /// <summary>
     /// Metadata required to resolve a specific GraphQL type.
     /// </summary>
-    public class GraphqlType
+    public class GraphQLType
     {
         /// <summary>
         /// The name of the table that this GraphQL type corresponds to.

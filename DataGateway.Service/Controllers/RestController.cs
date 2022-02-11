@@ -100,7 +100,7 @@ namespace Azure.DataGateway.Service.Controllers
             return await HandleOperation(
                 entityName,
                 Operation.Insert,
-                primaryKeyRoute: null);
+                string.Empty);
         }
 
         /// <summary>
@@ -138,7 +138,7 @@ namespace Azure.DataGateway.Service.Controllers
         private async Task<IActionResult> HandleOperation(
             string entityName,
             Operation operationType,
-            string primaryKeyRoute = null)
+            string primaryKeyRoute)
         {
             try
             {

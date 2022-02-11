@@ -134,7 +134,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         jsonResultString = "{}";
                     }
                 }
-                else if(context.OperationType == Operation.Insert || context.OperationType == Operation.Update)
+                else if (context.OperationType == Operation.Insert || context.OperationType == Operation.Update)
                 {
                     jsonResultString = JsonSerializer.Serialize(resultRecord);
                 }

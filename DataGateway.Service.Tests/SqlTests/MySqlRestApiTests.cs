@@ -63,7 +63,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFilterQueryStringOneEqFilter",
                 @"
-                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
                         FROM " + _integrationTableName + @"
@@ -75,7 +75,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFilterQueryStringValueFirstOneEqFilter",
                 @"
-                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
                         FROM " + _integrationTableName + @"
@@ -87,7 +87,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFilterQueryOneGtFilter",
                 @"
-                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
                         FROM " + _integrationTableName + @"
@@ -99,7 +99,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFilterQueryOneGeFilter",
                 @"
-                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
                         FROM " + _integrationTableName + @"
@@ -111,7 +111,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFilterQueryOneLtFilter",
                 @"
-                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
                         FROM " + _integrationTableName + @"
@@ -123,7 +123,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFilterQueryOneLeFilter",
                 @"
-                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
                         FROM " + _integrationTableName + @"
@@ -135,7 +135,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFilterQueryOneNeFilter",
                 @"
-                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
                         FROM " + _integrationTableName + @"
@@ -147,7 +147,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFilterQueryOneNotFilter",
                 @"
-                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
                         FROM " + _integrationTableName + @"
@@ -159,7 +159,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFilterQueryOneRightNullEqFilter",
                 @"
-                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
                         FROM " + _integrationTableName + @"
@@ -171,7 +171,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFilterQueryOneLeftNullNeFilter",
                 @"
-                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
                         FROM " + _integrationTableName + @"
@@ -183,7 +183,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFilterQueryStringSingleAndFilter",
                 @"
-                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
                         FROM " + _integrationTableName + @"
@@ -195,7 +195,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFilterQueryStringSingleOrFilter",
                 @"
-                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
                         FROM " + _integrationTableName + @"
@@ -207,7 +207,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFilterQueryStringMultipleAndFilters",
                 @"
-                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
                         FROM " + _integrationTableName + @"
@@ -219,7 +219,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFilterQueryStringMultipleOrFilters",
                 @"
-                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
                         FROM " + _integrationTableName + @"
@@ -231,7 +231,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFilterQueryStringMultipleAndOrFilters",
                 @"
-                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
                         FROM " + _integrationTableName + @"
@@ -243,7 +243,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFilterQueryStringMultipleNotAndOrFilters",
                 @"
-                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
                         FROM " + _integrationTableName + @"
@@ -255,7 +255,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFilterQueryStringBoolResultFilter",
                 @"
-                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
                         FROM " + _integrationTableName + @"

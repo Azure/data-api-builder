@@ -130,11 +130,11 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
         }
         else if (left is null)
         {
-            return CreateNullResult(op, left: right);
+            return CreateNullResult(op, field: right);
         }
         else if (right is null)
         {
-            return CreateNullResult(op, left);
+            return CreateNullResult(op, field: left);
         }
         else
         {

@@ -23,7 +23,7 @@
       "OperationType": "Delete"
     }
   ],
-  "GraphqlTypes": {
+  "GraphQLTypes": {
     "Publisher": {
       "Table": "publishers",
       "Fields": {

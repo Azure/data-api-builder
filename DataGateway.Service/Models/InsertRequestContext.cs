@@ -27,11 +27,21 @@ namespace Azure.DataGateway.Service.Models
             FieldValuePairsInUrl = new();
             HttpVerb = httpVerb;
             OperationType = operationType;
-            if (!string.IsNullOrEmpty(insertPayloadRoot.ToString()))
+
+            string? payload = insertPayloadRoot.ToString();
+            if (!string.IsNullOrEmpty(payload))
             {
                 try
                 {
-                    FieldValuePairsInBody = JsonSerializer.Deserialize<Dictionary<string, object>>(insertPayloadRoot.ToString());
+                    Dictionary<string, object>? dictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(payload);
+                    if (dictionary != null)
+                    {
+                        FieldValuePairsInBody = dictionary;
+                    }
+                    else
+                    {
+                        throw new JsonException("Failed to deserialize the insert payload");
+                    }
                 }
                 catch (JsonException)
                 {

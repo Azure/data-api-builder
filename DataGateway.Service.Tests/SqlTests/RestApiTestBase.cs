@@ -153,6 +153,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController
             );
         }
+
         /// <summary>
         /// Tests the REST Api for Find operation with two filters separated with AND
         /// comparisons connected with OR.
@@ -168,6 +169,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController
             );
         }
+
         /// <summary>
         /// Tests the REST Api for Find operation with two filters separated with OR
         /// comparisons connected with OR.
@@ -183,6 +185,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController
             );
         }
+
         /// <summary>
         /// Tests the REST Api for Find operation with a filter query string with multiple
         /// comparisons connected with AND.
@@ -244,6 +247,26 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringMultipleNotAndOrFilters)),
                 controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation where we compare one field
+        /// to the bool returned from another comparison.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterQueryStringBoolResultFilter()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id eq (publisher_id gt 1)",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringSingleAndFilter)),
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "A binary operator with incompatible types was detected. " +
+                    "Found operand types 'Edm.Int64' and 'Edm.Boolean' for operator kind 'Equal'.",
+                expectedStatusCode: 400
             );
         }
 

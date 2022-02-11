@@ -160,6 +160,11 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (context.FilterClauseInUrl is not null)
             {
+                // We use the visitor pattern here to traverse the Filter Clause AST
+                // AST has Accept method which takes our Visitor class, and then calls
+                // our visit functions. Each node in the AST will then automatically
+                // call the visit function for that node types, and we process the AST
+                // based on what type of node we are currently traversing.
                 ODataASTVisitor visitor = new(this);
                 FilterPredicates = context.FilterClauseInUrl.Expression.Accept<string>(visitor);
             }

@@ -113,6 +113,14 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
         }
     }
 
+    /// <summary>
+    /// Create the correct resultant string given left, op, right.
+    /// Check for null values and then format the predicate properly.
+    /// </summary>
+    /// <param name="op">The binary operation</param>
+    /// <param name="left">left side of the predicate</param>
+    /// <param name="right">right side of the predicate</param>
+    /// <returns>string representing the correct formatting.</returns>
     private static string CreateResult(BinaryOperatorKind op, string left, string right)
     {
         if (left is null && right is null)
@@ -133,6 +141,12 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
         }
     }
 
+    /// <summary>
+    /// Create the correctly formed response with NULLs.
+    /// </summary>
+    /// <param name="op">The binary operation</param>
+    /// <param name="left">The value that goes on the left.</param>
+    /// <returns>The correct format for a NULL given the op and left hand side.</returns>
     private static string CreateNullResult(BinaryOperatorKind op, string left = "NULL")
     {
         switch (op)

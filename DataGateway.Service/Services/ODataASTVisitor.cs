@@ -31,7 +31,7 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
     }
 
     /// <summary>
-    /// Represents visint a UnaryNode, which is what holds unary
+    /// Represents visiting a UnaryNode, which is what holds unary
     /// operators such as NOT.
     /// </summary>
     /// <param name="nodeIn">The node visisted.</param>

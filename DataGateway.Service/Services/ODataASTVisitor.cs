@@ -63,6 +63,7 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
     {
         if (nodeIn.TypeReference is null)
         {
+            // Represents a NULL value, we support NULL in queries so return null here
             return null;
         }
 
@@ -145,26 +146,26 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
     /// Create the correctly formed response with NULLs.
     /// </summary>
     /// <param name="op">The binary operation</param>
-    /// <param name="left">The value that goes on the left.</param>
+    /// <param name="field">The value representing a field.</param>
     /// <returns>The correct format for a NULL given the op and left hand side.</returns>
-    private static string CreateNullResult(BinaryOperatorKind op, string left = "NULL")
+    private static string CreateNullResult(BinaryOperatorKind op, string field = "NULL")
     {
         switch (op)
         {
             case BinaryOperatorKind.Equal:
-                return $"({left} IS NULL)";
+                return $"({field} IS NULL)";
             case BinaryOperatorKind.NotEqual:
-                return $"({left} IS NOT NULL)";
+                return $"({field} IS NOT NULL)";
             case BinaryOperatorKind.GreaterThan:
-                return $"({left} > NULL)";
+                return $"({field} > NULL)";
             case BinaryOperatorKind.GreaterThanOrEqual:
-                return $"({left} >= NULL)";
+                return $"({field} >= NULL)";
             case BinaryOperatorKind.LessThan:
-                return $"({left} < NULL)";
+                return $"({field} < NULL)";
             case BinaryOperatorKind.LessThanOrEqual:
-                return $"({left} <= NULL)";
+                return $"({field} <= NULL)";
             default:
-                throw new NotSupportedException($"{op} is not supported with types NULL and NULL");
+                throw new NotSupportedException($"{op} is not supported with {field} and NULL");
         }
     }
 

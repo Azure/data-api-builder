@@ -82,6 +82,14 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
+        /// Get primary key as list of string
+        /// </summary>
+        public List<string> PrimaryKey()
+        {
+            return GetTableDefinition().PrimaryKey;
+        }
+
+        /// <summary>
         ///  Add parameter to Parameters and return the name associated with it
         /// </summary>
         public string MakeParamWithValue(object value)

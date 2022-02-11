@@ -59,7 +59,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS subq
                 "
             },
-            //////////////////////////////////////////////////////////////////////
             {
                 "FindTestWithFilterQueryStringOneEqFilter",
                 @"
@@ -264,7 +263,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS subq
                 "
             },
-            /////////////////////////////////////////////////////////////////////
             {
                 "FindTestWithQueryStringMultipleFields",
                 @"

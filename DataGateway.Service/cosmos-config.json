@@ -41,6 +41,9 @@
       "containerName": "planet",
       "operationType": "Upsert"
     }
-  ]
+  ],
+  "DatabaseSchema": {
+    "Tables": {
+    }
+  }
 }
-

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
@@ -63,7 +63,7 @@
     <PackageReference Include="MSTest.TestFramework" Version="2.2.6" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="Npgsql" Version="5.0.10" />
-    <PackageReference Include="Microsoft.OData.Edm" Version="7.9.4" />
+    <PackageReference Include="Microsoft.OData.Edm" Version="7.9.0" />
     <PackageReference Include="Microsoft.OData.Core" Version="7.9.0" />
   </ItemGroup>
   <ItemGroup>

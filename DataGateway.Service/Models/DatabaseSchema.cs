@@ -67,7 +67,7 @@ namespace Azure.DataGateway.Service.Models
 
     public class ForeignKeyDefinition
     {
-        public string ReferencedTable { get; set; }
+        public string ReferencedTable { get; set; } = string.Empty;
         /// <summary>
         /// The list of columns that together reference the primary key of the
         /// referenced table. The order of these columns should corespond to

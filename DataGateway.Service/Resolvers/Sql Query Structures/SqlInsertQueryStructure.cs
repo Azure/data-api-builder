@@ -22,22 +22,12 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<string> Values { get; }
 
-        /// <summary>
-        /// The inserted columns that the insert will return
-        /// </summary>
-        public List<string> ReturnColumns { get; }
-
         public SqlInsertStructure(string tableName, IMetadataStoreProvider metadataStore, IDictionary<string, object> mutationParams)
         : base(metadataStore)
         {
             TableName = tableName;
             InsertColumns = new();
             Values = new();
-
-            TableDefinition tableDefinition = GetTableDefinition();
-
-            // return primary key so the inserted row can be identified
-            ReturnColumns = tableDefinition.PrimaryKey;
 
             foreach (KeyValuePair<string, object> param in mutationParams)
             {
@@ -81,6 +71,14 @@ namespace Azure.DataGateway.Service.Resolvers
                     statusCode: (int)HttpStatusCode.BadRequest,
                     subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
             }
+        }
+
+        /// <summary>
+        /// Get the definition of a column by name
+        /// </summary>
+        public ColumnDefinition GetColumnDefinition(string columnName)
+        {
+            return GetTableDefinition().Columns[columnName];
         }
     }
 }

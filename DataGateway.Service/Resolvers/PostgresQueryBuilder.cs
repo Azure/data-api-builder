@@ -59,7 +59,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             return $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
                     $"VALUES ({string.Join(", ", (structure.Values))}) " +
-                    $"RETURNING {Build(structure.ReturnColumns)};";
+                    $"RETURNING {Build(structure.PrimaryKey())};";
         }
 
         /// <inheritdoc />
@@ -68,7 +68,7 @@ namespace Azure.DataGateway.Service.Resolvers
             return $"UPDATE {QuoteIdentifier(structure.TableName)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                     $"WHERE {Build(structure.Predicates)} " +
-                    $"RETURNING {Build(structure.ReturnColumns)};";
+                    $"RETURNING {Build(structure.PrimaryKey())};";
         }
 
         /// <inheritdoc />

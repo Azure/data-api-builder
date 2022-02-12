@@ -38,8 +38,8 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
     /// <returns>String concatenation of (op children)</returns>
     public override string Visit(UnaryOperatorNode nodeIn)
     {
-        string children = nodeIn.Operand.Accept(this);
-        return "(" + GetFilterPredicateOperator(nodeIn.OperatorKind) + " " + children + ")";
+        string child = nodeIn.Operand.Accept(this);
+        return "(" + GetFilterPredicateOperator(nodeIn.OperatorKind) + " " + child + ")";
     }
 
     /// <summary>

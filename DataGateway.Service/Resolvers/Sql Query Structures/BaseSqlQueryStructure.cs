@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
 using HotChocolate.Language;
+using HotChocolate.Types;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -142,6 +143,35 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return itemsField;
+        }
+
+        /// <summary>
+        /// UnderlyingType is the type main GraphQL type that is described by
+        /// this type. This strips all modifiers, such as List and Non-Null.
+        /// So the following GraphQL types would all have the underlyingType Book:
+        /// - Book
+        /// - [Book]
+        /// - Book!
+        /// - [Book]!
+        /// - [Book!]!
+        /// </summary>
+        internal static ObjectType UnderlyingType(IType type)
+        {
+            ObjectType underlyingType = type as ObjectType;
+            if (underlyingType != null)
+            {
+                return underlyingType;
+            }
+
+            return UnderlyingType(type.InnerType());
+        }
+
+        /// <summary>
+        /// Extracts the *Connection.items schema field from the *Connection schema field
+        /// </summary>
+        internal static IObjectField ExtractItemsSchemaField(IObjectField connectionSchemaField)
+        {
+            return UnderlyingType(connectionSchemaField.Type).Fields["items"];
         }
 
     }

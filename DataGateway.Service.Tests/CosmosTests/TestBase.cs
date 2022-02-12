@@ -134,6 +134,28 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         }
 
         /// <summary>
+        /// Creates and registers a mutation resolver
+        /// </summary>
+        /// <param name="id">name of the mutation</param>
+        /// <param name="database">the database name</param>
+        /// <param name="container">the container name</param>
+        /// <param name="operationType">the type of operation. Defaults to UPSERT</param>
+        internal static void RegisterGraphqlType(string id,
+           string database,
+           string container,
+           bool isPaginationType = false)
+        {
+            string resolverJson = JObject.FromObject(new
+            {
+                database,
+                container,
+                isPaginationType
+            }).ToString();
+            GraphqlType gqlType = JsonConvert.DeserializeObject<GraphqlType>(resolverJson);
+            _metadataStoreProvider.StoreGraphQLType(id, gqlType);
+        }
+
+        /// <summary>
         /// Executes the GraphQL request and returns the results
         /// </summary>
         /// <param name="queryName"> Name of the GraphQL query/mutation</param>
@@ -149,5 +171,6 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             JsonElement graphQLResult = await _controller.PostAsync();
             return graphQLResult.GetProperty("data").GetProperty(queryName);
         }
+
     }
 }

@@ -42,14 +42,13 @@ namespace Azure.DataGateway.Services
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
-            string graphQLQueryName = context.Selection.Field.Name.Value;
-            GraphQLQueryResolver resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
-            Container container = this._clientProvider.Client.GetDatabase(resolver.DatabaseName).GetContainer(resolver.ContainerName);
+            CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider);
+
+            Container container = this._clientProvider.Client.GetDatabase(structure.Database).GetContainer(structure.Container);
 
             QueryRequestOptions queryRequestOptions = new();
             string requestContinuation = null;
 
-            CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider, isPaginatedQuery);
             string queryString = _queryBuilder.Build(structure);
 
             QueryDefinition querySpec = new(queryString);
@@ -59,7 +58,7 @@ namespace Azure.DataGateway.Services
                 querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
             }
 
-            if (isPaginatedQuery)
+            if (structure.IsPaginated)
             {
                 queryRequestOptions.MaxItemCount = (int?)structure.MaxItemCount;
                 requestContinuation = Base64Decode(structure.Continuation);
@@ -67,7 +66,7 @@ namespace Azure.DataGateway.Services
 
             FeedResponse<JObject> firstPage = await container.GetItemQueryIterator<JObject>(querySpec, requestContinuation, queryRequestOptions).ReadNextAsync();
 
-            if (isPaginatedQuery)
+            if (structure.IsPaginated)
             {
                 JArray jarray = new();
                 IEnumerator<JObject> enumerator = firstPage.GetEnumerator();
@@ -113,10 +112,10 @@ namespace Azure.DataGateway.Services
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
-            string graphQLQueryName = context.Selection.Field.Name.Value;
-            GraphQLQueryResolver resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
-            Container container = this._clientProvider.Client.GetDatabase(resolver.DatabaseName).GetContainer(resolver.ContainerName);
-            QueryDefinition querySpec = new(resolver.ParametrizedQuery);
+            CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider);
+
+            Container container = this._clientProvider.Client.GetDatabase(structure.Database).GetContainer(structure.Container);
+            QueryDefinition querySpec = new(_queryBuilder.Build(structure));
 
             if (parameters != null)
             {
@@ -172,14 +171,7 @@ namespace Azure.DataGateway.Services
         /// <returns></returns>
         public bool IsPaginatedQuery(string queryName)
         {
-            GraphQLQueryResolver resolver = _metadataStoreProvider.GetQueryResolver(queryName);
-            if (resolver == null)
-            {
-                string message = string.Format("There is no resolver for the query: {0}", queryName);
-                throw new InvalidOperationException(message);
-            }
-
-            return resolver.IsPaginated;
+            return false;
         }
 
         private static string Base64Encode(string plainText)

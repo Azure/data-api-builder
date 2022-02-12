@@ -1,36 +1,6 @@
 {
   "GraphQLSchema": "",
   "GraphQLSchemaFile": "schema.gql",
-  "QueryResolvers": [
-    {
-      "id": "characterById",
-      "databaseName": "graphqldb",
-      "containerName": "character"
-    },
-    {
-      "id": "characterList",
-      "databaseName": "graphqldb",
-      "containerName": "character",
-      "parametrizedQuery": "select * FROM c"
-    },
-    {
-      "id": "planetById",
-      "databaseName": "graphqldb",
-      "containerName": "planet"
-    },
-    {
-      "id": "planetList",
-      "databaseName": "graphqldb",
-      "containerName": "planet",
-      "parametrizedQuery": "select * FROM c"
-    },
-    {
-      "id": "planets",
-      "isPaginated": true,
-      "databaseName": "graphqldb",
-      "containerName": "planet"
-    }
-  ],
   "MutationResolvers": [
     {
       "id": "addPlanet",
@@ -41,7 +11,18 @@
   ],
   "GraphqlTypes": {
     "Planet": {
-      "Table": "planet"
+      "database": "graphqldb",
+      "container": "planet"
+    },
+    "Character": {
+      "database": "graphqldb",
+      "container": "character"
+    },
+    "PlanetConnection": {
+      "IsPaginationType": true
+    },
+    "CharacterConnection": {
+      "IsPaginationType": true
     }
   }
 }

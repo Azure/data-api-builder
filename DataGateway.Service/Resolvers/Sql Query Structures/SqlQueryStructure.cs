@@ -136,6 +136,7 @@ namespace Azure.DataGateway.Service.Resolvers
             TableName = context.EntityName;
             TableAlias = TableName;
             IsListQuery = context.IsMany;
+            FilterPredicates = string.Empty;
 
             context.FieldsToBeReturned.ForEach(fieldName => AddColumn(fieldName));
             if (Columns.Count == 0)
@@ -157,10 +158,17 @@ namespace Azure.DataGateway.Service.Resolvers
                 PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
             }
 
-            foreach (KeyValuePair<string, Tuple<object, PredicateOperation>> predicate in context.FieldValuePairsInUrl)
+            if (context.FilterClauseInUrl is not null)
             {
-                PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value.Item1, op: predicate.Value.Item2);
+                // We use the visitor pattern here to traverse the Filter Clause AST
+                // AST has Accept method which takes our Visitor class, and then calls
+                // our visit functions. Each node in the AST will then automatically
+                // call the visit function for that node types, and we process the AST
+                // based on what type of node we are currently traversing.
+                ODataASTVisitor visitor = new(this);
+                FilterPredicates = context.FilterClauseInUrl.Expression.Accept<string>(visitor);
             }
+
         }
 
         /// <summary>

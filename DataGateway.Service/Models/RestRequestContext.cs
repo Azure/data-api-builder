@@ -1,6 +1,6 @@
-using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
+using Microsoft.OData.UriParser;
 
 namespace Azure.DataGateway.Service.Models
 {
@@ -28,12 +28,10 @@ namespace Azure.DataGateway.Service.Models
         public virtual Dictionary<string, object> PrimaryKeyValuePairs { get; set; }
 
         /// <summary>
-        /// Dictionary of field names and a tuple which holds the associated value and
-        /// predicate operation. Where value is the value compared to the field and
-        /// the predicate operation is the sort of comparison done.
+        /// AST that represents the filter part of the query.
         /// Based on the operation type, this property may or may not be populated.
         /// </summary>
-        public Dictionary<string, Tuple<object, PredicateOperation>> FieldValuePairsInUrl { get; set; }
+        public virtual FilterClause FilterClauseInUrl { get; set; }
 
         /// <summary>
         /// Dictionary of field names and their values given in the request body.

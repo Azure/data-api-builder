@@ -155,6 +155,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     return ">=";
                 case PredicateOperation.LessThanOrEqual:
                     return "<=";
+                case PredicateOperation.NotEqual:
+                    return "!=";
                 default:
                     throw new ArgumentException($"Cannot build unknown predicate operation {op}.");
             }

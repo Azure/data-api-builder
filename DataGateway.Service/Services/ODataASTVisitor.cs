@@ -130,7 +130,7 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
         }
         else if (left is null)
         {
-            return CreateNullResult(op, field: right);
+            return CreateNullResult(op, value: right);
         }
         else if (right is null)
         {
@@ -148,24 +148,34 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
     /// <param name="op">The binary operation</param>
     /// <param name="field">The value representing a field.</param>
     /// <returns>The correct format for a NULL given the op and left hand side.</returns>
-    private static string CreateNullResult(BinaryOperatorKind op, string field = "NULL")
+    private static string CreateNullResult(BinaryOperatorKind op, string left = "NULL", string right = "NULL")
     {
         switch (op)
         {
             case BinaryOperatorKind.Equal:
-                return $"({field} IS NULL)";
+                if (!left.Equals("NULL"))
+                {
+                    return $"({left} IS NULL)";
+                }
+
+                return $"({right} IS NULL)";
             case BinaryOperatorKind.NotEqual:
-                return $"({field} IS NOT NULL)";
+                if (!left.Equals("NULL"))
+                {
+                    return $"({left} IS NOT NULL)";
+                }
+
+                return $"({right} IS NOT NULL)";
             case BinaryOperatorKind.GreaterThan:
-                return $"({field} > NULL)";
+                return $"({left} > {right})";
             case BinaryOperatorKind.GreaterThanOrEqual:
-                return $"({field} >= NULL)";
+                return $"({left} >= {right})";
             case BinaryOperatorKind.LessThan:
-                return $"({field} < NULL)";
+                return $"({left} < {right})";
             case BinaryOperatorKind.LessThanOrEqual:
-                return $"({field} <= NULL)";
+                return $"({left} <= {right})";
             default:
-                throw new NotSupportedException($"{op} is not supported with {field} and NULL");
+                throw new NotSupportedException($"{op} is not supported with {left} and {right}");
         }
     }
 

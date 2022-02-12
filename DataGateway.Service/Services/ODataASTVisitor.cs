@@ -64,7 +64,7 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
         if (nodeIn.TypeReference is null)
         {
             // Represents a NULL value, we support NULL in queries so return null here
-            return null;
+            return "NULL";
         }
 
         return "@" + _struct.MakeParamWithValue(GetParamWithSystemType(nodeIn.Value.ToString(), nodeIn.TypeReference));
@@ -124,22 +124,12 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
     /// <returns>string representing the correct formatting.</returns>
     private static string CreateResult(BinaryOperatorKind op, string left, string right)
     {
-        if (left is null && right is null)
+        if (left.Equals("NULL") || right.Equals("NULL"))
         {
-            return CreateNullResult(op);
+            return CreateNullResult(op, left, right);
         }
-        else if (left is null)
-        {
-            return CreateNullResult(op, right: right);
-        }
-        else if (right is null)
-        {
-            return CreateNullResult(op, left: left);
-        }
-        else
-        {
-            return "(" + left + " " + GetFilterPredicateOperator(op) + " " + right + ")";
-        }
+
+        return "(" + left + " " + GetFilterPredicateOperator(op) + " " + right + ")";
     }
 
     /// <summary>
@@ -167,13 +157,10 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
 
                 return $"({right} IS NOT NULL)";
             case BinaryOperatorKind.GreaterThan:
-                return $"({left} > {right})";
             case BinaryOperatorKind.GreaterThanOrEqual:
-                return $"({left} >= {right})";
             case BinaryOperatorKind.LessThan:
-                return $"({left} < {right})";
             case BinaryOperatorKind.LessThanOrEqual:
-                return $"({left} <= {right})";
+                return $"({left} {GetFilterPredicateOperator(op)} {right})";
             default:
                 throw new NotSupportedException($"{op} is not supported with {left} and {right}");
         }

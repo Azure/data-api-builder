@@ -39,7 +39,7 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
     public override string Visit(UnaryOperatorNode nodeIn)
     {
         string child = nodeIn.Operand.Accept(this);
-        return "(" + GetFilterPredicateOperator(nodeIn.OperatorKind) + " " + child + ")";
+        return $"({GetFilterPredicateOperator(nodeIn.OperatorKind)} {child} )";
     }
 
     /// <summary>
@@ -63,11 +63,11 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
     {
         if (nodeIn.TypeReference is null)
         {
-            // Represents a NULL value, we support NULL in queries so return null here
+            // Represents a NULL value, we support NULL in queries so return "NULL" here
             return "NULL";
         }
 
-        return "@" + _struct.MakeParamWithValue(GetParamWithSystemType(nodeIn.Value.ToString(), nodeIn.TypeReference));
+        return $"@{_struct.MakeParamWithValue(GetParamWithSystemType(nodeIn.Value.ToString(), nodeIn.TypeReference))}";
     }
 
     /// <summary>
@@ -129,7 +129,7 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
             return CreateNullResult(op, left, right);
         }
 
-        return "(" + left + " " + GetFilterPredicateOperator(op) + " " + right + ")";
+        return $"({left} {GetFilterPredicateOperator(op)} {right})";
     }
 
     /// <summary>
@@ -138,7 +138,7 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
     /// <param name="op">The binary operation</param>
     /// <param name="field">The value representing a field.</param>
     /// <returns>The correct format for a NULL given the op and left hand side.</returns>
-    private static string CreateNullResult(BinaryOperatorKind op, string left = "NULL", string right = "NULL")
+    private static string CreateNullResult(BinaryOperatorKind op, string left, string right)
     {
         switch (op)
         {

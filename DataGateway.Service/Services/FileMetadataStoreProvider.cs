@@ -67,7 +67,7 @@ namespace Azure.DataGateway.Service
             };
             options.Converters.Add(new JsonStringEnumConverter());
 
-            // This feels dirty but it avoids having to make _config nullable - which would result in more
+            // This feels verbose but it avoids having to make _config nullable - which would result in more
             // down the line issues and null check requirements
             ResolverConfig? deserializedConfig;
             if ((deserializedConfig = JsonSerializer.Deserialize<ResolverConfig>(jsonString, options)) == null)

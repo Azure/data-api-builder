@@ -20,9 +20,8 @@ namespace Azure.DataGateway.Service.Models
             JsonElement insertPayloadRoot,
             OperationAuthorizationRequirement httpVerb,
             Operation operationType)
-            : base(httpVerb)
+            : base(httpVerb, entityName)
         {
-            EntityName = entityName;
             FieldsToBeReturned = new();
             PrimaryKeyValuePairs = new();
             OperationType = operationType;

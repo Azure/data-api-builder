@@ -45,7 +45,7 @@ namespace Azure.DataGateway.Services
             Container container = this._clientProvider.Client.GetDatabase(resolver.DatabaseName).GetContainer(resolver.ContainerName);
 
             QueryRequestOptions queryRequestOptions = new();
-            string? requestContinuation = null;
+            string requestContinuation = null;
 
             QueryDefinition querySpec = new(resolver.ParametrizedQuery);
 
@@ -79,7 +79,7 @@ namespace Azure.DataGateway.Services
                     jarray.Add(item);
                 }
 
-                string? responseContinuation = firstPage.ContinuationToken;
+                string responseContinuation = firstPage.ContinuationToken;
                 if (string.IsNullOrEmpty(responseContinuation))
                 {
                     responseContinuation = null;
@@ -96,7 +96,7 @@ namespace Azure.DataGateway.Services
 
             static JObject FindFirstItem(IEnumerator<JObject> iterator)
             {
-                JObject? firstItem;
+                JObject firstItem;
                 if (iterator.MoveNext() && (firstItem = iterator.Current) == null)
                 {
                     return FindFirstItem(iterator);

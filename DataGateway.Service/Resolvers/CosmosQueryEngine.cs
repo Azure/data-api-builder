@@ -1,3 +1,4 @@
+# nullable disable
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -55,12 +56,12 @@ namespace Azure.DataGateway.Services
                     querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
                 }
 
-                if (parameters.TryGetValue("first", out object? maxSize))
+                if (parameters.TryGetValue("first", out object maxSize))
                 {
                     queryRequestOptions.MaxItemCount = Convert.ToInt32(maxSize);
                 }
 
-                if (parameters.TryGetValue("after", out object? after))
+                if (parameters.TryGetValue("after", out object after))
                 {
                     requestContinuation = Base64Decode((string)after);
                 }
@@ -187,7 +188,7 @@ namespace Azure.DataGateway.Services
             return resolver.IsPaginated;
         }
 
-        private static string? Base64Encode(string? plainText)
+        private static string Base64Encode(string plainText)
         {
             if (plainText == default)
             {
@@ -198,7 +199,7 @@ namespace Azure.DataGateway.Services
             return System.Convert.ToBase64String(plainTextBytes);
         }
 
-        private static string? Base64Decode(string base64EncodedData)
+        private static string Base64Decode(string base64EncodedData)
         {
             if (base64EncodedData == default)
             {

@@ -32,7 +32,7 @@ namespace Azure.DataGateway.Services
         /// Gets metadata required to resolve the GraphQL type with the given
         /// name.
         /// </summary>
-        GraphQLType GetGraphqlType(string name);
+        GraphQLType GetGraphQLType(string name);
 
         /// <summary>
         /// Returns the resolved config

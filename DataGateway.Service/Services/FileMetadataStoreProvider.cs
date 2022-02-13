@@ -137,7 +137,7 @@ namespace Azure.DataGateway.Service
             return metadata;
         }
 
-        public GraphQLType GetGraphqlType(string name)
+        public GraphQLType GetGraphQLType(string name)
         {
             if (!_config.GraphQLTypes.TryGetValue(name, out GraphQLType? typeInfo))
             {

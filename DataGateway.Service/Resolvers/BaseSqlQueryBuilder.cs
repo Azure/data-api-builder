@@ -210,11 +210,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Join predicate strings while ignoring empty or null predicates
         /// </summary>
         /// <returns>returns "1 = 1" if no valid predicates</returns>
-        public string JoinPredicateStrings(params string[] predicateStrings)
+        public string JoinPredicateStrings(params string?[] predicateStrings)
         {
-            IEnumerable<string> validPredicates = predicateStrings.Where(s => !string.IsNullOrEmpty(s));
+            IEnumerable<string> validPredicates = predicateStrings.Where(s => !string.IsNullOrEmpty(s)).Select(s => s!);
 
-            if (validPredicates.Count() == 0)
+            if (!validPredicates.Any())
             {
                 return "1 = 1";
             }

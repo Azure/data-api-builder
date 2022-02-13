@@ -58,16 +58,16 @@ namespace Azure.DataGateway.Service.Resolvers
         /// If this query is built because of a GraphQL query (as opposed to
         /// REST), then this is set to the resolver context of that query.
         /// </summary>
-        IResolverContext _ctx;
+        IResolverContext? _ctx;
 
         /// <summary>
         /// The underlying type of the type returned by this query see, the
         /// comment on UnderlyingType to understand what an underlying type is.
         /// </summary>
-        ObjectType _underlyingFieldType;
+        ObjectType _underlyingFieldType = null!;
 
-        private readonly GraphQLType _typeInfo;
-        private List<Column> _primaryKey;
+        private readonly GraphQLType _typeInfo = null!;
+        private List<Column>? _primaryKey;
 
         /// <summary>
         /// Generate the structure for a SQL query based on GraphQL query
@@ -108,18 +108,21 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Extracts the *Connection.items query field from the *Connection query field
         /// </summary>
         /// <returns> The query field or null if **Conneciton.items is not requested in the query</returns>
-        private static FieldNode ExtractItemsQueryField(FieldNode connectionQueryField)
+        private static FieldNode? ExtractItemsQueryField(FieldNode connectionQueryField)
         {
-            FieldNode itemsField = null;
-            foreach (ISelectionNode node in connectionQueryField.SelectionSet.Selections)
+            FieldNode? itemsField = null;
+            if (connectionQueryField != null && connectionQueryField.SelectionSet != null)
             {
-                FieldNode field = node as FieldNode;
-                string fieldName = field.Name.Value;
-
-                if (fieldName == "items")
+                foreach (ISelectionNode node in connectionQueryField.SelectionSet.Selections)
                 {
-                    itemsField = field;
-                    break;
+                    FieldNode field = (FieldNode)node;
+                    string fieldName = field.Name.Value;
+
+                    if (fieldName == "items")
+                    {
+                        itemsField = field;
+                        break;
+                    }
                 }
             }
 
@@ -131,9 +134,8 @@ namespace Azure.DataGateway.Service.Resolvers
         /// which is created by a FindById or FindMany REST request.
         /// </summary>
         public SqlQueryStructure(RestRequestContext context, IMetadataStoreProvider metadataStoreProvider) :
-            this(metadataStoreProvider, new IncrementingInteger())
+            this(metadataStoreProvider, context.EntityName, new IncrementingInteger())
         {
-            TableName = context.EntityName;
             TableAlias = TableName;
             IsListQuery = context.IsMany;
             FilterPredicates = string.Empty;
@@ -168,7 +170,6 @@ namespace Azure.DataGateway.Service.Resolvers
                 ODataASTVisitor visitor = new(this);
                 FilterPredicates = context.FilterClauseInUrl.Expression.Accept<string>(visitor);
             }
-
         }
 
         /// <summary>
@@ -183,27 +184,31 @@ namespace Azure.DataGateway.Service.Resolvers
                 IObjectField schemaField,
                 FieldNode queryField,
                 IncrementingInteger counter
-        ) : this(metadataStoreProvider, counter)
+        ) : this(metadataStoreProvider, string.Empty, counter)
         {
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
             _underlyingFieldType = UnderlyingType(outputType);
 
-            _typeInfo = MetadataStoreProvider.GetGraphqlType(_underlyingFieldType.Name);
+            _typeInfo = MetadataStoreProvider.GetGraphQLType(_underlyingFieldType.Name);
             PaginationMetadata.IsPaginated = _typeInfo.IsPaginationType;
 
             if (PaginationMetadata.IsPaginated)
             {
-                // process pagination fields without overriding them
-                ProcessPaginationFields(queryField.SelectionSet.Selections);
+                if (queryField != null && queryField.SelectionSet != null)
+                {
+                    // process pagination fields without overriding them
+                    ProcessPaginationFields(queryField.SelectionSet.Selections);
 
-                // override schemaField and queryField with the schemaField and queryField of *Connection.items
-                queryField = ExtractItemsQueryField(queryField);
+                    // override schemaField and queryField with the schemaField and queryField of *Connection.items
+                    queryField = ExtractItemsQueryField(queryField) ?? queryField;
+                }
+
                 schemaField = ExtractItemsSchemaField(schemaField);
 
                 outputType = schemaField.Type;
                 _underlyingFieldType = UnderlyingType(outputType);
-                _typeInfo = MetadataStoreProvider.GetGraphqlType(_underlyingFieldType.Name);
+                _typeInfo = MetadataStoreProvider.GetGraphQLType(_underlyingFieldType.Name);
 
                 // this is required to correctly keep track of which pagination metadata
                 // refers to what section of the json
@@ -221,9 +226,9 @@ namespace Azure.DataGateway.Service.Resolvers
             TableName = _typeInfo.Table;
             TableAlias = CreateTableAlias();
 
-            if (queryField != null)
+            if (queryField != null && queryField.SelectionSet != null)
             {
-                AddGraphqlFields(queryField.SelectionSet.Selections);
+                AddGraphQLFields(queryField.SelectionSet.Selections);
             }
 
             if (outputType.IsNonNullType())
@@ -289,8 +294,8 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Private constructor that is used as a base by all public
         /// constructors.
         /// </summary>
-        private SqlQueryStructure(IMetadataStoreProvider metadataStoreProvider, IncrementingInteger counter)
-            : base(metadataStoreProvider, counter)
+        private SqlQueryStructure(IMetadataStoreProvider metadataStoreProvider, string tableName, IncrementingInteger counter)
+            : base(metadataStoreProvider, tableName, counter)
         {
             JoinQueries = new();
             Joins = new();
@@ -309,8 +314,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         private static ObjectType UnderlyingType(IType type)
         {
-            ObjectType underlyingType = type as ObjectType;
-            if (underlyingType != null)
+            if (type is ObjectType underlyingType)
             {
                 return underlyingType;
             }
@@ -371,7 +375,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (value != null)
                 {
                     parameterName = MakeParamWithValue(
-                        GetParamAsColumnSystemType(value.ToString(), field));
+                        GetParamAsColumnSystemType(value.ToString()!, field));
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(TableAlias, field)),
                         op,
@@ -439,7 +443,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             foreach (ISelectionNode node in paginationSelections)
             {
-                FieldNode field = node as FieldNode;
+                FieldNode field = (FieldNode)node;
                 string fieldName = field.Name.Value;
 
                 switch (fieldName)
@@ -464,11 +468,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// to the result set, but also adding any subqueries or joins that are
         /// required to fetch nested data.
         /// </summary>
-        void AddGraphqlFields(IReadOnlyList<ISelectionNode> Selections)
+        void AddGraphQLFields(IReadOnlyList<ISelectionNode> Selections)
         {
             foreach (ISelectionNode node in Selections)
             {
-                FieldNode field = node as FieldNode;
+                FieldNode field = (FieldNode)node;
                 string fieldName = field.Name.Value;
 
                 if (field.SelectionSet == null)
@@ -477,9 +481,14 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
                 else
                 {
-                    IObjectField subschemaField = _underlyingFieldType.Fields[fieldName];
+                    IObjectField? subschemaField = _underlyingFieldType.Fields[fieldName];
 
                     IDictionary<string, object> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field);
+                    if (_ctx == null)
+                    {
+                        throw new InvalidOperationException("No GraphQL context exists");
+                    }
+
                     SqlQueryStructure subquery = new(_ctx, subqueryParams, MetadataStoreProvider, subschemaField, field, Counter);
 
                     if (PaginationMetadata.IsPaginated)
@@ -507,7 +516,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     // use the _underlyingType from the subquery which will be overridden appropriately if the query is paginated
                     ObjectType subunderlyingType = subquery._underlyingFieldType;
 
-                    GraphQLType subTypeInfo = MetadataStoreProvider.GetGraphqlType(subunderlyingType.Name);
+                    GraphQLType subTypeInfo = MetadataStoreProvider.GetGraphQLType(subunderlyingType.Name);
                     TableDefinition subTableDefinition = MetadataStoreProvider.GetTableDefinition(subTypeInfo.Table);
                     GraphQLField fieldInfo = _typeInfo.Fields[fieldName];
 

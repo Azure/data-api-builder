@@ -33,7 +33,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// in the WHERE Clause. This is generated specifically from the $filter portion
         /// of the query string.
         /// </summary>
-        public string FilterPredicates { get; set; }
+        public string? FilterPredicates { get; set; }
         /// <summary>
         /// Parameters values required to execute the query.
         /// </summary>
@@ -47,14 +47,18 @@ namespace Azure.DataGateway.Service.Resolvers
 
         protected IMetadataStoreProvider MetadataStoreProvider { get; }
 
-        public BaseSqlQueryStructure(IMetadataStoreProvider metadataStore,
-            IncrementingInteger counter = null)
+        public BaseSqlQueryStructure(IMetadataStoreProvider metadataStore, string tableName,
+            IncrementingInteger? counter = null)
         {
             Columns = new();
             Predicates = new();
             Parameters = new();
             MetadataStoreProvider = metadataStore;
+            TableName = tableName;
             Counter = counter ?? new IncrementingInteger();
+
+            // Default the alias to the table name
+            TableAlias = tableName;
         }
 
         /// <summary>
@@ -62,8 +66,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public ColumnType GetColumnType(string columnName)
         {
-            ColumnDefinition column;
-            if (GetTableDefinition().Columns.TryGetValue(columnName, out column))
+            if (GetTableDefinition().Columns.TryGetValue(columnName, out ColumnDefinition? column))
             {
                 return column.Type;
             }

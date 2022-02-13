@@ -17,9 +17,8 @@ namespace Azure.DataGateway.Service.Resolvers
         public List<Predicate> UpdateOperations { get; }
 
         public SqlUpdateStructure(string tableName, IMetadataStoreProvider metadataStore, IDictionary<string, object> mutationParams)
-        : base(metadataStore)
+        : base(metadataStore, tableName)
         {
-            TableName = tableName;
             UpdateOperations = new();
             TableDefinition tableDefinition = GetTableDefinition();
 

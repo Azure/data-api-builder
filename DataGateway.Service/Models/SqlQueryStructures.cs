@@ -11,13 +11,13 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Table alias of the table which owns the column
         /// </summary>
-        public string TableAlias { get; }
+        public string? TableAlias { get; }
         /// <summary>
         /// Name of the column
         /// </summary>
         public string ColumnName { get; }
 
-        public Column(string tableAlias, string columnName)
+        public Column(string? tableAlias, string columnName)
         {
             TableAlias = tableAlias;
             ColumnName = columnName;

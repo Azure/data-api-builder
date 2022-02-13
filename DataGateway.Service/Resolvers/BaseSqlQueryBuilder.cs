@@ -20,7 +20,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Builds a database specific keyset pagination predicate
         /// </summary>
-        protected virtual string Build(KeysetPaginationPredicate predicate)
+        protected virtual string Build(KeysetPaginationPredicate? predicate)
         {
             if (predicate == null)
             {

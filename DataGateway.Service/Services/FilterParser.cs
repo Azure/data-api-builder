@@ -1,7 +1,10 @@
 using System;
-using System.Collections.Generic;
+using System.Net;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -11,9 +14,7 @@ namespace Azure.DataGateway.Service.Services
     /// </summary>
     public class FilterParser
     {
-#pragma warning disable IDE0052 // Supressed temporarily until Parse() is implemented
         private IEdmModel _model;
-#pragma warning restore IDE0052 // Remove unread private members
 
         public FilterParser(DatabaseSchema schema)
         {
@@ -22,12 +23,23 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
-        /// Parses the filter clause.
+        /// Parses a given filter part of a query string.
         /// </summary>
-        /// <returns>A list of rest predicates to be used in query generation.</returns>
-        public Dictionary<string, Tuple<object, PredicateOperation>> Parse()
+        /// <param name="filterQueryString">Represents the $filter part of the query string</param>
+        /// <param name="resourcePath">Represents the resource path, in our case the entity name.</param>
+        /// <returns>An AST FilterClause that represents the filter portion of the WHERE clause.</returns>
+        public FilterClause GetFilterClause(string filterQueryString, string resourcePath)
         {
-            throw new NotImplementedException();
+            try
+            {
+                Uri relativeUri = new(resourcePath + filterQueryString, UriKind.Relative);
+                ODataUriParser parser = new(_model, relativeUri);
+                return parser.ParseFilter();
+            }
+            catch (ODataException e)
+            {
+                throw new DatagatewayException(e.Message, ((int)HttpStatusCode.BadRequest), DatagatewayException.SubStatusCodes.BadRequest);
+            }
         }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Text;
@@ -22,6 +23,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         internal static GraphQLService _graphQLService;
         internal static CosmosClientProvider _clientProvider;
         internal static MetadataStoreProviderForTest _metadataStoreProvider;
+        internal static IMetadataStoreProvider _metaStoreProvider;
         internal static CosmosQueryEngine _queryEngine;
         internal static CosmosMutationEngine _mutationEngine;
         internal static GraphQLController _controller;
@@ -47,15 +49,19 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         /// <param name="dbName">the database name</param>
         /// <param name="containerName">the container name</param>
         /// <param name="numItems">number of items to be created</param>
-        internal static void CreateItems(string dbName, string containerName, int numItems)
+        internal static List<string> CreateItems(string dbName, string containerName, int numItems)
         {
+            List<String> idList = new();
             for (int i = 0; i < numItems; i++)
             {
                 string uid = Guid.NewGuid().ToString();
+                idList.Add(uid);
                 dynamic sourceItem = TestHelper.GetItem(uid);
                 Client.GetContainer(dbName, containerName)
                     .CreateItemAsync(sourceItem, new PartitionKey(uid)).Wait();
             }
+
+            return idList;
         }
 
         private static DefaultHttpContext GetHttpContextWithBody(string data)
@@ -128,6 +134,28 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         }
 
         /// <summary>
+        /// Creates and registers a GraphqlType
+        /// </summary>
+        /// <param name="id">name of the mutation</param>
+        /// <param name="databaseName">the database name</param>
+        /// <param name="containerName">the container name</param>
+        /// <param name="isPaginationType">is the type a pagination type</param>
+        internal static void RegisterGraphqlType(string id,
+           string databaseName,
+           string containerName,
+           bool isPaginationType = false)
+        {
+            string resolverJson = JObject.FromObject(new
+            {
+                databaseName,
+                containerName,
+                isPaginationType
+            }).ToString();
+            GraphqlType gqlType = JsonConvert.DeserializeObject<GraphqlType>(resolverJson);
+            _metadataStoreProvider.StoreGraphQLType(id, gqlType);
+        }
+
+        /// <summary>
         /// Executes the GraphQL request and returns the results
         /// </summary>
         /// <param name="queryName"> Name of the GraphQL query/mutation</param>
@@ -143,5 +171,6 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             JsonElement graphQLResult = await _controller.PostAsync();
             return graphQLResult.GetProperty("data").GetProperty(queryName);
         }
+
     }
 }

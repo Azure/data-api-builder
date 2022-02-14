@@ -1,39 +1,6 @@
 {
   "GraphQLSchema": "",
   "GraphQLSchemaFile": "schema.gql",
-  "QueryResolvers": [
-    {
-      "id": "characterById",
-      "databaseName": "graphqldb",
-      "containerName": "character",
-      "parametrizedQuery": "select * FROM c WHERE c.id = @id"
-    },
-    {
-      "id": "characterList",
-      "databaseName": "graphqldb",
-      "containerName": "character",
-      "parametrizedQuery": "select * FROM c"
-    },
-    {
-      "id": "planetById",
-      "databaseName": "graphqldb",
-      "containerName": "planet",
-      "parametrizedQuery": "select * FROM c WHERE c.id = @id"
-    },
-    {
-      "id": "planetList",
-      "databaseName": "graphqldb",
-      "containerName": "planet",
-      "parametrizedQuery": "select * FROM c"
-    },
-    {
-      "id": "planets",
-      "isPaginated": true,
-      "databaseName": "graphqldb",
-      "containerName": "planet",
-      "parametrizedQuery": "select * FROM c"
-    }
-  ],
   "MutationResolvers": [
     {
       "id": "addPlanet",
@@ -41,6 +8,22 @@
       "containerName": "planet",
       "operationType": "Upsert"
     }
-  ]
+  ],
+  "GraphqlTypes": {
+    "Planet": {
+      "databaseName": "graphqldb",
+      "containerName": "planet"
+    },
+    "Character": {
+      "databaseName": "graphqldb",
+      "containerName": "character"
+    },
+    "PlanetConnection": {
+      "IsPaginationType": true
+    },
+    "CharacterConnection": {
+      "IsPaginationType": true
+    }
+  }
 }
 

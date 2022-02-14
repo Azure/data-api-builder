@@ -62,8 +62,7 @@ namespace Azure.DataGateway.Services
                 }
                 else
                 {
-                    bool isPaginatedQuery = _queryEngine.IsPaginatedQuery(context.Selection.Field.Name.Value);
-                    Tuple<JsonDocument, IMetadata> result = await _queryEngine.ExecuteAsync(context, parameters, isPaginatedQuery);
+                    Tuple<JsonDocument, IMetadata> result = await _queryEngine.ExecuteAsync(context, parameters);
                     context.Result = result.Item1;
                     SetNewMetadata(context, result.Item2);
                 }

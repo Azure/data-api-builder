@@ -80,7 +80,7 @@ namespace Azure.DataGateway.Services
                 // One-To-Many join.
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
-                    IMetadata metadata = GetMetadata(context);
+                    IMetadata? metadata = GetMetadata(context);
                     context.Result = _queryEngine.ResolveInnerObject(jsonElement, context.Selection.Field, ref metadata);
                     SetNewMetadata(context, metadata);
                 }
@@ -93,7 +93,7 @@ namespace Azure.DataGateway.Services
                 // join.
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
-                    IMetadata metadata = GetMetadata(context);
+                    IMetadata? metadata = GetMetadata(context);
                     context.Result = _queryEngine.ResolveListType(jsonElement, context.Selection.Field, ref metadata);
                     SetNewMetadata(context, metadata);
                 }

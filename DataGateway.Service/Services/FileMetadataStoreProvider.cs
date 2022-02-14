@@ -102,7 +102,11 @@ namespace Azure.DataGateway.Service
                 _mutationResolvers.Add(resolver.Id, resolver);
             }
 
-            _filterParser = new(_config.DatabaseSchema);
+            // Database Schema may be null for CosmosDB
+            if (_config.DatabaseSchema is not null)
+            {
+                _filterParser = new(_config.DatabaseSchema);
+            }
         }
         /// <summary>
         /// Reads generated JSON configuration file with GraphQL Schema

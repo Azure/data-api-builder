@@ -33,18 +33,13 @@ namespace Azure.DataGateway.Services
             _metadataStoreProvider = metadataStoreProvider;
         }
 
-        public ResolverMiddleware(FieldDelegate next)
-        {
-            _next = next;
-        }
-
         public async Task InvokeAsync(IMiddlewareContext context)
         {
             JsonElement jsonElement;
 
             if (context.Selection.Field.Coordinate.TypeName.Value == "Mutation")
             {
-                IDictionary<string, object> parameters = GetParametersFromContext(context);
+                IDictionary<string, object?> parameters = GetParametersFromContext(context);
 
                 Tuple<JsonDocument, IMetadata> result = await _mutationEngine.ExecuteAsync(context, parameters);
                 context.Result = result.Item1;
@@ -52,7 +47,7 @@ namespace Azure.DataGateway.Services
             }
             else if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
             {
-                IDictionary<string, object> parameters = GetParametersFromContext(context);
+                IDictionary<string, object?> parameters = GetParametersFromContext(context);
 
                 if (context.Selection.Type.IsListType())
                 {
@@ -124,7 +119,7 @@ namespace Azure.DataGateway.Services
             return context.Selection.Field.Type.IsObjectType() && context.Parent<JsonDocument>() != default;
         }
 
-        static private object ArgumentValue(IValueNode value)
+        static private object? ArgumentValue(IValueNode value)
         {
             if (value.Kind == SyntaxKind.IntValue)
             {
@@ -142,9 +137,9 @@ namespace Azure.DataGateway.Services
         /// Extracts defualt parameter values from the schema or null if no default
         /// Overrides default values with actual values of parameters provided
         /// </summary>
-        public static IDictionary<string, object> GetParametersFromSchemaAndQueryFields(IObjectField schema, FieldNode query)
+        public static IDictionary<string, object?> GetParametersFromSchemaAndQueryFields(IObjectField schema, FieldNode query)
         {
-            IDictionary<string, object> parameters = new Dictionary<string, object>();
+            IDictionary<string, object?> parameters = new Dictionary<string, object?>();
 
             // Fill the parameters dictionary with the default argument values
             IFieldCollection<IInputField> availableArguments = schema.Arguments;
@@ -170,7 +165,7 @@ namespace Azure.DataGateway.Services
             return parameters;
         }
 
-        protected static IDictionary<string, object> GetParametersFromContext(IMiddlewareContext context)
+        protected static IDictionary<string, object?> GetParametersFromContext(IMiddlewareContext context)
         {
             return GetParametersFromSchemaAndQueryFields(context.Selection.Field, context.Selection.SyntaxNode);
         }
@@ -180,7 +175,14 @@ namespace Azure.DataGateway.Services
         /// </summary>
         private static IMetadata GetMetadata(IMiddlewareContext context)
         {
-            return (IMetadata)context.ScopedContextData[_contextMetadata];
+            IMetadata? metadata = (IMetadata?)context.ScopedContextData[_contextMetadata];
+
+            if (metadata == null)
+            {
+                throw new InvalidOperationException("Unable to load metadata");
+            }
+
+            return metadata;
         }
 
         /// <summary>

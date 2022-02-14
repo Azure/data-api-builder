@@ -10,7 +10,6 @@ using HotChocolate.Types;
 
 namespace Azure.DataGateway.Service.Configurations
 {
-
     /// This portion of the class
     /// holds the members of the SqlConfigValidator and the functions
     /// which run its validation logic.
@@ -19,7 +18,7 @@ namespace Azure.DataGateway.Service.Configurations
     public partial class SqlConfigValidator : IConfigValidator
     {
         private ResolverConfig _config;
-        private ISchema _schema;
+        private ISchema? _schema;
         private Stack<string> _configValidationStack;
         private Stack<string> _schemaValidationStack;
         private Dictionary<string, FieldDefinitionNode> _queries;
@@ -44,21 +43,24 @@ namespace Azure.DataGateway.Service.Configurations
             _config = metadataStoreProvider.GetResolvedConfig();
             _schema = graphQLService.Schema;
 
-            foreach (IDefinitionNode node in _schema.ToDocument().Definitions)
+            if (_schema != null)
             {
-                if (node is ObjectTypeDefinitionNode objectTypeDef)
+                foreach (IDefinitionNode node in _schema.ToDocument().Definitions)
                 {
-                    if (objectTypeDef.Name.ToString() == "Mutation")
+                    if (node is ObjectTypeDefinitionNode objectTypeDef)
                     {
-                        _mutations = GetObjTypeDefFields(objectTypeDef);
-                    }
-                    else if (objectTypeDef.Name.Value == "Query")
-                    {
-                        _queries = GetObjTypeDefFields(objectTypeDef);
-                    }
-                    else
-                    {
-                        _types.Add(objectTypeDef.Name.ToString(), objectTypeDef);
+                        if (objectTypeDef.Name.ToString() == "Mutation")
+                        {
+                            _mutations = GetObjTypeDefFields(objectTypeDef);
+                        }
+                        else if (objectTypeDef.Name.Value == "Query")
+                        {
+                            _queries = GetObjTypeDefFields(objectTypeDef);
+                        }
+                        else
+                        {
+                            _types.Add(objectTypeDef.Name.ToString(), objectTypeDef);
+                        }
                     }
                 }
             }

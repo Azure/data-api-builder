@@ -123,13 +123,6 @@ namespace Azure.DataGateway.Service.Resolvers
                     context.OperationType,
                     parameters);
                 Dictionary<string, object>? primaryKeyValues = await ExtractRowFromDbDataReader(dbDataReader);
-                if (primaryKeyValues == null)
-                {
-                    throw new InvalidOperationException($"Unable to determine primary keys for the entity '{context.EntityName}'");
-                }
-
-                context.PrimaryKeyValuePairs = primaryKeyValues;
-
                 if (context.OperationType == Operation.Delete)
                 {
                     // Records affected tells us that item was successfully deleted.
@@ -147,6 +140,13 @@ namespace Azure.DataGateway.Service.Resolvers
 #pragma warning restore CS8603 // Possible null reference return.
                     }
                 }
+
+                if (primaryKeyValues == null)
+                {
+                    throw new InvalidOperationException($"Unable to determine primary keys for the entity '{context.EntityName}'");
+                }
+
+                context.PrimaryKeyValuePairs = primaryKeyValues;
             }
             catch (DbException ex)
             {

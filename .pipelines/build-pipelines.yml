@@ -1,0 +1,78 @@
+# ASP.NET Core (.NET Framework)
+# Build and test ASP.NET Core projects targeting the full .NET Framework.
+# Add steps that publish symbols, save build artifacts, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-18.04' # examples of other options: 'macOS-10.15', 'windows-2019'
+
+variables:
+  solution: '**/*.sln'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
+
+steps:
+- task: NuGetToolInstaller@1
+
+- task: NuGetCommand@2
+  inputs:
+    restoreSolution: '$(solution)'
+
+- task: DotNetCoreCLI@2
+  displayName: Install dotnet format
+  inputs:
+    command: custom
+    custom: tool
+    arguments: 'restore'
+
+- task: DotNetCoreCLI@2
+  displayName: Check formatting
+  inputs:
+    command: custom
+    custom: format
+    projects: '$(solution)'
+    arguments: '--verify-no-changes'
+
+- task: DotNetCoreCLI@2
+  displayName: Build
+  inputs:
+    command: build
+    projects: '**/*.csproj'
+    arguments: '--configuration $(buildConfiguration)' # Update this to match your need
+
+- task: DotNetCoreCLI@2
+  displayName: "Run Unit Tests"
+  inputs:
+    command: test
+    projects: '**/*Tests/*.csproj'
+    arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --logger trx --blame --collect "XPlat Code coverage" --results-directory $(Build.SourcesDirectory)\TestResults\'
+
+- task: PublishCodeCoverageResults@1
+  displayName: 'Publish code coverage'
+  inputs:
+    codeCoverageTool: Cobertura
+    summaryFileLocation: '$(Build.SourcesDirectory)\TestResults\**\*.xml'
+
+# This task gets the current date and saves it to a variable so the docker task can use the build's
+# date and time as a tag.
+- task: PowerShell@2
+  displayName: "Get date for Docker image Tag"
+  inputs:
+    targetType: 'inline'
+    script: |
+      Write-Host "Setting up the date and time as a build variable for the Docker tag"
+      $date=$(Get-Date -format yyyyMMdd-HHmmss)
+      Write-Host "##vso[task.setvariable variable=BuildDate]$date"
+
+# Build a docker image and push it to the container registry.
+- task: Docker@2
+  displayName: "Build and push docker image to Azure Container Registry"
+  inputs:
+    containerRegistry: 'CosmosDB GraphQL/Hawaii'
+    repository: 'hawaii/$(Build.SourceBranch)'
+    command: 'buildAndPush'
+    Dockerfile: '**/Dockerfile'
+    tags: '$(BuildDate)-$(Build.SourceVersion)' # Use build date and commitId as the tag for the image

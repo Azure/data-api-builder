@@ -114,7 +114,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 string jsonResultString = null;
 
                 /// Processes a second result set from DbDataReader if it exists.
-                /// In upsert:
+                /// In MsSQL upsert:
                 /// result set #1: result of the UPDATE operation.
                 /// result set #2: result of the INSERT operation.
                 if (await dbDataReader.NextResultAsync())

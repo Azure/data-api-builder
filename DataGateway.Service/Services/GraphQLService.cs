@@ -17,7 +17,8 @@ namespace Azure.DataGateway.Services
         private readonly IQueryEngine _queryEngine;
         private readonly IMutationEngine _mutationEngine;
         private readonly IMetadataStoreProvider _metadataStoreProvider;
-        public ISchema Schema { private set; get; }
+        public ISchema? Schema { private set; get; }
+        public IRequestExecutor? Executor { get; private set; }
 
         public GraphQLService(
             IQueryEngine queryEngine,
@@ -31,7 +32,7 @@ namespace Azure.DataGateway.Services
             InitializeSchemaAndResolvers();
         }
 
-        public void ParseAsync(String data)
+        public void ParseAsync(string data)
         {
             Schema = SchemaBuilder.New()
                .AddDocumentFromString(data)
@@ -81,8 +82,6 @@ namespace Azure.DataGateway.Services
                 .Result;
         }
 
-        public IRequestExecutor Executor { get; private set; }
-
         /// <summary>
         /// Executes GraphQL request within GraphQL Library components.
         /// </summary>
@@ -93,7 +92,7 @@ namespace Azure.DataGateway.Services
         {
             if (Executor == null)
             {
-                return "{\"error\": \"Schema must be defined first\" }";
+                return /*lang=json,strict*/ "{\"error\": \"Schema must be defined first\" }";
             }
 
             IQueryRequest queryRequest = CompileRequest(requestBody, requestProperties);
@@ -129,7 +128,7 @@ namespace Azure.DataGateway.Services
         {
             using JsonDocument requestBodyJson = JsonDocument.Parse(requestBody);
             IQueryRequestBuilder requestBuilder = QueryRequestBuilder.New()
-                .SetQuery(requestBodyJson.RootElement.GetProperty("query").GetString());
+                .SetQuery(requestBodyJson.RootElement.GetProperty("query").GetString()!);
 
             // Individually adds each property to requestBuilder if they are provided.
             // Avoids using SetProperties() as it detrimentally overwrites

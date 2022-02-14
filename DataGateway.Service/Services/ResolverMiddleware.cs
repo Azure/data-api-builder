@@ -173,16 +173,9 @@ namespace Azure.DataGateway.Services
         /// <summary>
         /// Get metadata from context
         /// </summary>
-        private static IMetadata GetMetadata(IMiddlewareContext context)
+        private static IMetadata? GetMetadata(IMiddlewareContext context)
         {
-            IMetadata? metadata = (IMetadata?)context.ScopedContextData[_contextMetadata];
-
-            if (metadata == null)
-            {
-                throw new InvalidOperationException("Unable to load metadata");
-            }
-
-            return metadata;
+            return (IMetadata?)context.ScopedContextData[_contextMetadata];
         }
 
         /// <summary>

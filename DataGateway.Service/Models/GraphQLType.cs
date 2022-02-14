@@ -20,6 +20,16 @@ namespace Azure.DataGateway.Service.Models
         /// Shows if the type is a *Connection pagination result type
         /// </summary>
         public bool IsPaginationType { get; set; }
+
+        /// <summary>
+        /// The name of the container that this GraphQL type corresponds to.
+        /// </summary>
+        public string ContainerName { get; set; }
+
+        /// <summary>
+        /// The name of the database that this GraphQL type corresponds to.
+        /// </summary>
+        public string DatabaseName { get; set; }
     }
 
     public enum GraphqlRelationshipType

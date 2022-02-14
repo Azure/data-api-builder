@@ -102,7 +102,10 @@ namespace Azure.DataGateway.Service
                 _mutationResolvers.Add(resolver.Id, resolver);
             }
 
-            _filterParser = new(_config.DatabaseSchema);
+            if (_config.DatabaseSchema != default)
+            {
+                _filterParser = new(_config.DatabaseSchema);
+            }
         }
         /// <summary>
         /// Reads generated JSON configuration file with GraphQL Schema

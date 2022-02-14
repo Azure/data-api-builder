@@ -116,7 +116,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Tests the InsertOne functionality with a REST POST request.
         /// </summary>
         [TestMethod]
-        public async Task InsertOneTest()
+        public virtual async Task InsertOneTest()
         {
             string requestBody = @"
             {
@@ -165,7 +165,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// with item that exists, resulting in potentially destructive update.
         /// </summary>
         [TestMethod]
-        public async Task PutOne_Update_Test()
+        public virtual async Task PutOne_Update_Test()
         {
             string requestBody = @"
             {
@@ -190,7 +190,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// with item that does NOT exist, results in insert.
         /// </summary>
         [TestMethod]
-        public async Task PutOne_Insert_Test()
+        public virtual async Task PutOne_Insert_Test()
         {
             string requestBody = @"
             {
@@ -220,7 +220,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </summary>
         /// <returns></returns>
         [TestMethod]
-        public async Task PutOne_Insert_BadReq_Test()
+        public virtual async Task PutOne_Insert_BadReq_Test()
         {
             string requestBody = @"
             {

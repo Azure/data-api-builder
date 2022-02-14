@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
@@ -136,7 +137,46 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         WHERE id = 7
                     ) AS subq
                 "
-            }
+            },
+            {
+                "PutOne_Update_Test",
+                @"
+                    SELECT JSON_OBJECT('id', id) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 7 AND title = 'The Hobbit Returns to The Shire'
+                        AND publisher_id = 1234
+                    ) AS subq
+                "
+            },
+            {
+                "PutOne_Insert_Test",
+                @"
+                    SELECT JSON_OBJECT('id', id) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id > 5000 AND title = 'The Hobbit Returns to The Shire'
+                        AND publisher_id = 1234
+                    ) AS subq
+                "
+            },
+            {
+                "PutOne_Insert_BadReq_Test",
+                /// Tests the PutOne functionality with a REST PUT request
+                /// with item that does NOT exist, AND parameters incorrectly match schema, results in BadRequest.
+                /// sqlQuery represents the query used to get 'expected' result of zero items.
+                @"
+                    SELECT JSON_OBJECT('id', id) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id > 5000 AND title = 'The Hobbit Returns to The Shire'
+                        AND publisher_id = 1234
+                    ) AS subq
+                "
+            },
         };
 
         #region Test Fixture Setup
@@ -164,6 +204,34 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public override string GetQuery(string key)
         {
             return _queryMap[key];
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task InsertOneTest()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOne_Update_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOne_Insert_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOne_Insert_BadReq_Test()
+        {
+            throw new NotImplementedException();
         }
     }
 }

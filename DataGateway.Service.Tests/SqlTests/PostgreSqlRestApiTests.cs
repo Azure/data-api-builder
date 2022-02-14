@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
@@ -7,7 +8,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Azure.DataGateway.Service.Tests.SqlTests
 {
 
-    [TestClass, TestCategory(TestCategory.POSTGRESQL), Ignore]
+    [TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class PostgreSqlRestApiTests : RestApiTestBase
     {
         protected static Dictionary<string, string> _queryMap = new()
@@ -143,7 +144,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// MSTest decorator.
         /// </summary>
         /// <param name="context"></param>
-        [ClassInitialize, Ignore]
+        [ClassInitialize]
         public static async Task InitializeTestFixture(TestContext context)
         {
             await InitializeTestFixture(context, RestApiTestBase._integrationTableName, TestCategory.POSTGRESQL);
@@ -161,6 +162,34 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public override string GetQuery(string key)
         {
             return _queryMap[key];
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task InsertOneTest()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOne_Update_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOne_Insert_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOne_Insert_BadReq_Test()
+        {
+            throw new NotImplementedException();
         }
     }
 }

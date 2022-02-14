@@ -103,22 +103,18 @@ namespace Azure.DataGateway.Services
             // Perform Authorization check prior to moving forward in request pipeline.
             // RESTAuthorizationService
             AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
-                user: _httpContextAccessor.HttpContext.User,
+                user: GetHttpContext().User,
                 resource: context,
                 requirements: new[] { context.HttpVerb });
 
             if (authorizationResult.Succeeded)
             {
-                switch (operationType)
+                return operationType switch
                 {
-                    case Operation.Find:
-                        return await _queryEngine.ExecuteAsync(context);
-                    case Operation.Insert:
-                    case Operation.Delete:
-                        return await _mutationEngine.ExecuteAsync(context);
-                    default:
-                        throw new NotSupportedException("This operation is not yet supported.");
-                }
+                    Operation.Find => await _queryEngine.ExecuteAsync(context),
+                    Operation.Insert or Operation.Delete => await _mutationEngine.ExecuteAsync(context),
+                    _ => throw new NotSupportedException("This operation is not yet supported."),
+                };
             }
             else
             {
@@ -132,7 +128,7 @@ namespace Azure.DataGateway.Services
 
         private HttpContext GetHttpContext()
         {
-            return _httpContextAccessor.HttpContext;
+            return _httpContextAccessor.HttpContext!;
         }
     }
 }

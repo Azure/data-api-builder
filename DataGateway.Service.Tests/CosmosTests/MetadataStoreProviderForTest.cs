@@ -7,7 +7,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
 {
     public class MetadataStoreProviderForTest : IMetadataStoreProvider
     {
-        public string GraphqlSchema { get; set; }
+        public string GraphQLSchema { get; set; }
         private readonly FilterParser _filterParser;
         public Dictionary<string, MutationResolver> MutationResolvers { get; set; } = new();
         public Dictionary<string, GraphQLQueryResolver> QueryResolvers { get; set; } = new();
@@ -15,7 +15,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
 
         public string GetGraphQLSchema()
         {
-            return GraphqlSchema;
+            return GraphQLSchema;
         }
 
         public MutationResolver GetMutationResolver(string name)

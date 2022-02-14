@@ -33,7 +33,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             _clientProvider = new CosmosClientProvider(TestHelper.DataGatewayConfig);
             _metadataStoreProvider = new MetadataStoreProviderForTest();
             string jsonString = File.ReadAllText("schema.gql");
-            _metadataStoreProvider.GraphqlSchema = jsonString;
+            _metadataStoreProvider.GraphQLSchema = jsonString;
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
             _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider);

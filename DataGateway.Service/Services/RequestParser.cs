@@ -73,8 +73,10 @@ namespace Azure.DataGateway.Services
                         context.FieldsToBeReturned = nvc[key].Split(",").ToList();
                         break;
                     case FILTER_URL:
-                        // not yet implemented
-                        context.FieldValuePairsInUrl = filterParser.Parse();
+                        // save the AST that represents the filter for the query
+                        // ?$filter=<filter clause using microsoft api guidelines>
+                        string filterQueryString = "?" + FILTER_URL + "=" + nvc[key];
+                        context.FilterClauseInUrl = filterParser.GetFilterClause(filterQueryString, context.EntityName + "/");
                         break;
                     default:
                         throw new ArgumentException("Invalid Query Parameter: " + key.ToString());

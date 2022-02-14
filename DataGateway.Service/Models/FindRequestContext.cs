@@ -15,7 +15,6 @@ namespace Azure.DataGateway.Service.Models
             FieldsToBeReturned = new();
             PrimaryKeyValuePairs = new();
             FieldValuePairsInBody = new();
-            FieldValuePairsInUrl = new();
             IsMany = isList;
             HttpVerb = HttpRestVerbs.GET;
             OperationType = Operation.Find;

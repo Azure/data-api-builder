@@ -116,6 +116,7 @@ namespace Azure.DataGateway.Service.Configurations
 
                 ValidateNoDuplicatePkColumns(tableDefinition);
                 ValidatePkColsMatchTableCols(tableDefinition);
+                ValidateNoPkColsWithDefaultValue(tableDefinition);
 
                 ValidateTableColumnsLogic(tableDefinition);
 

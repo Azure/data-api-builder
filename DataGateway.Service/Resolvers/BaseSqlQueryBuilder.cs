@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Azure.DataGateway.Service.Models;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -19,7 +20,61 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Builds a database specific keyset pagination predicate
         /// </summary>
-        protected abstract string Build(KeysetPaginationPredicate predicate);
+        protected virtual string Build(KeysetPaginationPredicate predicate)
+        {
+            if (predicate == null)
+            {
+                return string.Empty;
+            }
+
+            if (predicate.PrimaryKey.Count > 1)
+            {
+                StringBuilder result = new("(");
+                for (int i = 0; i < predicate.PrimaryKey.Count; i++)
+                {
+                    if (i > 0)
+                    {
+                        result.Append(" OR ");
+                    }
+
+                    result.Append($"({MakePaginationInequality(predicate.PrimaryKey, predicate.Values, i)})");
+                }
+
+                result.Append(")");
+
+                return result.ToString();
+            }
+            else
+            {
+                return MakePaginationInequality(predicate.PrimaryKey, predicate.Values, 0);
+            }
+        }
+
+        /// <summary>
+        /// Create an inequality where all primary key columns up to untilIndex are equilized to the
+        /// respective pkValue, and the primary key colum at untilIndex has to be greater than its pkValue
+        /// E.g. for
+        /// primaryKey: [a, b, c, d, e, f]
+        /// pkValues: [A, B, C, D, E, F]
+        /// untilIndex: 2
+        /// generate <c>a = A AND b = B AND c > C</c>
+        /// </summary>
+        private string MakePaginationInequality(List<Column> primaryKey, List<string> pkValues, int untilIndex)
+        {
+            StringBuilder result = new();
+            for (int i = 0; i <= untilIndex; i++)
+            {
+                string op = i == untilIndex ? ">" : "=";
+                result.Append($"{Build(primaryKey[i])} {op} {pkValues[i]}");
+
+                if (i < untilIndex)
+                {
+                    result.Append(" AND ");
+                }
+            }
+
+            return result.ToString();
+        }
 
         /// <summary>
         /// Build column as
@@ -100,6 +155,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     return ">=";
                 case PredicateOperation.LessThanOrEqual:
                     return "<=";
+                case PredicateOperation.NotEqual:
+                    return "!=";
                 default:
                     throw new ArgumentException($"Cannot build unknown predicate operation {op}.");
             }

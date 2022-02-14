@@ -31,6 +31,12 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<Predicate> Predicates { get; }
         /// <summary>
+        /// FilterPredicates is a string that represents the filter portion of our query
+        /// in the WHERE Clause. This is generated specifically from the $filter portion
+        /// of the query string.
+        /// </summary>
+        public string FilterPredicates { get; set; }
+        /// <summary>
         /// Parameters values required to execute the query.
         /// </summary>
         public Dictionary<string, object> Parameters { get; set; }
@@ -78,9 +84,17 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
+        /// Get primary key as list of string
+        /// </summary>
+        public List<string> PrimaryKey()
+        {
+            return GetTableDefinition().PrimaryKey;
+        }
+
+        /// <summary>
         ///  Add parameter to Parameters and return the name associated with it
         /// </summary>
-        protected string MakeParamWithValue(object value)
+        public string MakeParamWithValue(object value)
         {
             string paramName = $"param{Counter.Next()}";
             Parameters.Add(paramName, value);

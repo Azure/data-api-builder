@@ -284,7 +284,8 @@ namespace Azure.DataGateway.Service.Services
 
             if (insertPayload.RootElement.ValueKind == JsonValueKind.Array)
             {
-                throw new NotSupportedException("UpsertMany operations are not yet supported.");
+                throw new NotSupportedException(
+                    message: "Mutation operation on many instances of an entity in a single request are not yet supported.");
             }
             else
             {

@@ -72,7 +72,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (!context.Selection.Type.IsScalarType() && mutationResolver.OperationType != Operation.Delete)
             {
-                Dictionary<string, object> searchParams = await ExtractRowFromDbDataReader(dbDataReader);
+                Dictionary<string, object>? searchParams = await ExtractRowFromDbDataReader(dbDataReader);
 
                 if (searchParams == null)
                 {
@@ -142,7 +142,9 @@ namespace Azure.DataGateway.Service.Resolvers
                     else
                     {
                         // TODO: how to represent to the user a "No records affected" response.
+#pragma warning disable CS8603 // Possible null reference return.
                         return null;
+#pragma warning restore CS8603 // Possible null reference return.
                     }
                 }
             }

@@ -53,7 +53,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             string tableName = mutationResolver.Table;
 
-            Tuple<JsonDocument, IMetadata> result = new(null, null);
+            Tuple<JsonDocument, IMetadata>? result = null;
 
             if (mutationResolver.OperationType == Operation.Delete)
             {
@@ -87,6 +87,11 @@ namespace Azure.DataGateway.Service.Resolvers
                     isPaginationQuery: false);
             }
 
+            if (result == null)
+            {
+                throw new InvalidOperationException("Failed to resolve any query based on the current configuration.");
+            }
+
             return result;
         }
 
@@ -117,7 +122,13 @@ namespace Azure.DataGateway.Service.Resolvers
                     context.EntityName,
                     context.OperationType,
                     parameters);
-                context.PrimaryKeyValuePairs = await ExtractRowFromDbDataReader(dbDataReader);
+                Dictionary<string, object>? primaryKeyValues = await ExtractRowFromDbDataReader(dbDataReader);
+                if (primaryKeyValues == null)
+                {
+                    throw new InvalidOperationException($"Unable to determine primary keys for the entity '{context.EntityName}'");
+                }
+
+                context.PrimaryKeyValuePairs = primaryKeyValues;
 
                 if (context.OperationType == Operation.Delete)
                 {
@@ -130,6 +141,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     }
                     else
                     {
+                        // TODO: how to represent to the user a "No records affected" response.
                         return null;
                     }
                 }
@@ -193,7 +205,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Extracts a single row from DbDataReader and format it so it can be used as a parameter to a query execution
         ///</summary>
         ///<returns>A dictionary representating the row in <c>ColumnName: Value</c> format, null if no row was found</returns>
-        private static async Task<Dictionary<string, object>> ExtractRowFromDbDataReader(DbDataReader dbDataReader)
+        private static async Task<Dictionary<string, object>?> ExtractRowFromDbDataReader(DbDataReader dbDataReader)
         {
             Dictionary<string, object> row = new();
 
@@ -201,12 +213,15 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 if (dbDataReader.HasRows)
                 {
-                    DataTable schemaTable = dbDataReader.GetSchemaTable();
+                    DataTable? schemaTable = dbDataReader.GetSchemaTable();
 
-                    foreach (DataRow schemaRow in schemaTable.Rows)
+                    if (schemaTable != null)
                     {
-                        string columnName = (string)schemaRow["ColumnName"];
-                        row.Add(columnName, dbDataReader[columnName]);
+                        foreach (DataRow schemaRow in schemaTable.Rows)
+                        {
+                            string columnName = (string)schemaRow["ColumnName"];
+                            row.Add(columnName, dbDataReader[columnName]);
+                        } 
                     }
                 }
             }

@@ -45,6 +45,13 @@ namespace Azure.DataGateway.Service.Resolvers
         public PaginationMetadata PaginationMetadata { get; set; }
 
         /// <summary>
+        /// Map query columns' labels to the parameter representing that
+        /// column label as a string literal.
+        /// Only used for MySql
+        /// </summary>
+        public Dictionary<string, string> ColumnLabelToParam { get; }
+
+        /// <summary>
         /// Default limit when no first param is specified for list queries
         /// </summary>
         private const uint DEFAULT_LIST_LIMIT = 100;
@@ -68,12 +75,6 @@ namespace Azure.DataGateway.Service.Resolvers
 
         private readonly GraphqlType _typeInfo;
         private List<Column> _primaryKey;
-
-        /// <summary>
-        /// Map query columns' labels to the parameter representing that
-        /// column label as a string literal
-        /// </summary>
-        public Dictionary<string, string> ColumnLabelToParam { get; }
 
         /// <summary>
         /// Generate the structure for a SQL query based on GraphQL query

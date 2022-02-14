@@ -24,12 +24,12 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// The name of the container that this GraphQL type corresponds to.
         /// </summary>
-        public string Container { get; set; }
+        public string ContainerName { get; set; }
 
         /// <summary>
         /// The name of the database that this GraphQL type corresponds to.
         /// </summary>
-        public string Database { get; set; }
+        public string DatabaseName { get; set; }
     }
 
     public enum GraphqlRelationshipType

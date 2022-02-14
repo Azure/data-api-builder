@@ -44,8 +44,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 Columns.AddRange(selection.SyntaxNode.SelectionSet.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.ToString())));
             }
 
-            Container = graphqlType.Container;
-            Database = graphqlType.Database;
+            Container = graphqlType.ContainerName;
+            Database = graphqlType.DatabaseName;
 
             foreach (KeyValuePair<string, object> parameter in queryParams)
             {

@@ -11,12 +11,12 @@
   ],
   "GraphqlTypes": {
     "Planet": {
-      "database": "graphqldb",
-      "container": "planet"
+      "databaseName": "graphqldb",
+      "containerName": "planet"
     },
     "Character": {
-      "database": "graphqldb",
-      "container": "character"
+      "databaseName": "graphqldb",
+      "containerName": "character"
     },
     "PlanetConnection": {
       "IsPaginationType": true

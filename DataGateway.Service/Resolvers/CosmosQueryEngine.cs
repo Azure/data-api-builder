@@ -35,7 +35,7 @@ namespace Azure.DataGateway.Services
         /// Executes the given IMiddlewareContext of the GraphQL query and
         /// expecting a single Json back.
         /// </summary>
-        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters, bool isPaginatedQuery)
+        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
@@ -162,16 +162,6 @@ namespace Azure.DataGateway.Services
         {
             //TODO: Try to avoid additional deserialization/serialization here.
             return JsonSerializer.Deserialize<List<JsonDocument>>(element.ToString());
-        }
-
-        /// <summary>
-        /// Identifies if a query is paginated or not by checking the IsPaginated param on the respective resolver.
-        /// </summary>
-        /// <param name="queryName the name of the query"></param>
-        /// <returns></returns>
-        public bool IsPaginatedQuery(string queryName)
-        {
-            return false;
         }
 
         private static string Base64Encode(string plainText)

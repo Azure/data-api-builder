@@ -134,21 +134,21 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         }
 
         /// <summary>
-        /// Creates and registers a mutation resolver
+        /// Creates and registers a GraphqlType
         /// </summary>
         /// <param name="id">name of the mutation</param>
-        /// <param name="database">the database name</param>
-        /// <param name="container">the container name</param>
-        /// <param name="operationType">the type of operation. Defaults to UPSERT</param>
+        /// <param name="databaseName">the database name</param>
+        /// <param name="containerName">the container name</param>
+        /// <param name="isPaginationType">is the type a pagination type</param>
         internal static void RegisterGraphqlType(string id,
-           string database,
-           string container,
+           string databaseName,
+           string containerName,
            bool isPaginationType = false)
         {
             string resolverJson = JObject.FromObject(new
             {
-                database,
-                container,
+                databaseName,
+                containerName,
                 isPaginationType
             }).ToString();
             GraphqlType gqlType = JsonConvert.DeserializeObject<GraphqlType>(resolverJson);

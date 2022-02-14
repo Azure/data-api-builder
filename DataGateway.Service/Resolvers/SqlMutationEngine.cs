@@ -60,8 +60,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 // compute the mutation result before removing the element
                 result = await _queryEngine.ExecuteAsync(
                     context,
-                    parameters,
-                    isPaginationQuery: false);
+                    parameters);
             }
 
             using DbDataReader dbDataReader =
@@ -83,8 +82,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 result = await _queryEngine.ExecuteAsync(
                     context,
-                    searchParams,
-                    isPaginationQuery: false);
+                    searchParams);
             }
 
             return result;

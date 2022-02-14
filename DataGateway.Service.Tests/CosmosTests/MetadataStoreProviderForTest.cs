@@ -57,7 +57,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
 
         public GraphqlType GetGraphqlType(string name)
         {
-           return GraphqlTypes.TryGetValue(name, out GraphqlType graphqlType) ? graphqlType : null;
+            return GraphqlTypes.TryGetValue(name, out GraphqlType graphqlType) ? graphqlType : null;
         }
 
         public ResolverConfig GetResolvedConfig()

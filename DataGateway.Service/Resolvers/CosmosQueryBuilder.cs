@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Text;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 
@@ -15,15 +16,16 @@ namespace Azure.DataGateway.Service
         /// <returns></returns>
         public string Build(CosmosQueryStructure structure)
         {
-            string query = $"SELECT {WrappedColumns(structure)}"
-                + $" FROM {_containerAlias}";
+            StringBuilder queryStringBuilder = new();
+            queryStringBuilder.Append($"SELECT {WrappedColumns(structure)}"
+                + $" FROM {_containerAlias}");
             string predicateString = Build(structure.Predicates);
             if (!string.IsNullOrEmpty(predicateString))
             {
-                query = query + $" WHERE {predicateString}";
+                queryStringBuilder.Append($" WHERE {predicateString}");
             }
 
-            return query;
+            return queryStringBuilder.ToString();
         }
 
         protected override string Build(Column column)
@@ -33,7 +35,8 @@ namespace Azure.DataGateway.Service
 
         protected override string Build(KeysetPaginationPredicate predicate)
         {
-            return "";
+            // Cosmos doesnt do keyset pagination
+            return string.Empty;
         }
 
         protected override string QuoteIdentifier(string ident)
@@ -46,11 +49,6 @@ namespace Azure.DataGateway.Service
         /// </summary>
         private string WrappedColumns(CosmosQueryStructure structure)
         {
-            if (!structure.Columns.Any())
-            {
-                return "*";
-            }
-
             return string.Join(", ",
                 structure.Columns.Select(
                     c => _containerAlias + "." + c.Label

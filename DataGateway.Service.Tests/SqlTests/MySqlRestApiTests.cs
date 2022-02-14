@@ -61,6 +61,210 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "FindTestWithFilterQueryStringOneEqFilter",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 1
+                        ORDER BY id
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFilterQueryStringValueFirstOneEqFilter",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 2
+                        ORDER BY id
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFilterQueryOneGtFilter",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE id > 3
+                        ORDER BY id
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFilterQueryOneGeFilter",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE id >= 4
+                        ORDER BY id
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFilterQueryOneLtFilter",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE id < 5
+                        ORDER BY id
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFilterQueryOneLeFilter",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE id <= 4
+                        ORDER BY id
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFilterQueryOneNeFilter",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE id != 3
+                        ORDER BY id
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFilterQueryOneNotFilter",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE not (id < 2)
+                        ORDER BY id
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFilterQueryOneRightNullEqFilter",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE NOT (title IS NULL)
+                        ORDER BY id
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFilterQueryOneLeftNullNeFilter",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE title IS NOT NULL
+                        ORDER BY id
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFilterQueryStringSingleAndFilter",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE id < 3 AND id > 1
+                        ORDER BY id
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFilterQueryStringSingleOrFilter",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE id < 3 OR id > 4
+                        ORDER BY id
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFilterQueryStringMultipleAndFilters",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE id < 4 AND id > 1 AND title != 'Awesome book'
+                        ORDER BY id
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFilterQueryStringMultipleOrFilters",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 1 OR id = 2 OR id = 3
+                        ORDER BY id
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFilterQueryStringMultipleAndOrFilters",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE (id > 2 AND id < 4) OR (title = 'Awesome book')
+                        ORDER BY id
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFilterQueryStringMultipleNotAndOrFilters",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE (NOT (id < 3) OR (id < 4) or NOT (title = 'Awesome book'))
+                        ORDER BY id
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFilterQueryStringBoolResultFilter",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE id = (publisher_id > 1)
+                        ORDER BY id
+                    ) AS subq
+                "
+            },
+            {
                 "FindTestWithQueryStringMultipleFields",
                 @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title)) AS data

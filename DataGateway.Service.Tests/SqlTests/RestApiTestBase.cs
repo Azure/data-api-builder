@@ -69,22 +69,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Tests the REST Api for Find operation with a query string with multiple fields
-        /// including the field names. Only returns fields designated in the query string.
-        /// </summary>
-        [TestMethod]
-        public async Task FindTestWithQueryStringMultipleFields()
-        {
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: string.Empty,
-                queryString: "?_f=id,title",
-                entity: _integrationTableName,
-                sqlQuery: GetQuery(nameof(FindTestWithQueryStringMultipleFields)),
-                controller: _restController
-            );
-        }
-
-        /// <summary>
         /// Tests the REST Api for Find operation with an empty query string
         /// including the field names.
         /// </summary>
@@ -97,6 +81,192 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithQueryStringAllFields)),
                 controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with a single filter, executes
+        /// a test for all of the comparison operators and the unary NOT operator.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestsWithFilterQueryStringOneOpFilter()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id eq 1",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery("FindTestWithFilterQueryStringOneEqFilter"),
+                controller: _restController);
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=2 eq id",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery("FindTestWithFilterQueryStringValueFirstOneEqFilter"),
+                controller: _restController);
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id gt 3",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneGtFilter"),
+                controller: _restController);
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id ge 4",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneGeFilter"),
+                controller: _restController);
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id lt 5",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneLtFilter"),
+                controller: _restController);
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id le 4",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneLeFilter"),
+                controller: _restController);
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id ne 3",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneNeFilter"),
+                controller: _restController);
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=not (id lt 2)",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneNotFilter"),
+                controller: _restController);
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=not (title eq null)",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneRightNullEqFilter"),
+                controller: _restController);
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=null ne title",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneLeftNullNeFilter"),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with two filters separated with AND
+        /// comparisons connected with OR.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterQueryStringSingleAndFilter()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id lt 3 and id gt 1",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringSingleAndFilter)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with two filters separated with OR
+        /// comparisons connected with OR.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterQueryStringSingleOrFilter()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id lt 3 or id gt 4",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringSingleOrFilter)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with a filter query string with multiple
+        /// comparisons connected with AND.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterQueryStringMultipleAndFilters()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id lt 4 and id gt 1 and title ne 'Awesome book'",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringMultipleAndFilters)),
+                controller: _restController);
+
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with a filter query string with multiple
+        /// comparisons connected with OR.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterQueryStringMultipleOrFilters()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id eq 1 or id eq 2 or id eq 3",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringMultipleOrFilters)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with a filter query string with multiple
+        /// comparisons connected with AND and those comparisons connected with OR.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterQueryStringMultipleAndOrFilters()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=(id gt 2 and id lt 4) or (title eq 'Awesome book')",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringMultipleAndOrFilters)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with a filter query string with multiple
+        /// comparisons connected with AND OR and including NOT.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterQueryStringMultipleNotAndOrFilters()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=(not (id lt 3) or id lt 4) or not (title eq 'Awesome book')",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringMultipleNotAndOrFilters)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation where we compare one field
+        /// to the bool returned from another comparison.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterQueryStringBoolResultFilter()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id eq (publisher_id gt 1)",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringSingleAndFilter)),
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "A binary operator with incompatible types was detected. " +
+                    "Found operand types 'Edm.Int64' and 'Edm.Boolean' for operator kind 'Equal'.",
+                expectedStatusCode: 400
             );
         }
 

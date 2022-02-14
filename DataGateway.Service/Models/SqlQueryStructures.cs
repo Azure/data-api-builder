@@ -42,11 +42,11 @@ namespace Azure.DataGateway.Service.Models
     }
 
     /// <summary>
-    /// Represents the operations a predicate can have
+    /// Represents the comparison operations a predicate can have
     /// </summary>
     public enum PredicateOperation
     {
-        Equal, GreaterThan, LessThan, GreaterThanOrEqual, LessThanOrEqual
+        Equal, GreaterThan, LessThan, GreaterThanOrEqual, LessThanOrEqual, NotEqual
     }
 
     /// <summary>

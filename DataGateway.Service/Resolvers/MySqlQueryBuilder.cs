@@ -28,6 +28,7 @@ namespace Azure.DataGateway.Service.Resolvers
             fromSql += string.Join("", structure.JoinQueries.Select(x => $" LEFT OUTER JOIN LATERAL ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)} ON TRUE"));
 
             string predicates = JoinPredicateStrings(
+                                    structure.FilterPredicates,
                                     Build(structure.Predicates),
                                     Build(structure.PaginationMetadata.PaginationPredicate));
 
@@ -104,13 +105,14 @@ namespace Azure.DataGateway.Service.Resolvers
             foreach (LabelledColumn column in structure.Columns)
             {
                 string cLabel = column.Label;
+                string parametrizedCLabel = structure.ColumnLabelToParam[cLabel];
                 if (structure.IsSubqueryColumn(column))
                 {
-                    jsonColumns.Add($"\"{cLabel}\", JSON_EXTRACT({subqueryName}.{QuoteIdentifier(cLabel)}, '$')");
+                    jsonColumns.Add($"{parametrizedCLabel}, JSON_EXTRACT({subqueryName}.{QuoteIdentifier(cLabel)}, '$')");
                 }
                 else
                 {
-                    jsonColumns.Add($"\"{cLabel}\", {subqueryName}.{QuoteIdentifier(cLabel)}");
+                    jsonColumns.Add($"{parametrizedCLabel}, {subqueryName}.{QuoteIdentifier(cLabel)}");
                 }
             }
 

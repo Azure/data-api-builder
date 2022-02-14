@@ -81,7 +81,7 @@ namespace Azure.DataGateway.Service
 
             if (string.IsNullOrEmpty(_config.GraphQLSchema))
             {
-                _config = _config with { GraphQLSchemaFile = File.ReadAllText(_config.GraphQLSchemaFile ?? "schema.gql") };
+                _config = _config with { GraphQLSchema = File.ReadAllText(_config.GraphQLSchemaFile ?? "schema.gql") };
             }
 
             _queryResolvers = new();

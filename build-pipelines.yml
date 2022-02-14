@@ -48,20 +48,20 @@ steps:
   inputs:
     command: test
     projects: '**/*Tests/*.csproj'
-    arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --logger trx --blame --collect "XPlat Code coverage" --results-directory $(Build.SourcesDirectory)\TestResults\'
+    arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --logger trx --blame --collect "XPlat Code coverage" --results-directory $(Build.SourcesDirectory)/TestResults/'
 
 - task: PublishTestResults@2
   displayName: 'Publish test results'
   inputs:
     testResultsFormat: MSTest
-    testResultsFiles: '$(Build.SourcesDirectory)\TestResults\**\*.trx'
+    testResultsFiles: '$(Build.SourcesDirectory)/TestResults/**/*.trx'
     failTaskOnFailedTests: true
 
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage'
   inputs:
     codeCoverageTool: Cobertura
-    summaryFileLocation: '$(Build.SourcesDirectory)\TestResults\**\*.xml'
+    summaryFileLocation: '$(Build.SourcesDirectory)/TestResults/**/*.xml'
 
 # This task gets the current date and saves it to a variable so the docker task can use the build's
 # date and time as a tag.

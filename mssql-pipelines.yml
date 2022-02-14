@@ -59,7 +59,7 @@ jobs:
     displayName: 'Publish code coverage'
     inputs:
       codeCoverageTool: Cobertura
-      summaryFileLocation: '$(Build.SourcesDirectory)\TestResults\**\*.xml'
+      summaryFileLocation: '$(Build.SourcesDirectory)/TestResults/**/*.xml'
 
 
 - job: windows

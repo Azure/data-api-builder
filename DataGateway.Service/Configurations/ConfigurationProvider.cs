@@ -1,5 +1,3 @@
-#nullable disable
-
 using System;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
@@ -42,22 +40,14 @@ namespace Azure.DataGateway.Service.Configurations
         public DatabaseType DatabaseType { get; set; }
 
         // This should be renamed to databaseConnection but need to coordiate with moderakh on CI configuration.
-        public DatabaseConnectionConfig DatabaseConnection { get; set; }
+        public DatabaseConnectionConfig DatabaseConnection { get; set; } = null!;
         public string ResolverConfigFile { get; set; } = "config.json";
     }
 
     /// <summary>
     /// Database connection configuration.
     /// </summary>
-    public class DatabaseConnectionConfig
-    {
-        public string ServerEndpointUrl { get; set; }
-        public string AuthorizationKey { get; set; }
-        public string Server { get; set; }
-        public string Database { get; set; }
-        public string Container { get; set; }
-        public string ConnectionString { get; set; }
-    }
+    public record DatabaseConnectionConfig(string ServerEndpointUrl, string AuthorizationKey, string Server, string Database, string Container, string ConnectionString);
 
     /// <summary>
     /// Post configuration processing for DataGatewayConfig.
@@ -97,7 +87,7 @@ namespace Azure.DataGateway.Service.Configurations
                 };
 
                 builder.IntegratedSecurity = true;
-                options.DatabaseConnection.ConnectionString = builder.ToString();
+                options.DatabaseConnection = options.DatabaseConnection with { ConnectionString = builder.ToString() };
             }
         }
     }

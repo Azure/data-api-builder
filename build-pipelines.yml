@@ -34,7 +34,7 @@ steps:
     command: custom
     custom: format
     projects: '$(solution)'
-    arguments: '--check --fix-whitespace --fix-style warn --fix-analyzers warn'
+    arguments: '--verify-no-changes'
 
 - task: DotNetCoreCLI@2
   displayName: Build
@@ -48,7 +48,7 @@ steps:
   inputs:
     command: test
     projects: '**/*Tests/*.csproj'
-    arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql" --configuration $(buildConfiguration)'
+    arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration)'
 
 # This task gets the current date and saves it to a variable so the docker task can use the build's
 # date and time as a tag.
@@ -61,13 +61,12 @@ steps:
       $date=$(Get-Date -format yyyyMMdd-HHmmss)
       Write-Host "##vso[task.setvariable variable=BuildDate]$date"
 
-# Build a docker image and push it to the container registry. This is a temporary location until
-# we close on where we want these images to live.
+# Build a docker image and push it to the container registry.
 - task: Docker@2
-  displayName: "Build and push docker image to docker hub"
+  displayName: "Build and push docker image to Azure Container Registry"
   inputs:
-    containerRegistry: 'CosmosDB-GraphQL-TempDockerHub'
-    repository: 'matrembl/graphql'
+    containerRegistry: 'CosmosDB GraphQL/Hawaii'
+    repository: 'hawaii/$(Build.SourceBranch)'
     command: 'buildAndPush'
     Dockerfile: '**/Dockerfile'
     tags: '$(BuildDate)-$(Build.SourceVersion)' # Use build date and commitId as the tag for the image

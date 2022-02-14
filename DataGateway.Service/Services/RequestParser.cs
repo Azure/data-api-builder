@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.Linq;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Services;
 
 namespace Azure.DataGateway.Services
 {
@@ -16,7 +17,7 @@ namespace Azure.DataGateway.Services
         /// Prefix used for specifying the fields in the query string of the URL.
         /// </summary>
         private const string FIELDS_URL = "_f";
-
+        private const string FILTER_URL = "$filter";
         /// <summary>
         /// Parses the primary key string to identify the field names composing the key
         /// and their values.
@@ -61,7 +62,7 @@ namespace Azure.DataGateway.Services
         /// </summary>
         /// <param name="nvc">NameValueCollection representing query params from the URL's query string.</param>
         /// <param name="context">The RestRequestContext holding the major components of the query.</param>
-        public static void ParseQueryString(NameValueCollection nvc, RestRequestContext context)
+        public static void ParseQueryString(NameValueCollection nvc, RestRequestContext context, FilterParser filterParser)
         {
             foreach (string key in nvc.Keys)
             {
@@ -70,6 +71,12 @@ namespace Azure.DataGateway.Services
                     case FIELDS_URL:
                         CheckListForNullElement(nvc[key].Split(",").ToList());
                         context.FieldsToBeReturned = nvc[key].Split(",").ToList();
+                        break;
+                    case FILTER_URL:
+                        // save the AST that represents the filter for the query
+                        // ?$filter=<filter clause using microsoft api guidelines>
+                        string filterQueryString = "?" + FILTER_URL + "=" + nvc[key];
+                        context.FilterClauseInUrl = filterParser.GetFilterClause(filterQueryString, context.EntityName + "/");
                         break;
                     default:
                         throw new ArgumentException("Invalid Query Parameter: " + key.ToString());

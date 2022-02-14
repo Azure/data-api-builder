@@ -45,6 +45,13 @@ namespace Azure.DataGateway.Service.Resolvers
         public PaginationMetadata PaginationMetadata { get; set; }
 
         /// <summary>
+        /// Map query columns' labels to the parameter representing that
+        /// column label as a string literal.
+        /// Only used for MySql
+        /// </summary>
+        public Dictionary<string, string> ColumnLabelToParam { get; }
+
+        /// <summary>
         /// Default limit when no first param is specified for list queries
         /// </summary>
         private const uint DEFAULT_LIST_LIMIT = 100;
@@ -136,6 +143,7 @@ namespace Azure.DataGateway.Service.Resolvers
             TableName = context.EntityName;
             TableAlias = TableName;
             IsListQuery = context.IsMany;
+            FilterPredicates = string.Empty;
 
             context.FieldsToBeReturned.ForEach(fieldName => AddColumn(fieldName));
             if (Columns.Count == 0)
@@ -149,13 +157,26 @@ namespace Azure.DataGateway.Service.Resolvers
 
             foreach (KeyValuePair<string, object> predicate in context.PrimaryKeyValuePairs)
             {
-                PopulateParamsAndPredicates(predicate);
+                PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
             }
 
             foreach (KeyValuePair<string, object> predicate in context.FieldValuePairsInBody)
             {
-                PopulateParamsAndPredicates(predicate);
+                PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
             }
+
+            if (context.FilterClauseInUrl is not null)
+            {
+                // We use the visitor pattern here to traverse the Filter Clause AST
+                // AST has Accept method which takes our Visitor class, and then calls
+                // our visit functions. Each node in the AST will then automatically
+                // call the visit function for that node types, and we process the AST
+                // based on what type of node we are currently traversing.
+                ODataASTVisitor visitor = new(this);
+                FilterPredicates = context.FilterClauseInUrl.Expression.Accept<string>(visitor);
+            }
+
+            ParametrizeColumns();
         }
 
         /// <summary>
@@ -270,6 +291,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     _limit++;
                 }
             }
+
+            ParametrizeColumns();
         }
 
         /// <summary>
@@ -282,6 +305,7 @@ namespace Azure.DataGateway.Service.Resolvers
             JoinQueries = new();
             Joins = new();
             PaginationMetadata = new(this);
+            ColumnLabelToParam = new();
         }
 
         /// <summary>
@@ -344,32 +368,34 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        ///  Given the predicate key value pair, populates the Parameters and Predicates properties.
+        ///  Given the predicate key value pair, where value includes the Predicte Operation as well as the value associated with the field,
+        ///  populates the Parameters and Predicates properties.
         /// </summary>
-        /// <param name="predicate">The key value pair representing a predicate.</param>
-        private void PopulateParamsAndPredicates(KeyValuePair<string, object> predicate)
+        /// <param name="field">The string representing a field.</param>
+        /// <param name="value">The value associated with a given field.</param>
+        /// <param name="op">The predicate operation representing the comparison between field and value.</param>
+        private void PopulateParamsAndPredicates(string field, object value, PredicateOperation op = PredicateOperation.Equal)
         {
             try
             {
                 string parameterName;
-                if (predicate.Value != null)
+                if (value != null)
                 {
                     parameterName = MakeParamWithValue(
-                        GetParamAsColumnSystemType(predicate.Value.ToString(), predicate.Key));
+                        GetParamAsColumnSystemType(value.ToString(), field));
+                    Predicates.Add(new Predicate(
+                        new PredicateOperand(new Column(TableAlias, field)),
+                        op,
+                        new PredicateOperand($"@{parameterName}")));
                 }
                 else
                 {
                     // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
                     throw new DatagatewayException(
-                        message: $"Unexpected value for column \"{predicate.Key}\" provided.",
+                        message: $"Unexpected value for column \"{field}\" provided.",
                         statusCode: (int)HttpStatusCode.BadRequest,
                         subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
                 }
-
-                Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(TableAlias, predicate.Key)),
-                        PredicateOperation.Equal,
-                        new PredicateOperand($"@{parameterName}")));
             }
             catch (ArgumentException ex)
             {
@@ -590,19 +616,30 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Get primary key as list of string
-        /// </summary>
-        public List<string> PrimaryKey()
-        {
-            return GetTableDefinition().PrimaryKey;
-        }
-
-        /// <summary>
         /// Adds a labelled column to this query's columns
         /// </summary>
         protected void AddColumn(string columnName)
         {
-            Columns.Add(new LabelledColumn(TableAlias, columnName, columnName));
+            Columns.Add(new LabelledColumn(TableAlias, columnName, label: columnName));
+        }
+
+        /// <summary>
+        /// Check if the column belongs to one of the subqueries
+        /// </summary>
+        public bool IsSubqueryColumn(Column column)
+        {
+            return JoinQueries.ContainsKey(column.TableAlias);
+        }
+
+        /// <summary>
+        /// Add column label string literals as parameters to the query structure
+        /// </summary>
+        private void ParametrizeColumns()
+        {
+            foreach (LabelledColumn column in Columns)
+            {
+                ColumnLabelToParam.Add(column.Label, $"@{MakeParamWithValue(column.Label)}");
+            }
         }
     }
 }

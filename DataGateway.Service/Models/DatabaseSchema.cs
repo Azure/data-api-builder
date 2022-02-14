@@ -47,7 +47,7 @@ namespace Azure.DataGateway.Service.Models
             {
                 case ColumnType.Text:
                 case ColumnType.Varchar:
-                    return typeof(String);
+                    return typeof(string);
                 case ColumnType.Bigint:
                 case ColumnType.Int:
                 case ColumnType.Smallint:

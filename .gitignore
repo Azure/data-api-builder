@@ -7,10 +7,12 @@ appsettings.*.json
 !appsettings.Development.json
 !appsettings.PostgreSql.json
 !appsettings.MsSql.json
+!appsettings.MySql.json
 !appsettings.Cosmos.json
 !appsettings.Test.json
 !appsettings.MsSqlIntegrationTest.json
 !appsettings.PostgreSqlIntegrationTest.json
+!appsettings.MySqlIntegrationTest.json
 !appsettings.*.example.json
 
 *.cd

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
+using Microsoft.OData.UriParser;
 
 namespace Azure.DataGateway.Service.Models
 {
@@ -27,7 +28,13 @@ namespace Azure.DataGateway.Service.Models
         public virtual Dictionary<string, object> PrimaryKeyValuePairs { get; set; }
 
         /// <summary>
-        /// Dictionary of field names and their values given in the request.
+        /// AST that represents the filter part of the query.
+        /// Based on the operation type, this property may or may not be populated.
+        /// </summary>
+        public virtual FilterClause FilterClauseInUrl { get; set; }
+
+        /// <summary>
+        /// Dictionary of field names and their values given in the request body.
         /// Based on the operation type, this property may or may not be populated.
         /// </summary>
         public virtual Dictionary<string, object> FieldValuePairsInBody { get; set; }

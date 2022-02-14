@@ -70,6 +70,12 @@ namespace Azure.DataGateway.Service.Resolvers
         private List<Column> _primaryKey;
 
         /// <summary>
+        /// Map query columns' labels to the parameter representing that
+        /// column label as a string literal
+        /// </summary>
+        public Dictionary<string, string> ColumnLabelToParam { get; }
+
+        /// <summary>
         /// Generate the structure for a SQL query based on GraphQL query
         /// information.
         /// Only use as constructor for the outermost queries not subqueries
@@ -169,6 +175,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 FilterPredicates = context.FilterClauseInUrl.Expression.Accept<string>(visitor);
             }
 
+            ParametrizeColumns();
         }
 
         /// <summary>
@@ -283,6 +290,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     _limit++;
                 }
             }
+
+            ParametrizeColumns();
         }
 
         /// <summary>
@@ -295,6 +304,7 @@ namespace Azure.DataGateway.Service.Resolvers
             JoinQueries = new();
             Joins = new();
             PaginationMetadata = new(this);
+            ColumnLabelToParam = new();
         }
 
         /// <summary>
@@ -618,6 +628,17 @@ namespace Azure.DataGateway.Service.Resolvers
         public bool IsSubqueryColumn(Column column)
         {
             return JoinQueries.ContainsKey(column.TableAlias);
+        }
+
+        /// <summary>
+        /// Add column label string literals as parameters to the query structure
+        /// </summary>
+        private void ParametrizeColumns()
+        {
+            foreach (LabelledColumn column in Columns)
+            {
+                ColumnLabelToParam.Add(column.Label, $"@{MakeParamWithValue(column.Label)}");
+            }
         }
     }
 }

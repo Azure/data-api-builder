@@ -626,7 +626,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public bool IsSubqueryColumn(Column column)
         {
-            return JoinQueries.ContainsKey(column.TableAlias);
+            return column.TableAlias == null ? false : JoinQueries.ContainsKey(column.TableAlias);
         }
     }
 }

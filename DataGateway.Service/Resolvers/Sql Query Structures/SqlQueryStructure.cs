@@ -182,7 +182,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 IDictionary<string, object> queryParams,
                 IMetadataStoreProvider metadataStoreProvider,
                 IObjectField schemaField,
-                FieldNode queryField,
+                FieldNode? queryField,
                 IncrementingInteger counter
         ) : this(metadataStoreProvider, string.Empty, counter)
         {
@@ -201,7 +201,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     ProcessPaginationFields(queryField.SelectionSet.Selections);
 
                     // override schemaField and queryField with the schemaField and queryField of *Connection.items
-                    queryField = ExtractItemsQueryField(queryField) ?? queryField;
+                    queryField = ExtractItemsQueryField(queryField);
                 }
 
                 schemaField = ExtractItemsSchemaField(schemaField);

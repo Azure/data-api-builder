@@ -224,14 +224,17 @@ namespace Azure.DataGateway.Service.Configurations
                     ValidateGQLTypeTableIsUnique(type, tableToType);
                     tableToType.Add(type.Table, typeName);
 
-                    ValidateGraphQLTypeTableMatchesSchema(typeName, type.Table);
+                    ValidateGraphQLTypeTableColumnsMatchSchema(typeName, type.Table);
+
                     Dictionary<string, FieldDefinitionNode> fieldDefinitions = GetTypeFields(typeName);
                     ValidateSchemaFieldsReturnTypes(fieldDefinitions);
-                    bool hasNonScalarFields = HasAnyCustomFieldInGraphQLType(fieldDefinitions);
 
-                    if (hasNonScalarFields)
+                    if (!TypeHasFields(type))
                     {
-                        ValidateGraphQLTypeHasFields(type);
+                        ValidateNoFieldsWithInnerCustomType(typeName, fieldDefinitions);
+                    }
+                    else
+                    {
                         ValidateGraphQLTypeFields(typeName, type);
                     }
                 }
@@ -285,16 +288,20 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate that the scalar fields of the type match the table associated with the type
+        /// Validate that the scalar fields of the type match the table columns associated with the type
         /// </summary>
-        private void ValidateGraphQLTypeTableMatchesSchema(
+        /// <remarks>
+        /// Ignore scalar fields which match cofig type fields
+        /// </remarks>
+        private void ValidateGraphQLTypeTableColumnsMatchSchema(
             string typeName,
             string typeTable)
         {
             string[] tableColumnsPath = new[] { "DatabaseSchema", "Tables", typeTable, "Columns" };
             ValidateTableColumnsMatchScalarFields(typeTable, typeName, MakeConfigPosition(tableColumnsPath));
             ValidateTableColumnTypesMatchScalarFieldTypes(typeTable, typeName, MakeConfigPosition(tableColumnsPath));
-            ValidateScalarFieldNullability(typeName);
+            ValidateScalarFieldsMatchingTableColumnsHaveNoArgs(typeName, typeTable, MakeConfigPosition(tableColumnsPath));
+            ValidateScalarFieldsMatchingTableColumnsNullability(typeName, typeTable, MakeConfigPosition(tableColumnsPath));
         }
 
         /// <summary>
@@ -360,7 +367,7 @@ namespace Azure.DataGateway.Service.Configurations
                 ["after"] = new[] { "String" }
             };
 
-            Dictionary<string, InputValueDefinitionNode> fieldArguments = GetArgumentFromField(field);
+            Dictionary<string, InputValueDefinitionNode> fieldArguments = GetArgumentsFromField(field);
 
             ValidateFieldHasRequiredArguments(fieldArguments.Keys, requiredArguments.Keys);
             ValidateFieldArgumentTypes(fieldArguments, requiredArguments);
@@ -376,7 +383,7 @@ namespace Azure.DataGateway.Service.Configurations
                 ["first"] = new[] { "Int", "Int!" },
             };
 
-            Dictionary<string, InputValueDefinitionNode> fieldArguments = GetArgumentFromField(field);
+            Dictionary<string, InputValueDefinitionNode> fieldArguments = GetArgumentsFromField(field);
 
             ValidateFieldHasNoUnexpectedArguments(fieldArguments.Keys, expectedArguments.Keys);
             ValidateFieldArgumentTypes(fieldArguments, expectedArguments);
@@ -387,7 +394,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateNoFieldArguments(FieldDefinitionNode field)
         {
-            Dictionary<string, InputValueDefinitionNode> fieldArguments = GetArgumentFromField(field);
+            Dictionary<string, InputValueDefinitionNode> fieldArguments = GetArgumentsFromField(field);
             ValidateFieldHasNoUnexpectedArguments(fieldArguments.Keys, Enumerable.Empty<string>());
         }
 
@@ -523,7 +530,7 @@ namespace Azure.DataGateway.Service.Configurations
         private void ValidateInsertMutationSchema(MutationResolver resolver)
         {
             FieldDefinitionNode mutation = GetMutation(resolver.Id);
-            Dictionary<string, InputValueDefinitionNode> mutArgs = GetArgumentFromField(mutation);
+            Dictionary<string, InputValueDefinitionNode> mutArgs = GetArgumentsFromField(mutation);
             TableDefinition table = GetTableWithName(resolver.Table);
 
             ValidateMutReturnTypeIsNotListType(mutation);
@@ -546,7 +553,7 @@ namespace Azure.DataGateway.Service.Configurations
         private void ValidateUpdateMutationSchema(MutationResolver resolver)
         {
             FieldDefinitionNode mutation = GetMutation(resolver.Id);
-            Dictionary<string, InputValueDefinitionNode> mutArgs = GetArgumentFromField(mutation);
+            Dictionary<string, InputValueDefinitionNode> mutArgs = GetArgumentsFromField(mutation);
             TableDefinition table = GetTableWithName(resolver.Table);
 
             ValidateMutReturnTypeIsNotListType(mutation);
@@ -567,7 +574,7 @@ namespace Azure.DataGateway.Service.Configurations
         private void ValidateDeleteMutationSchema(MutationResolver resolver)
         {
             FieldDefinitionNode mutation = GetMutation(resolver.Id);
-            Dictionary<string, InputValueDefinitionNode> mutArgs = GetArgumentFromField(mutation);
+            Dictionary<string, InputValueDefinitionNode> mutArgs = GetArgumentsFromField(mutation);
             TableDefinition table = GetTableWithName(resolver.Table);
 
             ValidateMutReturnTypeIsNotListType(mutation);
@@ -635,7 +642,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </remarks>
         private void ValidateNonListCustomTypeQueryFieldArgs(FieldDefinitionNode queryField)
         {
-            Dictionary<string, InputValueDefinitionNode> arguments = GetArgumentFromField(queryField);
+            Dictionary<string, InputValueDefinitionNode> arguments = GetArgumentsFromField(queryField);
 
             string returnedTypeTableName = GetTypeTable(InnerTypeStr(queryField.Type));
             TableDefinition returnedTypeTable = GetTableWithName(returnedTypeTableName);

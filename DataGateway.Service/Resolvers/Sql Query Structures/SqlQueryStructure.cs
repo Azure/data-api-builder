@@ -45,6 +45,13 @@ namespace Azure.DataGateway.Service.Resolvers
         public PaginationMetadata PaginationMetadata { get; set; }
 
         /// <summary>
+        /// Map query columns' labels to the parameter representing that
+        /// column label as a string literal.
+        /// Only used for MySql
+        /// </summary>
+        public Dictionary<string, string> ColumnLabelToParam { get; }
+
+        /// <summary>
         /// Default limit when no first param is specified for list queries
         /// </summary>
         private const uint DEFAULT_LIST_LIMIT = 100;
@@ -169,6 +176,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 FilterPredicates = context.FilterClauseInUrl.Expression.Accept<string>(visitor);
             }
 
+            ParametrizeColumns();
         }
 
         /// <summary>
@@ -283,6 +291,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     _limit++;
                 }
             }
+
+            ParametrizeColumns();
         }
 
         /// <summary>
@@ -295,6 +305,7 @@ namespace Azure.DataGateway.Service.Resolvers
             JoinQueries = new();
             Joins = new();
             PaginationMetadata = new(this);
+            ColumnLabelToParam = new();
         }
 
         /// <summary>
@@ -618,6 +629,17 @@ namespace Azure.DataGateway.Service.Resolvers
         public bool IsSubqueryColumn(Column column)
         {
             return JoinQueries.ContainsKey(column.TableAlias);
+        }
+
+        /// <summary>
+        /// Add column label string literals as parameters to the query structure
+        /// </summary>
+        private void ParametrizeColumns()
+        {
+            foreach (LabelledColumn column in Columns)
+            {
+                ColumnLabelToParam.Add(column.Label, $"@{MakeParamWithValue(column.Label)}");
+            }
         }
     }
 }

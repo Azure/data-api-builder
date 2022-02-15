@@ -189,9 +189,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             },
             {
                 "PutOne_Insert_Test",
-                $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
-                $"WHERE id > 5000 AND [title] = 'The Hobbit Returns to The Shire' " +
-                $"AND [publisher_id] = 1234" +
+                $"SELECT [id], [title], [issueNumber] FROM { _integration_NonAutoGenPK_TableName } " +
+                $"WHERE id = 1 AND [title] = 'Batman Returns' " +
+                $"AND [issueNumber] = 1234" +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
@@ -210,9 +210,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 /// with item that does not include publisher_id,
                 /// an IsNullable = false field, results in BadRequest.
                 $"INSERT INTO { _integrationTableName } " +
-                $"(id, title)" +
-                $"VALUES (5000,'The Hobbit Returns to The Shire')"
+                $"(title)" +
+                $"VALUES ('The Hobbit Returns to The Shire')"
             },
+            {
+                "PutOne_Insert_PKAutoGen_Test",
+                $"INSERT INTO { _integrationTableName } " +
+                $"(id, title, publisher_id)" +
+                $"VALUES (1000,'The Hobbit Returns to The Shire',1234)"
+
+            }
         };
 
         #region Test Fixture Setup

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Net;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -48,7 +49,7 @@ namespace Azure.DataGateway.Services
                     {
                         throw new DatagatewayException(
                             message: "The request is invalid since it contains duplicate primary keys.",
-                            statusCode: 400,
+                            statusCode: HttpStatusCode.BadRequest,
                             DatagatewayException.SubStatusCodes.BadRequest);
                     }
                 }

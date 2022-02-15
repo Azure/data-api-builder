@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 
 namespace Azure.DataGateway.Service.Exceptions
 {
@@ -35,10 +36,10 @@ namespace Azure.DataGateway.Service.Exceptions
             UnexpectedError
         }
 
-        public int StatusCode { get; }
+        public HttpStatusCode StatusCode { get; }
         public SubStatusCodes SubStatusCode { get; }
 
-        public DatagatewayException(string message, int statusCode, SubStatusCodes subStatusCode)
+        public DatagatewayException(string message, HttpStatusCode statusCode, SubStatusCodes subStatusCode)
             : base(message)
         {
             StatusCode = statusCode;

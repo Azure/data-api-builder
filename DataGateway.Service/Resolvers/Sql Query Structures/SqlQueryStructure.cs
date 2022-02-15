@@ -225,7 +225,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     if (first <= 0)
                     {
-                        throw new DatagatewayException($"first must be a positive integer for {schemaField.Name}", 400, DatagatewayException.SubStatusCodes.BadRequest);
+                        throw new DatagatewayException($"first must be a positive integer for {schemaField.Name}", HttpStatusCode.BadRequest, DatagatewayException.SubStatusCodes.BadRequest);
                     }
 
                     _limit = (uint)first;
@@ -342,7 +342,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
                     throw new DatagatewayException(
                         message: $"Unexpected value for column \"{field}\" provided.",
-                        statusCode: (int)HttpStatusCode.BadRequest,
+                        statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
                 }
             }
@@ -350,7 +350,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 throw new DatagatewayException(
                   message: ex.Message,
-                  statusCode: (int)HttpStatusCode.BadRequest,
+                  statusCode: HttpStatusCode.BadRequest,
                   subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
             }
         }

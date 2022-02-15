@@ -182,15 +182,15 @@ namespace Azure.DataGateway.Service.Controllers
                 {
                     throw new DatagatewayException(
                         message: $"Not Found",
-                        statusCode: (int)HttpStatusCode.NotFound,
+                        statusCode: HttpStatusCode.NotFound,
                         subStatusCode: DatagatewayException.SubStatusCodes.EntityNotFound);
                 }
 
             }
             catch (DatagatewayException ex)
             {
-                Response.StatusCode = ex.StatusCode;
-                return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
+                Response.StatusCode = (int)ex.StatusCode;
+                return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, (int)ex.StatusCode);
             }
             catch (Exception ex)
             {

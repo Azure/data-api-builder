@@ -103,7 +103,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             PerformTest(findRequestContext,
                 _metadataStore.Object,
                 expectsException: true,
-                statusCode: 400,
+                statusCode: HttpStatusCode.BadRequest,
                 subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
         }
 
@@ -200,7 +200,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             FindRequestContext findRequestContext,
             IMetadataStoreProvider metadataStore,
             bool expectsException,
-            int statusCode = 400,
+            HttpStatusCode statusCode = HttpStatusCode.BadRequest,
             DatagatewayException.SubStatusCodes subStatusCode = DatagatewayException.SubStatusCodes.BadRequest)
         {
             try
@@ -255,7 +255,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             catch (DatagatewayException ex)
             {
                 // validates the status code and sub status code match the expected values.
-                Assert.AreEqual((int)HttpStatusCode.BadRequest, ex.StatusCode);
+                Assert.AreEqual(HttpStatusCode.BadRequest, ex.StatusCode);
                 Assert.AreEqual(DatagatewayException.SubStatusCodes.BadRequest, ex.SubStatusCode);
             }
         }

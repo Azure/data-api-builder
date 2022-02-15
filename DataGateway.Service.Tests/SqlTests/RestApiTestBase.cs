@@ -268,7 +268,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 exception: true,
                 expectedErrorMessage: "A binary operator with incompatible types was detected. " +
                     "Found operand types 'Edm.Int64' and 'Edm.Boolean' for operator kind 'Equal'.",
-                expectedStatusCode: 400
+                expectedStatusCode: (int)HttpStatusCode.BadRequest
             );
         }
 
@@ -305,7 +305,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                expectedStatusCode: 201,
+                expectedStatusCode: (int)HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
             );
         }
@@ -332,7 +332,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                expectedStatusCode: 201,
+                expectedStatusCode: (int)HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
             );
         }
@@ -427,7 +427,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController,
                 exception: true,
                 expectedErrorMessage: "Invalid Column name requested: content",
-                expectedStatusCode: 400
+                expectedStatusCode: (int)HttpStatusCode.BadRequest
             );
         }
 
@@ -468,7 +468,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController,
                 exception: true,
                 expectedErrorMessage: "Invalid Column name requested: content",
-                expectedStatusCode: 400
+                expectedStatusCode: (int)HttpStatusCode.BadRequest
             );
         }
 

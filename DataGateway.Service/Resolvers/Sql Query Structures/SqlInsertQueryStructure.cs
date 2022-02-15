@@ -23,9 +23,8 @@ namespace Azure.DataGateway.Service.Resolvers
         public List<string> Values { get; }
 
         public SqlInsertStructure(string tableName, IMetadataStoreProvider metadataStore, IDictionary<string, object> mutationParams)
-        : base(metadataStore)
+        : base(metadataStore, tableName: tableName)
         {
-            TableName = tableName;
             InsertColumns = new();
             Values = new();
 

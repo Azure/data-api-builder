@@ -52,11 +52,11 @@ jobs:
     displayName: 'Run Postgres Integration Tests'
     inputs:
       command: test
-      arguments: '--filter "TestCategory=PostgreSql" --configuration $(buildConfiguration) --collect "XPlat Code coverage" --results-directory $(Build.SourcesDirectory)/CodeCoverage/'
+      arguments: '--filter "TestCategory=PostgreSql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
       projects: '**/*Tests/*.csproj'
 
   - task: PublishCodeCoverageResults@1
     displayName: 'Publish code coverage'
     inputs:
       codeCoverageTool: Cobertura
-      summaryFileLocation: '$(Build.SourcesDirectory)/CodeCoverage/**/*cobertura.xml'
+      summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'

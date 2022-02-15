@@ -56,11 +56,11 @@ jobs:
     displayName: 'Run MySql Integration Tests'
     inputs:
       command: test
-      arguments: '--filter "TestCategory=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage" --results-directory $(Build.SourcesDirectory)/CodeCoverage/'
+      arguments: '--filter "TestCategory=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
       projects: '**/*Tests/*.csproj'
 
   - task: PublishCodeCoverageResults@1
     displayName: 'Publish code coverage'
     inputs:
       codeCoverageTool: Cobertura
-      summaryFileLocation: '$(Build.SourcesDirectory)/CodeCoverage/**/*cobertura.xml'
+      summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'

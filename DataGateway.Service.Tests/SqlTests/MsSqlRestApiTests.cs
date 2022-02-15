@@ -199,7 +199,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "PutOne_Insert_Test",
                 $"SELECT [id], [title], [issueNumber] FROM { _integration_NonAutoGenPK_TableName } " +
-                $"WHERE id = 1 AND [title] = 'Batman Returns' " +
+                $"WHERE id = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'Batman Returns' " +
                 $"AND [issueNumber] = 1234" +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },

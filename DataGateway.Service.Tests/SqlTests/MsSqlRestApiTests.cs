@@ -162,8 +162,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 // after the insert operation. Not the query that we generate to perform
                 // the insertion.
                 $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
-                $"WHERE [id] = 5001 AND [title] = 'My New Book' " +
+                $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'My New Book' " +
                 $"AND [publisher_id] = 1234 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "InsertOneInCompositeKeyTableTest",
+                // This query is the query for the result we get back from the database
+                // after the insert operation. Not the query that we generate to perform
+                // the insertion.
+                $"SELECT [id], [content], [book_id] FROM { _tableWithCompositePrimaryKey } " +
+                $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS } AND [book_id] = 1 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {

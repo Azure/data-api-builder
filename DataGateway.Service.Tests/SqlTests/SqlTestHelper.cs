@@ -119,10 +119,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="expected">string represents the expected result. This value can be null for NoContent or NotFound
         /// results of operations like GET and DELETE</param>
         /// <param name="expectedStatusCode">int represents the returned http status code</param>
+        /// <param name="expectedLocationHeader">The expected location header in the response(if any).</param>
         public static void VerifyResult(
             IActionResult actionResult,
             string expected,
-            int expectedStatusCode)
+            int expectedStatusCode,
+            string expectedLocationHeader)
         {
             string actual;
             switch (actionResult)
@@ -134,6 +136,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     break;
                 case CreatedResult createdResult:
                     Assert.AreEqual(expectedStatusCode, createdResult.StatusCode);
+                    Assert.AreEqual(expectedLocationHeader, createdResult.Location);
                     actual = createdResult.Value.ToString();
                     break;
                 // NoContentResult does not have value property for messages

@@ -17,6 +17,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static RestService _restService;
         protected static RestController _restController;
         protected static readonly string _integrationTableName = "books";
+        protected static readonly string _tableWithCompositePrimaryKey = "reviews";
+        protected const int STARTING_ID_FOR_TEST_INSERTS = 5001;
 
         public abstract string GetQuery(string key);
 
@@ -294,16 +296,45 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 ""publisher_id"": 1234
             }";
 
+            string expectedLocationHeader = $"/id/{STARTING_ID_FOR_TEST_INSERTS}";
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: null,
-                    queryString: null,
-                    entity: _integrationTableName,
-                    sqlQuery: GetQuery(nameof(InsertOneTest)),
-                    controller: _restController,
-                    operationType: Operation.Insert,
-                    requestBody: requestBody,
-                    expectedStatusCode: 201
-                );
+                primaryKeyRoute: null,
+                queryString: null,
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(InsertOneTest)),
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: 201,
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
+        /// <summary>
+        /// Tests InsertOne into a table that has a composite primary key
+        /// with a REST POST request.
+        /// </summary>
+        [TestMethod]
+        public async Task InsertOneInCompositeKeyTableTest()
+        {
+            string requestBody = @"
+            {
+                ""book_id"": ""1"",
+                ""content"": ""Amazing book!""
+            }";
+
+            string expectedLocationHeader = $"/book_id/1/id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entity: _tableWithCompositePrimaryKey,
+                sqlQuery: GetQuery(nameof(InsertOneInCompositeKeyTableTest)),
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: 201,
+                expectedLocationHeader: expectedLocationHeader
+            );
         }
 
         /// <summary>

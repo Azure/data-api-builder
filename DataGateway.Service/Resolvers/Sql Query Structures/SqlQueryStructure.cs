@@ -45,6 +45,13 @@ namespace Azure.DataGateway.Service.Resolvers
         public PaginationMetadata PaginationMetadata { get; set; }
 
         /// <summary>
+        /// Map query columns' labels to the parameter representing that
+        /// column label as a string literal.
+        /// Only used for MySql
+        /// </summary>
+        public Dictionary<string, string> ColumnLabelToParam { get; }
+
+        /// <summary>
         /// Default limit when no first param is specified for list queries
         /// </summary>
         private const uint DEFAULT_LIST_LIMIT = 100;
@@ -97,39 +104,6 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Extracts the *Connection.items schema field from the *Connection schema field
-        /// </summary>
-        private static IObjectField ExtractItemsSchemaField(IObjectField connectionSchemaField)
-        {
-            return UnderlyingType(connectionSchemaField.Type).Fields["items"];
-        }
-
-        /// <summary>
-        /// Extracts the *Connection.items query field from the *Connection query field
-        /// </summary>
-        /// <returns> The query field or null if **Conneciton.items is not requested in the query</returns>
-        private static FieldNode? ExtractItemsQueryField(FieldNode connectionQueryField)
-        {
-            FieldNode? itemsField = null;
-            if (connectionQueryField != null && connectionQueryField.SelectionSet != null)
-            {
-                foreach (ISelectionNode node in connectionQueryField.SelectionSet.Selections)
-                {
-                    FieldNode field = (FieldNode)node;
-                    string fieldName = field.Name.Value;
-
-                    if (fieldName == "items")
-                    {
-                        itemsField = field;
-                        break;
-                    }
-                }
-            }
-
-            return itemsField;
-        }
-
-        /// <summary>
         /// Generate the structure for a SQL query based on FindRequestContext,
         /// which is created by a FindById or FindMany REST request.
         /// </summary>
@@ -170,6 +144,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 ODataASTVisitor visitor = new(this);
                 FilterPredicates = context.FilterClauseInUrl.Expression.Accept<string>(visitor);
             }
+
+            ParametrizeColumns();
         }
 
         /// <summary>
@@ -288,6 +264,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     _limit++;
                 }
             }
+
+            ParametrizeColumns();
         }
 
         /// <summary>
@@ -300,26 +278,7 @@ namespace Azure.DataGateway.Service.Resolvers
             JoinQueries = new();
             Joins = new();
             PaginationMetadata = new(this);
-        }
-
-        /// <summary>
-        /// UnderlyingType is the type main GraphQL type that is described by
-        /// this type. This strips all modifiers, such as List and Non-Null.
-        /// So the following GraphQL types would all have the underlyingType Book:
-        /// - Book
-        /// - [Book]
-        /// - Book!
-        /// - [Book]!
-        /// - [Book!]!
-        /// </summary>
-        private static ObjectType UnderlyingType(IType type)
-        {
-            if (type is ObjectType underlyingType)
-            {
-                return underlyingType;
-            }
-
-            return UnderlyingType(type.InnerType());
+            ColumnLabelToParam = new();
         }
 
         ///<summary>
@@ -627,6 +586,17 @@ namespace Azure.DataGateway.Service.Resolvers
         public bool IsSubqueryColumn(Column column)
         {
             return column.TableAlias == null ? false : JoinQueries.ContainsKey(column.TableAlias);
+        }
+
+        /// <summary>
+        /// Add column label string literals as parameters to the query structure
+        /// </summary>
+        private void ParametrizeColumns()
+        {
+            foreach (LabelledColumn column in Columns)
+            {
+                ColumnLabelToParam.Add(column.Label, $"@{MakeParamWithValue(column.Label)}");
+            }
         }
     }
 }

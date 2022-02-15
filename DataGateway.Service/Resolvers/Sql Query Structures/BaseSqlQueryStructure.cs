@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
+using HotChocolate.Language;
+using HotChocolate.Types;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -136,6 +138,57 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Extracts the *Connection.items query field from the *Connection query field
+        /// </summary>
+        /// <returns> The query field or null if **Conneciton.items is not requested in the query</returns>
+        internal static FieldNode ExtractItemsQueryField(FieldNode connectionQueryField)
+        {
+            FieldNode itemsField = null;
+            foreach (ISelectionNode node in connectionQueryField.SelectionSet.Selections)
+            {
+                FieldNode field = node as FieldNode;
+                string fieldName = field.Name.Value;
+
+                if (fieldName == "items")
+                {
+                    itemsField = field;
+                    break;
+                }
+            }
+
+            return itemsField;
+        }
+
+        /// <summary>
+        /// UnderlyingType is the type main GraphQL type that is described by
+        /// this type. This strips all modifiers, such as List and Non-Null.
+        /// So the following GraphQL types would all have the underlyingType Book:
+        /// - Book
+        /// - [Book]
+        /// - Book!
+        /// - [Book]!
+        /// - [Book!]!
+        /// </summary>
+        internal static ObjectType UnderlyingType(IType type)
+        {
+            ObjectType underlyingType = type as ObjectType;
+            if (underlyingType != null)
+            {
+                return underlyingType;
+            }
+
+            return UnderlyingType(type.InnerType());
+        }
+
+        /// <summary>
+        /// Extracts the *Connection.items schema field from the *Connection schema field
+        /// </summary>
+        internal static IObjectField ExtractItemsSchemaField(IObjectField connectionSchemaField)
+        {
+            return UnderlyingType(connectionSchemaField.Type).Fields["items"];
         }
 
     }

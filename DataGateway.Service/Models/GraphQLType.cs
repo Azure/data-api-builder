@@ -7,7 +7,8 @@ namespace Azure.DataGateway.Service.Models
     /// </summary>
     /// <param name="Table">The name of the table that this GraphQL type corresponds to.</param>
     /// <param name="IsPaginationType">Shows if the type is a *Connection pagination result type</param>
-    public record GraphQLType(string Table, bool IsPaginationType)
+    /// <param name="DatabaseName">The name of the database that this GraphQL type corresponds to.</param>
+    public record GraphQLType(string Table, bool IsPaginationType, string DatabaseName)
     {
         /// <summary>
         /// Metadata required to resolve specific fields of the GraphQL type.

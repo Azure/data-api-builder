@@ -138,19 +138,26 @@ namespace Azure.DataGateway.Services
         /// </summary>
         /// <param name="entityName">Name of the entity.</param>
         /// <param name="entity">A Json element representing one instance of the entity.</param>
+        /// <remarks> This function expects the Json element entity to contain all the properties
+        /// that make up the primary keys.</remarks>
         /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
         public string ConstructPrimaryKeyRoute(string entityName, JsonElement entity)
         {
             TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(entityName);
-            StringBuilder primaryKeyRoute = new();
+            StringBuilder newPrimaryKeyRoute = new();
+
             foreach (string primaryKey in tableDefinition.PrimaryKey)
             {
-                primaryKeyRoute.Append(primaryKey);
-                primaryKeyRoute.Append("/");
-                primaryKeyRoute.Append(entity.GetProperty(primaryKey).ToString());
+                newPrimaryKeyRoute.Append(primaryKey);
+                newPrimaryKeyRoute.Append("/");
+                newPrimaryKeyRoute.Append(entity.GetProperty(primaryKey).ToString());
+                newPrimaryKeyRoute.Append("/");
             }
 
-            return primaryKeyRoute.ToString();
+            // Remove the trailing "/"
+            newPrimaryKeyRoute.Remove(newPrimaryKeyRoute.Length - 1, 1);
+
+            return newPrimaryKeyRoute.ToString();
         }
 
         private HttpContext GetHttpContext()

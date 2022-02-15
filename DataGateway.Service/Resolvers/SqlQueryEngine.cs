@@ -52,7 +52,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Executes the given IMiddlewareContext of the GraphQL query and
         /// expecting a single Json and its related pagination metadata back.
         /// </summary>
-        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters, bool isPaginated)
+        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider);
 
@@ -130,15 +130,6 @@ namespace Azure.DataGateway.Service.Resolvers
 
             //TODO: Try to avoid additional deserialization/serialization here.
             return JsonSerializer.Deserialize<List<JsonDocument>>(element.ToString());
-        }
-
-        /// <summary>
-        /// Used to match the IQueryEngine interface
-        /// Always returns false
-        /// </summary>
-        public bool IsPaginatedQuery(string queryName)
-        {
-            return false;
         }
 
         // <summary>

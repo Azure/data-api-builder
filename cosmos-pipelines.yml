@@ -86,7 +86,7 @@ jobs:
     displayName: 'Publish code coverage'
     inputs:
       codeCoverageTool: Cobertura
-      summaryFileLocation: '$(Build.SourcesDirectory)/CodeCoverage/**/*.xml'
+      summaryFileLocation: '$(Build.SourcesDirectory)/CodeCoverage/**/*cobertura.xml'
 
 
 - job: windows
@@ -131,4 +131,4 @@ jobs:
     displayName: 'Publish code coverage'
     inputs:
       codeCoverageTool: Cobertura
-      summaryFileLocation: '$(Build.SourcesDirectory)/Code/Coverage/**/*.xml'
+      summaryFileLocation: '$(Build.SourcesDirectory)/Code/Coverage/**/*cobertura.xml'

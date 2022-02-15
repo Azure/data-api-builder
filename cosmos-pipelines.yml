@@ -50,90 +50,90 @@ jobs:
       codeCoverageTool: Cobertura
       summaryFileLocation: '$(Build.SourcesDirectory)/TestResults/**/*.xml'
 
-job: linux
-pool:
-  vmImage: 'ubuntu-latest'
-variables:
-  solution: '**/*.sln'
-  buildPlatform: 'Any CPU'
-  buildConfiguration: 'Release'
+- job: linux
+  pool:
+    vmImage: 'ubuntu-latest'
+  variables:
+    solution: '**/*.sln'
+    buildPlatform: 'Any CPU'
+    buildConfiguration: 'Release'
 
-steps:
-- task: NuGetToolInstaller@1
+  steps:
+  - task: NuGetToolInstaller@1
 
-- task: NuGetCommand@2
-  displayName: Restore NuGet packages
-  inputs:
-    restoreSolution: '$(solution)'
+  - task: NuGetCommand@2
+    displayName: Restore NuGet packages
+    inputs:
+      restoreSolution: '$(solution)'
 
-- task: FileTransform@1
-  displayName: 'Generate appsettings.Test.json'
-  inputs:
-    folderPath: '$(System.DefaultWorkingDirectory)'
-    fileType: 'json'
-    targetFiles: 'DataGateway.Service/appsettings.Test.json'
+  - task: FileTransform@1
+    displayName: 'Generate appsettings.Test.json'
+    inputs:
+      folderPath: '$(System.DefaultWorkingDirectory)'
+      fileType: 'json'
+      targetFiles: 'DataGateway.Service/appsettings.Test.json'
 
-- task: DotNetCoreCLI@2
-  displayName: Build
-  inputs:
-    command: build
-    projects: '**/*.csproj'
-    arguments: '--configuration $(buildConfiguration)' # Update this to match your need
+  - task: DotNetCoreCLI@2
+    displayName: Build
+    inputs:
+      command: build
+      projects: '**/*.csproj'
+      arguments: '--configuration $(buildConfiguration)' # Update this to match your need
 
-- task: DotNetCoreCLI@2
-  displayName: 'Run Cosmos DB Integration Tests'
-  inputs:
-    command: test
-    arguments: '--filter "TestCategory=Cosmos" --configuration $(buildConfiguration) --logger: trx --blame --collect: XPlat Code coverage --results-directory: $(Build.SourcesDirectory)/TestResults/'
-    projects: '**/*Tests/*.csproj'
+  - task: DotNetCoreCLI@2
+    displayName: 'Run Cosmos DB Integration Tests'
+    inputs:
+      command: test
+      arguments: '--filter "TestCategory=Cosmos" --configuration $(buildConfiguration) --logger: trx --blame --collect: XPlat Code coverage --results-directory: $(Build.SourcesDirectory)/TestResults/'
+      projects: '**/*Tests/*.csproj'
 
-- task: PublishCodeCoverageResults@1
-  displayName: 'Publish code coverage'
-  inputs:
-    codeCoverageTool: Cobertura
-    summaryFileLocation: '$(Build.SourcesDirectory)/TestResults/**/*.xml'
+  - task: PublishCodeCoverageResults@1
+    displayName: 'Publish code coverage'
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(Build.SourcesDirectory)/TestResults/**/*.xml'
 
 
-job: windows
-pool:
-  vmImage: 'windows-latest'
+- job: windows
+  pool:
+    vmImage: 'windows-latest'
 
-variables:
-  solution: '**/*.sln'
-  buildPlatform: 'Any CPU'
-  buildConfiguration: 'Release'
+  variables:
+    solution: '**/*.sln'
+    buildPlatform: 'Any CPU'
+    buildConfiguration: 'Release'
 
-steps:
-- task: NuGetToolInstaller@1
+  steps:
+  - task: NuGetToolInstaller@1
 
-- task: NuGetCommand@2
-  displayName: Restore NuGet packages
-  inputs:
-    restoreSolution: '$(solution)'
+  - task: NuGetCommand@2
+    displayName: Restore NuGet packages
+    inputs:
+      restoreSolution: '$(solution)'
 
-- task: FileTransform@1
-  displayName: 'Generate appsettings.Test.json'
-  inputs:
-    folderPath: '$(System.DefaultWorkingDirectory)'
-    fileType: 'json'
-    targetFiles: 'DataGateway.Service/appsettings.Test.json'
+  - task: FileTransform@1
+    displayName: 'Generate appsettings.Test.json'
+    inputs:
+      folderPath: '$(System.DefaultWorkingDirectory)'
+      fileType: 'json'
+      targetFiles: 'DataGateway.Service/appsettings.Test.json'
 
-- task: DotNetCoreCLI@2
-  displayName: Build
-  inputs:
-    command: build
-    projects: '**/*.csproj'
-    arguments: '--configuration $(buildConfiguration)' # Update this to match your need
+  - task: DotNetCoreCLI@2
+    displayName: Build
+    inputs:
+      command: build
+      projects: '**/*.csproj'
+      arguments: '--configuration $(buildConfiguration)' # Update this to match your need
 
-- task: DotNetCoreCLI@2
-  displayName: 'Run Cosmos DB Integration Tests'
-  inputs:
-    command: test
-    arguments: '--filter "TestCategory=Cosmos" --configuration $(buildConfiguration) --logger: trx --blame --collect: XPlat Code coverage --results-directory: $(Build.SourcesDirectory)/TestResults/'
-    projects: '**/*Tests/*.csproj'
+  - task: DotNetCoreCLI@2
+    displayName: 'Run Cosmos DB Integration Tests'
+    inputs:
+      command: test
+      arguments: '--filter "TestCategory=Cosmos" --configuration $(buildConfiguration) --logger: trx --blame --collect: XPlat Code coverage --results-directory: $(Build.SourcesDirectory)/TestResults/'
+      projects: '**/*Tests/*.csproj'
 
-- task: PublishCodeCoverageResults@1
-  displayName: 'Publish code coverage'
-  inputs:
-    codeCoverageTool: Cobertura
-    summaryFileLocation: '$(Build.SourcesDirectory)/TestResults/**/*.xml'
+  - task: PublishCodeCoverageResults@1
+    displayName: 'Publish code coverage'
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(Build.SourcesDirectory)/TestResults/**/*.xml'

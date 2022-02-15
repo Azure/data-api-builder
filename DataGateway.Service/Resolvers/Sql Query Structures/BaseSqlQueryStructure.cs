@@ -49,7 +49,9 @@ namespace Azure.DataGateway.Service.Resolvers
 
         protected IMetadataStoreProvider MetadataStoreProvider { get; }
 
-        public BaseSqlQueryStructure(IMetadataStoreProvider metadataStore, string tableName,
+        public BaseSqlQueryStructure(
+            IMetadataStoreProvider metadataStore,
+            string tableName = "",
             IncrementingInteger? counter = null)
         {
             Columns = new();
@@ -144,12 +146,12 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Extracts the *Connection.items query field from the *Connection query field
         /// </summary>
         /// <returns> The query field or null if **Conneciton.items is not requested in the query</returns>
-        internal static FieldNode ExtractItemsQueryField(FieldNode connectionQueryField)
+        internal static FieldNode? ExtractItemsQueryField(FieldNode connectionQueryField)
         {
-            FieldNode itemsField = null;
-            foreach (ISelectionNode node in connectionQueryField.SelectionSet.Selections)
+            FieldNode? itemsField = null;
+            foreach (ISelectionNode node in connectionQueryField.SelectionSet!.Selections)
             {
-                FieldNode field = node as FieldNode;
+                FieldNode field = (FieldNode)node;
                 string fieldName = field.Name.Value;
 
                 if (fieldName == "items")
@@ -174,7 +176,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         internal static ObjectType UnderlyingType(IType type)
         {
-            ObjectType underlyingType = type as ObjectType;
+            ObjectType? underlyingType = type as ObjectType;
             if (underlyingType != null)
             {
                 return underlyingType;

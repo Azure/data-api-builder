@@ -151,7 +151,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
                 containerName,
                 isPaginationType
             }).ToString();
-            GraphqlType gqlType = JsonConvert.DeserializeObject<GraphqlType>(resolverJson);
+            GraphQLType gqlType = JsonConvert.DeserializeObject<GraphQLType>(resolverJson);
             _metadataStoreProvider.StoreGraphQLType(id, gqlType);
         }
 

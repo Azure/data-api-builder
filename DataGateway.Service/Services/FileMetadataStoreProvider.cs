@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -42,8 +43,8 @@ namespace Azure.DataGateway.Service
     /// </summary>
     public class FileMetadataStoreProvider : IMetadataStoreProvider
     {
-        private ResolverConfig _config;
-        private readonly FilterParser _filterParser;
+        private readonly ResolverConfig _config;
+        private readonly FilterParser? _filterParser;
 
         /// <summary>
         /// Stores query resolvers contained in configuration file.
@@ -157,6 +158,11 @@ namespace Azure.DataGateway.Service
 
         public FilterParser GetFilterParser()
         {
+            if (_filterParser == null)
+            {
+                throw new InvalidOperationException("No filter parser has been initialised");
+            }
+
             return _filterParser;
         }
     }

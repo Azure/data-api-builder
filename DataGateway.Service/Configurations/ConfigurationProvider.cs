@@ -14,7 +14,6 @@ namespace Azure.DataGateway.Service.Configurations
         PostgreSql,
         MySql
     }
-
     /// <summary>
     /// Data gateway configuration.
     /// </summary>
@@ -36,7 +35,6 @@ namespace Azure.DataGateway.Service.Configurations
               }
             }
          */
-
         public DatabaseType DatabaseType { get; set; }
 
         // This should be renamed to databaseConnection but need to coordiate with moderakh on CI configuration.
@@ -47,7 +45,15 @@ namespace Azure.DataGateway.Service.Configurations
     /// <summary>
     /// Database connection configuration.
     /// </summary>
-    public record DatabaseConnectionConfig(string ServerEndpointUrl, string AuthorizationKey, string Server, string Database, string Container, string ConnectionString);
+    public class DatabaseConnectionConfig
+    {
+        public string ServerEndpointUrl { get; set; } = null!;
+        public string AuthorizationKey { get; set; } = null!;
+        public string Server { get; set; } = null!;
+        public string Database { get; set; } = null!;
+        public string Container { get; set; } = null!;
+        public string ConnectionString { get; set; } = null!;
+    }
 
     /// <summary>
     /// Post configuration processing for DataGatewayConfig.
@@ -63,7 +69,6 @@ namespace Azure.DataGateway.Service.Configurations
             bool connStringProvided = !string.IsNullOrEmpty(options.DatabaseConnection.ConnectionString);
             bool serverProvided = !string.IsNullOrEmpty(options.DatabaseConnection.Server);
             bool dbProvided = !string.IsNullOrEmpty(options.DatabaseConnection.Database);
-
             if (!connStringProvided && !serverProvided && !dbProvided)
             {
                 throw new NotSupportedException("Either Server and Database or ConnectionString need to be provided");
@@ -87,7 +92,7 @@ namespace Azure.DataGateway.Service.Configurations
                 };
 
                 builder.IntegratedSecurity = true;
-                options.DatabaseConnection = options.DatabaseConnection with { ConnectionString = builder.ToString() };
+                options.DatabaseConnection.ConnectionString = builder.ToString();
             }
         }
     }

@@ -52,7 +52,7 @@ jobs:
     displayName: 'Run MsSql Integration Tests'
     inputs:
       command: test
-      arguments: '--filter "TestCategory=MsSql" --configuration $(buildConfiguration) --logger trx --blame --collect "XPlat Code coverage" --results-directory $(Build.SourcesDirectory)/CodeCoverage/'
+      arguments: '--filter "TestCategory=MsSql" --configuration $(buildConfiguration) --collect "XPlat Code coverage" --results-directory $(Build.SourcesDirectory)/CodeCoverage/'
       projects: '**/*Tests/*.csproj'
 
   - task: PublishCodeCoverageResults@1
@@ -122,7 +122,7 @@ jobs:
     displayName: 'Run MsSql Integration Tests'
     inputs:
       command: test
-      arguments: '--filter "TestCategory=MsSql" --configuration $(buildConfiguration) --logger trx --blame --collect "XPlat Code coverage" --results-directory $(Build.SourcesDirectory)/CodeCoverage/'
+      arguments: '--filter "TestCategory=MsSql" --configuration $(buildConfiguration) --collect "XPlat Code coverage" --results-directory $(Build.SourcesDirectory)/CodeCoverage/'
       projects: '**/*Tests/*.csproj'
   
   - task: PublishCodeCoverageResults@1

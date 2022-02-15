@@ -56,7 +56,7 @@ jobs:
     displayName: 'Run MySql Integration Tests'
     inputs:
       command: test
-      arguments: '--filter "TestCategory=MySql" --configuration $(buildConfiguration) --logger trx --blame --collect "XPlat Code coverage" --results-directory $(Build.SourcesDirectory)/CodeCoverage/'
+      arguments: '--filter "TestCategory=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage" --results-directory $(Build.SourcesDirectory)/CodeCoverage/'
       projects: '**/*Tests/*.csproj'
 
   - task: PublishCodeCoverageResults@1

@@ -50,7 +50,7 @@ steps:
   displayName: 'Run Cosmos DB Integration Tests'
   inputs:
     command: test
-    arguments: '--filter "TestCategory=Cosmos" --configuration $(buildConfiguration) --logger trx --blame --collect:\"XPlat Code coverage\" --results-directory $(Build.SourcesDirectory)/TestResults/'
+    arguments: '--filter "TestCategory=Cosmos" --configuration $(buildConfiguration) --logger trx --blame --collect:\"XPlat Code coverage\"'
     projects: '**/*Tests/*.csproj'
 
 - task: PublishCodeCoverageResults@1

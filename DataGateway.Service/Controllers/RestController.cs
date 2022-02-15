@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataGateway.Service.Controllers
@@ -167,7 +168,10 @@ namespace Azure.DataGateway.Service.Controllers
                         case Operation.Find:
                             return Ok(resultElement);
                         case Operation.Insert:
-                            return new CreatedResult(location: string.Empty, resultElement);
+                            primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
+                            string location =
+                                UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute;
+                            return new CreatedResult(location: location, resultElement);
                         case Operation.Delete:
                             return new NoContentResult();
                         default:

@@ -300,6 +300,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "InsertOneInCompositeKeyTableTest",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, content, book_id
+                        FROM " + _tableWithCompositePrimaryKey + @"
+                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
+                        AND book_id = 1
+                    ) AS subq
+                "
+            },
+            {
                 "DeleteOneTest",
                 @"
                     SELECT to_jsonb(subq) AS data

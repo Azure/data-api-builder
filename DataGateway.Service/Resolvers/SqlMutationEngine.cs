@@ -221,7 +221,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         {
                             string columnName = (string)schemaRow["ColumnName"];
                             row.Add(columnName, dbDataReader[columnName]);
-                        } 
+                        }
                     }
                 }
             }

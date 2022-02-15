@@ -188,7 +188,10 @@ namespace Azure.DataGateway.Service.Controllers
                         case Operation.Delete:
                             return new NoContentResult();
                         case Operation.Upsert:
-                            return new CreatedResult(location: string.Empty, resultElement);
+                            primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
+                            location =
+                                UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute;
+                            return new CreatedResult(location: location, resultElement);
                         default:
                             throw new NotSupportedException($"Unsupported Operation: \" {operationType}\".");
                     }

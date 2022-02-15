@@ -316,7 +316,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// with a REST POST request.
         /// </summary>
         [TestMethod]
-        public async Task InsertOneInCompositeKeyTableTest()
+        public virtual async Task InsertOneInCompositeKeyTableTest()
         {
             string requestBody = @"
             {
@@ -400,15 +400,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 ""issueNumber"": 1234
             }";
 
+            string expectedLocationHeader = $"/id/{STARTING_ID_FOR_TEST_INSERTS}";
+
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/1",
+                    primaryKeyRoute: $"id/{STARTING_ID_FOR_TEST_INSERTS}",
                     queryString: null,
                     entity: _integration_NonAutoGenPK_TableName,
                     sqlQuery: GetQuery(nameof(PutOne_Insert_Test)),
                     controller: _restController,
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
-                    expectedStatusCode: 201
+                    expectedStatusCode: 201,
+                    expectedLocationHeader: expectedLocationHeader
                 );
         }
 

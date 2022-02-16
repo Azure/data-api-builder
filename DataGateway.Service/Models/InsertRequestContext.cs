@@ -31,10 +31,10 @@ namespace Azure.DataGateway.Service.Models
             {
                 try
                 {
-                    Dictionary<string, object>? dictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(payload);
-                    if (dictionary != null)
+                    Dictionary<string, object>? fieldValuePairs = JsonSerializer.Deserialize<Dictionary<string, object>>(payload);
+                    if (fieldValuePairs != null)
                     {
-                        FieldValuePairsInBody = dictionary;
+                        FieldValuePairsInBody = fieldValuePairs;
                     }
                     else
                     {

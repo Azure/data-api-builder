@@ -92,7 +92,8 @@ namespace Azure.DataGateway.Services
         {
             if (Executor == null)
             {
-                return /*lang=json,strict*/ "{\"error\": \"Schema must be defined first\" }";
+                /*lang=json,strict*/ 
+                return "{\"error\": \"Schema must be defined first\" }";
             }
 
             IQueryRequest queryRequest = CompileRequest(requestBody, requestProperties);

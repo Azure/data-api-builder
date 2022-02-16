@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
@@ -320,6 +321,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "InsertOneInCompositeKeyTableTest",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'content', content, 'book_id', book_id) AS data
+                    FROM (
+                        SELECT id, content, book_id
+                        FROM " + _tableWithCompositePrimaryKey + @"
+                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
+                        AND book_id = 1
+                    ) AS subq
+                "
+            },
+            {
                 "DeleteOneTest",
                 @"
                     SELECT JSON_OBJECT('id', id) AS data
@@ -340,7 +353,46 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         WHERE id = 7
                     ) AS subq
                 "
-            }
+            },
+            {
+                "PutOne_Update_Test",
+                @"
+                    SELECT JSON_OBJECT('id', id) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 7 AND title = 'The Hobbit Returns to The Shire'
+                        AND publisher_id = 1234
+                    ) AS subq
+                "
+            },
+            {
+                "PutOne_Insert_Test",
+                @"
+                    SELECT JSON_OBJECT('id', id) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id > 5000 AND title = 'The Hobbit Returns to The Shire'
+                        AND publisher_id = 1234
+                    ) AS subq
+                "
+            },
+            {
+                "PutOne_Insert_BadReq_Test",
+                /// Tests the PutOne functionality with a REST PUT request
+                /// with item that does NOT exist, AND parameters incorrectly match schema, results in BadRequest.
+                /// sqlQuery represents the query used to get 'expected' result of zero items.
+                @"
+                    SELECT JSON_OBJECT('id', id) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id > 5000 AND title = 'The Hobbit Returns to The Shire'
+                        AND publisher_id = 1234
+                    ) AS subq
+                "
+            },
         };
 
         #region Test Fixture Setup
@@ -368,6 +420,55 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public override string GetQuery(string key)
         {
             return _queryMap[key];
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task InsertOneTest()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task InsertOneInCompositeKeyTableTest()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOne_Update_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOne_Insert_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOne_Insert_BadReq_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOne_Insert_BadReq_NonNullable_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOne_Insert_PKAutoGen_Test()
+        {
+            throw new NotImplementedException();
         }
     }
 }

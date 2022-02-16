@@ -60,8 +60,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 // compute the mutation result before removing the element
                 result = await _queryEngine.ExecuteAsync(
                     context,
-                    parameters,
-                    isPaginationQuery: false);
+                    parameters);
             }
 
             using DbDataReader dbDataReader =
@@ -78,13 +77,12 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(tableName);
                     string searchedPK = '<' + string.Join(", ", tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
-                    throw new DatagatewayException($"Could not find entity with {searchedPK}", 404, DatagatewayException.SubStatusCodes.EntityNotFound);
+                    throw new DatagatewayException($"Could not find entity with {searchedPK}", HttpStatusCode.NotFound, DatagatewayException.SubStatusCodes.EntityNotFound);
                 }
 
                 result = await _queryEngine.ExecuteAsync(
                     context,
-                    searchParams,
-                    isPaginationQuery: false);
+                    searchParams);
             }
 
             return result;
@@ -98,17 +96,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>JSON object result</returns>
         public async Task<JsonDocument> ExecuteAsync(RestRequestContext context)
         {
-            // create result object to be populated by different operations
-            Dictionary<string, object> parameters;
-            if (context.OperationType == Operation.Delete)
-            {
-                // DeleteOne based off primary key in request.
-                parameters = new(context.PrimaryKeyValuePairs);
-            }
-            else
-            {
-                parameters = new(context.FieldValuePairsInBody);
-            }
+            Dictionary<string, object> parameters = PrepareParameters(context);
 
             try
             {
@@ -117,7 +105,22 @@ namespace Azure.DataGateway.Service.Resolvers
                     context.EntityName,
                     context.OperationType,
                     parameters);
-                context.PrimaryKeyValuePairs = await ExtractRowFromDbDataReader(dbDataReader);
+
+                Dictionary<string, object> resultRecord = new();
+                resultRecord = await ExtractRowFromDbDataReader(dbDataReader);
+
+                string jsonResultString = null;
+
+                /// Processes a second result set from DbDataReader if it exists.
+                /// In MsSQL upsert:
+                /// result set #1: result of the UPDATE operation.
+                /// result set #2: result of the INSERT operation.
+                if (await dbDataReader.NextResultAsync())
+                {
+                    // Since no first result set exists, we overwrite Dictionary here.
+                    resultRecord = await ExtractRowFromDbDataReader(dbDataReader);
+                    jsonResultString = JsonSerializer.Serialize(resultRecord);
+                }
 
                 if (context.OperationType == Operation.Delete)
                 {
@@ -126,29 +129,40 @@ namespace Azure.DataGateway.Service.Resolvers
                     // Returning empty JSON result triggers a NoContent result in calling REST service.
                     if (dbDataReader.RecordsAffected > 0)
                     {
-                        return JsonDocument.Parse("{}");
-                    }
-                    else
-                    {
-                        return null;
+                        jsonResultString = "{}";
                     }
                 }
+                else if (context.OperationType == Operation.Insert || context.OperationType == Operation.Update)
+                {
+                    jsonResultString = JsonSerializer.Serialize(resultRecord);
+                }
+
+                if (jsonResultString == null)
+                {
+                    return null;
+                }
+
+                return JsonDocument.Parse(jsonResultString);
             }
             catch (DbException ex)
             {
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine(ex.StackTrace);
+
                 throw new DatagatewayException(
                     message: $"Could not perform the given mutation on entity {context.EntityName}.",
-                    statusCode: (int)HttpStatusCode.InternalServerError,
+                    statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DatagatewayException.SubStatusCodes.DatabaseOperationFailed);
             }
-
-            // Reuse the same context as a FindRequestContext to return the results after the mutation operation.
-            context.OperationType = Operation.Find;
-
-            // delegates the querying part of the mutation to the QueryEngine
-            return await _queryEngine.ExecuteAsync(context);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine(ex.StackTrace);
+                throw new DatagatewayException(
+                    message: $"Could not perform the given mutation on entity {context.EntityName}.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DatagatewayException.SubStatusCodes.DatabaseOperationFailed);
+            }
         }
 
         /// <summary>
@@ -179,6 +193,11 @@ namespace Azure.DataGateway.Service.Resolvers
                     SqlDeleteStructure deleteStructure = new(tableName, _metadataStoreProvider, parameters);
                     queryString = _queryBuilder.Build(deleteStructure);
                     queryParameters = deleteStructure.Parameters;
+                    break;
+                case Operation.Upsert:
+                    SqlUpsertQueryStructure upsertStructure = new(tableName, _metadataStoreProvider, parameters);
+                    queryString = _queryBuilder.Build(upsertStructure);
+                    queryParameters = upsertStructure.Parameters;
                     break;
                 default:
                     throw new NotSupportedException($"Unexpected mutation operation \" {operationType}\" requested.");
@@ -218,6 +237,33 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return row;
+        }
+
+        private static Dictionary<string, object> PrepareParameters(RestRequestContext context)
+        {
+            Dictionary<string, object> parameters;
+
+            if (context.OperationType == Operation.Delete)
+            {
+                // DeleteOne based off primary key in request.
+                parameters = new(context.PrimaryKeyValuePairs);
+            }
+            else if (context.OperationType == Operation.Upsert)
+            {
+                // Combine both PrimaryKey/Field ValuePairs
+                // because we create both an insert and an update statement.
+                parameters = new(context.PrimaryKeyValuePairs);
+                foreach (KeyValuePair<string, object> pair in context.FieldValuePairsInBody)
+                {
+                    parameters.Add(pair.Key, pair.Value);
+                }
+            }
+            else
+            {
+                parameters = new(context.FieldValuePairsInBody);
+            }
+
+            return parameters;
         }
     }
 }

@@ -58,7 +58,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
 
             return $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
-                    $"OUTPUT {MakeOutputColumns(structure.PrimaryKey(), OutputQualifier.Inserted)} " +
+                    $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
                     $"VALUES ({string.Join(", ", structure.Values)});";
         }
 
@@ -76,6 +76,26 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             return $"DELETE FROM {QuoteIdentifier(structure.TableName)} " +
                     $"WHERE {Build(structure.Predicates)} ";
+        }
+
+        /// <summary>
+        /// Avoid redundant check, wrap the sequence in a transaction,
+        /// and protect the first table access with appropriate locking.
+        /// </summary>
+        /// <param name="structure"></param>
+        /// <returns></returns>
+        public string Build(SqlUpsertQueryStructure structure)
+        {
+            return $"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;BEGIN TRANSACTION; UPDATE { QuoteIdentifier(structure.TableName)} " +
+                $"WITH(UPDLOCK) SET {Build(structure.UpdateOperations, ", ")} " +
+                $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
+                $"WHERE {Build(structure.Predicates)} " +
+                $"IF @@ROWCOUNT = 0 " +
+                $"BEGIN; " +
+                $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
+                $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
+                $"VALUES ({string.Join(", ", structure.Values)}) " +
+                $"END; COMMIT TRANSACTION";
         }
 
         /// <summary>

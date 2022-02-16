@@ -103,7 +103,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             PerformTest(findRequestContext,
                 _metadataStore.Object,
                 expectsException: true,
-                statusCode: 400,
+                statusCode: HttpStatusCode.BadRequest,
                 subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
         }
 
@@ -183,6 +183,25 @@ namespace Azure.DataGateway.Service.Tests.REST
 
             PerformTest(findRequestContext, _metadataStore.Object, expectsException: true);
         }
+
+        /// <summary>
+        /// Simulated client request includes matching DB primary key column, but
+        /// does not include value.
+        /// </summary>
+        [TestMethod]
+        public void PrimaryKeyWithNoValueTest()
+        {
+            FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
+
+            string primaryKeyRoute = "id/";
+            PerformRequestParserPrimaryKeyTest(findRequestContext, primaryKeyRoute, expectsException: true);
+
+            primaryKeyRoute = "id/1/title/";
+            PerformRequestParserPrimaryKeyTest(findRequestContext, primaryKeyRoute, expectsException: true);
+
+            primaryKeyRoute = "id//title/";
+            PerformRequestParserPrimaryKeyTest(findRequestContext, primaryKeyRoute, expectsException: true);
+        }
         #endregion
         #region Helper Methods
         /// <summary>
@@ -200,7 +219,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             FindRequestContext findRequestContext,
             IMetadataStoreProvider metadataStore,
             bool expectsException,
-            int statusCode = 400,
+            HttpStatusCode statusCode = HttpStatusCode.BadRequest,
             DatagatewayException.SubStatusCodes subStatusCode = DatagatewayException.SubStatusCodes.BadRequest)
         {
             try
@@ -255,8 +274,41 @@ namespace Azure.DataGateway.Service.Tests.REST
             catch (DatagatewayException ex)
             {
                 // validates the status code and sub status code match the expected values.
-                Assert.AreEqual((int)HttpStatusCode.BadRequest, ex.StatusCode);
+                Assert.AreEqual(HttpStatusCode.BadRequest, ex.StatusCode);
                 Assert.AreEqual(DatagatewayException.SubStatusCodes.BadRequest, ex.SubStatusCode);
+            }
+        }
+
+        /// <summary>
+        /// Tests the ParsePrimaryKey method in the RequestParser class.
+        /// </summary>
+        private static void PerformRequestParserPrimaryKeyTest(
+            FindRequestContext findRequestContext,
+            string primaryKeyRoute,
+            bool expectsException,
+            HttpStatusCode statusCode = HttpStatusCode.BadRequest,
+            DatagatewayException.SubStatusCodes subStatusCode = DatagatewayException.SubStatusCodes.BadRequest)
+        {
+            try
+            {
+                RequestParser.ParsePrimaryKey(primaryKeyRoute.ToString(), findRequestContext);
+
+                //If expecting an exception, the code should not reach this point.
+                Assert.IsFalse(expectsException, "No exception thrown when exception expected.");
+            }
+            catch (DatagatewayException ex)
+            {
+                //If we are not expecting an exception, fail the test. Completing test method without
+                //failure will pass the test, so no Assert.Pass() is necessary (nor exists).
+                if (!expectsException)
+                {
+                    Console.Error.WriteLine(ex.Message);
+                    throw;
+                }
+
+                // validates the status code and sub status code match the expected values.
+                Assert.AreEqual(statusCode, ex.StatusCode);
+                Assert.AreEqual(subStatusCode, ex.SubStatusCode);
             }
         }
 

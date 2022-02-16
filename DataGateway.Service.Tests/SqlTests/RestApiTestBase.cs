@@ -17,6 +17,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static RestService _restService;
         protected static RestController _restController;
         protected static readonly string _integrationTableName = "books";
+        protected static readonly string _tableWithCompositePrimaryKey = "reviews";
+        protected const int STARTING_ID_FOR_TEST_INSERTS = 5001;
+        protected static readonly string _integration_NonAutoGenPK_TableName = "magazines";
 
         public abstract string GetQuery(string key);
 
@@ -266,7 +269,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 exception: true,
                 expectedErrorMessage: "A binary operator with incompatible types was detected. " +
                     "Found operand types 'Edm.Int64' and 'Edm.Boolean' for operator kind 'Equal'.",
-                expectedStatusCode: 400
+                expectedStatusCode: HttpStatusCode.BadRequest
             );
         }
 
@@ -286,7 +289,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Tests the InsertOne functionality with a REST POST request.
         /// </summary>
         [TestMethod]
-        public async Task InsertOneTest()
+        public virtual async Task InsertOneTest()
         {
             string requestBody = @"
             {
@@ -294,16 +297,45 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 ""publisher_id"": 1234
             }";
 
+            string expectedLocationHeader = $"/id/{STARTING_ID_FOR_TEST_INSERTS}";
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: null,
-                    queryString: null,
-                    entity: _integrationTableName,
-                    sqlQuery: GetQuery(nameof(InsertOneTest)),
-                    controller: _restController,
-                    operationType: Operation.Insert,
-                    requestBody: requestBody,
-                    expectedStatusCode: 201
-                );
+                primaryKeyRoute: null,
+                queryString: null,
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(InsertOneTest)),
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
+        /// <summary>
+        /// Tests InsertOne into a table that has a composite primary key
+        /// with a REST POST request.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneInCompositeKeyTableTest()
+        {
+            string requestBody = @"
+            {
+                ""book_id"": ""1"",
+                ""content"": ""Amazing book!""
+            }";
+
+            string expectedLocationHeader = $"/book_id/1/id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entity: _tableWithCompositePrimaryKey,
+                sqlQuery: GetQuery(nameof(InsertOneInCompositeKeyTableTest)),
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
         }
 
         /// <summary>
@@ -326,13 +358,157 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     controller: _restController,
                     operationType: Operation.Delete,
                     requestBody: null,
-                    expectedStatusCode: (int)HttpStatusCode.NoContent
+                    expectedStatusCode: HttpStatusCode.NoContent
+                );
+        }
+
+        /// <summary>
+        /// Tests the PutOne functionality with a REST PUT request
+        /// with item that exists, resulting in potentially destructive update.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutOne_Update_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""The Hobbit Returns to The Shire"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/7",
+                    queryString: null,
+                    entity: _integrationTableName,
+                    sqlQuery: GetQuery(nameof(PutOne_Update_Test)),
+                    controller: _restController,
+                    operationType: Operation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.NoContent
+                );
+        }
+
+        /// <summary>
+        /// Tests the PutOne functionality with a REST PUT request
+        /// with item that does NOT exist, results in insert.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutOne_Insert_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Batman Returns"",
+                ""issueNumber"": 1234
+            }";
+
+            string expectedLocationHeader = $"/id/{STARTING_ID_FOR_TEST_INSERTS}";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: $"id/{STARTING_ID_FOR_TEST_INSERTS}",
+                    queryString: null,
+                    entity: _integration_NonAutoGenPK_TableName,
+                    sqlQuery: GetQuery(nameof(PutOne_Insert_Test)),
+                    controller: _restController,
+                    operationType: Operation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: expectedLocationHeader
                 );
         }
 
         #endregion
 
         #region Negative Tests
+        /// <summary>
+        /// Tests the PutOne functionality with a REST PUT request
+        /// with item that does NOT exist, AND parameters incorrectly match schema, results in BadRequest.
+        /// sqlQuery represents the query used to get 'expected' result of zero items.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task PutOne_Insert_BadReq_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""The Hobbit Returns to The Shire""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/7",
+                    queryString: null,
+                    entity: _integrationTableName,
+                    sqlQuery: GetQuery(nameof(PutOne_Insert_BadReq_Test)),
+                    controller: _restController,
+                    operationType: Operation.Upsert,
+                    requestBody: requestBody,
+                    exception: true,
+                    expectedErrorMessage: "Invalid request body. Either insufficient or unnecessary values for fields supplied.",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DatagatewayException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
+
+        /// <summary>
+        /// Tests the PutOne functionality with a REST PUT request
+        /// with item that does NOT exist, AND primary key defined is autogenerated in schema,
+        /// which results in a BadRequest.
+        /// sqlQuery represents the query used to get 'expected' result of zero items.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task PutOne_Insert_PKAutoGen_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""The Hobbit Returns to The Shire"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/1000",
+                    queryString: null,
+                    entity: _integrationTableName,
+                    sqlQuery: GetQuery(nameof(PutOne_Insert_PKAutoGen_Test)),
+                    controller: _restController,
+                    operationType: Operation.Upsert,
+                    requestBody: requestBody,
+                    exception: true,
+                    expectedErrorMessage: $"Could not perform the given mutation on entity books.",
+                    expectedStatusCode: HttpStatusCode.InternalServerError,
+                    expectedSubStatusCode: DatagatewayException.SubStatusCodes.DatabaseOperationFailed.ToString()
+                );
+        }
+
+        /// <summary>
+        /// Tests the PutOne functionality with a REST PUT request
+        /// with item that does NOT exist, AND primary key defined is autogenerated in schema,
+        /// which results in a BadRequest.
+        /// sqlQuery represents the query used to get 'expected' result of zero items.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task PutOne_Insert_BadReq_NonNullable_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""The Hobbit Returns to The Shire""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/1000",
+                    queryString: null,
+                    entity: _integrationTableName,
+                    sqlQuery: GetQuery(nameof(PutOne_Insert_BadReq_NonNullable_Test)),
+                    controller: _restController,
+                    operationType: Operation.Upsert,
+                    requestBody: requestBody,
+                    exception: true,
+                    expectedErrorMessage: $"Invalid request body. Either insufficient or unnecessary " +
+                                            "values for fields supplied.",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DatagatewayException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
+
         /// <summary>
         /// DeleteNonExistent operates on a single entity with target object
         /// identified in the primaryKeyRoute.
@@ -343,7 +519,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task DeleteNonExistentTest()
         {//expected status code 404
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/7",
+                    primaryKeyRoute: "id/1000",
                     queryString: null,
                     entity: _integrationTableName,
                     sqlQuery: GetQuery(nameof(DeleteNonExistentTest)),
@@ -352,7 +528,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     requestBody: null,
                     exception: true,
                     expectedErrorMessage: "Not Found",
-                    expectedStatusCode: (int)HttpStatusCode.NotFound,
+                    expectedStatusCode: HttpStatusCode.NotFound,
                     expectedSubStatusCode: DatagatewayException.SubStatusCodes.EntityNotFound.ToString()
                 );
         }
@@ -376,7 +552,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     requestBody: null,
                     exception: true,
                     expectedErrorMessage: "The request is invalid since the primary keys: title requested were not found in the entity definition.",
-                    expectedStatusCode: (int)HttpStatusCode.BadRequest,
+                    expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DatagatewayException.SubStatusCodes.BadRequest.ToString()
                 );
         }
@@ -396,7 +572,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController,
                 exception: true,
                 expectedErrorMessage: "Invalid Column name requested: content",
-                expectedStatusCode: 400
+                expectedStatusCode: HttpStatusCode.BadRequest
             );
         }
 
@@ -415,7 +591,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController,
                 exception: true,
                 expectedErrorMessage: RestController.SERVER_ERROR,
-                expectedStatusCode: (int)HttpStatusCode.InternalServerError,
+                expectedStatusCode: HttpStatusCode.InternalServerError,
                 expectedSubStatusCode: DatagatewayException.SubStatusCodes.UnexpectedError.ToString()
             );
         }
@@ -437,7 +613,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController,
                 exception: true,
                 expectedErrorMessage: "Invalid Column name requested: content",
-                expectedStatusCode: 400
+                expectedStatusCode: HttpStatusCode.BadRequest
             );
         }
 

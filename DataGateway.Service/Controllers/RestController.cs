@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataGateway.Service.Controllers
@@ -44,7 +45,7 @@ namespace Azure.DataGateway.Service.Controllers
         /// <param name="message">string provides a message associated with this error.</param>
         /// <param name="status">int provides the http response status code associated with this error</param>
         /// <returns></returns>
-        public static JsonResult ErrorResponse(string code, string message, int status)
+        public static JsonResult ErrorResponse(string code, string message, HttpStatusCode status)
         {
             return new JsonResult(new
             {
@@ -52,7 +53,7 @@ namespace Azure.DataGateway.Service.Controllers
                 {
                     code = code,
                     message = message,
-                    status = status
+                    status = (int)status
                 }
             });
         }
@@ -128,6 +129,19 @@ namespace Azure.DataGateway.Service.Controllers
                 primaryKeyRoute);
         }
 
+        [HttpPut]
+        [Route("{*primaryKeyRoute}")]
+        [Produces("application/json")]
+        public async Task<IActionResult> Upsert(
+            string entityName,
+            string primaryKeyRoute)
+        {
+            return await HandleOperation(
+                entityName,
+                Operation.Upsert,
+                primaryKeyRoute);
+        }
+
         /// <summary>
         /// Handle the given operation.
         /// </summary>
@@ -167,25 +181,41 @@ namespace Azure.DataGateway.Service.Controllers
                         case Operation.Find:
                             return Ok(resultElement);
                         case Operation.Insert:
-                            return new CreatedResult(location: string.Empty, resultElement);
+                            primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
+                            string location =
+                                UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute;
+                            return new CreatedResult(location: location, resultElement);
                         case Operation.Delete:
                             return new NoContentResult();
+                        case Operation.Upsert:
+                            primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
+                            location =
+                                UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute;
+                            return new CreatedResult(location: location, resultElement);
                         default:
                             throw new NotSupportedException($"Unsupported Operation: \" {operationType}\".");
                     }
                 }
                 else
                 {
-                    throw new DatagatewayException(
-                        message: $"Not Found",
-                        statusCode: (int)HttpStatusCode.NotFound,
-                        subStatusCode: DatagatewayException.SubStatusCodes.EntityNotFound);
+                    switch (operationType)
+                    {
+                        case Operation.Upsert:
+                            // Empty result set indicates an Update successfully occurred.
+                            return new NoContentResult();
+                        default:
+                            throw new DatagatewayException(
+                                message: $"Not Found",
+                                statusCode: HttpStatusCode.NotFound,
+                                subStatusCode: DatagatewayException.SubStatusCodes.EntityNotFound);
+                    }
                 }
-
             }
             catch (DatagatewayException ex)
             {
-                Response.StatusCode = ex.StatusCode;
+                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine(ex.StackTrace);
+                Response.StatusCode = (int)ex.StatusCode;
                 return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
             }
             catch (Exception ex)
@@ -196,7 +226,7 @@ namespace Azure.DataGateway.Service.Controllers
                 return ErrorResponse(
                     DatagatewayException.SubStatusCodes.UnexpectedError.ToString(),
                     SERVER_ERROR,
-                    (int)HttpStatusCode.InternalServerError);
+                    HttpStatusCode.InternalServerError);
             }
         }
     }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
@@ -22,12 +23,22 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<string> Values { get; }
 
+        /// <summary>
+        /// The inserted columns that the insert will return
+        /// </summary>
+        public List<string> ReturnColumns { get; }
+
         public SqlInsertStructure(string tableName, IMetadataStoreProvider metadataStore, IDictionary<string, object> mutationParams)
-        : base(metadataStore)
+        : base(metadataStore, tableName: tableName)
         {
-            TableName = tableName;
             InsertColumns = new();
             Values = new();
+
+            TableDefinition tableDefinition = GetTableDefinition();
+
+            // return primary key so the inserted row can be identified
+            //ReturnColumns = tableDefinition.PrimaryKey;
+            ReturnColumns = tableDefinition.Columns.Keys.ToList<string>();
 
             foreach (KeyValuePair<string, object> param in mutationParams)
             {
@@ -58,7 +69,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
                     throw new DatagatewayException(
                         message: $"Unexpected value for column \"{columnName}\" provided.",
-                        statusCode: (int)HttpStatusCode.BadRequest,
+                        statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
                 }
 
@@ -68,7 +79,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 throw new DatagatewayException(
                     message: ex.Message,
-                    statusCode: (int)HttpStatusCode.BadRequest,
+                    statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
             }
         }

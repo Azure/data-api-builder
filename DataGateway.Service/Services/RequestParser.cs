@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Net;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -39,6 +40,15 @@ namespace Azure.DataGateway.Services
                 for (int primaryKeyIndex = 0; primaryKeyIndex < primaryKeyValues.Length; primaryKeyIndex += 2)
                 {
                     string primaryKey = primaryKeyValues[primaryKeyIndex];
+
+                    if (string.IsNullOrWhiteSpace(primaryKeyValues[primaryKeyIndex + 1]))
+                    {
+                        throw new DatagatewayException(
+                            message: "The request is invalid since it contains a primary key with no value specified.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            DatagatewayException.SubStatusCodes.BadRequest);
+                    }
+
                     if (!context.PrimaryKeyValuePairs.ContainsKey(primaryKey))
                     {
                         context.PrimaryKeyValuePairs.Add(primaryKeyValues[primaryKeyIndex],
@@ -48,7 +58,7 @@ namespace Azure.DataGateway.Services
                     {
                         throw new DatagatewayException(
                             message: "The request is invalid since it contains duplicate primary keys.",
-                            statusCode: 400,
+                            statusCode: HttpStatusCode.BadRequest,
                             DatagatewayException.SubStatusCodes.BadRequest);
                     }
                 }

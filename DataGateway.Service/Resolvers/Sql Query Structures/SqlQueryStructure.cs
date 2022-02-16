@@ -104,43 +104,12 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Extracts the *Connection.items schema field from the *Connection schema field
-        /// </summary>
-        private static IObjectField ExtractItemsSchemaField(IObjectField connectionSchemaField)
-        {
-            return UnderlyingType(connectionSchemaField.Type).Fields["items"];
-        }
-
-        /// <summary>
-        /// Extracts the *Connection.items query field from the *Connection query field
-        /// </summary>
-        /// <returns> The query field or null if **Conneciton.items is not requested in the query</returns>
-        private static FieldNode ExtractItemsQueryField(FieldNode connectionQueryField)
-        {
-            FieldNode itemsField = null;
-            foreach (ISelectionNode node in connectionQueryField.SelectionSet.Selections)
-            {
-                FieldNode field = node as FieldNode;
-                string fieldName = field.Name.Value;
-
-                if (fieldName == "items")
-                {
-                    itemsField = field;
-                    break;
-                }
-            }
-
-            return itemsField;
-        }
-
-        /// <summary>
         /// Generate the structure for a SQL query based on FindRequestContext,
         /// which is created by a FindById or FindMany REST request.
         /// </summary>
         public SqlQueryStructure(RestRequestContext context, IMetadataStoreProvider metadataStoreProvider) :
-            this(metadataStoreProvider, new IncrementingInteger())
+            this(metadataStoreProvider, new IncrementingInteger(), tableName: context.EntityName)
         {
-            TableName = context.EntityName;
             TableAlias = TableName;
             IsListQuery = context.IsMany;
             FilterPredicates = string.Empty;
@@ -255,7 +224,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     if (first <= 0)
                     {
-                        throw new DatagatewayException($"first must be a positive integer for {schemaField.Name}", 400, DatagatewayException.SubStatusCodes.BadRequest);
+                        throw new DatagatewayException($"first must be a positive integer for {schemaField.Name}", HttpStatusCode.BadRequest, DatagatewayException.SubStatusCodes.BadRequest);
                     }
 
                     _limit = (uint)first;
@@ -299,34 +268,13 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Private constructor that is used as a base by all public
         /// constructors.
         /// </summary>
-        private SqlQueryStructure(IMetadataStoreProvider metadataStoreProvider, IncrementingInteger counter)
-            : base(metadataStoreProvider, counter)
+        private SqlQueryStructure(IMetadataStoreProvider metadataStoreProvider, IncrementingInteger counter, string tableName = "")
+            : base(metadataStoreProvider, counter, tableName)
         {
             JoinQueries = new();
             Joins = new();
             PaginationMetadata = new(this);
             ColumnLabelToParam = new();
-        }
-
-        /// <summary>
-        /// UnderlyingType is the type main GraphQL type that is described by
-        /// this type. This strips all modifiers, such as List and Non-Null.
-        /// So the following GraphQL types would all have the underlyingType Book:
-        /// - Book
-        /// - [Book]
-        /// - Book!
-        /// - [Book]!
-        /// - [Book!]!
-        /// </summary>
-        private static ObjectType UnderlyingType(IType type)
-        {
-            ObjectType underlyingType = type as ObjectType;
-            if (underlyingType != null)
-            {
-                return underlyingType;
-            }
-
-            return UnderlyingType(type.InnerType());
         }
 
         ///<summary>
@@ -393,7 +341,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
                     throw new DatagatewayException(
                         message: $"Unexpected value for column \"{field}\" provided.",
-                        statusCode: (int)HttpStatusCode.BadRequest,
+                        statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
                 }
             }
@@ -401,7 +349,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 throw new DatagatewayException(
                   message: ex.Message,
-                  statusCode: (int)HttpStatusCode.BadRequest,
+                  statusCode: HttpStatusCode.BadRequest,
                   subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
             }
         }

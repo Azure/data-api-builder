@@ -18,7 +18,7 @@ namespace Azure.DataGateway.Services
         private readonly IMutationEngine _mutationEngine;
         private readonly IMetadataStoreProvider _metadataStoreProvider;
         public ISchema? Schema { private set; get; }
-        public IRequestExecutor? Executor { get; private set; }
+        public IRequestExecutor? Executor { private set; get; }
 
         public GraphQLService(
             IQueryEngine queryEngine,

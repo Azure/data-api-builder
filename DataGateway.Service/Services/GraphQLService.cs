@@ -92,7 +92,7 @@ namespace Azure.DataGateway.Services
         {
             if (Executor == null)
             {
-                /*lang=json,strict*/ 
+                /*lang=json,strict*/
                 return "{\"error\": \"Schema must be defined first\" }";
             }
 

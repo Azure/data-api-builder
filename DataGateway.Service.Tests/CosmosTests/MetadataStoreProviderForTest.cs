@@ -12,7 +12,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         public Dictionary<string, MutationResolver> MutationResolvers { get; set; } = new();
         public Dictionary<string, GraphQLQueryResolver> QueryResolvers { get; set; } = new();
         public Dictionary<string, TableDefinition> Tables { get; set; } = new();
-        public Dictionary<string, GraphQLType> GraphqlTypes { get; set; } = new();
+        public Dictionary<string, GraphQLType> GraphQLTypes { get; set; } = new();
 
         public string GetGraphQLSchema()
         {
@@ -52,12 +52,12 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
 
         public void StoreGraphQLType(string name, GraphQLType graphQLType)
         {
-            GraphqlTypes.Add(name, graphQLType);
+            GraphQLTypes.Add(name, graphQLType);
         }
 
         public GraphQLType GetGraphQLType(string name)
         {
-            return GraphqlTypes.TryGetValue(name, out GraphQLType graphqlType) ? graphqlType : null;
+            return GraphQLTypes.TryGetValue(name, out GraphQLType graphqlType) ? graphqlType : null;
         }
 
         public ResolverConfig GetResolvedConfig()

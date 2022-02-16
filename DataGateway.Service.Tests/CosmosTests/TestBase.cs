@@ -134,13 +134,13 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         }
 
         /// <summary>
-        /// Creates and registers a GraphqlType
+        /// Creates and registers a GraphQLType
         /// </summary>
         /// <param name="id">name of the mutation</param>
         /// <param name="databaseName">the database name</param>
         /// <param name="containerName">the container name</param>
         /// <param name="isPaginationType">is the type a pagination type</param>
-        internal static void RegisterGraphqlType(string id,
+        internal static void RegisterGraphQLType(string id,
            string databaseName,
            string containerName,
            bool isPaginationType = false)

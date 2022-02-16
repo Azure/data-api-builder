@@ -421,7 +421,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// AddGraphqlFields looks at the fields that are selected in the
+        /// AddGraphQLFields looks at the fields that are selected in the
         /// GraphQL query and all the necessary elements to the query which are
         /// required to return these fields. This includes adding the columns
         /// to the result set, but also adding any subqueries or joins that are

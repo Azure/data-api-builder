@@ -647,7 +647,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// Each scalar field should either:
         /// <list type="bullet">
         /// <item> match a table column in name and type </item>
-        /// <item> match a GraphqlType.Field </item>
+        /// <item> match a GraphQLType.Field </item>
         /// </list>
         /// </remarks>
         private void ValidateTableColumnsMatchScalarFields(string tableName, string typeName, Stack<string> tableColumnPosition)
@@ -1065,7 +1065,7 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate that Config.GraphqlTypes has already been validated
+        /// Validate that Config.GraphQLTypes has already been validated
         /// </summary>
         private void ValidateGraphQLTypesIsValidated()
         {

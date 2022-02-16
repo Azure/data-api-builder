@@ -502,7 +502,7 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Get the config GraphqlTypes.Fields for a graphql schema type
+        /// Get the config GraphQLTypes.Fields for a graphql schema type
         /// </summary>
         private IEnumerable<string> GetConfigFieldsForGqlType(ObjectTypeDefinitionNode type)
         {

@@ -33,7 +33,7 @@ namespace Azure.DataGateway.Service
 
         /// <summary>
         /// A list containing metadata required to resolve the different
-        /// types in the GraphQL schema. See GraphqlType for details.
+        /// types in the GraphQL schema. See GraphQLType for details.
         /// </summary>
         public Dictionary<string, GraphQLType> GraphQLTypes { get; set; } = new();
     }

@@ -290,36 +290,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
-                "FindByIdTestInvalidPrimaryKeyRoute",
-                @"
-                    SELECT JSON_OBJECT('id', id) AS data
-                    FROM (
-                        SELECT id
-                        FROM " + _integrationTableName + @"
-                    ) AS subq
-                "
-            },
-            {
-                "FindByIdTestWithInvalidFields",
-                @"
-                    SELECT JSON_OBJECT('id', id, 'name', name, 'type', type) AS data
-                    FROM (
-                        SELECT id, name, type
-                        FROM " + _integrationTableName + @"
-                    ) AS subq
-                "
-            },
-            {
-                "FindTestWithInvalidFields",
-                @"
-                    SELECT JSON_OBJECT('id', id, 'name', name, 'type', type) AS data
-                    FROM (
-                        SELECT id, name, type
-                        FROM " + _integrationTableName + @"
-                    ) AS subq
-                "
-            },
-            {
                 "InsertOneTest",
                 @"
                     SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
@@ -354,17 +324,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
-                "DeleteNonExistentTest",
-                @"
-                    SELECT JSON_OBJECT('id', id) AS data
-                    FROM (
-                        SELECT id
-                        FROM " + _integrationTableName + @"
-                        WHERE id = 7
-                    ) AS subq
-                "
-            },
-            {
                 "PutOne_Update_Test",
                 @"
                     SELECT JSON_OBJECT('id', id) AS data
@@ -387,22 +346,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         AND publisher_id = 1234
                     ) AS subq
                 "
-            },
-            {
-                "PutOne_Insert_BadReq_Test",
-                /// Tests the PutOne functionality with a REST PUT request
-                /// with item that does NOT exist, AND parameters incorrectly match schema, results in BadRequest.
-                /// sqlQuery represents the query used to get 'expected' result of zero items.
-                @"
-                    SELECT JSON_OBJECT('id', id) AS data
-                    FROM (
-                        SELECT id, title, publisher_id
-                        FROM " + _integrationTableName + @"
-                        WHERE id > 5000 AND title = 'The Hobbit Returns to The Shire'
-                        AND publisher_id = 1234
-                    ) AS subq
-                "
-            },
+            }
         };
 
         #region Test Fixture Setup

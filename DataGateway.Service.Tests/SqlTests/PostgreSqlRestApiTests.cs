@@ -270,36 +270,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
-                "FindByIdTestInvalidPrimaryKeyRoute",
-                @"
-                    SELECT to_jsonb(subq) AS data
-                    FROM (
-                        SELECT id
-                        FROM " + _integrationTableName + @"
-                    ) AS subq
-                "
-            },
-            {
-                "FindByIdTestWithInvalidFields",
-                @"
-                    SELECT to_jsonb(subq) AS data
-                    FROM (
-                        SELECT id, name, type
-                        FROM " + _integrationTableName + @"
-                    ) AS subq
-                "
-            },
-            {
-                "FindTestWithInvalidFields",
-                @"
-                    SELECT to_jsonb(subq) AS data
-                    FROM (
-                        SELECT id, name, type
-                        FROM " + _integrationTableName + @"
-                    ) AS subq
-                "
-            },
-            {
                 "InsertOneTest",
                 @"
                     SELECT to_jsonb(subq) AS data
@@ -330,17 +300,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         SELECT id
                         FROM " + _integrationTableName + @"
                         WHERE id = 5
-                    ) AS subq
-                "
-            },
-            {
-                "DeleteNonExistentTest",
-                @"
-                    SELECT to_jsonb(subq) AS data
-                    FROM (
-                        SELECT id
-                        FROM " + _integrationTableName + @"
-                        WHERE id = 7
                     ) AS subq
                 "
             }

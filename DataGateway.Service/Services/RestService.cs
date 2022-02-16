@@ -47,7 +47,7 @@ namespace Azure.DataGateway.Services
         /// <param name="entityName">The entity name.</param>
         /// <param name="operationType">The kind of operation to execute.</param>
         /// <param name="primaryKeyRoute">The primary key route. e.g. customerName/Xyz/saleOrderId/123</param>
-        public async Task<JsonDocument> ExecuteAsync(
+        public async Task<JsonDocument?> ExecuteAsync(
             string entityName,
             Operation operationType,
             string primaryKeyRoute)

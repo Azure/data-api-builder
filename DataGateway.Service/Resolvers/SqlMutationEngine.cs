@@ -77,7 +77,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(tableName);
                     string searchedPK = '<' + string.Join(", ", tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
-                    throw new DatagatewayException($"Could not find entity with {searchedPK}", HttpStatusCode.NotFound, DatagatewayException.SubStatusCodes.EntityNotFound);
+                    throw new DataGatewayException($"Could not find entity with {searchedPK}", HttpStatusCode.NotFound, DataGatewayException.SubStatusCodes.EntityNotFound);
                 }
 
                 result = await _queryEngine.ExecuteAsync(
@@ -149,19 +149,19 @@ namespace Azure.DataGateway.Service.Resolvers
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine(ex.StackTrace);
 
-                throw new DatagatewayException(
+                throw new DataGatewayException(
                     message: $"Could not perform the given mutation on entity {context.EntityName}.",
                     statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DatagatewayException.SubStatusCodes.DatabaseOperationFailed);
+                    subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine(ex.StackTrace);
-                throw new DatagatewayException(
+                throw new DataGatewayException(
                     message: $"Could not perform the given mutation on entity {context.EntityName}.",
                     statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DatagatewayException.SubStatusCodes.DatabaseOperationFailed);
+                    subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
             }
         }
 

@@ -49,10 +49,8 @@ namespace Azure.DataGateway.Service.Resolvers
 
         protected IMetadataStoreProvider MetadataStoreProvider { get; }
 
-        public BaseSqlQueryStructure(
-            IMetadataStoreProvider metadataStore,
-            string tableName = "",
-            IncrementingInteger? counter = null)
+        public BaseSqlQueryStructure(IMetadataStoreProvider metadataStore,
+            IncrementingInteger? counter = null, string tableName = "")
         {
             Columns = new();
             Predicates = new();

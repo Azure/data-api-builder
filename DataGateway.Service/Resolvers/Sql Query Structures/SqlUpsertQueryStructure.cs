@@ -47,7 +47,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// An upsert query must be prepared to be utilized for either an UPDATE or INSERT.
-        /// 
+        ///
         /// </summary>
         /// <param name="tableName"></param>
         /// <param name="metadataStore"></param>

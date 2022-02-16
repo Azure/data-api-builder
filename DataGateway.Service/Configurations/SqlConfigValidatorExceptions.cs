@@ -752,26 +752,6 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate that type has no fields which return a custom type
-        /// </summary>
-        /// <remarks>
-        /// Called if config type has no fields
-        /// </remarks>
-        private void ValidateNoFieldsWithInnerCustomType(string typeName, Dictionary<string, FieldDefinitionNode> fields)
-        {
-            IEnumerable<String> fieldsWithCustomTypes = fields.Keys.Where(fieldName => IsInnerTypeCustom(fields[fieldName].Type));
-
-            if (fieldsWithCustomTypes.Any())
-            {
-                throw new ConfigValidationException(
-                    $"Type \"{typeName}\" has no fields to resolve schema fields which return custom types [" +
-                    string.Join(", ", fieldsWithCustomTypes) + "].",
-                    _configValidationStack
-                );
-            }
-        }
-
-        /// <summary>
         /// Validate if argument names match the required arguments and optional arguments
         /// </summary>
         private void ValidateFieldArguments(

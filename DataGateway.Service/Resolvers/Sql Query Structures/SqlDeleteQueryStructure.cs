@@ -10,7 +10,7 @@ namespace Azure.DataGateway.Service.Resolvers
     public class SqlDeleteStructure : BaseSqlQueryStructure
     {
         public SqlDeleteStructure(string tableName, IMetadataStoreProvider metadataStore, IDictionary<string, object> mutationParams)
-        : base(metadataStore, tableName)
+        : base(metadataStore, tableName: tableName)
         {
             TableDefinition tableDefinition = GetTableDefinition();
 

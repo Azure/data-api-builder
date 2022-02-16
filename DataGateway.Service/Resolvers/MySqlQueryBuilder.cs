@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
@@ -82,6 +83,13 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             return $"DELETE FROM {QuoteIdentifier(structure.TableName)} " +
                     $"WHERE {Build(structure.Predicates)}";
+        }
+
+        /// <inheritdoc />
+        public string Build(SqlUpsertQueryStructure structure)
+        {
+            // TODO: these should be put in a transcation
+            throw new NotImplementedException();
         }
 
         /// <summary>

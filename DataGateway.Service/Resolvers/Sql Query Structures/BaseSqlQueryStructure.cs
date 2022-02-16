@@ -99,6 +99,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         ///  Add parameter to Parameters and return the name associated with it
         /// </summary>
+        /// <param name="value">Value to be assigned to parameter, which can be null for nullable columns.</param>
         public string MakeParamWithValue(object value)
         {
             string paramName = $"param{Counter.Next()}";

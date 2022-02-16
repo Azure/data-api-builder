@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
@@ -17,7 +18,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public List<Predicate> UpdateOperations { get; }
 
         public SqlUpdateStructure(string tableName, IMetadataStoreProvider metadataStore, IDictionary<string, object> mutationParams)
-        : base(metadataStore, tableName)
+        : base(metadataStore, tableName: tableName)
         {
             UpdateOperations = new();
             TableDefinition tableDefinition = GetTableDefinition();
@@ -51,7 +52,10 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (UpdateOperations.Count == 0)
             {
-                throw new DatagatewayException("Update mutation does not update any values", 400, DatagatewayException.SubStatusCodes.BadRequest);
+                throw new DatagatewayException(
+                    message: "Update mutation does not update any values",
+                    statusCode: (int)HttpStatusCode.BadRequest,
+                    subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
             }
         }
     }

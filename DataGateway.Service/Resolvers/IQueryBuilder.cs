@@ -30,5 +30,10 @@ namespace Azure.DataGateway.Service.Resolvers
         /// query.
         /// </summary>
         public string Build(SqlDeleteStructure structure);
+        /// Builds the query specific to the target database for the given
+        /// SqlUpsertQueryStructure object which holds the major components of the
+        /// query.
+        /// </summary>
+        public string Build(SqlUpsertQueryStructure structure);
     }
 }

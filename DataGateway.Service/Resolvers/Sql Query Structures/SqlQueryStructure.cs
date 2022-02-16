@@ -108,7 +108,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// which is created by a FindById or FindMany REST request.
         /// </summary>
         public SqlQueryStructure(RestRequestContext context, IMetadataStoreProvider metadataStoreProvider) :
-            this(metadataStoreProvider, context.EntityName, new IncrementingInteger())
+            this(metadataStoreProvider, new IncrementingInteger(), tableName: context.EntityName)
         {
             TableAlias = TableName;
             IsListQuery = context.IsMany;
@@ -160,7 +160,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 IObjectField schemaField,
                 FieldNode? queryField,
                 IncrementingInteger counter
-        ) : this(metadataStoreProvider, tableName: string.Empty, counter)
+        ) : this(metadataStoreProvider, counter, tableName: string.Empty)
         {
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
@@ -272,8 +272,8 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Private constructor that is used as a base by all public
         /// constructors.
         /// </summary>
-        private SqlQueryStructure(IMetadataStoreProvider metadataStoreProvider, string tableName, IncrementingInteger counter)
-            : base(metadataStoreProvider, tableName, counter)
+        private SqlQueryStructure(IMetadataStoreProvider metadataStoreProvider, IncrementingInteger counter, string tableName = "")
+            : base(metadataStoreProvider, counter: counter, tableName: tableName)
         {
             JoinQueries = new();
             Joins = new();

@@ -110,11 +110,15 @@ namespace Azure.DataGateway.Services
 
             if (authorizationResult.Succeeded)
             {
-                return operationType switch
+                switch (operationType)
                 {
-                    Operation.Find => await _queryEngine.ExecuteAsync(context),
-                    Operation.Insert or Operation.Delete => await _mutationEngine.ExecuteAsync(context),
-                    _ => throw new NotSupportedException("This operation is not yet supported."),
+                    case Operation.Find:
+                        return await _queryEngine.ExecuteAsync(context);
+                    case Operation.Insert:
+                    case Operation.Delete:
+                        return await _mutationEngine.ExecuteAsync(context);
+                    default:
+                        throw new NotSupportedException("This operation is not yet supported.");
                 };
             }
             else

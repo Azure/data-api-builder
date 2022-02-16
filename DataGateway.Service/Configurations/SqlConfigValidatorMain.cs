@@ -291,7 +291,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// Validate that the scalar fields of the type match the table columns associated with the type
         /// </summary>
         /// <remarks>
-        /// Ignore scalar fields which match cofig type fields
+        /// Ignore scalar fields which match config type fields
         /// </remarks>
         private void ValidateGraphQLTypeTableColumnsMatchSchema(
             string typeName,

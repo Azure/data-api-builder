@@ -108,7 +108,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// which is created by a FindById or FindMany REST request.
         /// </summary>
         public SqlQueryStructure(RestRequestContext context, IMetadataStoreProvider metadataStoreProvider) :
-            this(metadataStoreProvider, new IncrementingInteger(), context.EntityName)
+            this(metadataStoreProvider, new IncrementingInteger(), tableName: context.EntityName)
         {
             TableAlias = TableName;
             IsListQuery = context.IsMany;

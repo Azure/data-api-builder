@@ -45,7 +45,7 @@ namespace Azure.DataGateway.Services
                     {
                         throw new DatagatewayException(
                             message: "The request is invalid since it contains a primary key with no value specified.",
-                            statusCode: (int)HttpStatusCode.BadRequest,
+                            statusCode: HttpStatusCode.BadRequest,
                             DatagatewayException.SubStatusCodes.BadRequest);
                     }
 
@@ -58,7 +58,7 @@ namespace Azure.DataGateway.Services
                     {
                         throw new DatagatewayException(
                             message: "The request is invalid since it contains duplicate primary keys.",
-                            statusCode: (int)HttpStatusCode.BadRequest,
+                            statusCode: HttpStatusCode.BadRequest,
                             DatagatewayException.SubStatusCodes.BadRequest);
                     }
                 }

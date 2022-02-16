@@ -54,7 +54,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 throw new DatagatewayException(
                     message: "Update mutation does not update any values",
-                    statusCode: (int)HttpStatusCode.BadRequest,
+                    statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
             }
         }

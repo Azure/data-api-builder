@@ -77,7 +77,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(tableName);
                     string searchedPK = '<' + string.Join(", ", tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
-                    throw new DatagatewayException($"Could not find entity with {searchedPK}", 404, DatagatewayException.SubStatusCodes.EntityNotFound);
+                    throw new DatagatewayException($"Could not find entity with {searchedPK}", HttpStatusCode.NotFound, DatagatewayException.SubStatusCodes.EntityNotFound);
                 }
 
                 result = await _queryEngine.ExecuteAsync(
@@ -151,7 +151,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 throw new DatagatewayException(
                     message: $"Could not perform the given mutation on entity {context.EntityName}.",
-                    statusCode: (int)HttpStatusCode.InternalServerError,
+                    statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DatagatewayException.SubStatusCodes.DatabaseOperationFailed);
             }
             catch (Exception ex)
@@ -160,7 +160,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 Console.Error.WriteLine(ex.StackTrace);
                 throw new DatagatewayException(
                     message: $"Could not perform the given mutation on entity {context.EntityName}.",
-                    statusCode: (int)HttpStatusCode.InternalServerError,
+                    statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DatagatewayException.SubStatusCodes.DatabaseOperationFailed);
             }
         }

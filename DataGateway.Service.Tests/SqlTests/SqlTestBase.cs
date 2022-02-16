@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.IO;
+using System.Net;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
@@ -177,7 +178,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string requestBody = null,
             bool exception = false,
             string expectedErrorMessage = "",
-            int expectedStatusCode = 200,
+            HttpStatusCode expectedStatusCode = HttpStatusCode.OK,
             string expectedSubStatusCode = "BadRequest",
             string expectedLocationHeader = null)
         {

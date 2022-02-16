@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Net;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
@@ -123,7 +124,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public static void VerifyResult(
             IActionResult actionResult,
             string expected,
-            int expectedStatusCode,
+            HttpStatusCode expectedStatusCode,
             string expectedLocationHeader)
         {
             string actual;
@@ -131,21 +132,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 // OkObjectResult will throw exception if we attempt cast to JsonResult
                 case OkObjectResult okResult:
-                    Assert.AreEqual(expectedStatusCode, okResult.StatusCode);
+                    Assert.AreEqual((int)expectedStatusCode, okResult.StatusCode);
                     actual = okResult.Value.ToString();
                     break;
                 case CreatedResult createdResult:
-                    Assert.AreEqual(expectedStatusCode, createdResult.StatusCode);
+                    Assert.AreEqual((int)expectedStatusCode, createdResult.StatusCode);
                     Assert.AreEqual(expectedLocationHeader, createdResult.Location);
                     actual = createdResult.Value.ToString();
                     break;
                 // NoContentResult does not have value property for messages
                 case NoContentResult noContentResult:
-                    Assert.AreEqual(expectedStatusCode, noContentResult.StatusCode);
+                    Assert.AreEqual((int)expectedStatusCode, noContentResult.StatusCode);
                     actual = null;
                     break;
                 case NotFoundResult notFoundResult:
-                    Assert.AreEqual(expectedStatusCode, notFoundResult.StatusCode);
+                    Assert.AreEqual((int)expectedStatusCode, notFoundResult.StatusCode);
                     actual = null;
                     break;
                 default:

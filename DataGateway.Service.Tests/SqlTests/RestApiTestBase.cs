@@ -268,7 +268,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 exception: true,
                 expectedErrorMessage: "A binary operator with incompatible types was detected. " +
                     "Found operand types 'Edm.Int64' and 'Edm.Boolean' for operator kind 'Equal'.",
-                expectedStatusCode: (int)HttpStatusCode.BadRequest
+                expectedStatusCode: HttpStatusCode.BadRequest
             );
         }
 
@@ -305,7 +305,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                expectedStatusCode: (int)HttpStatusCode.Created,
+                expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
             );
         }
@@ -332,7 +332,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                expectedStatusCode: (int)HttpStatusCode.Created,
+                expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
             );
         }
@@ -357,7 +357,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     controller: _restController,
                     operationType: Operation.Delete,
                     requestBody: null,
-                    expectedStatusCode: (int)HttpStatusCode.NoContent
+                    expectedStatusCode: HttpStatusCode.NoContent
                 );
         }
 
@@ -383,7 +383,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     requestBody: null,
                     exception: true,
                     expectedErrorMessage: "Not Found",
-                    expectedStatusCode: (int)HttpStatusCode.NotFound,
+                    expectedStatusCode: HttpStatusCode.NotFound,
                     expectedSubStatusCode: DatagatewayException.SubStatusCodes.EntityNotFound.ToString()
                 );
         }
@@ -407,7 +407,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     requestBody: null,
                     exception: true,
                     expectedErrorMessage: "The request is invalid since the primary keys: title requested were not found in the entity definition.",
-                    expectedStatusCode: (int)HttpStatusCode.BadRequest,
+                    expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DatagatewayException.SubStatusCodes.BadRequest.ToString()
                 );
         }
@@ -427,7 +427,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController,
                 exception: true,
                 expectedErrorMessage: "Invalid Column name requested: content",
-                expectedStatusCode: (int)HttpStatusCode.BadRequest
+                expectedStatusCode: HttpStatusCode.BadRequest
             );
         }
 
@@ -446,7 +446,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController,
                 exception: true,
                 expectedErrorMessage: RestController.SERVER_ERROR,
-                expectedStatusCode: (int)HttpStatusCode.InternalServerError,
+                expectedStatusCode: HttpStatusCode.InternalServerError,
                 expectedSubStatusCode: DatagatewayException.SubStatusCodes.UnexpectedError.ToString()
             );
         }
@@ -468,7 +468,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController,
                 exception: true,
                 expectedErrorMessage: "Invalid Column name requested: content",
-                expectedStatusCode: (int)HttpStatusCode.BadRequest
+                expectedStatusCode: HttpStatusCode.BadRequest
             );
         }
 

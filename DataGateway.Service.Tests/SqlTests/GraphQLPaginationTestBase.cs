@@ -532,6 +532,44 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        /// <summary>
+        /// Restrict the pagination result using the _where argument
+        /// </summary>
+        [TestMethod]
+        public async Task PaginationWithWhereArgument()
+        {
+            string graphQLQueryName = "books";
+            string after = SqlPaginationUtil.Base64Encode("{\"id\":1}");
+            string graphQLQuery = @"{
+                books(first: 2, after: """ + after + @""", _where: ""publisher_id eq 2345"") {
+                    items {
+                        id
+                        publisher_id
+                    }
+                    endCursor
+                    hasNextPage
+                }
+            }";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = @"{
+              ""items"": [
+                {
+                  ""id"": 3,
+                  ""publisher_id"": 2345
+                },
+                {
+                  ""id"": 4,
+                  ""publisher_id"": 2345
+                }
+              ],
+              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":4}") + @""",
+              ""hasNextPage"": false
+            }";
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Negative Tests

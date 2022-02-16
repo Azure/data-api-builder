@@ -752,12 +752,37 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate if argument names match required arguments
+        /// Validate that type has no fields which return a custom type
         /// </summary>
-        private void ValidateFieldHasRequiredArguments(IEnumerable<string> fieldArgumentNames, IEnumerable<string> requiredArguments)
+        /// <remarks>
+        /// Called if config type has no fields
+        /// </remarks>
+        private void ValidateNoFieldsWithInnerCustomType(string typeName, Dictionary<string, FieldDefinitionNode> fields)
         {
-            IEnumerable<string> missingArguments = requiredArguments.Except(fieldArgumentNames);
-            IEnumerable<string> extraArguments = fieldArgumentNames.Except(requiredArguments);
+            IEnumerable<String> fieldsWithCustomTypes = fields.Keys.Where(fieldName => IsInnerTypeCustom(fields[fieldName].Type));
+
+            if (fieldsWithCustomTypes.Any())
+            {
+                throw new ConfigValidationException(
+                    $"Type \"{typeName}\" has no fields to resolve schema fields which return custom types [" +
+                    string.Join(", ", fieldsWithCustomTypes) + "].",
+                    _configValidationStack
+                );
+            }
+        }
+
+        /// <summary>
+        /// Validate if argument names match the required arguments and optional arguments
+        /// </summary>
+        private void ValidateFieldArguments(
+            IEnumerable<string> fieldArgumentNames,
+            IEnumerable<string> requiredArguments = null,
+            IEnumerable<string> optionalArguments = null)
+        {
+            IEnumerable<string> empty = Enumerable.Empty<string>();
+            IEnumerable<string> missingArguments = requiredArguments?.Except(fieldArgumentNames) ?? empty;
+            IEnumerable<string> extraArguments = fieldArgumentNames.Except(requiredArguments ?? empty)
+                                                                    .Except(optionalArguments ?? empty);
 
             if (missingArguments.Any() || extraArguments.Any())
             {
@@ -771,7 +796,7 @@ namespace Azure.DataGateway.Service.Configurations
                     : string.Empty;
 
                 throw new ConfigValidationException(
-                    $"Field does not have the required arguments [{string.Join(", ", requiredArguments)}]. " +
+                    $"Field has invalid arguments." +
                     missingArgsMessage +
                     extraArgsMessage,
                     _schemaValidationStack
@@ -804,21 +829,6 @@ namespace Azure.DataGateway.Service.Configurations
             {
                 throw new ConfigValidationException(
                     "Unexpected arguments types found. " + string.Join(" ", mismatchMessages),
-                    _schemaValidationStack
-                );
-            }
-        }
-
-        /// <summary>
-        /// Validate field has no unexpected arguments
-        /// </summary>
-        private void ValidateFieldHasNoUnexpectedArguments(IEnumerable<string> fieldArgNames, IEnumerable<string> expectedArgNames)
-        {
-            IEnumerable<string> unexpectedArguments = fieldArgNames.Except(expectedArgNames);
-            if (unexpectedArguments.Any())
-            {
-                throw new ConfigValidationException(
-                    $"Field has unexpected arguments [{string.Join(", ", unexpectedArguments)}]",
                     _schemaValidationStack
                 );
             }
@@ -1342,7 +1352,7 @@ namespace Azure.DataGateway.Service.Configurations
                 }
             }
 
-            ValidateFieldHasRequiredArguments(mutArgs.Keys, requiredArguments);
+            ValidateFieldArguments(mutArgs.Keys, requiredArguments: requiredArguments);
         }
 
         /// <summary>

@@ -3,6 +3,8 @@ DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
 DROP TABLE IF EXISTS books;
 DROP TABLE IF EXISTS publishers;
+DROP TABLE IF EXISTS magazines;
+
 CREATE TABLE publishers(
     id bigint AUTO_INCREMENT PRIMARY KEY,
     name text NOT NULL
@@ -35,6 +37,12 @@ CREATE TABLE book_author_link(
     PRIMARY KEY(book_id, author_id)
 );
 
+CREATE TABLE magazines(
+    id bigint PRIMARY KEY,
+    title text NOT NULL,
+    issueNumber bigint NULL
+);
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
@@ -61,7 +69,7 @@ ON DELETE CASCADE;
 
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd');
 INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02');
-INSERT INTO books(id, title, publisher_id) VALUES (1, 'Awesome book', 1234), (2, 'Also Awesome book', 1234), (3, 'Great wall of china explained', 2345), (4, 'US history in a nutshell', 2345), (5, 'Chernobyl Diaries', 2323), (6, 'The Palace Door', 2324);
+INSERT INTO books(id, title, publisher_id) VALUES (1, 'Awesome book', 1234), (2, 'Also Awesome book', 1234), (3, 'Great wall of china explained', 2345), (4, 'US history in a nutshell', 2345), (5, 'Chernobyl Diaries', 2323), (6, 'The Palace Door', 2324), (7, 'The Groovy Bar', 2324);
 INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 123), (3, 124), (4, 123), (4, 124);
 INSERT INTO reviews(id, book_id, content) VALUES (567, 1, 'Indeed a great book'), (568, 1, 'I loved it'), (569, 1, 'best book I read in years');
 

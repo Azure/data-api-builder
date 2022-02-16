@@ -50,12 +50,13 @@ namespace Azure.DataGateway.Service.Resolvers
         protected IMetadataStoreProvider MetadataStoreProvider { get; }
 
         public BaseSqlQueryStructure(IMetadataStoreProvider metadataStore,
-            IncrementingInteger counter = null)
+            IncrementingInteger counter = null, string tableName = "")
         {
             Columns = new();
             Predicates = new();
             Parameters = new();
             MetadataStoreProvider = metadataStore;
+            TableName = tableName;
             Counter = counter ?? new IncrementingInteger();
         }
 
@@ -94,6 +95,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         ///  Add parameter to Parameters and return the name associated with it
         /// </summary>
+        /// <param name="value">Value to be assigned to parameter, which can be null for nullable columns.</param>
         public string MakeParamWithValue(object value)
         {
             string paramName = $"param{Counter.Next()}";

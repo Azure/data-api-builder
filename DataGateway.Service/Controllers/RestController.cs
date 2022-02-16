@@ -129,6 +129,19 @@ namespace Azure.DataGateway.Service.Controllers
                 primaryKeyRoute);
         }
 
+        [HttpPut]
+        [Route("{*primaryKeyRoute}")]
+        [Produces("application/json")]
+        public async Task<IActionResult> Upsert(
+            string entityName,
+            string primaryKeyRoute)
+        {
+            return await HandleOperation(
+                entityName,
+                Operation.Upsert,
+                primaryKeyRoute);
+        }
+
         /// <summary>
         /// Handle the given operation.
         /// </summary>
@@ -174,21 +187,34 @@ namespace Azure.DataGateway.Service.Controllers
                             return new CreatedResult(location: location, resultElement);
                         case Operation.Delete:
                             return new NoContentResult();
+                        case Operation.Upsert:
+                            primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
+                            location =
+                                UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute;
+                            return new CreatedResult(location: location, resultElement);
                         default:
                             throw new NotSupportedException($"Unsupported Operation: \" {operationType}\".");
                     }
                 }
                 else
                 {
-                    throw new DatagatewayException(
-                        message: $"Not Found",
-                        statusCode: HttpStatusCode.NotFound,
-                        subStatusCode: DatagatewayException.SubStatusCodes.EntityNotFound);
+                    switch (operationType)
+                    {
+                        case Operation.Upsert:
+                            // Empty result set indicates an Update successfully occurred.
+                            return new NoContentResult();
+                        default:
+                            throw new DatagatewayException(
+                                message: $"Not Found",
+                                statusCode: HttpStatusCode.NotFound,
+                                subStatusCode: DatagatewayException.SubStatusCodes.EntityNotFound);
+                    }
                 }
-
             }
             catch (DatagatewayException ex)
             {
+                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine(ex.StackTrace);
                 Response.StatusCode = (int)ex.StatusCode;
                 return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
             }

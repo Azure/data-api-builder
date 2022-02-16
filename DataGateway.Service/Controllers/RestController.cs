@@ -101,7 +101,7 @@ namespace Azure.DataGateway.Service.Controllers
             return await HandleOperation(
                 entityName,
                 Operation.Insert,
-                string.Empty);
+                primaryKeyRoute: string.Empty);
         }
 
         /// <summary>

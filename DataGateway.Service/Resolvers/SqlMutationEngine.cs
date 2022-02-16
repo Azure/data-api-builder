@@ -87,7 +87,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (result == null)
             {
-                throw new InvalidOperationException("Failed to resolve any query based on the current configuration.");
+                throw new DatagatewayException("Failed to resolve any query based on the current configuration.", (int)HttpStatusCode.BadRequest, DatagatewayException.SubStatusCodes.UnexpectedError);
             }
 
             return result;

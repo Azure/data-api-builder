@@ -286,7 +286,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             FindRequestContext findRequestContext,
             string primaryKeyRoute,
             bool expectsException,
-            int statusCode = 400,
+            HttpStatusCode statusCode = HttpStatusCode.BadRequest,
             DatagatewayException.SubStatusCodes subStatusCode = DatagatewayException.SubStatusCodes.BadRequest)
         {
             try

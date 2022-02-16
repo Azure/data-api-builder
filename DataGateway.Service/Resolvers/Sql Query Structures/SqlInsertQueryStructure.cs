@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
@@ -22,11 +23,22 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<string> Values { get; }
 
+        /// <summary>
+        /// The inserted columns that the insert will return
+        /// </summary>
+        public List<string> ReturnColumns { get; }
+
         public SqlInsertStructure(string tableName, IMetadataStoreProvider metadataStore, IDictionary<string, object> mutationParams)
         : base(metadataStore, tableName: tableName)
         {
             InsertColumns = new();
             Values = new();
+
+            TableDefinition tableDefinition = GetTableDefinition();
+
+            // return primary key so the inserted row can be identified
+            //ReturnColumns = tableDefinition.PrimaryKey;
+            ReturnColumns = tableDefinition.Columns.Keys.ToList<string>();
 
             foreach (KeyValuePair<string, object> param in mutationParams)
             {

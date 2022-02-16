@@ -188,6 +188,46 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 // actual delete query.
                 $"SELECT [id] FROM { _integrationTableName } " +
                 $"WHERE id = 7 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PutOne_Update_Test",
+                $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
+                $"WHERE id = 7 AND [title] = 'The Hobbit Returns to The Shire' " +
+                $"AND [publisher_id] = 1234" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PutOne_Insert_Test",
+                $"SELECT [id], [title], [issueNumber] FROM { _integration_NonAutoGenPK_TableName } " +
+                $"WHERE id = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'Batman Returns' " +
+                $"AND [issueNumber] = 1234" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PutOne_Insert_BadReq_Test",
+                /// Tests the PutOne functionality with a REST PUT request
+                /// with item that does NOT exist, AND parameters incorrectly match schema, results in BadRequest.
+                /// sqlQuery represents the query used to get 'expected' result of zero items.
+                $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
+                $"WHERE id > 5000 AND [title] = 'The Hobbit Returns to The Shire' " +
+                $"AND [publisher_id] = 1234" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PutOne_Insert_BadReq_NonNullable_Test",
+                /// Tests the PutOne functionality with a REST PUT request
+                /// with item that does not include publisher_id,
+                /// an IsNullable = false field, results in BadRequest.
+                $"INSERT INTO { _integrationTableName } " +
+                $"(title)" +
+                $"VALUES ('The Hobbit Returns to The Shire')"
+            },
+            {
+                "PutOne_Insert_PKAutoGen_Test",
+                $"INSERT INTO { _integrationTableName } " +
+                $"(id, title, publisher_id)" +
+                $"VALUES (1000,'The Hobbit Returns to The Shire',1234)"
+
             }
         };
 

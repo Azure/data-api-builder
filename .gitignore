@@ -32,3 +32,4 @@ local.settings.json
 
 .fake
 .ionide
+*.orig

@@ -463,7 +463,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     // pass the parameters of the subquery to the current query so upmost query has all the
                     // parameters of the query tree and it can pass them to the database query executor
-                    foreach (KeyValuePair<string, object> parameter in subquery.Parameters)
+                    foreach (KeyValuePair<string, object?> parameter in subquery.Parameters)
                     {
                         Parameters.Add(parameter.Key, parameter.Value);
                     }

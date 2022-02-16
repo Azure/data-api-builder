@@ -180,7 +180,7 @@ namespace Azure.DataGateway.Service.Resolvers
             IDictionary<string, object> parameters)
         {
             string queryString;
-            Dictionary<string, object> queryParameters;
+            Dictionary<string, object?> queryParameters;
 
             switch (operationType)
             {

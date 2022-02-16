@@ -27,7 +27,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="sqltext">Sql text to be executed.</param>
         /// <param name="parameters">The parameters used to execute the SQL text.</param>
         /// <returns>DbDataReader object for reading the result set.</returns>
-        public async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object> parameters)
+        public async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object?> parameters)
         {
             ConnectionT conn = new();
             conn.ConnectionString = _datagatewayConfig.DatabaseConnection.ConnectionString;
@@ -37,7 +37,7 @@ namespace Azure.DataGateway.Service.Resolvers
             cmd.CommandType = CommandType.Text;
             if (parameters != null)
             {
-                foreach (KeyValuePair<string, object> parameterEntry in parameters)
+                foreach (KeyValuePair<string, object?> parameterEntry in parameters)
                 {
                     DbParameter parameter = cmd.CreateParameter();
                     parameter.ParameterName = "@" + parameterEntry.Key;

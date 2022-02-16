@@ -39,7 +39,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Parameters values required to execute the query.
         /// </summary>
-        public Dictionary<string, object> Parameters { get; set; }
+        public Dictionary<string, object?> Parameters { get; set; }
         /// <summary>
         /// Counter.Next() can be used to get a unique integer within this
         /// query, which can be used to create unique aliases, parameters or
@@ -98,7 +98,7 @@ namespace Azure.DataGateway.Service.Resolvers
         ///  Add parameter to Parameters and return the name associated with it
         /// </summary>
         /// <param name="value">Value to be assigned to parameter, which can be null for nullable columns.</param>
-        public string MakeParamWithValue(object value)
+        public string MakeParamWithValue(object? value)
         {
             string paramName = $"param{Counter.Next()}";
             Parameters.Add(paramName, value);

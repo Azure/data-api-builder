@@ -147,6 +147,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"WHERE id = 567 AND book_id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "FindByIdTestInvalidPrimaryKeyRoute",
+                $"SELECT [id] FROM { _integrationTableName } " +
+                $"WHERE 1 = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "FindByIdTestWithInvalidFields",
                 $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
                 $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"

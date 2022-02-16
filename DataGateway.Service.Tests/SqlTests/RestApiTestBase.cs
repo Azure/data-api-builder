@@ -558,6 +558,24 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Tests the REST Api for FindById operation with an invalid Primary Key Route.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestInvalidPrimaryKeyRoute()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/",
+                queryString: string.Empty,
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindByIdTestInvalidPrimaryKeyRoute)),
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "The request is invalid since it contains a primary key with no value specified.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
         /// Tests the REST Api for FindById operation with a query string
         /// having invalid field names.
         /// </summary>

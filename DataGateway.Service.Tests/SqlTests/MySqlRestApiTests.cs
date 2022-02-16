@@ -290,6 +290,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "FindByIdTestInvalidPrimaryKeyRoute",
+                @"
+                    SELECT JSON_OBJECT('id', id) AS data
+                    FROM (
+                        SELECT id
+                        FROM " + _integrationTableName + @"
+                    ) AS subq
+                "
+            },
+            {
                 "FindByIdTestWithInvalidFields",
                 @"
                     SELECT JSON_OBJECT('id', id, 'name', name, 'type', type) AS data

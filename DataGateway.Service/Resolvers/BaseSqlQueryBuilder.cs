@@ -124,7 +124,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         protected string Build(PredicateOperand operand)
         {
-            if (operand is null)
+            if (operand == null)
             {
                 throw new ArgumentNullException(nameof(operand));
             }

@@ -160,7 +160,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 IObjectField schemaField,
                 FieldNode? queryField,
                 IncrementingInteger counter
-        ) : this(metadataStoreProvider, string.Empty, counter)
+        ) : this(metadataStoreProvider, tableName: string.Empty, counter)
         {
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;

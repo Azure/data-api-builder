@@ -511,9 +511,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public virtual async Task InsertOneWithNoValidFieldInBodyJsonBodyTest()
         {
             string requestBody = @"
-            {
-                ""tree"": ""leaves""
-            }";
+            {}";
 
             string expectedLocationHeader = $"/id/{STARTING_ID_FOR_TEST_INSERTS}";
             await SetupAndRunRestApiTest(

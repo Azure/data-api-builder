@@ -476,7 +476,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Tests the InsertOne functionality with an invalid type in the request body.
+        /// Tests the InsertOne functionality with a type that will not parse correctly in the request body.
         /// </summary>
         [TestMethod]
         public virtual async Task InsertOneWithInvalidTypeInJsonBodyTest()

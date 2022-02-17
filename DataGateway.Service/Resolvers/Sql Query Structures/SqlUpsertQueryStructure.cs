@@ -75,7 +75,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 throw new DatagatewayException(
                     message: "Update mutation does not update any values",
-                    statusCode: (int)HttpStatusCode.BadRequest,
+                    statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
             }
         }
@@ -137,7 +137,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 // ArgumentException thrown from GetParamAsColumnSystemType()
                 throw new DatagatewayException(
                     message: ex.Message,
-                    statusCode: (int)HttpStatusCode.BadRequest,
+                    statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
             }
         }
@@ -170,7 +170,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     // the table schema configures the column with a default value.
                     throw new DatagatewayException(
                         message: "Request must define values for all nullable and non-default valued columns.",
-                        statusCode: (int)HttpStatusCode.BadRequest,
+                        statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
                 }
 
@@ -198,7 +198,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
                 throw new DatagatewayException(
                     message: $"Unexpected value for column \"{columnName}\" provided.",
-                    statusCode: (int)HttpStatusCode.BadRequest,
+                    statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
             }
 

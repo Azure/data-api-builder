@@ -45,7 +45,7 @@ namespace Azure.DataGateway.Service.Models
                 {
                     throw new DatagatewayException(
                         message: "The request body is not in a valid JSON format.",
-                        statusCode: (int)HttpStatusCode.BadRequest,
+                        statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
                 }
             }

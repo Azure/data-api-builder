@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text.Json;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
@@ -176,7 +177,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     {
                         Console.Error.WriteLine(e);
                         string notValidString = $"Parameter after with value {afterObject} is not a valid pagination token.";
-                        throw new DatagatewayException(notValidString, 400, DatagatewayException.SubStatusCodes.BadRequest);
+                        throw new DatagatewayException(notValidString, HttpStatusCode.BadRequest, DatagatewayException.SubStatusCodes.BadRequest);
                     }
                     else
                     {

@@ -45,7 +45,7 @@ namespace Azure.DataGateway.Service.Controllers
         /// <param name="message">string provides a message associated with this error.</param>
         /// <param name="status">int provides the http response status code associated with this error</param>
         /// <returns></returns>
-        public static JsonResult ErrorResponse(string code, string message, int status)
+        public static JsonResult ErrorResponse(string code, string message, HttpStatusCode status)
         {
             return new JsonResult(new
             {
@@ -53,7 +53,7 @@ namespace Azure.DataGateway.Service.Controllers
                 {
                     code = code,
                     message = message,
-                    status = status
+                    status = (int)status
                 }
             });
         }
@@ -206,7 +206,7 @@ namespace Azure.DataGateway.Service.Controllers
                         default:
                             throw new DatagatewayException(
                                 message: $"Not Found",
-                                statusCode: (int)HttpStatusCode.NotFound,
+                                statusCode: HttpStatusCode.NotFound,
                                 subStatusCode: DatagatewayException.SubStatusCodes.EntityNotFound);
                     }
                 }
@@ -215,7 +215,7 @@ namespace Azure.DataGateway.Service.Controllers
             {
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine(ex.StackTrace);
-                Response.StatusCode = ex.StatusCode;
+                Response.StatusCode = (int)ex.StatusCode;
                 return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
             }
             catch (Exception ex)
@@ -226,7 +226,7 @@ namespace Azure.DataGateway.Service.Controllers
                 return ErrorResponse(
                     DatagatewayException.SubStatusCodes.UnexpectedError.ToString(),
                     SERVER_ERROR,
-                    (int)HttpStatusCode.InternalServerError);
+                    HttpStatusCode.InternalServerError);
             }
         }
     }

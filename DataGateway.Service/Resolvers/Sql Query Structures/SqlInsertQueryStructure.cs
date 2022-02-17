@@ -69,7 +69,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
                     throw new DatagatewayException(
                         message: $"Unexpected value for column \"{columnName}\" provided.",
-                        statusCode: (int)HttpStatusCode.BadRequest,
+                        statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
                 }
 
@@ -79,7 +79,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 throw new DatagatewayException(
                     message: ex.Message,
-                    statusCode: (int)HttpStatusCode.BadRequest,
+                    statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
             }
         }

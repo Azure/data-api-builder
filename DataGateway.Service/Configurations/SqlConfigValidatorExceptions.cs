@@ -519,7 +519,7 @@ namespace Azure.DataGateway.Service.Configurations
             List<string> fieldsWithArguments = new();
             foreach (string fieldName in paginationFieldNames)
             {
-                if (GetArgumentFromField(typeFields[fieldName]).Count > 0)
+                if (GetArgumentsFromField(typeFields[fieldName]).Count > 0)
                 {
                     fieldsWithArguments.Add(fieldName);
                 }
@@ -629,19 +629,6 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate the GraphQLType has a "fields" element
-        /// </summary>
-        private void ValidateGraphQLTypeHasFields(GraphqlType type)
-        {
-            if (type.Fields == null || type.Fields.Count == 0)
-            {
-                throw new ConfigValidationException(
-                    "Type must have \"Fields\" element.",
-                    _configValidationStack);
-            }
-        }
-
-        /// <summary>
         /// Validate the scalar fields and table columns match one to one
         /// </summary>
         /// <remarks>
@@ -732,22 +719,73 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate scalar type fields nullability
+        /// Validate that the scalar fields that match table columns do
+        /// not have arguments
+        /// </summary>
+        private void ValidateScalarFieldsMatchingTableColumnsHaveNoArgs(
+            string typeName,
+            string typeTable,
+            Stack<string> tableColumnsPosition
+        )
+        {
+            Dictionary<string, FieldDefinitionNode> scalarFields = GetScalarFields(GetTypeFields(typeName));
+            IEnumerable<String> fieldsWithArgs =
+                scalarFields.Keys.Where(fieldName => GetArgumentsFromField(scalarFields[fieldName]).Count > 0)
+                                    .Intersect(GetTableWithName(typeTable).Columns.Keys);
+
+            if (fieldsWithArgs.Any())
+            {
+                throw new ConfigValidationException(
+                    $"Fields [{string.Join(", ", fieldsWithArgs)}] which match with table columns " +
+                    $"in {PrettyPrintValidationStack(tableColumnsPosition)} should not have any arguments.",
+                    _schemaValidationStack
+                );
+            }
+        }
+
+        /// <summary>
+        /// Validate the nullability of scalar type fields which match table columns
         /// </summary>
         /// <remarks>
         /// Currently it validates that all scalar type fields are non nullable.
         /// This will have to change when nullable database types are supported
         /// </remarks>
-        private void ValidateScalarFieldNullability(string typeName)
+        private void ValidateScalarFieldsMatchingTableColumnsNullability(
+            string typeName,
+            string typeTable,
+            Stack<string> tableColumnsPosition)
         {
             Dictionary<string, FieldDefinitionNode> scalarFields = GetScalarFields(GetTypeFields(typeName));
-            IEnumerable<string> nullableScalarFields = scalarFields.Keys.Where(fieldName => !scalarFields[fieldName].Type.IsNonNullType());
+            IEnumerable<string> nullableScalarFields =
+                scalarFields.Keys.Where(fieldName => !scalarFields[fieldName].Type.IsNonNullType())
+                                    .Intersect(GetTableWithName(typeTable).Columns.Keys);
 
             if (nullableScalarFields.Any())
             {
                 throw new ConfigValidationException(
-                    $"Fields [{string.Join(", ", nullableScalarFields)}] should return a non nullable type.",
+                    $"Fields [{string.Join(", ", nullableScalarFields)}] which match with table columns " +
+                    $"in {PrettyPrintValidationStack(tableColumnsPosition)} should return a non nullable type.",
                     _schemaValidationStack);
+            }
+        }
+
+        /// <summary>
+        /// Validate that type has no fields which return a custom type
+        /// </summary>
+        /// <remarks>
+        /// Called if config type has no fields
+        /// </remarks>
+        private void ValidateNoFieldsWithInnerCustomType(string typeName, Dictionary<string, FieldDefinitionNode> fields)
+        {
+            IEnumerable<String> fieldsWithCustomTypes = fields.Keys.Where(fieldName => IsInnerTypeCustom(fields[fieldName].Type));
+
+            if (fieldsWithCustomTypes.Any())
+            {
+                throw new ConfigValidationException(
+                    $"Type \"{typeName}\" has no fields to resolve schema fields which return custom types [" +
+                    string.Join(", ", fieldsWithCustomTypes) + "].",
+                    _configValidationStack
+                );
             }
         }
 

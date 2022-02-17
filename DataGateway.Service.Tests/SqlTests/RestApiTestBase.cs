@@ -419,6 +419,146 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         #region Negative Tests
         /// <summary>
+        /// Tests the InsertOne functionality with an invalid Query String.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithInvalidQueryStringTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            string expectedLocationHeader = $"/id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?/id/5001",
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Query string for POST requests is an invalid url.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
+        /// <summary>
+        /// Tests the InsertOne functionality with an array as the request body.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithInvalidArrayJsonBodyTest()
+        {
+            string requestBody = @"
+            [{
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }]";
+
+            string expectedLocationHeader = $"/id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "While processing your request the server ran into an unexpected error.",
+                expectedStatusCode: HttpStatusCode.InternalServerError,
+                expectedSubStatusCode: "UnexpectedError",
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
+        /// <summary>
+        /// Tests the InsertOne functionality with an invalid type in the request body.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithInvalidTypeInJsonBodyTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": [""My New Book"", ""Another new Book"", {""author"": ""unknown""}],
+                ""publisher_id"": [1234, 4321]
+            }";
+
+            string expectedLocationHeader = $"/id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Could not perform the given mutation on entity books.",
+                expectedStatusCode: HttpStatusCode.InternalServerError,
+                expectedSubStatusCode: "DatabaseOperationFailed",
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
+        /// <summary>
+        /// Tests the InsertOne functionality with no valid fields in the request body.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithNoValidFieldInBodyJsonBodyTest()
+        {
+            string requestBody = @"
+            {
+                ""tree"": ""leaves""
+            }";
+
+            string expectedLocationHeader = $"/id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Invalid request body. Missing required field in body: title",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
+        /// <summary>
+        /// Tests the InsertOne functionality with an invalid field in the request body.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithInvalidFieldInBodyJsonBodyTest()
+        {
+            string requestBody = @"
+            {
+                ""id"": " + STARTING_ID_FOR_TEST_INSERTS +
+            "}";
+
+            string expectedLocationHeader = $"/id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Invalid request body. Contained unexpected field in body: id",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
+        /// <summary>
         /// Tests the PutOne functionality with a REST PUT request
         /// with item that does NOT exist, AND parameters incorrectly match schema, results in BadRequest.
         /// sqlQuery represents the query used to get 'expected' result of zero items.

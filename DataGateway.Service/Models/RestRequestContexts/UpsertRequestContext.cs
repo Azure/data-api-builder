@@ -33,10 +33,10 @@ namespace Azure.DataGateway.Service.Models
                 }
                 catch (JsonException)
                 {
-                    throw new DatagatewayException(
+                    throw new DataGatewayException(
                         message: "The request body is not in a valid JSON format.",
                         statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
             }
             else

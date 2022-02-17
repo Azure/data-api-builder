@@ -246,6 +246,14 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
+        /// Checks if config type has fields
+        /// </summary>
+        private static bool TypeHasFields(GraphQLType type)
+        {
+            return type.Fields != null;
+        }
+
+        /// <summary>
         /// Checks if the type is a nested list type
         /// e.g. [[Book]], [[[Book!]!]!]!
         /// </summary>
@@ -370,7 +378,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Get arguments from field and return a dictionary in [argName, argument] format
         /// </summary>
-        private static Dictionary<string, InputValueDefinitionNode> GetArgumentFromField(FieldDefinitionNode field)
+        private static Dictionary<string, InputValueDefinitionNode> GetArgumentsFromField(FieldDefinitionNode field)
         {
             Dictionary<string, InputValueDefinitionNode> arguments = new();
 
@@ -389,30 +397,6 @@ namespace Azure.DataGateway.Service.Configurations
         private bool IsScalarType(ITypeNode type)
         {
             return !IsCustomType(type) && !IsListType(type);
-        }
-
-        /// <summary>
-        /// Checks if the given GraphQL typename has at least 1 custom
-        /// field type which means it is either
-        /// - a custom type or
-        /// - a list of custom type or
-        /// - a pagination type.
-        /// </summary>
-        private bool HasAnyCustomFieldInGraphQLType(Dictionary<string, FieldDefinitionNode> fieldDefinitions)
-        {
-            bool hasAnyCustomField = false;
-            foreach (KeyValuePair<string, FieldDefinitionNode> nameFieldPair in fieldDefinitions)
-            {
-                FieldDefinitionNode field = nameFieldPair.Value;
-
-                if (IsInnerTypeCustom(field.Type))
-                {
-                    hasAnyCustomField = true;
-                    break;
-                }
-            }
-
-            return hasAnyCustomField;
         }
 
         /// <summary>

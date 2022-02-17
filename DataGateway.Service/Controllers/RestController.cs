@@ -204,14 +204,14 @@ namespace Azure.DataGateway.Service.Controllers
                             // Empty result set indicates an Update successfully occurred.
                             return new NoContentResult();
                         default:
-                            throw new DatagatewayException(
+                            throw new DataGatewayException(
                                 message: $"Not Found",
                                 statusCode: HttpStatusCode.NotFound,
-                                subStatusCode: DatagatewayException.SubStatusCodes.EntityNotFound);
+                                subStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound);
                     }
                 }
             }
-            catch (DatagatewayException ex)
+            catch (DataGatewayException ex)
             {
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine(ex.StackTrace);
@@ -224,7 +224,7 @@ namespace Azure.DataGateway.Service.Controllers
                 Console.Error.WriteLine(ex.StackTrace);
                 Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 return ErrorResponse(
-                    DatagatewayException.SubStatusCodes.UnexpectedError.ToString(),
+                    DataGatewayException.SubStatusCodes.UnexpectedError.ToString(),
                     SERVER_ERROR,
                     HttpStatusCode.InternalServerError);
             }

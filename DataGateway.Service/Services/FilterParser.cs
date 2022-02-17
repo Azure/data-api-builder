@@ -38,7 +38,7 @@ namespace Azure.DataGateway.Service.Services
             }
             catch (ODataException e)
             {
-                throw new DatagatewayException(e.Message, HttpStatusCode.BadRequest, DatagatewayException.SubStatusCodes.BadRequest);
+                throw new DataGatewayException(e.Message, HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
             }
         }
     }

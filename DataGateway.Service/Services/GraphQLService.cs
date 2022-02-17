@@ -59,9 +59,9 @@ namespace Azure.DataGateway.Services
             })
                 .AddErrorFilter(error =>
             {
-                if (error.Exception is DatagatewayException)
+                if (error.Exception is DataGatewayException)
                 {
-                    DatagatewayException thrownException = (DatagatewayException)error.Exception;
+                    DataGatewayException thrownException = (DataGatewayException)error.Exception;
                     return error.RemoveException()
                             .RemoveLocations()
                             .RemovePath()

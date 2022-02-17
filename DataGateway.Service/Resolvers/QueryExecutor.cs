@@ -14,11 +14,11 @@ namespace Azure.DataGateway.Service.Resolvers
     public class QueryExecutor<ConnectionT> : IQueryExecutor
         where ConnectionT : DbConnection, new()
     {
-        private readonly DataGatewayConfig _datagatewayConfig;
+        private readonly DataGatewayConfig _dataGatewayConfig;
 
         public QueryExecutor(IOptions<DataGatewayConfig> dataGatewayConfig)
         {
-            _datagatewayConfig = dataGatewayConfig.Value;
+            _dataGatewayConfig = dataGatewayConfig.Value;
         }
 
         /// <summary>
@@ -30,7 +30,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object?> parameters)
         {
             ConnectionT conn = new();
-            conn.ConnectionString = _datagatewayConfig.DatabaseConnection.ConnectionString;
+            conn.ConnectionString = _dataGatewayConfig.DatabaseConnection.ConnectionString;
             await conn.OpenAsync();
             DbCommand cmd = conn.CreateCommand();
             cmd.CommandText = sqltext;

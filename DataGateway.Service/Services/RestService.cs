@@ -129,10 +129,10 @@ namespace Azure.DataGateway.Services
             }
             else
             {
-                throw new DatagatewayException(
+                throw new DataGatewayException(
                     message: "Unauthorized",
                     statusCode: HttpStatusCode.Unauthorized,
-                    subStatusCode: DatagatewayException.SubStatusCodes.AuthorizationCheckFailed
+                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
                 );
             }
         }

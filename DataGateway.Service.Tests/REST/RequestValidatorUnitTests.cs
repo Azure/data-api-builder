@@ -87,7 +87,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         /// <summary>
         /// Simulated client request contains matching number of Primary Key columns,
         /// but defines column that is NOT a primary key. We verify that the correct
-        /// status code and sub status code is a part of the DatagatewayException thrown.
+        /// status code and sub status code is a part of the DataGatewayException thrown.
         /// </summary>
         [TestMethod]
         public void RequestWithInvalidPrimaryKeyTest()
@@ -104,7 +104,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 _metadataStore.Object,
                 expectsException: true,
                 statusCode: HttpStatusCode.BadRequest,
-                subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+                subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
         }
 
         /// <summary>
@@ -206,7 +206,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         #region Helper Methods
         /// <summary>
         /// Runs the Validation method to show success/failure. Extracted to separate helper method
-        /// to avoid code duplication. Only attempt to catch DatagatewayException since
+        /// to avoid code duplication. Only attempt to catch DataGatewayException since
         /// that exception determines whether we encounter an expected validation failure in case
         /// of negative tests, vs downstream service failure.
         /// </summary>
@@ -220,7 +220,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             IMetadataStoreProvider metadataStore,
             bool expectsException,
             HttpStatusCode statusCode = HttpStatusCode.BadRequest,
-            DatagatewayException.SubStatusCodes subStatusCode = DatagatewayException.SubStatusCodes.BadRequest)
+            DataGatewayException.SubStatusCodes subStatusCode = DataGatewayException.SubStatusCodes.BadRequest)
         {
             try
             {
@@ -232,7 +232,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                     Assert.Fail();
                 }
             }
-            catch (DatagatewayException ex)
+            catch (DataGatewayException ex)
             {
                 //If we are not expecting an exception, fail the test. Completing test method without
                 //failure will pass the test, so no Assert.Pass() is necessary (nor exists).
@@ -271,11 +271,11 @@ namespace Azure.DataGateway.Service.Tests.REST
 
                 Assert.Fail();
             }
-            catch (DatagatewayException ex)
+            catch (DataGatewayException ex)
             {
                 // validates the status code and sub status code match the expected values.
                 Assert.AreEqual(HttpStatusCode.BadRequest, ex.StatusCode);
-                Assert.AreEqual(DatagatewayException.SubStatusCodes.BadRequest, ex.SubStatusCode);
+                Assert.AreEqual(DataGatewayException.SubStatusCodes.BadRequest, ex.SubStatusCode);
             }
         }
 
@@ -287,7 +287,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             string primaryKeyRoute,
             bool expectsException,
             HttpStatusCode statusCode = HttpStatusCode.BadRequest,
-            DatagatewayException.SubStatusCodes subStatusCode = DatagatewayException.SubStatusCodes.BadRequest)
+            DataGatewayException.SubStatusCodes subStatusCode = DataGatewayException.SubStatusCodes.BadRequest)
         {
             try
             {
@@ -296,7 +296,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 //If expecting an exception, the code should not reach this point.
                 Assert.IsFalse(expectsException, "No exception thrown when exception expected.");
             }
-            catch (DatagatewayException ex)
+            catch (DataGatewayException ex)
             {
                 //If we are not expecting an exception, fail the test. Completing test method without
                 //failure will pass the test, so no Assert.Pass() is necessary (nor exists).

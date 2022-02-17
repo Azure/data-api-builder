@@ -52,7 +52,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="tableName"></param>
         /// <param name="metadataStore"></param>
         /// <param name="mutationParams"></param>
-        /// <exception cref="DatagatewayException"></exception>
+        /// <exception cref="DataGatewayException"></exception>
         public SqlUpsertQueryStructure(string tableName, IMetadataStoreProvider metadataStore, IDictionary<string, object> mutationParams)
         : base(metadataStore)
         {
@@ -73,10 +73,10 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (UpdateOperations.Count == 0)
             {
-                throw new DatagatewayException(
+                throw new DataGatewayException(
                     message: "Update mutation does not update any values",
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
         }
 
@@ -135,10 +135,10 @@ namespace Azure.DataGateway.Service.Resolvers
             catch (ArgumentException ex)
             {
                 // ArgumentException thrown from GetParamAsColumnSystemType()
-                throw new DatagatewayException(
+                throw new DataGatewayException(
                     message: ex.Message,
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
         }
 
@@ -168,10 +168,10 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     // Non Nullable columns must have a value defined in request unless
                     // the table schema configures the column with a default value.
-                    throw new DatagatewayException(
+                    throw new DataGatewayException(
                         message: "Request must define values for all nullable and non-default valued columns.",
                         statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
 
             }
@@ -196,10 +196,10 @@ namespace Azure.DataGateway.Service.Resolvers
             else
             {
                 // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
-                throw new DatagatewayException(
+                throw new DataGatewayException(
                     message: $"Unexpected value for column \"{columnName}\" provided.",
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
 
             Values.Add($"@{paramName}");

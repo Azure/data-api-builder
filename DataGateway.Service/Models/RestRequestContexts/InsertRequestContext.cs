@@ -20,24 +20,33 @@ namespace Azure.DataGateway.Service.Models
             JsonElement insertPayloadRoot,
             OperationAuthorizationRequirement httpVerb,
             Operation operationType)
+            : base(httpVerb, entityName)
         {
-            EntityName = entityName;
             FieldsToBeReturned = new();
             PrimaryKeyValuePairs = new();
-            HttpVerb = httpVerb;
             OperationType = operationType;
-            if (!string.IsNullOrEmpty(insertPayloadRoot.ToString()))
+
+            string? payload = insertPayloadRoot.ToString();
+            if (!string.IsNullOrEmpty(payload))
             {
                 try
                 {
-                    FieldValuePairsInBody = JsonSerializer.Deserialize<Dictionary<string, object>>(insertPayloadRoot.ToString());
+                    Dictionary<string, object>? fieldValuePairs = JsonSerializer.Deserialize<Dictionary<string, object>>(payload);
+                    if (fieldValuePairs != null)
+                    {
+                        FieldValuePairsInBody = fieldValuePairs;
+                    }
+                    else
+                    {
+                        throw new JsonException("Failed to deserialize the insert payload");
+                    }
                 }
                 catch (JsonException)
                 {
-                    throw new DatagatewayException(
+                    throw new DataGatewayException(
                         message: "The request body is not in a valid JSON format.",
                         statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
             }
             else

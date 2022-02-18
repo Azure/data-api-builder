@@ -66,16 +66,16 @@ namespace Azure.DataGateway.Service.Resolvers
         /// If this query is built because of a GraphQL query (as opposed to
         /// REST), then this is set to the resolver context of that query.
         /// </summary>
-        IResolverContext _ctx;
+        IResolverContext? _ctx;
 
         /// <summary>
         /// The underlying type of the type returned by this query see, the
         /// comment on UnderlyingType to understand what an underlying type is.
         /// </summary>
-        ObjectType _underlyingFieldType;
+        ObjectType _underlyingFieldType = null!;
 
-        private readonly GraphqlType _typeInfo;
-        private List<Column> _primaryKey;
+        private readonly GraphQLType _typeInfo = null!;
+        private List<Column>? _primaryKey;
 
         /// <summary>
         /// Generate the structure for a SQL query based on GraphQL query
@@ -158,29 +158,33 @@ namespace Azure.DataGateway.Service.Resolvers
                 IDictionary<string, object> queryParams,
                 IMetadataStoreProvider metadataStoreProvider,
                 IObjectField schemaField,
-                FieldNode queryField,
+                FieldNode? queryField,
                 IncrementingInteger counter
-        ) : this(metadataStoreProvider, counter)
+        ) : this(metadataStoreProvider, counter, tableName: string.Empty)
         {
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
             _underlyingFieldType = UnderlyingType(outputType);
 
-            _typeInfo = MetadataStoreProvider.GetGraphqlType(_underlyingFieldType.Name);
+            _typeInfo = MetadataStoreProvider.GetGraphQLType(_underlyingFieldType.Name);
             PaginationMetadata.IsPaginated = _typeInfo.IsPaginationType;
 
             if (PaginationMetadata.IsPaginated)
             {
-                // process pagination fields without overriding them
-                ProcessPaginationFields(queryField.SelectionSet.Selections);
+                if (queryField != null && queryField.SelectionSet != null)
+                {
+                    // process pagination fields without overriding them
+                    ProcessPaginationFields(queryField.SelectionSet.Selections);
 
-                // override schemaField and queryField with the schemaField and queryField of *Connection.items
-                queryField = ExtractItemsQueryField(queryField);
+                    // override schemaField and queryField with the schemaField and queryField of *Connection.items
+                    queryField = ExtractItemsQueryField(queryField);
+                }
+
                 schemaField = ExtractItemsSchemaField(schemaField);
 
                 outputType = schemaField.Type;
                 _underlyingFieldType = UnderlyingType(outputType);
-                _typeInfo = MetadataStoreProvider.GetGraphqlType(_underlyingFieldType.Name);
+                _typeInfo = MetadataStoreProvider.GetGraphQLType(_underlyingFieldType.Name);
 
                 // this is required to correctly keep track of which pagination metadata
                 // refers to what section of the json
@@ -198,9 +202,9 @@ namespace Azure.DataGateway.Service.Resolvers
             TableName = _typeInfo.Table;
             TableAlias = CreateTableAlias();
 
-            if (queryField != null)
+            if (queryField != null && queryField.SelectionSet != null)
             {
-                AddGraphqlFields(queryField.SelectionSet.Selections);
+                AddGraphQLFields(queryField.SelectionSet.Selections);
             }
 
             if (outputType.IsNonNullType())
@@ -224,7 +228,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     if (first <= 0)
                     {
-                        throw new DatagatewayException($"first must be a positive integer for {schemaField.Name}", HttpStatusCode.BadRequest, DatagatewayException.SubStatusCodes.BadRequest);
+                        throw new DataGatewayException($"first must be a positive integer for {schemaField.Name}", HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
                     }
 
                     _limit = (uint)first;
@@ -284,7 +288,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// constructors.
         /// </summary>
         private SqlQueryStructure(IMetadataStoreProvider metadataStoreProvider, IncrementingInteger counter, string tableName = "")
-            : base(metadataStoreProvider, counter, tableName)
+            : base(metadataStoreProvider, counter: counter, tableName: tableName)
         {
             JoinQueries = new();
             Joins = new();
@@ -346,7 +350,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (value != null)
                 {
                     parameterName = MakeParamWithValue(
-                        GetParamAsColumnSystemType(value.ToString(), field));
+                        GetParamAsColumnSystemType(value.ToString()!, field));
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(TableAlias, field)),
                         op,
@@ -355,18 +359,18 @@ namespace Azure.DataGateway.Service.Resolvers
                 else
                 {
                     // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
-                    throw new DatagatewayException(
+                    throw new DataGatewayException(
                         message: $"Unexpected value for column \"{field}\" provided.",
                         statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
             }
             catch (ArgumentException ex)
             {
-                throw new DatagatewayException(
+                throw new DataGatewayException(
                   message: ex.Message,
                   statusCode: HttpStatusCode.BadRequest,
-                  subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+                  subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
         }
 
@@ -414,7 +418,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             foreach (ISelectionNode node in paginationSelections)
             {
-                FieldNode field = node as FieldNode;
+                FieldNode field = (FieldNode)node;
                 string fieldName = field.Name.Value;
 
                 switch (fieldName)
@@ -433,17 +437,17 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// AddGraphqlFields looks at the fields that are selected in the
+        /// AddGraphQLFields looks at the fields that are selected in the
         /// GraphQL query and all the necessary elements to the query which are
         /// required to return these fields. This includes adding the columns
         /// to the result set, but also adding any subqueries or joins that are
         /// required to fetch nested data.
         /// </summary>
-        void AddGraphqlFields(IReadOnlyList<ISelectionNode> Selections)
+        void AddGraphQLFields(IReadOnlyList<ISelectionNode> Selections)
         {
             foreach (ISelectionNode node in Selections)
             {
-                FieldNode field = node as FieldNode;
+                FieldNode field = (FieldNode)node;
                 string fieldName = field.Name.Value;
 
                 if (field.SelectionSet == null)
@@ -452,9 +456,14 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
                 else
                 {
-                    IObjectField subschemaField = _underlyingFieldType.Fields[fieldName];
+                    IObjectField? subschemaField = _underlyingFieldType.Fields[fieldName];
 
                     IDictionary<string, object> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field);
+                    if (_ctx == null)
+                    {
+                        throw new InvalidOperationException("No GraphQL context exists");
+                    }
+
                     SqlQueryStructure subquery = new(_ctx, subqueryParams, MetadataStoreProvider, subschemaField, field, Counter);
 
                     if (PaginationMetadata.IsPaginated)
@@ -470,7 +479,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     // pass the parameters of the subquery to the current query so upmost query has all the
                     // parameters of the query tree and it can pass them to the database query executor
-                    foreach (KeyValuePair<string, object> parameter in subquery.Parameters)
+                    foreach (KeyValuePair<string, object?> parameter in subquery.Parameters)
                     {
                         Parameters.Add(parameter.Key, parameter.Value);
                     }
@@ -482,15 +491,15 @@ namespace Azure.DataGateway.Service.Resolvers
                     // use the _underlyingType from the subquery which will be overridden appropriately if the query is paginated
                     ObjectType subunderlyingType = subquery._underlyingFieldType;
 
-                    GraphqlType subTypeInfo = MetadataStoreProvider.GetGraphqlType(subunderlyingType.Name);
+                    GraphQLType subTypeInfo = MetadataStoreProvider.GetGraphQLType(subunderlyingType.Name);
                     TableDefinition subTableDefinition = MetadataStoreProvider.GetTableDefinition(subTypeInfo.Table);
-                    GraphqlField fieldInfo = _typeInfo.Fields[fieldName];
+                    GraphQLField fieldInfo = _typeInfo.Fields[fieldName];
 
                     string subtableAlias = subquery.TableAlias;
 
                     switch (fieldInfo.RelationshipType)
                     {
-                        case GraphqlRelationshipType.ManyToOne:
+                        case GraphQLRelationshipType.ManyToOne:
                             subquery.Predicates.AddRange(CreateJoinPredicates(
                                 TableAlias,
                                 GetTableDefinition().ForeignKeys[fieldInfo.LeftForeignKey].Columns,
@@ -498,7 +507,7 @@ namespace Azure.DataGateway.Service.Resolvers
                                 subTableDefinition.PrimaryKey
                             ));
                             break;
-                        case GraphqlRelationshipType.OneToMany:
+                        case GraphQLRelationshipType.OneToMany:
                             subquery.Predicates.AddRange(CreateJoinPredicates(
                                 TableAlias,
                                 PrimaryKey(),
@@ -506,7 +515,7 @@ namespace Azure.DataGateway.Service.Resolvers
                                 subTableDefinition.ForeignKeys[fieldInfo.RightForeignKey].Columns
                             ));
                             break;
-                        case GraphqlRelationshipType.ManyToMany:
+                        case GraphQLRelationshipType.ManyToMany:
                             string associativeTableName = fieldInfo.AssociativeTable;
                             string associativeTableAlias = CreateTableAlias();
 
@@ -519,20 +528,20 @@ namespace Azure.DataGateway.Service.Resolvers
                             ));
 
                             subquery.Joins.Add(new SqlJoinStructure
-                            {
-                                TableName = associativeTableName,
-                                TableAlias = associativeTableAlias,
-                                Predicates = CreateJoinPredicates(
+                            (
+                                associativeTableName,
+                                associativeTableAlias,
+                                CreateJoinPredicates(
                                         associativeTableAlias,
                                         associativeTableDefinition.ForeignKeys[fieldInfo.RightForeignKey].Columns,
                                         subtableAlias,
                                         subTableDefinition.PrimaryKey
                                     ).ToList()
-                            });
+                            ));
 
                             break;
 
-                        case GraphqlRelationshipType.None:
+                        case GraphQLRelationshipType.None:
                             throw new NotSupportedException("Cannot do a join when there is no relationship");
                         default:
                             throw new NotImplementedException("OneToOne and ManyToMany relationships are not yet implemented");
@@ -592,7 +601,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public bool IsSubqueryColumn(Column column)
         {
-            return JoinQueries.ContainsKey(column.TableAlias);
+            return column.TableAlias == null ? false : JoinQueries.ContainsKey(column.TableAlias);
         }
 
         /// <summary>

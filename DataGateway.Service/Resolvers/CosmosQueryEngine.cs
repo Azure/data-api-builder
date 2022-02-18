@@ -1,3 +1,4 @@
+# nullable disable
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -91,14 +92,18 @@ namespace Azure.DataGateway.Services
                 return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(res.ToString()), null);
             }
 
-            JObject firstItem = null;
-
-            IEnumerator<JObject> iterator = firstPage.GetEnumerator();
-
-            while (iterator.MoveNext() && firstItem == null)
+            static JObject FindFirstItem(IEnumerator<JObject> iterator)
             {
-                firstItem = iterator.Current;
+                JObject firstItem;
+                if (iterator.MoveNext() && (firstItem = iterator.Current) == null)
+                {
+                    return FindFirstItem(iterator);
+                }
+
+                return iterator.Current;
             }
+
+            JObject firstItem = FindFirstItem(firstPage.GetEnumerator());
 
             JsonDocument jsonDocument = JsonDocument.Parse(firstItem.ToString());
 
@@ -185,6 +190,5 @@ namespace Azure.DataGateway.Services
             byte[] base64EncodedBytes = System.Convert.FromBase64String(base64EncodedData);
             return System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
         }
-
     }
 }

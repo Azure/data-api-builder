@@ -26,6 +26,6 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         /// <param name="context">context of REST mutation request.</param>
         /// <returns>JSON object result</returns>
-        public Task<JsonDocument> ExecuteAsync(RestRequestContext context);
+        public Task<JsonDocument?> ExecuteAsync(RestRequestContext context);
     }
 }

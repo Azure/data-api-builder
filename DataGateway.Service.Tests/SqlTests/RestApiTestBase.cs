@@ -443,7 +443,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     exception: true,
                     expectedErrorMessage: "Invalid request body. Either insufficient or unnecessary values for fields supplied.",
                     expectedStatusCode: HttpStatusCode.BadRequest,
-                    expectedSubStatusCode: DatagatewayException.SubStatusCodes.BadRequest.ToString()
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
                 );
         }
 
@@ -474,7 +474,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     exception: true,
                     expectedErrorMessage: $"Could not perform the given mutation on entity books.",
                     expectedStatusCode: HttpStatusCode.InternalServerError,
-                    expectedSubStatusCode: DatagatewayException.SubStatusCodes.DatabaseOperationFailed.ToString()
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed.ToString()
                 );
         }
 
@@ -505,7 +505,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     expectedErrorMessage: $"Invalid request body. Either insufficient or unnecessary " +
                                             "values for fields supplied.",
                     expectedStatusCode: HttpStatusCode.BadRequest,
-                    expectedSubStatusCode: DatagatewayException.SubStatusCodes.BadRequest.ToString()
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
                 );
         }
 
@@ -529,7 +529,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     exception: true,
                     expectedErrorMessage: "Not Found",
                     expectedStatusCode: HttpStatusCode.NotFound,
-                    expectedSubStatusCode: DatagatewayException.SubStatusCodes.EntityNotFound.ToString()
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound.ToString()
                 );
         }
 
@@ -553,7 +553,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     exception: true,
                     expectedErrorMessage: "The request is invalid since the primary keys: title requested were not found in the entity definition.",
                     expectedStatusCode: HttpStatusCode.BadRequest,
-                    expectedSubStatusCode: DatagatewayException.SubStatusCodes.BadRequest.ToString()
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
                 );
         }
 
@@ -610,16 +610,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 exception: true,
                 expectedErrorMessage: RestController.SERVER_ERROR,
                 expectedStatusCode: HttpStatusCode.InternalServerError,
-                expectedSubStatusCode: DatagatewayException.SubStatusCodes.UnexpectedError.ToString()
+                expectedSubStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError.ToString()
             );
         }
 
         /// <summary>
         /// Tests the REST Api for the correct error condition format when
-        /// a DatagatewayException is thrown
+        /// a DataGatewayException is thrown
         /// </summary>
         [TestMethod]
-        public async Task RestDatagatewayExceptionErrorConditionFormat()
+        public async Task RestDataGatewayExceptionErrorConditionFormat()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,

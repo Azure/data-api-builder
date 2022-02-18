@@ -53,7 +53,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             string tableName = mutationResolver.Table;
 
-            Tuple<JsonDocument, IMetadata> result = new(null, null);
+            Tuple<JsonDocument, IMetadata>? result = null;
 
             if (mutationResolver.OperationType == Operation.Delete)
             {
@@ -71,18 +71,23 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (!context.Selection.Type.IsScalarType() && mutationResolver.OperationType != Operation.Delete)
             {
-                Dictionary<string, object> searchParams = await ExtractRowFromDbDataReader(dbDataReader);
+                Dictionary<string, object>? searchParams = await ExtractRowFromDbDataReader(dbDataReader);
 
                 if (searchParams == null)
                 {
                     TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(tableName);
                     string searchedPK = '<' + string.Join(", ", tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
-                    throw new DatagatewayException($"Could not find entity with {searchedPK}", HttpStatusCode.NotFound, DatagatewayException.SubStatusCodes.EntityNotFound);
+                    throw new DataGatewayException($"Could not find entity with {searchedPK}", HttpStatusCode.NotFound, DataGatewayException.SubStatusCodes.EntityNotFound);
                 }
 
                 result = await _queryEngine.ExecuteAsync(
                     context,
                     searchParams);
+            }
+
+            if (result == null)
+            {
+                throw new DataGatewayException("Failed to resolve any query based on the current configuration.", HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.UnexpectedError);
             }
 
             return result;
@@ -94,7 +99,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="context">context of REST mutation request.</param>
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result</returns>
-        public async Task<JsonDocument> ExecuteAsync(RestRequestContext context)
+        public async Task<JsonDocument?> ExecuteAsync(RestRequestContext context)
         {
             Dictionary<string, object> parameters = PrepareParameters(context);
 
@@ -106,10 +111,10 @@ namespace Azure.DataGateway.Service.Resolvers
                     context.OperationType,
                     parameters);
 
-                Dictionary<string, object> resultRecord = new();
+                Dictionary<string, object>? resultRecord = new();
                 resultRecord = await ExtractRowFromDbDataReader(dbDataReader);
 
-                string jsonResultString = null;
+                string? jsonResultString = null;
 
                 /// Processes a second result set from DbDataReader if it exists.
                 /// In MsSQL upsert:
@@ -149,19 +154,19 @@ namespace Azure.DataGateway.Service.Resolvers
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine(ex.StackTrace);
 
-                throw new DatagatewayException(
+                throw new DataGatewayException(
                     message: $"Could not perform the given mutation on entity {context.EntityName}.",
                     statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DatagatewayException.SubStatusCodes.DatabaseOperationFailed);
+                    subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine(ex.StackTrace);
-                throw new DatagatewayException(
+                throw new DataGatewayException(
                     message: $"Could not perform the given mutation on entity {context.EntityName}.",
                     statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DatagatewayException.SubStatusCodes.DatabaseOperationFailed);
+                    subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
             }
         }
 
@@ -175,7 +180,7 @@ namespace Azure.DataGateway.Service.Resolvers
             IDictionary<string, object> parameters)
         {
             string queryString;
-            Dictionary<string, object> queryParameters;
+            Dictionary<string, object?> queryParameters;
 
             switch (operationType)
             {
@@ -212,7 +217,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Extracts a single row from DbDataReader and format it so it can be used as a parameter to a query execution
         ///</summary>
         ///<returns>A dictionary representating the row in <c>ColumnName: Value</c> format, null if no row was found</returns>
-        private static async Task<Dictionary<string, object>> ExtractRowFromDbDataReader(DbDataReader dbDataReader)
+        private static async Task<Dictionary<string, object>?> ExtractRowFromDbDataReader(DbDataReader dbDataReader)
         {
             Dictionary<string, object> row = new();
 
@@ -220,12 +225,15 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 if (dbDataReader.HasRows)
                 {
-                    DataTable schemaTable = dbDataReader.GetSchemaTable();
+                    DataTable? schemaTable = dbDataReader.GetSchemaTable();
 
-                    foreach (DataRow schemaRow in schemaTable.Rows)
+                    if (schemaTable != null)
                     {
-                        string columnName = (string)schemaRow["ColumnName"];
-                        row.Add(columnName, dbDataReader[columnName]);
+                        foreach (DataRow schemaRow in schemaTable.Rows)
+                        {
+                            string columnName = (string)schemaRow["ColumnName"];
+                            row.Add(columnName, dbDataReader[columnName]);
+                        }
                     }
                 }
             }

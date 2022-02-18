@@ -35,7 +35,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             _clientProvider = new CosmosClientProvider(TestHelper.DataGatewayConfig);
             _metadataStoreProvider = new MetadataStoreProviderForTest();
             string jsonString = File.ReadAllText("schema.gql");
-            _metadataStoreProvider.GraphqlSchema = jsonString;
+            _metadataStoreProvider.GraphQLSchema = jsonString;
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
             _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider);
@@ -134,13 +134,13 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         }
 
         /// <summary>
-        /// Creates and registers a GraphqlType
+        /// Creates and registers a GraphQLType
         /// </summary>
         /// <param name="id">name of the mutation</param>
         /// <param name="databaseName">the database name</param>
         /// <param name="containerName">the container name</param>
         /// <param name="isPaginationType">is the type a pagination type</param>
-        internal static void RegisterGraphqlType(string id,
+        internal static void RegisterGraphQLType(string id,
            string databaseName,
            string containerName,
            bool isPaginationType = false)
@@ -151,7 +151,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
                 containerName,
                 isPaginationType
             }).ToString();
-            GraphqlType gqlType = JsonConvert.DeserializeObject<GraphqlType>(resolverJson);
+            GraphQLType gqlType = JsonConvert.DeserializeObject<GraphQLType>(resolverJson);
             _metadataStoreProvider.StoreGraphQLType(id, gqlType);
         }
 

@@ -104,7 +104,7 @@ namespace Azure.DataGateway.Service
         {
             // validate the configuration after the services have been built
             // but before the application is built
-            app.ApplicationServices.GetService<IConfigValidator>().ValidateConfig();
+            app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
 
             if (env.IsDevelopment())
             {

@@ -79,8 +79,8 @@ namespace Azure.DataGateway.Services
                 switch (key)
                 {
                     case FIELDS_URL:
-                        CheckListForNullElement(nvc[key].Split(",").ToList());
-                        context.FieldsToBeReturned = nvc[key].Split(",").ToList();
+                        CheckListForNullElement(nvc[key]!.Split(",").ToList());
+                        context.FieldsToBeReturned = nvc[key]!.Split(",").ToList();
                         break;
                     case FILTER_URL:
                         // save the AST that represents the filter for the query

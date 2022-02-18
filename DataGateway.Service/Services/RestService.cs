@@ -47,7 +47,7 @@ namespace Azure.DataGateway.Services
         /// <param name="entityName">The entity name.</param>
         /// <param name="operationType">The kind of operation to execute.</param>
         /// <param name="primaryKeyRoute">The primary key route. e.g. customerName/Xyz/saleOrderId/123</param>
-        public async Task<JsonDocument> ExecuteAsync(
+        public async Task<JsonDocument?> ExecuteAsync(
             string entityName,
             Operation operationType,
             string primaryKeyRoute)
@@ -109,7 +109,7 @@ namespace Azure.DataGateway.Services
             // Perform Authorization check prior to moving forward in request pipeline.
             // RESTAuthorizationService
             AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
-                user: _httpContextAccessor.HttpContext.User,
+                user: GetHttpContext().User,
                 resource: context,
                 requirements: new[] { context.HttpVerb });
 
@@ -125,7 +125,7 @@ namespace Azure.DataGateway.Services
                         return await _mutationEngine.ExecuteAsync(context);
                     default:
                         throw new NotSupportedException("This operation is not yet supported.");
-                }
+                };
             }
             else
             {
@@ -168,7 +168,7 @@ namespace Azure.DataGateway.Services
 
         private HttpContext GetHttpContext()
         {
-            return _httpContextAccessor.HttpContext;
+            return _httpContextAccessor.HttpContext!;
         }
     }
 }

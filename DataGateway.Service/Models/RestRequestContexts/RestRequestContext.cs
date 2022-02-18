@@ -10,6 +10,12 @@ namespace Azure.DataGateway.Service.Models
     /// </summary>
     public abstract class RestRequestContext
     {
+        protected RestRequestContext(OperationAuthorizationRequirement httpVerb, string entityName)
+        {
+            HttpVerb = httpVerb;
+            EntityName = entityName;
+        }
+
         /// <summary>
         /// The target Entity on which the request needs to be operated upon.
         /// </summary>
@@ -18,26 +24,26 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Field names of the entity that are queried in the request.
         /// </summary>
-        public List<string> FieldsToBeReturned { get; set; }
+        public List<string> FieldsToBeReturned { get; set; } = new();
 
         /// <summary>
         /// Dictionary of primary key and their values specified in the request.
         /// When there are multiple values, that means its a composite primary key.
         /// Based on the operation type, this property may or may not be populated.
         /// </summary>
-        public virtual Dictionary<string, object> PrimaryKeyValuePairs { get; set; }
+        public virtual Dictionary<string, object> PrimaryKeyValuePairs { get; set; } = new();
 
         /// <summary>
         /// AST that represents the filter part of the query.
         /// Based on the operation type, this property may or may not be populated.
         /// </summary>
-        public virtual FilterClause FilterClauseInUrl { get; set; }
+        public virtual FilterClause? FilterClauseInUrl { get; set; }
 
         /// <summary>
         /// Dictionary of field names and their values given in the request body.
         /// Based on the operation type, this property may or may not be populated.
         /// </summary>
-        public virtual Dictionary<string, object> FieldValuePairsInBody { get; set; }
+        public virtual Dictionary<string, object> FieldValuePairsInBody { get; set; } = new();
 
         /// <summary>
         /// Is the result supposed to be multiple values or not.
@@ -47,7 +53,7 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// The REST verb this request is.
         /// </summary>
-        public OperationAuthorizationRequirement HttpVerb { get; set; }
+        public OperationAuthorizationRequirement HttpVerb { get; init; }
 
         /// <summary>
         /// The database engine operation type this request is.

@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -31,11 +32,6 @@ namespace Azure.DataGateway.Services
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
             _metadataStoreProvider = metadataStoreProvider;
-        }
-
-        public ResolverMiddleware(FieldDelegate next)
-        {
-            _next = next;
         }
 
         public async Task InvokeAsync(IMiddlewareContext context)

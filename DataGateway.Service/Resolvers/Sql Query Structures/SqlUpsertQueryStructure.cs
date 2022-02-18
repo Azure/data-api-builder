@@ -47,7 +47,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// An upsert query must be prepared to be utilized for either an UPDATE or INSERT.
-        /// 
+        ///
         /// </summary>
         /// <param name="tableName"></param>
         /// <param name="metadataStore"></param>
@@ -92,7 +92,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 foreach (KeyValuePair<string, object> param in mutationParams)
                 {
                     // Create Parameter and map it to column for downstream logic to utilize.
-                    string paramIdentifier = MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString(), param.Key));
+                    string paramIdentifier = MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, param.Key));
 
                     ColumnToParam.Add(param.Key, paramIdentifier);
 

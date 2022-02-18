@@ -34,7 +34,7 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Keeps a reference to the SqlQueryStructure the pagination metadata is associated with
         /// </summary>
-        public SqlQueryStructure Structure { get; }
+        public SqlQueryStructure? Structure { get; }
 
         /// <summary>
         /// Holds the pagination metadata for subqueries
@@ -44,9 +44,9 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Holds the keyset pagination predicate for a SqlQueryStructure
         /// </summary>
-        public KeysetPaginationPredicate PaginationPredicate { get; set; }
+        public KeysetPaginationPredicate? PaginationPredicate { get; set; }
 
-        public PaginationMetadata(SqlQueryStructure structure)
+        public PaginationMetadata(SqlQueryStructure? structure)
         {
             Structure = structure;
         }

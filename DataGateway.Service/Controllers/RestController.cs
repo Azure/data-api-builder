@@ -101,7 +101,7 @@ namespace Azure.DataGateway.Service.Controllers
             return await HandleOperation(
                 entityName,
                 Operation.Insert,
-                primaryKeyRoute: null);
+                primaryKeyRoute: string.Empty);
         }
 
         /// <summary>
@@ -152,19 +152,19 @@ namespace Azure.DataGateway.Service.Controllers
         private async Task<IActionResult> HandleOperation(
             string entityName,
             Operation operationType,
-            string primaryKeyRoute = null)
+            string primaryKeyRoute)
         {
             try
             {
                 // Parse App Service's EasyAuth injected headers into MiddleWare usable Security Principal
-                ClaimsIdentity identity = AppServiceAuthentication.Parse(this.HttpContext);
+                ClaimsIdentity? identity = AppServiceAuthentication.Parse(this.HttpContext);
                 if (identity != null)
                 {
                     this.HttpContext.User = new ClaimsPrincipal(identity);
                 }
 
                 // Utilizes C#8 using syntax which does not require brackets.
-                using JsonDocument result
+                using JsonDocument? result
                     = await _restService.ExecuteAsync(
                             entityName,
                             operationType,

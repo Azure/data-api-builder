@@ -17,17 +17,14 @@ namespace Azure.DataGateway.Service.Configurations
         /// If no path is passed, make starting stack,
         /// add the path to the stack otherwise
         /// </summary>
-        private static Stack<string> MakeConfigPosition(IEnumerable<string> path = null)
+        private static Stack<string> MakeConfigPosition(IEnumerable<string> path)
         {
             Stack<string> configStack = new();
             configStack.Push("Config");
 
-            if (path != null)
+            foreach (string pathElement in path)
             {
-                foreach (string pathElement in path)
-                {
-                    configStack.Push(pathElement);
-                }
+                configStack.Push(pathElement);
             }
 
             return configStack;
@@ -38,17 +35,14 @@ namespace Azure.DataGateway.Service.Configurations
         /// If no path is passed, make starting stack,
         /// add the path to the stack otherwise
         /// </summary>
-        private static Stack<string> MakeSchemaPosition(IEnumerable<string> path = null)
+        private static Stack<string> MakeSchemaPosition(IEnumerable<string> path)
         {
             Stack<string> schemaStack = new();
             schemaStack.Push("GQL Schema");
 
-            if (path != null)
+            foreach (string pathElement in path)
             {
-                foreach (string pathElement in path)
-                {
-                    schemaStack.Push(pathElement);
-                }
+                schemaStack.Push(pathElement);
             }
 
             return schemaStack;
@@ -190,9 +184,9 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Gets graphql types from config
         /// </summmary>
-        private Dictionary<string, GraphqlType> GetGraphQLTypes()
+        private Dictionary<string, GraphQLType> GetGraphQLTypes()
         {
-            return _config.GraphqlTypes;
+            return _config.GraphQLTypes;
         }
 
         /// <summary>
@@ -254,7 +248,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Checks if config type has fields
         /// </summary>
-        private static bool TypeHasFields(GraphqlType type)
+        private static bool TypeHasFields(GraphQLType type)
         {
             return type.Fields != null;
         }
@@ -284,8 +278,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private bool IsPaginationTypeName(string typeName)
         {
-            GraphqlType type;
-            if (_config.GraphqlTypes.TryGetValue(typeName, out type))
+            if (_config.GraphQLTypes.TryGetValue(typeName, out GraphQLType? type))
             {
                 return type.IsPaginationType;
             }
@@ -493,17 +486,17 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Get the config GraphqlTypes.Fields for a graphql schema type
+        /// Get the config GraphQLTypes.Fields for a graphql schema type
         /// </summary>
         private IEnumerable<string> GetConfigFieldsForGqlType(ObjectTypeDefinitionNode type)
         {
-            return _config.GraphqlTypes[type.Name.Value].Fields.Keys;
+            return _config.GraphQLTypes[type.Name.Value].Fields.Keys;
         }
 
         /// <summary>
         /// Check that GraphQLType.Field has only a left foreign key
         /// </summary>
-        private static bool HasLeftForeignKey(GraphqlField field)
+        private static bool HasLeftForeignKey(GraphQLField field)
         {
             return !string.IsNullOrEmpty(field.LeftForeignKey);
         }
@@ -511,7 +504,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Check that GraphQLType.Field has only a right foreign key
         /// </summary>
-        private static bool HasRightForeignKey(GraphqlField field)
+        private static bool HasRightForeignKey(GraphQLField field)
         {
             return !string.IsNullOrEmpty(field.RightForeignKey);
         }

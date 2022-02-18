@@ -34,8 +34,10 @@ namespace Azure.DataGateway.Service.Tests.REST
         public void MatchingPrimaryKeyTest()
         {
             string[] primaryKeys = new string[] { "id" };
-            TableDefinition tableDef = new();
-            tableDef.PrimaryKey = new(primaryKeys);
+            TableDefinition tableDef = new()
+            {
+                PrimaryKey = new(primaryKeys)
+            };
             _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
 
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
@@ -53,8 +55,10 @@ namespace Azure.DataGateway.Service.Tests.REST
         public void MatchingCompositePrimaryKeyOrdered()
         {
             string[] primaryKeys = new string[] { "id", "isbn" };
-            TableDefinition tableDef = new();
-            tableDef.PrimaryKey = new(primaryKeys);
+            TableDefinition tableDef = new()
+            {
+                PrimaryKey = new(primaryKeys)
+            };
             _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
             string primaryKeyRoute = "id/2/isbn/12345";
@@ -72,8 +76,10 @@ namespace Azure.DataGateway.Service.Tests.REST
         public void MatchingCompositePrimaryKeyNotOrdered()
         {
             string[] primaryKeys = new string[] { "id", "isbn" };
-            TableDefinition tableDef = new();
-            tableDef.PrimaryKey = new(primaryKeys);
+            TableDefinition tableDef = new()
+            {
+                PrimaryKey = new(primaryKeys)
+            };
             _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
             string primaryKeyRoute = "isbn/12345/id/2";
@@ -93,8 +99,10 @@ namespace Azure.DataGateway.Service.Tests.REST
         public void RequestWithInvalidPrimaryKeyTest()
         {
             string[] primaryKeys = new string[] { "id" };
-            TableDefinition tableDef = new();
-            tableDef.PrimaryKey = new(primaryKeys);
+            TableDefinition tableDef = new()
+            {
+                PrimaryKey = new(primaryKeys)
+            };
             _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
             string primaryKeyRoute = "name/Catch22";
@@ -138,8 +146,10 @@ namespace Azure.DataGateway.Service.Tests.REST
         public void RequestWithIncompleteCompositePrimaryKeyTest()
         {
             string[] primaryKeys = new string[] { "id", "name" };
-            TableDefinition tableDef = new();
-            tableDef.PrimaryKey = new(primaryKeys);
+            TableDefinition tableDef = new()
+            {
+                PrimaryKey = new(primaryKeys)
+            };
             _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
             string primaryKeyRoute = "name/1";
@@ -156,8 +166,10 @@ namespace Azure.DataGateway.Service.Tests.REST
         public void IncompleteRequestCompositePrimaryKeyTest()
         {
             string[] primaryKeys = new string[] { "id", "isbn" };
-            TableDefinition tableDef = new();
-            tableDef.PrimaryKey = new(primaryKeys);
+            TableDefinition tableDef = new()
+            {
+                PrimaryKey = new(primaryKeys)
+            };
             _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
             string primaryKeyRoute = "id/12345/name/2";
@@ -174,8 +186,10 @@ namespace Azure.DataGateway.Service.Tests.REST
         public void BloatedRequestCompositePrimaryKeyTest()
         {
             string[] primaryKeys = new string[] { "id", "isbn" };
-            TableDefinition tableDef = new();
-            tableDef.PrimaryKey = new(primaryKeys);
+            TableDefinition tableDef = new()
+            {
+                PrimaryKey = new(primaryKeys)
+            };
             _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
             string primaryKeyRoute = "id/12345/isbn/2/name/TwoTowers";

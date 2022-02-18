@@ -62,7 +62,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (value != null)
                 {
                     paramName = MakeParamWithValue(
-                        GetParamAsColumnSystemType(value.ToString(), columnName));
+                        GetParamAsColumnSystemType(value.ToString()!, columnName));
                 }
                 else
                 {

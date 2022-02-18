@@ -86,7 +86,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <inheritdoc />
-        protected override string Build(KeysetPaginationPredicate predicate)
+        protected override string Build(KeysetPaginationPredicate? predicate)
         {
             if (predicate == null)
             {

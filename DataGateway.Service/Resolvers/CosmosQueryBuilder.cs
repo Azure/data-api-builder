@@ -33,7 +33,7 @@ namespace Azure.DataGateway.Service
             return _containerAlias + "." + column.ColumnName;
         }
 
-        protected override string Build(KeysetPaginationPredicate predicate)
+        protected override string Build(KeysetPaginationPredicate? predicate)
         {
             // Cosmos doesnt do keyset pagination
             return string.Empty;

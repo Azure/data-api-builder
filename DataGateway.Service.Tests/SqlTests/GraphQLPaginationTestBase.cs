@@ -533,15 +533,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Restrict the pagination result using the _where argument
+        /// Restrict the pagination result using the _filter argument
         /// </summary>
         [TestMethod]
-        public async Task PaginationWithWhereArgument()
+        public async Task PaginationWithFilterArgument()
         {
             string graphQLQueryName = "books";
             string after = SqlPaginationUtil.Base64Encode("{\"id\":1}");
             string graphQLQuery = @"{
-                books(first: 2, after: """ + after + @""", _where: ""publisher_id eq 2345"") {
+                books(first: 2, after: """ + after + @""", _filter: ""publisher_id eq 2345"") {
                     items {
                         id
                         publisher_id

@@ -235,9 +235,9 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            if (IsListQuery && queryParams.ContainsKey("_where"))
+            if (IsListQuery && queryParams.ContainsKey("_filter"))
             {
-                object whereObject = queryParams["_where"];
+                object whereObject = queryParams["_filter"];
 
                 if (whereObject != null)
                 {

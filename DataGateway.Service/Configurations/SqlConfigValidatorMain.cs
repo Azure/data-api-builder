@@ -369,7 +369,7 @@ namespace Azure.DataGateway.Service.Configurations
 
             Dictionary<string, IEnumerable<string>> optionalArguments = new()
             {
-                ["_where"] = new[] { "String", "String!" }
+                ["_filter"] = new[] { "String", "String!" }
             };
 
             Dictionary<string, InputValueDefinitionNode> fieldArguments = GetArgumentsFromField(field);
@@ -391,7 +391,7 @@ namespace Azure.DataGateway.Service.Configurations
             Dictionary<string, IEnumerable<string>> optionalArguments = new()
             {
                 ["first"] = new[] { "Int", "Int!" },
-                ["_where"] = new[] { "String", "String!" }
+                ["_filter"] = new[] { "String", "String!" }
             };
 
             Dictionary<string, InputValueDefinitionNode> fieldArguments = GetArgumentsFromField(field);

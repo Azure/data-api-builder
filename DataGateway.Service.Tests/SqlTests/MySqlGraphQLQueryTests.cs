@@ -411,17 +411,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <sumary>
-        /// Test if where param successfully filters the query results
+        /// Test if filter param successfully filters the query results
         /// </summary>
         [TestMethod]
-        public async Task TestWhereParamForListQueries()
+        public async Task TestFilterParamForListQueries()
         {
             string graphQLQueryName = "getBooks";
             string graphQLQuery = @"{
-                getBooks(_where: ""id ge 1 and id le 4"") {
+                getBooks(_filter: ""id ge 1 and id le 4"") {
                     id
                     publisher {
-                        books(first: 3, _where: ""id ne 2"") {
+                        books(first: 3, _filter: ""id ne 2"") {
                             id
                         }
                     }
@@ -484,11 +484,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         [TestMethod]
-        public async Task TestInvalidWhereParamQuery()
+        public async Task TestInvalidFilterParamQuery()
         {
             string graphQLQueryName = "getBooks";
             string graphQLQuery = @"{
-                getBooks(_where: ""INVALID"") {
+                getBooks(_filter: ""INVALID"") {
                     id
                     title
                 }

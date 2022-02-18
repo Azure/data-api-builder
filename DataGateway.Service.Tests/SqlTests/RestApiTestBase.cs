@@ -508,7 +508,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Tests the InsertOne functionality with no valid fields in the request body.
         /// </summary>
         [TestMethod]
-        public virtual async Task InsertOneWithNoValidFieldInBodyJsonBodyTest()
+        public virtual async Task InsertOneWithNoValidFieldInJsonBodyTest()
         {
             string requestBody = @"
             {}";
@@ -533,7 +533,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Tests the InsertOne functionality with an invalid field in the request body.
         /// </summary>
         [TestMethod]
-        public virtual async Task InsertOneWithInvalidFieldInBodyJsonBodyTest()
+        public virtual async Task InsertOneWithInvalidFieldInJsonBodyTest()
         {
             string requestBody = @"
             {

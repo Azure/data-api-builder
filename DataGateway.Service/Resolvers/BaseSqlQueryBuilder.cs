@@ -20,7 +20,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Builds a database specific keyset pagination predicate
         /// </summary>
-        protected virtual string Build(KeysetPaginationPredicate predicate)
+        protected virtual string Build(KeysetPaginationPredicate? predicate)
         {
             if (predicate == null)
             {
@@ -124,13 +124,20 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         protected string Build(PredicateOperand operand)
         {
-            if (operand.AsColumn() != null)
+            if (operand == null)
             {
-                return Build(operand.AsColumn());
+                throw new ArgumentNullException(nameof(operand));
             }
-            else if (operand.AsString() != null)
+
+            Column? c;
+            string? s;
+            if ((c = operand.AsColumn()) != null)
             {
-                return operand.AsString();
+                return Build(c);
+            }
+            else if ((s = operand.AsString()) != null)
+            {
+                return s;
             }
             else
             {
@@ -168,6 +175,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         protected string Build(Predicate predicate)
         {
+            if (predicate is null)
+            {
+                throw new ArgumentNullException(nameof(predicate));
+            }
+
             return $"{Build(predicate.Left)} {Build(predicate.Op)} {Build(predicate.Right)}";
         }
 
@@ -185,6 +197,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         protected string Build(SqlJoinStructure join)
         {
+            if (join is null)
+            {
+                throw new ArgumentNullException(nameof(join));
+            }
+
             return $" INNER JOIN {QuoteIdentifier(join.TableName)}"
                         + $" AS {QuoteIdentifier(join.TableAlias)}"
                         + $" ON {Build(join.Predicates)}";
@@ -210,11 +227,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Join predicate strings while ignoring empty or null predicates
         /// </summary>
         /// <returns>returns "1 = 1" if no valid predicates</returns>
-        public string JoinPredicateStrings(params string[] predicateStrings)
+        public string JoinPredicateStrings(params string?[] predicateStrings)
         {
-            IEnumerable<string> validPredicates = predicateStrings.Where(s => !string.IsNullOrEmpty(s));
+            IEnumerable<string> validPredicates = predicateStrings.Where(s => !string.IsNullOrEmpty(s)).Select(s => s!);
 
-            if (validPredicates.Count() == 0)
+            if (!validPredicates.Any())
             {
                 return "1 = 1";
             }

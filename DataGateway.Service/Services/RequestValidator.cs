@@ -21,7 +21,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="context">Request context containing the REST operation fields and their values.</param>
         /// <param name="configurationProvider">Configuration provider that enables referencing DB schema in config.</param>
-        /// <exception cref="DatagatewayException"></exception>
+        /// <exception cref="DataGatewayException"></exception>
         public static void ValidateRequestContext(RestRequestContext context, IMetadataStoreProvider configurationProvider)
         {
             TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, configurationProvider);
@@ -30,10 +30,10 @@ namespace Azure.DataGateway.Service.Services
             {
                 if (!tableDefinition.Columns.ContainsKey(field))
                 {
-                    throw new DatagatewayException(
+                    throw new DataGatewayException(
                         message: "Invalid Column name requested: " + field,
                         statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
             }
         }
@@ -44,7 +44,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="context">Request context containing the primary keys and their values.</param>
         /// <param name="configurationProvider">Configuration provider that enables referencing DB schema in config.</param>
-        /// <exception cref="DatagatewayException"></exception>
+        /// <exception cref="DataGatewayException"></exception>
         public static void ValidatePrimaryKey(RestRequestContext context, IMetadataStoreProvider configurationProvider)
         {
             TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, configurationProvider);
@@ -54,10 +54,10 @@ namespace Azure.DataGateway.Service.Services
 
             if (countOfPrimaryKeysInRequest != countOfPrimaryKeysInSchema)
             {
-                throw new DatagatewayException(
+                throw new DataGatewayException(
                     message: "Primary key column(s) provided do not match DB schema.",
                     statusCode: HttpStatusCode.BadRequest,
-                    DatagatewayException.SubStatusCodes.BadRequest);
+                    DataGatewayException.SubStatusCodes.BadRequest);
             }
 
             // Verify each primary key is present in the table definition.
@@ -66,12 +66,12 @@ namespace Azure.DataGateway.Service.Services
 
             if (missingKeys.Any())
             {
-                throw new DatagatewayException(
+                throw new DataGatewayException(
                     message: $"The request is invalid since the primary keys: " +
                         string.Join(", ", missingKeys) +
                         " requested were not found in the entity definition.",
                         statusCode: HttpStatusCode.BadRequest,
-                        DatagatewayException.SubStatusCodes.BadRequest);
+                        DataGatewayException.SubStatusCodes.BadRequest);
             }
         }
 
@@ -80,15 +80,15 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="queryString">Query string from the url.</param>
         /// <param name="requestBody">The string JSON body from the request.</param>
-        /// <exception cref="DatagatewayException"></exception>
+        /// <exception cref="DataGatewayException"></exception>
         public static JsonElement ValidateInsertRequest(string queryString, string requestBody)
         {
             if (!string.IsNullOrEmpty(queryString))
             {
-                throw new DatagatewayException(
+                throw new DataGatewayException(
                     message: "Query string for POST requests is an invalid url.",
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
 
             JsonElement insertPayloadRoot = new();
@@ -105,15 +105,15 @@ namespace Azure.DataGateway.Service.Services
         /// Validates the primarykeyroute is populated with respect to a Delete operation.
         /// </summary>
         /// <param name="primaryKeyRoute">Primary key route from the url.</param>
-        /// <exception cref="DatagatewayException"></exception>
+        /// <exception cref="DataGatewayException"></exception>
         public static void ValidateDeleteRequest(string primaryKeyRoute)
         {
             if (string.IsNullOrEmpty(primaryKeyRoute))
             {
-                throw new DatagatewayException(
+                throw new DataGatewayException(
                     message: "Primary Key for DELETE requests is required.",
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
         }
 
@@ -121,15 +121,15 @@ namespace Azure.DataGateway.Service.Services
         /// Validates the primarykeyroute is populated with respect to an Upsert operation.
         /// </summary>
         /// <param name="primaryKeyRoute">Primary key route from the url.</param>
-        /// <exception cref="DatagatewayException"></exception>
+        /// <exception cref="DataGatewayException"></exception>
         public static JsonElement ValidateUpsertRequest(string primaryKeyRoute, string requestBody)
         {
             if (string.IsNullOrEmpty(primaryKeyRoute))
             {
-                throw new DatagatewayException(
+                throw new DataGatewayException(
                     message: "Primary Key for UPSERT requests is required.",
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
 
             JsonElement upsertPayloadRoot = new();
@@ -149,7 +149,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="insertRequestCtx">Insert Request context containing the request body.</param>
         /// <param name="configurationProvider">Configuration provider that enables referencing DB schema in config.</param>
-        /// <exception cref="DatagatewayException"></exception>
+        /// <exception cref="DataGatewayException"></exception>
         public static void ValidateInsertRequestContext(
         InsertRequestContext insertRequestCtx,
         IMetadataStoreProvider configurationProvider)
@@ -167,17 +167,17 @@ namespace Azure.DataGateway.Service.Services
             {
                 if (!column.Value.IsAutoGenerated && !fieldsInRequestBody.Contains(column.Key))
                 {
-                    throw new DatagatewayException(
+                    throw new DataGatewayException(
                         message: $"Invalid request body. Missing required field in body: {column.Key}",
                         statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
                 else if (column.Value.IsAutoGenerated && fieldsInRequestBody.Contains(column.Key))
                 {
-                    throw new DatagatewayException(
+                    throw new DataGatewayException(
                         message: $"Invalid request body. Contained unexpected field in body: {column.Key}",
                         statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
                 // Since the field is now validated, remove it from the unvalidated fields.
                 // containing a value for it in the request body is valid.
@@ -188,9 +188,9 @@ namespace Azure.DataGateway.Service.Services
             // this should not throw any error. Tracked by issue #158.
             if (unvalidatedFields.Any())
             {
-                throw new DatagatewayException(
+                throw new DataGatewayException(
                     message: $"Invalid request body. Contained unexpected fields in body: {string.Join(", ", unvalidatedFields)}", statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
         }
 
@@ -201,7 +201,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="upsertRequestCtx">Upsert Request context containing the request body.</param>
         /// <param name="configurationProvider">Configuration provider that enables referencing DB schema in config.</param>
-        /// <exception cref="DatagatewayException"></exception>
+        /// <exception cref="DataGatewayException"></exception>
         public static void ValidateUpsertRequestContext(
         UpsertRequestContext upsertRequestCtx,
         IMetadataStoreProvider configurationProvider)
@@ -239,10 +239,10 @@ namespace Azure.DataGateway.Service.Services
                 }
                 else
                 {
-                    throw new DatagatewayException(
+                    throw new DataGatewayException(
                         message: "Invalid request body. Either insufficient or unnecessary values for fields supplied.",
                         statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
             }
 
@@ -250,10 +250,10 @@ namespace Azure.DataGateway.Service.Services
             // this should not throw any error. Tracked by issue #158.
             if (unValidatedFields.Any())
             {
-                throw new DatagatewayException(
+                throw new DataGatewayException(
                     message: "Invalid request body. Either insufficient or extra fields supplied.",
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
         }
 
@@ -263,7 +263,7 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="entityName">Target entity name.</param>
         /// <param name="configurationProvider">Configuration provider that
         /// enables referencing DB schema in config.</param>
-        /// <exception cref="DatagatewayException"></exception>
+        /// <exception cref="DataGatewayException"></exception>
 
         private static TableDefinition TryGetTableDefinition(string entityName, IMetadataStoreProvider configurationProvider)
         {
@@ -274,10 +274,10 @@ namespace Azure.DataGateway.Service.Services
             }
             catch (KeyNotFoundException)
             {
-                throw new DatagatewayException(
+                throw new DataGatewayException(
                     message: $"TableDefinition for entity: {entityName} does not exist.",
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
         }
 

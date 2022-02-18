@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
@@ -15,7 +16,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private readonly string _containerAlias = "c";
         public string Container { get; internal set; }
         public string Database { get; internal set; }
-        public string Continuation { get; internal set; }
+        public string? Continuation { get; internal set; }
         public long MaxItemCount { get; internal set; }
 
         public CosmosQueryStructure(IMiddlewareContext context,
@@ -26,22 +27,27 @@ namespace Azure.DataGateway.Service.Resolvers
             Init(parameters);
         }
 
+        [MemberNotNull(nameof(Container))]
+        [MemberNotNull(nameof(Database))]
         private void Init(IDictionary<string, object> queryParams)
         {
             IFieldSelection selection = _context.Selection;
-            GraphqlType graphqlType = MetadataStoreProvider.GetGraphqlType(UnderlyingType(selection.Field.Type).Name);
+            GraphQLType graphqlType = MetadataStoreProvider.GetGraphQLType(UnderlyingType(selection.Field.Type).Name);
             IsPaginated = graphqlType.IsPaginationType;
 
             if (IsPaginated)
             {
-                FieldNode fieldNode = ExtractItemsQueryField(selection.SyntaxNode);
-                graphqlType = MetadataStoreProvider.GetGraphqlType(UnderlyingType((ExtractItemsSchemaField(selection.Field)).Type).Name);
+                FieldNode? fieldNode = ExtractItemsQueryField(selection.SyntaxNode);
+                graphqlType = MetadataStoreProvider.GetGraphQLType(UnderlyingType(ExtractItemsSchemaField(selection.Field).Type).Name);
 
-                Columns.AddRange(fieldNode.SelectionSet.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.ToString())));
+                if (fieldNode != null)
+                {
+                    Columns.AddRange(fieldNode.SelectionSet!.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.ToString())));
+                }
             }
             else
             {
-                Columns.AddRange(selection.SyntaxNode.SelectionSet.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.ToString())));
+                Columns.AddRange(selection.SyntaxNode.SelectionSet!.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.ToString())));
             }
 
             Container = graphqlType.ContainerName;

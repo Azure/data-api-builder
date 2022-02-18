@@ -66,7 +66,9 @@ namespace Azure.DataGateway.Service.Resolvers
             // TODO: we are doing multiple round of serialization/deserialization
             // fixme
             JObject jObject = await ExecuteAsync(parameters, resolver);
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
             return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(jObject.ToString()), null);
+#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
         }
 
         /// <summary>
@@ -74,7 +76,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         /// <param name="context">context of REST mutation request.</param>
         /// <returns>JSON object result</returns>
-        public Task<JsonDocument> ExecuteAsync(RestRequestContext context)
+        public Task<JsonDocument?> ExecuteAsync(RestRequestContext context)
         {
             throw new NotImplementedException();
         }

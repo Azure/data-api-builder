@@ -35,11 +35,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// in the WHERE Clause. This is generated specifically from the $filter portion
         /// of the query string.
         /// </summary>
-        public string FilterPredicates { get; set; }
+        public string? FilterPredicates { get; set; }
         /// <summary>
         /// Parameters values required to execute the query.
         /// </summary>
-        public Dictionary<string, object> Parameters { get; set; }
+        public Dictionary<string, object?> Parameters { get; set; }
         /// <summary>
         /// Counter.Next() can be used to get a unique integer within this
         /// query, which can be used to create unique aliases, parameters or
@@ -50,7 +50,7 @@ namespace Azure.DataGateway.Service.Resolvers
         protected IMetadataStoreProvider MetadataStoreProvider { get; }
 
         public BaseSqlQueryStructure(IMetadataStoreProvider metadataStore,
-            IncrementingInteger counter = null, string tableName = "")
+            IncrementingInteger? counter = null, string tableName = "")
         {
             Columns = new();
             Predicates = new();
@@ -58,6 +58,9 @@ namespace Azure.DataGateway.Service.Resolvers
             MetadataStoreProvider = metadataStore;
             TableName = tableName;
             Counter = counter ?? new IncrementingInteger();
+
+            // Default the alias to the table name
+            TableAlias = tableName;
         }
 
         /// <summary>
@@ -65,8 +68,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public ColumnType GetColumnType(string columnName)
         {
-            ColumnDefinition column;
-            if (GetTableDefinition().Columns.TryGetValue(columnName, out column))
+            if (GetTableDefinition().Columns.TryGetValue(columnName, out ColumnDefinition? column))
             {
                 return column.Type;
             }
@@ -96,7 +98,7 @@ namespace Azure.DataGateway.Service.Resolvers
         ///  Add parameter to Parameters and return the name associated with it
         /// </summary>
         /// <param name="value">Value to be assigned to parameter, which can be null for nullable columns.</param>
-        public string MakeParamWithValue(object value)
+        public string MakeParamWithValue(object? value)
         {
             string paramName = $"param{Counter.Next()}";
             Parameters.Add(paramName, value);
@@ -143,12 +145,12 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Extracts the *Connection.items query field from the *Connection query field
         /// </summary>
         /// <returns> The query field or null if **Conneciton.items is not requested in the query</returns>
-        internal static FieldNode ExtractItemsQueryField(FieldNode connectionQueryField)
+        internal static FieldNode? ExtractItemsQueryField(FieldNode connectionQueryField)
         {
-            FieldNode itemsField = null;
-            foreach (ISelectionNode node in connectionQueryField.SelectionSet.Selections)
+            FieldNode? itemsField = null;
+            foreach (ISelectionNode node in connectionQueryField.SelectionSet!.Selections)
             {
-                FieldNode field = node as FieldNode;
+                FieldNode field = (FieldNode)node;
                 string fieldName = field.Name.Value;
 
                 if (fieldName == "items")
@@ -173,7 +175,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         internal static ObjectType UnderlyingType(IType type)
         {
-            ObjectType underlyingType = type as ObjectType;
+            ObjectType? underlyingType = type as ObjectType;
             if (underlyingType != null)
             {
                 return underlyingType;

@@ -11,13 +11,13 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Table alias of the table which owns the column
         /// </summary>
-        public string TableAlias { get; }
+        public string? TableAlias { get; }
         /// <summary>
         /// Name of the column
         /// </summary>
         public string ColumnName { get; }
 
-        public Column(string tableAlias, string columnName)
+        public Column(string? tableAlias, string columnName)
         {
             TableAlias = tableAlias;
             ColumnName = columnName;
@@ -58,11 +58,11 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Holds the column value when the operand is a Column
         /// </summary>
-        private readonly Column _columnOperand;
+        private readonly Column? _columnOperand;
         /// <summary>
         /// Holds the string value when the operand is a string
         /// </summary>
-        private readonly string _stringOperand;
+        private readonly string? _stringOperand;
 
         /// <summary>
         /// Initialize operand as Column
@@ -96,7 +96,7 @@ namespace Azure.DataGateway.Service.Models
         /// Resolve operand as string
         /// </summary>
         /// <returns> null if operand is intialized as Column </returns>
-        public string AsString()
+        public string? AsString()
         {
             return _stringOperand;
         }
@@ -105,7 +105,7 @@ namespace Azure.DataGateway.Service.Models
         /// Resolve operand as Column
         /// </summary>
         /// <returns> null if operand is intialized as string </returns>
-        public Column AsColumn()
+        public Column? AsColumn()
         {
             return _columnOperand;
         }
@@ -191,19 +191,8 @@ namespace Azure.DataGateway.Service.Models
     /// A simple class that is used to hold the information about joins that
     /// are part of a SQL query.
     /// <summary>
-    public class SqlJoinStructure
-    {
-        /// <summary>
-        /// The name of the table that is joined with.
-        /// </summary>
-        public string TableName { get; set; }
-        /// <summary>
-        /// The alias of the table that is joined with.
-        /// </summary>
-        public string TableAlias { get; set; }
-        /// <summary>
-        /// The predicates that are part of the ON clause of the join.
-        /// </summary>
-        public List<Predicate> Predicates { get; set; }
-    }
+    /// <param name="TableName">The name of the table that is joined with.</param>
+    /// <param name="TableAlias">The alias of the table that is joined with.</param>
+    /// <param name="Predicates">The predicates that are part of the ON clause of the join.</param>
+    public record SqlJoinStructure(string TableName, string TableAlias, List<Predicate> Predicates);
 }

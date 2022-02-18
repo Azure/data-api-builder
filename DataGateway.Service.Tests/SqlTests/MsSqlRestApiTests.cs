@@ -147,16 +147,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"WHERE id = 567 AND book_id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "FindByIdTestWithInvalidFields",
-                $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
-                $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "FindTestWithInvalidFields",
-                $"SELECT [id], [name], [type] FROM { _integrationTableName } " +
-                $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
                 "InsertOneTest",
                 // This query is the query for the result we get back from the database
                 // after the insert operation. Not the query that we generate to perform
@@ -183,13 +173,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"WHERE id = 5 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "DeleteNonExistentTest",
-                // This query is used to confirm that the item no longer exists, not the
-                // actual delete query.
-                $"SELECT [id] FROM { _integrationTableName } " +
-                $"WHERE id = 7 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
                 "PutOne_Update_Test",
                 $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
                 $"WHERE id = 7 AND [title] = 'The Hobbit Returns to The Shire' " +
@@ -202,25 +185,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"WHERE id = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'Batman Returns' " +
                 $"AND [issueNumber] = 1234" +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PutOne_Insert_BadReq_Test",
-                /// Tests the PutOne functionality with a REST PUT request
-                /// with item that does NOT exist, AND parameters incorrectly match schema, results in BadRequest.
-                /// sqlQuery represents the query used to get 'expected' result of zero items.
-                $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
-                $"WHERE id > 5000 AND [title] = 'The Hobbit Returns to The Shire' " +
-                $"AND [publisher_id] = 1234" +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PutOne_Insert_BadReq_NonNullable_Test",
-                /// Tests the PutOne functionality with a REST PUT request
-                /// with item that does not include publisher_id,
-                /// an IsNullable = false field, results in BadRequest.
-                $"INSERT INTO { _integrationTableName } " +
-                $"(title)" +
-                $"VALUES ('The Hobbit Returns to The Shire')"
             },
             {
                 "PutOne_Insert_PKAutoGen_Test",

@@ -588,7 +588,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// Merges two dictionaries and returns the result
         /// </summary>
         /// <exception cref="ArgumentException"> If the dictionaries have overlapping keys </exception>
-        private static Dictionary<K, V> MergeDictionaries<K, V>(IDictionary<K, V> d1, IDictionary<K, V> d2) where K: notnull
+        private static Dictionary<K, V> MergeDictionaries<K, V>(IDictionary<K, V> d1, IDictionary<K, V> d2) where K : notnull
         {
             Dictionary<K, V> result = new();
 

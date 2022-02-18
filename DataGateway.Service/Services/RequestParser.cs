@@ -86,7 +86,7 @@ namespace Azure.DataGateway.Services
                         // save the AST that represents the filter for the query
                         // ?$filter=<filter clause using microsoft api guidelines>
                         string filterQueryString = "?" + FILTER_URL + "=" + nvc[key];
-                        context.FilterClauseInUrl = filterParser.GetFilterClause(filterQueryString, context.EntityName + "/");
+                        context.FilterClauseInUrl = filterParser.GetFilterClause(filterQueryString, context.EntityName);
                         break;
                     default:
                         throw new ArgumentException("Invalid Query Parameter: " + key.ToString());

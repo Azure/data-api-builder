@@ -98,6 +98,19 @@ namespace Azure.DataGateway.Service.Resolvers
                 $"END; COMMIT TRANSACTION";
         }
 
+        /// <inheritdoc />
+        public override string BuildColumnInfoQuery(
+            string databaseNameParam,
+            string schemaNameParam,
+            string tableNameParam)
+        {
+            return $"SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT " +
+                $"FROM INFORMATION_SCHEMA.COLUMNS " +
+                $"WHERE TABLE_CATALOG = '{databaseNameParam}' " +
+                $"AND TABLE_SCHEMA IN('{schemaNameParam}') " +
+                $"AND TABLE_NAME = '{tableNameParam}';";
+        }
+
         /// <summary>
         /// Labels with which columns can be marked in the OUTPUT clause
         /// </summary>

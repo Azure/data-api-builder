@@ -430,7 +430,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 ""publisher_id"": 1234
             }";
 
-            string expectedLocationHeader = $"/id/{STARTING_ID_FOR_TEST_INSERTS}";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?/id/5001",
@@ -441,8 +440,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 requestBody: requestBody,
                 exception: true,
                 expectedErrorMessage: "Query string for POST requests is an invalid url.",
-                expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedLocationHeader: expectedLocationHeader
+                expectedStatusCode: HttpStatusCode.BadRequest
             );
         }
 
@@ -458,7 +456,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 ""publisher_id"": 1234
             }]";
 
-            string expectedLocationHeader = $"/id/{STARTING_ID_FOR_TEST_INSERTS}";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
@@ -470,8 +467,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 exception: true,
                 expectedErrorMessage: "Mutation operation on many instances of an entity in a single request are not yet supported.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: "BadRequest",
-                expectedLocationHeader: expectedLocationHeader
+                expectedSubStatusCode: "BadRequest"
             );
         }
 
@@ -487,7 +483,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 ""publisher_id"": [1234, 4321]
             }";
 
-            string expectedLocationHeader = $"/id/{STARTING_ID_FOR_TEST_INSERTS}";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
@@ -499,8 +494,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 exception: true,
                 expectedErrorMessage: "Could not perform the given mutation on entity books.",
                 expectedStatusCode: HttpStatusCode.InternalServerError,
-                expectedSubStatusCode: "DatabaseOperationFailed",
-                expectedLocationHeader: expectedLocationHeader
+                expectedSubStatusCode: "DatabaseOperationFailed"
             );
         }
 
@@ -513,7 +507,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string requestBody = @"
             {}";
 
-            string expectedLocationHeader = $"/id/{STARTING_ID_FOR_TEST_INSERTS}";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
@@ -524,8 +517,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 requestBody: requestBody,
                 exception: true,
                 expectedErrorMessage: "Invalid request body. Missing required field in body: title",
-                expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedLocationHeader: expectedLocationHeader
+                expectedStatusCode: HttpStatusCode.BadRequest
             );
         }
 
@@ -541,7 +533,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 ""id"": " + STARTING_ID_FOR_TEST_INSERTS +
             "}";
 
-            string expectedLocationHeader = $"/id/{STARTING_ID_FOR_TEST_INSERTS}";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
@@ -552,8 +543,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 requestBody: requestBody,
                 exception: true,
                 expectedErrorMessage: "Invalid request body. Contained unexpected field in body: id",
-                expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedLocationHeader: expectedLocationHeader
+                expectedStatusCode: HttpStatusCode.BadRequest
             );
         }
 
@@ -570,7 +560,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 ""issueNumber"": ""My New Book""
             }";
 
-            string expectedLocationHeader = $"/id/{STARTING_ID_FOR_TEST_INSERTS}";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
@@ -582,8 +571,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 exception: true,
                 expectedErrorMessage: "Invalid request body. Missing required field in body: id",
                 expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: "BadRequest",
-                expectedLocationHeader: expectedLocationHeader
+                expectedSubStatusCode: "BadRequest"
             );
         }
 
@@ -600,7 +588,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "\"title\": \"hello world\"\n" +
             "}";
 
-            string expectedLocationHeader = $"/id/{STARTING_ID_FOR_TEST_INSERTS}";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
@@ -612,8 +599,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 exception: true,
                 expectedErrorMessage: "Invalid request body. Missing required field in body: issueNumber",
                 expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: "BadRequest",
-                expectedLocationHeader: expectedLocationHeader
+                expectedSubStatusCode: "BadRequest"
             );
         }
 

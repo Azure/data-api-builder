@@ -67,7 +67,7 @@ public class ODataASTVisitor : QueryNodeVisitor<string>
             return "NULL";
         }
 
-        return $"@{_struct.MakeParamWithValue(GetParamWithSystemType(nodeIn.Value.ToString(), nodeIn.TypeReference))}";
+        return $"@{_struct.MakeParamWithValue(GetParamWithSystemType(nodeIn.Value.ToString()!, nodeIn.TypeReference))}";
     }
 
     /// <summary>

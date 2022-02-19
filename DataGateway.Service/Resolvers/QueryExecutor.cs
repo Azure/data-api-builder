@@ -14,11 +14,11 @@ namespace Azure.DataGateway.Service.Resolvers
     public class QueryExecutor<ConnectionT> : IQueryExecutor
         where ConnectionT : DbConnection, new()
     {
-        private readonly DataGatewayConfig _datagatewayConfig;
+        private readonly DataGatewayConfig _dataGatewayConfig;
 
         public QueryExecutor(IOptions<DataGatewayConfig> dataGatewayConfig)
         {
-            _datagatewayConfig = dataGatewayConfig.Value;
+            _dataGatewayConfig = dataGatewayConfig.Value;
         }
 
         /// <summary>
@@ -27,17 +27,17 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="sqltext">Sql text to be executed.</param>
         /// <param name="parameters">The parameters used to execute the SQL text.</param>
         /// <returns>DbDataReader object for reading the result set.</returns>
-        public async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object> parameters)
+        public async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object?> parameters)
         {
             ConnectionT conn = new();
-            conn.ConnectionString = _datagatewayConfig.DatabaseConnection.ConnectionString;
+            conn.ConnectionString = _dataGatewayConfig.DatabaseConnection.ConnectionString;
             await conn.OpenAsync();
             DbCommand cmd = conn.CreateCommand();
             cmd.CommandText = sqltext;
             cmd.CommandType = CommandType.Text;
             if (parameters != null)
             {
-                foreach (KeyValuePair<string, object> parameterEntry in parameters)
+                foreach (KeyValuePair<string, object?> parameterEntry in parameters)
                 {
                     DbParameter parameter = cmd.CreateParameter();
                     parameter.ParameterName = "@" + parameterEntry.Key;

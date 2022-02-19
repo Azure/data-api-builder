@@ -5,7 +5,6 @@ using Azure.DataGateway.Service.Models;
 using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -19,7 +18,6 @@ namespace Azure.DataGateway.Service.Services
 
         public FilterParser(DatabaseSchema schema)
         {
-            Assert.IsNotNull(schema);
             EdmModelBuilder builder = new();
             _model = builder.BuildModel(schema).GetModel();
         }
@@ -40,7 +38,7 @@ namespace Azure.DataGateway.Service.Services
             }
             catch (ODataException e)
             {
-                throw new DatagatewayException(e.Message, HttpStatusCode.BadRequest, DatagatewayException.SubStatusCodes.BadRequest);
+                throw new DataGatewayException(e.Message, HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
             }
         }
     }

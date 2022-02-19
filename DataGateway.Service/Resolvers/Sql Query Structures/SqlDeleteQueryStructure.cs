@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(TableName, param.Key)),
                         PredicateOperation.Equal,
-                        new PredicateOperand($"@{MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString(), param.Key))}")
+                        new PredicateOperand($"@{MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, param.Key))}")
                     ));
                 }
             }

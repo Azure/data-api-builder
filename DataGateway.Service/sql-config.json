@@ -124,6 +124,12 @@
           },
           "DELETE": {
             "Authorization": "Authenticated"
+          },
+          "PUT": {
+            "Authorization": "Authenticated"
+          },
+          "PATCH": {
+            "Authorization": "Authenticated"
           }
         }
       },
@@ -161,6 +167,9 @@
             "Authorization": "Authenticated"
           },
           "PUT": {
+            "Authorization": "Authenticated"
+          },
+          "PATCH": {
             "Authorization": "Authenticated"
           }
         }
@@ -242,11 +251,11 @@
           },
           "title": {
             "Type": "text",
-            "IsNullable": true
+            "IsNullable": false
           },
           "issueNumber": {
             "Type": "bigint",
-            "IsNullable": false
+            "IsNullable": true
           }
         },
         "ForeignKeys": {
@@ -262,6 +271,9 @@
             "Authorization": "Authenticated"
           },
           "PUT": {
+            "Authorization": "Authenticated"
+          },
+          "PATCH": {
             "Authorization": "Authenticated"
           }
         }

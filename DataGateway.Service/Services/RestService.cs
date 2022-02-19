@@ -85,6 +85,11 @@ namespace Azure.DataGateway.Services
                     context = new UpsertRequestContext(entityName, upsertPayloadRoot, HttpRestVerbs.PUT, operationType);
                     RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _metadataStoreProvider);
                     break;
+                case Operation.Update:
+                    JsonElement updatePayloadRoot = RequestValidator.ValidateUpsertRequest(primaryKeyRoute, requestBody);
+                    context = new UpsertRequestContext(entityName, updatePayloadRoot, HttpRestVerbs.PATCH, operationType);
+                    RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _metadataStoreProvider);
+                    break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
             }
@@ -122,6 +127,7 @@ namespace Azure.DataGateway.Services
                     case Operation.Insert:
                     case Operation.Delete:
                     case Operation.Upsert:
+                    case Operation.Update:
                         return await _mutationEngine.ExecuteAsync(context);
                     default:
                         throw new NotSupportedException("This operation is not yet supported.");

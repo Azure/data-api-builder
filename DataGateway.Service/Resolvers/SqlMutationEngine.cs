@@ -137,7 +137,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         jsonResultString = "{}";
                     }
                 }
-                else if (context.OperationType == Operation.Insert || context.OperationType == Operation.Update)
+                else if (context.OperationType == Operation.Insert)
                 {
                     jsonResultString = JsonSerializer.Serialize(resultRecord);
                 }
@@ -190,9 +190,9 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryParameters = insertQueryStruct.Parameters;
                     break;
                 case Operation.Update:
-                    SqlUpdateStructure updateQueryStruct = new(tableName, _metadataStoreProvider, parameters);
-                    queryString = _queryBuilder.Build(updateQueryStruct);
-                    queryParameters = updateQueryStruct.Parameters;
+                    SqlUpsertQueryStructure updateStructure = new(tableName, _metadataStoreProvider, parameters, incrementalUpdate: true);
+                    queryString = _queryBuilder.Build(updateStructure);
+                    queryParameters = updateStructure.Parameters;
                     break;
                 case Operation.Delete:
                     SqlDeleteStructure deleteStructure = new(tableName, _metadataStoreProvider, parameters);
@@ -200,7 +200,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryParameters = deleteStructure.Parameters;
                     break;
                 case Operation.Upsert:
-                    SqlUpsertQueryStructure upsertStructure = new(tableName, _metadataStoreProvider, parameters);
+                    SqlUpsertQueryStructure upsertStructure = new(tableName, _metadataStoreProvider, parameters, incrementalUpdate: false);
                     queryString = _queryBuilder.Build(upsertStructure);
                     queryParameters = upsertStructure.Parameters;
                     break;
@@ -256,7 +256,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 // DeleteOne based off primary key in request.
                 parameters = new(context.PrimaryKeyValuePairs);
             }
-            else if (context.OperationType == Operation.Upsert)
+            else if (context.OperationType == Operation.Upsert || context.OperationType == Operation.Update)
             {
                 // Combine both PrimaryKey/Field ValuePairs
                 // because we create both an insert and an update statement.

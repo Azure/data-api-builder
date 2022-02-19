@@ -142,6 +142,19 @@ namespace Azure.DataGateway.Service.Controllers
                 primaryKeyRoute);
         }
 
+        [HttpPatch]
+        [Route("{*primaryKeyRoute}")]
+        [Produces("application/json")]
+        public async Task<IActionResult> Update(
+            string entityName,
+            string primaryKeyRoute)
+        {
+            return await HandleOperation(
+                entityName,
+                Operation.Update,
+                primaryKeyRoute);
+        }
+
         /// <summary>
         /// Handle the given operation.
         /// </summary>
@@ -188,6 +201,7 @@ namespace Azure.DataGateway.Service.Controllers
                         case Operation.Delete:
                             return new NoContentResult();
                         case Operation.Upsert:
+                        case Operation.Update:
                             primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
                             location =
                                 UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute;
@@ -201,6 +215,7 @@ namespace Azure.DataGateway.Service.Controllers
                     switch (operationType)
                     {
                         case Operation.Upsert:
+                        case Operation.Update:
                             // Empty result set indicates an Update successfully occurred.
                             return new NoContentResult();
                         default:

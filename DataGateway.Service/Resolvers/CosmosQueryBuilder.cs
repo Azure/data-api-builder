@@ -1,9 +1,8 @@
 using System.Linq;
 using System.Text;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Service.Resolvers;
 
-namespace Azure.DataGateway.Service
+namespace Azure.DataGateway.Service.Resolvers
 {
     public class CosmosQueryBuilder : BaseSqlQueryBuilder
     {

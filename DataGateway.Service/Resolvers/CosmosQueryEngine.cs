@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Service;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
+using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using Microsoft.Azure.Cosmos;

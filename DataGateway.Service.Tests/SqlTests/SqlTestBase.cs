@@ -190,7 +190,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             if (expectedLocationHeader != null)
             {
                 expectedLocationHeader =
-                    UriHelper.GetEncodedUrl(controller.HttpContext.Request) + expectedLocationHeader;
+                    UriHelper.GetEncodedUrl(controller.HttpContext.Request)
+                    + @"/" + expectedLocationHeader;
             }
 
             IActionResult actionResult = await SqlTestHelper.PerformApiTest(

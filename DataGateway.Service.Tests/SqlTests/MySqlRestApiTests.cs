@@ -424,5 +424,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             throw new NotImplementedException();
         }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOne_Insert_BadReq_AutoGen_NonNullable_Test()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

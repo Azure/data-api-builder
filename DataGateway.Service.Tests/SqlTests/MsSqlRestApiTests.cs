@@ -187,11 +187,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "PutOne_Insert_PKAutoGen_Test",
-                $"INSERT INTO { _integrationTableName } " +
-                $"(id, title, publisher_id)" +
-                $"VALUES (1000,'The Hobbit Returns to The Shire',1234)"
-
+                "PutOne_Insert_Nullable_Test",
+                $"SELECT [id], [title], [issueNumber] FROM { _integration_NonAutoGenPK_TableName } " +
+                $"WHERE id = { STARTING_ID_FOR_TEST_INSERTS + 1 } AND [title] = 'Times' " +
+                $"AND [issueNumber] IS NULL " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PutOne_Insert_AutoGenNonPK_Test",
+                $"SELECT [id], [title], [issueNumber] FROM { _integration_AutoGenNonPK_TableName } " +
+                $"WHERE id = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'Star Trek' " +
+                $"AND [volume] IS NOT NULL " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
 

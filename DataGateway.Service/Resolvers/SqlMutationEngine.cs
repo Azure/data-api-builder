@@ -159,15 +159,6 @@ namespace Azure.DataGateway.Service.Resolvers
                     statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
             }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine(ex.StackTrace);
-                throw new DataGatewayException(
-                    message: $"Could not perform the given mutation on entity {context.EntityName}.",
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
-            }
         }
 
         /// <summary>

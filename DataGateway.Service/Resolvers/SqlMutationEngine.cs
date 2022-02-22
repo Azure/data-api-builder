@@ -60,9 +60,10 @@ namespace Azure.DataGateway.Service.Resolvers
                 // compute the mutation result before removing the element
                 result = await _queryEngine.ExecuteAsync(
                     context,
-#pragma warning disable CS8620 // Argument cannot be used for parameter due to differences in the nullability of reference types.
+// Disabling the warning, since trying to fix this opens up support for nullability tracked in #235 on REST and #201 on GraphQL
+#pragma warning disable CS8620
                     parameters);
-#pragma warning restore CS8620 // Argument cannot be used for parameter due to differences in the nullability of reference types.
+#pragma warning restore CS8620
             }
 
             using DbDataReader dbDataReader =

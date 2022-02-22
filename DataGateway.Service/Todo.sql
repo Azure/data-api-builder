@@ -1,17 +1,12 @@
 DROP TABLE IF EXISTS [dbo].[todo];
 GO
+
 CREATE TABLE [dbo].[todo](
-	[id] [int] NOT NULL IDENTITY,
+	[id] [int] NOT NULL IDENTITY PRIMARY KEY CLUSTERED,
 	[title] [nvarchar](100) NOT NULL,
-	[completed] [int] NOT NULL,
+	[completed] [int] NOT NULL DEFAULT(0),
 	[owner] [nvarchar](100) NOT NULL
-) ON [PRIMARY]
-GO
-ALTER TABLE [dbo].[todo] ADD PRIMARY KEY CLUSTERED 
-(
-	[id] ASC
 )
-ALTER TABLE [dbo].[todo] ADD  DEFAULT ((0)) FOR [completed]
 GO
 
 INSERT INTO dbo.todo (title, completed, [owner]) VALUES

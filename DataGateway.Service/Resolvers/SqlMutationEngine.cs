@@ -60,7 +60,9 @@ namespace Azure.DataGateway.Service.Resolvers
                 // compute the mutation result before removing the element
                 result = await _queryEngine.ExecuteAsync(
                     context,
+#pragma warning disable CS8620 // Argument cannot be used for parameter due to differences in the nullability of reference types.
                     parameters);
+#pragma warning restore CS8620 // Argument cannot be used for parameter due to differences in the nullability of reference types.
             }
 
             using DbDataReader dbDataReader =
@@ -230,7 +232,7 @@ namespace Azure.DataGateway.Service.Resolvers
                             }
                             else
                             {
-                                row.Add(columnName, value:null);
+                                row.Add(columnName, value: null);
                             }
                         }
                     }

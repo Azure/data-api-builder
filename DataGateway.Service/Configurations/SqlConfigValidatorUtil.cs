@@ -446,6 +446,13 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private static bool GraphQLTypeEqualsColumnType(ITypeNode gqlType, ColumnType columnType)
         {
+            if (gqlType.NullableType().ToString() == "ID")
+            {
+                // ID columns don't have a set data type
+                // DB will determine the type
+                return true;
+            }
+
             return GetGraphQLTypeForColumnType(columnType) == gqlType.NullableType().ToString();
         }
 
@@ -455,16 +462,15 @@ namespace Azure.DataGateway.Service.Configurations
         private static string GetGraphQLTypeForColumnType(ColumnType type)
         {
             Type systemType = ColumnDefinition.ResolveColumnTypeToSystemType(type);
-            switch (systemType.Name)
+            return systemType.Name switch
             {
-                case "String":
-                    return "String";
-                case "Int64":
-                    return "Int";
-                default:
-                    throw new ArgumentException($"ColumnType {type} not handled by case. Please add a case resolving " +
-                                                $"{type} to the appropriate GraphQL type");
-            }
+                "String" => "String",
+                "Int64" => "Int",
+                "Boolean" => "Boolean",
+                "Single" => "Float",
+                _ => throw new ArgumentException($"ColumnType {type} not handled by case. Please add a case resolving " +
+                              $"{systemType.Name} to the appropriate GraphQL type"),
+            };
         }
 
         /// <summary>

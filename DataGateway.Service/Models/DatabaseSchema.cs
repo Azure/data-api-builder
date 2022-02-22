@@ -53,8 +53,14 @@ namespace Azure.DataGateway.Service.Models
                 case ColumnType.Int:
                 case ColumnType.Smallint:
                     return typeof(Int64);
+                case ColumnType.Bit:
+                    return typeof(bool);
+                case ColumnType.Float:
+                    return typeof(float);
+                case ColumnType.Double:
+                    return typeof(double);
                 default:
-                    throw new ArgumentException($"No resolver for colum type {type}");
+                    throw new ArgumentException($"No resolver for column type {type}");
             }
         }
     }
@@ -63,7 +69,9 @@ namespace Azure.DataGateway.Service.Models
     {
         None,
         Text, Varchar,
-        Bigint, Int, Smallint
+        Bigint, Int, Smallint,
+        Float, Double,
+        Bit
     }
 
     public class ForeignKeyDefinition

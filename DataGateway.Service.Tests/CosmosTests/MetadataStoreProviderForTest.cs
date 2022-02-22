@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Services;
@@ -13,6 +14,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         public Dictionary<string, GraphQLQueryResolver> QueryResolvers { get; set; } = new();
         public Dictionary<string, TableDefinition> Tables { get; set; } = new();
         public Dictionary<string, GraphQLType> GraphQLTypes { get; set; } = new();
+        public DatabaseSchema DatabaseSchema { get; set; } = new();
 
         public string GetGraphQLSchema()
         {
@@ -62,7 +64,12 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
 
         public ResolverConfig GetResolvedConfig()
         {
-            throw new System.NotImplementedException();
+            return new ResolverConfig(GraphQLSchema, string.Empty, DatabaseSchema)
+            {
+                GraphQLTypes = GraphQLTypes,
+                MutationResolvers = MutationResolvers == null ? null : MutationResolvers.Values.ToList(),
+                QueryResolvers = QueryResolvers.Values.ToList()
+            };
         }
 
         public FilterParser GetFilterParser()

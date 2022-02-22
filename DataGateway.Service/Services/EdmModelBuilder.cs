@@ -60,6 +60,10 @@ namespace Azure.DataGateway.Service.Services
                     {
                         type = EdmPrimitiveTypeKind.Int64;
                     }
+                    else if (systemTypeName == typeof(bool).Name)
+                    {
+                        type = EdmPrimitiveTypeKind.Boolean;
+                    }
                     else
                     {
                         throw new ArgumentException($"No resolver for column type {columnType}");

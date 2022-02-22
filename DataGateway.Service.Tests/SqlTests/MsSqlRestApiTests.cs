@@ -195,7 +195,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             },
             {
                 "PutOne_Insert_AutoGenNonPK_Test",
-                $"SELECT [id], [title], [issueNumber] FROM { _integration_AutoGenNonPK_TableName } " +
+                $"SELECT [id], [title], [volume] FROM { _integration_AutoGenNonPK_TableName } " +
                 $"WHERE id = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'Star Trek' " +
                 $"AND [volume] IS NOT NULL " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"

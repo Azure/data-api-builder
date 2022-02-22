@@ -60,7 +60,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 // compute the mutation result before removing the element
                 result = await _queryEngine.ExecuteAsync(
                     context,
-// Disabling the warning, since trying to fix this opens up support for nullability tracked in #235 on REST and #201 on GraphQL
+                // Disabling the warning since trying to fix this opens up support for nullability
+                // tracked in #235 on REST and #201 on GraphQL.
 #pragma warning disable CS8620
                     parameters);
 #pragma warning restore CS8620

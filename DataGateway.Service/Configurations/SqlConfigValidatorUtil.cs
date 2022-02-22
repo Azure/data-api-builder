@@ -583,5 +583,26 @@ namespace Azure.DataGateway.Service.Configurations
         {
             return _mutations.Count > 0;
         }
+
+        /// <summary>
+        /// Merges two dictionaries and returns the result
+        /// </summary>
+        /// <exception cref="ArgumentException"> If the dictionaries have overlapping keys </exception>
+        private static Dictionary<K, V> MergeDictionaries<K, V>(IDictionary<K, V> d1, IDictionary<K, V> d2) where K : notnull
+        {
+            Dictionary<K, V> result = new();
+
+            foreach (KeyValuePair<K, V> pair in d1)
+            {
+                result.Add(pair.Key, pair.Value);
+            }
+
+            foreach (KeyValuePair<K, V> pair in d2)
+            {
+                result.Add(pair.Key, pair.Value);
+            }
+
+            return result;
+        }
     }
 }

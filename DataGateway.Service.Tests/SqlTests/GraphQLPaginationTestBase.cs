@@ -113,9 +113,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 {
                   ""id"": 6,
                   ""title"": ""The Palace Door""
+                },
+                {
+                  ""id"": 7,
+                  ""title"": ""The Groovy Bar""
                 }
               ],
-              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":6}") + @""",
+              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":7}") + @""",
               ""hasNextPage"": false
             }";
 
@@ -528,6 +532,44 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        /// <summary>
+        /// Restrict the pagination result using the _filter argument
+        /// </summary>
+        [TestMethod]
+        public async Task PaginationWithFilterArgument()
+        {
+            string graphQLQueryName = "books";
+            string after = SqlPaginationUtil.Base64Encode("{\"id\":1}");
+            string graphQLQuery = @"{
+                books(first: 2, after: """ + after + @""", _filter: ""publisher_id eq 2345"") {
+                    items {
+                        id
+                        publisher_id
+                    }
+                    endCursor
+                    hasNextPage
+                }
+            }";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = @"{
+              ""items"": [
+                {
+                  ""id"": 3,
+                  ""publisher_id"": 2345
+                },
+                {
+                  ""id"": 4,
+                  ""publisher_id"": 2345
+                }
+              ],
+              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":4}") + @""",
+              ""hasNextPage"": false
+            }";
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Negative Tests
@@ -548,7 +590,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }";
 
             JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DatagatewayException.SubStatusCodes.BadRequest}");
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 
         /// <summary>
@@ -567,7 +609,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }";
 
             JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DatagatewayException.SubStatusCodes.BadRequest}");
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 
         /// <summary>
@@ -587,7 +629,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }";
 
             JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DatagatewayException.SubStatusCodes.BadRequest}");
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 
         /// <summary>
@@ -607,7 +649,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }";
 
             JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DatagatewayException.SubStatusCodes.BadRequest}");
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 
         #endregion

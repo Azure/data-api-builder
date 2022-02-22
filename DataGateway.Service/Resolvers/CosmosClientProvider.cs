@@ -7,13 +7,11 @@ namespace Azure.DataGateway.Service.Resolvers
 {
     public class CosmosClientProvider
     {
-        private static CosmosClient _cosmosClient;
-
         public CosmosClientProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
         {
-            _cosmosClient = new CosmosClientBuilder(dataGatewayConfig.Value.DatabaseConnection.ConnectionString).WithContentResponseOnWrite(true).Build();
+            Client = new CosmosClientBuilder(dataGatewayConfig.Value.DatabaseConnection.ConnectionString).WithContentResponseOnWrite(true).Build();
         }
 
-        public CosmosClient Client => _cosmosClient;
+        public CosmosClient Client { get; }
     }
 }

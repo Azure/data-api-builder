@@ -116,6 +116,7 @@ namespace Azure.DataGateway.Service.Configurations
 
                 ValidateNoDuplicatePkColumns(tableDefinition);
                 ValidatePkColsMatchTableCols(tableDefinition);
+                ValidateNoPkColsWithDefaultValue(tableDefinition);
 
                 ValidateTableColumnsLogic(tableDefinition);
 
@@ -199,7 +200,7 @@ namespace Azure.DataGateway.Service.Configurations
 
             ConfigStepInto("GraphQLTypes");
 
-            Dictionary<string, GraphqlType> types = GetGraphQLTypes();
+            Dictionary<string, GraphQLType> types = GetGraphQLTypes();
             Dictionary<string, string> tableToType = new();
 
             ValidateTypesMatchSchemaTypes(types);
@@ -208,10 +209,10 @@ namespace Azure.DataGateway.Service.Configurations
             // this must be validated first
             ValidatePaginationTypes(types);
 
-            foreach (KeyValuePair<string, GraphqlType> nameTypePair in types)
+            foreach (KeyValuePair<string, GraphQLType> nameTypePair in types)
             {
                 string typeName = nameTypePair.Key;
-                GraphqlType type = nameTypePair.Value;
+                GraphQLType type = nameTypePair.Value;
 
                 ConfigStepInto(typeName);
                 SchemaStepInto(typeName);
@@ -223,14 +224,17 @@ namespace Azure.DataGateway.Service.Configurations
                     ValidateGQLTypeTableIsUnique(type, tableToType);
                     tableToType.Add(type.Table, typeName);
 
-                    ValidateGraphQLTypeTableMatchesSchema(typeName, type.Table);
+                    ValidateGraphQLTypeTableColumnsMatchSchema(typeName, type.Table);
+
                     Dictionary<string, FieldDefinitionNode> fieldDefinitions = GetTypeFields(typeName);
                     ValidateSchemaFieldsReturnTypes(fieldDefinitions);
-                    bool hasNonScalarFields = HasAnyCustomFieldInGraphQLType(fieldDefinitions);
 
-                    if (hasNonScalarFields)
+                    if (!TypeHasFields(type))
                     {
-                        ValidateGraphQLTypeHasFields(type);
+                        ValidateNoFieldsWithInnerCustomType(typeName, fieldDefinitions);
+                    }
+                    else
+                    {
                         ValidateGraphQLTypeFields(typeName, type);
                     }
                 }
@@ -247,7 +251,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate pagination types
         /// </summary>
-        private void ValidatePaginationTypes(Dictionary<string, GraphqlType> types)
+        private void ValidatePaginationTypes(Dictionary<string, GraphQLType> types)
         {
             foreach (string typeName in types.Keys)
             {
@@ -284,22 +288,26 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate that the scalar fields of the type match the table associated with the type
+        /// Validate that the scalar fields of the type match the table columns associated with the type
         /// </summary>
-        private void ValidateGraphQLTypeTableMatchesSchema(
+        /// <remarks>
+        /// Ignore scalar fields which match config type fields
+        /// </remarks>
+        private void ValidateGraphQLTypeTableColumnsMatchSchema(
             string typeName,
             string typeTable)
         {
             string[] tableColumnsPath = new[] { "DatabaseSchema", "Tables", typeTable, "Columns" };
             ValidateTableColumnsMatchScalarFields(typeTable, typeName, MakeConfigPosition(tableColumnsPath));
             ValidateTableColumnTypesMatchScalarFieldTypes(typeTable, typeName, MakeConfigPosition(tableColumnsPath));
-            ValidateScalarFieldNullability(typeName);
+            ValidateScalarFieldsMatchingTableColumnsHaveNoArgs(typeName, typeTable, MakeConfigPosition(tableColumnsPath));
+            ValidateScalarFieldsMatchingTableColumnsNullability(typeName, typeTable, MakeConfigPosition(tableColumnsPath));
         }
 
         /// <summary>
         /// Validate GraphQLType fields
         /// </summary>
-        private void ValidateGraphQLTypeFields(string typeName, GraphqlType type)
+        private void ValidateGraphQLTypeFields(string typeName, GraphQLType type)
         {
             ConfigStepInto("Fields");
 
@@ -307,10 +315,10 @@ namespace Azure.DataGateway.Service.Configurations
 
             ValidateConfigFieldsMatchSchemaFields(type.Fields, fieldDefinitions);
 
-            foreach (KeyValuePair<string, GraphqlField> nameFieldPair in type.Fields)
+            foreach (KeyValuePair<string, GraphQLField> nameFieldPair in type.Fields)
             {
                 string fieldName = nameFieldPair.Key;
-                GraphqlField field = nameFieldPair.Value;
+                GraphQLField field = nameFieldPair.Value;
 
                 ConfigStepInto(fieldName);
                 SchemaStepInto(fieldName);
@@ -319,24 +327,24 @@ namespace Azure.DataGateway.Service.Configurations
                 ITypeNode fieldType = fieldDefinition.Type;
                 string returnedType = InnerTypeStr(fieldType);
 
-                List<GraphqlRelationshipType> validRelationshipTypes = new()
+                List<GraphQLRelationshipType> validRelationshipTypes = new()
                 {
-                    GraphqlRelationshipType.ManyToMany,
-                    GraphqlRelationshipType.OneToMany,
-                    GraphqlRelationshipType.ManyToOne
+                    GraphQLRelationshipType.ManyToMany,
+                    GraphQLRelationshipType.OneToMany,
+                    GraphQLRelationshipType.ManyToOne
                 };
 
                 ValidateRelationshipType(field, validRelationshipTypes);
 
                 switch (field.RelationshipType)
                 {
-                    case GraphqlRelationshipType.OneToMany:
+                    case GraphQLRelationshipType.OneToMany:
                         ValidateOneToManyField(field, fieldDefinition, typeName, returnedType);
                         break;
-                    case GraphqlRelationshipType.ManyToOne:
+                    case GraphQLRelationshipType.ManyToOne:
                         ValidateManyToOneField(field, fieldDefinition, typeName, returnedType);
                         break;
-                    case GraphqlRelationshipType.ManyToMany:
+                    case GraphQLRelationshipType.ManyToMany:
                         ValidateManyToManyField(field, fieldDefinition, typeName, returnedType);
                         break;
                 }
@@ -359,10 +367,20 @@ namespace Azure.DataGateway.Service.Configurations
                 ["after"] = new[] { "String" }
             };
 
-            Dictionary<string, InputValueDefinitionNode> fieldArguments = GetArgumentFromField(field);
+            Dictionary<string, IEnumerable<string>> optionalArguments = new()
+            {
+                ["_filter"] = new[] { "String", "String!" }
+            };
 
-            ValidateFieldHasRequiredArguments(fieldArguments.Keys, requiredArguments.Keys);
-            ValidateFieldArgumentTypes(fieldArguments, requiredArguments);
+            Dictionary<string, InputValueDefinitionNode> fieldArguments = GetArgumentsFromField(field);
+
+            ValidateFieldArguments(
+                fieldArguments.Keys,
+                requiredArguments: requiredArguments.Keys,
+                optionalArguments: optionalArguments.Keys);
+            ValidateFieldArgumentTypes(
+                fieldArguments,
+                MergeDictionaries<string, IEnumerable<string>>(requiredArguments, optionalArguments));
         }
 
         /// <summary>
@@ -370,15 +388,16 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateListTypeFieldArguments(FieldDefinitionNode field)
         {
-            Dictionary<string, IEnumerable<string>> expectedArguments = new()
+            Dictionary<string, IEnumerable<string>> optionalArguments = new()
             {
                 ["first"] = new[] { "Int", "Int!" },
+                ["_filter"] = new[] { "String", "String!" }
             };
 
-            Dictionary<string, InputValueDefinitionNode> fieldArguments = GetArgumentFromField(field);
+            Dictionary<string, InputValueDefinitionNode> fieldArguments = GetArgumentsFromField(field);
 
-            ValidateFieldHasNoUnexpectedArguments(fieldArguments.Keys, expectedArguments.Keys);
-            ValidateFieldArgumentTypes(fieldArguments, expectedArguments);
+            ValidateFieldArguments(fieldArguments.Keys, optionalArguments: optionalArguments.Keys);
+            ValidateFieldArgumentTypes(fieldArguments, optionalArguments);
         }
 
         /// <summary>
@@ -386,14 +405,14 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateNoFieldArguments(FieldDefinitionNode field)
         {
-            Dictionary<string, InputValueDefinitionNode> fieldArguments = GetArgumentFromField(field);
-            ValidateFieldHasNoUnexpectedArguments(fieldArguments.Keys, Enumerable.Empty<string>());
+            Dictionary<string, InputValueDefinitionNode> fieldArguments = GetArgumentsFromField(field);
+            ValidateFieldArguments(fieldArguments.Keys, requiredArguments: Enumerable.Empty<string>());
         }
 
         /// <summary>
         /// Validate field with One-To-Many relationship to the type that owns it
         /// </summary>
-        private void ValidateOneToManyField(GraphqlField field, FieldDefinitionNode fieldDefinition, string type, string returnedType)
+        private void ValidateOneToManyField(GraphQLField field, FieldDefinitionNode fieldDefinition, string type, string returnedType)
         {
             if (IsPaginationType(fieldDefinition.Type))
             {
@@ -418,7 +437,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate field with Many-To-One relationship to the type that owns it
         /// </summary>
-        private void ValidateManyToOneField(GraphqlField field, FieldDefinitionNode fieldDefinition, string type, string returnedType)
+        private void ValidateManyToOneField(GraphQLField field, FieldDefinitionNode fieldDefinition, string type, string returnedType)
         {
             ValidateReturnTypeNotPagination(field, fieldDefinition);
             ValidateFieldReturnsCustomType(fieldDefinition, typeNullable: false);
@@ -435,7 +454,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate field with Many-To-Many relationship to the type that owns it
         /// </summary>
-        private void ValidateManyToManyField(GraphqlField field, FieldDefinitionNode fieldDefinition, string type, string returnedType)
+        private void ValidateManyToManyField(GraphQLField field, FieldDefinitionNode fieldDefinition, string type, string returnedType)
         {
             if (IsPaginationType(fieldDefinition.Type))
             {
@@ -522,7 +541,7 @@ namespace Azure.DataGateway.Service.Configurations
         private void ValidateInsertMutationSchema(MutationResolver resolver)
         {
             FieldDefinitionNode mutation = GetMutation(resolver.Id);
-            Dictionary<string, InputValueDefinitionNode> mutArgs = GetArgumentFromField(mutation);
+            Dictionary<string, InputValueDefinitionNode> mutArgs = GetArgumentsFromField(mutation);
             TableDefinition table = GetTableWithName(resolver.Table);
 
             ValidateMutReturnTypeIsNotListType(mutation);
@@ -545,7 +564,7 @@ namespace Azure.DataGateway.Service.Configurations
         private void ValidateUpdateMutationSchema(MutationResolver resolver)
         {
             FieldDefinitionNode mutation = GetMutation(resolver.Id);
-            Dictionary<string, InputValueDefinitionNode> mutArgs = GetArgumentFromField(mutation);
+            Dictionary<string, InputValueDefinitionNode> mutArgs = GetArgumentsFromField(mutation);
             TableDefinition table = GetTableWithName(resolver.Table);
 
             ValidateMutReturnTypeIsNotListType(mutation);
@@ -566,7 +585,7 @@ namespace Azure.DataGateway.Service.Configurations
         private void ValidateDeleteMutationSchema(MutationResolver resolver)
         {
             FieldDefinitionNode mutation = GetMutation(resolver.Id);
-            Dictionary<string, InputValueDefinitionNode> mutArgs = GetArgumentFromField(mutation);
+            Dictionary<string, InputValueDefinitionNode> mutArgs = GetArgumentsFromField(mutation);
             TableDefinition table = GetTableWithName(resolver.Table);
 
             ValidateMutReturnTypeIsNotListType(mutation);
@@ -575,7 +594,7 @@ namespace Azure.DataGateway.Service.Configurations
                 ValidateMutReturnTypeMatchesTable(resolver.Table, mutation);
             }
 
-            ValidateFieldHasRequiredArguments(mutArgs.Keys, table.PrimaryKey);
+            ValidateFieldArguments(mutArgs.Keys, requiredArguments: table.PrimaryKey);
             ValidateMutArgTypesMatchTableColTypes(resolver.Table, table, mutArgs);
             ValidateFieldArgumentsAreNonNullable(mutArgs);
             ValidateReturnTypeNullability(mutation, returnsNullable: true);
@@ -634,12 +653,12 @@ namespace Azure.DataGateway.Service.Configurations
         /// </remarks>
         private void ValidateNonListCustomTypeQueryFieldArgs(FieldDefinitionNode queryField)
         {
-            Dictionary<string, InputValueDefinitionNode> arguments = GetArgumentFromField(queryField);
+            Dictionary<string, InputValueDefinitionNode> arguments = GetArgumentsFromField(queryField);
 
             string returnedTypeTableName = GetTypeTable(InnerTypeStr(queryField.Type));
             TableDefinition returnedTypeTable = GetTableWithName(returnedTypeTableName);
 
-            ValidateFieldHasRequiredArguments(arguments.Keys, returnedTypeTable.PrimaryKey);
+            ValidateFieldArguments(arguments.Keys, requiredArguments: returnedTypeTable.PrimaryKey);
             ValidateFieldArgumentsAreNonNullable(arguments);
         }
     }

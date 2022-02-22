@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -33,11 +34,6 @@ namespace Azure.DataGateway.Services
             _metadataStoreProvider = metadataStoreProvider;
         }
 
-        public ResolverMiddleware(FieldDelegate next)
-        {
-            _next = next;
-        }
-
         public async Task InvokeAsync(IMiddlewareContext context)
         {
             JsonElement jsonElement;
@@ -62,8 +58,7 @@ namespace Azure.DataGateway.Services
                 }
                 else
                 {
-                    bool isPaginatedQuery = _queryEngine.IsPaginatedQuery(context.Selection.Field.Name.Value);
-                    Tuple<JsonDocument, IMetadata> result = await _queryEngine.ExecuteAsync(context, parameters, isPaginatedQuery);
+                    Tuple<JsonDocument, IMetadata> result = await _queryEngine.ExecuteAsync(context, parameters);
                     context.Result = result.Item1;
                     SetNewMetadata(context, result.Item2);
                 }

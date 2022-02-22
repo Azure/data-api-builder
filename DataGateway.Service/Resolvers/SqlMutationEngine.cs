@@ -53,15 +53,14 @@ namespace Azure.DataGateway.Service.Resolvers
 
             string tableName = mutationResolver.Table;
 
-            Tuple<JsonDocument, IMetadata> result = new(null, null);
+            Tuple<JsonDocument, IMetadata>? result = null;
 
             if (mutationResolver.OperationType == Operation.Delete)
             {
                 // compute the mutation result before removing the element
                 result = await _queryEngine.ExecuteAsync(
                     context,
-                    parameters,
-                    isPaginationQuery: false);
+                    parameters);
             }
 
             using DbDataReader dbDataReader =
@@ -72,19 +71,23 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (!context.Selection.Type.IsScalarType() && mutationResolver.OperationType != Operation.Delete)
             {
-                Dictionary<string, object> searchParams = await ExtractRowFromDbDataReader(dbDataReader);
+                Dictionary<string, object>? searchParams = await ExtractRowFromDbDataReader(dbDataReader);
 
                 if (searchParams == null)
                 {
                     TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(tableName);
                     string searchedPK = '<' + string.Join(", ", tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
-                    throw new DatagatewayException($"Could not find entity with {searchedPK}", 404, DatagatewayException.SubStatusCodes.EntityNotFound);
+                    throw new DataGatewayException($"Could not find entity with {searchedPK}", HttpStatusCode.NotFound, DataGatewayException.SubStatusCodes.EntityNotFound);
                 }
 
                 result = await _queryEngine.ExecuteAsync(
                     context,
-                    searchParams,
-                    isPaginationQuery: false);
+                    searchParams);
+            }
+
+            if (result == null)
+            {
+                throw new DataGatewayException("Failed to resolve any query based on the current configuration.", HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.UnexpectedError);
             }
 
             return result;
@@ -96,19 +99,9 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="context">context of REST mutation request.</param>
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result</returns>
-        public async Task<JsonDocument> ExecuteAsync(RestRequestContext context)
+        public async Task<JsonDocument?> ExecuteAsync(RestRequestContext context)
         {
-            // create result object to be populated by different operations
-            Dictionary<string, object> parameters;
-            if (context.OperationType == Operation.Delete)
-            {
-                // DeleteOne based off primary key in request.
-                parameters = new(context.PrimaryKeyValuePairs);
-            }
-            else
-            {
-                parameters = new(context.FieldValuePairsInBody);
-            }
+            Dictionary<string, object> parameters = PrepareParameters(context);
 
             try
             {
@@ -117,7 +110,22 @@ namespace Azure.DataGateway.Service.Resolvers
                     context.EntityName,
                     context.OperationType,
                     parameters);
-                context.PrimaryKeyValuePairs = await ExtractRowFromDbDataReader(dbDataReader);
+
+                Dictionary<string, object>? resultRecord = new();
+                resultRecord = await ExtractRowFromDbDataReader(dbDataReader);
+
+                string? jsonResultString = null;
+
+                /// Processes a second result set from DbDataReader if it exists.
+                /// In MsSQL upsert:
+                /// result set #1: result of the UPDATE operation.
+                /// result set #2: result of the INSERT operation.
+                if (await dbDataReader.NextResultAsync())
+                {
+                    // Since no first result set exists, we overwrite Dictionary here.
+                    resultRecord = await ExtractRowFromDbDataReader(dbDataReader);
+                    jsonResultString = JsonSerializer.Serialize(resultRecord);
+                }
 
                 if (context.OperationType == Operation.Delete)
                 {
@@ -126,29 +134,40 @@ namespace Azure.DataGateway.Service.Resolvers
                     // Returning empty JSON result triggers a NoContent result in calling REST service.
                     if (dbDataReader.RecordsAffected > 0)
                     {
-                        return JsonDocument.Parse("{}");
-                    }
-                    else
-                    {
-                        return null;
+                        jsonResultString = "{}";
                     }
                 }
+                else if (context.OperationType == Operation.Insert || context.OperationType == Operation.Update)
+                {
+                    jsonResultString = JsonSerializer.Serialize(resultRecord);
+                }
+
+                if (jsonResultString == null)
+                {
+                    return null;
+                }
+
+                return JsonDocument.Parse(jsonResultString);
             }
             catch (DbException ex)
             {
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine(ex.StackTrace);
-                throw new DatagatewayException(
+
+                throw new DataGatewayException(
                     message: $"Could not perform the given mutation on entity {context.EntityName}.",
-                    statusCode: (int)HttpStatusCode.InternalServerError,
-                    subStatusCode: DatagatewayException.SubStatusCodes.DatabaseOperationFailed);
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
             }
-
-            // Reuse the same context as a FindRequestContext to return the results after the mutation operation.
-            context.OperationType = Operation.Find;
-
-            // delegates the querying part of the mutation to the QueryEngine
-            return await _queryEngine.ExecuteAsync(context);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine(ex.StackTrace);
+                throw new DataGatewayException(
+                    message: $"Could not perform the given mutation on entity {context.EntityName}.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
+            }
         }
 
         /// <summary>
@@ -161,7 +180,7 @@ namespace Azure.DataGateway.Service.Resolvers
             IDictionary<string, object> parameters)
         {
             string queryString;
-            Dictionary<string, object> queryParameters;
+            Dictionary<string, object?> queryParameters;
 
             switch (operationType)
             {
@@ -180,6 +199,11 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryString = _queryBuilder.Build(deleteStructure);
                     queryParameters = deleteStructure.Parameters;
                     break;
+                case Operation.Upsert:
+                    SqlUpsertQueryStructure upsertStructure = new(tableName, _metadataStoreProvider, parameters);
+                    queryString = _queryBuilder.Build(upsertStructure);
+                    queryParameters = upsertStructure.Parameters;
+                    break;
                 default:
                     throw new NotSupportedException($"Unexpected mutation operation \" {operationType}\" requested.");
             }
@@ -193,7 +217,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Extracts a single row from DbDataReader and format it so it can be used as a parameter to a query execution
         ///</summary>
         ///<returns>A dictionary representating the row in <c>ColumnName: Value</c> format, null if no row was found</returns>
-        private static async Task<Dictionary<string, object>> ExtractRowFromDbDataReader(DbDataReader dbDataReader)
+        private static async Task<Dictionary<string, object>?> ExtractRowFromDbDataReader(DbDataReader dbDataReader)
         {
             Dictionary<string, object> row = new();
 
@@ -201,12 +225,15 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 if (dbDataReader.HasRows)
                 {
-                    DataTable schemaTable = dbDataReader.GetSchemaTable();
+                    DataTable? schemaTable = dbDataReader.GetSchemaTable();
 
-                    foreach (DataRow schemaRow in schemaTable.Rows)
+                    if (schemaTable != null)
                     {
-                        string columnName = (string)schemaRow["ColumnName"];
-                        row.Add(columnName, dbDataReader[columnName]);
+                        foreach (DataRow schemaRow in schemaTable.Rows)
+                        {
+                            string columnName = (string)schemaRow["ColumnName"];
+                            row.Add(columnName, dbDataReader[columnName]);
+                        }
                     }
                 }
             }
@@ -218,6 +245,33 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return row;
+        }
+
+        private static Dictionary<string, object> PrepareParameters(RestRequestContext context)
+        {
+            Dictionary<string, object> parameters;
+
+            if (context.OperationType == Operation.Delete)
+            {
+                // DeleteOne based off primary key in request.
+                parameters = new(context.PrimaryKeyValuePairs);
+            }
+            else if (context.OperationType == Operation.Upsert)
+            {
+                // Combine both PrimaryKey/Field ValuePairs
+                // because we create both an insert and an update statement.
+                parameters = new(context.PrimaryKeyValuePairs);
+                foreach (KeyValuePair<string, object> pair in context.FieldValuePairsInBody)
+                {
+                    parameters.Add(pair.Key, pair.Value);
+                }
+            }
+            else
+            {
+                parameters = new(context.FieldValuePairsInBody);
+            }
+
+            return parameters;
         }
     }
 }

@@ -7,15 +7,16 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
 {
     public class MetadataStoreProviderForTest : IMetadataStoreProvider
     {
-        public string GraphqlSchema { get; set; }
+        public string GraphQLSchema { get; set; }
         private readonly FilterParser _filterParser;
         public Dictionary<string, MutationResolver> MutationResolvers { get; set; } = new();
         public Dictionary<string, GraphQLQueryResolver> QueryResolvers { get; set; } = new();
         public Dictionary<string, TableDefinition> Tables { get; set; } = new();
+        public Dictionary<string, GraphQLType> GraphQLTypes { get; set; } = new();
 
         public string GetGraphQLSchema()
         {
-            return GraphqlSchema;
+            return GraphQLSchema;
         }
 
         public MutationResolver GetMutationResolver(string name)
@@ -49,9 +50,14 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             QueryResolvers.Add(queryResolver.Id, queryResolver);
         }
 
-        public GraphqlType GetGraphqlType(string name)
+        public void StoreGraphQLType(string name, GraphQLType graphQLType)
         {
-            throw new System.NotImplementedException();
+            GraphQLTypes.Add(name, graphQLType);
+        }
+
+        public GraphQLType GetGraphQLType(string name)
+        {
+            return GraphQLTypes.TryGetValue(name, out GraphQLType graphqlType) ? graphqlType : null;
         }
 
         public ResolverConfig GetResolvedConfig()

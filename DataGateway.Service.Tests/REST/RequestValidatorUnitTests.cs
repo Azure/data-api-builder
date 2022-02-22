@@ -34,8 +34,10 @@ namespace Azure.DataGateway.Service.Tests.REST
         public void MatchingPrimaryKeyTest()
         {
             string[] primaryKeys = new string[] { "id" };
-            TableDefinition tableDef = new();
-            tableDef.PrimaryKey = new(primaryKeys);
+            TableDefinition tableDef = new()
+            {
+                PrimaryKey = new(primaryKeys)
+            };
             _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
 
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
@@ -53,8 +55,10 @@ namespace Azure.DataGateway.Service.Tests.REST
         public void MatchingCompositePrimaryKeyOrdered()
         {
             string[] primaryKeys = new string[] { "id", "isbn" };
-            TableDefinition tableDef = new();
-            tableDef.PrimaryKey = new(primaryKeys);
+            TableDefinition tableDef = new()
+            {
+                PrimaryKey = new(primaryKeys)
+            };
             _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
             string primaryKeyRoute = "id/2/isbn/12345";
@@ -72,8 +76,10 @@ namespace Azure.DataGateway.Service.Tests.REST
         public void MatchingCompositePrimaryKeyNotOrdered()
         {
             string[] primaryKeys = new string[] { "id", "isbn" };
-            TableDefinition tableDef = new();
-            tableDef.PrimaryKey = new(primaryKeys);
+            TableDefinition tableDef = new()
+            {
+                PrimaryKey = new(primaryKeys)
+            };
             _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
             string primaryKeyRoute = "isbn/12345/id/2";
@@ -87,14 +93,16 @@ namespace Azure.DataGateway.Service.Tests.REST
         /// <summary>
         /// Simulated client request contains matching number of Primary Key columns,
         /// but defines column that is NOT a primary key. We verify that the correct
-        /// status code and sub status code is a part of the DatagatewayException thrown.
+        /// status code and sub status code is a part of the DataGatewayException thrown.
         /// </summary>
         [TestMethod]
         public void RequestWithInvalidPrimaryKeyTest()
         {
             string[] primaryKeys = new string[] { "id" };
-            TableDefinition tableDef = new();
-            tableDef.PrimaryKey = new(primaryKeys);
+            TableDefinition tableDef = new()
+            {
+                PrimaryKey = new(primaryKeys)
+            };
             _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
             string primaryKeyRoute = "name/Catch22";
@@ -103,8 +111,8 @@ namespace Azure.DataGateway.Service.Tests.REST
             PerformTest(findRequestContext,
                 _metadataStore.Object,
                 expectsException: true,
-                statusCode: 400,
-                subStatusCode: DatagatewayException.SubStatusCodes.BadRequest);
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
         }
 
         /// <summary>
@@ -138,8 +146,10 @@ namespace Azure.DataGateway.Service.Tests.REST
         public void RequestWithIncompleteCompositePrimaryKeyTest()
         {
             string[] primaryKeys = new string[] { "id", "name" };
-            TableDefinition tableDef = new();
-            tableDef.PrimaryKey = new(primaryKeys);
+            TableDefinition tableDef = new()
+            {
+                PrimaryKey = new(primaryKeys)
+            };
             _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
             string primaryKeyRoute = "name/1";
@@ -156,8 +166,10 @@ namespace Azure.DataGateway.Service.Tests.REST
         public void IncompleteRequestCompositePrimaryKeyTest()
         {
             string[] primaryKeys = new string[] { "id", "isbn" };
-            TableDefinition tableDef = new();
-            tableDef.PrimaryKey = new(primaryKeys);
+            TableDefinition tableDef = new()
+            {
+                PrimaryKey = new(primaryKeys)
+            };
             _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
             string primaryKeyRoute = "id/12345/name/2";
@@ -174,8 +186,10 @@ namespace Azure.DataGateway.Service.Tests.REST
         public void BloatedRequestCompositePrimaryKeyTest()
         {
             string[] primaryKeys = new string[] { "id", "isbn" };
-            TableDefinition tableDef = new();
-            tableDef.PrimaryKey = new(primaryKeys);
+            TableDefinition tableDef = new()
+            {
+                PrimaryKey = new(primaryKeys)
+            };
             _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
             string primaryKeyRoute = "id/12345/isbn/2/name/TwoTowers";
@@ -183,11 +197,30 @@ namespace Azure.DataGateway.Service.Tests.REST
 
             PerformTest(findRequestContext, _metadataStore.Object, expectsException: true);
         }
+
+        /// <summary>
+        /// Simulated client request includes matching DB primary key column, but
+        /// does not include value.
+        /// </summary>
+        [TestMethod]
+        public void PrimaryKeyWithNoValueTest()
+        {
+            FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
+
+            string primaryKeyRoute = "id/";
+            PerformRequestParserPrimaryKeyTest(findRequestContext, primaryKeyRoute, expectsException: true);
+
+            primaryKeyRoute = "id/1/title/";
+            PerformRequestParserPrimaryKeyTest(findRequestContext, primaryKeyRoute, expectsException: true);
+
+            primaryKeyRoute = "id//title/";
+            PerformRequestParserPrimaryKeyTest(findRequestContext, primaryKeyRoute, expectsException: true);
+        }
         #endregion
         #region Helper Methods
         /// <summary>
         /// Runs the Validation method to show success/failure. Extracted to separate helper method
-        /// to avoid code duplication. Only attempt to catch DatagatewayException since
+        /// to avoid code duplication. Only attempt to catch DataGatewayException since
         /// that exception determines whether we encounter an expected validation failure in case
         /// of negative tests, vs downstream service failure.
         /// </summary>
@@ -200,8 +233,8 @@ namespace Azure.DataGateway.Service.Tests.REST
             FindRequestContext findRequestContext,
             IMetadataStoreProvider metadataStore,
             bool expectsException,
-            int statusCode = 400,
-            DatagatewayException.SubStatusCodes subStatusCode = DatagatewayException.SubStatusCodes.BadRequest)
+            HttpStatusCode statusCode = HttpStatusCode.BadRequest,
+            DataGatewayException.SubStatusCodes subStatusCode = DataGatewayException.SubStatusCodes.BadRequest)
         {
             try
             {
@@ -213,7 +246,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                     Assert.Fail();
                 }
             }
-            catch (DatagatewayException ex)
+            catch (DataGatewayException ex)
             {
                 //If we are not expecting an exception, fail the test. Completing test method without
                 //failure will pass the test, so no Assert.Pass() is necessary (nor exists).
@@ -252,11 +285,44 @@ namespace Azure.DataGateway.Service.Tests.REST
 
                 Assert.Fail();
             }
-            catch (DatagatewayException ex)
+            catch (DataGatewayException ex)
             {
                 // validates the status code and sub status code match the expected values.
-                Assert.AreEqual((int)HttpStatusCode.BadRequest, ex.StatusCode);
-                Assert.AreEqual(DatagatewayException.SubStatusCodes.BadRequest, ex.SubStatusCode);
+                Assert.AreEqual(HttpStatusCode.BadRequest, ex.StatusCode);
+                Assert.AreEqual(DataGatewayException.SubStatusCodes.BadRequest, ex.SubStatusCode);
+            }
+        }
+
+        /// <summary>
+        /// Tests the ParsePrimaryKey method in the RequestParser class.
+        /// </summary>
+        private static void PerformRequestParserPrimaryKeyTest(
+            FindRequestContext findRequestContext,
+            string primaryKeyRoute,
+            bool expectsException,
+            HttpStatusCode statusCode = HttpStatusCode.BadRequest,
+            DataGatewayException.SubStatusCodes subStatusCode = DataGatewayException.SubStatusCodes.BadRequest)
+        {
+            try
+            {
+                RequestParser.ParsePrimaryKey(primaryKeyRoute.ToString(), findRequestContext);
+
+                //If expecting an exception, the code should not reach this point.
+                Assert.IsFalse(expectsException, "No exception thrown when exception expected.");
+            }
+            catch (DataGatewayException ex)
+            {
+                //If we are not expecting an exception, fail the test. Completing test method without
+                //failure will pass the test, so no Assert.Pass() is necessary (nor exists).
+                if (!expectsException)
+                {
+                    Console.Error.WriteLine(ex.Message);
+                    throw;
+                }
+
+                // validates the status code and sub status code match the expected values.
+                Assert.AreEqual(statusCode, ex.StatusCode);
+                Assert.AreEqual(subStatusCode, ex.SubStatusCode);
             }
         }
 

@@ -295,7 +295,7 @@
             "Authorization": "Authenticated"
           },
           "PUT": {
-            "Authorization": "Anonymous"
+            "Authorization": "Authenticated"
           }
         }
       }

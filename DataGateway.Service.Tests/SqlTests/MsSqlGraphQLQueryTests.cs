@@ -404,6 +404,61 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        /// <sumary>
+        /// Test if filter param successfully filters the query results
+        /// </summary>
+        [TestMethod]
+        public async Task TestFilterParamForListQueries()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(_filter: ""id ge 1 and id le 4"") {
+                    id
+                    publisher {
+                        books(first: 3, _filter: ""id ne 2"") {
+                            id
+                        }
+                    }
+                }
+            }";
+
+            string msSqlQuery = @"
+                SELECT TOP 100 [table0].[id] AS [id],
+                    JSON_QUERY([table1_subq].[data]) AS [publisher]
+                FROM [books] AS [table0]
+                OUTER APPLY (
+                    SELECT TOP 1 JSON_QUERY(COALESCE([table2_subq].[data], '[]')) AS [books]
+                    FROM [publishers] AS [table1]
+                    OUTER APPLY (
+                        SELECT TOP 3 [table2].[id] AS [id]
+                        FROM [books] AS [table2]
+                        WHERE (id != 2)
+                            AND [table1].[id] = [table2].[publisher_id]
+                        ORDER BY [table2].[id]
+                        FOR JSON PATH,
+                            INCLUDE_NULL_VALUES
+                        ) AS [table2_subq]([data])
+                    WHERE [table0].[publisher_id] = [table1].[id]
+                    ORDER BY [table1].[id]
+                    FOR JSON PATH,
+                        INCLUDE_NULL_VALUES,
+                        WITHOUT_ARRAY_WRAPPER
+                    ) AS [table1_subq]([data])
+                WHERE (
+                        (id >= 1)
+                        AND (id <= 4)
+                        )
+                ORDER BY [table0].[id]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Negative Tests
@@ -422,6 +477,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
+
+        [TestMethod]
+        public async Task TestInvalidFilterParamQuery()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(_filter: ""INVALID"") {
+                    id
+                    title
+                }
+            }";
+
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
+        }
+
         #endregion
     }
 }

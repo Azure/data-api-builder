@@ -434,9 +434,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/7",
-                    queryString: null,
+                    queryString: string.Empty,
                     entity: _integrationTableName,
-                    sqlQuery: GetQuery(nameof(PutOne_Insert_BadReq_Test)),
+                    sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
@@ -465,9 +465,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/1000",
-                    queryString: null,
+                    queryString: string.Empty,
                     entity: _integrationTableName,
-                    sqlQuery: GetQuery(nameof(PutOne_Insert_PKAutoGen_Test)),
+                    sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
@@ -495,9 +495,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/1000",
-                    queryString: null,
+                    queryString: string.Empty,
                     entity: _integrationTableName,
-                    sqlQuery: GetQuery(nameof(PutOne_Insert_BadReq_NonNullable_Test)),
+                    sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
@@ -520,12 +520,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {//expected status code 404
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/1000",
-                    queryString: null,
+                    queryString: string.Empty,
                     entity: _integrationTableName,
-                    sqlQuery: GetQuery(nameof(DeleteNonExistentTest)),
+                    sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Delete,
-                    requestBody: null,
+                    requestBody: string.Empty,
                     exception: true,
                     expectedErrorMessage: "Not Found",
                     expectedStatusCode: HttpStatusCode.NotFound,
@@ -544,17 +544,35 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {//expected status code 404
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "title/7",
-                    queryString: null,
+                    queryString: string.Empty,
                     entity: _integrationTableName,
-                    sqlQuery: null,
+                    sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Delete,
-                    requestBody: null,
+                    requestBody: string.Empty,
                     exception: true,
                     expectedErrorMessage: "The request is invalid since the primary keys: title requested were not found in the entity definition.",
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
                 );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for FindById operation with an invalid Primary Key Route.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestInvalidPrimaryKeyRoute()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/",
+                queryString: string.Empty,
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "The request is invalid since it contains a primary key with no value specified.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
         }
 
         /// <summary>
@@ -568,7 +586,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 primaryKeyRoute: "id/5671",
                 queryString: "?_f=id,content",
                 entity: _integrationTableName,
-                sqlQuery: GetQuery(nameof(FindByIdTestWithInvalidFields)),
+                sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
                 expectedErrorMessage: "Invalid Column name requested: content",
@@ -587,7 +605,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 primaryKeyRoute: string.Empty,
                 queryString: "?_f=id,null",
                 entity: _integrationTableName,
-                sqlQuery: GetQuery(nameof(FindTestWithInvalidFields)),
+                sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
                 expectedErrorMessage: RestController.SERVER_ERROR,
@@ -603,13 +621,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task RestDataGatewayExceptionErrorConditionFormat()
         {
-            string msSqlQuery = string.Empty;
-
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?_f=id,content",
                 entity: _integrationTableName,
-                sqlQuery: msSqlQuery,
+                sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
                 expectedErrorMessage: "Invalid Column name requested: content",

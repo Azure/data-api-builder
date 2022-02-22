@@ -71,7 +71,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (!context.Selection.Type.IsScalarType() && mutationResolver.OperationType != Operation.Delete)
             {
-                Dictionary<string, object>? searchParams = await ExtractRowFromDbDataReader(dbDataReader);
+                Dictionary<string, object?>? searchParams = await ExtractRowFromDbDataReader(dbDataReader);
 
                 if (searchParams == null)
                 {
@@ -111,7 +111,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     context.OperationType,
                     parameters);
 
-                Dictionary<string, object>? resultRecord = new();
+                Dictionary<string, object?>? resultRecord = new();
                 resultRecord = await ExtractRowFromDbDataReader(dbDataReader);
 
                 string? jsonResultString = null;
@@ -208,9 +208,9 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Extracts a single row from DbDataReader and format it so it can be used as a parameter to a query execution
         ///</summary>
         ///<returns>A dictionary representating the row in <c>ColumnName: Value</c> format, null if no row was found</returns>
-        private static async Task<Dictionary<string, object>?> ExtractRowFromDbDataReader(DbDataReader dbDataReader)
+        private static async Task<Dictionary<string, object?>?> ExtractRowFromDbDataReader(DbDataReader dbDataReader)
         {
-            Dictionary<string, object> row = new();
+            Dictionary<string, object?> row = new();
 
             if (await dbDataReader.ReadAsync())
             {
@@ -223,7 +223,15 @@ namespace Azure.DataGateway.Service.Resolvers
                         foreach (DataRow schemaRow in schemaTable.Rows)
                         {
                             string columnName = (string)schemaRow["ColumnName"];
-                            row.Add(columnName, dbDataReader[columnName]);
+                            int colIndex = dbDataReader.GetOrdinal(columnName);
+                            if (!dbDataReader.IsDBNull(colIndex))
+                            {
+                                row.Add(columnName, dbDataReader[columnName]);
+                            }
+                            else
+                            {
+                                row.Add(columnName, value:null);
+                            }
                         }
                     }
                 }

@@ -19,12 +19,5 @@ namespace Azure.DataGateway.Service.Tests
         {
             Assert.IsNotNull(_fileProvider.GetGraphQLSchema());
         }
-
-        [TestMethod]
-        [Ignore] // TODO: moderakh we will re-enable, once we can run all components tests in the CI
-        public void TestGetResolver()
-        {
-            Assert.IsNotNull(_fileProvider.GetQueryResolver("authorById"));
-        }
     }
 }

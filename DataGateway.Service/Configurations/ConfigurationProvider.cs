@@ -39,7 +39,7 @@ namespace Azure.DataGateway.Service.Configurations
 
         // This should be renamed to databaseConnection but need to coordiate with moderakh on CI configuration.
         public DatabaseConnectionConfig DatabaseConnection { get; set; } = null!;
-        public string ResolverConfigFile { get; set; } = "config.json";
+        public string ResolverConfigFile { get; set; } = null!;
     }
 
     /// <summary>

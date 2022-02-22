@@ -19,11 +19,7 @@ namespace Azure.DataGateway.Services
         /// given name.
         /// </summary>
         MutationResolver GetMutationResolver(string name);
-        /// <summary>
-        /// Gets metadata required to resolve the GraphQL query with the given
-        /// name.
-        /// </summary>
-        GraphQLQueryResolver GetQueryResolver(string name);
+
         /// <summary>
         /// Gets the database schema information for the given table.
         /// </summary>

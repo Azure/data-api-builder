@@ -492,9 +492,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 exception: true,
-                expectedErrorMessage: "Invalid request body. Missing field in body: id.",
-                expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: "BadRequest"
+                expectedErrorMessage: "Could not perform the given mutation on entity books.",
+                expectedStatusCode: HttpStatusCode.InternalServerError,
+                expectedSubStatusCode: "DatabaseOperationFailed"
             );
         }
 
@@ -516,7 +516,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 exception: true,
-                expectedErrorMessage: "Invalid request body. Missing field in body: id.",
+                expectedErrorMessage: "Invalid request body. Missing field in body: publisher_id.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

@@ -63,6 +63,7 @@ namespace Azure.DataGateway.Service.Resolvers
             // No need to put into transaction as LAST_INSERT_ID is session level variable
             return $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
                     $"VALUES ({string.Join(", ", (structure.Values))}); " +
+                    $" SET @ROWCOUNT=ROW_COUNT(); " +
                     $"SELECT {MakeInsertSelections(structure)}";
         }
 
@@ -70,20 +71,22 @@ namespace Azure.DataGateway.Service.Resolvers
         public string Build(SqlUpdateStructure structure)
         {
             // Create local variables to store the pk columns
-            var sets = String.Join(";\n", structure.PrimaryKey().Select(x => $"SET @LU_{x} := 0"));
+            string sets = String.Join(";\n", structure.PrimaryKey().Select(x => $"SET {QuoteIdentifier("@LU_" + QuoteIdentifier(x))} := 0"));
 
             // Fetch the value to local variables
-            var updates = String.Join(", ", structure.PrimaryKey().Select(x => $"{x} = (SELECT @LU_{x} := {x})"));
+            string updates = String.Join(", ", structure.PrimaryKey().Select(x =>
+                $"{QuoteIdentifier(x)} = (SELECT {QuoteIdentifier("@LU_" + QuoteIdentifier(x))} := {QuoteIdentifier(x)})"));
 
             // Select local variables and mapping to original column name
-            var select = String.Join(", ", structure.PrimaryKey().Select(x => $"@LU_{x} AS {x}"));
+            string select = String.Join(", ", structure.PrimaryKey().Select(x => $"{QuoteIdentifier("@LU_" + QuoteIdentifier(x))} AS {QuoteIdentifier(x)}"));
 
             return sets + ";\n" +
                     $"UPDATE {QuoteIdentifier(structure.TableName)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                         ", " + updates +
                     $" WHERE {Build(structure.Predicates)}; " +
-                    $"SELECT " + select + $" WHERE @LU_{structure.PrimaryKey().First()} != 0;";
+                    $" SET @ROWCOUNT=ROW_COUNT(); " +
+                    $"SELECT " + select + $" WHERE @ROWCOUNT > 0;";
         }
 
         /// <inheritdoc />

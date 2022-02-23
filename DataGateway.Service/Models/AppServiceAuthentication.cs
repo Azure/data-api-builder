@@ -41,9 +41,9 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
         /// <param name="context">Request's Http Context</param>
         /// <returns></returns>
-        public static ClaimsIdentity Parse(HttpContext context)
+        public static ClaimsIdentity? Parse(HttpContext context)
         {
-            ClaimsIdentity identity = null;
+            ClaimsIdentity? identity = null;
             // x-ms-client-principal is base64 encoded custom JWT injected by AppService Authentication (EasyAuth)
             // only when Bearer token has been validated.
             if (context.Request.Headers.TryGetValue("x-ms-client-principal", out StringValues header))

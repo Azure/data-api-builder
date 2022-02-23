@@ -18,7 +18,7 @@ namespace Azure.DataGateway.Services
         /// Prefix used for specifying the fields in the query string of the URL.
         /// </summary>
         private const string FIELDS_URL = "_f";
-        private const string FILTER_URL = "$filter";
+        public const string FILTER_URL = "$filter";
         /// <summary>
         /// Parses the primary key string to identify the field names composing the key
         /// and their values.
@@ -43,10 +43,10 @@ namespace Azure.DataGateway.Services
 
                     if (string.IsNullOrWhiteSpace(primaryKeyValues[primaryKeyIndex + 1]))
                     {
-                        throw new DatagatewayException(
+                        throw new DataGatewayException(
                             message: "The request is invalid since it contains a primary key with no value specified.",
                             statusCode: HttpStatusCode.BadRequest,
-                            DatagatewayException.SubStatusCodes.BadRequest);
+                            DataGatewayException.SubStatusCodes.BadRequest);
                     }
 
                     if (!context.PrimaryKeyValuePairs.ContainsKey(primaryKey))
@@ -56,10 +56,10 @@ namespace Azure.DataGateway.Services
                     }
                     else
                     {
-                        throw new DatagatewayException(
+                        throw new DataGatewayException(
                             message: "The request is invalid since it contains duplicate primary keys.",
                             statusCode: HttpStatusCode.BadRequest,
-                            DatagatewayException.SubStatusCodes.BadRequest);
+                            DataGatewayException.SubStatusCodes.BadRequest);
                     }
                 }
             }
@@ -79,14 +79,14 @@ namespace Azure.DataGateway.Services
                 switch (key)
                 {
                     case FIELDS_URL:
-                        CheckListForNullElement(nvc[key].Split(",").ToList());
-                        context.FieldsToBeReturned = nvc[key].Split(",").ToList();
+                        CheckListForNullElement(nvc[key]!.Split(",").ToList());
+                        context.FieldsToBeReturned = nvc[key]!.Split(",").ToList();
                         break;
                     case FILTER_URL:
                         // save the AST that represents the filter for the query
                         // ?$filter=<filter clause using microsoft api guidelines>
                         string filterQueryString = "?" + FILTER_URL + "=" + nvc[key];
-                        context.FilterClauseInUrl = filterParser.GetFilterClause(filterQueryString, context.EntityName + "/");
+                        context.FilterClauseInUrl = filterParser.GetFilterClause(filterQueryString, context.EntityName);
                         break;
                     default:
                         throw new ArgumentException("Invalid Query Parameter: " + key.ToString());

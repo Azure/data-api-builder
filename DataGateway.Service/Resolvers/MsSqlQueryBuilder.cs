@@ -149,7 +149,7 @@ namespace Azure.DataGateway.Service.Resolvers
             return string.Join(", ",
                 structure.Columns.Select(
                     c => structure.IsSubqueryColumn(c) ?
-                        WrapSubqueryColumn(c, structure.JoinQueries[c.TableAlias]) + $" AS {QuoteIdentifier(c.Label)}" :
+                        WrapSubqueryColumn(c, structure.JoinQueries[c.TableAlias!]) + $" AS {QuoteIdentifier(c.Label)}" :
                         Build(c)
             ));
         }

@@ -47,7 +47,7 @@ namespace Azure.DataGateway.Service.Authorization
                         context.Succeed(requirement);
                         break;
                     case AuthorizationType.Authenticated:
-                        if (context.User.Identity.IsAuthenticated)
+                        if (context.User.Identity != null && context.User.Identity.IsAuthenticated)
                         {
                             context.Succeed(requirement);
                         }

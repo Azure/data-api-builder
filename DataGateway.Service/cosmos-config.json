@@ -9,7 +9,7 @@
       "operationType": "Upsert"
     }
   ],
-  "GraphqlTypes": {
+  "GraphQLTypes": {
     "Planet": {
       "databaseName": "graphqldb",
       "containerName": "planet"
@@ -26,4 +26,3 @@
     }
   }
 }
-

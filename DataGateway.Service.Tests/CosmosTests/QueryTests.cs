@@ -34,8 +34,8 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             Client.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
             Client.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             _idList = CreateItems(DATABASE_NAME, _containerName, 10);
-            RegisterGraphqlType("Planet", DATABASE_NAME, _containerName);
-            RegisterGraphqlType("PlanetConnection", DATABASE_NAME, _containerName, true);
+            RegisterGraphQLType("Planet", DATABASE_NAME, _containerName);
+            RegisterGraphQLType("PlanetConnection", DATABASE_NAME, _containerName, true);
         }
 
         [TestMethod]

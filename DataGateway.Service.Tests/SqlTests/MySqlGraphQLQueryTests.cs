@@ -410,6 +410,60 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        /// <sumary>
+        /// Test if filter param successfully filters the query results
+        /// </summary>
+        [TestMethod]
+        public async Task TestFilterParamForListQueries()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(_filter: ""id ge 1 and id le 4"") {
+                    id
+                    publisher {
+                        books(first: 3, _filter: ""id ne 2"") {
+                            id
+                        }
+                    }
+                }
+            }";
+
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT(""id"", `subq12`.`id`, ""publisher"", JSON_EXTRACT(`subq12`.
+                                    `publisher`, '$'))), '[]') AS `data`
+                FROM (
+                    SELECT `table0`.`id` AS `id`,
+                        `table1_subq`.`data` AS `publisher`
+                    FROM `books` AS `table0`
+                    LEFT OUTER JOIN LATERAL(SELECT JSON_OBJECT(""books"", JSON_EXTRACT(`subq11`.`books`, '$')) AS `data` FROM
+                            (
+                            SELECT `table2_subq`.`data` AS `books`
+                            FROM `publishers` AS `table1`
+                            LEFT OUTER JOIN LATERAL(SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT(""id"", `subq10`.`id`)),
+                                        '[]') AS `data` FROM (
+                                    SELECT `table2`.`id` AS `id`
+                                    FROM `books` AS `table2`
+                                    WHERE (id != 2)
+                                        AND `table1`.`id` = `table2`.`publisher_id`
+                                    ORDER BY `table2`.`id` LIMIT 3
+                                    ) AS `subq10`) AS `table2_subq` ON TRUE
+                            WHERE `table0`.`publisher_id` = `table1`.`id`
+                            ORDER BY `table1`.`id` LIMIT 1
+                            ) AS `subq11`) AS `table1_subq` ON TRUE
+                    WHERE (
+                            (id >= 1)
+                            AND (id <= 4)
+                            )
+                    ORDER BY `table0`.`id` LIMIT 100
+                    ) AS `subq12`
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Negative Tests
@@ -426,7 +480,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }";
 
             JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DatagatewayException.SubStatusCodes.BadRequest}");
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
+        }
+
+        [TestMethod]
+        public async Task TestInvalidFilterParamQuery()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(_filter: ""INVALID"") {
+                    id
+                    title
+                }
+            }";
+
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 
         #endregion

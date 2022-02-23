@@ -17,17 +17,14 @@ namespace Azure.DataGateway.Service.Configurations
         /// If no path is passed, make starting stack,
         /// add the path to the stack otherwise
         /// </summary>
-        private static Stack<string> MakeConfigPosition(IEnumerable<string> path = null)
+        private static Stack<string> MakeConfigPosition(IEnumerable<string> path)
         {
             Stack<string> configStack = new();
             configStack.Push("Config");
 
-            if (path != null)
+            foreach (string pathElement in path)
             {
-                foreach (string pathElement in path)
-                {
-                    configStack.Push(pathElement);
-                }
+                configStack.Push(pathElement);
             }
 
             return configStack;
@@ -38,17 +35,14 @@ namespace Azure.DataGateway.Service.Configurations
         /// If no path is passed, make starting stack,
         /// add the path to the stack otherwise
         /// </summary>
-        private static Stack<string> MakeSchemaPosition(IEnumerable<string> path = null)
+        private static Stack<string> MakeSchemaPosition(IEnumerable<string> path)
         {
             Stack<string> schemaStack = new();
             schemaStack.Push("GQL Schema");
 
-            if (path != null)
+            foreach (string pathElement in path)
             {
-                foreach (string pathElement in path)
-                {
-                    schemaStack.Push(pathElement);
-                }
+                schemaStack.Push(pathElement);
             }
 
             return schemaStack;
@@ -190,9 +184,9 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Gets graphql types from config
         /// </summmary>
-        private Dictionary<string, GraphqlType> GetGraphQLTypes()
+        private Dictionary<string, GraphQLType> GetGraphQLTypes()
         {
-            return _config.GraphqlTypes;
+            return _config.GraphQLTypes;
         }
 
         /// <summary>
@@ -252,6 +246,14 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
+        /// Checks if config type has fields
+        /// </summary>
+        private static bool TypeHasFields(GraphQLType type)
+        {
+            return type.Fields != null;
+        }
+
+        /// <summary>
         /// Checks if the type is a nested list type
         /// e.g. [[Book]], [[[Book!]!]!]!
         /// </summary>
@@ -276,8 +278,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private bool IsPaginationTypeName(string typeName)
         {
-            GraphqlType type;
-            if (_config.GraphqlTypes.TryGetValue(typeName, out type))
+            if (_config.GraphQLTypes.TryGetValue(typeName, out GraphQLType? type))
             {
                 return type.IsPaginationType;
             }
@@ -377,7 +378,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Get arguments from field and return a dictionary in [argName, argument] format
         /// </summary>
-        private static Dictionary<string, InputValueDefinitionNode> GetArgumentFromField(FieldDefinitionNode field)
+        private static Dictionary<string, InputValueDefinitionNode> GetArgumentsFromField(FieldDefinitionNode field)
         {
             Dictionary<string, InputValueDefinitionNode> arguments = new();
 
@@ -396,30 +397,6 @@ namespace Azure.DataGateway.Service.Configurations
         private bool IsScalarType(ITypeNode type)
         {
             return !IsCustomType(type) && !IsListType(type);
-        }
-
-        /// <summary>
-        /// Checks if the given GraphQL typename has at least 1 custom
-        /// field type which means it is either
-        /// - a custom type or
-        /// - a list of custom type or
-        /// - a pagination type.
-        /// </summary>
-        private bool HasAnyCustomFieldInGraphQLType(Dictionary<string, FieldDefinitionNode> fieldDefinitions)
-        {
-            bool hasAnyCustomField = false;
-            foreach (KeyValuePair<string, FieldDefinitionNode> nameFieldPair in fieldDefinitions)
-            {
-                FieldDefinitionNode field = nameFieldPair.Value;
-
-                if (IsInnerTypeCustom(field.Type))
-                {
-                    hasAnyCustomField = true;
-                    break;
-                }
-            }
-
-            return hasAnyCustomField;
         }
 
         /// <summary>
@@ -509,17 +486,17 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Get the config GraphqlTypes.Fields for a graphql schema type
+        /// Get the config GraphQLTypes.Fields for a graphql schema type
         /// </summary>
         private IEnumerable<string> GetConfigFieldsForGqlType(ObjectTypeDefinitionNode type)
         {
-            return _config.GraphqlTypes[type.Name.Value].Fields.Keys;
+            return _config.GraphQLTypes[type.Name.Value].Fields.Keys;
         }
 
         /// <summary>
         /// Check that GraphQLType.Field has only a left foreign key
         /// </summary>
-        private static bool HasLeftForeignKey(GraphqlField field)
+        private static bool HasLeftForeignKey(GraphQLField field)
         {
             return !string.IsNullOrEmpty(field.LeftForeignKey);
         }
@@ -527,7 +504,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Check that GraphQLType.Field has only a right foreign key
         /// </summary>
-        private static bool HasRightForeignKey(GraphqlField field)
+        private static bool HasRightForeignKey(GraphQLField field)
         {
             return !string.IsNullOrEmpty(field.RightForeignKey);
         }
@@ -605,6 +582,27 @@ namespace Azure.DataGateway.Service.Configurations
         private bool SchemaHasMutations()
         {
             return _mutations.Count > 0;
+        }
+
+        /// <summary>
+        /// Merges two dictionaries and returns the result
+        /// </summary>
+        /// <exception cref="ArgumentException"> If the dictionaries have overlapping keys </exception>
+        private static Dictionary<K, V> MergeDictionaries<K, V>(IDictionary<K, V> d1, IDictionary<K, V> d2) where K : notnull
+        {
+            Dictionary<K, V> result = new();
+
+            foreach (KeyValuePair<K, V> pair in d1)
+            {
+                result.Add(pair.Key, pair.Value);
+            }
+
+            foreach (KeyValuePair<K, V> pair in d2)
+            {
+                result.Add(pair.Key, pair.Value);
+            }
+
+            return result;
         }
     }
 }

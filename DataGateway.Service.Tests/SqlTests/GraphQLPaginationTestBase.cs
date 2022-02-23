@@ -122,7 +122,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ""id"": 8,
                   ""title"": ""Time to Eat""
                 }
-
               ],
               ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":8}") + @""",
               ""hasNextPage"": false

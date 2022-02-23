@@ -383,6 +383,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         [TestMethod]
         [Ignore]
+        public override Task PutOne_Insert_BadReq_AutoGen_NonNullable_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
         public override Task PatchOne_Insert_NonAutoGenPK_Test()
         {
             throw new NotImplementedException();
@@ -405,20 +412,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         [Ignore]
         public override Task PatchOne_Insert_WithoutNonNullableField_Test()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PatchOne_Insert_BadReq_NullsOutANonNullableField_Test()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PutOne_Insert_BadReq_AutoGen_NonNullable_Test()
         {
             throw new NotImplementedException();
         }

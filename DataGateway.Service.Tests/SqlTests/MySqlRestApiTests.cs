@@ -369,6 +369,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _restController = new RestController(_restService);
         }
 
+        /// <summary>
+        /// Runs after every test to reset the database state
+        /// </summary>
+        [TestCleanup]
+        public async Task TestCleanup()
+        {
+            await ResetDbStateAsync();
+        }
+
         #endregion
 
         public override string GetQuery(string key)
@@ -427,6 +436,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         [TestMethod]
         [Ignore]
+        public override Task PutOne_Insert_BadReq_AutoGen_NonNullable_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
         public override Task PatchOne_Insert_NonAutoGenPK_Test()
         {
             throw new NotImplementedException();
@@ -449,20 +465,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         [Ignore]
         public override Task PatchOne_Insert_WithoutNonNullableField_Test()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PatchOne_Insert_BadReq_NullsOutANonNullableField_Test()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PutOne_Insert_BadReq_AutoGen_NonNullable_Test()
         {
             throw new NotImplementedException();
         }

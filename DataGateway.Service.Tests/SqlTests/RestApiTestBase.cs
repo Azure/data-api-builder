@@ -486,7 +486,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     entity: _integration_NonAutoGenPK_TableName,
                     sqlQuery: GetQuery(nameof(PatchOne_Insert_NonAutoGenPK_Test)),
                     controller: _restController,
-                    operationType: Operation.Update,
+                    operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: expectedLocationHeader
@@ -496,7 +496,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Tests REST PatchOne which results in incremental update
         /// URI Path: PK of existing record.
-        /// Req Body: Valid Parameters.
+        /// Req Body: Valid Parameter with intended update.
         /// Expects: 201 Created where sqlQuery validates insert.
         /// </summary>
         [TestMethod]
@@ -511,9 +511,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     primaryKeyRoute: "id/8",
                     queryString: null,
                     entity: _integrationTableName,
-                    sqlQuery: GetQuery(nameof(PutOne_Update_Test)),
+                    sqlQuery: GetQuery(nameof(PatchOne_Update_Test)),
                     controller: _restController,
-                    operationType: Operation.Update,
+                    operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.NoContent
                 );
@@ -543,7 +543,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     entity: _integrationTableName,
                     sqlQuery: null,
                     controller: _restController,
-                    operationType: Operation.Update,
+                    operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
                     exception: true,
                     expectedErrorMessage: $"Could not perform the given mutation on entity books.",
@@ -573,7 +573,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     entity: _integration_NonAutoGenPK_TableName,
                     sqlQuery: null,
                     controller: _restController,
-                    operationType: Operation.Update,
+                    operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
                     exception: true,
                     expectedErrorMessage: "Could not perform the given mutation on entity magazines.",
@@ -582,37 +582,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 );
         }
 
-        /// <summary>
-        /// Tests REST PatchOne which results in insert.
-        /// URI Path: PK of record that does not exist.
-        /// Req Body: Parameters include non-nullable/non-default field(s).
-        /// Expects: 400 Bad Request. No sqlQuery as request does not touch db.
-
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public virtual async Task PatchOne_Insert_BadReq_NullsOutANonNullableField_Test()
-        {
-            string requestBody = @"
-            {
-                ""title"": ""The Hobbit Returns to The Shire"",
-                ""issueNumber"": null
-            }";
-
-            await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/1000",
-                    queryString: null,
-                    entity: _integrationTableName,
-                    sqlQuery: null,
-                    controller: _restController,
-                    operationType: Operation.Update,
-                    requestBody: requestBody,
-                    exception: true,
-                    expectedErrorMessage: $"Invalid request body. Either insufficient or extra fields supplied.",
-                    expectedStatusCode: HttpStatusCode.BadRequest,
-                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
-                );
-        }
         /// <summary>
         /// Tests the PutOne functionality with a REST PUT request
         /// with item that does NOT exist, AND parameters incorrectly match schema, results in BadRequest.

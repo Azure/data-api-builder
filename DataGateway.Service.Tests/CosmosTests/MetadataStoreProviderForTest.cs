@@ -9,7 +9,6 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         public string GraphQLSchema { get; set; }
         private readonly FilterParser _filterParser;
         public Dictionary<string, MutationResolver> MutationResolvers { get; set; } = new();
-        public Dictionary<string, GraphQLQueryResolver> QueryResolvers { get; set; } = new();
         public Dictionary<string, TableDefinition> Tables { get; set; } = new();
         public Dictionary<string, GraphQLType> GraphQLTypes { get; set; } = new();
 
@@ -25,13 +24,6 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             return result;
         }
 
-        public GraphQLQueryResolver GetQueryResolver(string name)
-        {
-            GraphQLQueryResolver result;
-            QueryResolvers.TryGetValue(name, out result);
-            return result;
-        }
-
         public TableDefinition GetTableDefinition(string name)
         {
             TableDefinition result;
@@ -42,11 +34,6 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         public void StoreMutationResolver(MutationResolver mutationResolver)
         {
             MutationResolvers.Add(mutationResolver.Id, mutationResolver);
-        }
-
-        public void StoreQueryResolver(GraphQLQueryResolver queryResolver)
-        {
-            QueryResolvers.Add(queryResolver.Id, queryResolver);
         }
 
         public void StoreGraphQLType(string name, GraphQLType graphQLType)

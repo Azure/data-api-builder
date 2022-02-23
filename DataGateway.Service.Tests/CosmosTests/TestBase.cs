@@ -77,40 +77,6 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         }
 
         /// <summary>
-        /// Generates a query resolver for cosmos that looks like below
-        /// {
-        ///  "id": "queryName",
-        ///  "isPaginated": isPaginated,
-        ///  "databaseName": databaseName,
-        ///  "containerName": containerName,
-        ///  "parametrizedQuery": queryString
-        /// }
-        /// </summary>
-        /// <param name="id"></param>
-        /// <param name="databaseName"></param>
-        /// <param name="containerName"></param>
-        /// <param name="parametrizedQuery"></param>
-        /// <param name="isPaginated"></param>
-        /// <returns></returns>
-        internal static void RegisterQueryResolver(string id,
-            string databaseName,
-            string containerName,
-            string parametrizedQuery = "select * from c",
-            bool isPaginated = false)
-        {
-            string queryResolver = JObject.FromObject(new
-            {
-                id,
-                databaseName,
-                containerName,
-                isPaginated,
-                parametrizedQuery
-            }).ToString();
-            GraphQLQueryResolver graphQLQueryResolver = JsonConvert.DeserializeObject<GraphQLQueryResolver>(queryResolver);
-            _metadataStoreProvider.StoreQueryResolver(graphQLQueryResolver);
-        }
-
-        /// <summary>
         /// Creates and registers a mutation resolver
         /// </summary>
         /// <param name="id">name of the mutation</param>

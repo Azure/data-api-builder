@@ -8,6 +8,7 @@ using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using Microsoft.OData.UriParser;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -112,7 +113,6 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             TableAlias = TableName;
             IsListQuery = context.IsMany;
-            FilterPredicates = string.Empty;
 
             context.FieldsToBeReturned.ForEach(fieldName => AddColumn(fieldName));
             if (Columns.Count == 0)
@@ -235,6 +235,21 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
+            if (IsListQuery && queryParams.ContainsKey("_filter"))
+            {
+                object whereObject = queryParams["_filter"];
+
+                if (whereObject != null)
+                {
+                    string where = (string)whereObject;
+
+                    ODataASTVisitor visitor = new(this);
+                    Services.FilterParser parser = MetadataStoreProvider.GetFilterParser();
+                    FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={where}", TableName);
+                    FilterPredicates = filterClause.Expression.Accept<string>(visitor);
+                }
+            }
+
             // need to run after the rest of the query has been processed since it relies on
             // TableName, TableAlias, Columns, and _limit
             if (PaginationMetadata.IsPaginated)
@@ -279,6 +294,7 @@ namespace Azure.DataGateway.Service.Resolvers
             Joins = new();
             PaginationMetadata = new(this);
             ColumnLabelToParam = new();
+            FilterPredicates = string.Empty;
         }
 
         ///<summary>

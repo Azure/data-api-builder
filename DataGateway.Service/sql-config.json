@@ -48,7 +48,7 @@
           "RelationshipType": "OneToMany",
           "RightForeignKey": "review_book_fk"
         },
-        "paginatedReviews":{
+        "paginatedReviews": {
           "RelationshipType": "OneToMany",
           "RightForeignKey": "review_book_fk"
         },
@@ -93,19 +93,21 @@
       }
     },
     "BookConnection": {
-     "IsPaginationType": true
+      "IsPaginationType": true
     },
     "AuthorConnection": {
-    "IsPaginationType": true
+      "IsPaginationType": true
     },
     "ReviewConnection": {
-    "IsPaginationType": true
+      "IsPaginationType": true
     }
   },
   "DatabaseSchema": {
     "Tables": {
       "publishers": {
-        "PrimaryKey": [ "id" ],
+        "PrimaryKey": [
+          "id"
+        ],
         "Columns": {
           "id": {
             "Type": "bigint",
@@ -128,7 +130,9 @@
         }
       },
       "books": {
-        "PrimaryKey": [ "id" ],
+        "PrimaryKey": [
+          "id"
+        ],
         "Columns": {
           "id": {
             "Type": "bigint",
@@ -147,7 +151,9 @@
         "ForeignKeys": {
           "book_publisher_fk": {
             "ReferencedTable": "publishers",
-            "Columns": [ "publisher_id" ]
+            "Columns": [
+              "publisher_id"
+            ]
           }
         },
         "HttpVerbs": {
@@ -166,7 +172,9 @@
         }
       },
       "authors": {
-        "PrimaryKey": [ "id" ],
+        "PrimaryKey": [
+          "id"
+        ],
         "Columns": {
           "id": {
             "Type": "bigint",
@@ -189,7 +197,10 @@
         }
       },
       "reviews": {
-        "PrimaryKey": [ "book_id", "id" ],
+        "PrimaryKey": [
+          "book_id",
+          "id"
+        ],
         "Columns": {
           "id": {
             "Type": "bigint",
@@ -205,7 +216,9 @@
         "ForeignKeys": {
           "review_book_fk": {
             "ReferencedTable": "books",
-            "Columns": [ "book_id" ]
+            "Columns": [
+              "book_id"
+            ]
           }
         },
         "HttpVerbs": {
@@ -215,7 +228,10 @@
         }
       },
       "book_author_link": {
-        "PrimaryKey": [ "book_id", "author_id" ],
+        "PrimaryKey": [
+          "book_id",
+          "author_id"
+        ],
         "Columns": {
           "book_id": {
             "Type": "bigint"
@@ -227,16 +243,22 @@
         "ForeignKeys": {
           "book_author_link_book_fk": {
             "ReferencedTable": "books",
-            "Columns": [ "book_id" ]
+            "Columns": [
+              "book_id"
+            ]
           },
           "book_author_link_author_fk": {
             "ReferencedTable": "authors",
-            "Columns": [ "author_id" ]
+            "Columns": [
+              "author_id"
+            ]
           }
         }
       },
       "magazines": {
-        "PrimaryKey": [ "id" ],
+        "PrimaryKey": [
+          "id"
+        ],
         "Columns": {
           "id": {
             "Type": "bigint",
@@ -252,8 +274,7 @@
             "IsNullable": false
           }
         },
-        "ForeignKeys": {
-        },
+        "ForeignKeys": {},
         "HttpVerbs": {
           "GET": {
             "AuthorizationType": "Anonymous"

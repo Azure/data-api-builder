@@ -1,0 +1,60 @@
+type Query {        
+    todo_by_pk(id: Int!): Todo  
+    todos(first: Int, after: String): TodoConnection!
+    user_by_pk(id: Int!): User  
+    users(first: Int, after: String): UserConnection!
+    category_by_pk(id: Int!): User  
+    categories(first: Int, after: String): CategoryConnection!
+}
+
+type Mutation {
+    editTodo(id: Int!, title: String, completed: Int, category_id:Int, owner_id: Int): Todo
+    insertTodo(title: String!, completed: Int!, category_id:Int!, owner_id: Int!): Todo    
+    deleteTodo(id: Int!): Todo
+    editUser(id: Int!, first_name: String, middle_name: String, last_name: String, email: String): User
+    insertUser(first_name: String!, middle_name: String!, last_name: String!, email: String!): User
+    deleteUser(id: Int!): User
+    editCategory(id: Int!, category: String): Category
+    insertCategory(category: String!): Category    
+    deleteCategory(id: Int!): Category
+}
+
+type Todo {
+    id: Int!
+    title: String!
+    completed: Int!
+    category_id: Int!
+    owner_id: Int!
+}
+
+type TodoConnection {
+    items: [Todo!]!
+    endCursor: String
+    hasNextPage: Boolean!
+}
+
+type User {
+    id: Int!
+    first_name: String!
+    middle_name: String!
+    last_name: String!
+    email: String!    
+}
+
+type UserConnection {
+    items: [User!]!
+    endCursor: String
+    hasNextPage: Boolean!
+}
+
+type Category {
+    id: Int!
+    category: String!
+}
+
+type CategoryConnection {
+    items: [Category!]!
+    endCursor: String
+    hasNextPage: Boolean!
+}
+

@@ -20,7 +20,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>
         /// returns the json result and a metadata object required to resolve the Json.
         /// </returns>
-        public Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters);
+        public Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters);
 
         /// <summary>
         /// Executes the given IMiddlewareContext of the GraphQL and expecting a

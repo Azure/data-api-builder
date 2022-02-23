@@ -99,8 +99,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlUpsertQueryStructure structure)
         {
-            // TODO: these should be put in a transcation
-            throw new NotImplementedException();
+            return $"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;START TRANSACTION;" +
+                Build(structure.CreateUpdateStructure()) +
+                $"IF @ROWCOUNT = 0 THEN " +
+                Build(structure.CreateInsertStructure()) +
+                $"END IF; COMMIT TRANSACTION";
         }
 
         /// <summary>

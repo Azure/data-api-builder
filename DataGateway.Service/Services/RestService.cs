@@ -88,7 +88,7 @@ namespace Azure.DataGateway.Services
                 case Operation.Update:
                     JsonElement updatePayloadRoot = RequestValidator.ValidateUpsertRequest(primaryKeyRoute, requestBody);
                     context = new UpsertRequestContext(entityName, updatePayloadRoot, HttpRestVerbs.PATCH, operationType);
-                    RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _metadataStoreProvider);
+                    RequestValidator.ValidateUpdateRequestContext((UpsertRequestContext)context, _metadataStoreProvider);
                     break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");

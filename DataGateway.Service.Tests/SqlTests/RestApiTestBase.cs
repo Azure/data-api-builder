@@ -537,9 +537,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 exception: true,
-                expectedErrorMessage: "Could not perform the given mutation on entity books.",
-                expectedStatusCode: HttpStatusCode.InternalServerError,
-                expectedSubStatusCode: "DatabaseOperationFailed"
+                expectedErrorMessage: "Parameter \"[1234, 4321]\" cannot be resolved as column \"publisher_id\" with type \"Bigint\".",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: "BadRequest"
             );
         }
 

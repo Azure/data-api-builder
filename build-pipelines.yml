@@ -22,13 +22,6 @@ steps:
     restoreSolution: '$(solution)'
 
 - task: DotNetCoreCLI@2
-  displayName: Install dotnet format
-  inputs:
-    command: custom
-    custom: tool
-    arguments: 'restore'
-
-- task: DotNetCoreCLI@2
   displayName: Check formatting
   inputs:
     command: custom

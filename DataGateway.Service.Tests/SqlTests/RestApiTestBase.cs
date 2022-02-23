@@ -492,9 +492,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 exception: true,
-                expectedErrorMessage: "Could not perform the given mutation on entity books.",
-                expectedStatusCode: HttpStatusCode.InternalServerError,
-                expectedSubStatusCode: "DatabaseOperationFailed"
+                expectedErrorMessage: "Invalid request body. Missing field in body: id.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: "BadRequest"
             );
         }
 
@@ -516,7 +516,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 exception: true,
-                expectedErrorMessage: "Invalid request body. Either insufficient or unnecessary values for fields supplied.",
+                expectedErrorMessage: "Invalid request body. Missing field in body: id.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }
@@ -542,7 +542,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 exception: true,
-                expectedErrorMessage: "Invalid request body. Either insufficient or unnecessary values for fields supplied.",
+                expectedErrorMessage: "Invalid request body. Field not allowed in body: id.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }
@@ -568,7 +568,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 exception: true,
-                expectedErrorMessage: "Invalid request body. Either insufficient or unnecessary values for fields supplied.",
+                expectedErrorMessage: "Invalid request body. Missing field in body: id.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
             );
@@ -596,7 +596,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 exception: true,
-                expectedErrorMessage: "Invalid request body. Either insufficient or unnecessary values for fields supplied.",
+                expectedErrorMessage: "Invalid request body. Missing field in body: title.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
             );
@@ -625,7 +625,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: "Invalid request body. Either insufficient or unnecessary values for fields supplied.",
+                    expectedErrorMessage: "Invalid request body. Missing field in body: publisher_id.",
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
                 );
@@ -686,8 +686,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: $"Invalid request body. Either insufficient or unnecessary " +
-                                            "values for fields supplied.",
+                    expectedErrorMessage: $"Invalid request body. Missing field in body: publisher_id.",
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
                 );

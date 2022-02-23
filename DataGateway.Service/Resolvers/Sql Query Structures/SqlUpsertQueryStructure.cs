@@ -134,7 +134,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (!isIncrementalUpdate)
                 {
                     AddNullifiedUnspecifiedFields(schemaColumns, tableDefinition);
-                }               
+                }
             }
             catch (ArgumentException ex)
             {

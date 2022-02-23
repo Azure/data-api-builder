@@ -20,7 +20,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>
         /// returns the json result and a metadata object required to resolve the Json.
         /// </returns>
-        public Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters, bool isPaginationQuery);
+        public Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters);
 
         /// <summary>
         /// Executes the given IMiddlewareContext of the GraphQL and expecting a
@@ -46,10 +46,5 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public IEnumerable<JsonDocument> ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata);
 
-        /// <summary>
-        /// Holds database specific implementation to determine if query is paginated based on query name
-        /// Note: only used in Cosmos
-        /// </summary>
-        public bool IsPaginatedQuery(string queryName);
     }
 }

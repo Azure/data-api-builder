@@ -1,7 +1,9 @@
+# nullable disable
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using HotChocolate.Resolvers;
@@ -18,6 +20,7 @@ namespace Azure.DataGateway.Services
     {
         private readonly CosmosClientProvider _clientProvider;
         private readonly IMetadataStoreProvider _metadataStoreProvider;
+        private readonly CosmosQueryBuilder _queryBuilder;
 
         // <summary>
         // Constructor.
@@ -26,49 +29,45 @@ namespace Azure.DataGateway.Services
         {
             this._clientProvider = clientProvider;
             this._metadataStoreProvider = metadataStoreProvider;
+            this._queryBuilder = new CosmosQueryBuilder();
         }
 
         /// <summary>
         /// Executes the given IMiddlewareContext of the GraphQL query and
         /// expecting a single Json back.
         /// </summary>
-        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters, bool isPaginatedQuery)
+        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
-            string graphQLQueryName = context.Selection.Field.Name.Value;
-            GraphQLQueryResolver resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
-            Container container = this._clientProvider.Client.GetDatabase(resolver.DatabaseName).GetContainer(resolver.ContainerName);
+            CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider);
+
+            Container container = this._clientProvider.Client.GetDatabase(structure.Database).GetContainer(structure.Container);
 
             QueryRequestOptions queryRequestOptions = new();
             string requestContinuation = null;
 
-            QueryDefinition querySpec = new(resolver.ParametrizedQuery);
+            string queryString = _queryBuilder.Build(structure);
 
-            if (parameters != null)
+            QueryDefinition querySpec = new(queryString);
+
+            foreach (KeyValuePair<string, object> parameterEntry in structure.Parameters)
             {
-                foreach (KeyValuePair<string, object> parameterEntry in parameters)
-                {
-                    querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
-                }
+                querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
             }
 
-            if (parameters.TryGetValue("first", out object maxSize))
+            if (structure.IsPaginated)
             {
-                queryRequestOptions.MaxItemCount = Convert.ToInt32(maxSize);
-            }
-
-            if (parameters.TryGetValue("after", out object after))
-            {
-                requestContinuation = Base64Decode(after as string);
+                queryRequestOptions.MaxItemCount = (int?)structure.MaxItemCount;
+                requestContinuation = Base64Decode(structure.Continuation);
             }
 
             FeedResponse<JObject> firstPage = await container.GetItemQueryIterator<JObject>(querySpec, requestContinuation, queryRequestOptions).ReadNextAsync();
 
-            if (isPaginatedQuery)
+            if (structure.IsPaginated)
             {
                 JArray jarray = new();
                 IEnumerator<JObject> enumerator = firstPage.GetEnumerator();
@@ -87,20 +86,24 @@ namespace Azure.DataGateway.Services
                 JObject res = new(
                    new JProperty("endCursor", Base64Encode(responseContinuation)),
                    new JProperty("hasNextPage", responseContinuation != null),
-                   new JProperty("nodes", jarray));
+                   new JProperty("items", jarray));
 
                 // This extra deserialize/serialization will be removed after moving to Newtonsoft from System.Text.Json
                 return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(res.ToString()), null);
             }
 
-            JObject firstItem = null;
-
-            IEnumerator<JObject> iterator = firstPage.GetEnumerator();
-
-            while (iterator.MoveNext() && firstItem == null)
+            static JObject FindFirstItem(IEnumerator<JObject> iterator)
             {
-                firstItem = iterator.Current;
+                JObject firstItem;
+                if (iterator.MoveNext() && (firstItem = iterator.Current) == null)
+                {
+                    return FindFirstItem(iterator);
+                }
+
+                return iterator.Current;
             }
+
+            JObject firstItem = FindFirstItem(firstPage.GetEnumerator());
 
             JsonDocument jsonDocument = JsonDocument.Parse(firstItem.ToString());
 
@@ -114,10 +117,10 @@ namespace Azure.DataGateway.Services
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
-            string graphQLQueryName = context.Selection.Field.Name.Value;
-            GraphQLQueryResolver resolver = this._metadataStoreProvider.GetQueryResolver(graphQLQueryName);
-            Container container = this._clientProvider.Client.GetDatabase(resolver.DatabaseName).GetContainer(resolver.ContainerName);
-            QueryDefinition querySpec = new(resolver.ParametrizedQuery);
+            CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider);
+
+            Container container = this._clientProvider.Client.GetDatabase(structure.Database).GetContainer(structure.Container);
+            QueryDefinition querySpec = new(_queryBuilder.Build(structure));
 
             if (parameters != null)
             {
@@ -166,23 +169,6 @@ namespace Azure.DataGateway.Services
             return JsonSerializer.Deserialize<List<JsonDocument>>(element.ToString());
         }
 
-        /// <summary>
-        /// Identifies if a query is paginated or not by checking the IsPaginated param on the respective resolver.
-        /// </summary>
-        /// <param name="queryName the name of the query"></param>
-        /// <returns></returns>
-        public bool IsPaginatedQuery(string queryName)
-        {
-            GraphQLQueryResolver resolver = _metadataStoreProvider.GetQueryResolver(queryName);
-            if (resolver == null)
-            {
-                string message = string.Format("There is no resolver for the query: {0}", queryName);
-                throw new InvalidOperationException(message);
-            }
-
-            return resolver.IsPaginated;
-        }
-
         private static string Base64Encode(string plainText)
         {
             if (plainText == default)
@@ -204,6 +190,5 @@ namespace Azure.DataGateway.Services
             byte[] base64EncodedBytes = System.Convert.FromBase64String(base64EncodedData);
             return System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
         }
-
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Net;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
@@ -17,16 +18,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public static IOptions<DataGatewayConfig> LoadConfig(string environment)
         {
 
-            DataGatewayConfig datagatewayConfig = new();
+            DataGatewayConfig dataGatewayConfig = new();
             IConfigurationRoot config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile($"appsettings.{environment}.json")
                 .AddJsonFile($"appsettings.{environment}.overrides.json", optional: true)
                 .Build();
 
-            config.Bind(nameof(DataGatewayConfig), datagatewayConfig);
+            config.Bind(nameof(DataGatewayConfig), dataGatewayConfig);
 
-            return Options.Create(datagatewayConfig);
+            return Options.Create(dataGatewayConfig);
         }
 
         /// <summary>
@@ -105,6 +106,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case Operation.Delete:
                     actionResult = await controller.Delete(entityName, primaryKeyRoute);
                     break;
+                case Operation.Upsert:
+                    actionResult = await controller.Upsert(entityName, primaryKeyRoute);
+                    break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
             }
@@ -119,30 +123,33 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="expected">string represents the expected result. This value can be null for NoContent or NotFound
         /// results of operations like GET and DELETE</param>
         /// <param name="expectedStatusCode">int represents the returned http status code</param>
+        /// <param name="expectedLocationHeader">The expected location header in the response(if any).</param>
         public static void VerifyResult(
             IActionResult actionResult,
             string expected,
-            int expectedStatusCode)
+            HttpStatusCode expectedStatusCode,
+            string expectedLocationHeader)
         {
             string actual;
             switch (actionResult)
             {
                 // OkObjectResult will throw exception if we attempt cast to JsonResult
                 case OkObjectResult okResult:
-                    Assert.AreEqual(expectedStatusCode, okResult.StatusCode);
+                    Assert.AreEqual((int)expectedStatusCode, okResult.StatusCode);
                     actual = okResult.Value.ToString();
                     break;
                 case CreatedResult createdResult:
-                    Assert.AreEqual(expectedStatusCode, createdResult.StatusCode);
+                    Assert.AreEqual((int)expectedStatusCode, createdResult.StatusCode);
+                    Assert.AreEqual(expectedLocationHeader, createdResult.Location);
                     actual = createdResult.Value.ToString();
                     break;
                 // NoContentResult does not have value property for messages
                 case NoContentResult noContentResult:
-                    Assert.AreEqual(expectedStatusCode, noContentResult.StatusCode);
+                    Assert.AreEqual((int)expectedStatusCode, noContentResult.StatusCode);
                     actual = null;
                     break;
                 case NotFoundResult notFoundResult:
-                    Assert.AreEqual(expectedStatusCode, notFoundResult.StatusCode);
+                    Assert.AreEqual((int)expectedStatusCode, notFoundResult.StatusCode);
                     actual = null;
                     break;
                 default:

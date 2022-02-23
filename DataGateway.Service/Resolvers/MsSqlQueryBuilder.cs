@@ -1,8 +1,6 @@
-using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
-using System.Text;
 using Azure.DataGateway.Service.Models;
 using Microsoft.Data.SqlClient;
 
@@ -37,6 +35,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         x => $" OUTER APPLY ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)}({dataIdent})"));
 
             string predicates = JoinPredicateStrings(
+                                    structure.FilterPredicates,
                                     Build(structure.Predicates),
                                     Build(structure.PaginationMetadata.PaginationPredicate));
 
@@ -68,7 +67,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             return $"UPDATE {QuoteIdentifier(structure.TableName)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
-                    $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
+                    $"OUTPUT {MakeOutputColumns(structure.PrimaryKey(), OutputQualifier.Inserted)} " +
                     $"WHERE {Build(structure.Predicates)};";
         }
 
@@ -77,6 +76,26 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             return $"DELETE FROM {QuoteIdentifier(structure.TableName)} " +
                     $"WHERE {Build(structure.Predicates)} ";
+        }
+
+        /// <summary>
+        /// Avoid redundant check, wrap the sequence in a transaction,
+        /// and protect the first table access with appropriate locking.
+        /// </summary>
+        /// <param name="structure"></param>
+        /// <returns></returns>
+        public string Build(SqlUpsertQueryStructure structure)
+        {
+            return $"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;BEGIN TRANSACTION; UPDATE { QuoteIdentifier(structure.TableName)} " +
+                $"WITH(UPDLOCK) SET {Build(structure.UpdateOperations, ", ")} " +
+                $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
+                $"WHERE {Build(structure.Predicates)} " +
+                $"IF @@ROWCOUNT = 0 " +
+                $"BEGIN; " +
+                $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
+                $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
+                $"VALUES ({string.Join(", ", structure.Values)}) " +
+                $"END; COMMIT TRANSACTION";
         }
 
         /// <summary>
@@ -93,63 +112,6 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             List<string> outputColumns = columns.Select(column => $"{outputQualifier}.{QuoteIdentifier(column)}").ToList();
             return string.Join(", ", outputColumns);
-        }
-
-        /// <inheritdoc />
-        protected override string Build(KeysetPaginationPredicate predicate)
-        {
-            if (predicate == null)
-            {
-                return string.Empty;
-            }
-
-            if (predicate.PrimaryKey.Count > 1)
-            {
-                StringBuilder result = new("(");
-                for (int i = 0; i < predicate.PrimaryKey.Count; i++)
-                {
-                    if (i > 0)
-                    {
-                        result.Append(" OR ");
-                    }
-
-                    result.Append($"({MakePaginationInequality(predicate.PrimaryKey, predicate.Values, i)})");
-                }
-
-                result.Append(")");
-
-                return result.ToString();
-            }
-            else
-            {
-                return MakePaginationInequality(predicate.PrimaryKey, predicate.Values, 0);
-            }
-        }
-
-        /// <summary>
-        /// Create an inequality where all primary key columns up to untilIndex are equilized to the
-        /// respective pkValue, and the primary key colum at untilIndex has to be greater than its pkValue
-        /// E.g. for
-        /// primaryKey: [a, b, c, d, e, f]
-        /// pkValues: [A, B, C, D, E, F]
-        /// untilIndex: 2
-        /// generate <c>a = A AND b = B AND c > C</c>
-        /// </summary>
-        private string MakePaginationInequality(List<Column> primaryKey, List<string> pkValues, int untilIndex)
-        {
-            StringBuilder result = new();
-            for (int i = 0; i <= untilIndex; i++)
-            {
-                string op = i == untilIndex ? ">" : "=";
-                result.Append($"{Build(primaryKey[i])} {op} {pkValues[i]}");
-
-                if (i < untilIndex)
-                {
-                    result.Append(" AND ");
-                }
-            }
-
-            return result.ToString();
         }
 
         /// <summary>
@@ -171,13 +133,10 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         private string WrappedColumns(SqlQueryStructure structure)
         {
-            Func<LabelledColumn, bool> isJoinColumn = c => structure.JoinQueries.ContainsKey(c.TableAlias);
-            Func<LabelledColumn, SqlQueryStructure> getJoinSubquery = c => structure.JoinQueries[c.TableAlias];
-
             return string.Join(", ",
                 structure.Columns.Select(
-                    c => isJoinColumn(c) ?
-                        WrapSubqueryColumn(c, getJoinSubquery(c)) + $" AS {QuoteIdentifier(c.Label)}" :
+                    c => structure.IsSubqueryColumn(c) ?
+                        WrapSubqueryColumn(c, structure.JoinQueries[c.TableAlias!]) + $" AS {QuoteIdentifier(c.Label)}" :
                         Build(c)
             ));
         }

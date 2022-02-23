@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text.Json;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
@@ -32,7 +33,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 // check if the number of elements requested is successfully returned
                 // structure.Limit() is first + 1 for paginated queries where hasNextPage is requested
-                hasExtraElement = rootEnumerated.Count() == paginationMetadata.Structure.Limit();
+                hasExtraElement = rootEnumerated.Count() == paginationMetadata.Structure!.Limit();
 
                 // add hasNextPage to connection elements
                 connectionJson.Add("hasNextPage", hasExtraElement ? true : false);
@@ -57,7 +58,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 else
                 {
                     // if the result doesn't have an extra element, just return the dbResult for *Conneciton.items
-                    connectionJson.Add("items", root.ToString());
+                    connectionJson.Add("items", root.ToString()!);
                 }
             }
 
@@ -106,7 +107,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private static string MakeCursorFromJsonElement(JsonElement element, PaginationMetadata paginationMetadata)
         {
             Dictionary<string, object> cursorJson = new();
-            List<string> primaryKey = paginationMetadata.Structure.PrimaryKey();
+            List<string> primaryKey = paginationMetadata.Structure!.PrimaryKey();
 
             foreach (string column in primaryKey)
             {
@@ -122,8 +123,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public static IDictionary<string, object> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
         {
             Dictionary<string, object> after = new();
-            Dictionary<string, JsonElement> afterDeserialized = new();
-            List<string> primaryKey = paginationMetadata.Structure.PrimaryKey();
+            List<string> primaryKey = paginationMetadata.Structure!.PrimaryKey();
 
             object afterObject = queryParams["after"];
             string afterJsonString;
@@ -134,7 +134,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     string afterPlainText = (string)afterObject;
                     afterJsonString = Base64Decode(afterPlainText);
-                    afterDeserialized = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(afterJsonString);
+                    Dictionary<string, JsonElement> afterDeserialized = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(afterJsonString)!;
 
                     if (!ListsAreEqual(afterDeserialized.Keys.ToList(), primaryKey))
                     {
@@ -177,7 +177,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     {
                         Console.Error.WriteLine(e);
                         string notValidString = $"Parameter after with value {afterObject} is not a valid pagination token.";
-                        throw new DatagatewayException(notValidString, 400, DatagatewayException.SubStatusCodes.BadRequest);
+                        throw new DataGatewayException(notValidString, HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
                     }
                     else
                     {
@@ -198,7 +198,7 @@ namespace Azure.DataGateway.Service.Resolvers
             switch (element.ValueKind)
             {
                 case JsonValueKind.String:
-                    return element.GetString();
+                    return element.GetString()!;
                 case JsonValueKind.Number:
                     return element.GetInt64();
                 case JsonValueKind.True:

@@ -13,15 +13,15 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
 
         private static IOptions<DataGatewayConfig> LoadConfig()
         {
-            DataGatewayConfig datagatewayConfig = new();
+            DataGatewayConfig dataGatewayConfig = new();
             IConfigurationRoot config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.Test.json")
+                .AddJsonFile($"appsettings.Cosmos.json")
                 .Build();
 
-            config.Bind(nameof(DataGatewayConfig), datagatewayConfig);
+            config.Bind(nameof(DataGatewayConfig), dataGatewayConfig);
 
-            return Options.Create(datagatewayConfig);
+            return Options.Create(dataGatewayConfig);
         }
 
         public static IOptions<DataGatewayConfig> DataGatewayConfig

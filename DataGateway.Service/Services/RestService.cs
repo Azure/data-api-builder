@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
@@ -46,7 +47,7 @@ namespace Azure.DataGateway.Services
         /// <param name="entityName">The entity name.</param>
         /// <param name="operationType">The kind of operation to execute.</param>
         /// <param name="primaryKeyRoute">The primary key route. e.g. customerName/Xyz/saleOrderId/123</param>
-        public async Task<JsonDocument> ExecuteAsync(
+        public async Task<JsonDocument?> ExecuteAsync(
             string entityName,
             Operation operationType,
             string primaryKeyRoute)
@@ -79,6 +80,11 @@ namespace Azure.DataGateway.Services
                     context = new DeleteRequestContext(entityName, isList: false);
                     RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                     break;
+                case Operation.Upsert:
+                    JsonElement upsertPayloadRoot = RequestValidator.ValidateUpsertRequest(primaryKeyRoute, requestBody);
+                    context = new UpsertRequestContext(entityName, upsertPayloadRoot, HttpRestVerbs.PUT, operationType);
+                    RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _metadataStoreProvider);
+                    break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
             }
@@ -103,7 +109,7 @@ namespace Azure.DataGateway.Services
             // Perform Authorization check prior to moving forward in request pipeline.
             // RESTAuthorizationService
             AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
-                user: _httpContextAccessor.HttpContext.User,
+                user: GetHttpContext().User,
                 resource: context,
                 requirements: new[] { context.HttpVerb });
 
@@ -115,24 +121,54 @@ namespace Azure.DataGateway.Services
                         return await _queryEngine.ExecuteAsync(context);
                     case Operation.Insert:
                     case Operation.Delete:
+                    case Operation.Upsert:
                         return await _mutationEngine.ExecuteAsync(context);
                     default:
                         throw new NotSupportedException("This operation is not yet supported.");
-                }
+                };
             }
             else
             {
-                throw new DatagatewayException(
+                throw new DataGatewayException(
                     message: "Unauthorized",
-                    statusCode: (int)HttpStatusCode.Unauthorized,
-                    subStatusCode: DatagatewayException.SubStatusCodes.AuthorizationCheckFailed
+                    statusCode: HttpStatusCode.Unauthorized,
+                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
                 );
             }
         }
 
+        /// <summary>
+        /// For the given entity, constructs the primary key route
+        /// using the primary key names from metadata and their values from the JsonElement
+        /// representing one instance of the entity.
+        /// </summary>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="entity">A Json element representing one instance of the entity.</param>
+        /// <remarks> This function expects the Json element entity to contain all the properties
+        /// that make up the primary keys.</remarks>
+        /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
+        public string ConstructPrimaryKeyRoute(string entityName, JsonElement entity)
+        {
+            TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(entityName);
+            StringBuilder newPrimaryKeyRoute = new();
+
+            foreach (string primaryKey in tableDefinition.PrimaryKey)
+            {
+                newPrimaryKeyRoute.Append(primaryKey);
+                newPrimaryKeyRoute.Append("/");
+                newPrimaryKeyRoute.Append(entity.GetProperty(primaryKey).ToString());
+                newPrimaryKeyRoute.Append("/");
+            }
+
+            // Remove the trailing "/"
+            newPrimaryKeyRoute.Remove(newPrimaryKeyRoute.Length - 1, 1);
+
+            return newPrimaryKeyRoute.ToString();
+        }
+
         private HttpContext GetHttpContext()
         {
-            return _httpContextAccessor.HttpContext;
+            return _httpContextAccessor.HttpContext!;
         }
     }
 }

@@ -12,8 +12,8 @@ namespace Azure.DataGateway.Service.Configurations
         Cosmos,
         MsSql,
         PostgreSql,
+        MySql
     }
-
     /// <summary>
     /// Data gateway configuration.
     /// </summary>
@@ -35,12 +35,11 @@ namespace Azure.DataGateway.Service.Configurations
               }
             }
          */
-
         public DatabaseType DatabaseType { get; set; }
 
         // This should be renamed to databaseConnection but need to coordiate with moderakh on CI configuration.
-        public DatabaseConnectionConfig DatabaseConnection { get; set; }
-        public string ResolverConfigFile { get; set; } = "config.json";
+        public DatabaseConnectionConfig DatabaseConnection { get; set; } = null!;
+        public string ResolverConfigFile { get; set; } = null!;
     }
 
     /// <summary>
@@ -48,12 +47,12 @@ namespace Azure.DataGateway.Service.Configurations
     /// </summary>
     public class DatabaseConnectionConfig
     {
-        public string ServerEndpointUrl { get; set; }
-        public string AuthorizationKey { get; set; }
-        public string Server { get; set; }
-        public string Database { get; set; }
-        public string Container { get; set; }
-        public string ConnectionString { get; set; }
+        public string ServerEndpointUrl { get; set; } = null!;
+        public string AuthorizationKey { get; set; } = null!;
+        public string Server { get; set; } = null!;
+        public string Database { get; set; } = null!;
+        public string Container { get; set; } = null!;
+        public string ConnectionString { get; set; } = null!;
     }
 
     /// <summary>
@@ -70,7 +69,6 @@ namespace Azure.DataGateway.Service.Configurations
             bool connStringProvided = !string.IsNullOrEmpty(options.DatabaseConnection.ConnectionString);
             bool serverProvided = !string.IsNullOrEmpty(options.DatabaseConnection.Server);
             bool dbProvided = !string.IsNullOrEmpty(options.DatabaseConnection.Database);
-
             if (!connStringProvided && !serverProvided && !dbProvided)
             {
                 throw new NotSupportedException("Either Server and Database or ConnectionString need to be provided");

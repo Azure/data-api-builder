@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.IO;
+using System.Net;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
@@ -13,11 +14,13 @@ using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using MySqlConnector;
 using Newtonsoft.Json.Linq;
 using Npgsql;
 
@@ -59,6 +62,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case TestCategory.MSSQL:
                     _queryExecutor = new QueryExecutor<SqlConnection>(config);
                     _queryBuilder = new MsSqlQueryBuilder();
+                    break;
+                case TestCategory.MYSQL:
+                    _queryExecutor = new QueryExecutor<MySqlConnection>(config);
+                    _queryBuilder = new MySqlQueryBuilder();
                     break;
             }
 
@@ -159,6 +166,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="expectedErrorMessage">string represents the error message in the JsonResponse</param>
         /// <param name="expectedStatusCode">int represents the returned http status code</param>
         /// <param name="expectedSubStatusCode">enum represents the returned sub status code</param>
+        /// <param name="expectedLocationHeader">The expected location header in the response (if any)</param>
         /// <returns></returns>
         protected static async Task SetupAndRunRestApiTest(
             string primaryKeyRoute,
@@ -170,13 +178,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string requestBody = null,
             bool exception = false,
             string expectedErrorMessage = "",
-            int expectedStatusCode = 200,
-            string expectedSubStatusCode = "BadRequest")
+            HttpStatusCode expectedStatusCode = HttpStatusCode.OK,
+            string expectedSubStatusCode = "BadRequest",
+            string expectedLocationHeader = null)
         {
             ConfigureRestController(
                 controller,
                 queryString,
                 requestBody);
+
+            if (expectedLocationHeader != null)
+            {
+                expectedLocationHeader =
+                    UriHelper.GetEncodedUrl(controller.HttpContext.Request)
+                    + @"/" + expectedLocationHeader;
+            }
 
             IActionResult actionResult = await SqlTestHelper.PerformApiTest(
                         controller,
@@ -190,7 +206,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             // Initial DELETE request results in 204 no content, no exception thrown.
             // Subsequent DELETE requests result in 404, which result in an exception.
             string expected;
-            if (operationType == Operation.Delete && actionResult is NoContentResult)
+            if ((operationType == Operation.Delete || operationType == Operation.Upsert)
+                && actionResult is NoContentResult)
             {
                 expected = null;
             }
@@ -203,7 +220,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     await GetDatabaseResultAsync(sqlQuery);
             }
 
-            SqlTestHelper.VerifyResult(actionResult, expected, expectedStatusCode);
+            SqlTestHelper.VerifyResult(
+                actionResult,
+                expected,
+                expectedStatusCode,
+                expectedLocationHeader);
 
         }
 

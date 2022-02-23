@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Services;
+using HotChocolate.Language;
+using HotChocolate.Types;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -29,9 +31,15 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<Predicate> Predicates { get; }
         /// <summary>
+        /// FilterPredicates is a string that represents the filter portion of our query
+        /// in the WHERE Clause. This is generated specifically from the $filter portion
+        /// of the query string.
+        /// </summary>
+        public string? FilterPredicates { get; set; }
+        /// <summary>
         /// Parameters values required to execute the query.
         /// </summary>
-        public Dictionary<string, object> Parameters { get; set; }
+        public Dictionary<string, object?> Parameters { get; set; }
         /// <summary>
         /// Counter.Next() can be used to get a unique integer within this
         /// query, which can be used to create unique aliases, parameters or
@@ -42,13 +50,17 @@ namespace Azure.DataGateway.Service.Resolvers
         protected IMetadataStoreProvider MetadataStoreProvider { get; }
 
         public BaseSqlQueryStructure(IMetadataStoreProvider metadataStore,
-            IncrementingInteger counter = null)
+            IncrementingInteger? counter = null, string tableName = "")
         {
             Columns = new();
             Predicates = new();
             Parameters = new();
             MetadataStoreProvider = metadataStore;
+            TableName = tableName;
             Counter = counter ?? new IncrementingInteger();
+
+            // Default the alias to the table name
+            TableAlias = tableName;
         }
 
         /// <summary>
@@ -56,8 +68,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public ColumnType GetColumnType(string columnName)
         {
-            ColumnDefinition column;
-            if (GetTableDefinition().Columns.TryGetValue(columnName, out column))
+            if (GetTableDefinition().Columns.TryGetValue(columnName, out ColumnDefinition? column))
             {
                 return column.Type;
             }
@@ -76,9 +87,18 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
+        /// Get primary key as list of string
+        /// </summary>
+        public List<string> PrimaryKey()
+        {
+            return GetTableDefinition().PrimaryKey;
+        }
+
+        /// <summary>
         ///  Add parameter to Parameters and return the name associated with it
         /// </summary>
-        protected string MakeParamWithValue(object value)
+        /// <param name="value">Value to be assigned to parameter, which can be null for nullable columns.</param>
+        public string MakeParamWithValue(object? value)
         {
             string paramName = $"param{Counter.Next()}";
             Parameters.Add(paramName, value);
@@ -119,6 +139,57 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Extracts the *Connection.items query field from the *Connection query field
+        /// </summary>
+        /// <returns> The query field or null if **Conneciton.items is not requested in the query</returns>
+        internal static FieldNode? ExtractItemsQueryField(FieldNode connectionQueryField)
+        {
+            FieldNode? itemsField = null;
+            foreach (ISelectionNode node in connectionQueryField.SelectionSet!.Selections)
+            {
+                FieldNode field = (FieldNode)node;
+                string fieldName = field.Name.Value;
+
+                if (fieldName == "items")
+                {
+                    itemsField = field;
+                    break;
+                }
+            }
+
+            return itemsField;
+        }
+
+        /// <summary>
+        /// UnderlyingType is the type main GraphQL type that is described by
+        /// this type. This strips all modifiers, such as List and Non-Null.
+        /// So the following GraphQL types would all have the underlyingType Book:
+        /// - Book
+        /// - [Book]
+        /// - Book!
+        /// - [Book]!
+        /// - [Book!]!
+        /// </summary>
+        internal static ObjectType UnderlyingType(IType type)
+        {
+            ObjectType? underlyingType = type as ObjectType;
+            if (underlyingType != null)
+            {
+                return underlyingType;
+            }
+
+            return UnderlyingType(type.InnerType());
+        }
+
+        /// <summary>
+        /// Extracts the *Connection.items schema field from the *Connection schema field
+        /// </summary>
+        internal static IObjectField ExtractItemsSchemaField(IObjectField connectionSchemaField)
+        {
+            return UnderlyingType(connectionSchemaField.Type).Fields["items"];
         }
 
     }

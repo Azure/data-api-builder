@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using MySqlConnector;
 using Npgsql;
 
 namespace Azure.DataGateway.Service
@@ -74,6 +75,14 @@ namespace Azure.DataGateway.Service
                     services.AddSingleton<IMutationEngine, SqlMutationEngine>();
                     services.AddSingleton<IConfigValidator, SqlConfigValidator>();
                     break;
+                case DatabaseType.MySql:
+                    services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
+                    services.AddSingleton<IQueryExecutor, QueryExecutor<MySqlConnection>>();
+                    services.AddSingleton<IQueryBuilder, MySqlQueryBuilder>();
+                    services.AddSingleton<IQueryEngine, SqlQueryEngine>();
+                    services.AddSingleton<IMutationEngine, SqlMutationEngine>();
+                    services.AddSingleton<IConfigValidator, SqlConfigValidator>();
+                    break;
                 default:
                     throw new NotSupportedException(String.Format("The provided DatabaseType value: {0} is currently not supported." +
                         "Please check the configuration file.", dataGatewayConfig.DatabaseType));
@@ -95,7 +104,7 @@ namespace Azure.DataGateway.Service
         {
             // validate the configuration after the services have been built
             // but before the application is built
-            app.ApplicationServices.GetService<IConfigValidator>().ValidateConfig();
+            app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
 
             if (env.IsDevelopment())
             {

@@ -60,7 +60,11 @@ namespace Azure.DataGateway.Service.Resolvers
                 // compute the mutation result before removing the element
                 result = await _queryEngine.ExecuteAsync(
                     context,
+                // Disabling the warning since trying to fix this opens up support for nullability
+                // tracked in #235 on REST and #201 on GraphQL.
+#pragma warning disable CS8620
                     parameters);
+#pragma warning restore CS8620
             }
 
             using DbDataReader dbDataReader =
@@ -71,7 +75,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (!context.Selection.Type.IsScalarType() && mutationResolver.OperationType != Operation.Delete)
             {
-                Dictionary<string, object>? searchParams = await ExtractRowFromDbDataReader(dbDataReader);
+                Dictionary<string, object?>? searchParams = await ExtractRowFromDbDataReader(dbDataReader);
 
                 if (searchParams == null)
                 {
@@ -111,7 +115,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     context.OperationType,
                     parameters);
 
-                Dictionary<string, object>? resultRecord = new();
+                Dictionary<string, object?>? resultRecord = new();
                 resultRecord = await ExtractRowFromDbDataReader(dbDataReader);
 
                 string? jsonResultString = null;
@@ -154,15 +158,6 @@ namespace Azure.DataGateway.Service.Resolvers
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine(ex.StackTrace);
 
-                throw new DataGatewayException(
-                    message: $"Could not perform the given mutation on entity {context.EntityName}.",
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine(ex.StackTrace);
                 throw new DataGatewayException(
                     message: $"Could not perform the given mutation on entity {context.EntityName}.",
                     statusCode: HttpStatusCode.InternalServerError,
@@ -217,9 +212,9 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Extracts a single row from DbDataReader and format it so it can be used as a parameter to a query execution
         ///</summary>
         ///<returns>A dictionary representating the row in <c>ColumnName: Value</c> format, null if no row was found</returns>
-        private static async Task<Dictionary<string, object>?> ExtractRowFromDbDataReader(DbDataReader dbDataReader)
+        private static async Task<Dictionary<string, object?>?> ExtractRowFromDbDataReader(DbDataReader dbDataReader)
         {
-            Dictionary<string, object> row = new();
+            Dictionary<string, object?> row = new();
 
             if (await dbDataReader.ReadAsync())
             {
@@ -232,7 +227,15 @@ namespace Azure.DataGateway.Service.Resolvers
                         foreach (DataRow schemaRow in schemaTable.Rows)
                         {
                             string columnName = (string)schemaRow["ColumnName"];
-                            row.Add(columnName, dbDataReader[columnName]);
+                            int colIndex = dbDataReader.GetOrdinal(columnName);
+                            if (!dbDataReader.IsDBNull(colIndex))
+                            {
+                                row.Add(columnName, dbDataReader[columnName]);
+                            }
+                            else
+                            {
+                                row.Add(columnName, value: null);
+                            }
                         }
                     }
                 }

@@ -478,7 +478,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 ""issueNumber"": 1234
             }";
 
-            string expectedLocationHeader = $"/id/2";
+            string expectedLocationHeader = $"id/2";
 
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: $"id/2",

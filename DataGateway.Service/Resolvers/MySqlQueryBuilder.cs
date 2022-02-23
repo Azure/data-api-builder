@@ -60,7 +60,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlInsertStructure structure)
         {
-            // TODO: these should be put in a transcation
+            // No need to put into transaction as LAST_INSERT_ID is session level variable
             return $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
                     $"VALUES ({string.Join(", ", (structure.Values))}); " +
                     $"SELECT {MakeInsertSelections(structure)}";
@@ -69,13 +69,21 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlUpdateStructure structure)
         {
-            // TODO: these should be put in a transaction
-            return $"UPDATE {QuoteIdentifier(structure.TableName)} " +
+            // Create local variables to store the pk columns
+            var sets = String.Join(";\n", structure.PrimaryKey().Select(x => $"SET @LU_{x} := 0"));
+
+            // Fetch the value to local variables
+            var updates = String.Join(", ", structure.PrimaryKey().Select(x => $"{x} = (SELECT @LU_{x} := {x})"));
+
+            // Select local variables and mapping to original column name
+            var select = String.Join(", ", structure.PrimaryKey().Select(x => $"@LU_{x} AS {x}"));
+
+            return sets + ";\n" +
+                    $"UPDATE {QuoteIdentifier(structure.TableName)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
-                    $"WHERE {Build(structure.Predicates)}; " +
-                    $"SELECT {Build(structure.PrimaryKey())} " +
-                    $"FROM {QuoteIdentifier(structure.TableName)} " +
-                    $"WHERE {Build(structure.Predicates)}; ";
+                        ", " + updates +
+                    $" WHERE {Build(structure.Predicates)}; " +
+                    $"SELECT " + select + $" WHERE @LU_{structure.PrimaryKey().First()} != 0;";
         }
 
         /// <inheritdoc />

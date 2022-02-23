@@ -71,14 +71,14 @@ namespace Azure.DataGateway.Service.Resolvers
         public string Build(SqlUpdateStructure structure)
         {
             // Create local variables to store the pk columns
-            string sets = String.Join(";\n", structure.PrimaryKey().Select(x => $"SET {QuoteIdentifier("@LU_" + QuoteIdentifier(x))} := 0"));
+            string sets = String.Join(";\n", structure.PrimaryKey().Select((x, index) => $"SET {"@LU_" + index.ToString()} := 0"));
 
             // Fetch the value to local variables
-            string updates = String.Join(", ", structure.PrimaryKey().Select(x =>
-                $"{QuoteIdentifier(x)} = (SELECT {QuoteIdentifier("@LU_" + QuoteIdentifier(x))} := {QuoteIdentifier(x)})"));
+            string updates = String.Join(", ", structure.PrimaryKey().Select((x, index) =>
+                $"{QuoteIdentifier(x)} = (SELECT {"@LU_" + index.ToString()} := {QuoteIdentifier(x)})"));
 
             // Select local variables and mapping to original column name
-            string select = String.Join(", ", structure.PrimaryKey().Select(x => $"{QuoteIdentifier("@LU_" + QuoteIdentifier(x))} AS {QuoteIdentifier(x)}"));
+            string select = String.Join(", ", structure.PrimaryKey().Select((x, index) => $"{"@LU_" + index.ToString()} AS {QuoteIdentifier(x)}"));
 
             return sets + ";\n" +
                     $"UPDATE {QuoteIdentifier(structure.TableName)} " +

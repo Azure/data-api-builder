@@ -36,7 +36,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Executes the mutation query and returns result as JSON object asynchronously.
+        /// Executes the GraphQL mutation query and returns result as JSON object asynchronously.
         /// </summary>
         /// <param name="context">context of graphql mutation</param>
         /// <param name="parameters">parameters in the mutation query.</param>
@@ -98,7 +98,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Executes the mutation query and returns result as JSON object asynchronously.
+        /// Executes the REST mutation query and returns result as JSON object asynchronously.
         /// </summary>
         /// <param name="context">context of REST mutation request.</param>
         /// <param name="parameters">parameters in the mutation query.</param>
@@ -166,8 +166,8 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Performs the given mutation operation type on the table and
-        /// returns result as JSON object asynchronously.
+        /// Performs the given REST and GraphQL mutation operation type
+        /// on the table and returns result as JSON object asynchronously.
         /// </summary>
         private async Task<DbDataReader> PerformMutationOperation(
             string tableName,
@@ -185,7 +185,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryParameters = insertQueryStruct.Parameters;
                     break;
                 case Operation.Update:
-                    SqlUpsertQueryStructure updateStructure = new(tableName, _metadataStoreProvider, parameters, incrementalUpdate: true);
+                    SqlUpdateStructure updateStructure = new(tableName, _metadataStoreProvider, parameters);
                     queryString = _queryBuilder.Build(updateStructure);
                     queryParameters = updateStructure.Parameters;
                     break;
@@ -198,6 +198,11 @@ namespace Azure.DataGateway.Service.Resolvers
                     SqlUpsertQueryStructure upsertStructure = new(tableName, _metadataStoreProvider, parameters, incrementalUpdate: false);
                     queryString = _queryBuilder.Build(upsertStructure);
                     queryParameters = upsertStructure.Parameters;
+                    break;
+                case Operation.UpsertIncremental:
+                    SqlUpsertQueryStructure upsertIncrementalStructure = new(tableName, _metadataStoreProvider, parameters, incrementalUpdate: true);
+                    queryString = _queryBuilder.Build(upsertIncrementalStructure);
+                    queryParameters = upsertIncrementalStructure.Parameters;
                     break;
                 default:
                     throw new NotSupportedException($"Unexpected mutation operation \" {operationType}\" requested.");
@@ -259,7 +264,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 // DeleteOne based off primary key in request.
                 parameters = new(context.PrimaryKeyValuePairs);
             }
-            else if (context.OperationType == Operation.Upsert || context.OperationType == Operation.Update)
+            else if (context.OperationType == Operation.Upsert || context.OperationType == Operation.UpsertIncremental)
             {
                 // Combine both PrimaryKey/Field ValuePairs
                 // because we create both an insert and an update statement.

@@ -247,6 +247,7 @@ namespace Azure.DataGateway.Service.Services
                         subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
             }
+        }
 
         /// <summary>
         /// Validates the request body of an Increment Update request context.

@@ -205,7 +205,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             // Initial DELETE request results in 204 no content, no exception thrown.
             // Subsequent DELETE requests result in 404, which result in an exception.
             string expected;
-            if ((operationType == Operation.Delete || operationType == Operation.Upsert)
+            if ((operationType == Operation.Delete || operationType == Operation.Upsert || operationType == Operation.Update)
                 && actionResult is NoContentResult)
             {
                 expected = null;

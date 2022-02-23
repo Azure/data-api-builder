@@ -83,6 +83,43 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Inserts new book and return its id and title
+        /// <code>Check: </code> If book with the expected values of the new book is present in the database and
+        /// if the mutation query has returned the correct information
+        /// </summary>
+        [TestMethod]
+        public async Task UpsertMutation()
+        {
+            string graphQLMutationName = "upsertBook";
+            string graphQLMutation = @"
+                mutation {
+                    upsertBook(title: ""My New Book"", publisher_id: 1234) {
+                        id
+                        title
+                    }
+                }
+            ";
+
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('id', `subq`.`id`, 'title', `subq`.`title`) AS `data`
+                FROM (
+                    SELECT `table0`.`id` AS `id`,
+                        `table0`.`title` AS `title`
+                    FROM `books` AS `table0`
+                    WHERE `id` = 5001
+                        AND `title` = 'My New Book'
+                        AND `publisher_id` = 1234
+                    ORDER BY `id` LIMIT 1
+                    ) AS `subq`
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
         /// <code>Do: </code>Update book in database and return its updated fields
         /// <code>Check: </code>if the book with the id of the edited book and the new values exists in the database
         /// and if the mutation query has returned the values correctly

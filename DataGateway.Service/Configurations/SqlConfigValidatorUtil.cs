@@ -446,13 +446,6 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private static bool GraphQLTypeEqualsColumnType(ITypeNode gqlType, ColumnType columnType)
         {
-            if (gqlType.NullableType().ToString() == "ID")
-            {
-                // ID columns don't have a set data type
-                // DB will determine the type
-                return true;
-            }
-
             return GetGraphQLTypeForColumnType(columnType) == gqlType.NullableType().ToString();
         }
 

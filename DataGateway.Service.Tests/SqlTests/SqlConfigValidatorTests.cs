@@ -12,6 +12,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     public class SqlConfigValidatorTests
     {
         [TestMethod]
+        [Ignore("Ignoring test until ID field support is included")]
         public void CanCreateFieldWithIDType()
         {
             IMetadataStoreProvider metadataStoreProvider = new MetadataStoreProviderForTest

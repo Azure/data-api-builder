@@ -55,7 +55,6 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             {
                 GraphQLTypes = GraphQLTypes,
                 MutationResolvers = MutationResolvers == null ? null : MutationResolvers.Values.ToList(),
-                QueryResolvers = QueryResolvers.Values.ToList()
             };
         }
 

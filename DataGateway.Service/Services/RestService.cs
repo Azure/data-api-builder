@@ -50,7 +50,7 @@ namespace Azure.DataGateway.Services
         public async Task<JsonDocument?> ExecuteAsync(
             string entityName,
             Operation operationType,
-            string primaryKeyRoute)
+            string? primaryKeyRoute)
         {
             string queryString = GetHttpContext().Request.QueryString.ToString();
 

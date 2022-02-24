@@ -184,7 +184,6 @@ namespace Azure.DataGateway.Service.Controllers
                             {
                                 value = resultElement
                             }));
-                            resultElement);
                         case Operation.Insert:
                             primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
                             string location =

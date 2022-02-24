@@ -179,7 +179,12 @@ namespace Azure.DataGateway.Service.Controllers
                     switch (operationType)
                     {
                         case Operation.Find:
-                            return Ok(resultElement);
+
+                            return Ok(new JsonResult(new
+                            {
+                                value = resultElement
+                            }));
+                            resultElement);
                         case Operation.Insert:
                             primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
                             string location =

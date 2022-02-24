@@ -60,22 +60,33 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlInsertStructure structure)
         {
-            // TODO: these should be put in a transcation
+            // No need to put into transaction as LAST_INSERT_ID is session level variable
             return $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
                     $"VALUES ({string.Join(", ", (structure.Values))}); " +
+                    $" SET @ROWCOUNT=ROW_COUNT(); " +
                     $"SELECT {MakeInsertSelections(structure)}";
         }
 
         /// <inheritdoc />
         public string Build(SqlUpdateStructure structure)
         {
-            // TODO: these should be put in a transaction
-            return $"UPDATE {QuoteIdentifier(structure.TableName)} " +
+            // Create local variables to store the pk columns
+            string sets = String.Join(";\n", structure.PrimaryKey().Select((x, index) => $"SET {"@LU_" + index.ToString()} := 0"));
+
+            // Fetch the value to local variables
+            string updates = String.Join(", ", structure.PrimaryKey().Select((x, index) =>
+                $"{QuoteIdentifier(x)} = (SELECT {"@LU_" + index.ToString()} := {QuoteIdentifier(x)})"));
+
+            // Select local variables and mapping to original column name
+            string select = String.Join(", ", structure.PrimaryKey().Select((x, index) => $"{"@LU_" + index.ToString()} AS {QuoteIdentifier(x)}"));
+
+            return sets + ";\n" +
+                    $"UPDATE {QuoteIdentifier(structure.TableName)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
-                    $"WHERE {Build(structure.Predicates)}; " +
-                    $"SELECT {Build(structure.PrimaryKey())} " +
-                    $"FROM {QuoteIdentifier(structure.TableName)} " +
-                    $"WHERE {Build(structure.Predicates)}; ";
+                        ", " + updates +
+                    $" WHERE {Build(structure.Predicates)}; " +
+                    $" SET @ROWCOUNT=ROW_COUNT(); " +
+                    $"SELECT " + select + $" WHERE @ROWCOUNT > 0;";
         }
 
         /// <inheritdoc />

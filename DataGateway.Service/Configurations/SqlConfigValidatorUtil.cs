@@ -460,7 +460,7 @@ namespace Azure.DataGateway.Service.Configurations
                 "String" => "String",
                 "Int64" => "Int",
                 "Boolean" => "Boolean",
-                "Single" => "Float",
+                "Double" => "Float",
                 _ => throw new ArgumentException($"ColumnType {type} not handled by case. Please add a case resolving " +
                               $"{systemType.Name} to the appropriate GraphQL type"),
             };

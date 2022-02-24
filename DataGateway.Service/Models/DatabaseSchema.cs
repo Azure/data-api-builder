@@ -56,7 +56,6 @@ namespace Azure.DataGateway.Service.Models
                 case ColumnType.Bit:
                     return typeof(bool);
                 case ColumnType.Float:
-                    return typeof(float);
                 case ColumnType.Double:
                     return typeof(double);
                 default:

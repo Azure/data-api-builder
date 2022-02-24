@@ -64,6 +64,10 @@ namespace Azure.DataGateway.Service.Services
                     {
                         type = EdmPrimitiveTypeKind.Boolean;
                     }
+                    else if (systemTypeName == typeof(double).Name)
+                    {
+                        type = EdmPrimitiveTypeKind.Double;
+                    }
                     else
                     {
                         throw new ArgumentException($"No resolver for column type {columnType}");

@@ -12,6 +12,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     public class SqlConfigValidatorTests
     {
         [TestMethod]
+        [TestCategory("GraphQL to SQL column type validation")]
         [Ignore("Ignoring test until ID field support is included")]
         public void CanCreateFieldWithIDType()
         {
@@ -51,6 +52,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         [TestMethod]
+        [TestCategory("GraphQL to SQL column type validation")]
         public void CanCreateFieldWithStringType()
         {
             IMetadataStoreProvider metadataStoreProvider = new MetadataStoreProviderForTest
@@ -88,6 +90,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         [TestMethod]
+        [TestCategory("GraphQL to SQL column type validation")]
         public void CanCreateFieldWithIntType()
         {
             IMetadataStoreProvider metadataStoreProvider = new MetadataStoreProviderForTest
@@ -125,6 +128,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         [TestMethod]
+        [TestCategory("GraphQL to SQL column type validation")]
         public void CanCreateFieldWithFloatType()
         {
             IMetadataStoreProvider metadataStoreProvider = new MetadataStoreProviderForTest
@@ -162,6 +166,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         [TestMethod]
+        [TestCategory("GraphQL to SQL column type validation")]
         public void CanCreateFieldWithBooleanType()
         {
             IMetadataStoreProvider metadataStoreProvider = new MetadataStoreProviderForTest
@@ -200,6 +205,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         [TestMethod]
         [Ignore("Ignored until nullable DB types are supported")]
+        [TestCategory("GraphQL to SQL column type validation")]
         public void CanCreateFieldWithNullableIDType()
         {
             IMetadataStoreProvider metadataStoreProvider = new MetadataStoreProviderForTest
@@ -239,6 +245,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         [TestMethod]
         [Ignore("Ignored until nullable DB types are supported")]
+        [TestCategory("GraphQL to SQL column type validation")]
         public void CanCreateFieldWithNullableStringType()
         {
             IMetadataStoreProvider metadataStoreProvider = new MetadataStoreProviderForTest
@@ -277,6 +284,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         [TestMethod]
         [Ignore("Ignored until nullable DB types are supported")]
+        [TestCategory("GraphQL to SQL column type validation")]
         public void CanCreateFieldWithNullableIntType()
         {
             IMetadataStoreProvider metadataStoreProvider = new MetadataStoreProviderForTest
@@ -315,6 +323,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         [TestMethod]
         [Ignore("Ignored until nullable DB types are supported")]
+        [TestCategory("GraphQL to SQL column type validation")]
         public void CanCreateFieldWithNullableFloatType()
         {
             IMetadataStoreProvider metadataStoreProvider = new MetadataStoreProviderForTest
@@ -353,6 +362,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         [TestMethod]
         [Ignore("Ignored until nullable DB types are supported")]
+        [TestCategory("GraphQL to SQL column type validation")]
         public void CanCreateFieldWithNullableBooleanType()
         {
             IMetadataStoreProvider metadataStoreProvider = new MetadataStoreProviderForTest

@@ -580,6 +580,37 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Tests the Put functionality with a REST PUT request
+        /// without a primary key route. We expect a failure and so
+        /// no sql query is provided.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutWithNoPrimaryKeyRouteTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Batman Returns"",
+                ""issueNumber"": 1234
+            }";
+
+            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: string.Empty,
+                    queryString: null,
+                    entity: _integration_NonAutoGenPK_TableName,
+                    sqlQuery: string.Empty,
+                    controller: _restController,
+                    operationType: Operation.Upsert,
+                    requestBody: requestBody,
+                    exception: true,
+                    expectedErrorMessage: "Primary Key for UPSERT requests is required.",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedLocationHeader: expectedLocationHeader
+                );
+        }
+
+        /// <summary>
         /// DeleteNonExistent operates on a single entity with target object
         /// identified in the primaryKeyRoute.
         /// sqlQuery represents the query used to get 'expected' result of zero items.
@@ -622,6 +653,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     requestBody: string.Empty,
                     exception: true,
                     expectedErrorMessage: "The request is invalid since the primary keys: title requested were not found in the entity definition.",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
+
+        /// <summary>
+        /// DeleteWithoutPrimaryKey attempts to operate on a single entity but with
+        /// no primary key route. No sqlQuery value is provided as this request
+        /// should fail prior to querying the database.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task DeleteWithOutPrimaryKeyTest()
+        {
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: string.Empty,
+                    queryString: string.Empty,
+                    entity: _integrationTableName,
+                    sqlQuery: string.Empty,
+                    controller: _restController,
+                    operationType: Operation.Delete,
+                    requestBody: string.Empty,
+                    exception: true,
+                    expectedErrorMessage: "Primary Key for DELETE requests is required.",
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
                 );

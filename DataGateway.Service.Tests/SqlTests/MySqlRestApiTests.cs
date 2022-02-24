@@ -402,7 +402,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [Ignore]
         public override Task PutOne_Insert_PKAutoGen_Test()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("error: Fail, still able to insert");
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOne_Update_Test()
+        {
+            throw new NotImplementedException("error: While processing your request the server ran into an unexpected error");
         }
     }
 }

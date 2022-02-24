@@ -117,7 +117,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     $"UPDATE {Build(structure.UpdateOperations, ", ")}" +
                     $", " + updates + ";" +
                     $" SET @ROWCOUNT=ROW_COUNT(); " +
-                    $"SELECT {MakeUpsertSelections(structure, false)}, " + select + $" WHERE @ROWCOUNT = 2;" +
+                    $"SELECT " + select + $" WHERE @ROWCOUNT = 2;" +
                     $"SELECT {MakeUpsertSelections(structure, true)} WHERE @ROWCOUNT = 1;";
         }
 
@@ -189,7 +189,9 @@ namespace Azure.DataGateway.Service.Resolvers
                 string quotedColName = QuoteIdentifier(colName);
 
                 if (!includePK && structure.PrimaryKey().Contains(colName))
+                {
                     continue;
+                }
 
                 if (structure.InsertColumns.Contains(colName))
                 {

@@ -32,7 +32,7 @@ namespace Azure.DataGateway.Service.Services
         {
             try
             {
-                Uri relativeUri = new(resourcePath + filterQueryString, UriKind.Relative);
+                Uri relativeUri = new(resourcePath + '/' + filterQueryString, UriKind.Relative);
                 ODataUriParser parser = new(_model, relativeUri);
                 return parser.ParseFilter();
             }

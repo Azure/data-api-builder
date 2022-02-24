@@ -367,10 +367,20 @@ namespace Azure.DataGateway.Service.Configurations
                 ["after"] = new[] { "String" }
             };
 
+            Dictionary<string, IEnumerable<string>> optionalArguments = new()
+            {
+                ["_filter"] = new[] { "String", "String!" }
+            };
+
             Dictionary<string, InputValueDefinitionNode> fieldArguments = GetArgumentsFromField(field);
 
-            ValidateFieldHasRequiredArguments(fieldArguments.Keys, requiredArguments.Keys);
-            ValidateFieldArgumentTypes(fieldArguments, requiredArguments);
+            ValidateFieldArguments(
+                fieldArguments.Keys,
+                requiredArguments: requiredArguments.Keys,
+                optionalArguments: optionalArguments.Keys);
+            ValidateFieldArgumentTypes(
+                fieldArguments,
+                MergeDictionaries<string, IEnumerable<string>>(requiredArguments, optionalArguments));
         }
 
         /// <summary>
@@ -378,15 +388,16 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateListTypeFieldArguments(FieldDefinitionNode field)
         {
-            Dictionary<string, IEnumerable<string>> expectedArguments = new()
+            Dictionary<string, IEnumerable<string>> optionalArguments = new()
             {
                 ["first"] = new[] { "Int", "Int!" },
+                ["_filter"] = new[] { "String", "String!" }
             };
 
             Dictionary<string, InputValueDefinitionNode> fieldArguments = GetArgumentsFromField(field);
 
-            ValidateFieldHasNoUnexpectedArguments(fieldArguments.Keys, expectedArguments.Keys);
-            ValidateFieldArgumentTypes(fieldArguments, expectedArguments);
+            ValidateFieldArguments(fieldArguments.Keys, optionalArguments: optionalArguments.Keys);
+            ValidateFieldArgumentTypes(fieldArguments, optionalArguments);
         }
 
         /// <summary>
@@ -395,7 +406,7 @@ namespace Azure.DataGateway.Service.Configurations
         private void ValidateNoFieldArguments(FieldDefinitionNode field)
         {
             Dictionary<string, InputValueDefinitionNode> fieldArguments = GetArgumentsFromField(field);
-            ValidateFieldHasNoUnexpectedArguments(fieldArguments.Keys, Enumerable.Empty<string>());
+            ValidateFieldArguments(fieldArguments.Keys, requiredArguments: Enumerable.Empty<string>());
         }
 
         /// <summary>
@@ -583,7 +594,7 @@ namespace Azure.DataGateway.Service.Configurations
                 ValidateMutReturnTypeMatchesTable(resolver.Table, mutation);
             }
 
-            ValidateFieldHasRequiredArguments(mutArgs.Keys, table.PrimaryKey);
+            ValidateFieldArguments(mutArgs.Keys, requiredArguments: table.PrimaryKey);
             ValidateMutArgTypesMatchTableColTypes(resolver.Table, table, mutArgs);
             ValidateFieldArgumentsAreNonNullable(mutArgs);
             ValidateReturnTypeNullability(mutation, returnsNullable: true);
@@ -647,7 +658,7 @@ namespace Azure.DataGateway.Service.Configurations
             string returnedTypeTableName = GetTypeTable(InnerTypeStr(queryField.Type));
             TableDefinition returnedTypeTable = GetTableWithName(returnedTypeTableName);
 
-            ValidateFieldHasRequiredArguments(arguments.Keys, returnedTypeTable.PrimaryKey);
+            ValidateFieldArguments(arguments.Keys, requiredArguments: returnedTypeTable.PrimaryKey);
             ValidateFieldArgumentsAreNonNullable(arguments);
         }
     }

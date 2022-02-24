@@ -29,11 +29,11 @@ steps:
   inputs:
     restoreSolution: '$(solution)'
 - task: FileTransform@1
-  displayName: 'Generate appsettings.Test.json'
+  displayName: 'Generate appsettings.Cosmos.json'
   inputs:
     folderPath: '$(System.DefaultWorkingDirectory)'
     fileType: 'json'
-    targetFiles: 'DataGateway.Service/appsettings.Test.json'
+    targetFiles: 'DataGateway.Service/appsettings.Cosmos.json'
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:

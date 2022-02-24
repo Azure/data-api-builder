@@ -167,6 +167,44 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         [TestMethod]
         [TestCategory("GraphQL to SQL column type validation")]
+        public void CanCreateFieldWithFloatTypeAndDoubleColumn()
+        {
+            IMetadataStoreProvider metadataStoreProvider = new MetadataStoreProviderForTest
+            {
+                GraphQLSchema = @"
+                type Foo {
+                  bar: Float!
+                }
+
+                type Query {
+                    foo(bar: Float!): Foo
+                }
+                ",
+                DatabaseSchema = new Models.DatabaseSchema
+                {
+                    Tables = new Dictionary<string, Models.TableDefinition> {
+                        { "Foo", new Models.TableDefinition {
+                            Columns = new Dictionary<string, Models.ColumnDefinition> {
+                                { "bar", new Models.ColumnDefinition {
+                                    Type = Models.ColumnType.Double,
+                                    IsNullable = false } } },
+                            PrimaryKey = new List<string> { "bar" } } } }
+                },
+                GraphQLTypes = new Dictionary<string, Models.GraphQLType> {
+                    { "Foo", new Models.GraphQLType (Table: "Foo", false, "", "") }
+                },
+                MutationResolvers = null
+            };
+
+            GraphQLService graphQLService = new(new Mock<IQueryEngine>().Object, new Mock<IMutationEngine>().Object, metadataStoreProvider);
+
+            SqlConfigValidator validator = new(metadataStoreProvider, graphQLService);
+
+            validator.ValidateConfig();
+        }
+
+        [TestMethod]
+        [TestCategory("GraphQL to SQL column type validation")]
         public void CanCreateFieldWithBooleanType()
         {
             IMetadataStoreProvider metadataStoreProvider = new MetadataStoreProviderForTest

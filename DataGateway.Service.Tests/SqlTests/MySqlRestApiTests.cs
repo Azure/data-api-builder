@@ -378,20 +378,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         [TestMethod]
         [Ignore]
-        public override Task InsertOneTest()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task InsertOneInCompositeKeyTableTest()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
         public override Task PutOne_Update_Test()
         {
             throw new NotImplementedException();

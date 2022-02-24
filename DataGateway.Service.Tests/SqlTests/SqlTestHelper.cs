@@ -128,7 +128,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             IActionResult actionResult,
             string expected,
             HttpStatusCode expectedStatusCode,
-            string expectedLocationHeader)
+            string expectedLocationHeader,
+            bool isJson = false)
         {
             string actual;
             switch (actionResult)
@@ -155,12 +156,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 default:
                     JsonResult actualResult = (JsonResult)actionResult;
                     actual = actualResult.Value.ToString();
-                    break;
+                    return;
             }
 
-            // if whitespaces are not consistent JsonStringDeepEquals should be used
-            // this will require deserializing and then serializing the strings for JSON
-            Assert.AreEqual(expected, actual);
+            if (isJson && !String.IsNullOrEmpty(expected))
+                Assert.IsTrue(JToken.DeepEquals(JToken.Parse(expected), JToken.Parse(actual)));
+            else
+                Assert.AreEqual(expected, actual);
         }
     }
 }

@@ -64,7 +64,7 @@ namespace Azure.DataGateway.Service.Resolvers
             return $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
                     $"VALUES ({string.Join(", ", (structure.Values))}); " +
                     $" SET @ROWCOUNT=ROW_COUNT(); " +
-                    $"SELECT {MakeInsertSelections(structure)}";
+                    $"SELECT {MakeInsertSelections(structure)} WHERE @ROWCOUNT > 0";
         }
 
         /// <inheritdoc />
@@ -137,8 +137,11 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             List<string> selections = new();
 
+            List<string> fields = structure.PrimaryKey()
+                .Union(structure.InsertColumns).ToList();
+
             int index = 0;
-            foreach (string colName in structure.PrimaryKey())
+            foreach (string colName in fields)
             {
                 string quotedColName = QuoteIdentifier(colName);
                 if (structure.InsertColumns.Contains(colName))

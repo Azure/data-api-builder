@@ -3,7 +3,6 @@
 ## Introduction
 DataGateway provides a consistent, productive abstraction for building GraphQL and REST API applications with data. Powered by Azure Databases, DataGateway provides modern access patterns to the database, allowing developers to use REST or GraphQL and providing developer experiences that meet developers where they are. 
 
-
 ## Configure and Run
 
 Clone the repository with your prefered method or locally navigate to where you'd like the repository to be and clone with the following command, make sure you replace `<directory name>` 
@@ -67,6 +66,9 @@ For example, to invoke a FindMany on the Table "Books" and retrieve the "id" and
 To see how the code flows, set a breakpoint in the controller which is associated with the particular DatabaseType that you are using, ie: after line 75 in `RestController.cs`
 
 This is a good entry point for debugging if you are not sure where in the service your problem is located.
+
+## Using Docker Containers
+Instructions for using Docker containers can be found under [docs/GetStarted.md](https://github.com/Azure/hawaii-gql/blob/main/docs/GetStarted.md)
 
 ### Contributing
 

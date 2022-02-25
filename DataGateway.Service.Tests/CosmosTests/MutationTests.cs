@@ -18,6 +18,15 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
                                                         name
                                                     }}
                                                 }}";
+        private static readonly string _mutationDeleteItemStringFormat = @"
+                                                mutation
+                                                {{
+                                                    deletePlanet (id: ""{0}"")
+                                                    {{
+                                                        id
+                                                        name
+                                                    }}
+                                                }}";
 
         /// <summary>
         /// Executes once for the test class.
@@ -31,14 +40,23 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             Client.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             CreateItems(DATABASE_NAME, _containerName, 10);
             RegisterMutationResolver("addPlanet", DATABASE_NAME, _containerName);
+            RegisterMutationResolver("deletePlanet", DATABASE_NAME, _containerName, "Delete");
         }
 
         [TestMethod]
         public async Task TestMutationRun()
         {
-            // Run mutation;
-            string mutation = String.Format(_mutationStringFormat, Guid.NewGuid().ToString(), "test_name");
+            // Run mutation Add planet;
+            String id = Guid.NewGuid().ToString();
+            string mutation = String.Format(_mutationStringFormat, id, "test_name");
             JsonElement response = await ExecuteGraphQLRequestAsync("addPlanet", mutation);
+
+            // Validate results
+            Assert.IsFalse(response.ToString().Contains("Error"));
+
+            // Run mutation delete item;
+            mutation = String.Format(_mutationDeleteItemStringFormat, id);
+            response = await ExecuteGraphQLRequestAsync("deletePlanet", mutation);
 
             // Validate results
             Assert.IsFalse(response.ToString().Contains("Error"));

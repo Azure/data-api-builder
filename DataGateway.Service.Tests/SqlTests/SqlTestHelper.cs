@@ -160,9 +160,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }
 
             Console.WriteLine($"Expected: {expected}\nActual: {actual}");
-            if (isJson && !String.IsNullOrEmpty(expected))
+            if (isJson && !string.IsNullOrEmpty(expected))
             {
-                Assert.IsTrue(JToken.DeepEquals(JToken.Parse(expected), JToken.Parse(actual)));
+                Assert.IsTrue(JsonStringsDeepEqual(expected, actual));
             }
             else
             {

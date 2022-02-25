@@ -70,15 +70,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlUpdateStructure structure)
         {
-            // Create local variables to store the pk columns
-            string sets = String.Join(";\n", structure.PrimaryKey().Select((x, index) => $"SET {"@LU_" + index.ToString()} := 0"));
-
-            // Fetch the value to local variables
-            string updates = String.Join(", ", structure.PrimaryKey().Select((x, index) =>
-                $"{QuoteIdentifier(x)} = (SELECT {"@LU_" + index.ToString()} := {QuoteIdentifier(x)})"));
-
-            // Select local variables and mapping to original column name
-            string select = String.Join(", ", structure.PrimaryKey().Select((x, index) => $"{"@LU_" + index.ToString()} AS {QuoteIdentifier(x)}"));
+            (string sets, string updates, string select) = MakeStoreUpdatePK(structure.PrimaryKey());
 
             return sets + ";\n" +
                     $"UPDATE {QuoteIdentifier(structure.TableName)} " +
@@ -99,15 +91,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlUpsertQueryStructure structure)
         {
-            // Create local variables to store the pk columns
-            string sets = String.Join(";\n", structure.PrimaryKey().Select((x, index) => $"SET {"@LU_" + index.ToString()} := 0"));
-
-            // Fetch the value to local variables
-            string updates = String.Join(", ", structure.PrimaryKey().Select((x, index) =>
-                $"{QuoteIdentifier(x)} = (SELECT {"@LU_" + index.ToString()} := {QuoteIdentifier(x)})"));
-
-            // Select local variables and mapping to original column name
-            string select = String.Join(", ", structure.PrimaryKey().Select((x, index) => $"{"@LU_" + index.ToString()} AS {QuoteIdentifier(x)}"));
+            (string sets, string updates, string select) = MakeStoreUpdatePK(structure.PrimaryKey());
 
             string insert = $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
                     $"VALUES ({string.Join(", ", (structure.Values))}) ";
@@ -117,8 +101,26 @@ namespace Azure.DataGateway.Service.Resolvers
                     $"UPDATE {Build(structure.UpdateOperations, ", ")}" +
                     $", " + updates + ";" +
                     $" SET @ROWCOUNT=ROW_COUNT(); " +
-                    $"SELECT " + select + $" WHERE @ROWCOUNT = 2;" +
-                    $"SELECT {MakeUpsertSelections(structure, true)} WHERE @ROWCOUNT = 1;";
+                    $"SELECT " + select + $" WHERE @ROWCOUNT != 1;" +
+                    $"SELECT {MakeUpsertSelections(structure)} WHERE @ROWCOUNT = 1;";
+        }
+
+        /// <summary>
+        /// Makes the query segments to store PK during an update
+        /// </summary>
+        private (string, string, string) MakeStoreUpdatePK(List<string> primaryKey)
+        {
+            // Create local variables to store the pk columns
+            string sets = String.Join(";\n", primaryKey.Select((x, index) => $"SET {"@LU_" + index.ToString()} := 0"));
+
+            // Fetch the value to local variables
+            string updates = String.Join(", ", primaryKey.Select((x, index) =>
+                $"{QuoteIdentifier(x)} = (SELECT {"@LU_" + index.ToString()} := {QuoteIdentifier(x)})"));
+
+            // Select local variables and mapping to original column name
+            string select = String.Join(", ", primaryKey.Select((x, index) => $"{"@LU_" + index.ToString()} AS {QuoteIdentifier(x)}"));
+
+            return (sets, updates, select);
         }
 
         /// <summary>
@@ -177,7 +179,7 @@ namespace Azure.DataGateway.Service.Resolvers
             return string.Join(", ", selections);
         }
 
-        private string MakeUpsertSelections(SqlUpsertQueryStructure structure, bool includePK)
+        private string MakeUpsertSelections(SqlUpsertQueryStructure structure)
         {
             List<string> selections = new();
 
@@ -187,11 +189,6 @@ namespace Azure.DataGateway.Service.Resolvers
             foreach (string colName in fields)
             {
                 string quotedColName = QuoteIdentifier(colName);
-
-                if (!includePK && structure.PrimaryKey().Contains(colName))
-                {
-                    continue;
-                }
 
                 if (structure.InsertColumns.Contains(colName))
                 {

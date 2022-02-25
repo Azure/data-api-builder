@@ -102,7 +102,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             Mock<SqlQueryStructure> structure = new(context, metaDataStore.Object);
             IEdmPrimitiveType primitiveType = EdmCoreModel.Instance.GetPrimitiveType(EdmPrimitiveTypeKind.Geography);
             EdmPrimitiveTypeReference typeRef = new(primitiveType, false);
-            ConstantNode nodeIn = new(string.Empty, string.Empty, typeRef);
+            ConstantNode nodeIn = new(string.Empty, "not empty", typeRef);
             ODataASTVisitor visitor = new(structure.Object);
             Assert.ThrowsException<NotSupportedException>(() => visitor.Visit(nodeIn));
         }

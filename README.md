@@ -36,7 +36,7 @@ In these files you need to modify the value for `ConnectionString` for the proje
 
 #### MySQL
 ```
-"ConnectionString": "server=localhost;database=graphql;uid=USERNAME;pwd=PASSWORD"
+"ConnectionString": "server=localhost;database=graphql;Allow User variables=true;uid=USERNAME;pwd=PASSWORD"
 ```
 
 #### PostresSQL

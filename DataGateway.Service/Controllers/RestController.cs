@@ -59,6 +59,30 @@ namespace Azure.DataGateway.Service.Controllers
         }
 
         /// <summary>
+        /// Helper function returns an OkObjectResult with provided arguments in a
+        /// form that complies with vNext Api guidelines.
+        /// </summary>
+        /// <param name="jsonElement">Value representing the Json results of the client's request.</param>
+        /// <param name="continuationToken">Value represents the token needed to continue with paged results.</param>
+        /// <returns></returns>
+        private OkObjectResult OkResponse(JsonElement jsonResult, string continuationToken)
+        {
+            if (string.IsNullOrWhiteSpace(continuationToken))
+            {
+                return Ok(new
+                {
+                    value = jsonResult,
+                });
+            }
+
+            return Ok(new
+            {
+                value = jsonResult,
+                @nextLink = continuationToken
+            });
+        }
+
+        /// <summary>
         /// Find action serving the HttpGet verb.
         /// </summary>
         /// <param name="entityName">The name of the entity.</param>
@@ -175,30 +199,24 @@ namespace Azure.DataGateway.Service.Controllers
                     // Clones the root element to a new JsonElement that can be
                     // safely stored beyond the lifetime of the original JsonDocument.
                     JsonElement resultElement = result.RootElement.Clone();
+                    OkObjectResult formattedResult = OkResponse(resultElement, string.Empty);
 
                     switch (operationType)
                     {
                         case Operation.Find:
-                            // returns Json of the form
-                            // {
-                            //   "value": [...]
-                            // }
-                            return Ok(
-                            "{" + "\n" +
-                           $"    \"value\" = {resultElement}" + "\n" +
-                            "}");
+                            return formattedResult;
                         case Operation.Insert:
                             primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
                             string location =
                                 UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute;
-                            return new CreatedResult(location: location, resultElement);
+                            return new CreatedResult(location: location, formattedResult);
                         case Operation.Delete:
                             return new NoContentResult();
                         case Operation.Upsert:
                             primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
                             location =
                                 UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute;
-                            return new CreatedResult(location: location, resultElement);
+                            return new CreatedResult(location: location, formattedResult);
                         default:
                             throw new NotSupportedException($"Unsupported Operation: \" {operationType}\".");
                     }

@@ -183,7 +183,10 @@ namespace Azure.DataGateway.Service.Controllers
                             // {
                             //   "value": [...]
                             // }
-                            return new Ok(resultElement);
+                            return Ok(
+                            "{" + "\n" +
+                           $"    \"value\" = {resultElement}" + "\n" +
+                            "}");
                         case Operation.Insert:
                             primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
                             string location =

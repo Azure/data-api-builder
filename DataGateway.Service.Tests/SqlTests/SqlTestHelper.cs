@@ -141,7 +141,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case CreatedResult createdResult:
                     Assert.AreEqual((int)expectedStatusCode, createdResult.StatusCode);
                     Assert.AreEqual(expectedLocationHeader, createdResult.Location);
-                    actual = createdResult.Value.ToString();
+                    OkObjectResult innerResult = (OkObjectResult)createdResult.Value;
+                    actual = innerResult.Value.ToString();
                     break;
                 // NoContentResult does not have value property for messages
                 case NoContentResult noContentResult:

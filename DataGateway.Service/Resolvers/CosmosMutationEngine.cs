@@ -65,12 +65,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     response = await container.UpsertItemAsync(jObject);
                     break;
                 case Operation.Delete:
-                    ItemRequestOptions options = new()
-                    {
-                        EnableContentResponseOnWrite = true,
-                    };
-
-                    response = await container.DeleteItemAsync<JObject>(id, partitionKey, options);
+                    response = await container.DeleteItemAsync<JObject>(id, partitionKey);
                     if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
                     {
                         // Delete item doesnt return the actual item, so we return emtpy json

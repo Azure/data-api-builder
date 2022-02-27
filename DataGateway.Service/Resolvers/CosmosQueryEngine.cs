@@ -1,6 +1,7 @@
 # nullable disable
 using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
@@ -175,8 +176,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 return null;
             }
 
-            byte[] plainTextBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
-            return System.Convert.ToBase64String(plainTextBytes);
+            byte[] plainTextBytes = Encoding.UTF8.GetBytes(plainText);
+            return Convert.ToBase64String(plainTextBytes);
         }
 
         private static string Base64Decode(string base64EncodedData)
@@ -186,8 +187,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 return null;
             }
 
-            byte[] base64EncodedBytes = System.Convert.FromBase64String(base64EncodedData);
-            return System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
+            byte[] base64EncodedBytes = Convert.FromBase64String(base64EncodedData);
+            return Encoding.UTF8.GetString(base64EncodedBytes);
         }
     }
 }

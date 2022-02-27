@@ -4,6 +4,7 @@ DROP TABLE IF EXISTS authors;
 DROP TABLE IF EXISTS books;
 DROP TABLE IF EXISTS publishers;
 DROP TABLE IF EXISTS magazines;
+DROP TABLE IF EXISTS comics;
 
 CREATE TABLE publishers(
     id bigint AUTO_INCREMENT PRIMARY KEY,
@@ -43,6 +44,12 @@ CREATE TABLE magazines(
     issueNumber bigint NULL
 );
 
+CREATE TABLE comics(
+    id bigint PRIMARY KEY,
+    title text NOT NULL,
+    volume bigint AUTO_INCREMENT UNIQUE KEY
+);
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
@@ -80,5 +87,5 @@ ALTER TABLE books AUTO_INCREMENT = 5001;
 ALTER TABLE publishers AUTO_INCREMENT = 5001;
 ALTER TABLE authors AUTO_INCREMENT = 5001;
 ALTER TABLE reviews AUTO_INCREMENT = 5001;
-
+ALTER TABLE comics AUTO_INCREMENT = 5001
 

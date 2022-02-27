@@ -9,6 +9,7 @@ type Query {
 
 type Mutation {
     addPlanet(id: String, name: String): Planet
+    deletePlanet(id: String): Planet
 }
 
 type PlanetConnection {

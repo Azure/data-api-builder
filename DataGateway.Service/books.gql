@@ -1,5 +1,5 @@
 type Query {
-    getBooks(first: Int = 100, _filter: String): [Book!]!
+    getBooks(first: Int = 100, _filter: BookQueryInput): [Book!]!
     getBook(id: Int!): Book
     getReview(id: Int!, book_id: Int!): Review
     getReviews(_filter: String): [Review!]!
@@ -62,4 +62,57 @@ type AuthorConnection {
     items: [Author!]!
     endCursor: String
     hasNextPage: Boolean!
+}
+
+input StringQueryInput {
+  eq: String
+  neq: String
+  contains: String
+  notContains: String
+  startsWith: String
+  endWith: String
+  caseInsensitive: Boolean
+}
+
+input IntQueryInput {
+  eq: Int
+  neq: Int
+  lt: Int
+  gt: Int
+  lte: Int
+  gte: Int
+}
+
+input BookQueryInput {
+  inPrt: BookQueryInput
+  and: [BookQueryInput]
+  or: [BookQueryInput]
+  id: IntQueryInput
+  title: StringQueryInput
+  publisher_id: IntQueryInput
+}
+
+input PublisherQueryInput {
+    inPrt: PublisherQueryInput
+    and: [PublisherQueryInput]
+    or: [PublisherQueryInput]
+    id: IntQueryInput,
+    name: StringQueryInput
+}
+
+input AuthorQueryInput {
+    inPrt: AuthorQueryInput
+    and: [AuthorQueryInput]
+    or: [AuthorQueryInput]
+    id: IntQueryInput,
+    name: StringQueryInput
+    birthdate: StringQueryInput
+}
+
+input ReviewQueryInput {
+    inPrt: ReviewQueryInput
+    and: [ReviewQueryInput]
+    or: [ReviewQueryInput]
+    id: IntQueryInput,
+    content: StringQueryInput
 }

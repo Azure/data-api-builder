@@ -77,7 +77,7 @@ namespace Azure.DataGateway.Service.Controllers
         [Produces("application/json")]
         public async Task<IActionResult> Find(
             string entityName,
-            string primaryKeyRoute)
+            string? primaryKeyRoute)
         {
             return await HandleOperation(
                 entityName,
@@ -121,7 +121,7 @@ namespace Azure.DataGateway.Service.Controllers
         [Produces("application/json")]
         public async Task<IActionResult> Delete(
             string entityName,
-            string primaryKeyRoute)
+            string? primaryKeyRoute)
         {
             return await HandleOperation(
                 entityName,
@@ -134,7 +134,7 @@ namespace Azure.DataGateway.Service.Controllers
         [Produces("application/json")]
         public async Task<IActionResult> Upsert(
             string entityName,
-            string primaryKeyRoute)
+            string? primaryKeyRoute)
         {
             return await HandleOperation(
                 entityName,
@@ -165,7 +165,7 @@ namespace Azure.DataGateway.Service.Controllers
         private async Task<IActionResult> HandleOperation(
             string entityName,
             Operation operationType,
-            string primaryKeyRoute)
+            string? primaryKeyRoute)
         {
             try
             {

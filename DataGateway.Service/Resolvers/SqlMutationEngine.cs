@@ -120,17 +120,18 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 string? jsonResultString = null;
 
-                switch(context.OperationType)
+                switch (context.OperationType)
                 {
                     case Operation.Delete:
-                    // Records affected tells us that item was successfully deleted.
-                    // No records affected happens for a DELETE request on nonexistent object
-                    // Returning empty JSON result triggers a NoContent result in calling REST service.
-                    if (dbDataReader.RecordsAffected > 0)
-                    {
-                        jsonResultString = "{}";
-                    }
-                    break;
+                        // Records affected tells us that item was successfully deleted.
+                        // No records affected happens for a DELETE request on nonexistent object
+                        // Returning empty JSON result triggers a NoContent result in calling REST service.
+                        if (dbDataReader.RecordsAffected > 0)
+                        {
+                            jsonResultString = "{}";
+                        }
+
+                        break;
 
                     case Operation.Insert:
                     case Operation.Update:
@@ -160,6 +161,7 @@ namespace Azure.DataGateway.Service.Resolvers
                                 statusCode: HttpStatusCode.InternalServerError,
                                 subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
                         }
+
                         break;
                 }
 

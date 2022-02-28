@@ -95,9 +95,10 @@ namespace Azure.DataGateway.Service.Resolvers
 
             // If id is autogen column, we fallback to update
             bool fallback = false;
-            foreach(var col in structure.InsertColumns)
+            foreach (string col in structure.InsertColumns)
             {
-                if (structure.PrimaryKey().Contains(col)) {
+                if (structure.PrimaryKey().Contains(col))
+                {
                     fallback = true;
                     break;
                 }

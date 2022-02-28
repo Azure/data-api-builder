@@ -80,6 +80,14 @@ namespace Azure.DataGateway.Service.Resolvers
             }
         }
 
+        /// <summary>
+        /// Get the definition of a column by name
+        /// </summary>
+        public ColumnDefinition GetColumnDefinition(string columnName)
+        {
+            return GetTableDefinition().Columns[columnName];
+        }
+
         private void PopulateColumns(
             IDictionary<string, object> mutationParams,
             TableDefinition tableDefinition)

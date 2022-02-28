@@ -34,7 +34,12 @@ In these files you need to modify the value for `ConnectionString` for the proje
 "ConnectionString": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=USERNAME;Password=PASSWORD;MultipleActiveResultSets=False;Connection Timeout=5;"
 ```
 
-#### PostresSql
+#### MySQL
+```
+"ConnectionString": "server=localhost;database=graphql;Allow User variables=true;uid=USERNAME;pwd=PASSWORD"
+```
+
+#### PostresSQL
 ```
 "ConnectionString": "Host=localhost;Database=graphql"
 ```

@@ -397,12 +397,5 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             return _queryMap[key];
         }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PutOne_Insert_PKAutoGen_Test()
-        {
-            throw new NotImplementedException("Insert success");
-        }
     }
 }

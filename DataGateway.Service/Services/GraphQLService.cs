@@ -10,7 +10,7 @@ using HotChocolate.Execution.Configuration;
 using HotChocolate.Types;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Azure.DataGateway.Services
+namespace Azure.DataGateway.Service.Services
 {
     public class GraphQLService
     {

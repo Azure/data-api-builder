@@ -4,7 +4,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataGateway.Service.Controllers

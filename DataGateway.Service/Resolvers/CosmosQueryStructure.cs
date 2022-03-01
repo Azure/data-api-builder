@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 

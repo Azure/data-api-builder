@@ -5,7 +5,6 @@ using System.Net;
 using System.Text.Json;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
 
 namespace Azure.DataGateway.Service.Services
 {

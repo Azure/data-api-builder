@@ -8,7 +8,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
 
@@ -120,30 +120,51 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 string? jsonResultString = null;
 
-                /// Processes a second result set from DbDataReader if it exists.
-                /// In MsSQL upsert:
-                /// result set #1: result of the UPDATE operation.
-                /// result set #2: result of the INSERT operation.
-                if (await dbDataReader.NextResultAsync() && resultRecord == null)
+                switch (context.OperationType)
                 {
-                    // Since no first result set exists, we overwrite Dictionary here.
-                    resultRecord = await ExtractRowFromDbDataReader(dbDataReader);
-                    jsonResultString = JsonSerializer.Serialize(resultRecord);
-                }
+                    case Operation.Delete:
+                        // Records affected tells us that item was successfully deleted.
+                        // No records affected happens for a DELETE request on nonexistent object
+                        // Returning empty JSON result triggers a NoContent result in calling REST service.
+                        if (dbDataReader.RecordsAffected > 0)
+                        {
+                            jsonResultString = "{}";
+                        }
 
-                if (context.OperationType == Operation.Delete)
-                {
-                    // Records affected tells us that item was successfully deleted.
-                    // No records affected happens for a DELETE request on nonexistent object
-                    // Returning empty JSON result triggers a NoContent result in calling REST service.
-                    if (dbDataReader.RecordsAffected > 0)
-                    {
-                        jsonResultString = "{}";
-                    }
-                }
-                else if (context.OperationType == Operation.Insert)
-                {
-                    jsonResultString = JsonSerializer.Serialize(resultRecord);
+                        break;
+
+                    case Operation.Insert:
+                    case Operation.Update:
+                        jsonResultString = JsonSerializer.Serialize(resultRecord);
+                        break;
+
+                    case Operation.Upsert:
+                        /// Processes a second result set from DbDataReader if it exists.
+                        /// In MsSQL upsert:
+                        /// result set #1: result of the UPDATE operation.
+                        /// result set #2: result of the INSERT operation.
+                        if (resultRecord != null)
+                        {
+                            // We give empty result set for updates
+                            jsonResultString = null;
+                        }
+                        else if (await dbDataReader.NextResultAsync())
+                        {
+                            // Since no first result set exists, we overwrite Dictionary here.
+                            resultRecord = await ExtractRowFromDbDataReader(dbDataReader);
+                            jsonResultString = JsonSerializer.Serialize(resultRecord);
+                        }
+                        else
+                        {
+                            // If there is no resultset, raise dbexception
+                            // this is needed for MySQL.
+                            throw new DataGatewayException(
+                                message: $"Could not perform the given mutation on entity {context.EntityName}.",
+                                statusCode: HttpStatusCode.InternalServerError,
+                                subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
+                        }
+
+                        break;
                 }
 
                 if (jsonResultString == null)

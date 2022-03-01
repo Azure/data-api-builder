@@ -139,6 +139,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         break;
 
                     case Operation.Upsert:
+                    case Operation.UpsertIncremental:
                         /// Processes a second result set from DbDataReader if it exists.
                         /// In MsSQL upsert:
                         /// result set #1: result of the UPDATE operation.

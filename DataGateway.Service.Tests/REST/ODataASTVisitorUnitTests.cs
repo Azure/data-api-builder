@@ -106,14 +106,14 @@ namespace Azure.DataGateway.Service.Tests.REST
         public void InvalidEdmTypeReferenceTest()
         {
 
-            ConstantNode nodeIn = CreateConstantNode(string.Empty, "text", EdmPrimitiveTypeKind.Geography);
+            ConstantNode nodeIn = CreateConstantNode(constantValue: string.Empty, literalText: "text", EdmPrimitiveTypeKind.Geography);
             ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY);
             Assert.ThrowsException<NotSupportedException>(() => visitor.Visit(nodeIn));
         }
 
         /// <summary>
         /// Verifies that we throw an exception for values that can
-        /// not be parsed into their valid Edm Type Kind. Create a constant
+        /// not be parsed into a valid Edm Type Kind. Create a constant
         /// node with a valid type and a value that can not be parsed into
         /// that type and then invoke the visit function from our visitor
         /// using that node.
@@ -121,7 +121,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         [TestMethod]
         public void InvalidValueTypeTest()
         {
-            ConstantNode nodeIn = CreateConstantNode(string.Empty, "text", EdmPrimitiveTypeKind.Int64);
+            ConstantNode nodeIn = CreateConstantNode(constantValue: string.Empty, literalText: "text", EdmPrimitiveTypeKind.Int64);
             ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY);
             Assert.ThrowsException<ArgumentException>(() => visitor.Visit(nodeIn));
         }
@@ -133,7 +133,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         [TestMethod]
         public void InvalidBinaryOperatorKindTest()
         {
-            ConstantNode constantNode = CreateConstantNode("null", "null", EdmPrimitiveTypeKind.None, true);
+            ConstantNode constantNode = CreateConstantNode(constantValue: "null", literalText: "null", EdmPrimitiveTypeKind.None, isNull: true);
             BinaryOperatorNode binaryNode = CreateBinaryNode(constantNode, constantNode, BinaryOperatorKind.And);
             ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY);
             Assert.ThrowsException<NotSupportedException>(() => visitor.Visit(binaryNode));
@@ -146,7 +146,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         [TestMethod]
         public void InvalidUnaryOperatorKindTest()
         {
-            ConstantNode constantNode = CreateConstantNode("null", "null", EdmPrimitiveTypeKind.None, true);
+            ConstantNode constantNode = CreateConstantNode(constantValue: "null", literalText: "null", EdmPrimitiveTypeKind.None, isNull: true);
             UnaryOperatorNode binaryNode = CreateUnaryNode(constantNode, UnaryOperatorKind.Negate);
             ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY);
             Assert.ThrowsException<ArgumentException>(() => visitor.Visit(binaryNode));

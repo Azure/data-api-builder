@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
-using Azure.DataGateway.Services;
 
 namespace Azure.DataGateway.Service.Tests.CosmosTests
 {

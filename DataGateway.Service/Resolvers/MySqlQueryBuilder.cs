@@ -43,7 +43,7 @@ namespace Azure.DataGateway.Service.Resolvers
             StringBuilder result = new();
             if (structure.IsListQuery)
             {
-                result.Append($"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT({MakeJsonObjectParams(structure, subqueryName)})), '[]') ");
+                result.Append($"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT({MakeJsonObjectParams(structure, subqueryName)})), JSON_ARRAY()) ");
             }
             else
             {
@@ -163,14 +163,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 string cLabel = column.Label;
                 string parametrizedCLabel = structure.ColumnLabelToParam[cLabel];
-                if (structure.IsSubqueryColumn(column))
-                {
-                    jsonColumns.Add($"{parametrizedCLabel}, JSON_EXTRACT({subqueryName}.{QuoteIdentifier(cLabel)}, '$')");
-                }
-                else
-                {
-                    jsonColumns.Add($"{parametrizedCLabel}, {subqueryName}.{QuoteIdentifier(cLabel)}");
-                }
+                jsonColumns.Add($"{parametrizedCLabel}, {subqueryName}.{QuoteIdentifier(cLabel)}");
             }
 
             return string.Join(", ", jsonColumns);

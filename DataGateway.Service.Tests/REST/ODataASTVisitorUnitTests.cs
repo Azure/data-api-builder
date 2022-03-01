@@ -184,7 +184,7 @@ namespace Azure.DataGateway.Service.Tests.REST
 
         /// <summary>
         /// Tests that we throw an exception when trying to use an invalid
-        /// operator in our filter. In those case an add operator.
+        /// operator in our filter. In this case an add operator.
         /// </summary>
         [TestMethod]
         public void InvalidNullBinaryOpTest()

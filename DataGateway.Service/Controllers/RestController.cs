@@ -129,6 +129,18 @@ namespace Azure.DataGateway.Service.Controllers
                 primaryKeyRoute);
         }
 
+        /// <summary>
+        /// Replacement Update/Insert action serving the HttpPut verb
+        /// </summary>
+        /// <param name="entityName">The name of the entity.</param>
+        /// <param name="primaryKeyRoute">The string representing the primary key route
+        /// which gets its content from the route attribute {*primaryKeyRoute}.
+        /// asterisk(*) here is a wild-card/catch all i.e it matches the rest of the route after {entityName}.
+        /// primary_key = [shard_value/]id_key_value
+        /// Expected URL template is of the following form:
+        /// MsSql: URL template: /<entityName>/[<primary_key_column_name>/<primary_key_value>
+        /// URL MUST NOT contain a queryString
+        /// URL example: /Books </param>
         [HttpPut]
         [Route("{*primaryKeyRoute}")]
         [Produces("application/json")]
@@ -139,6 +151,31 @@ namespace Azure.DataGateway.Service.Controllers
             return await HandleOperation(
                 entityName,
                 Operation.Upsert,
+                primaryKeyRoute);
+        }
+
+        /// <summary>
+        /// Incremental Update/Insert action serving the HttpPatch verb
+        /// </summary>
+        /// <param name="entityName">The name of the entity.</param>
+        /// <param name="primaryKeyRoute">The string representing the primary key route
+        /// which gets its content from the route attribute {*primaryKeyRoute}.
+        /// asterisk(*) here is a wild-card/catch all i.e it matches the rest of the route after {entityName}.
+        /// primary_key = [shard_value/]id_key_value
+        /// Expected URL template is of the following form:
+        /// MsSql: URL template: /<entityName>/[<primary_key_column_name>/<primary_key_value>
+        /// URL MUST NOT contain a queryString
+        /// URL example: /Books </param>
+        [HttpPatch]
+        [Route("{*primaryKeyRoute}")]
+        [Produces("application/json")]
+        public async Task<IActionResult> UpsertIncremental(
+            string entityName,
+            string? primaryKeyRoute)
+        {
+            return await HandleOperation(
+                entityName,
+                Operation.UpsertIncremental,
                 primaryKeyRoute);
         }
 
@@ -188,6 +225,7 @@ namespace Azure.DataGateway.Service.Controllers
                         case Operation.Delete:
                             return new NoContentResult();
                         case Operation.Upsert:
+                        case Operation.UpsertIncremental:
                             primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
                             location =
                                 UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute;
@@ -201,6 +239,7 @@ namespace Azure.DataGateway.Service.Controllers
                     switch (operationType)
                     {
                         case Operation.Upsert:
+                        case Operation.UpsertIncremental:
                             // Empty result set indicates an Update successfully occurred.
                             return new NoContentResult();
                         default:

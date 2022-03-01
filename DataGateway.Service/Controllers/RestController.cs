@@ -63,11 +63,11 @@ namespace Azure.DataGateway.Service.Controllers
         /// form that complies with vNext Api guidelines.
         /// </summary>
         /// <param name="jsonElement">Value representing the Json results of the client's request.</param>
-        /// <param name="continuationToken">Value represents the token needed to continue with paged results.</param>
+        /// <param name="url">Value represents the complete url needed to continue with paged results.</param>
         /// <returns></returns>
-        private OkObjectResult OkResponse(JsonElement jsonResult, string continuationToken)
+        private OkObjectResult OkResponse(JsonElement jsonResult, string url)
         {
-            if (string.IsNullOrWhiteSpace(continuationToken))
+            if (string.IsNullOrWhiteSpace(url))
             {
                 return Ok(new
                 {
@@ -78,7 +78,7 @@ namespace Azure.DataGateway.Service.Controllers
             return Ok(new
             {
                 value = jsonResult,
-                @nextLink = continuationToken
+                @nextLink = url
             });
         }
 

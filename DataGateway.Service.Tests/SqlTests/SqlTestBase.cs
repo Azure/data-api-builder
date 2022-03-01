@@ -217,7 +217,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     RestController.ErrorResponse(
                         expectedSubStatusCode.ToString(),
                         expectedErrorMessage, expectedStatusCode).Value.ToString() :
-                    $"{{ value = {await GetDatabaseResultAsync(sqlQuery)} }}";
+                    $"{{ \"value\" : {await GetDatabaseResultAsync(sqlQuery)} }}";
             }
 
             SqlTestHelper.VerifyResult(

@@ -224,7 +224,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 actionResult,
                 expected,
                 expectedStatusCode,
-                expectedLocationHeader);
+                expectedLocationHeader,
+                !exception);
         }
 
         /// <summary>

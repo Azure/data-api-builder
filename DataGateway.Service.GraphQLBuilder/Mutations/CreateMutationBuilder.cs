@@ -21,7 +21,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                         HotChocolate.Language.IHasName def = definitions.First(d => d.Name.Value == typeName);
                         if (def is ObjectTypeDefinitionNode otdn)
                         {
-                            return GetComplexInputType(inputs, name, definitions, f, typeName, otdn);
+                            return GetComplexInputType(inputs, definitions, f, typeName, otdn);
                         }
                     }
 
@@ -58,7 +58,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             );
         }
 
-        private static InputValueDefinitionNode GetComplexInputType(Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs, NameNode name, IEnumerable<HotChocolate.Language.IHasName> definitions, FieldDefinitionNode f, string typeName, ObjectTypeDefinitionNode otdn)
+        private static InputValueDefinitionNode GetComplexInputType(Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs, IEnumerable<HotChocolate.Language.IHasName> definitions, FieldDefinitionNode f, string typeName, ObjectTypeDefinitionNode otdn)
         {
             InputObjectTypeDefinitionNode node;
             NameNode inputTypeName = GenerateInputTypeName(typeName);

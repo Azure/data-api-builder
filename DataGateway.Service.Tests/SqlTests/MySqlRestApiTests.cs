@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
@@ -396,13 +395,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public override string GetQuery(string key)
         {
             return _queryMap[key];
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PutOne_Insert_PKAutoGen_Test()
-        {
-            throw new NotImplementedException("Insert success");
         }
     }
 }

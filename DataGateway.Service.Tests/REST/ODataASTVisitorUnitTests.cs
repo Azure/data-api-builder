@@ -91,19 +91,25 @@ namespace Azure.DataGateway.Service.Tests.REST
         [TestMethod]
         public void InvalidEdmTypeReferenceTest()
         {
-            Mock<IMetadataStoreProvider> metaDataStore = new();
-            TableDefinition tableDef = new()
-            {
-                Columns = new()
-            };
-            metaDataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            FindRequestContext context = new(DEFAULT_ENTITY, false);
-            Mock<SqlQueryStructure> structure = new(context, metaDataStore.Object);
-            IEdmPrimitiveType primitiveType = EdmCoreModel.Instance.GetPrimitiveType(EdmPrimitiveTypeKind.Geography);
-            EdmPrimitiveTypeReference typeRef = new(primitiveType, false);
-            ConstantNode nodeIn = new(string.Empty, "not empty", typeRef);
-            ODataASTVisitor visitor = new(structure.Object);
+
+            ConstantNode nodeIn = CreateConstantNode(string.Empty, "text", EdmPrimitiveTypeKind.Geography);
+            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY);
             Assert.ThrowsException<NotSupportedException>(() => visitor.Visit(nodeIn));
+        }
+
+        /// <summary>
+        /// Verifies that we throw an exception for values that can
+        /// not be parsed into their valid Edm Type Kind. Create a constant
+        /// node with a valid type and a value that can not be parsed into
+        /// that type and then invoke the visit function from our visitor
+        /// using that node.
+        /// </summary>
+        [TestMethod]
+        public void InvalidValueTypeTest()
+        {
+            ConstantNode nodeIn = CreateConstantNode(string.Empty, "text", EdmPrimitiveTypeKind.Int64);
+            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY);
+            Assert.ThrowsException<ArgumentException>(() => visitor.Visit(nodeIn));
         }
 
         /// <summary>
@@ -179,6 +185,33 @@ namespace Azure.DataGateway.Service.Tests.REST
             string actual = ast.Expression.Accept<string>(visitor);
             Assert.AreEqual(expected, actual);
         }
+
+        private static ODataASTVisitor CreateVisitor(
+            string entityName,
+            bool isList = false)
+        {
+            Mock<IMetadataStoreProvider> metaDataStore = new();
+            TableDefinition tableDef = new()
+            {
+                Columns = new()
+            };
+            metaDataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            FindRequestContext context = new(entityName, isList);
+            Mock<SqlQueryStructure> structure = new(context, metaDataStore.Object);
+            return new ODataASTVisitor(structure.Object);
+        }
+
+        private static ConstantNode CreateConstantNode(
+            object constantValue,
+            string literalText,
+            EdmPrimitiveTypeKind edmTypeKind,
+            bool isNullable = false)
+        {
+            IEdmPrimitiveType primitiveType = EdmCoreModel.Instance.GetPrimitiveType(edmTypeKind);
+            EdmPrimitiveTypeReference typeRef = new(primitiveType, isNullable);
+            return new ConstantNode(constantValue, literalText, typeRef);
+        }
+
         #endregion
     }
 }

@@ -141,7 +141,7 @@ namespace Azure.DataGateway.Service.Tests.REST
 
         /// <summary>
         /// Verifies that we throw an exception for unary operations
-        /// that are not supported.
+        /// that are not supported. Currently only negate is not supported.
         /// </summary>
         [TestMethod]
         public void InvalidUnaryOperatorKindTest()

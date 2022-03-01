@@ -462,9 +462,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Tests the PatchOne functionality with a REST PATCH request
-        /// with item that does NOT exist, results in insert.
-        /// Tests REST PatchOne which results in insert
+        /// Tests REST PatchOne which results in an insert.
         /// URI Path: PK of record that does not exist.
         /// Req Body: Valid Parameters.
         /// Expects: 201 Created where sqlQuery validates insert.
@@ -497,7 +495,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Tests REST PatchOne which results in incremental update
         /// URI Path: PK of existing record.
         /// Req Body: Valid Parameter with intended update.
-        /// Expects: 201 Created where sqlQuery validates insert.
+        /// Expects: 201 Created where sqlQuery validates update.
         /// </summary>
         [TestMethod]
         public virtual async Task PatchOne_Update_Test()

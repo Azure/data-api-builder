@@ -194,15 +194,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "PutOne_Insert_BadReq_NonNullable_Test",
-                /// Tests the PutOne functionality with a REST PUT request
-                /// with item that does not include publisher_id,
-                /// an IsNullable = false field, results in BadRequest.
-                $"INSERT INTO { _integrationTableName } " +
-                $"(title)" +
-                $"VALUES ('The Hobbit Returns to The Shire')"
-            },
-            {
                 "PutOne_Insert_PKAutoGen_Test",
                 $"INSERT INTO { _integrationTableName } " +
                 $"(id, title, publisher_id)" +
@@ -219,21 +210,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "PatchOne_Insert_NonAutoGenPK_Test",
                 $"SELECT [id], [title], [issueNumber] FROM { _integration_NonAutoGenPK_TableName } " +
                 $"WHERE id = 2 AND [title] = 'Batman Begins' " +
-                $"AND [issueNumber] = 1234" +
+                $"AND [issueNumber] = 1234 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "PatchOne_Update_Test",
                 $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
                 $"WHERE id = 8 AND [title] = 'Heart of Darkness' " +
-                $"AND [publisher_id] = 2324" +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PatchOne_Insert_BadReq_Test",
-                $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
-                $"WHERE id > 5000 AND [title] = 'The Hobbit Returns to The Shire' " +
-                $"AND [publisher_id] = 1234" +
+                $"AND [publisher_id] = 2324 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {

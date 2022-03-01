@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using System.Linq;
 using HotChocolate.Language;
 using HotChocolate.Types;
-using static Azure.DataGateway.GraphQLBuilder.Utils;
+using static Azure.DataGateway.Service.GraphQLBuilder.Utils;
 
-namespace Azure.DataGateway.GraphQLBuilder
+namespace Azure.DataGateway.Service.GraphQLBuilder
 {
     public static class QueryBuilder
     {

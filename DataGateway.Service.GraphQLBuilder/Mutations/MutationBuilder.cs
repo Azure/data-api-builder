@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using HotChocolate.Language;
-using static Azure.DataGateway.GraphQLBuilder.Utils;
+using static Azure.DataGateway.Service.GraphQLBuilder.Utils;
 
-namespace Azure.DataGateway.GraphQLBuilder
+namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 {
     public static class MutationBuilder
     {

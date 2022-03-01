@@ -1,10 +1,10 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using HotChocolate.Language;
 using HotChocolate.Types;
-using static Azure.DataGateway.GraphQLBuilder.Utils;
+using static Azure.DataGateway.Service.GraphQLBuilder.Utils;
 
-namespace Azure.DataGateway.GraphQLBuilder
+namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 {
     internal static class CreateMutationBuilder
     {
@@ -13,7 +13,8 @@ namespace Azure.DataGateway.GraphQLBuilder
             IEnumerable<InputValueDefinitionNode> inputFields =
                 objectTypeDefinitionNode.Fields
                 .Where(f => ExcludeFieldFromCreateInput(f))
-                .Select(f => {
+                .Select(f =>
+                {
                     if (!IsBuiltInType(f.Type))
                     {
                         string typeName = f.Type.NamedType().Name.Value;

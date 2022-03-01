@@ -1,7 +1,7 @@
 using System.Linq;
 using HotChocolate.Language;
 
-namespace Azure.DataGateway.GraphQLBuilder
+namespace Azure.DataGateway.Service.GraphQLBuilder
 {
     internal static class Utils
     {

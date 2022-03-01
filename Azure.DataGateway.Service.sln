@@ -24,7 +24,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Configs", "Configs", "{EFA9
 		DataGateway.Service\sql-config.json = DataGateway.Service\sql-config.json
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Azure.DataGateway.GraphQLBuilder", "Azure.DataGateway.GraphQLBuilder\Azure.DataGateway.GraphQLBuilder.csproj", "{A491CE70-1E5D-4A95-A3F3-ECAE925B6BAB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Azure.DataGateway.Service.GraphQLBuilder", "DataGateway.Service.GraphQLBuilder\Azure.DataGateway.Service.GraphQLBuilder.csproj", "{A491CE70-1E5D-4A95-A3F3-ECAE925B6BAB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -163,14 +163,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 string cLabel = column.Label;
                 string parametrizedCLabel = structure.ColumnLabelToParam[cLabel];
-                if (structure.IsSubqueryColumn(column))
-                {
-                    jsonColumns.Add($"{parametrizedCLabel}, {subqueryName}.{QuoteIdentifier(cLabel)}");
-                }
-                else
-                {
-                    jsonColumns.Add($"{parametrizedCLabel}, {subqueryName}.{QuoteIdentifier(cLabel)}");
-                }
+                jsonColumns.Add($"{parametrizedCLabel}, {subqueryName}.{QuoteIdentifier(cLabel)}");
             }
 
             return string.Join(", ", jsonColumns);

@@ -72,4 +72,7 @@
   <ItemGroup>
     <ProjectCapability Include="CSharp;Managed;ClassDesigner" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Azure.DataGateway.GraphQLBuilder\Azure.DataGateway.GraphQLBuilder.csproj" />
+  </ItemGroup>
 </Project>

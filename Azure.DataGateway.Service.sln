@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.31205.134
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32216.311
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataGateway.Service", "DataGateway.Service\Azure.DataGateway.Service.csproj", "{208FC26C-A21C-4C96-98EE-F10FDAEAC508}"
 EndProject
@@ -24,6 +24,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Configs", "Configs", "{EFA9
 		DataGateway.Service\sql-config.json = DataGateway.Service\sql-config.json
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Azure.DataGateway.GraphQLBuilder", "Azure.DataGateway.GraphQLBuilder\Azure.DataGateway.GraphQLBuilder.csproj", "{A491CE70-1E5D-4A95-A3F3-ECAE925B6BAB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,6 +44,10 @@ Global
 		{B5806EF5-E26E-4E2B-9076-CDDCA97BCCE6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B5806EF5-E26E-4E2B-9076-CDDCA97BCCE6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B5806EF5-E26E-4E2B-9076-CDDCA97BCCE6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A491CE70-1E5D-4A95-A3F3-ECAE925B6BAB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A491CE70-1E5D-4A95-A3F3-ECAE925B6BAB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A491CE70-1E5D-4A95-A3F3-ECAE925B6BAB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A491CE70-1E5D-4A95-A3F3-ECAE925B6BAB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

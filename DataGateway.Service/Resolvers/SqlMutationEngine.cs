@@ -156,6 +156,8 @@ namespace Azure.DataGateway.Service.Resolvers
                         }
                         else
                         {
+                            // If there is no resultset, raise dbexception
+                            // this is needed for MySQL.
                             throw new DataGatewayException(
                                 message: $"Could not perform the given mutation on entity {context.EntityName}.",
                                 statusCode: HttpStatusCode.InternalServerError,

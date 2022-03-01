@@ -6,7 +6,6 @@ using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
-using Azure.DataGateway.Services;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -108,8 +107,23 @@ namespace Azure.DataGateway.Service.Tests.REST
         }
 
         /// <summary>
-        /// Tests that we throw an ArgumentException for comparison
+        /// Tests that we throw a DataGateway exception for comparison
         /// of a field to a boolean value.
+        /// </summary>
+        [TestMethod]
+        public void InvalidComparisonTypeBoolTest()
+        {
+            Assert.ThrowsException<DataGatewayException>(() => PerformVisitorTest(
+                entityName: DEFAULT_ENTITY,
+                filterString: "?$filter=id eq (publisher_id gt 1)",
+                expected: string.Empty
+                ));
+
+        }
+
+        /// <summary>
+        /// Tests that we throw an ArgumentException for using an invalid
+        /// binary operation.
         /// </summary>
         [TestMethod]
         public void InvalidBinaryOpTest()

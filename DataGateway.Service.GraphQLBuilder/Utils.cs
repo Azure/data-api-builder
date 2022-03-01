@@ -7,7 +7,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
     {
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
-            string modelDirectiveName = CustomDirectives.ModelTypeDirective().Name.Value;
+            string modelDirectiveName = CustomDirectives.ModelTypeDirectiveName;
             return objectTypeDefinitionNode.Directives.Any(d => d.Name.ToString() == modelDirectiveName);
         }
 

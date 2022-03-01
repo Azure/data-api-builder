@@ -11,7 +11,7 @@ using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -206,7 +206,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             // Initial DELETE request results in 204 no content, no exception thrown.
             // Subsequent DELETE requests result in 404, which result in an exception.
             string expected;
-            if ((operationType == Operation.Delete || operationType == Operation.Upsert)
+            if ((operationType == Operation.Delete || operationType == Operation.Upsert || operationType == Operation.UpsertIncremental)
                 && actionResult is NoContentResult)
             {
                 expected = null;
@@ -224,8 +224,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 actionResult,
                 expected,
                 expectedStatusCode,
-                expectedLocationHeader);
-
+                expectedLocationHeader,
+                !exception);
         }
 
         /// <summary>

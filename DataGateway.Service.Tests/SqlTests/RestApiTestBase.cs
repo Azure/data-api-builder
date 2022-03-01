@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
@@ -390,7 +390,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         /// <summary>
         /// Tests the PutOne functionality with a REST PUT request
-        /// with item that does NOT exist, results in insert.
+        /// with item that does NOT exist, results in an insert with
+        /// the specified ID as table does NOT have Identity() PK column.
         /// </summary>
         [TestMethod]
         public virtual async Task PutOne_Insert_Test()
@@ -460,9 +461,309 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 );
         }
 
+        /// <summary>
+        /// Tests REST PatchOne which results in an insert.
+        /// URI Path: PK of record that does not exist.
+        /// Req Body: Valid Parameters.
+        /// Expects: 201 Created where sqlQuery validates insert.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Insert_NonAutoGenPK_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Batman Begins"",
+                ""issueNumber"": 1234
+            }";
+
+            string expectedLocationHeader = $"id/2";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: $"id/2",
+                    queryString: null,
+                    entity: _integration_NonAutoGenPK_TableName,
+                    sqlQuery: GetQuery(nameof(PatchOne_Insert_NonAutoGenPK_Test)),
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: expectedLocationHeader
+                );
+        }
+
+        /// <summary>
+        /// Tests REST PatchOne which results in incremental update
+        /// URI Path: PK of existing record.
+        /// Req Body: Valid Parameter with intended update.
+        /// Expects: 201 Created where sqlQuery validates update.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Update_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Heart of Darkness""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/8",
+                    queryString: null,
+                    entity: _integrationTableName,
+                    sqlQuery: GetQuery(nameof(PatchOne_Update_Test)),
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.NoContent
+                );
+        }
+
         #endregion
 
         #region Negative Tests
+        /// <summary>
+        /// Tests the InsertOne functionality with disallowed URL composition: contains Query String.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithInvalidQueryStringTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?/id/5001",
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Query string for POST requests is an invalid url.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
+        /// Tests the InsertOne functionality with disallowed request composition: array in request body.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithInvalidArrayJsonBodyTest()
+        {
+            string requestBody = @"
+            [{
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }]";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Mutation operation on many instances of an entity in a single request are not yet supported.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: "BadRequest"
+            );
+        }
+
+        /// <summary>
+        /// Tests the InsertOne functionality with a request body containing values that do not match the value type defined in the schema.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithInvalidTypeInJsonBodyTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": [""My New Book"", ""Another new Book"", {""author"": ""unknown""}],
+                ""publisher_id"": [1234, 4321]
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Parameter \"[1234, 4321]\" cannot be resolved as column \"publisher_id\" with type \"Bigint\".",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: "BadRequest"
+            );
+        }
+
+        /// <summary>
+        /// Tests the InsertOne functionality with no valid fields in the request body.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithNoValidFieldInJsonBodyTest()
+        {
+            string requestBody = @"
+            {}";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Invalid request body. Missing field in body: publisher_id.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
+        /// Tests the InsertOne functionality with an invalid field in the request body:
+        /// Primary Key in the request body for table with Autogenerated PK.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithAutoGeneratedPrimaryKeyInJsonBodyTest()
+        {
+            string requestBody = @"
+            {
+                ""id"": " + STARTING_ID_FOR_TEST_INSERTS +
+            "}";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Invalid request body. Field not allowed in body: id.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
+        /// Tests the InsertOne functionality with a missing field from the request body:
+        /// Missing non auto generated Primary Key in Json Body.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithNonAutoGeneratedPrimaryKeyMissingInJsonBodyTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _integration_NonAutoGenPK_TableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Invalid request body. Missing field in body: id.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: "BadRequest"
+            );
+        }
+
+        /// <summary>
+        /// Tests the InsertOne functionality with a missing field in the request body:
+        /// A non-nullable field in the Json Body is missing.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithNonNullableFieldMissingInJsonBodyTest()
+        {
+            string requestBody = @"
+            {
+                ""id"": " + STARTING_ID_FOR_TEST_INSERTS + ",\n" +
+                "\"issueNumber\": 1234\n" +
+            "}";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _integration_NonAutoGenPK_TableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Invalid request body. Missing field in body: title.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: "BadRequest"
+            );
+        }
+
+        /// <summary>
+        /// Tests REST PatchOne which results in insert.
+        /// URI Path: PK of record that does not exist, Schema PK is autogenerated.
+        /// Req Body: Valid Parameters.
+        /// Expects: 500 Server error (Not 400 since we don't catch DB specific Identity() insert errors).
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task PatchOne_Insert_PKAutoGen_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""The Hobbit Returns to The Shire""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/1000",
+                    queryString: null,
+                    entity: _integrationTableName,
+                    sqlQuery: null,
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    exception: true,
+                    expectedErrorMessage: $"Could not perform the given mutation on entity books.",
+                    expectedStatusCode: HttpStatusCode.InternalServerError,
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed.ToString()
+                );
+        }
+
+        /// <summary>
+        /// Tests REST PatchOne which results in insert
+        /// URI Path: PK of record that does not exist.
+        /// Req Body: Missing non-nullable parameters.
+        /// Expects: BadRequest, so no sqlQuery used since req does not touch DB.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task PatchOne_Insert_WithoutNonNullableField_Test()
+        {
+            string requestBody = @"
+            {
+                ""issueNumber"": ""1234""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/1000",
+                    queryString: null,
+                    entity: _integration_NonAutoGenPK_TableName,
+                    sqlQuery: null,
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    exception: true,
+                    expectedErrorMessage: "Could not perform the given mutation on entity magazines.",
+                    expectedStatusCode: HttpStatusCode.InternalServerError,
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed.ToString()
+                );
+        }
+
         /// <summary>
         /// Tests the PutOne functionality with a REST PUT request
         /// with item that does NOT exist, AND parameters incorrectly match schema, results in BadRequest.
@@ -486,7 +787,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: "Invalid request body. Either insufficient or unnecessary values for fields supplied.",
+                    expectedErrorMessage: "Invalid request body. Missing field in body: publisher_id.",
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
                 );
@@ -527,6 +828,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Tests the PutOne functionality with a REST PUT request
         /// with item that does NOT exist, AND primary key defined is autogenerated in schema,
         /// which results in a BadRequest.
+        /// sqlQuery represents the query used to get 'expected' result of zero items.
         /// </summary>
         /// <returns></returns>
         [TestMethod]
@@ -546,8 +848,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: $"Invalid request body. Either insufficient or unnecessary " +
-                                            "values for fields supplied.",
+                    expectedErrorMessage: $"Invalid request body. Missing field in body: publisher_id.",
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
                 );
@@ -576,6 +877,37 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 requestBody: requestBody,
                 expectedErrorMessage: @"Invalid request body. Either insufficient or extra fields supplied.",
                 expectedStatusCode: HttpStatusCode.BadRequest
+                );
+        }
+
+        /// <summary>
+        /// Tests the Put functionality with a REST PUT request
+        /// without a primary key route. We expect a failure and so
+        /// no sql query is provided.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutWithNoPrimaryKeyRouteTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Batman Returns"",
+                ""issueNumber"": 1234
+            }";
+
+            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: string.Empty,
+                    queryString: null,
+                    entity: _integration_NonAutoGenPK_TableName,
+                    sqlQuery: string.Empty,
+                    controller: _restController,
+                    operationType: Operation.Upsert,
+                    requestBody: requestBody,
+                    exception: true,
+                    expectedErrorMessage: "Primary Key for UPSERT requests is required.",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedLocationHeader: expectedLocationHeader
                 );
         }
 
@@ -622,6 +954,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     requestBody: string.Empty,
                     exception: true,
                     expectedErrorMessage: "The request is invalid since the primary keys: title requested were not found in the entity definition.",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
+
+        /// <summary>
+        /// DeleteWithoutPrimaryKey attempts to operate on a single entity but with
+        /// no primary key route. No sqlQuery value is provided as this request
+        /// should fail prior to querying the database.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task DeleteWithOutPrimaryKeyTest()
+        {
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: string.Empty,
+                    queryString: string.Empty,
+                    entity: _integrationTableName,
+                    sqlQuery: string.Empty,
+                    controller: _restController,
+                    operationType: Operation.Delete,
+                    requestBody: string.Empty,
+                    exception: true,
+                    expectedErrorMessage: "Primary Key for DELETE requests is required.",
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
                 );

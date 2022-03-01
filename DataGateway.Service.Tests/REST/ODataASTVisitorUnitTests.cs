@@ -140,6 +140,19 @@ namespace Azure.DataGateway.Service.Tests.REST
         }
 
         /// <summary>
+        /// Verifies that we throw an exception for unary operations
+        /// that are not supported.
+        /// </summary>
+        [TestMethod]
+        public void InvalidUnaryOperatorKindTest()
+        {
+            ConstantNode constantNode = CreateConstantNode("null", "null", EdmPrimitiveTypeKind.None, true);
+            UnaryOperatorNode binaryNode = CreateUnaryNode(constantNode, UnaryOperatorKind.Negate);
+            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY);
+            Assert.ThrowsException<ArgumentException>(() => visitor.Visit(binaryNode));
+        }
+
+        /// <summary>
         /// Tests that we throw a DataGateway exception for comparison
         /// of a field to a boolean value.
         /// </summary>
@@ -271,6 +284,19 @@ namespace Azure.DataGateway.Service.Tests.REST
             BinaryOperatorKind op)
         {
             return new BinaryOperatorNode(op, left, right);
+        }
+
+        /// <summary>
+        /// Creates and returns a Unary Node.
+        /// </summary>
+        /// <param name="child">Represents the child node.</param>
+        /// <param name="op">Represents the unary operation.</param>
+        /// <returns></returns>
+        private static UnaryOperatorNode CreateUnaryNode(
+            SingleValueNode child,
+            UnaryOperatorKind op)
+        {
+            return new UnaryOperatorNode(op, child);
         }
 
         #endregion

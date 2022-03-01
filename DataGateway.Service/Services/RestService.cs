@@ -8,11 +8,10 @@ using System.Web;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
-using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 
-namespace Azure.DataGateway.Services
+namespace Azure.DataGateway.Service.Services
 {
     /// <summary>
     /// Service providing REST Api executions.
@@ -50,7 +49,7 @@ namespace Azure.DataGateway.Services
         public async Task<JsonDocument?> ExecuteAsync(
             string entityName,
             Operation operationType,
-            string primaryKeyRoute)
+            string? primaryKeyRoute)
         {
             string queryString = GetHttpContext().Request.QueryString.ToString();
 

@@ -8,7 +8,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
 
@@ -124,7 +124,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 /// In MsSQL upsert:
                 /// result set #1: result of the UPDATE operation.
                 /// result set #2: result of the INSERT operation.
-                if (await dbDataReader.NextResultAsync())
+                if (await dbDataReader.NextResultAsync() && resultRecord == null)
                 {
                     // Since no first result set exists, we overwrite Dictionary here.
                     resultRecord = await ExtractRowFromDbDataReader(dbDataReader);

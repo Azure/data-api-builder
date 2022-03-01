@@ -4,7 +4,7 @@ using System.Linq;
 using System.Net;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -78,6 +78,14 @@ namespace Azure.DataGateway.Service.Resolvers
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
+        }
+
+        /// <summary>
+        /// Get the definition of a column by name
+        /// </summary>
+        public ColumnDefinition GetColumnDefinition(string columnName)
+        {
+            return GetTableDefinition().Columns[columnName];
         }
 
         private void PopulateColumns(

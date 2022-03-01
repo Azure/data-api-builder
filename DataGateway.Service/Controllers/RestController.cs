@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 
@@ -77,7 +77,7 @@ namespace Azure.DataGateway.Service.Controllers
         [Produces("application/json")]
         public async Task<IActionResult> Find(
             string entityName,
-            string primaryKeyRoute)
+            string? primaryKeyRoute)
         {
             return await HandleOperation(
                 entityName,
@@ -121,7 +121,7 @@ namespace Azure.DataGateway.Service.Controllers
         [Produces("application/json")]
         public async Task<IActionResult> Delete(
             string entityName,
-            string primaryKeyRoute)
+            string? primaryKeyRoute)
         {
             return await HandleOperation(
                 entityName,
@@ -134,7 +134,7 @@ namespace Azure.DataGateway.Service.Controllers
         [Produces("application/json")]
         public async Task<IActionResult> Upsert(
             string entityName,
-            string primaryKeyRoute)
+            string? primaryKeyRoute)
         {
             return await HandleOperation(
                 entityName,
@@ -152,7 +152,7 @@ namespace Azure.DataGateway.Service.Controllers
         private async Task<IActionResult> HandleOperation(
             string entityName,
             Operation operationType,
-            string primaryKeyRoute)
+            string? primaryKeyRoute)
         {
             try
             {

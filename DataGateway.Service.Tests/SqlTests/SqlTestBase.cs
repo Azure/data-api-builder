@@ -11,7 +11,7 @@ using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -224,8 +224,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 actionResult,
                 expected,
                 expectedStatusCode,
-                expectedLocationHeader);
-
+                expectedLocationHeader,
+                !exception);
         }
 
         /// <summary>

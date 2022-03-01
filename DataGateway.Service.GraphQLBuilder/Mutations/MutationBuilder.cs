@@ -21,7 +21,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                 }
             }
 
-            List<IDefinitionNode> definitionNodes = new() {
+            List<IDefinitionNode> definitionNodes = new()
+            {
                 new ObjectTypeDefinitionNode(null, new NameNode("Mutation"), null, new List<DirectiveNode>(), new List<NamedTypeNode>(), mutationFields),
             };
             definitionNodes.AddRange(inputs.Values);

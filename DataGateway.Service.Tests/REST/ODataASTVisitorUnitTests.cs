@@ -41,7 +41,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         #region Positive Tests
         /// <summary>
         /// Verify the correct string is parsed from the
-        /// provided filter with eq and null as value on right side.
+        /// provided filter with eq and null on right side.
         /// </summary>
         [TestMethod]
         public void VisitorLeftFieldRightNullFilterTest()
@@ -55,7 +55,7 @@ namespace Azure.DataGateway.Service.Tests.REST
 
         /// <summary>
         /// Verify the correct string is parsed from the
-        /// provided filter with ne and null as value on right side.
+        /// provided filter with ne and null on right side.
         /// </summary>
         [TestMethod]
         public void VisitorLeftFieldRightNotNullFilterTest()
@@ -64,6 +64,20 @@ namespace Azure.DataGateway.Service.Tests.REST
                 entityName: DEFAULT_ENTITY,
                 filterString: "?$filter=id ne null",
                 expected: "(id IS NOT NULL)"
+                );
+        }
+
+        /// <summary>
+        /// Verify the correct string is parsed from the
+        /// provided filter with eq and null on left side.
+        /// </summary>
+        [TestMethod]
+        public void VisitorLeftNullRightFieldFilterTest()
+        {
+            PerformVisitorTest(
+                entityName: DEFAULT_ENTITY,
+                filterString: "?$filter=null eq id",
+                expected: "(id IS NULL)"
                 );
         }
 
@@ -110,6 +124,19 @@ namespace Azure.DataGateway.Service.Tests.REST
             ConstantNode nodeIn = CreateConstantNode(string.Empty, "text", EdmPrimitiveTypeKind.Int64);
             ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY);
             Assert.ThrowsException<ArgumentException>(() => visitor.Visit(nodeIn));
+        }
+
+        /// <summary>
+        /// Verifies that we throw an exception for binary operations
+        /// that are not supported with null types.
+        /// </summary>
+        [TestMethod]
+        public void InvalidBinaryOperatorKindTest()
+        {
+            ConstantNode constantNode = CreateConstantNode("null", "null", EdmPrimitiveTypeKind.None, true);
+            BinaryOperatorNode binaryNode = CreateBinaryNode(constantNode, constantNode, BinaryOperatorKind.And);
+            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY);
+            Assert.ThrowsException<NotSupportedException>(() => visitor.Visit(binaryNode));
         }
 
         /// <summary>
@@ -186,6 +213,12 @@ namespace Azure.DataGateway.Service.Tests.REST
             Assert.AreEqual(expected, actual);
         }
 
+        /// <summary>
+        /// Create and return an ODataASTVisitor.
+        /// </summary>
+        /// <param name="entityName">String represents the entity name.</param>
+        /// <param name="isList">bool represents if the context is a list.</param>
+        /// <returns></returns>
         private static ODataASTVisitor CreateVisitor(
             string entityName,
             bool isList = false)
@@ -201,15 +234,43 @@ namespace Azure.DataGateway.Service.Tests.REST
             return new ODataASTVisitor(structure.Object);
         }
 
+        /// <summary>
+        /// Create and return a Constant Node.
+        /// </summary>
+        /// <param name="constantValue">The value the node will hold.</param>
+        /// <param name="literalText">The literal text of the value.</param>
+        /// <param name="edmTypeKind">Represents the type of the value.</param>
+        /// <param name="isNull">Represents if the node holds null as its value.</param>
+        /// <returns></returns>
         private static ConstantNode CreateConstantNode(
             object constantValue,
             string literalText,
             EdmPrimitiveTypeKind edmTypeKind,
-            bool isNullable = false)
+            bool isNull = false)
         {
             IEdmPrimitiveType primitiveType = EdmCoreModel.Instance.GetPrimitiveType(edmTypeKind);
-            EdmPrimitiveTypeReference typeRef = new(primitiveType, isNullable);
+            EdmPrimitiveTypeReference typeRef = null;
+            if (!isNull)
+            {
+                typeRef = new(primitiveType, isNull);
+            }
+
             return new ConstantNode(constantValue, literalText, typeRef);
+        }
+
+        /// <summary>
+        /// Creates and returns a Binary Node.
+        /// </summary>
+        /// <param name="left">Represents the left child node.</param>
+        /// <param name="right">Represents the right child node.</param>
+        /// <param name="op">Represents the binary operation.</param>
+        /// <returns></returns>
+        private static BinaryOperatorNode CreateBinaryNode(
+            SingleValueNode left,
+            SingleValueNode right,
+            BinaryOperatorKind op)
+        {
+            return new BinaryOperatorNode(op, left, right);
         }
 
         #endregion

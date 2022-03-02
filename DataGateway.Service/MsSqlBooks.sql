@@ -29,7 +29,7 @@ CREATE TABLE authors(
 CREATE TABLE reviews(
     book_id bigint,
     id bigint IDENTITY(5001, 1),
-    content varchar(max),
+    content varchar(max) DEFAULT('Its a classic') NOT NULL,
     PRIMARY KEY(book_id, id)
 );
 
@@ -86,3 +86,4 @@ INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 
 SET IDENTITY_INSERT reviews ON
 INSERT INTO reviews(id, book_id, content) VALUES (567, 1, 'Indeed a great book'), (568, 1, 'I loved it'), (569, 1, 'best book I read in years');
 SET IDENTITY_INSERT reviews OFF
+

@@ -23,7 +23,7 @@ namespace Azure.DataGateway.Service.Services
         /// a Predicate operation (eq, gt, lt, etc), or a Logical operaton (And, Or).
         /// </summary>
         /// <param name="nodeIn">The node visited.</param>
-        /// <returns>String concatenation of (left op right)</returns>
+        /// <returns>String concatenation of (left op right).</returns>
         public override string Visit(BinaryOperatorNode nodeIn)
         {
             // In order traversal but add parens to maintain order of logical operations

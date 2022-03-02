@@ -110,6 +110,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case Operation.Upsert:
                     actionResult = await controller.Upsert(entityName, primaryKeyRoute);
                     break;
+                case Operation.UpsertIncremental:
+                    actionResult = await controller.UpsertIncremental(entityName, primaryKeyRoute);
+                    break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
             }

@@ -15,7 +15,10 @@ namespace Azure.DataGateway.Service.Models
         Upsert, Create,
 
         // Sql operations
-        Insert, Update
+        Insert, Update,
+
+        // Additional
+        UpsertIncremental
     }
 
     /// <summary>
@@ -35,6 +38,9 @@ namespace Azure.DataGateway.Service.Models
 
         public static OperationAuthorizationRequirement PUT =
             new() { Name = nameof(PUT) };
+
+        public static OperationAuthorizationRequirement PATCH =
+            new() { Name = nameof(PATCH) };
     }
 }
 

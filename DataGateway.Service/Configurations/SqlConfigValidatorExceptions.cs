@@ -130,7 +130,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateDatabaseHasTables()
         {
-            if (_config.DatabaseSchema.Tables == null || _config.DatabaseSchema.Tables.Count == 0)
+            if (_config.DatabaseSchema!.Tables == null || _config.DatabaseSchema!.Tables.Count == 0)
             {
                 throw new ConfigValidationException(
                     "Database schema must have a non empty \"Tables\" element.",

@@ -17,7 +17,7 @@ namespace Azure.DataGateway.Service
     /// <param name="GraphQLSchema">String Representation of graphQL schema, non escaped. This has higher priority than GraphQLSchemaFile, so if both are set this one will be used.</param>
     /// <param name="GraphQLSchemaFile">Location of the graphQL schema file</param>
     /// <param name="DatabaseSchema">A JSON encoded version of the information that resolvers need about schema of the schema of the database.</param>
-    public record ResolverConfig(string GraphQLSchema, string GraphQLSchemaFile, DatabaseSchema DatabaseSchema)
+    public record ResolverConfig(string GraphQLSchema, string GraphQLSchemaFile)
     {
         /// <summary>
         /// A list containing metadata required to resolve the different
@@ -36,6 +36,8 @@ namespace Azure.DataGateway.Service
         /// types in the GraphQL schema. See GraphQLType for details.
         /// </summary>
         public Dictionary<string, GraphQLType> GraphQLTypes { get; set; } = new();
+
+        public DatabaseSchema? DatabaseSchema { get; set; }
     }
 
     /// <summary>
@@ -57,9 +59,12 @@ namespace Azure.DataGateway.Service
         private Dictionary<string, MutationResolver> _mutationResolvers;
 
         public FileMetadataStoreProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
-        : this(dataGatewayConfig.Value.ResolverConfigFile) { }
+        : this(dataGatewayConfig.Value.ResolverConfigFile,
+              dataGatewayConfig.Value.DatabaseConnection.ConnectionString) { }
 
-        public FileMetadataStoreProvider(string resolverConfigPath)
+        public FileMetadataStoreProvider(
+            string resolverConfigPath,
+            string connectionString)
         {
             string jsonString = File.ReadAllText(resolverConfigPath);
             JsonSerializerOptions options = new()
@@ -101,6 +106,12 @@ namespace Azure.DataGateway.Service
             {
                 _filterParser = new(_config.DatabaseSchema);
             }
+            else
+            {
+                MsSqlMetadataProvider databaseMetadataProvider = new(connectionString);
+                _config.DatabaseSchema =
+                    databaseMetadataProvider.GetDatabaseSchema().Result;
+            }
         }
         /// <summary>
         /// Reads generated JSON configuration file with GraphQL Schema
@@ -133,7 +144,7 @@ namespace Azure.DataGateway.Service
 
         public TableDefinition GetTableDefinition(string name)
         {
-            if (!_config.DatabaseSchema.Tables.TryGetValue(name, out TableDefinition? metadata))
+            if (!_config.DatabaseSchema!.Tables.TryGetValue(name, out TableDefinition? metadata))
             {
                 throw new KeyNotFoundException($"Table Definition for {name} does not exist.");
             }

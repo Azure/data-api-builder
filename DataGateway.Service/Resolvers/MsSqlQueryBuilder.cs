@@ -104,7 +104,8 @@ namespace Azure.DataGateway.Service.Resolvers
             string schemaNameParam,
             string tableNameParam)
         {
-            return $"SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT " +
+            return $"SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT, " +
+                $"COLUMNPROPERTY(OBJECT_ID(TABLE_NAME), [COLUMN_NAME],'ISIDENTITY') AS IS_IDENTITY " +
                 $"FROM INFORMATION_SCHEMA.COLUMNS " +
                 $"WHERE TABLE_CATALOG = '{databaseNameParam}' " +
                 $"AND TABLE_SCHEMA IN('{schemaNameParam}') " +

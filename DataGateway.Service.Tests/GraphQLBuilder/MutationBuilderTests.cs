@@ -17,6 +17,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder
                 @"
 type Foo @model {
     id: ID!
+    bar: String!
 }
                 ";
 
@@ -37,6 +38,7 @@ type Foo @model {
                 @"
 type Foo @model {
     id: ID!
+    bar: String!
 }
                 ";
 
@@ -46,7 +48,11 @@ type Foo @model {
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");
-            Assert.AreEqual(0, field.Arguments.Count);
+            Assert.AreEqual(1, field.Arguments.Count);
+
+            InputObjectTypeDefinitionNode argType = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is INamedSyntaxNode node && node.Name == field.Arguments[0].Type.NamedType().Name);
+            Assert.AreEqual(1, argType.Fields.Count);
+            Assert.AreEqual("bar", argType.Fields[0].Name.Value);
         }
 
         [TestMethod]

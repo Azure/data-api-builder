@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
-using Azure.DataGateway.Service.GraphQLBuilder;
+using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

@@ -10,6 +10,13 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
     {
         private static InputObjectTypeDefinitionNode GenerateCreateInputType(Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs, ObjectTypeDefinitionNode objectTypeDefinitionNode, NameNode name, IEnumerable<HotChocolate.Language.IHasName> definitions)
         {
+            NameNode inputName = GenerateInputTypeName(name.Value);
+
+            if (inputs.ContainsKey(inputName))
+            {
+                return inputs[inputName];
+            }
+
             IEnumerable<InputValueDefinitionNode> inputFields =
                 objectTypeDefinitionNode.Fields
                 .Where(f => ExcludeFieldFromCreateInput(f))
@@ -31,7 +38,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             InputObjectTypeDefinitionNode input =
                 new(
                     null,
-                    GenerateInputTypeName(name.Value),
+                    inputName,
                     new StringValueNode($"Input type for creating {name}"),
                     new List<DirectiveNode>(),
                     inputFields.ToList()

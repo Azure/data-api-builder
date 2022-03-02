@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
@@ -377,6 +377,41 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         [Ignore]
         public override Task PutOne_Insert_PKAutoGen_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOne_Insert_BadReq_AutoGen_NonNullable_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOne_Insert_NonAutoGenPK_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOne_Update_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOne_Insert_PKAutoGen_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOne_Insert_WithoutNonNullableField_Test()
         {
             throw new NotImplementedException();
         }

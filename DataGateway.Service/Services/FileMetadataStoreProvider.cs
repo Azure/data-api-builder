@@ -5,11 +5,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Service.Services;
-using Azure.DataGateway.Services;
 using Microsoft.Extensions.Options;
 
-namespace Azure.DataGateway.Service
+namespace Azure.DataGateway.Service.Services
 {
     /// <summary>
     /// A class describing the format of the JSON resolver configuration file.
@@ -19,12 +17,6 @@ namespace Azure.DataGateway.Service
     /// <param name="DatabaseSchema">A JSON encoded version of the information that resolvers need about schema of the schema of the database.</param>
     public record ResolverConfig(string GraphQLSchema, string GraphQLSchemaFile)
     {
-        /// <summary>
-        /// A list containing metadata required to resolve the different
-        /// queries in the GraphQL schema. See GraphQLQueryResolver for details.
-        /// </summary>
-        public List<GraphQLQueryResolver> QueryResolvers { get; set; } = new();
-
         /// <summary>
         /// A list containing metadata required to execute the different
         /// mutations in the GraphQL schema. See MutationResolver for details.
@@ -47,11 +39,6 @@ namespace Azure.DataGateway.Service
     {
         private readonly ResolverConfig _config;
         private readonly FilterParser? _filterParser;
-
-        /// <summary>
-        /// Stores query resolvers contained in configuration file.
-        /// </summary>
-        private Dictionary<string, GraphQLQueryResolver> _queryResolvers;
 
         /// <summary>
         /// Stores mutation resolvers contained in configuration file.
@@ -90,12 +77,6 @@ namespace Azure.DataGateway.Service
                 _config = _config with { GraphQLSchema = File.ReadAllText(_config.GraphQLSchemaFile ?? "schema.gql") };
             }
 
-            _queryResolvers = new();
-            foreach (GraphQLQueryResolver resolver in _config.QueryResolvers)
-            {
-                _queryResolvers.Add(resolver.Id, resolver);
-            }
-
             _mutationResolvers = new();
             foreach (MutationResolver resolver in _config.MutationResolvers)
             {
@@ -127,16 +108,6 @@ namespace Azure.DataGateway.Service
             if (!_mutationResolvers.TryGetValue(name, out MutationResolver? resolver))
             {
                 throw new KeyNotFoundException("Mutation Resolver does not exist.");
-            }
-
-            return resolver;
-        }
-
-        public GraphQLQueryResolver GetQueryResolver(string name)
-        {
-            if (!_queryResolvers.TryGetValue(name, out GraphQLQueryResolver? resolver))
-            {
-                throw new KeyNotFoundException("Query Resolver does not exist.");
             }
 
             return resolver;

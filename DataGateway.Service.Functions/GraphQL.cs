@@ -1,7 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 

@@ -109,6 +109,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case Operation.Upsert:
                     actionResult = await controller.Upsert(entityName, primaryKeyRoute);
                     break;
+                case Operation.UpsertIncremental:
+                    actionResult = await controller.UpsertIncremental(entityName, primaryKeyRoute);
+                    break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
             }
@@ -128,7 +131,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             IActionResult actionResult,
             string expected,
             HttpStatusCode expectedStatusCode,
-            string expectedLocationHeader)
+            string expectedLocationHeader,
+            bool isJson = false)
         {
             string actual;
             switch (actionResult)
@@ -158,9 +162,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     break;
             }
 
-            // if whitespaces are not consistent JsonStringDeepEquals should be used
-            // this will require deserializing and then serializing the strings for JSON
-            Assert.AreEqual(expected, actual);
+            Console.WriteLine($"Expected: {expected}\nActual: {actual}");
+            if (isJson && !string.IsNullOrEmpty(expected))
+            {
+                Assert.IsTrue(JsonStringsDeepEqual(expected, actual));
+            }
+            else
+            {
+                Assert.AreEqual(expected, actual);
+            }
         }
     }
 }

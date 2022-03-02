@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.Cosmos;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -74,40 +74,6 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
                 Request = { Body = stream, ContentLength = stream.Length }
             };
             return httpContext;
-        }
-
-        /// <summary>
-        /// Generates a query resolver for cosmos that looks like below
-        /// {
-        ///  "id": "queryName",
-        ///  "isPaginated": isPaginated,
-        ///  "databaseName": databaseName,
-        ///  "containerName": containerName,
-        ///  "parametrizedQuery": queryString
-        /// }
-        /// </summary>
-        /// <param name="id"></param>
-        /// <param name="databaseName"></param>
-        /// <param name="containerName"></param>
-        /// <param name="parametrizedQuery"></param>
-        /// <param name="isPaginated"></param>
-        /// <returns></returns>
-        internal static void RegisterQueryResolver(string id,
-            string databaseName,
-            string containerName,
-            string parametrizedQuery = "select * from c",
-            bool isPaginated = false)
-        {
-            string queryResolver = JObject.FromObject(new
-            {
-                id,
-                databaseName,
-                containerName,
-                isPaginated,
-                parametrizedQuery
-            }).ToString();
-            GraphQLQueryResolver graphQLQueryResolver = JsonConvert.DeserializeObject<GraphQLQueryResolver>(queryResolver);
-            _metadataStoreProvider.StoreQueryResolver(graphQLQueryResolver);
         }
 
         /// <summary>

@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
@@ -117,9 +117,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 {
                   ""id"": 7,
                   ""title"": ""The Groovy Bar""
+                },
+                {
+                  ""id"": 8,
+                  ""title"": ""Time to Eat""
                 }
               ],
-              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":7}") + @""",
+              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":8}") + @""",
               ""hasNextPage"": false
             }";
 

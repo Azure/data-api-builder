@@ -1,17 +1,17 @@
 # nullable disable
 using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Service.Resolvers;
+using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json.Linq;
 
-namespace Azure.DataGateway.Services
+namespace Azure.DataGateway.Service.Resolvers
 {
     //<summary>
     // CosmosQueryEngine to execute queries against CosmosDb.
@@ -27,16 +27,16 @@ namespace Azure.DataGateway.Services
         // </summary>
         public CosmosQueryEngine(CosmosClientProvider clientProvider, IMetadataStoreProvider metadataStoreProvider)
         {
-            this._clientProvider = clientProvider;
-            this._metadataStoreProvider = metadataStoreProvider;
-            this._queryBuilder = new CosmosQueryBuilder();
+            _clientProvider = clientProvider;
+            _metadataStoreProvider = metadataStoreProvider;
+            _queryBuilder = new CosmosQueryBuilder();
         }
 
         /// <summary>
         /// Executes the given IMiddlewareContext of the GraphQL query and
         /// expecting a single Json back.
         /// </summary>
-        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
+        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
@@ -45,7 +45,7 @@ namespace Azure.DataGateway.Services
 
             CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider);
 
-            Container container = this._clientProvider.Client.GetDatabase(structure.Database).GetContainer(structure.Container);
+            Container container = _clientProvider.Client.GetDatabase(structure.Database).GetContainer(structure.Container);
 
             QueryRequestOptions queryRequestOptions = new();
             string requestContinuation = null;
@@ -119,7 +119,7 @@ namespace Azure.DataGateway.Services
 
             CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider);
 
-            Container container = this._clientProvider.Client.GetDatabase(structure.Database).GetContainer(structure.Container);
+            Container container = _clientProvider.Client.GetDatabase(structure.Database).GetContainer(structure.Container);
             QueryDefinition querySpec = new(_queryBuilder.Build(structure));
 
             if (parameters != null)
@@ -176,8 +176,8 @@ namespace Azure.DataGateway.Services
                 return null;
             }
 
-            byte[] plainTextBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
-            return System.Convert.ToBase64String(plainTextBytes);
+            byte[] plainTextBytes = Encoding.UTF8.GetBytes(plainText);
+            return Convert.ToBase64String(plainTextBytes);
         }
 
         private static string Base64Decode(string base64EncodedData)
@@ -187,8 +187,8 @@ namespace Azure.DataGateway.Services
                 return null;
             }
 
-            byte[] base64EncodedBytes = System.Convert.FromBase64String(base64EncodedData);
-            return System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
+            byte[] base64EncodedBytes = Convert.FromBase64String(base64EncodedData);
+            return Encoding.UTF8.GetString(base64EncodedBytes);
         }
     }
 }

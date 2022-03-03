@@ -47,11 +47,13 @@ namespace Azure.DataGateway.Service.Services
 
         public FileMetadataStoreProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
         : this(dataGatewayConfig.Value.ResolverConfigFile,
+              dataGatewayConfig.Value.DatabaseType,
               dataGatewayConfig.Value.DatabaseConnection.ConnectionString)
         { }
 
         public FileMetadataStoreProvider(
             string resolverConfigPath,
+            DatabaseType databaseType,
             string connectionString)
         {
             string jsonString = File.ReadAllText(resolverConfigPath);
@@ -84,7 +86,7 @@ namespace Azure.DataGateway.Service.Services
                 _mutationResolvers.Add(resolver.Id, resolver);
             }
 
-            if (_config.DatabaseSchema != default)
+            if (_config.DatabaseSchema != default && databaseType != DatabaseType.Cosmos)
             {
                 _filterParser = new(_config.DatabaseSchema);
             }

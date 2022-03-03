@@ -81,7 +81,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _httpContextAccessor = new Mock<IHttpContextAccessor>();
             _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
 
-            _metadataStoreProvider = new FileMetadataStoreProvider("sql-config.json", config.Value.DatabaseConnection.ConnectionString);
+            _metadataStoreProvider = new FileMetadataStoreProvider(
+                "sql-config.json",
+                config.Value.DatabaseType,
+                config.Value.DatabaseConnection.ConnectionString);
             _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
             _mutationEngine = new SqlMutationEngine(_queryEngine, _metadataStoreProvider, _queryExecutor, _queryBuilder);
 

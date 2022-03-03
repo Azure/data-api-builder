@@ -90,7 +90,7 @@ namespace Azure.DataGateway.Service.Services
             {
                 _filterParser = new(_config.DatabaseSchema);
             }
-            else if (databaseType != DatabaseType.Cosmos)
+            else if (databaseType == DatabaseType.MsSql)
             {
                 MsSqlMetadataProvider databaseMetadataProvider = new(connectionString);
                 _config.DatabaseSchema =

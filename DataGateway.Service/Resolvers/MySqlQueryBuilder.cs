@@ -151,10 +151,8 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// Makes the parameters for the JSON_OBJECT function from a list of labelled columns
-        /// Format for table columns is:
+        /// Format for columns is:
         ///     "label1", subqueryName.label1, "label2", subqueryName.label2
-        /// Format for subquery columns is:
-        ///     "label1", JSON_EXTRACT(subqueryName.label1, '$'), "label2", JSON_EXTRACT(subqueryName.label2, '$')
         /// </summary>
         private string MakeJsonObjectParams(SqlQueryStructure structure, string subqueryName)
         {

@@ -149,15 +149,6 @@ namespace Azure.DataGateway.Service.Resolvers
             return (sets, updates, select);
         }
 
-        /// <inheritdoc />
-        public override string BuildColumnInfoQuery(
-            string databaseNameParam,
-            string schemaNameParam,
-            string tableNameParam)
-        {
-            throw new NotImplementedException();
-        }
-
         /// <summary>
         /// Makes the parameters for the JSON_OBJECT function from a list of labelled columns
         /// Format for table columns is:

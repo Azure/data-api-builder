@@ -86,16 +86,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public override string BuildColumnInfoQuery(
-            string databaseNameParam,
-            string schemaNameParam,
-            string tableNameParam)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <inheritdoc />
-        protected override string Build(KeysetPaginationPredicate? predicate)
+        protected override string Build(KeysetPaginationPredicate predicate)
         {
             if (predicate == null)
             {

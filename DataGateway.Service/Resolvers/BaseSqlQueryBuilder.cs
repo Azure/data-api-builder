@@ -238,18 +238,5 @@ namespace Azure.DataGateway.Service.Resolvers
 
             return string.Join(" AND ", validPredicates);
         }
-
-        /// <summary>
-        /// Create the query required for obtaining column information for the
-        /// given database, schema and table name.
-        /// </summary>
-        /// <param name="databaseNameParam">The name of parameter for database.</param>
-        /// <param name="schemaNameParam">The name of parameter for schema.</param>
-        /// <param name="tableNameParam">The name of parameter for table.</param>
-        /// <returns></returns>
-        public abstract string BuildColumnInfoQuery(
-            string databaseNameParam,
-            string schemaNameParam,
-            string tableNameParam);
     }
 }

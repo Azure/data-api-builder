@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using System.Text;
 using Azure.DataGateway.Service.Models;
@@ -28,15 +27,6 @@ namespace Azure.DataGateway.Service.Resolvers
             return queryStringBuilder.ToString();
         }
 
-        /// <inheritdoc />
-        public override string BuildColumnInfoQuery(
-            string databaseNameParam,
-            string schemaNameParam,
-            string tableNameParam)
-        {
-            throw new NotImplementedException();
-        }
-
         protected override string Build(Column column)
         {
             return _containerAlias + "." + column.ColumnName;
@@ -50,7 +40,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
         protected override string QuoteIdentifier(string ident)
         {
-            throw new NotImplementedException();
+            throw new System.NotImplementedException();
         }
 
         /// <summary>

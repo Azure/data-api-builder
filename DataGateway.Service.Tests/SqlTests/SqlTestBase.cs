@@ -214,10 +214,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             else
             {
                 expected = exception ?
-                    RestController.ErrorResponse(
+                    JsonSerializer.Serialize(RestController.ErrorResponse(
                         expectedSubStatusCode.ToString(),
-                        expectedErrorMessage, expectedStatusCode).Value.ToString() :
-                    await GetDatabaseResultAsync(sqlQuery);
+                        expectedErrorMessage, expectedStatusCode).Value) :
+                    $"{{ \"value\" : {await GetDatabaseResultAsync(sqlQuery)} }}";
             }
 
             SqlTestHelper.VerifyResult(

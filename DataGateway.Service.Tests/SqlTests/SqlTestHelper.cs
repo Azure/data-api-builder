@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Net;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
@@ -137,15 +138,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string actual;
             switch (actionResult)
             {
-                // OkObjectResult will throw exception if we attempt cast to JsonResult
                 case OkObjectResult okResult:
                     Assert.AreEqual((int)expectedStatusCode, okResult.StatusCode);
-                    actual = okResult.Value.ToString();
+                    actual = JsonSerializer.Serialize(okResult.Value);
                     break;
                 case CreatedResult createdResult:
                     Assert.AreEqual((int)expectedStatusCode, createdResult.StatusCode);
                     Assert.AreEqual(expectedLocationHeader, createdResult.Location);
-                    actual = createdResult.Value.ToString();
+                    OkObjectResult innerResult = (OkObjectResult)createdResult.Value;
+                    actual = JsonSerializer.Serialize(innerResult.Value);
                     break;
                 // NoContentResult does not have value property for messages
                 case NoContentResult noContentResult:
@@ -158,7 +159,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     break;
                 default:
                     JsonResult actualResult = (JsonResult)actionResult;
-                    actual = actualResult.Value.ToString();
+                    actual = JsonSerializer.Serialize(actualResult.Value);
                     break;
             }
 

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
@@ -368,6 +367,41 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         AND volume IS NOT NULL
                     ) as subq
                 "
+            },
+            {
+                "PatchOne_Insert_NonAutoGenPK_Test",
+                @"SELECT JSON_OBJECT('id', id, 'title', title, 'issueNumber', issueNumber ) AS data
+                    FROM (
+                        SELECT id, title, issueNumber
+                        FROM " + _integration_NonAutoGenPK_TableName + @"
+                        WHERE id = 2 AND title = 'Batman Begins'
+                        AND issueNumber = 1234
+                    ) as subq
+                "
+            },
+            {
+                "PatchOne_Update_Test",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 8 AND title = 'Heart of Darkness'
+                        AND publisher_id = 2324
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOne_Insert_PKAutoGen_Test",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 1000 AND title = 'The Hobbit Returns to The Shire'
+                        AND publisher_id = 1234
+                    ) AS subq
+                "
             }
         };
 
@@ -391,18 +425,20 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _restController = new RestController(_restService);
         }
 
+        /// <summary>
+        /// Runs after every test to reset the database state
+        /// </summary>
+        [TestCleanup]
+        public async Task TestCleanup()
+        {
+            await ResetDbStateAsync();
+        }
+
         #endregion
 
         public override string GetQuery(string key)
         {
             return _queryMap[key];
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PutOne_Insert_PKAutoGen_Test()
-        {
-            throw new NotImplementedException("Insert success");
         }
     }
 }

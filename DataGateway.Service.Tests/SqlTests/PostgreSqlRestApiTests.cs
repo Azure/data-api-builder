@@ -387,5 +387,33 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             throw new NotImplementedException();
         }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOne_Insert_NonAutoGenPK_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOne_Update_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOne_Insert_PKAutoGen_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOne_Insert_WithoutNonNullableField_Test()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

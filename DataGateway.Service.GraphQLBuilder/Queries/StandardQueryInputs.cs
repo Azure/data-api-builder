@@ -77,7 +77,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
         public static Dictionary<string, InputObjectTypeDefinitionNode> InputTypes = new()
         {
-            { "ID", IdInputType() }, { "Int", IntInputType() }, { "Float", FloatInputType() }, { "Boolean", BooleanInputType() }, { "String", StringInputType() }
+            { "ID", IdInputType() },
+            { "Int", IntInputType() },
+            { "Float", FloatInputType() },
+            { "Boolean", BooleanInputType() },
+            { "String", StringInputType() }
         };
     }
 }

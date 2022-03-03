@@ -1,10 +1,9 @@
-using System.Data;
 using System.Collections.Generic;
+using System.Data;
+using System.Linq;
+using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
 using Microsoft.Data.SqlClient;
-using System.Threading.Tasks;
-using System.Linq;
-using System;
 
 namespace Azure.DataGateway.Service.Services
 {

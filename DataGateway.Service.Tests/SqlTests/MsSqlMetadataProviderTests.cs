@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
@@ -9,7 +8,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
 {
-    [TestClass] [TestCategory(TestCategory.MSSQL)]
+    [TestClass, TestCategory(TestCategory.MSSQL)]
     public class MsSqlMetadataProviderTests : MetadataProviderTests
     {
         private MsSqlMetadataProvider _msSqlMetadataProvider;

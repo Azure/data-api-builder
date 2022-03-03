@@ -47,7 +47,8 @@ namespace Azure.DataGateway.Service.Services
 
         public FileMetadataStoreProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
         : this(dataGatewayConfig.Value.ResolverConfigFile,
-              dataGatewayConfig.Value.DatabaseConnection.ConnectionString) { }
+              dataGatewayConfig.Value.DatabaseConnection.ConnectionString)
+        { }
 
         public FileMetadataStoreProvider(
             string resolverConfigPath,

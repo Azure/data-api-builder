@@ -145,6 +145,15 @@ namespace Azure.DataGateway.Service.Resolvers
                 FilterPredicates = context.FilterClauseInUrl.Expression.Accept<string>(visitor);
             }
 
+            // MakeParamWithValue(GetParamWithSystemType(nodeIn.Value.ToString()!, nodeIn.TypeReference))
+            if (!string.IsNullOrWhiteSpace(context.After))
+            {
+                string primaryKey = metadataStoreProvider.GetTableDefinition(context.EntityName).PrimaryKey[0].ToString();
+                PaginationMetadata.MsSqlPredicates = $"{primaryKey} > @{MakeParamWithValue(GetParamAsColumnSystemType(context.After, primaryKey))}";
+            }
+
+            _limit = uint.Parse(context.First);
+
             ParametrizeColumns();
         }
 

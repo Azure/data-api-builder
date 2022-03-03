@@ -21,9 +21,9 @@ namespace Azure.DataGateway.Service.Services
     {
         private readonly IQueryEngine _queryEngine;
         private readonly IMutationEngine _mutationEngine;
-        private readonly IMetadataStoreProvider _metadataStoreProvider;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationService _authorizationService;
+        public IMetadataStoreProvider MetadataStoreProvider { get; }
 
         public RestService(
             IQueryEngine queryEngine,
@@ -35,7 +35,7 @@ namespace Azure.DataGateway.Service.Services
         {
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
-            _metadataStoreProvider = metadataStoreProvider;
+            MetadataStoreProvider = metadataStoreProvider;
             _httpContextAccessor = httpContextAccessor;
             _authorizationService = authorizationService;
         }
@@ -74,7 +74,7 @@ namespace Azure.DataGateway.Service.Services
                         operationType);
                     RequestValidator.ValidateInsertRequestContext(
                         (InsertRequestContext)context,
-                        _metadataStoreProvider);
+                        MetadataStoreProvider);
                     break;
                 case Operation.Delete:
                     context = new DeleteRequestContext(entityName, isList: false);
@@ -84,7 +84,7 @@ namespace Azure.DataGateway.Service.Services
                 case Operation.UpsertIncremental:
                     JsonElement upsertPayloadRoot = RequestValidator.ValidateUpsertRequest(primaryKeyRoute, requestBody);
                     context = new UpsertRequestContext(entityName, upsertPayloadRoot, GetHttpVerb(operationType), operationType);
-                    RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _metadataStoreProvider);
+                    RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, MetadataStoreProvider);
                     break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
@@ -95,16 +95,16 @@ namespace Azure.DataGateway.Service.Services
                 // After parsing primary key, the context will be populated with the
                 // correct PrimaryKeyValuePairs.
                 RequestParser.ParsePrimaryKey(primaryKeyRoute, context);
-                RequestValidator.ValidatePrimaryKey(context, _metadataStoreProvider);
+                RequestValidator.ValidatePrimaryKey(context, MetadataStoreProvider);
             }
 
             if (!string.IsNullOrEmpty(queryString))
             {
-                RequestParser.ParseQueryString(HttpUtility.ParseQueryString(queryString), context, _metadataStoreProvider.GetFilterParser());
+                RequestParser.ParseQueryString(HttpUtility.ParseQueryString(queryString), context, MetadataStoreProvider.GetFilterParser());
             }
 
             // At this point for DELETE, the primary key should be populated in the Request context. 
-            RequestValidator.ValidateRequestContext(context, _metadataStoreProvider);
+            RequestValidator.ValidateRequestContext(context, MetadataStoreProvider);
 
             // RestRequestContext is finalized for QueryBuilding and QueryExecution.
             // Perform Authorization check prior to moving forward in request pipeline.
@@ -151,7 +151,7 @@ namespace Azure.DataGateway.Service.Services
         /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
         public string ConstructPrimaryKeyRoute(string entityName, JsonElement entity)
         {
-            TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(entityName);
+            TableDefinition tableDefinition = MetadataStoreProvider.GetTableDefinition(entityName);
             StringBuilder newPrimaryKeyRoute = new();
 
             foreach (string primaryKey in tableDefinition.PrimaryKey)
@@ -191,5 +191,6 @@ namespace Azure.DataGateway.Service.Services
                     throw new NotSupportedException("This operation is not yet supported.");
             }
         }
+
     }
 }

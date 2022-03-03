@@ -18,6 +18,8 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private const string FIELDS_URL = "_f";
         public const string FILTER_URL = "$filter";
+        private const string FIRST_URL = "$first";
+        private const string AFTER_URL = "$after";
         /// <summary>
         /// Parses the primary key string to identify the field names composing the key
         /// and their values.
@@ -86,6 +88,12 @@ namespace Azure.DataGateway.Service.Services
                         // ?$filter=<filter clause using microsoft api guidelines>
                         string filterQueryString = "?" + FILTER_URL + "=" + nvc[key];
                         context.FilterClauseInUrl = filterParser.GetFilterClause(filterQueryString, context.EntityName);
+                        break;
+                    case AFTER_URL:
+                        context.After = nvc[key];
+                        break;
+                    case FIRST_URL:
+                        context.First = nvc[key];
                         break;
                     default:
                         throw new ArgumentException("Invalid Query Parameter: " + key.ToString());

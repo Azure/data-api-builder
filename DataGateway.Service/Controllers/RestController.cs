@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Specialized;
 using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Web;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -65,9 +67,15 @@ namespace Azure.DataGateway.Service.Controllers
         /// <param name="jsonElement">Value representing the Json results of the client's request.</param>
         /// <param name="url">Value represents the complete url needed to continue with paged results.</param>
         /// <returns></returns>
-        private OkObjectResult OkResponse(JsonElement jsonResult, string url)
+        private OkObjectResult OkResponse(JsonElement jsonResult, string entityName)
         {
-            if (string.IsNullOrWhiteSpace(url))
+            string queryString = Request.QueryString.ToString();
+            // this will only provide for nextlink when client asks for custom limit
+            // but we really want to provide nextlink whenever there are more pages
+            // one way would be to execute the query we pass back to client and see if there
+            // are results, but this a poorly optimized approach.
+            // something like HasNext that returns along with the query would be nice.
+            if (!queryString.Contains("$first"))
             {
                 return Ok(new
                 {
@@ -75,11 +83,35 @@ namespace Azure.DataGateway.Service.Controllers
                 });
             }
 
+            string primaryKey = _restService.MetadataStoreProvider.GetTableDefinition(entityName).PrimaryKey[0].ToString();
+            string? afterValue = jsonResult[jsonResult.GetArrayLength() - 1].GetProperty(primaryKey).ToString();
+            NameValueCollection nvc = HttpUtility.ParseQueryString(queryString);
+            queryString = "?";
+            int count = nvc.Count;
+            foreach (string key in nvc)
+            {
+                --count;
+                string? value = nvc[key];
+                if (string.Equals(key, "$after"))
+                {
+                    value = afterValue;
+                }
+
+                queryString += key + "=" + value;
+                if (count > 0)
+                {
+                    queryString += "&";
+                }
+
+            }
+
+            string root = "https://localhost:5001";
             return Ok(new
             {
                 value = jsonResult,
-                @nextLink = url
+                @nextLink = $"{root}{Request.Path}{queryString}"
             });
+            ;
         }
 
         /// <summary>
@@ -236,7 +268,7 @@ namespace Azure.DataGateway.Service.Controllers
                     // Clones the root element to a new JsonElement that can be
                     // safely stored beyond the lifetime of the original JsonDocument.
                     JsonElement resultElement = result.RootElement.Clone();
-                    OkObjectResult formattedResult = OkResponse(resultElement, string.Empty);
+                    OkObjectResult formattedResult = OkResponse(resultElement, entityName);
 
                     switch (operationType)
                     {

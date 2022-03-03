@@ -45,6 +45,9 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
         public virtual Dictionary<string, object> FieldValuePairsInBody { get; set; } = new();
 
+        public string After { get; set; }
+        public string First { get; set; }
+
         /// <summary>
         /// Is the result supposed to be multiple values or not.
         /// </summary>

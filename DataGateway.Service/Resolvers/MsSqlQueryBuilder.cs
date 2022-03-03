@@ -38,7 +38,7 @@ namespace Azure.DataGateway.Service.Resolvers
                                     structure.FilterPredicates,
                                     Build(structure.Predicates),
                                     Build(structure.PaginationMetadata.PaginationPredicate),
-                                    structure.PaginationMetadata.MsSqlPredicates);
+                                    structure.PaginationMetadata.SqlPredicates);
 
             string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)}"
                 + $" FROM {fromSql}"

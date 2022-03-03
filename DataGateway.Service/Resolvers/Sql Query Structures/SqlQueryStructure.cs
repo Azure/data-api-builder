@@ -149,10 +149,11 @@ namespace Azure.DataGateway.Service.Resolvers
             if (!string.IsNullOrWhiteSpace(context.After))
             {
                 string primaryKey = metadataStoreProvider.GetTableDefinition(context.EntityName).PrimaryKey[0].ToString();
-                PaginationMetadata.MsSqlPredicates = $"{primaryKey} > @{MakeParamWithValue(GetParamAsColumnSystemType(context.After, primaryKey))}";
+                // > comparison operator should work for int and string, not sure on other types if this is OK
+                PaginationMetadata.SqlPredicates = $"{primaryKey} > @{MakeParamWithValue(GetParamAsColumnSystemType(context.After, primaryKey))}";
             }
 
-            _limit = uint.Parse(context.First);
+            _limit = uint.Parse(context.First!);
 
             ParametrizeColumns();
         }

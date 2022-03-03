@@ -1,8 +1,6 @@
-using Azure.DataGateway.Service;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Service.Services;
 
-namespace Azure.DataGateway.Services
+namespace Azure.DataGateway.Service.Services
 {
     /// <summary>
     /// To resolve queries and requests certain metadata is necessary. This is

@@ -8,11 +8,11 @@ using System.Web;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
-using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Http;
 
-namespace Azure.DataGateway.Services
+namespace Azure.DataGateway.Service.Services
 {
     /// <summary>
     /// Service providing REST Api executions.
@@ -81,8 +81,9 @@ namespace Azure.DataGateway.Services
                     RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                     break;
                 case Operation.Upsert:
+                case Operation.UpsertIncremental:
                     JsonElement upsertPayloadRoot = RequestValidator.ValidateUpsertRequest(primaryKeyRoute, requestBody);
-                    context = new UpsertRequestContext(entityName, upsertPayloadRoot, HttpRestVerbs.PUT, operationType);
+                    context = new UpsertRequestContext(entityName, upsertPayloadRoot, GetHttpVerb(operationType), operationType);
                     RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _metadataStoreProvider);
                     break;
                 default:
@@ -122,6 +123,7 @@ namespace Azure.DataGateway.Services
                     case Operation.Insert:
                     case Operation.Delete:
                     case Operation.Upsert:
+                    case Operation.UpsertIncremental:
                         return await _mutationEngine.ExecuteAsync(context);
                     default:
                         throw new NotSupportedException("This operation is not yet supported.");
@@ -169,6 +171,25 @@ namespace Azure.DataGateway.Services
         private HttpContext GetHttpContext()
         {
             return _httpContextAccessor.HttpContext!;
+        }
+
+        private static OperationAuthorizationRequirement GetHttpVerb(Operation operation)
+        {
+            switch (operation)
+            {
+                case Operation.Upsert:
+                    return HttpRestVerbs.PUT;
+                case Operation.UpsertIncremental:
+                    return HttpRestVerbs.PATCH;
+                case Operation.Delete:
+                    return HttpRestVerbs.DELETE;
+                case Operation.Insert:
+                    return HttpRestVerbs.POST;
+                case Operation.Find:
+                    return HttpRestVerbs.GET;
+                default:
+                    throw new NotSupportedException("This operation is not yet supported.");
+            }
         }
     }
 }

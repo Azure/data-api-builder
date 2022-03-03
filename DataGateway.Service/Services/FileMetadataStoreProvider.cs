@@ -86,11 +86,11 @@ namespace Azure.DataGateway.Service.Services
                 _mutationResolvers.Add(resolver.Id, resolver);
             }
 
-            if (_config.DatabaseSchema != default && databaseType != DatabaseType.Cosmos)
+            if (_config.DatabaseSchema != default)
             {
                 _filterParser = new(_config.DatabaseSchema);
             }
-            else
+            else if (databaseType != DatabaseType.Cosmos)
             {
                 MsSqlMetadataProvider databaseMetadataProvider = new(connectionString);
                 _config.DatabaseSchema =

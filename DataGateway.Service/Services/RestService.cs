@@ -191,6 +191,5 @@ namespace Azure.DataGateway.Service.Services
                     throw new NotSupportedException("This operation is not yet supported.");
             }
         }
-
     }
 }

@@ -145,7 +145,6 @@ namespace Azure.DataGateway.Service.Resolvers
                 FilterPredicates = context.FilterClauseInUrl.Expression.Accept<string>(visitor);
             }
 
-            // MakeParamWithValue(GetParamWithSystemType(nodeIn.Value.ToString()!, nodeIn.TypeReference))
             List<string> primaryKeys = metadataStoreProvider.GetTableDefinition(context.EntityName).PrimaryKey;
             List<string?> afterValues = context.After;
             int pkIndex = 0;

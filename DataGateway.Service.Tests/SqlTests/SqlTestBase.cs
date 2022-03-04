@@ -217,7 +217,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     JsonSerializer.Serialize(RestController.ErrorResponse(
                         expectedSubStatusCode.ToString(),
                         expectedErrorMessage, expectedStatusCode).Value) :
-                    $"{{ \"value\" : {await GetDatabaseResultAsync(sqlQuery)} }}";
+                    $"{{\"value\":{FormatExpectedValue(await GetDatabaseResultAsync(sqlQuery))}}}";
             }
 
             SqlTestHelper.VerifyResult(
@@ -226,6 +226,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expectedStatusCode,
                 expectedLocationHeader,
                 !exception);
+        }
+
+        private static string FormatExpectedValue(string expected)
+        {
+            if (!string.Equals(expected[0], '['))
+            {
+                expected = $"[{expected}]";
+            }
+
+            return expected;
         }
 
         /// <summary>

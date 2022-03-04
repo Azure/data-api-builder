@@ -29,7 +29,8 @@ namespace Azure.DataGateway.Service.Resolvers
             string predicates = JoinPredicateStrings(
                                     structure.FilterPredicates,
                                     Build(structure.Predicates),
-                                    Build(structure.PaginationMetadata.PaginationPredicate));
+                                    Build(structure.PaginationMetadata.PaginationPredicate),
+                                    Build(structure.PaginationMetadata.SqlPredicates, " OR "));
 
             string query = $"SELECT {Build(structure.Columns)}"
                 + $" FROM {fromSql}"

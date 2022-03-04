@@ -46,6 +46,8 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
         public KeysetPaginationPredicate? PaginationPredicate { get; set; }
 
+        public List<Predicate> SqlPredicates { get; set; } = new();
+
         public PaginationMetadata(SqlQueryStructure? structure)
         {
             Structure = structure;

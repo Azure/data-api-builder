@@ -228,6 +228,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 !exception);
         }
 
+        /// <summary>
+        /// Helper function formats the expected value to match actual response format.
+        /// </summary>
+        /// <param name="expected">The expected response.</param>
+        /// <returns>Formetted expected response.</returns>
         private static string FormatExpectedValue(string expected)
         {
             if (!string.Equals(expected[0], '['))

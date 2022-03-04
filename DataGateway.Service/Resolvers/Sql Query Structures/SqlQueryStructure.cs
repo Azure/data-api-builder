@@ -151,7 +151,7 @@ namespace Azure.DataGateway.Service.Resolvers
             foreach (string? val in afterValues)
             {
                 // > operator should work for int and string
-                PopulateParamsAndPredicates(field: primaryKeys[pkIndex], value: val!, op: PredicateOperation.GreaterThan);
+                PopulateParamsAndPredicates(field: primaryKeys[pkIndex], value: val!, PaginationMetadata, op: PredicateOperation.GreaterThan);
                 ++pkIndex;
             }
 
@@ -367,6 +367,46 @@ namespace Azure.DataGateway.Service.Resolvers
                     parameterName = MakeParamWithValue(
                         GetParamAsColumnSystemType(value.ToString()!, field));
                     Predicates.Add(new Predicate(
+                        new PredicateOperand(new Column(TableAlias, field)),
+                        op,
+                        new PredicateOperand($"@{parameterName}")));
+                }
+                else
+                {
+                    // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
+                    throw new DataGatewayException(
+                        message: $"Unexpected value for column \"{field}\" provided.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                }
+            }
+            catch (ArgumentException ex)
+            {
+                throw new DataGatewayException(
+                  message: ex.Message,
+                  statusCode: HttpStatusCode.BadRequest,
+                  subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+            }
+        }
+
+        /// <summary>
+        ///  Given the predicate key value pair, where value includes the Predicte Operation as well as the value associated with the field,
+        ///  populates the Parameters and Pagination metadata's SqlPredicates properties.
+        /// </summary>
+        /// <param name="field">String representing the field.</param>
+        /// <param name="value">String representing the value associated with the given field.</param>
+        /// <param name="metadata">Pagination metadata.</param>
+        /// <param name="op">The predicate op for comparing field and value.</param>
+        private void PopulateParamsAndPaginationPredicates(string field, object value, PaginationMetadata metadata, PredicateOperation op = PredicateOperation.Equal)
+        {
+            try
+            {
+                string parameterName;
+                if (value != null)
+                {
+                    parameterName = MakeParamWithValue(
+                        GetParamAsColumnSystemType(value.ToString()!, field));
+                    metadata.SqlPredicates.Add(new Predicate(
                         new PredicateOperand(new Column(TableAlias, field)),
                         op,
                         new PredicateOperand($"@{parameterName}")));

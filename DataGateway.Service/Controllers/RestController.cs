@@ -113,6 +113,7 @@ namespace Azure.DataGateway.Service.Controllers
             List<string> primaryKeys = _restService.MetadataStoreProvider.GetTableDefinition(entityName).PrimaryKey;
             foreach (string pk in primaryKeys)
             {
+                // saves the last record's value for each column that makes up the primary key
                 afterValues.Add(rootEnumerated.ElementAt(rootEnumerated.Count() - 1).GetProperty(pk).ToString());
             }
 

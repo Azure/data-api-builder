@@ -41,7 +41,7 @@ namespace Azure.DataGateway.Service.Services
 
             // For the array, 0-member represents Catalog; 1-member represents Schema;
             // 2-member represents Table Name; 3-member represents Table Type.
-            // We need to get all the base tables only.
+            // We only need to get the base tables, not views.
             const string TABLE_TYPE = "BASE TABLE";
             tableRestrictions[3] = TABLE_TYPE;
 

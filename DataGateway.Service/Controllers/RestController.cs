@@ -70,6 +70,12 @@ namespace Azure.DataGateway.Service.Controllers
         /// <returns></returns>
         private OkObjectResult OkResponse(JsonElement jsonResult, string entityName)
         {
+            if (jsonResult.ValueKind != JsonValueKind.Array)
+            {
+                string jsonString = $"[{JsonSerializer.Serialize(jsonResult)}]";
+                jsonResult = JsonSerializer.Deserialize<JsonElement>(jsonString);
+            }
+
             string queryString = Request.QueryString.ToString();
             // if no more records exist than requested just return jsonResult
             if (!SqlPaginationUtil.HasNext(jsonResult, queryString))

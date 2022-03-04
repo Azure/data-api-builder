@@ -296,10 +296,6 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>Bool representing if more records are available.</returns>
         public static bool HasNext(JsonElement jsonResult, string queryString)
         {
-            if (jsonResult.ValueKind != JsonValueKind.Array)
-            {
-                return false;
-            }
             // default limit is 100, meaning without specifying a new limit in $first,
             // we expect at most 100 records and if more than 99 are returned we provide a nextLink.
             int limit = 99;

@@ -151,7 +151,7 @@ namespace Azure.DataGateway.Service.Resolvers
             foreach (string? val in afterValues)
             {
                 // > operator should work for int and string
-                PopulateParamsAndPredicates(field: primaryKeys[pkIndex], value: val!, PaginationMetadata, op: PredicateOperation.GreaterThan);
+                PopulateParamsAndPaginationPredicates(field: primaryKeys[pkIndex], value: val!, PaginationMetadata, op: PredicateOperation.GreaterThan);
                 ++pkIndex;
             }
 

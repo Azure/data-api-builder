@@ -14,7 +14,6 @@ namespace Azure.DataGateway.Service.Services
     /// </summary>
     /// <param name="GraphQLSchema">String Representation of graphQL schema, non escaped. This has higher priority than GraphQLSchemaFile, so if both are set this one will be used.</param>
     /// <param name="GraphQLSchemaFile">Location of the graphQL schema file</param>
-    /// <param name="DatabaseSchema">A JSON encoded version of the information that resolvers need about schema of the schema of the database.</param>
     public record ResolverConfig(string GraphQLSchema, string GraphQLSchemaFile)
     {
         /// <summary>
@@ -29,6 +28,10 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         public Dictionary<string, GraphQLType> GraphQLTypes { get; set; } = new();
 
+        /// <summary>
+        /// A JSON encoded version of the information that resolvers
+        /// need about schema of the database.
+        /// </summary>
         public DatabaseSchema? DatabaseSchema { get; set; }
     }
 

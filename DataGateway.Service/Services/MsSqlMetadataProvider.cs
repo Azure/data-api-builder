@@ -37,11 +37,12 @@ namespace Azure.DataGateway.Service.Services
             // We can specify the Catalog, Schema, Table Name, Table Type to get
             // the specified table(s).
             // We can use four restrictions for Table, so we create a 4 members array.
+            // These restrictions are used to limit the amount of schema information returned.
             string[] tableRestrictions = new string[NUMBER_OF_RESTRICTIONS];
 
             // For the array, 0-member represents Catalog; 1-member represents Schema;
             // 2-member represents Table Name; 3-member represents Table Type.
-            // We need to get all the base tables only.
+            // We only need to get all the base tables, not views or system tables.
             const string TABLE_TYPE = "BASE TABLE";
             tableRestrictions[3] = TABLE_TYPE;
 
@@ -66,7 +67,7 @@ namespace Azure.DataGateway.Service.Services
         private void AddColumnDefinition(string tableName, TableDefinition tableDefinition)
         {
             DataTable? dataTable = _dataSet.Tables[tableName];
-            if (dataTable is not null)
+            if (dataTable != null)
             {
                 List<DataColumn> primaryKeys = new(dataTable.PrimaryKey);
                 tableDefinition.PrimaryKey = new(primaryKeys.Select(primaryKey => primaryKey.ColumnName));
@@ -100,7 +101,7 @@ namespace Azure.DataGateway.Service.Services
                 // Hence, we should create a 4 members array.
                 string[] columnRestrictions = new string[NUMBER_OF_RESTRICTIONS];
 
-                // To restrict the columns for the current table, specify the tables's name
+                // To restrict the columns for the current table, specify the table's name
                 // in column restrictions.
                 columnRestrictions[2] = tableName;
 

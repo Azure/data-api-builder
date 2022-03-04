@@ -115,6 +115,7 @@ namespace Azure.DataGateway.Service.Controllers
             {
                 afterValues.Add(rootEnumerated.ElementAt(rootEnumerated.Count() - 1).GetProperty(pk).ToString());
             }
+
             return afterValues;
         }
 

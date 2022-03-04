@@ -17,8 +17,17 @@ namespace Azure.DataGateway.Service.Services
         /// Prefix used for specifying the fields in the query string of the URL.
         /// </summary>
         private const string FIELDS_URL = "_f";
+        /// <summary>
+        /// Prefix used for specifying filter in the query string of the URL.
+        /// </summary>
         public const string FILTER_URL = "$filter";
+        /// <summary>
+        /// Prefix used for specifying limit in the query string of the URL.
+        /// </summary>
         private const string FIRST_URL = "$first";
+        /// <summary>
+        /// Prefix used for specifying paging in the query string of the URL.
+        /// </summary>
         private const string AFTER_URL = "$after";
         /// <summary>
         /// Parses the primary key string to identify the field names composing the key
@@ -90,7 +99,7 @@ namespace Azure.DataGateway.Service.Services
                         context.FilterClauseInUrl = filterParser.GetFilterClause(filterQueryString, context.EntityName);
                         break;
                     case AFTER_URL:
-                        context.After = nvc[key];
+                        context.After = nvc[key]!.Split(",").ToList()!;
                         break;
                     case FIRST_URL:
                         context.First = nvc[key];

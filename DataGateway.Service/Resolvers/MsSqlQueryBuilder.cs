@@ -37,8 +37,7 @@ namespace Azure.DataGateway.Service.Resolvers
             string predicates = JoinPredicateStrings(
                                     structure.FilterPredicates,
                                     Build(structure.Predicates),
-                                    Build(structure.PaginationMetadata.PaginationPredicate),
-                                    structure.PaginationMetadata.SqlPredicates);
+                                    Build(structure.PaginationMetadata.PaginationPredicate));
 
             string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)}"
                 + $" FROM {fromSql}"

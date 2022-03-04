@@ -45,7 +45,16 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
         public virtual Dictionary<string, object> FieldValuePairsInBody { get; set; } = new();
 
-        public string? After { get; set; }
+        /// <summary>
+        /// String holds information needed for pagination.
+        /// Based on request this property may or may not be populated.
+        /// </summary>
+        public List<string?> After { get; set; } = new();
+
+        /// <summary>
+        /// String holds information needed for limit.
+        /// Based on request this property may or may not be populated.
+        /// </summary>
         public string? First { get; set; }
 
         /// <summary>

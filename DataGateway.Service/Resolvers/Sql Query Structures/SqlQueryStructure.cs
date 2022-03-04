@@ -146,14 +146,20 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             // MakeParamWithValue(GetParamWithSystemType(nodeIn.Value.ToString()!, nodeIn.TypeReference))
-            if (!string.IsNullOrWhiteSpace(context.After))
+            List<string> primaryKeys = metadataStoreProvider.GetTableDefinition(context.EntityName).PrimaryKey;
+            List<string?> afterValues = context.After;
+            int pkIndex = 0;
+            foreach (string? val in afterValues)
             {
-                string primaryKey = metadataStoreProvider.GetTableDefinition(context.EntityName).PrimaryKey[0].ToString();
-                // > comparison operator should work for int and string, not sure on other types if this is OK
-                PaginationMetadata.SqlPredicates = $"{primaryKey} > @{MakeParamWithValue(GetParamAsColumnSystemType(context.After, primaryKey))}";
+                // > operator should work for int and string
+                PopulateParamsAndPredicates(field: primaryKeys[pkIndex], value: val!, op: PredicateOperation.GreaterThan);
+                ++pkIndex;
             }
 
-            _limit = uint.Parse(context.First!);
+            if (!string.IsNullOrWhiteSpace(context.First))
+            {
+                _limit = uint.Parse(context.First!) + 1;
+            }
 
             ParametrizeColumns();
         }

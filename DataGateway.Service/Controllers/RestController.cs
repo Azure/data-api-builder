@@ -1,12 +1,13 @@
 using System;
-using System.Collections.Specialized;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System.Web;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
@@ -70,12 +71,8 @@ namespace Azure.DataGateway.Service.Controllers
         private OkObjectResult OkResponse(JsonElement jsonResult, string entityName)
         {
             string queryString = Request.QueryString.ToString();
-            // this will only provide for nextlink when client asks for custom limit
-            // but we really want to provide nextlink whenever there are more pages
-            // one way would be to execute the query we pass back to client and see if there
-            // are results, but this a poorly optimized approach.
-            // something like HasNext that returns along with the query would be nice.
-            if (!queryString.Contains("$first"))
+            // if no more records exist than requested just return jsonResult
+            if (!SqlPaginationUtil.HasNext(jsonResult, queryString))
             {
                 return Ok(new
                 {
@@ -83,35 +80,36 @@ namespace Azure.DataGateway.Service.Controllers
                 });
             }
 
-            string primaryKey = _restService.MetadataStoreProvider.GetTableDefinition(entityName).PrimaryKey[0].ToString();
-            string? afterValue = jsonResult[jsonResult.GetArrayLength() - 1].GetProperty(primaryKey).ToString();
-            NameValueCollection nvc = HttpUtility.ParseQueryString(queryString);
-            queryString = "?";
-            int count = nvc.Count;
-            foreach (string key in nvc)
-            {
-                --count;
-                string? value = nvc[key];
-                if (string.Equals(key, "$after"))
-                {
-                    value = afterValue;
-                }
-
-                queryString += key + "=" + value;
-                if (count > 0)
-                {
-                    queryString += "&";
-                }
-
-            }
-
-            string root = "https://localhost:5001";
+            // More records exist than requested, we know this by requesting 1 extra record,
+            // that extra record is removed here.
+            IEnumerable<JsonElement> rootEnumerated = jsonResult.EnumerateArray();
+            rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
+            List<string?> afterValues = GetAfterValues(rootEnumerated, entityName);
+            // nextLink is the URL needed to get the next page of records using the same query options
+            string nextLink = SqlPaginationUtil.CreateNextLink(afterValues, Request.Path, queryString);
             return Ok(new
             {
-                value = jsonResult,
-                @nextLink = $"{root}{Request.Path}{queryString}"
+                value = rootEnumerated,
+                @nextLink = nextLink
             });
-            ;
+        }
+
+        /// <summary>
+        /// Helper function returns a list of the values needed for returning
+        /// records starting at the next page.
+        /// </summary>
+        /// <param name="rootEnumerated">The Json Elements that make up the records to return.</param>
+        /// <param name="entityName">The name of the table the records were queried from.</param>
+        /// <returns>List that represents the values needed to request the next page of results.</returns>
+        private List<string?> GetAfterValues(IEnumerable<JsonElement> rootEnumerated, string entityName)
+        {
+            List<string?> afterValues = new();
+            List<string> primaryKeys = _restService.MetadataStoreProvider.GetTableDefinition(entityName).PrimaryKey;
+            foreach (string pk in primaryKeys)
+            {
+                afterValues.Add(rootEnumerated.ElementAt(rootEnumerated.Count() - 1).GetProperty(pk).ToString());
+            }
+            return afterValues;
         }
 
         /// <summary>

@@ -157,7 +157,9 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (!string.IsNullOrWhiteSpace(context.First))
             {
-                _limit = uint.Parse(context.First!) + 1;
+                // return 1 extra record for pagination
+                _limit = RequestValidator.CheckFirstValidity(context.First) + 1;
+
             }
 
             ParametrizeColumns();

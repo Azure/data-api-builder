@@ -180,7 +180,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string expectedErrorMessage = "",
             HttpStatusCode expectedStatusCode = HttpStatusCode.OK,
             string expectedSubStatusCode = "BadRequest",
-            string expectedLocationHeader = null)
+            string expectedLocationHeader = null,
+            string expectedQueryString = "",
+            bool paginated = false)
         {
             ConfigureRestController(
                 controller,
@@ -217,7 +219,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     JsonSerializer.Serialize(RestController.ErrorResponse(
                         expectedSubStatusCode.ToString(),
                         expectedErrorMessage, expectedStatusCode).Value) :
-                    $"{{\"value\":{FormatExpectedValue(await GetDatabaseResultAsync(sqlQuery))}}}";
+                    $"{{\"value\":{FormatExpectedValue(await GetDatabaseResultAsync(sqlQuery))}{ExpectedPagination(paginated, $"/{entity}{expectedQueryString}")}}}";
             }
 
             SqlTestHelper.VerifyResult(
@@ -241,6 +243,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }
 
             return expected;
+        }
+
+        /// <summary>
+        /// Helper function formats the expected value to match actual response format.
+        /// </summary>
+        /// <param name="expected">The expected response.</param>
+        /// <returns>Formetted expected response.</returns>
+        private static string ExpectedPagination(bool paginated, string queryString)
+        {
+            return paginated ? $",\"nextLink\":\"https://localhost:5001{queryString}\"" : string.Empty;
         }
 
         /// <summary>

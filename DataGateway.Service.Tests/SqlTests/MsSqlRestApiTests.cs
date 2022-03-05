@@ -147,6 +147,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"WHERE id = 567 AND book_id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "FindTestWithFirstSingleKeyPagination",
+                $"SELECT TOP 1 * FROM { _integrationTableName } " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFirstMultiKeyPagination",
+                $"SELECT TOP 1 * FROM REVIEWS " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithAfterSingleKeyPagination",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE id > 7 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithAfterMultiKeyPagination",
+                $"SELECT * FROM REVIEWS " +
+                "WHERE book_id > 1 OR id > 567 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "InsertOneTest",
                 // This query is the query for the result we get back from the database
                 // after the insert operation. Not the query that we generate to perform

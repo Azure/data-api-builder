@@ -250,10 +250,9 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="path">The request path.</param>
         /// <param name="queryString">The query string.</param>
         /// <returns>The string representing nextLink.</returns>
-        public static string CreateNextLink(List<string?> afterValues, string path, string queryString)
+        public static string CreateNextLink(List<string?> afterValues, string path, NameValueCollection nvc)
         {
-            NameValueCollection nvc = HttpUtility.ParseQueryString(queryString);
-            queryString = "?";
+            string queryString = "?";
             int count = nvc.Count;
             bool nvcEmpty = count == 0;
             bool afterInQueryString = false;
@@ -283,7 +282,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 queryString += nvcEmpty ? $"$after={string.Join(",", afterValues)}" : $"&$after={string.Join(",", afterValues)}";
             }
 
-            string root = "https://localhost:5001";
+            string root = $"https://localhost:5001";
             return $"{root}{path}{queryString}";
         }
 

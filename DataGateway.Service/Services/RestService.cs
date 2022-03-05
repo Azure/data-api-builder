@@ -24,7 +24,7 @@ namespace Azure.DataGateway.Service.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationService _authorizationService;
         public IMetadataStoreProvider MetadataStoreProvider { get; }
-
+        public RestRequestContext Context { get; set; }
         public RestService(
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
@@ -60,31 +60,30 @@ namespace Azure.DataGateway.Service.Services
                 requestBody = await reader.ReadToEndAsync();
             }
 
-            RestRequestContext context;
             switch (operationType)
             {
                 case Operation.Find:
-                    context = new FindRequestContext(entityName, isList: string.IsNullOrEmpty(primaryKeyRoute));
+                    Context = new FindRequestContext(entityName, isList: string.IsNullOrEmpty(primaryKeyRoute));
                     break;
                 case Operation.Insert:
                     JsonElement insertPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);
-                    context = new InsertRequestContext(entityName,
+                    Context = new InsertRequestContext(entityName,
                         insertPayloadRoot,
                         HttpRestVerbs.POST,
                         operationType);
                     RequestValidator.ValidateInsertRequestContext(
-                        (InsertRequestContext)context,
+                        (InsertRequestContext)Context,
                         MetadataStoreProvider);
                     break;
                 case Operation.Delete:
-                    context = new DeleteRequestContext(entityName, isList: false);
+                    Context = new DeleteRequestContext(entityName, isList: false);
                     RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                     break;
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
                     JsonElement upsertPayloadRoot = RequestValidator.ValidateUpsertRequest(primaryKeyRoute, requestBody);
-                    context = new UpsertRequestContext(entityName, upsertPayloadRoot, GetHttpVerb(operationType), operationType);
-                    RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, MetadataStoreProvider);
+                    Context = new UpsertRequestContext(entityName, upsertPayloadRoot, GetHttpVerb(operationType), operationType);
+                    RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)Context, MetadataStoreProvider);
                     break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
@@ -94,37 +93,38 @@ namespace Azure.DataGateway.Service.Services
             {
                 // After parsing primary key, the context will be populated with the
                 // correct PrimaryKeyValuePairs.
-                RequestParser.ParsePrimaryKey(primaryKeyRoute, context);
-                RequestValidator.ValidatePrimaryKey(context, MetadataStoreProvider);
+                RequestParser.ParsePrimaryKey(primaryKeyRoute, Context);
+                RequestValidator.ValidatePrimaryKey(Context, MetadataStoreProvider);
             }
 
             if (!string.IsNullOrEmpty(queryString))
             {
-                RequestParser.ParseQueryString(HttpUtility.ParseQueryString(queryString), context, MetadataStoreProvider.GetFilterParser());
+                Context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
+                RequestParser.ParseQueryString(Context.ParsedQueryString, Context, MetadataStoreProvider.GetFilterParser());
             }
 
             // At this point for DELETE, the primary key should be populated in the Request context. 
-            RequestValidator.ValidateRequestContext(context, MetadataStoreProvider);
+            RequestValidator.ValidateRequestContext(Context, MetadataStoreProvider);
 
             // RestRequestContext is finalized for QueryBuilding and QueryExecution.
             // Perform Authorization check prior to moving forward in request pipeline.
             // RESTAuthorizationService
             AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
                 user: GetHttpContext().User,
-                resource: context,
-                requirements: new[] { context.HttpVerb });
+                resource: Context,
+                requirements: new[] { Context.HttpVerb });
 
             if (authorizationResult.Succeeded)
             {
                 switch (operationType)
                 {
                     case Operation.Find:
-                        return await _queryEngine.ExecuteAsync(context);
+                        return await _queryEngine.ExecuteAsync(Context);
                     case Operation.Insert:
                     case Operation.Delete:
                     case Operation.Upsert:
                     case Operation.UpsertIncremental:
-                        return await _mutationEngine.ExecuteAsync(context);
+                        return await _mutationEngine.ExecuteAsync(Context);
                     default:
                         throw new NotSupportedException("This operation is not yet supported.");
                 };

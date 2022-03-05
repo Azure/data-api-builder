@@ -289,6 +289,52 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "FindTestWithFirstSingleKeyPagination",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      ORDER BY id
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFirstMultiKeyPagination",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _tableWithCompositePrimaryKey + @"
+                      ORDER BY id
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
+                "FindTestWithAfterSingleKeyPagination",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE id > 7
+                      ORDER BY id
+                      LIMIT 100
+                  ) AS subq"
+            },
+            {
+                "FindTestWithAfterMultiKeyPagination",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _tableWithCompositePrimaryKey + @"
+                      WHERE book_id > 1 OR id > 567
+                      ORDER BY id
+                      LIMIT 100
+                  ) AS subq"
+            },
+            {
                 "InsertOneTest",
                 @"
                     SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data

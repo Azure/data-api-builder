@@ -325,7 +325,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithAfterMultiKeyPagination",
                 @"
-                  SELECT JSON_OBJECT('id', id, 'content', content, 'book_id', book_id) AS data
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'content', content, 'book_id', book_id)) AS data
                   FROM (
                       SELECT *
                       FROM " + _tableWithCompositePrimaryKey + @"

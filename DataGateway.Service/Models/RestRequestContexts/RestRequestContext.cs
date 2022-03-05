@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.OData.UriParser;
 
@@ -45,8 +44,6 @@ namespace Azure.DataGateway.Service.Models
         /// Based on the operation type, this property may or may not be populated.
         /// </summary>
         public virtual Dictionary<string, object> FieldValuePairsInBody { get; set; } = new();
-
-        public NameValueCollection ParsedQueryString { get; set; }
 
         /// <summary>
         /// String holds information needed for pagination.

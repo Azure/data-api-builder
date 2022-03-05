@@ -92,7 +92,7 @@ namespace Azure.DataGateway.Service.Controllers
             rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
             List<string?> afterValues = GetAfterValues(rootEnumerated, entityName);
             // nextLink is the URL needed to get the next page of records using the same query options
-            string nextLink = SqlPaginationUtil.CreateNextLink(afterValues, $"/{entityName}", nvc: _restService.Context.ParsedQueryString);
+            string nextLink = SqlPaginationUtil.CreateNextLink(afterValues, $"/{entityName}", nvc: _restService.ParsedQueryString);
             return Ok(new
             {
                 value = rootEnumerated,

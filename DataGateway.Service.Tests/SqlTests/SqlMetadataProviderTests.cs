@@ -16,26 +16,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             DatabaseSchema expectedSchema = runtimeConfig.DatabaseSchema;
             DatabaseSchema derivedDatabaseSchema = await _sqlMetadataProvider.RefreshDatabaseSchemaWithTables();
 
-            foreach (KeyValuePair<string, TableDefinition> table in expectedSchema.Tables)
+            foreach ((string tableName, TableDefinition expectedTableDefinition) in expectedSchema.Tables)
             {
-                string tableName = table.Key;
-                TableDefinition expectedTableDefinition = table.Value;
-
                 TableDefinition actualTableDefinition;
                 Assert.IsTrue(derivedDatabaseSchema.Tables.TryGetValue(tableName, out actualTableDefinition),
                     $"Could not find table definition for table '{tableName}'");
 
-                foreach (string primaryKey in expectedTableDefinition.PrimaryKey)
-                {
-                    Assert.IsTrue(actualTableDefinition.PrimaryKey.Contains(primaryKey),
-                       $"Could not column '{primaryKey}' as the primary key of table '{tableName}'");
-                }
+                CollectionAssert.AreEqual(
+                    expectedTableDefinition.PrimaryKey,
+                    actualTableDefinition.PrimaryKey,
+                    $"Did not find the expected primary keys for table {tableName}");
 
-                foreach (KeyValuePair<string, ColumnDefinition> column in expectedTableDefinition.Columns)
+                foreach ((string columnName, ColumnDefinition expectedColumnDefinition) in expectedTableDefinition.Columns)
                 {
-                    string columnName = column.Key;
-                    ColumnDefinition expectedColumnDefinition = column.Value;
-
                     ColumnDefinition actualColumnDefinition;
                     Assert.IsTrue(actualTableDefinition.Columns.TryGetValue(columnName, out actualColumnDefinition),
                         $"Could not find column definition for column '{columnName}' of table '{tableName}'");

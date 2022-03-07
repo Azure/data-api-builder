@@ -28,10 +28,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             DatabaseSchema expectedSchema = runtimeConfig.DatabaseSchema;
             DatabaseSchema derivedDatabaseSchema = await _msSqlMetadataProvider.GetDatabaseSchema();
 
-            foreach (KeyValuePair<string, TableDefinition> table in expectedSchema.Tables)
+             foreach ((string tableName, TableDefinition expectedTableDefinition) in expectedSchema.Tables)
             {
-                string tableName = table.Key;
-                TableDefinition expectedTableDefinition = table.Value;
 
                 TableDefinition actualTableDefinition;
                 Assert.IsTrue(derivedDatabaseSchema.Tables.TryGetValue(tableName, out actualTableDefinition));

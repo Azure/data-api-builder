@@ -3,9 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
+using MySqlConnector;
+using Npgsql;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -42,6 +46,8 @@ namespace Azure.DataGateway.Service.Services
     {
         private readonly ResolverConfig _config;
         private readonly FilterParser? _filterParser;
+        private DatabaseType _databaseType;
+        private string _connectionString;
 
         /// <summary>
         /// Stores mutation resolvers contained in configuration file.
@@ -59,6 +65,9 @@ namespace Azure.DataGateway.Service.Services
             DatabaseType databaseType,
             string connectionString)
         {
+            _databaseType = databaseType;
+            _connectionString = connectionString;
+
             string jsonString = File.ReadAllText(resolverConfigPath);
             JsonSerializerOptions options = new()
             {
@@ -89,17 +98,17 @@ namespace Azure.DataGateway.Service.Services
                 _mutationResolvers.Add(resolver.Id, resolver);
             }
 
+            if (_config.DatabaseSchema == default && databaseType != DatabaseType.Cosmos)
+            {
+                _config.DatabaseSchema = RefreshDatabaseSchemaWithTables().Result;
+            }
+
             if (_config.DatabaseSchema != default)
             {
                 _filterParser = new(_config.DatabaseSchema);
             }
-            else if (databaseType == DatabaseType.MsSql)
-            {
-                MsSqlMetadataProvider databaseMetadataProvider = new(connectionString);
-                _config.DatabaseSchema =
-                    databaseMetadataProvider.GetDatabaseSchema().Result;
-            }
         }
+
         /// <summary>
         /// Reads generated JSON configuration file with GraphQL Schema
         /// </summary>
@@ -153,5 +162,32 @@ namespace Azure.DataGateway.Service.Services
 
             return _filterParser;
         }
+
+        /// <inheritdoc/>
+        public Task<DatabaseSchema> RefreshDatabaseSchemaWithTables()
+        {
+            IMetadataStoreProvider? sqlMetadataProvider;
+            switch (_databaseType)
+            {
+                case DatabaseType.MsSql:
+                    sqlMetadataProvider =
+                        SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand>.GetSqlMetadataProvider(_connectionString);
+                    break;
+                case DatabaseType.PostgreSql:
+                    sqlMetadataProvider =
+                        SqlMetadataProvider<NpgsqlConnection, NpgsqlDataAdapter, NpgsqlCommand>.GetSqlMetadataProvider(_connectionString);
+                    break;
+                case DatabaseType.MySql:
+                    sqlMetadataProvider =
+                    SqlMetadataProvider<MySqlConnection, MySqlDataAdapter, MySqlCommand>.GetSqlMetadataProvider(_connectionString);
+                    break;
+                default:
+                    throw new ArgumentException($"Refreshing tables for this database type: {_databaseType}" +
+                        $"is not supported");
+            }
+
+            return sqlMetadataProvider!.RefreshDatabaseSchemaWithTables();
+        }
+
     }
 }

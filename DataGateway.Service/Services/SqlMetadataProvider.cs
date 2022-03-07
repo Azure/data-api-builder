@@ -1,38 +1,80 @@
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
-using Microsoft.Data.SqlClient;
 
 namespace Azure.DataGateway.Service.Services
 {
     /// <summary>
-    /// Reads schema information from the database to make it available for the GraphQL service.
+    /// Reads schema information from the database to make it
+    /// available for the GraphQL/REST services.
     /// </summary>
-    public class MsSqlMetadataProvider
+    public class SqlMetadataProvider<ConnectionT, DataAdapterT, CommandT> : IMetadataStoreProvider
+        where ConnectionT: DbConnection, new()
+        where DataAdapterT: DbDataAdapter, new()
+        where CommandT: DbCommand, new()
     {
         private const int NUMBER_OF_RESTRICTIONS = 4;
         private readonly string _connectionString;
         private DataSet _dataSet = new();
-        private DatabaseSchema _databaseSchema = new();
+        private static readonly object _syncLock = new();
+        private static SqlMetadataProvider<ConnectionT, DataAdapterT, CommandT>? _singleton;
 
-        public MsSqlMetadataProvider(string connectionString)
+        /// <summary>
+        /// The derived database schema.
+        /// </summary>
+        public DatabaseSchema DatabaseSchema { get; init; }
+
+        /// <summary>
+        /// Retrieves the singleton for SqlMetadataProvider
+        /// with the given connection string.
+        /// </summary>
+        public static
+        SqlMetadataProvider<ConnectionT, DataAdapterT, CommandT> GetSqlMetadataProvider(string connectionString)
+        {
+            if (_singleton == null)
+            {
+                lock (_syncLock)
+                {
+                    if (_singleton == null)
+                    {
+                        _singleton = new(connectionString);
+                    }
+                }
+            }
+
+            return _singleton;
+        }
+
+        private SqlMetadataProvider(string connectionString)
         {
             _connectionString = connectionString;
+            DatabaseSchema = new();
         }
 
-        public async Task<DatabaseSchema> GetDatabaseSchema()
+        /// <inheritdoc/>
+        public TableDefinition GetTableDefinition(string name)
         {
-            await PopulateDatabaseSchemaWithTables();
+            if (!DatabaseSchema.Tables.TryGetValue(name, out TableDefinition? metadata))
+            {
+                throw new KeyNotFoundException($"Table Definition for {name} does not exist.");
+            }
 
-            return _databaseSchema;
+            return metadata;
         }
 
-        private async Task PopulateDatabaseSchemaWithTables()
+        /// <summary>
+        /// Refreshes the database schema with table information.
+        /// </summary>
+        public async Task<DatabaseSchema> RefreshDatabaseSchemaWithTables(string schemaName)
         {
-            using SqlConnection conn = new(_connectionString);
+            using ConnectionT conn = new();
+            conn.ConnectionString = _connectionString;
             await conn.OpenAsync();
+
+            DatabaseSchema.Tables.Clear();
 
             // We can specify the Catalog, Schema, Table Name, Table Type to get
             // the specified table(s).
@@ -44,6 +86,7 @@ namespace Azure.DataGateway.Service.Services
             // 2-member represents Table Name; 3-member represents Table Type.
             // We only need to get all the base tables, not views or system tables.
             const string TABLE_TYPE = "BASE TABLE";
+            tableRestrictions[2] = schemaName;
             tableRestrictions[3] = TABLE_TYPE;
 
             DataTable allBaseTables = conn.GetSchema("Tables", tableRestrictions);
@@ -52,18 +95,31 @@ namespace Azure.DataGateway.Service.Services
             {
                 string tableName = table["TABLE_NAME"].ToString()!;
 
-                _databaseSchema.Tables.Add(tableName, new TableDefinition());
-                SqlDataAdapter adapterForTable = new(
-                    selectCommandText: $"SELECT * FROM {tableName}", conn);
+                DatabaseSchema.Tables.Add(tableName, new TableDefinition());
+
+                DataAdapterT adapterForTable = new();
+                CommandT selectCommand = new();
+                selectCommand.Connection = conn;
+                selectCommand.CommandText = ($"SELECT * FROM {tableName}");
+                adapterForTable.SelectCommand = selectCommand;
+
                 adapterForTable.FillSchema(_dataSet, SchemaType.Source, tableName);
 
-                AddColumnDefinition(tableName, _databaseSchema.Tables[tableName]);
+                AddColumnDefinition(tableName, DatabaseSchema.Tables[tableName]);
 
-                await PopulateColumnDefinitionWithDefault(
-                    tableName, _databaseSchema.Tables[tableName]);
+                await PopulateColumnDefinitionWithHasDefault(
+                    tableName, DatabaseSchema.Tables[tableName]);
             }
+
+            return DatabaseSchema;
         }
 
+        /// <summary>
+        /// Fills the Table definition with information of all columns and
+        /// primary keys.
+        /// </summary>
+        /// <param name="tableName">Name of the table.</param>
+        /// <param name="tableDefinition">Table definition to fill.</param>
         private void AddColumnDefinition(string tableName, TableDefinition tableDefinition)
         {
             DataTable? dataTable = _dataSet.Tables[tableName];
@@ -87,11 +143,14 @@ namespace Azure.DataGateway.Service.Services
             }
         }
 
-        private async Task PopulateColumnDefinitionWithDefault(
+        /// <summary>
+        /// Populates the column definition with HasDefault property.
+        /// </summary>
+        private async Task PopulateColumnDefinitionWithHasDefault(
             string tableName,
             TableDefinition tableDefinition)
         {
-            using (SqlConnection conn = new(_connectionString))
+            using (ConnectionT conn = new())
             {
                 conn.ConnectionString = _connectionString;
                 await conn.OpenAsync();
@@ -119,6 +178,36 @@ namespace Azure.DataGateway.Service.Services
                     }
                 }
             }
+        }
+
+        /// <inheritdoc/>
+        public string GetGraphQLSchema()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        /// <inheritdoc/>
+        public MutationResolver GetMutationResolver(string name)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        /// <inheritdoc/>
+        public GraphQLType GetGraphQLType(string name)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        /// <inheritdoc/>
+        public ResolverConfig GetResolvedConfig()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        /// <inheritdoc/>
+        public FilterParser GetFilterParser()
+        {
+            throw new System.NotImplementedException();
         }
     }
 }

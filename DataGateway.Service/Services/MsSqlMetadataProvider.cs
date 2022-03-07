@@ -106,7 +106,7 @@ namespace Azure.DataGateway.Service.Services
                 columnRestrictions[2] = tableName;
 
                 // Each row in the columnsInTable table corresponds to a single column of the table.
-                DataTable columnsInTable = conn.GetSchema("Columns", columnRestrictions);
+                DataTable columnsInTable = await conn.GetSchemaAsync("Columns", columnRestrictions);
 
                 foreach (DataRow columnInfo in columnsInTable.Rows)
                 {

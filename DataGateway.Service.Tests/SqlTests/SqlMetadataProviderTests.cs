@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -14,7 +13,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             ResolverConfig runtimeConfig = _metadataStoreProvider.GetResolvedConfig();
             DatabaseSchema expectedSchema = runtimeConfig.DatabaseSchema;
-            DatabaseSchema derivedDatabaseSchema = await _sqlMetadataProvider.RefreshDatabaseSchemaWithTables();
+            DatabaseSchema derivedDatabaseSchema =
+                await _sqlMetadataProvider.RefreshDatabaseSchemaWithTablesAsync(_defaultSchemaName);
 
             foreach ((string tableName, TableDefinition expectedTableDefinition) in expectedSchema.Tables)
             {

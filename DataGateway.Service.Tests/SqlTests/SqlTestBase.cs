@@ -41,6 +41,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
         protected static IMetadataStoreProvider _sqlMetadataProvider;
+        protected static string _defaultSchemaName;
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run.
@@ -62,18 +63,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _queryBuilder = new PostgresQueryBuilder();
                     _sqlMetadataProvider =
                         SqlMetadataProvider<NpgsqlConnection, NpgsqlDataAdapter, NpgsqlCommand>.GetSqlMetadataProvider(connectionString);
+                    _defaultSchemaName = "public";
                     break;
                 case TestCategory.MSSQL:
                     _queryExecutor = new QueryExecutor<SqlConnection>(config);
                     _queryBuilder = new MsSqlQueryBuilder();
                     _sqlMetadataProvider =
                       SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand>.GetSqlMetadataProvider(connectionString);
+                    _defaultSchemaName = "dbo";
                     break;
                 case TestCategory.MYSQL:
                     _queryExecutor = new QueryExecutor<MySqlConnection>(config);
                     _queryBuilder = new MySqlQueryBuilder();
                     _sqlMetadataProvider =
                         SqlMetadataProvider<MySqlConnection, MySqlDataAdapter, MySqlCommand>.GetSqlMetadataProvider(connectionString);
+                    _defaultSchemaName = "mysql";
                     break;
             }
 

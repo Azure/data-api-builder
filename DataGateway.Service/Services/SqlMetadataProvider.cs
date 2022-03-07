@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -66,49 +67,71 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
-        /// Refreshes the database schema with table information.
+        /// Refreshes the database schema with table information for the given schema.
+        /// This is best effort - some table information may not be accessible so
+        /// will not be retrieved.
         /// </summary>
-        public async Task<DatabaseSchema> RefreshDatabaseSchemaWithTables(string schemaName)
+        public async Task<DatabaseSchema> RefreshDatabaseSchemaWithTablesAsync(string? schemaName)
         {
-            using ConnectionT conn = new();
-            conn.ConnectionString = _connectionString;
-            await conn.OpenAsync();
-
-            DatabaseSchema.Tables.Clear();
-
-            // We can specify the Catalog, Schema, Table Name, Table Type to get
-            // the specified table(s).
-            // We can use four restrictions for Table, so we create a 4 members array.
-            // These restrictions are used to limit the amount of schema information returned.
-            string[] tableRestrictions = new string[NUMBER_OF_RESTRICTIONS];
-
-            // For the array, 0-member represents Catalog; 1-member represents Schema;
-            // 2-member represents Table Name; 3-member represents Table Type.
-            // We only need to get all the base tables, not views or system tables.
-            const string TABLE_TYPE = "BASE TABLE";
-            tableRestrictions[2] = schemaName;
-            tableRestrictions[3] = TABLE_TYPE;
-
-            DataTable allBaseTables = conn.GetSchema("Tables", tableRestrictions);
-
-            foreach (DataRow table in allBaseTables.Rows)
+            if (schemaName != default)
             {
-                string tableName = table["TABLE_NAME"].ToString()!;
+                using ConnectionT conn = new();
+                conn.ConnectionString = _connectionString;
+                await conn.OpenAsync();
 
-                DatabaseSchema.Tables.Add(tableName, new TableDefinition());
+                DatabaseSchema.Tables.Clear();
 
-                DataAdapterT adapterForTable = new();
-                CommandT selectCommand = new();
-                selectCommand.Connection = conn;
-                selectCommand.CommandText = ($"SELECT * FROM {tableName}");
-                adapterForTable.SelectCommand = selectCommand;
+                // We can specify the Catalog, Schema, Table Name, Table Type to get
+                // the specified table(s).
+                // We can use four restrictions for Table, so we create a 4 members array.
+                // These restrictions are used to limit the amount of schema information returned.
+                string[] tableRestrictions = new string[NUMBER_OF_RESTRICTIONS];
 
-                adapterForTable.FillSchema(_dataSet, SchemaType.Source, tableName);
+                // For the array, 0-member represents Catalog; 1-member represents Schema;
+                // 2-member represents Table Name; 3-member represents Table Type.
+                // We only need to get all the base tables, not views or system tables.
+                const string TABLE_TYPE = "BASE TABLE";
+                tableRestrictions[1] = schemaName!;
+                tableRestrictions[3] = TABLE_TYPE;
 
-                AddColumnDefinition(tableName, DatabaseSchema.Tables[tableName]);
+                DataTable allBaseTables = await conn.GetSchemaAsync("Tables", tableRestrictions);
 
-                await PopulateColumnDefinitionWithHasDefault(
-                    tableName, DatabaseSchema.Tables[tableName]);
+                foreach (DataRow table in allBaseTables.Rows)
+                {
+                    string tableName = table["TABLE_NAME"].ToString()!;
+
+                    try
+                    {
+                        TableDefinition tableDefinition = new();
+
+                        DataAdapterT adapterForTable = new();
+                        CommandT selectCommand = new();
+                        selectCommand.Connection = conn;
+                        selectCommand.CommandText = ($"SELECT * FROM {tableName}");
+                        adapterForTable.SelectCommand = selectCommand;
+
+                        adapterForTable.FillSchema(_dataSet, SchemaType.Source, tableName);
+
+                        AddColumnDefinition(tableName, tableDefinition);
+
+                        await PopulateColumnDefinitionWithHasDefaultAsync(
+                            schemaName,
+                            tableName,
+                            tableDefinition);
+
+                        DatabaseSchema.Tables.Add(tableName, tableDefinition);
+                    }
+                    catch (DbException db)
+                    {
+                        Console.WriteLine($"Unable to get information about: {tableName}" +
+                            $" due to this exception: {db.Message}");
+                    }
+                    catch (ArgumentException args)
+                    {
+                        Console.WriteLine($"Argument exception for: {tableName}" +
+                            $" due to this exception: {args.Message}");
+                    }
+                }
             }
 
             return DatabaseSchema;
@@ -146,7 +169,8 @@ namespace Azure.DataGateway.Service.Services
         /// <summary>
         /// Populates the column definition with HasDefault property.
         /// </summary>
-        private async Task PopulateColumnDefinitionWithHasDefault(
+        private async Task PopulateColumnDefinitionWithHasDefaultAsync(
+            string schemaName,
             string tableName,
             TableDefinition tableDefinition)
         {
@@ -162,6 +186,7 @@ namespace Azure.DataGateway.Service.Services
 
                 // To restrict the columns for the current table, specify the table's name
                 // in column restrictions.
+                columnRestrictions[1] = schemaName;
                 columnRestrictions[2] = tableName;
 
                 // Each row in the columnsInTable table corresponds to a single column of the table.

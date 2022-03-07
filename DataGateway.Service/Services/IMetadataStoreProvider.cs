@@ -43,6 +43,6 @@ namespace Azure.DataGateway.Service.Services
         /// <summary>
         /// Refreshes the database schema with table information.
         /// </summary>
-        Task<DatabaseSchema> RefreshDatabaseSchemaWithTables();
+        Task<DatabaseSchema> RefreshDatabaseSchemaWithTablesAsync(string? schemaName);
     }
 }

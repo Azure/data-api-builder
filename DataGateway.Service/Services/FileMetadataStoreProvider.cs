@@ -100,7 +100,7 @@ namespace Azure.DataGateway.Service.Services
 
             if (_config.DatabaseSchema == default && databaseType != DatabaseType.Cosmos)
             {
-                _config.DatabaseSchema = RefreshDatabaseSchemaWithTables().Result;
+                _config.DatabaseSchema = RefreshDatabaseSchemaWithTablesAsync().Result;
             }
 
             if (_config.DatabaseSchema != default)
@@ -164,7 +164,7 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <inheritdoc/>
-        public Task<DatabaseSchema> RefreshDatabaseSchemaWithTables()
+        public Task<DatabaseSchema> RefreshDatabaseSchemaWithTablesAsync(string? schemaName = default)
         {
             IMetadataStoreProvider? sqlMetadataProvider;
             switch (_databaseType)
@@ -172,21 +172,24 @@ namespace Azure.DataGateway.Service.Services
                 case DatabaseType.MsSql:
                     sqlMetadataProvider =
                         SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand>.GetSqlMetadataProvider(_connectionString);
+                    schemaName = "dbo";
                     break;
                 case DatabaseType.PostgreSql:
                     sqlMetadataProvider =
                         SqlMetadataProvider<NpgsqlConnection, NpgsqlDataAdapter, NpgsqlCommand>.GetSqlMetadataProvider(_connectionString);
+                    schemaName = "public";
                     break;
                 case DatabaseType.MySql:
                     sqlMetadataProvider =
                     SqlMetadataProvider<MySqlConnection, MySqlDataAdapter, MySqlCommand>.GetSqlMetadataProvider(_connectionString);
+                    schemaName = "mysql";
                     break;
                 default:
                     throw new ArgumentException($"Refreshing tables for this database type: {_databaseType}" +
                         $"is not supported");
             }
 
-            return sqlMetadataProvider!.RefreshDatabaseSchemaWithTables();
+            return sqlMetadataProvider!.RefreshDatabaseSchemaWithTablesAsync(schemaName);
         }
 
     }

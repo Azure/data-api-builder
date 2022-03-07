@@ -47,7 +47,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// this class.
         /// </summary>
         /// <param name="context"></param>
-        protected static async Task InitializeTestFixture(TestContext context, string tableName, string testCategory)
+        protected static async Task InitializeTestFixture(TestContext context, string testCategory)
         {
             _testCategory = testCategory;
 

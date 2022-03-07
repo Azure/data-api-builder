@@ -39,10 +39,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     Assert.IsTrue(actualTableDefinition.PrimaryKey.Contains(primaryKey));
                 }
 
-                foreach (KeyValuePair<string, ColumnDefinition> column in expectedTableDefinition.Columns)
+                foreach ((string columnName, ColumnDefinition expectedColumnDefinition) in expectedTableDefinition.Columns)
                 {
-                    string columnName = column.Key;
-                    ColumnDefinition expectedColumnDefinition = column.Value;
 
                     ColumnDefinition actualColumnDefinition;
                     Assert.IsTrue(actualTableDefinition.Columns.TryGetValue(columnName, out actualColumnDefinition));

@@ -165,11 +165,11 @@ namespace Azure.DataGateway.Service.Services
                 columnRestrictions[2] = tableName;
 
                 // Each row in the columnsInTable table corresponds to a single column of the table.
-                DataTable columnsInTable = conn.GetSchema("Columns", columnRestrictions);
+                DataTable columnsInTable = await conn.GetSchemaAsync("Columns", columnRestrictions);
 
                 foreach (DataRow columnInfo in columnsInTable.Rows)
                 {
-                    string columnName = columnInfo["COLUMN_NAME"].ToString()!;
+                    string columnName = (string)columnInfo["COLUMN_NAME"];
                     bool hasDefault = !string.IsNullOrEmpty(columnInfo["COLUMN_DEFAULT"].ToString());
                     ColumnDefinition? columnDefinition;
                     if (tableDefinition.Columns.TryGetValue(columnName, out columnDefinition))

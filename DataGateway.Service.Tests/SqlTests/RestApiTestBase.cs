@@ -300,7 +300,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyPagination)),
                 controller: _restController,
-                expectedQueryString: "?$first=1&$after=1",
+                expectedQueryString: "?$first=1&$after=eyJpZCI6MX0=",
                 paginated: true
             );
         }
@@ -319,7 +319,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _tableWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyPagination)),
                 controller: _restController,
-                expectedQueryString: "?$first=1&$after=1,567",
+                expectedQueryString: "?$first=1&$after=eyJib29rX2lkIjoxLCJpZCI6NTY3fQ==",
                 paginated: true
             );
         }
@@ -333,7 +333,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$after=7",
+                queryString: "?$after=eyJpZCI6N30=",
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithAfterSingleKeyPagination)),
                 controller: _restController
@@ -349,7 +349,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$after=1,567",
+                queryString: "?$after=eyJib29rX2lkIjoxLCJpZCI6NTY3fQ==",
                 entity: _tableWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithAfterMultiKeyPagination)),
                 controller: _restController

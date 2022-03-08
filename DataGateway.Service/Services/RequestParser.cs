@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Service.Resolvers;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -99,7 +98,7 @@ namespace Azure.DataGateway.Service.Services
                         context.FilterClauseInUrl = filterParser.GetFilterClause(filterQueryString, context.EntityName);
                         break;
                     case AFTER_URL:
-                        context.After = SqlPaginationUtil.Base64Decode(context.NVC[key]!);
+                        context.After = context.NVC[key];
                         break;
                     case FIRST_URL:
                         context.First = RequestValidator.CheckFirstValidity(context.NVC[key]);

@@ -102,19 +102,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFilterQueryOneLeftNullRightNullGtFilter",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE NULL > NULL" +
+                $"WHERE NULL > NULL " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithFilterQueryStringSingleAndFilter",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE id < 3 AND id > 1" +
+                $"WHERE id < 3 AND id > 1 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithFilterQueryStringSingleOrFilter",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE id < 3 OR id > 4" +
+                $"WHERE id < 3 OR id > 4 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
@@ -126,19 +126,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFilterQueryStringMultipleOrFilters",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE id = 1 OR id = 2 OR id = 3" +
+                $"WHERE id = 1 OR id = 2 OR id = 3 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithFilterQueryStringMultipleAndOrFilters",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE (id > 2 AND id < 4) OR title = 'Awesome book'" +
+                $"WHERE (id > 2 AND id < 4) OR title = 'Awesome book' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithFilterQueryStringMultipleNotAndOrFilters",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE (NOT (id < 3) OR id < 4) OR NOT (title = 'Awesome book')" +
+                $"WHERE (NOT (id < 3) OR id < 4) OR NOT (title = 'Awesome book') " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
@@ -149,23 +149,27 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFirstSingleKeyPagination",
                 $"SELECT TOP 1 * FROM { _integrationTableName } " +
+                $"ORDER BY id " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithFirstMultiKeyPagination",
                 $"SELECT TOP 1 * FROM REVIEWS " +
+                $"ORDER BY book_id, id " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithAfterSingleKeyPagination",
                 $"SELECT * FROM { _integrationTableName } " +
                 $"WHERE id > 7 " +
+                $"ORDER BY id " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithAfterMultiKeyPagination",
                 $"SELECT * FROM REVIEWS " +
                 "WHERE book_id > 1 OR id > 567 " +
+                $"ORDER BY book_id, id " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {

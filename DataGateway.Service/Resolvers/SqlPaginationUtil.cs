@@ -129,7 +129,7 @@ namespace Azure.DataGateway.Service.Resolvers
             if (afterObject != null)
             {
                 string afterPlainText = (string)afterObject;
-                after = ParseAfterFromJsonString(Base64Decode(afterPlainText), paginationMetadata);
+                after = ParseAfterFromJsonString(afterPlainText, paginationMetadata);
 
             }
 
@@ -146,6 +146,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             try
             {
+                afterJsonString = Base64Decode(afterJsonString);
                 Dictionary<string, JsonElement> afterDeserialized = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(afterJsonString)!;
 
                 if (!ListsAreEqual(afterDeserialized.Keys.ToList(), primaryKey))

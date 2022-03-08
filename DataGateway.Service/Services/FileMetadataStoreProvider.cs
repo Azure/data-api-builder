@@ -189,7 +189,7 @@ namespace Azure.DataGateway.Service.Services
                         $"is not supported");
             }
 
-            return sqlMetadataProvider!.RefreshDatabaseSchemaWithTablesAsync(schemaName);
+            return sqlMetadataProvider.RefreshDatabaseSchemaWithTablesAsync(schemaName);
         }
 
     }

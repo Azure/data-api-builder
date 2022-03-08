@@ -145,23 +145,12 @@ namespace Azure.DataGateway.Service.Resolvers
                 FilterPredicates = context.FilterClauseInUrl.Expression.Accept<string>(visitor);
             }
 
-            List<string> primaryKeys = metadataStoreProvider.GetTableDefinition(context.EntityName).PrimaryKey;
-            List<string?> afterValues = context.After;
-            int pkIndex = 0;
-            foreach (string? val in afterValues)
+            if (!string.IsNullOrWhiteSpace(context.After))
             {
-                // > operator should work for int and string
-                PopulateParamsAndPaginationPredicates(field: primaryKeys[pkIndex], value: val!, PaginationMetadata, op: PredicateOperation.GreaterThan);
-                ++pkIndex;
+                AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromJsonString(context.After, PaginationMetadata));
             }
 
-            if (!string.IsNullOrWhiteSpace(context.First))
-            {
-                // return 1 extra record for pagination
-                _limit = RequestValidator.CheckFirstValidity(context.First) + 1;
-
-            }
-
+            _limit = context.First > 0 ? context.First + 1 : DEFAULT_LIST_LIMIT + 1;
             ParametrizeColumns();
         }
 
@@ -271,7 +260,8 @@ namespace Azure.DataGateway.Service.Resolvers
             // TableName, TableAlias, Columns, and _limit
             if (PaginationMetadata.IsPaginated)
             {
-                AddPaginationPredicate(queryParams);
+                IDictionary<string, object>? afterJsonValues = SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata);
+                AddPaginationPredicate(afterJsonValues);
 
                 if (PaginationMetadata.RequestedEndCursor)
                 {
@@ -332,10 +322,8 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Add the predicates associated with the "after" parameter of paginated queries
         /// </summary>
-        void AddPaginationPredicate(IDictionary<string, object> queryParams)
+        void AddPaginationPredicate(IDictionary<string, object> afterJsonValues)
         {
-            IDictionary<string, object> afterJsonValues = SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata);
-
             if (!afterJsonValues.Any())
             {
                 // no need to create a predicate for pagination
@@ -369,46 +357,6 @@ namespace Azure.DataGateway.Service.Resolvers
                     parameterName = MakeParamWithValue(
                         GetParamAsColumnSystemType(value.ToString()!, field));
                     Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(TableAlias, field)),
-                        op,
-                        new PredicateOperand($"@{parameterName}")));
-                }
-                else
-                {
-                    // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
-                    throw new DataGatewayException(
-                        message: $"Unexpected value for column \"{field}\" provided.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
-                }
-            }
-            catch (ArgumentException ex)
-            {
-                throw new DataGatewayException(
-                  message: ex.Message,
-                  statusCode: HttpStatusCode.BadRequest,
-                  subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
-            }
-        }
-
-        /// <summary>
-        ///  Given the predicate key value pair, where value includes the Predicte Operation as well as the value associated with the field,
-        ///  populates the Parameters and Pagination metadata's SqlPredicates properties.
-        /// </summary>
-        /// <param name="field">String representing the field.</param>
-        /// <param name="value">String representing the value associated with the given field.</param>
-        /// <param name="metadata">Pagination metadata.</param>
-        /// <param name="op">The predicate op for comparing field and value.</param>
-        private void PopulateParamsAndPaginationPredicates(string field, object value, PaginationMetadata metadata, PredicateOperation op = PredicateOperation.Equal)
-        {
-            try
-            {
-                string parameterName;
-                if (value != null)
-                {
-                    parameterName = MakeParamWithValue(
-                        GetParamAsColumnSystemType(value.ToString()!, field));
-                    metadata.SqlPredicates.Add(new Predicate(
                         new PredicateOperand(new Column(TableAlias, field)),
                         op,
                         new PredicateOperand($"@{parameterName}")));

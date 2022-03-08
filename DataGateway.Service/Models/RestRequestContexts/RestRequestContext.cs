@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.OData.UriParser;
 
@@ -46,16 +47,21 @@ namespace Azure.DataGateway.Service.Models
         public virtual Dictionary<string, object> FieldValuePairsInBody { get; set; } = new();
 
         /// <summary>
+        /// NVC stores the query string parsed into a NameValueCollection.
+        /// </summary>
+        public NameValueCollection NVC { get; set; }
+
+        /// <summary>
         /// String holds information needed for pagination.
         /// Based on request this property may or may not be populated.
         /// </summary>
-        public List<string?> After { get; set; } = new();
+        public string? After { get; set; }
 
         /// <summary>
-        /// String holds information needed for limit.
+        /// uint holds the number of records to retrieve.
         /// Based on request this property may or may not be populated.
         /// </summary>
-        public string? First { get; set; }
+        public uint First { get; set; }
 
         /// <summary>
         /// Is the result supposed to be multiple values or not.

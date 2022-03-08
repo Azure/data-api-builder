@@ -90,9 +90,12 @@ namespace Azure.DataGateway.Service.Controllers
             // that extra record is removed here.
             IEnumerable<JsonElement> rootEnumerated = jsonResult.EnumerateArray();
             rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
-            List<string?> afterValues = GetAfterValues(rootEnumerated, entityName);
             // nextLink is the URL needed to get the next page of records using the same query options
-            string nextLink = SqlPaginationUtil.CreateNextLink(afterValues, $"/{entityName}", nvc: _restService.ParsedQueryString);
+            // with $after base64 encoded for opaqueness
+            string after = SqlPaginationUtil.MakeCursorFromJsonElement(
+                               element: rootEnumerated.Last(),
+                               primaryKey: _restService.MetadataStoreProvider.GetTableDefinition(entityName).PrimaryKey);
+            string nextLink = SqlPaginationUtil.CreateNextLink(_restService.Context, $"/{entityName}", after);
             return Ok(new
             {
                 value = rootEnumerated,

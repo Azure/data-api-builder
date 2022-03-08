@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Resolvers;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -82,27 +82,27 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="nvc">NameValueCollection representing query params from the URL's query string.</param>
         /// <param name="context">The RestRequestContext holding the major components of the query.</param>
-        public static void ParseQueryString(NameValueCollection nvc, RestRequestContext context, FilterParser filterParser)
+        public static void ParseQueryString(RestRequestContext context, FilterParser filterParser)
         {
-            foreach (string key in nvc.Keys)
+            foreach (string key in context.NVC.Keys)
             {
                 switch (key)
                 {
                     case FIELDS_URL:
-                        CheckListForNullElement(nvc[key]!.Split(",").ToList());
-                        context.FieldsToBeReturned = nvc[key]!.Split(",").ToList();
+                        CheckListForNullElement(context.NVC[key]!.Split(",").ToList());
+                        context.FieldsToBeReturned = context.NVC[key]!.Split(",").ToList();
                         break;
                     case FILTER_URL:
                         // save the AST that represents the filter for the query
                         // ?$filter=<filter clause using microsoft api guidelines>
-                        string filterQueryString = "?" + FILTER_URL + "=" + nvc[key];
+                        string filterQueryString = "?" + FILTER_URL + "=" + context.NVC[key];
                         context.FilterClauseInUrl = filterParser.GetFilterClause(filterQueryString, context.EntityName);
                         break;
                     case AFTER_URL:
-                        context.After = nvc[key]!.Split(",").ToList()!;
+                        context.After = SqlPaginationUtil.Base64Decode(context.NVC[key]!);
                         break;
                     case FIRST_URL:
-                        context.First = nvc[key];
+                        context.First = RequestValidator.CheckFirstValidity(context.NVC[key]);
                         break;
                     default:
                         throw new ArgumentException("Invalid Query Parameter: " + key.ToString());

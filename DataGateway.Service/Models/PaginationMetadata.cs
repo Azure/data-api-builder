@@ -48,7 +48,7 @@ namespace Azure.DataGateway.Service.Models
 
         public List<Predicate> SqlPredicates { get; set; } = new();
 
-        public PaginationMetadata(SqlQueryStructure? structure)
+        public PaginationMetadata(SqlQueryStructure? structure = null)
         {
             Structure = structure;
         }

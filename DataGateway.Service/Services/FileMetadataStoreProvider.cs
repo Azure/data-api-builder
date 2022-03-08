@@ -166,7 +166,7 @@ namespace Azure.DataGateway.Service.Services
         /// <inheritdoc/>
         public Task<DatabaseSchema> RefreshDatabaseSchemaWithTablesAsync(string? schemaName = default)
         {
-            IMetadataStoreProvider? sqlMetadataProvider;
+            IMetadataStoreProvider sqlMetadataProvider;
             switch (_databaseType)
             {
                 case DatabaseType.MsSql:

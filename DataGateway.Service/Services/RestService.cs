@@ -24,7 +24,7 @@ namespace Azure.DataGateway.Service.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationService _authorizationService;
         public IMetadataStoreProvider MetadataStoreProvider { get; }
-        public RestRequestContext Context { get; set; }
+        public RestRequestContext? Context { get; set; }
         public RestService(
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,

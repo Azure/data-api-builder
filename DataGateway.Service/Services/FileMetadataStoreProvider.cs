@@ -164,24 +164,35 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <inheritdoc/>
-        public Task<DatabaseSchema> RefreshDatabaseSchemaWithTablesAsync(string? schemaName = default)
+        public Task<DatabaseSchema> RefreshDatabaseSchemaWithTablesAsync(
+            string schemaName = "")
         {
             IMetadataStoreProvider sqlMetadataProvider;
             switch (_databaseType)
             {
                 case DatabaseType.MsSql:
                     sqlMetadataProvider =
-                        SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand>.GetSqlMetadataProvider(_connectionString);
+                        SqlMetadataProvider<
+                            SqlConnection,
+                            SqlDataAdapter,
+                            SqlCommand>.GetSqlMetadataProvider(
+                            _connectionString);
                     schemaName = "dbo";
                     break;
                 case DatabaseType.PostgreSql:
                     sqlMetadataProvider =
-                        SqlMetadataProvider<NpgsqlConnection, NpgsqlDataAdapter, NpgsqlCommand>.GetSqlMetadataProvider(_connectionString);
+                        SqlMetadataProvider<
+                            NpgsqlConnection,
+                            NpgsqlDataAdapter,
+                            NpgsqlCommand>.GetSqlMetadataProvider(_connectionString);
                     schemaName = "public";
                     break;
                 case DatabaseType.MySql:
                     sqlMetadataProvider =
-                    SqlMetadataProvider<MySqlConnection, MySqlDataAdapter, MySqlCommand>.GetSqlMetadataProvider(_connectionString);
+                    SqlMetadataProvider<
+                        MySqlConnection,
+                        MySqlDataAdapter,
+                        MySqlCommand>.GetSqlMetadataProvider(_connectionString);
                     schemaName = "mysql";
                     break;
                 default:

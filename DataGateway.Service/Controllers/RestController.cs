@@ -77,7 +77,7 @@ namespace Azure.DataGateway.Service.Controllers
             }
 
             // if no more records exist than requested just return jsonResult
-            if (!SqlPaginationUtil.HasNext(jsonResult, _restService.Context!.NVC))
+            if (!SqlPaginationUtil.HasNext(jsonResult, _restService.Context!.First))
             {
                 return Ok(new
                 {

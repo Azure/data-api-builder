@@ -298,23 +298,13 @@ namespace Azure.DataGateway.Service.Resolvers
         /// match the query options than were requested.
         /// </summary>
         /// <param name="jsonResult">Results plus one extra record if more exist.</param>
-        /// <param name="nvc">The collection of query params.</param>
+        /// <param name="first">Client provided limit if one exists, otherwise 0.</param>
         /// <returns>Bool representing if more records are available.</returns>
-        public static bool HasNext(JsonElement jsonResult, NameValueCollection? nvc)
+        public static bool HasNext(JsonElement jsonResult, uint first)
         {
-            // default limit is 100, meaning without specifying a new limit in $first,
-            // we expect at most 100 records and if more than that are returned we provide a nextLink.
-            int limit = 100;
-            int numRecords = jsonResult.GetArrayLength();
-
-            string? first = nvc is null ? string.Empty : nvc["$first"];
-            if (!string.IsNullOrWhiteSpace(first))
-            {
-                // if a separate limit is specified via $first then this is the limit and
-                // we expect at most this many records returned
-                limit = int.Parse(first!);
-            }
-
+            // When first is 0 we use default limit of 100, otherwise we use first
+            uint numRecords = (uint)jsonResult.GetArrayLength();
+            uint limit = first > 0 ? first : 100;
             return numRecords > limit;
         }
     }

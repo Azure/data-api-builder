@@ -76,9 +76,8 @@ namespace Azure.DataGateway.Service.Controllers
                 jsonResult = JsonSerializer.Deserialize<JsonElement>(jsonString);
             }
 
-            string queryString = Request.QueryString.ToString();
             // if no more records exist than requested just return jsonResult
-            if (!SqlPaginationUtil.HasNext(jsonResult, queryString))
+            if (!SqlPaginationUtil.HasNext(jsonResult, _restService.Context!.NVC))
             {
                 return Ok(new
                 {
@@ -96,7 +95,10 @@ namespace Azure.DataGateway.Service.Controllers
                                element: rootEnumerated.Last(),
                                primaryKey: _restService.MetadataStoreProvider.GetTableDefinition(entityName).PrimaryKey);
             string root = "https://localhost:5001/";
-            string nextLink = SqlPaginationUtil.CreateNextLink(path: $"{root}{entityName}", queryString: HttpContext.Request.QueryString.ToString(), after);
+            string nextLink = SqlPaginationUtil.CreateNextLink(
+                                  path: $"{root}{entityName}",
+                                  nvc: _restService.Context!.NVC,
+                                  after);
             return Ok(new
             {
                 value = rootEnumerated,

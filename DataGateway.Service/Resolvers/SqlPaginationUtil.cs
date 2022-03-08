@@ -4,7 +4,6 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
-using System.Web;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 
@@ -255,14 +254,43 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Create the URL that will provide for the next page of results
         /// using the same query options.
         /// </summary>
-        /// <param name="primaryKey">Primary key of the table we queried.</param>
-        /// <param name="afterValue">The value the next page of results comes after.</param>
         /// <param name="path">The request path.</param>
-        /// <param name="queryString">The query string.</param>
+        /// <param name="nvc">Collection of query params.</param>
+        /// <param name="after">The values needed for next page.</param>
         /// <returns>The string representing nextLink.</returns>
-        public static string CreateNextLink(string path, string queryString, string after)
+        public static string CreateNextLink(string path, NameValueCollection nvc, string after)
         {
-            return string.IsNullOrWhiteSpace(queryString) ? $"{path}$after={after}" : $"{path}{queryString}&$after={after}";
+            string queryString = "?";
+            int count = nvc.Count;
+            bool nvcEmpty = count == 0;
+            bool afterInQueryString = false;
+            foreach (string key in nvc)
+            {
+                --count;
+                string? value = nvc[key];
+                // nextLink needs the values of the primary keys
+                // in the last record to correspond with $after
+                if (string.Equals(key, "$after"))
+                {
+                    value = after;
+                    afterInQueryString = true;
+                }
+
+                queryString += key + "=" + value;
+                if (count > 0)
+                {
+                    queryString += "&";
+                }
+            }
+
+            // if there was no $after in the query string we must add it here.
+            // if the query string was empty we do not prepend '&'
+            if (!afterInQueryString)
+            {
+                queryString += nvcEmpty ? $"$after={after}" : $"&$after={after}";
+            }
+
+            return $"{path}{queryString}";
         }
 
         /// <summary>
@@ -270,17 +298,16 @@ namespace Azure.DataGateway.Service.Resolvers
         /// match the query options than were requested.
         /// </summary>
         /// <param name="jsonResult">Results plus one extra record if more exist.</param>
-        /// <param name="queryString">The query string.</param>
+        /// <param name="nvc">The collection of query params.</param>
         /// <returns>Bool representing if more records are available.</returns>
-        public static bool HasNext(JsonElement jsonResult, string queryString)
+        public static bool HasNext(JsonElement jsonResult, NameValueCollection? nvc)
         {
             // default limit is 100, meaning without specifying a new limit in $first,
             // we expect at most 100 records and if more than that are returned we provide a nextLink.
             int limit = 100;
             int numRecords = jsonResult.GetArrayLength();
 
-            NameValueCollection nvc = HttpUtility.ParseQueryString(queryString);
-            string? first = nvc["$first"];
+            string? first = nvc is null ? string.Empty : nvc["$first"];
             if (!string.IsNullOrWhiteSpace(first))
             {
                 // if a separate limit is specified via $first then this is the limit and

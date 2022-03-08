@@ -100,6 +100,14 @@ namespace Azure.DataGateway.Service.Services
                 {
                     string tableName = table["TABLE_NAME"].ToString()!;
 
+                    // For MySQL, the schema name restriction doesn't seem to
+                    // work so we could end up seeing same table name.
+                    // Ignore such tables.
+                    if (DatabaseSchema.Tables.ContainsKey(tableName))
+                    {
+                        continue;
+                    }
+
                     try
                     {
                         TableDefinition tableDefinition = new();
@@ -125,11 +133,6 @@ namespace Azure.DataGateway.Service.Services
                     {
                         Console.WriteLine($"Unable to get information about: {tableName}" +
                             $" due to this exception: {db.Message}");
-                    }
-                    catch (ArgumentException args)
-                    {
-                        Console.WriteLine($"Argument exception for: {tableName}" +
-                            $" due to this exception: {args.Message}");
                     }
                 }
             }

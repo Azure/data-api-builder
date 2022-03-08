@@ -260,41 +260,9 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="path">The request path.</param>
         /// <param name="queryString">The query string.</param>
         /// <returns>The string representing nextLink.</returns>
-        public static string CreateNextLink(RestRequestContext context, string path, string after)
+        public static string CreateNextLink(string path, string queryString, string after)
         {
-            NameValueCollection nvc = context.NVC;
-            string queryString = "?";
-            int count = nvc.Count;
-            bool nvcEmpty = count == 0;
-            bool afterInQueryString = false;
-            foreach (string key in nvc)
-            {
-                --count;
-                string? value = nvc[key];
-                // nextLink needs the values of the primary keys
-                // in the last record to correspond with $after
-                if (string.Equals(key, "$after"))
-                {
-                    value = after;
-                    afterInQueryString = true;
-                }
-
-                queryString += key + "=" + value;
-                if (count > 0)
-                {
-                    queryString += "&";
-                }
-            }
-
-            // if there was no $after in the query string we must add it here.
-            // if the query string was empty we do not prepend '&'
-            if (!afterInQueryString)
-            {
-                queryString += nvcEmpty ? $"$after={after}" : $"&$after={after}";
-            }
-
-            string root = $"https://localhost:5001";
-            return $"{root}{path}{queryString}";
+            return string.IsNullOrWhiteSpace(queryString) ? $"{path}$after={after}" : $"{path}{queryString}&$after={after}";
         }
 
         /// <summary>

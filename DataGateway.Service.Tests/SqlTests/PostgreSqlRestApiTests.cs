@@ -288,7 +288,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     FROM (
                         SELECT *
                         FROM " + _tableWithCompositePrimaryKey + @"
-                        ORDER BY book_id
+                        ORDER BY book_id, id
                         LIMIT 1
                     ) AS subq
                 "
@@ -313,8 +313,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     FROM (
                         SELECT *
                         FROM " + _tableWithCompositePrimaryKey + @"
-                        WHERE book_id > 1 OR id > 567
-                        ORDER BY book_id
+                        WHERE book_id > 1 OR (book_id = 1 AND id > 567)
+                        ORDER BY book_id, id
                         LIMIT 100
                     ) AS subq
                 "

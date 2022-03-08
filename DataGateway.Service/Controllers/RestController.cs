@@ -95,7 +95,8 @@ namespace Azure.DataGateway.Service.Controllers
             string after = SqlPaginationUtil.MakeCursorFromJsonElement(
                                element: rootEnumerated.Last(),
                                primaryKey: _restService.MetadataStoreProvider.GetTableDefinition(entityName).PrimaryKey);
-            string nextLink = SqlPaginationUtil.CreateNextLink(_restService.Context, $"/{entityName}", after);
+            string root = "https://localhost:5001/";
+            string nextLink = SqlPaginationUtil.CreateNextLink(path: $"{root}{entityName}", queryString: HttpContext.Request.QueryString.ToString(), after);
             return Ok(new
             {
                 value = rootEnumerated,

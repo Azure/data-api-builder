@@ -168,7 +168,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithAfterMultiKeyPagination",
                 $"SELECT * FROM REVIEWS " +
-                "WHERE book_id > 1 OR id > 567 " +
+                "WHERE book_id > 1 OR (book_id = 1 AND id > 567) " +
                 $"ORDER BY book_id, id " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },

@@ -13,9 +13,9 @@ namespace Azure.DataGateway.Service.Services
     /// available for the GraphQL/REST services.
     /// </summary>
     public class SqlMetadataProvider<ConnectionT, DataAdapterT, CommandT> : IMetadataStoreProvider
-        where ConnectionT: DbConnection, new()
-        where DataAdapterT: DbDataAdapter, new()
-        where CommandT: DbCommand, new()
+        where ConnectionT : DbConnection, new()
+        where DataAdapterT : DbDataAdapter, new()
+        where CommandT : DbCommand, new()
     {
         private const int NUMBER_OF_RESTRICTIONS = 4;
         private readonly string _connectionString;

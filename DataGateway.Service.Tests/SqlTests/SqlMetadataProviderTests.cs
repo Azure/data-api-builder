@@ -6,7 +6,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Azure.DataGateway.Service.Tests.SqlTests
 {
     [TestClass]
-    public abstract class SqlMetadataProviderTests: SqlTestBase
+    public abstract class SqlMetadataProviderTests : SqlTestBase
     {
         [TestMethod]
         public async Task TestDerivedDatabaseSchemaIsValid()

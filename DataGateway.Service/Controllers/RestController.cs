@@ -104,26 +104,6 @@ namespace Azure.DataGateway.Service.Controllers
         }
 
         /// <summary>
-        /// Helper function returns a list of the values needed for returning
-        /// records starting at the next page.
-        /// </summary>
-        /// <param name="rootEnumerated">The Json Elements that make up the records to return.</param>
-        /// <param name="entityName">The name of the table the records were queried from.</param>
-        /// <returns>List that represents the values needed to request the next page of results.</returns>
-        private List<string?> GetAfterValues(IEnumerable<JsonElement> rootEnumerated, string entityName)
-        {
-            List<string?> afterValues = new();
-            List<string> primaryKeys = _restService.MetadataStoreProvider.GetTableDefinition(entityName).PrimaryKey;
-            foreach (string pk in primaryKeys)
-            {
-                // saves the last record's value for each column that makes up the primary key
-                afterValues.Add(rootEnumerated.ElementAt(rootEnumerated.Count() - 1).GetProperty(pk).ToString());
-            }
-
-            return afterValues;
-        }
-
-        /// <summary>
         /// Find action serving the HttpGet verb.
         /// </summary>
         /// <param name="entityName">The name of the entity.</param>

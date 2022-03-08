@@ -126,6 +126,11 @@ namespace Azure.DataGateway.Service.Services
                         Console.WriteLine($"Unable to get information about: {tableName}" +
                             $" due to this exception: {db.Message}");
                     }
+                    catch (ArgumentException args)
+                    {
+                        Console.WriteLine($"Argument exception for: {tableName}" +
+                            $" due to this exception: {args.Message}");
+                    }
                 }
             }
 

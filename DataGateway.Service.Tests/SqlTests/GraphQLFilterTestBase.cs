@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
@@ -14,7 +14,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         #region Test Fixture Setup
         protected static GraphQLService _graphQLService;
         protected static GraphQLController _graphQLController;
-        protected static readonly string _integrationTableName = "books";
 
         #endregion
 

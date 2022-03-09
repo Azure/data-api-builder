@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
@@ -18,7 +18,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [ClassInitialize]
         public static async Task InitializeTestFixture(TestContext context)
         {
-            await InitializeTestFixture(context, _integrationTableName, TestCategory.MSSQL);
+            await InitializeTestFixture(context, TestCategory.MSSQL);
 
             // Setup GraphQL Components
             _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _metadataStoreProvider);

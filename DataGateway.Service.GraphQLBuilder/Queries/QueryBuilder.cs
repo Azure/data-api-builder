@@ -31,7 +31,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
             List<IDefinitionNode> definitionNodes = new()
             {
-                new ObjectTypeDefinitionNode(location : null, new NameNode("Query"), description: null, new List<DirectiveNode>(), new List<NamedTypeNode>(), queryFields),
+                new ObjectTypeDefinitionNode(location: null, new NameNode("Query"), description: null, new List<DirectiveNode>(), new List<NamedTypeNode>(), queryFields),
             };
             definitionNodes.AddRange(returnTypes);
             definitionNodes.AddRange(inputTypes.Values);

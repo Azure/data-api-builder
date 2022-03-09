@@ -219,7 +219,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     JsonSerializer.Serialize(RestController.ErrorResponse(
                         expectedSubStatusCode.ToString(),
                         expectedErrorMessage, expectedStatusCode).Value) :
-                    $"{{\"value\":{FormatExpectedValue(await GetDatabaseResultAsync(sqlQuery))}{ExpectedNextLinkIfAny(paginated, $"/{entity}{expectedQueryString}")}}}";
+                    $"{{\"value\":{FormatExpectedValue(await GetDatabaseResultAsync(sqlQuery))}{ExpectedNextLinkIfAny(paginated, $"{expectedQueryString}")}}}";
             }
 
             SqlTestHelper.VerifyResult(
@@ -252,7 +252,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <returns>Formetted expected response.</returns>
         private static string ExpectedNextLinkIfAny(bool paginated, string queryString)
         {
-            return paginated ? $",\"nextLink\":\"https://localhost:5001{queryString}\"" : string.Empty;
+            return paginated ? $",\"nextLink\":\":///{queryString}\"" : string.Empty;
         }
 
         /// <summary>

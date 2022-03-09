@@ -49,7 +49,7 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// NVC stores the query string parsed into a NameValueCollection.
         /// </summary>
-        public NameValueCollection NVC { get; set; } = new();
+        public NameValueCollection? ParsedQueryString { get; set; } = new();
 
         /// <summary>
         /// String holds information needed for pagination.
@@ -61,11 +61,12 @@ namespace Azure.DataGateway.Service.Models
         /// uint holds the number of records to retrieve.
         /// Based on request this property may or may not be populated.
         /// </summary>
-        public uint First { get; set; }
 
+        public uint? First { get; set; }
         /// <summary>
         /// Is the result supposed to be multiple values or not.
         /// </summary>
+
         public bool IsMany { get; set; }
 
         /// <summary>

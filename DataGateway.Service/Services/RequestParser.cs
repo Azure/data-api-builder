@@ -83,25 +83,25 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="context">The RestRequestContext holding the major components of the query.</param>
         public static void ParseQueryString(RestRequestContext context, FilterParser filterParser)
         {
-            foreach (string key in context.NVC.Keys)
+            foreach (string key in context.ParsedQueryString!.Keys)
             {
                 switch (key)
                 {
                     case FIELDS_URL:
-                        CheckListForNullElement(context.NVC[key]!.Split(",").ToList());
-                        context.FieldsToBeReturned = context.NVC[key]!.Split(",").ToList();
+                        CheckListForNullElement(context.ParsedQueryString[key]!.Split(",").ToList());
+                        context.FieldsToBeReturned = context.ParsedQueryString[key]!.Split(",").ToList();
                         break;
                     case FILTER_URL:
                         // save the AST that represents the filter for the query
                         // ?$filter=<filter clause using microsoft api guidelines>
-                        string filterQueryString = "?" + FILTER_URL + "=" + context.NVC[key];
+                        string filterQueryString = "?" + FILTER_URL + "=" + context.ParsedQueryString[key];
                         context.FilterClauseInUrl = filterParser.GetFilterClause(filterQueryString, context.EntityName);
                         break;
                     case AFTER_URL:
-                        context.After = context.NVC[key];
+                        context.After = context.ParsedQueryString[key];
                         break;
                     case FIRST_URL:
-                        context.First = RequestValidator.CheckFirstValidity(context.NVC[key]);
+                        context.First = RequestValidator.CheckFirstValidity(context.ParsedQueryString[key]);
                         break;
                     default:
                         throw new ArgumentException("Invalid Query Parameter: " + key.ToString());

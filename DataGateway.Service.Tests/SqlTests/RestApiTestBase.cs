@@ -1,8 +1,10 @@
 using System.Net;
 using System.Threading.Tasks;
+using System.Web;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -300,7 +302,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyPagination)),
                 controller: _restController,
-                expectedQueryString: "?$first=1&$after=eyJpZCI6MX0=",
+                expectedQueryString: "?" + HttpUtility.ParseQueryString($"?$first=1&$after={SqlPaginationUtil.Base64Encode("{\"id\":1}")}").ToString(),
                 paginated: true
             );
         }
@@ -319,7 +321,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _tableWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyPagination)),
                 controller: _restController,
-                expectedQueryString: "?$first=1&$after=eyJib29rX2lkIjoxLCJpZCI6NTY3fQ==",
+                expectedQueryString: "?" + HttpUtility.ParseQueryString($"?$first=1&$after={SqlPaginationUtil.Base64Encode("{\"book_id\":1,\"id\":567}")}").ToString(),
                 paginated: true
             );
         }

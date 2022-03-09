@@ -155,6 +155,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFirstMultiKeyPagination",
                 $"SELECT TOP 1 * FROM REVIEWS " +
+                $"WHERE 1=1 " +
                 $"ORDER BY book_id, id " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },

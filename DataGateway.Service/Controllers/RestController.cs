@@ -7,7 +7,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
@@ -68,41 +67,36 @@ namespace Azure.DataGateway.Service.Controllers
         /// <param name="jsonElement">Value representing the Json results of the client's request.</param>
         /// <param name="url">Value represents the complete url needed to continue with paged results.</param>
         /// <returns></returns>
-        private OkObjectResult OkResponse(JsonElement jsonResult, string entityName)
+        private OkObjectResult OkResponse(JsonElement jsonResult)
         {
+            // For consistency we return all values as type Array
             if (jsonResult.ValueKind != JsonValueKind.Array)
             {
                 string jsonString = $"[{JsonSerializer.Serialize(jsonResult)}]";
                 jsonResult = JsonSerializer.Deserialize<JsonElement>(jsonString);
             }
 
-            // if no more records exist than requested just return jsonResult
-            if (!SqlPaginationUtil.HasNext(jsonResult, _restService.Context!.First))
+            IEnumerable<JsonElement> resultEnumerated = jsonResult.EnumerateArray();
+            // More than 1 record indicates we have a paginated response
+            if (resultEnumerated.Count() > 1)
             {
-                return Ok(new
+                string nextLinkJsonString = JsonSerializer.Serialize(resultEnumerated.Last());
+                IEnumerable<JsonElement> value = resultEnumerated.Take(resultEnumerated.Count() - 1);
+                Dictionary<string, object>? nextLink = JsonSerializer.Deserialize<Dictionary<string, object>>(nextLinkJsonString);
+                if (nextLink!.ContainsKey("nextLink"))
                 {
-                    value = jsonResult,
-                });
+                    return Ok(new
+                    {
+                        value = value,
+                        @nextLink = nextLink!["nextLink"]
+                    });
+                }
             }
 
-            // More records exist than requested, we know this by requesting 1 extra record,
-            // that extra record is removed here.
-            IEnumerable<JsonElement> rootEnumerated = jsonResult.EnumerateArray();
-            rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
-            // nextLink is the URL needed to get the next page of records using the same query options
-            // with $after base64 encoded for opaqueness
-            string after = SqlPaginationUtil.MakeCursorFromJsonElement(
-                               element: rootEnumerated.Last(),
-                               primaryKey: _restService.MetadataStoreProvider.GetTableDefinition(entityName).PrimaryKey);
-            string root = "https://localhost:5001/";
-            string nextLink = SqlPaginationUtil.CreateNextLink(
-                                  path: $"{root}{entityName}",
-                                  nvc: _restService.Context!.NVC,
-                                  after);
+            // if only 1 record exists we do not provide a nextLink as there is no more paging
             return Ok(new
             {
-                value = rootEnumerated,
-                @nextLink = nextLink
+                value = resultEnumerated
             });
         }
 
@@ -260,7 +254,7 @@ namespace Azure.DataGateway.Service.Controllers
                     // Clones the root element to a new JsonElement that can be
                     // safely stored beyond the lifetime of the original JsonDocument.
                     JsonElement resultElement = result.RootElement.Clone();
-                    OkObjectResult formattedResult = OkResponse(resultElement, entityName);
+                    OkObjectResult formattedResult = OkResponse(resultElement); // split out value formatting from nextLink
 
                     switch (operationType)
                     {
@@ -269,7 +263,7 @@ namespace Azure.DataGateway.Service.Controllers
                         case Operation.Insert:
                             primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
                             string location =
-                                UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute;
+                                UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute; // use this to get root
                             return new CreatedResult(location: location, formattedResult);
                         case Operation.Delete:
                             return new NoContentResult();

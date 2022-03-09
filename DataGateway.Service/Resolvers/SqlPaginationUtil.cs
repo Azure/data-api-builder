@@ -258,39 +258,14 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="nvc">Collection of query params.</param>
         /// <param name="after">The values needed for next page.</param>
         /// <returns>The string representing nextLink.</returns>
-        public static string CreateNextLink(string path, NameValueCollection nvc, string after)
+        public static JsonElement CreateNextLink(string path, NameValueCollection nvc, string after)
         {
-            string queryString = "?";
-            int count = nvc.Count;
-            bool nvcEmpty = count == 0;
-            bool afterInQueryString = false;
-            foreach (string key in nvc)
+            nvc["$after"] = after;
+            string jsonString = JsonSerializer.Serialize(new
             {
-                --count;
-                string? value = nvc[key];
-                // nextLink needs the values of the primary keys
-                // in the last record to correspond with $after
-                if (string.Equals(key, "$after"))
-                {
-                    value = after;
-                    afterInQueryString = true;
-                }
-
-                queryString += key + "=" + value;
-                if (count > 0)
-                {
-                    queryString += "&";
-                }
-            }
-
-            // if there was no $after in the query string we must add it here.
-            // if the query string was empty we do not prepend '&'
-            if (!afterInQueryString)
-            {
-                queryString += nvcEmpty ? $"$after={after}" : $"&$after={after}";
-            }
-
-            return $"{path}{queryString}";
+                nextLink = @$"{path}?{nvc.ToString()}"
+            });
+            return JsonSerializer.Deserialize<JsonElement>(jsonString);
         }
 
         /// <summary>
@@ -300,11 +275,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="jsonResult">Results plus one extra record if more exist.</param>
         /// <param name="first">Client provided limit if one exists, otherwise 0.</param>
         /// <returns>Bool representing if more records are available.</returns>
-        public static bool HasNext(JsonElement jsonResult, uint first)
+        public static bool HasNext(JsonElement jsonResult, uint? first)
         {
             // When first is 0 we use default limit of 100, otherwise we use first
             uint numRecords = (uint)jsonResult.GetArrayLength();
-            uint limit = first > 0 ? first : 100;
+            uint? limit = first is not null ? first : 100;
             return numRecords > limit;
         }
     }

@@ -60,7 +60,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// The maximum number of results this query should return.
         /// </summary>
-        private uint _limit = DEFAULT_LIST_LIMIT;
+        private uint? _limit = DEFAULT_LIST_LIMIT;
 
         /// <summary>
         /// If this query is built because of a GraphQL query (as opposed to
@@ -150,7 +150,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromJsonString(context.After, PaginationMetadata));
             }
 
-            _limit = context.First > 0 ? context.First + 1 : DEFAULT_LIST_LIMIT + 1;
+            _limit = context.First is not null ? context.First + 1 : DEFAULT_LIST_LIMIT + 1;
             ParametrizeColumns();
         }
 
@@ -562,7 +562,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// The maximum number of results this query should return.
         /// </summary>
-        public uint Limit()
+        public uint? Limit()
         {
             if (IsListQuery || PaginationMetadata.IsPaginated)
             {

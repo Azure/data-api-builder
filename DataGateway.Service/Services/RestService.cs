@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -11,6 +13,7 @@ using Azure.DataGateway.Service.Resolvers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -24,7 +27,6 @@ namespace Azure.DataGateway.Service.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationService _authorizationService;
         public IMetadataStoreProvider MetadataStoreProvider { get; }
-        public RestRequestContext? Context { get; set; }
         public RestService(
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
@@ -52,7 +54,8 @@ namespace Azure.DataGateway.Service.Services
             Operation operationType,
             string? primaryKeyRoute)
         {
-            string queryString = GetHttpContext().Request.QueryString.ToString();
+            QueryString? query = GetHttpContext().Request.QueryString;
+            string queryString = query is null ? string.Empty : GetHttpContext().Request.QueryString.ToString();
 
             string requestBody = string.Empty;
             using (StreamReader reader = new(GetHttpContext().Request.Body))
@@ -60,30 +63,31 @@ namespace Azure.DataGateway.Service.Services
                 requestBody = await reader.ReadToEndAsync();
             }
 
+            RestRequestContext context;
             switch (operationType)
             {
                 case Operation.Find:
-                    Context = new FindRequestContext(entityName, isList: string.IsNullOrEmpty(primaryKeyRoute));
+                    context = new FindRequestContext(entityName, isList: string.IsNullOrEmpty(primaryKeyRoute));
                     break;
                 case Operation.Insert:
                     JsonElement insertPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);
-                    Context = new InsertRequestContext(entityName,
+                    context = new InsertRequestContext(entityName,
                         insertPayloadRoot,
                         HttpRestVerbs.POST,
                         operationType);
                     RequestValidator.ValidateInsertRequestContext(
-                        (InsertRequestContext)Context,
+                        (InsertRequestContext)context,
                         MetadataStoreProvider);
                     break;
                 case Operation.Delete:
-                    Context = new DeleteRequestContext(entityName, isList: false);
+                    context = new DeleteRequestContext(entityName, isList: false);
                     RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                     break;
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
                     JsonElement upsertPayloadRoot = RequestValidator.ValidateUpsertRequest(primaryKeyRoute, requestBody);
-                    Context = new UpsertRequestContext(entityName, upsertPayloadRoot, GetHttpVerb(operationType), operationType);
-                    RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)Context, MetadataStoreProvider);
+                    context = new UpsertRequestContext(entityName, upsertPayloadRoot, GetHttpVerb(operationType), operationType);
+                    RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, MetadataStoreProvider);
                     break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
@@ -93,35 +97,38 @@ namespace Azure.DataGateway.Service.Services
             {
                 // After parsing primary key, the Context will be populated with the
                 // correct PrimaryKeyValuePairs.
-                RequestParser.ParsePrimaryKey(primaryKeyRoute, Context);
-                RequestValidator.ValidatePrimaryKey(Context, MetadataStoreProvider);
+                RequestParser.ParsePrimaryKey(primaryKeyRoute, context);
+                RequestValidator.ValidatePrimaryKey(context, MetadataStoreProvider);
             }
 
-            Context.NVC = HttpUtility.ParseQueryString(queryString);
-            RequestParser.ParseQueryString(Context, MetadataStoreProvider.GetFilterParser());
+            if (!string.IsNullOrWhiteSpace(queryString))
+            {
+                context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
+                RequestParser.ParseQueryString(context, MetadataStoreProvider.GetFilterParser());
+            }
 
             // At this point for DELETE, the primary key should be populated in the Request Context. 
-            RequestValidator.ValidateRequestContext(Context, MetadataStoreProvider);
+            RequestValidator.ValidateRequestContext(context, MetadataStoreProvider);
 
             // RestRequestContext is finalized for QueryBuilding and QueryExecution.
             // Perform Authorization check prior to moving forward in request pipeline.
             // RESTAuthorizationService
             AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
                 user: GetHttpContext().User,
-                resource: Context,
-                requirements: new[] { Context.HttpVerb });
+                resource: context,
+                requirements: new[] { context.HttpVerb });
 
             if (authorizationResult.Succeeded)
             {
                 switch (operationType)
                 {
                     case Operation.Find:
-                        return await _queryEngine.ExecuteAsync(Context);
+                        return await FormatFindResult(_queryEngine.ExecuteAsync(context), (FindRequestContext)context);
                     case Operation.Insert:
                     case Operation.Delete:
                     case Operation.Upsert:
                     case Operation.UpsertIncremental:
-                        return await _mutationEngine.ExecuteAsync(Context);
+                        return await _mutationEngine.ExecuteAsync(context);
                     default:
                         throw new NotSupportedException("This operation is not yet supported.");
                 };
@@ -134,6 +141,52 @@ namespace Azure.DataGateway.Service.Services
                     subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
                 );
             }
+        }
+
+        /// <summary>
+        /// Format the results from a Find operation. Check if there is a requirement
+        /// for a nextLink, and if so, add this value to the array of JsonElements to
+        /// be used later to format the response in the RestController.
+        /// </summary>
+        /// <param name="task">This task will return the resultant JsonDocument from the query.</param>
+        /// <param name="context">The RequestContext.</param>
+        /// <returns>A result from a Find operation that has been correctly formatted for the controller.</returns>
+        private async Task<JsonDocument?> FormatFindResult(Task<JsonDocument> task, FindRequestContext context)
+        {
+            JsonDocument jsonDoc = await task;
+            JsonElement jsonElement = jsonDoc.RootElement;
+
+            // If the results are not a collection or if the query does not have a next page
+            // no nextLink is needed, return JsonDocument as is
+            if (jsonElement.ValueKind != JsonValueKind.Array || !SqlPaginationUtil.HasNext(jsonElement, context.First))
+            {
+                return jsonDoc;
+            }
+
+            // More records exist than requested, we know this by requesting 1 extra record,
+            // that extra record is removed here.
+            IEnumerable<JsonElement> rootEnumerated = jsonElement.EnumerateArray();
+            rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
+
+            // If there are no more records after we remove the extra that means limit was 0,
+            // return the empty array
+            if (rootEnumerated.Count() == 0)
+            {
+                return JsonDocument.Parse(JsonSerializer.Serialize(rootEnumerated));
+            }
+
+            // nextLink is the URL needed to get the next page of records using the same query options
+            // with $after base64 encoded for opaqueness
+            string after = SqlPaginationUtil.MakeCursorFromJsonElement(
+                               element: rootEnumerated.Last(),
+                               primaryKey: MetadataStoreProvider.GetTableDefinition(context.EntityName).PrimaryKey);
+            string path = UriHelper.GetEncodedUrl(GetHttpContext().Request).Split('?')[0];
+            JsonElement nextLink = SqlPaginationUtil.CreateNextLink(
+                                  path,
+                                  nvc: context!.ParsedQueryString,
+                                  after);
+            rootEnumerated = rootEnumerated.Append(nextLink);
+            return JsonDocument.Parse(JsonSerializer.Serialize(rootEnumerated));
         }
 
         /// <summary>

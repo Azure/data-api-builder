@@ -144,7 +144,7 @@ namespace Azure.DataGateway.Service.Models
             {
                 return new Predicate(
                     new PredicateOperand("1"),
-                    op == PredicateOperation.AND ? PredicateOperation.Equal : PredicateOperation.NotEqual,
+                    PredicateOperation.NotEqual,
                     new PredicateOperand("1")
                 );
             }

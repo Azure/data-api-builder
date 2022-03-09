@@ -239,19 +239,10 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 object filterObject = queryParams["_filter"];
 
-                if (filterObject != null && filterObject.GetType() == typeof(String))
-                {
-                    string filter = (string)filterObject;
-
-                    ODataASTVisitor visitor = new(this);
-                    Services.FilterParser parser = MetadataStoreProvider.GetFilterParser();
-                    FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={filter}", TableName);
-                    FilterPredicates = filterClause.Expression.Accept<string>(visitor);
-                }
-                else if(filterObject != null)
+                if(filterObject != null)
                 {
                     List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
-                    Predicates.Add(GQLFilterParser.Parse("_filter", filterFields, TableAlias, GetTableDefinition(), MakeParamWithValue));
+                    Predicates.Add(GQLFilterParser.Parse(filterFields, TableAlias, GetTableDefinition(), MakeParamWithValue));
                 }
             }
 

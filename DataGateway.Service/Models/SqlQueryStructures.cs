@@ -48,7 +48,7 @@ namespace Azure.DataGateway.Service.Models
     {
         None,
         Equal, GreaterThan, LessThan, GreaterThanOrEqual, LessThanOrEqual, NotEqual,
-        AND, OR, LIKE
+        AND, OR, LIKE, NOT_LIKE
     }
 
     /// <summary>

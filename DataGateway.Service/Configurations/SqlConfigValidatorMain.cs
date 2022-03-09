@@ -369,9 +369,8 @@ namespace Azure.DataGateway.Service.Configurations
 
             Dictionary<string, IEnumerable<string>> optionalArguments = new()
             {
-                ["_filter"] = new[] { "String", "String!",
-                                        "BookQueryInput", "PublisherQueryInput", "AuthorQueryInput", "ReviewQueryInput",
-                                        "BookQueryInput!", "PublisherQueryInput!", "AuthorQueryInput!", "ReviewQueryInput!" }
+                ["_filter"] = new[] { "BookFilterInput", "PublisherFilterInput", "AuthorFilterInput", "ReviewFilterInput",
+                                        "BookFilterInput!", "PublisherFilterInput!", "AuthorFilterInput!", "ReviewFilterInput!" }
             };
 
             Dictionary<string, InputValueDefinitionNode> fieldArguments = GetArgumentsFromField(field);
@@ -393,9 +392,8 @@ namespace Azure.DataGateway.Service.Configurations
             Dictionary<string, IEnumerable<string>> optionalArguments = new()
             {
                 ["first"] = new[] { "Int", "Int!" },
-                ["_filter"] = new[] { "String", "String!",
-                                        "BookQueryInput", "PublisherQueryInput", "AuthorQueryInput", "ReviewQueryInput",
-                                        "BookQueryInput!", "PublisherQueryInput!", "AuthorQueryInput!", "ReviewQueryInput!" }
+                ["_filter"] = new[] { "BookFilterInput", "PublisherFilterInput", "AuthorFilterInput", "ReviewFilterInput",
+                                        "BookFilterInput!", "PublisherFilterInput!", "AuthorFilterInput!", "ReviewFilterInput!" }
             };
 
             Dictionary<string, InputValueDefinitionNode> fieldArguments = GetArgumentsFromField(field);

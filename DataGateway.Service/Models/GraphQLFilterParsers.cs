@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using HotChocolate.Language;
-using System.Linq;
+using System.Text;
 
 
 namespace Azure.DataGateway.Service.Models {
@@ -9,20 +9,15 @@ namespace Azure.DataGateway.Service.Models {
     {
         private const string AND = "AND";
         private const string OR = "OR";
-        private const string IN_PRT = "inPrt";
         static public Predicate Parse(
-            string tag,
             List<ObjectFieldNode> fields,
             string tableAlias,
             TableDefinition table,
             Func<object, string> processLiterals,
             bool addParenthesis = false)
         {
-            bool isAnd = false;
-            bool isOr = false;
-            PredicateOperand? left = null;
-            PredicateOperation op = PredicateOperation.None;
-            PredicateOperand? right = null;
+            List<(PredicateOperation, PredicateOperand)> andOrs = new();
+            List<PredicateOperand> predicates = new();
 
             foreach(ObjectFieldNode field in fields)
             {
@@ -31,47 +26,65 @@ namespace Azure.DataGateway.Service.Models {
                 bool fieldIsAnd = String.Equals(name, AND, StringComparison.OrdinalIgnoreCase);
                 bool fieldIsOr = String.Equals(name, OR, StringComparison.OrdinalIgnoreCase);
 
-                isAnd = isAnd || fieldIsAnd;
-                isOr = isOr || fieldIsOr;
-
                 if(fieldIsAnd || fieldIsOr)
                 {
-                    if(right != null)
-                    {
-                        throw new FormatException($"{tag} filter cannot have both \"and\" and \"or\"");
-                    }
-
-                    op = fieldIsAnd ? PredicateOperation.AND : PredicateOperation.OR;
+                    PredicateOperation op = fieldIsAnd ? PredicateOperation.AND : PredicateOperation.OR;
 
                     List<IValueNode> otherPredicates = (List<IValueNode>) field.Value.Value!;
-                    right = new PredicateOperand(ParseAndOr(name, otherPredicates, tableAlias, table, op, processLiterals));
+                    andOrs.Push(
+                        (
+                            op,
+                            new PredicateOperand(ParseAndOr(otherPredicates, tableAlias, table, op, processLiterals))
+                        )
+                    );
                 }
                 else {
-                    if(left != null)
-                    {
-                        throw new FormatException($"{tag} has too many predicates.");
-                    }
-
                     List<ObjectFieldNode> subfields = (List<ObjectFieldNode>) field.Value.Value!;
-
-                    left = String.Equals(name, IN_PRT, StringComparison.OrdinalIgnoreCase) ?
-                        new PredicateOperand(Parse(name, subfields, tableAlias, table, processLiterals, addParenthesis: true))
-                        : new PredicateOperand(ParseScalarType(name, subfields, tableAlias, table, processLiterals));
-
+                    predicates.Push(new PredicateOperand(ParseScalarType(name, subfields, tableAlias, table, processLiterals)));
                 }
             }
 
-            if(left == null)
+            if(predicates.Count == 0)
             {
-                throw new FormatException($"{tag} doesn't have any predicates.");
+                if(andOrs.Count == 1)
+                {
+                    return andOrs[0].Item2.AsPredicate()!;
+                }
+                else // andOrs.Count = 2
+                {
+                    return new Predicate(
+                        andOrs[0].Item2,
+                        andOrs[1].Item1,
+                        andOrs[1].Item2
+                    );
+                }
             }
-
-            if(right == null)
+            else if(andOrs.Count == 0)
             {
-                return left.AsPredicate()!;
+                return MakeChainPredicate(predicates, PredicateOperation.AND);
             }
-            else {
-                return new Predicate(left, op, right, addParenthesis);
+            else
+            {
+                if(andOrs.Count == 1)
+                {
+                    return new Predicate(
+                        new PredicateOperand(MakeChainPredicate(predicates, PredicateOperation.AND)),
+                        andOrs[0].Item1,
+                        andOrs[0].Item2
+                    );
+                }
+                else // andOrs.Count = 2
+                {
+                    return new Predicate(
+                        new PredicateOperand(MakeChainPredicate(predicates, PredicateOperation.AND)),
+                        andOrs[0].Item1,
+                        new PredicateOperand(new Predicate(
+                            andOrs[0].Item2,
+                            andOrs[1].Item1,
+                            andOrs[1].Item2
+                        ))
+                    );
+                }
             }
         }
 
@@ -87,16 +100,15 @@ namespace Azure.DataGateway.Service.Models {
             switch(columnType.ToString())
             {
                 case "System.String":
-                    return StringTypeFilterParser.Parse(tag, column, fields, processLiterals);
+                    return StringTypeFilterParser.Parse(column, fields, processLiterals);
                 case "System.Int64":
-                    return IntTypeFilterParser.Parse(tag, column, fields, processLiterals);
+                    return IntTypeFilterParser.Parse(column, fields, processLiterals);
                 default:
                     throw new NotSupportedException($"Unexpected system type {columnType} found for column.");
             }
         }
 
         private static Predicate ParseAndOr(
-            string tag,
             List<IValueNode> otherPredicates,
             string tableAlias,
             TableDefinition table,
@@ -105,20 +117,28 @@ namespace Azure.DataGateway.Service.Models {
         {
             if(otherPredicates.Count == 0)
             {
-                throw new FormatException($"{tag} cannot be an empty list.");
+                return new Predicate(
+                    new PredicateOperand("1"),
+                    op == PredicateOperation.AND ? PredicateOperation.Equal : PredicateOperation.NotEqual,
+                    new PredicateOperand("1")
+                );
             }
 
             List<PredicateOperand> operands = new();
             foreach(IValueNode predicate in otherPredicates)
             {
                 List<ObjectFieldNode> fields = (List<ObjectFieldNode>) predicate.Value!;
-                operands.Add(new PredicateOperand(Parse($"{tag}[{operands.Count}]", fields, tableAlias, table, processLiterals)));
+                operands.Add(new PredicateOperand(Parse(fields, tableAlias, table, processLiterals)));
             }
 
-            return MakeChainPredicate(operands, op);
+            return MakeChainPredicate(operands, op, addParenthesis: true);
         }
 
-        private static Predicate MakeChainPredicate(List<PredicateOperand> operands, PredicateOperation op, int pos = 0)
+        public static Predicate MakeChainPredicate(
+            List<PredicateOperand> operands,
+            PredicateOperation op,
+            int pos = 0,
+            bool addParenthesis = false)
         {
             if(pos == operands.Count - 1)
             {
@@ -128,75 +148,112 @@ namespace Azure.DataGateway.Service.Models {
             return new Predicate(
                 operands[pos],
                 op,
-                new PredicateOperand(MakeChainPredicate(operands, op, pos + 1))
+                new PredicateOperand(MakeChainPredicate(operands, op, pos + 1, false)),
+                addParenthesis: addParenthesis && operands.Count > 1
             );
         }
     }
 
     static public class IntTypeFilterParser {
         static public Predicate Parse(
-            string tag, Column column,
+            Column column,
             List<ObjectFieldNode> fields,
             Func<object, string> processLiterals)
         {
-            if(fields.Count > 1)
+            List<PredicateOperand> predicates = new();
+
+            foreach(ObjectFieldNode field in fields)
             {
-                throw new FormatException($"Cannot have more than one rule in integer predicate in {tag}");
+                string name = field.Name.ToString();
+                int value = ((IntValueNode) fields[0].Value).ToInt32();
+
+                PredicateOperation op;
+                switch(name)
+                {
+                    case "eq":
+                        op = PredicateOperation.Equal;
+                        break;
+                    case "neq":
+                        op = PredicateOperation.NotEqual;
+                        break;
+                    case "lt":
+                        op = PredicateOperation.LessThan;
+                        break;
+                    case "gt":
+                        op = PredicateOperation.GreaterThan;
+                        break;
+                    case "lte":
+                        op = PredicateOperation.LessThanOrEqual;
+                        break;
+                    case "gte":
+                        op = PredicateOperation.GreaterThanOrEqual;
+                        break;
+                    default:
+                        throw new NotSupportedException($"Operation {name} on int type not supported.");
+                }
+
+                predicates.Push(new PredicateOperand(new Predicate(
+                    new PredicateOperand(column),
+                    op,
+                    new PredicateOperand($"@{processLiterals(value)}")
+                )));
             }
 
-            string name = fields[0].Name.ToString();
-            int value = ((IntValueNode) fields[0].Value).ToInt32();
-
-            PredicateOperation op;
-            switch(name)
-            {
-                case "eq":
-                    op = PredicateOperation.Equal;
-                    break;
-                case "neq":
-                    op = PredicateOperation.NotEqual;
-                    break;
-                case "lt":
-                    op = PredicateOperation.LessThan;
-                    break;
-                case "gt":
-                    op = PredicateOperation.GreaterThan;
-                    break;
-                case "lte":
-                    op = PredicateOperation.LessThanOrEqual;
-                    break;
-                case "gte":
-                    op = PredicateOperation.GreaterThanOrEqual;
-                    break;
-                default:
-                    throw new NotSupportedException($"Operation {name} on int type not supported.");
-            }
-
-            return new Predicate(
-                        new PredicateOperand(column),
-                        op,
-                        new PredicateOperand($"@{processLiterals(value)}"));
+            return GQLFilterParser.MakeChainPredicate(predicates, PredicateOperation.AND, addParenthesis: true);
         }
     }
 
     static public class StringTypeFilterParser {
         static public Predicate Parse(
-            string tag,
             Column column,
             List<ObjectFieldNode> fields,
             Func<object, string> processLiterals)
         {
-            if(fields.Count > 1)
+            List<PredicateOperand> predicates = new();
+
+            foreach(ObjectFieldNode field in fields)
             {
-                throw new FormatException($"Cannot have more than one rule in integer predicate in {tag}");
+                string ruleName = field.Name.ToString();
+                string ruleValue = ((StringValueNode)field.Value).Value;
+
+                PredicateOperation op;
+
+                switch(ruleName)
+                {
+                    case "eq":
+                        op = PredicateOperation.Equal;
+                        break;
+                    case "neq":
+                        op = PredicateOperation.NotEqual;
+                        break;
+                    case "contains":
+                        op = PredicateOperation.LIKE;
+                        ruleValue = $"%{ruleValue}%";
+                        break;
+                    case "notContains":
+                        op = PredicateOperation.NOT_LIKE;
+                        ruleValue = $"%{ruleValue}%";
+                        break;
+                    case "startsWith":
+                        op = PredicateOperation.LIKE;
+                        ruleValue = $"{ruleValue}%";
+                        break;
+                    case "endsWith":
+                        op = PredicateOperation.LIKE;
+                        ruleValue = $"%{ruleValue}";
+                        break;
+                    default:
+                        throw new NotSupportedException($"Operation {ruleName} on int type not supported.");
+                }
+
+                predicates.Push(new PredicateOperand(new Predicate(
+                    new PredicateOperand(column),
+                    op,
+                    new PredicateOperand($"@{processLiterals(ruleValue)}")
+                )));
             }
 
-            string name = fields[0].Name.ToString();
-            string value = fields[0].Value.ToString();
-
-            PredicateOperation op;
-
-            throw new NotImplementedException();
+            return GQLFilterParser.MakeChainPredicate(predicates, PredicateOperation.AND, addParenthesis: true);
         }
     }
 }

@@ -175,6 +175,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     return "OR";
                 case PredicateOperation.LIKE:
                     return "LIKE";
+                case PredicateOperation.NOT_LIKE:
+                    return "NOT LIKE";
                 default:
                     throw new ArgumentException($"Cannot build unknown predicate operation {op}.");
             }

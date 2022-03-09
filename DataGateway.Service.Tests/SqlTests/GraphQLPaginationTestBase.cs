@@ -541,7 +541,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "books";
             string after = SqlPaginationUtil.Base64Encode("{\"id\":1}");
             string graphQLQuery = @"{
-                books(first: 2, after: """ + after + @""", _filter: ""publisher_id eq 2345"") {
+                books(first: 2, after: """ + after + @""", _filter: {publisher_id: {eq: 2345}}) {
                     items {
                         id
                         publisher_id

@@ -8,7 +8,6 @@ using Azure.DataGateway.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
-using Microsoft.OData.UriParser;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -239,7 +238,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 object filterObject = queryParams["_filter"];
 
-                if(filterObject != null)
+                if (filterObject != null)
                 {
                     List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
                     Predicates.Add(GQLFilterParser.Parse(filterFields, TableAlias, GetTableDefinition(), MakeParamWithValue));

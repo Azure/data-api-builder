@@ -70,8 +70,7 @@ input StringFilterInput {
   contains: String
   notContains: String
   startsWith: String
-  endWith: String
-  caseInsensitive: Boolean
+  endsWith: String
 }
 
 input IntFilterInput {
@@ -84,7 +83,6 @@ input IntFilterInput {
 }
 
 input BookFilterInput {
-  inPrt: BookFilterInput
   and: [BookFilterInput]
   or: [BookFilterInput]
   id: IntFilterInput
@@ -93,7 +91,6 @@ input BookFilterInput {
 }
 
 input PublisherFilterInput {
-    inPrt: PublisherFilterInput
     and: [PublisherFilterInput]
     or: [PublisherFilterInput]
     id: IntFilterInput,
@@ -101,7 +98,6 @@ input PublisherFilterInput {
 }
 
 input AuthorFilterInput {
-    inPrt: AuthorFilterInput
     and: [AuthorFilterInput]
     or: [AuthorFilterInput]
     id: IntFilterInput,
@@ -110,7 +106,6 @@ input AuthorFilterInput {
 }
 
 input ReviewFilterInput {
-    inPrt: ReviewFilterInput
     and: [ReviewFilterInput]
     or: [ReviewFilterInput]
     id: IntFilterInput,

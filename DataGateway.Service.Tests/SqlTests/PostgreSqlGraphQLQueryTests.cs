@@ -477,21 +477,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
-
-        [TestMethod]
-        public async Task TestInvalidFilterParamQuery()
-        {
-            string graphQLQueryName = "getBooks";
-            string graphQLQuery = @"{
-                getBooks(_filter: ""INVALID"") {
-                    id
-                    title
-                }
-            }";
-
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
-        }
         #endregion
     }
 }

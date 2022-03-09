@@ -140,7 +140,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 return s;
             }
-            else if((p = operand.AsPredicate()) != null)
+            else if ((p = operand.AsPredicate()) != null)
             {
                 return Build(p);
             }
@@ -194,11 +194,12 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             string predicateString = $"{Build(predicate.Left)} {Build(predicate.Op)} {Build(predicate.Right)}";
-            if(predicate.AddParenthesis)
+            if (predicate.AddParenthesis)
             {
                 return "(" + predicateString + ")";
             }
-            else {
+            else
+            {
                 return predicateString;
             }
         }

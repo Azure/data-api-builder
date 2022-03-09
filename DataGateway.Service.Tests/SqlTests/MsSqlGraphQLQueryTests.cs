@@ -412,10 +412,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string graphQLQueryName = "getBooks";
             string graphQLQuery = @"{
-                getBooks(_filter: ""id ge 1 and id le 4"") {
+                getBooks(_filter: {id: {gte: 1} and: [{id: {lte: 4}}]}) {
                     id
                     publisher {
-                        books(first: 3, _filter: ""id ne 2"") {
+                        books(first: 3, _filter: {id: {neq: 2}}) {
                             id
                         }
                     }
@@ -469,21 +469,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "getBooks";
             string graphQLQuery = @"{
                 getBooks(first: -1) {
-                    id
-                    title
-                }
-            }";
-
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
-        }
-
-        [TestMethod]
-        public async Task TestInvalidFilterParamQuery()
-        {
-            string graphQLQueryName = "getBooks";
-            string graphQLQuery = @"{
-                getBooks(_filter: ""INVALID"") {
                     id
                     title
                 }

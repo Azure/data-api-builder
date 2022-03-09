@@ -1,10 +1,10 @@
 type Query {
-    getBooks(first: Int = 100, _filter: BookFilterInput): [Book!]!
+    getBooks(first: Int = 100, _filter: BookFilterInput, _filterOData: String): [Book!]!
     getBook(id: Int!): Book
     getReview(id: Int!, book_id: Int!): Review
-    getReviews(_filter: ReviewFilterInput): [Review!]!
-    books(first: Int, after: String, _filter: BookFilterInput): BookConnection!
-    reviews(first: Int, after: String, _filter: ReviewFilterInput): ReviewConnection!
+    getReviews(_filter: ReviewFilterInput, _filterOData: String): [Review!]!
+    books(first: Int, after: String, _filter: BookFilterInput, _filterOData: String): BookConnection!
+    reviews(first: Int, after: String, _filter: ReviewFilterInput, _filterOData: String): ReviewConnection!
 }
 
 type Mutation {
@@ -17,8 +17,8 @@ type Mutation {
 type Publisher {
     id: Int!
     name: String!
-    books(first: Int = 100, _filter: BookFilterInput): [Book!]!
-    paginatedBooks(first: Int, after: String, _filter: BookFilterInput): BookConnection!
+    books(first: Int = 100, _filter: BookFilterInput, _filterOData: String): [Book!]!
+    paginatedBooks(first: Int, after: String, _filter: BookFilterInput, _filterOData: String): BookConnection!
 }
 
 type Book {
@@ -26,18 +26,18 @@ type Book {
     title: String!
     publisher_id: Int!
     publisher: Publisher!
-    reviews(first: Int = 100, _filter: ReviewFilterInput): [Review!]!
-    paginatedReviews(first: Int, after: String, _filter: ReviewFilterInput): ReviewConnection!
-    authors(first: Int = 100, _filter: AuthorFilterInput): [Author!]!
-    paginatedAuthors(first: Int, after: String, _filter: AuthorFilterInput): AuthorConnection!
+    reviews(first: Int = 100, _filter: ReviewFilterInput, _filterOData: String): [Review!]!
+    paginatedReviews(first: Int, after: String, _filter: ReviewFilterInput, _filterOData: String): ReviewConnection!
+    authors(first: Int = 100, _filter: AuthorFilterInput, _filterOData: String): [Author!]!
+    paginatedAuthors(first: Int, after: String, _filter: AuthorFilterInput, _filterOData: String): AuthorConnection!
 }
 
 type Author {
     id: Int!
     name: String!
     birthdate: String!
-    books(first: Int = 100, _filter: BookFilterInput): [Book!]!
-    paginatedBooks(first: Int, after: String, _filter: BookFilterInput): BookConnection!
+    books(first: Int = 100, _filter: BookFilterInput, _filterOData: String): [Book!]!
+    paginatedBooks(first: Int, after: String, _filter: BookFilterInput, _filterOData: String): BookConnection!
 }
 
 type Review {

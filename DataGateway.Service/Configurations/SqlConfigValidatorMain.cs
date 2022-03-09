@@ -370,7 +370,8 @@ namespace Azure.DataGateway.Service.Configurations
             Dictionary<string, IEnumerable<string>> optionalArguments = new()
             {
                 ["_filter"] = new[] { "BookFilterInput", "PublisherFilterInput", "AuthorFilterInput", "ReviewFilterInput",
-                                        "BookFilterInput!", "PublisherFilterInput!", "AuthorFilterInput!", "ReviewFilterInput!" }
+                                        "BookFilterInput!", "PublisherFilterInput!", "AuthorFilterInput!", "ReviewFilterInput!" },
+                ["_filterOData"] = new[] { "String", "String!" }
             };
 
             Dictionary<string, InputValueDefinitionNode> fieldArguments = GetArgumentsFromField(field);
@@ -393,7 +394,8 @@ namespace Azure.DataGateway.Service.Configurations
             {
                 ["first"] = new[] { "Int", "Int!" },
                 ["_filter"] = new[] { "BookFilterInput", "PublisherFilterInput", "AuthorFilterInput", "ReviewFilterInput",
-                                        "BookFilterInput!", "PublisherFilterInput!", "AuthorFilterInput!", "ReviewFilterInput!" }
+                                        "BookFilterInput!", "PublisherFilterInput!", "AuthorFilterInput!", "ReviewFilterInput!" },
+                ["_filterOData"] = new[] { "String", "String!" }
             };
 
             Dictionary<string, InputValueDefinitionNode> fieldArguments = GetArgumentsFromField(field);

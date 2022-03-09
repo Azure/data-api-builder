@@ -130,8 +130,7 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
         /// <returns>
         /// The predicate representation of the and/or.
-        /// If and is passed as empty: a predicate representing 1 == 1
-        /// If or is passed as empty: a predicate representing 1 != 1
+        /// If and/or is passed as empty, a predicate representing 1 != 1 is returned
         /// </returns>
         private static Predicate ParseAndOr(
             List<IValueNode> predicates,

@@ -8,6 +8,7 @@ using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using Microsoft.OData.UriParser;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -242,6 +243,22 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
                     Predicates.Add(GQLFilterParser.Parse(filterFields, TableAlias, GetTableDefinition(), MakeParamWithValue));
+                }
+            }
+
+
+            if (IsListQuery && queryParams.ContainsKey("_filterOData"))
+            {
+                object whereObject = queryParams["_filterOData"];
+
+                if (whereObject != null)
+                {
+                    string where = (string)whereObject;
+
+                    ODataASTVisitor visitor = new(this);
+                    FilterParser parser = MetadataStoreProvider.GetFilterParser();
+                    FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={where}", TableName);
+                    FilterPredicates = filterClause.Expression.Accept<string>(visitor);
                 }
             }
 

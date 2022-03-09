@@ -246,7 +246,6 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-
             if (IsListQuery && queryParams.ContainsKey("_filterOData"))
             {
                 object whereObject = queryParams["_filterOData"];

@@ -38,26 +38,18 @@ namespace Azure.DataGateway.Service.Services
 
         public void ParseAsync(string data)
         {
-            try
-            {
-                DocumentNode root = Utf8GraphQLParser.Parse(data);
+            DocumentNode root = Utf8GraphQLParser.Parse(data);
 
-                ISchemaBuilder sb = SchemaBuilder.New()
-                    .AddDocument(root)
-                    .AddDirectiveType(CustomDirectives.ModelTypeDirective())
-                    .AddDocument(QueryBuilder.Build(root))
-                    .AddDocument(MutationBuilder.Build(root));
+            ISchemaBuilder sb = SchemaBuilder.New()
+                .AddDocument(root)
+                .AddDirectiveType(CustomDirectives.ModelTypeDirective())
+                .AddDocument(QueryBuilder.Build(root))
+                .AddDocument(MutationBuilder.Build(root));
 
-                Schema = sb
-                    .AddAuthorizeDirectiveType()
-                    .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine, _metadataStoreProvider))
-                    .Create();
-            }
-            catch (Exception)
-            {
-                // this is just for debugging, won't be doing the try/catch later
-                throw;
-            }
+            Schema = sb
+                .AddAuthorizeDirectiveType()
+                .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine, _metadataStoreProvider))
+                .Create();
 
             // Below is pretty much an inlined version of
             // ISchema.MakeExecutable. The reason that we inline it is that

@@ -49,6 +49,7 @@ namespace Azure.DataGateway.Service.Services
                     .AddDocument(MutationBuilder.Build(root));
 
                 Schema = sb
+                    .AddAuthorizeDirectiveType()
                     .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine, _metadataStoreProvider))
                     .Create();
             }

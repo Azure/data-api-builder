@@ -11,7 +11,7 @@ using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -47,7 +47,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// this class.
         /// </summary>
         /// <param name="context"></param>
-        protected static async Task InitializeTestFixture(TestContext context, string tableName, string testCategory)
+        protected static async Task InitializeTestFixture(TestContext context, string testCategory)
         {
             _testCategory = testCategory;
 
@@ -206,7 +206,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             // Initial DELETE request results in 204 no content, no exception thrown.
             // Subsequent DELETE requests result in 404, which result in an exception.
             string expected;
-            if ((operationType == Operation.Delete || operationType == Operation.Upsert)
+            if ((operationType == Operation.Delete || operationType == Operation.Upsert || operationType == Operation.UpsertIncremental)
                 && actionResult is NoContentResult)
             {
                 expected = null;
@@ -214,10 +214,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             else
             {
                 expected = exception ?
-                    RestController.ErrorResponse(
+                    JsonSerializer.Serialize(RestController.ErrorResponse(
                         expectedSubStatusCode.ToString(),
-                        expectedErrorMessage, expectedStatusCode).Value.ToString() :
-                    await GetDatabaseResultAsync(sqlQuery);
+                        expectedErrorMessage, expectedStatusCode).Value) :
+                    $"{{ \"value\" : {await GetDatabaseResultAsync(sqlQuery)} }}";
             }
 
             SqlTestHelper.VerifyResult(

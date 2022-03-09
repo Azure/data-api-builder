@@ -22,9 +22,6 @@ appsettings.*.json
 **/.vscode/**/*
 **/*.user
 
-# Azure Functions localsettings file
-local.settings.json
-
 # include some basic vscode config files
 !/Cosmos.GraphQL.Service/Cosmos.GraphQL.Service/.vscode/launch.json
 !/Cosmos.GraphQL.Service/Cosmos.GraphQL.Service/.vscode/tasks.json

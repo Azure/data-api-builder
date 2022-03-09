@@ -4,7 +4,7 @@ using System.Linq;
 using System.Net;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -53,7 +53,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="metadataStore"></param>
         /// <param name="mutationParams"></param>
         /// <exception cref="DataGatewayException"></exception>
-        public SqlUpsertQueryStructure(string tableName, IMetadataStoreProvider metadataStore, IDictionary<string, object> mutationParams)
+        public SqlUpsertQueryStructure(string tableName, IMetadataStoreProvider metadataStore, IDictionary<string, object> mutationParams, bool incrementalUpdate)
         : base(metadataStore)
         {
             TableName = tableName;
@@ -69,7 +69,7 @@ namespace Azure.DataGateway.Service.Resolvers
             ReturnColumns = tableDefinition.Columns.Keys.ToList();
 
             // Populates the UpsertQueryStructure with UPDATE and INSERT column:value metadata
-            PopulateColumns(mutationParams, tableDefinition);
+            PopulateColumns(mutationParams, tableDefinition, isIncrementalUpdate: incrementalUpdate);
 
             if (UpdateOperations.Count == 0)
             {
@@ -90,7 +90,8 @@ namespace Azure.DataGateway.Service.Resolvers
 
         private void PopulateColumns(
             IDictionary<string, object> mutationParams,
-            TableDefinition tableDefinition)
+            TableDefinition tableDefinition,
+            bool isIncrementalUpdate)
         {
             List<string> primaryKeys = tableDefinition.PrimaryKey;
             List<string> schemaColumns = tableDefinition.Columns.Keys.ToList();
@@ -138,7 +139,10 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
 
                 // Process remaining columns in schemaColumns.
-                AddNullifiedUnspecifiedFields(schemaColumns, tableDefinition);
+                if (!isIncrementalUpdate)
+                {
+                    AddNullifiedUnspecifiedFields(schemaColumns, tableDefinition);
+                }
             }
             catch (ArgumentException ex)
             {

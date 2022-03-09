@@ -6,8 +6,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataGateway.Service",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataGateway.Service.Tests", "DataGateway.Service.Tests\Azure.DataGateway.Service.Tests.csproj", "{4E50C9B0-818E-4041-B18B-5BB17E4D409F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataGateway.Service.Functions", "DataGateway.Service.Functions\Azure.DataGateway.Service.Functions.csproj", "{B5806EF5-E26E-4E2B-9076-CDDCA97BCCE6}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Configs", "Configs", "{EFA9C661-D8FD-469A-9372-284387C4BEFC}"
 	ProjectSection(SolutionItems) = preProject
 		DataGateway.Service\appsettings.Cosmos.json = DataGateway.Service\appsettings.Cosmos.json

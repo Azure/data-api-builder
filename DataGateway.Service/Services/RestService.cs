@@ -123,7 +123,7 @@ namespace Azure.DataGateway.Service.Services
                 switch (operationType)
                 {
                     case Operation.Find:
-                        return await FormatFindResult(_queryEngine.ExecuteAsync(context), (FindRequestContext)context);
+                        return FormatFindResult(await _queryEngine.ExecuteAsync(context), (FindRequestContext)context);
                     case Operation.Insert:
                     case Operation.Delete:
                     case Operation.Upsert:
@@ -151,9 +151,8 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="task">This task will return the resultant JsonDocument from the query.</param>
         /// <param name="context">The RequestContext.</param>
         /// <returns>A result from a Find operation that has been correctly formatted for the controller.</returns>
-        private async Task<JsonDocument?> FormatFindResult(Task<JsonDocument> task, FindRequestContext context)
+        private JsonDocument? FormatFindResult(JsonDocument jsonDoc, FindRequestContext context)
         {
-            JsonDocument jsonDoc = await task;
             JsonElement jsonElement = jsonDoc.RootElement;
 
             // If the results are not a collection or if the query does not have a next page

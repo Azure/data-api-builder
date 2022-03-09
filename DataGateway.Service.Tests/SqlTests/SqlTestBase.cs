@@ -181,7 +181,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             HttpStatusCode expectedStatusCode = HttpStatusCode.OK,
             string expectedSubStatusCode = "BadRequest",
             string expectedLocationHeader = null,
-            string expectedQueryString = "",
+            string expectedAfterQueryString = "",
             bool paginated = false)
         {
             ConfigureRestController(
@@ -219,7 +219,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     JsonSerializer.Serialize(RestController.ErrorResponse(
                         expectedSubStatusCode.ToString(),
                         expectedErrorMessage, expectedStatusCode).Value) :
-                    $"{{\"value\":{FormatExpectedValue(await GetDatabaseResultAsync(sqlQuery))}{ExpectedNextLinkIfAny(paginated, $"{expectedQueryString}")}}}";
+                    $"{{\"value\":{FormatExpectedValue(await GetDatabaseResultAsync(sqlQuery))}{ExpectedNextLinkIfAny(paginated, controller, $"{expectedAfterQueryString}")}}}";
             }
 
             SqlTestHelper.VerifyResult(
@@ -250,9 +250,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </summary>
         /// <param name="expected">The expected response.</param>
         /// <returns>Formetted expected response.</returns>
-        private static string ExpectedNextLinkIfAny(bool paginated, string queryString)
+        private static string ExpectedNextLinkIfAny(bool paginated, RestController controller, string queryString)
         {
-            return paginated ? $",\"nextLink\":\":///{queryString}\"" : string.Empty;
+            return paginated ? $",\"nextLink\":\"{UriHelper.GetEncodedUrl(controller.HttpContext.Request)}{queryString}\"" : string.Empty;
         }
 
         /// <summary>

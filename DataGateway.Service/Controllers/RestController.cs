@@ -77,12 +77,13 @@ namespace Azure.DataGateway.Service.Controllers
             }
 
             IEnumerable<JsonElement> resultEnumerated = jsonResult.EnumerateArray();
-            // More than 1 record indicates we have a paginated response
+            // More than 1 record indicates we may have a paginated response
             if (resultEnumerated.Count() > 1)
             {
                 string nextLinkJsonString = JsonSerializer.Serialize(resultEnumerated.Last());
                 IEnumerable<JsonElement> value = resultEnumerated.Take(resultEnumerated.Count() - 1);
                 Dictionary<string, object>? nextLink = JsonSerializer.Deserialize<Dictionary<string, object>>(nextLinkJsonString);
+                // if the last element has a key of "nextLink" we have a paginated response
                 if (nextLink!.ContainsKey("nextLink"))
                 {
                     return Ok(new
@@ -93,7 +94,7 @@ namespace Azure.DataGateway.Service.Controllers
                 }
             }
 
-            // if only 1 record exists we do not provide a nextLink as there is no more paging
+            // only 1 record or no "nextLink" key in the json, so pagination not required
             return Ok(new
             {
                 value = resultEnumerated
@@ -254,7 +255,7 @@ namespace Azure.DataGateway.Service.Controllers
                     // Clones the root element to a new JsonElement that can be
                     // safely stored beyond the lifetime of the original JsonDocument.
                     JsonElement resultElement = result.RootElement.Clone();
-                    OkObjectResult formattedResult = OkResponse(resultElement); // split out value formatting from nextLink
+                    OkObjectResult formattedResult = OkResponse(resultElement);
 
                     switch (operationType)
                     {
@@ -263,7 +264,7 @@ namespace Azure.DataGateway.Service.Controllers
                         case Operation.Insert:
                             primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
                             string location =
-                                UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute; // use this to get root
+                                UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute;
                             return new CreatedResult(location: location, formattedResult);
                         case Operation.Delete:
                             return new NoContentResult();

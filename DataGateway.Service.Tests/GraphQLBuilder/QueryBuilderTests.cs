@@ -75,6 +75,32 @@ type Foo @model {
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"Foos"));
         }
 
+        [TestMethod]
+        [TestCategory("Query Generation")]
+        [TestCategory("Collection access")]
+        public void CollectionQueryResultTypeHasItemFieldAndContinuation()
+        {
+            string gql =
+                @"
+type Foo @model {
+    id: ID!
+}
+                ";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
+            DocumentNode queryRoot = QueryBuilder.Build(root);
+
+            ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
+            string returnTypeName = query.Fields.First(f => f.Name.Value == $"Foos").Type.NamedType().Name.Value;
+            ObjectTypeDefinitionNode returnType = queryRoot.Definitions.Where(d => d is ObjectTypeDefinitionNode).Cast<ObjectTypeDefinitionNode>().First(d => d.Name.Value == returnTypeName);
+            Assert.AreEqual(2, returnType.Fields.Count);
+            Assert.AreEqual("items", returnType.Fields[0].Name.Value);
+            Assert.AreEqual("[Foo!]!", returnType.Fields[0].Type.ToString());
+            Assert.AreEqual("continuation", returnType.Fields[1].Name.Value);
+            Assert.AreEqual("String", returnType.Fields[1].Type.NamedType().Name.Value);
+        }
+
         private static ObjectTypeDefinitionNode GetQueryNode(DocumentNode queryRoot)
         {
             return (ObjectTypeDefinitionNode)queryRoot.Definitions.First(d => d is ObjectTypeDefinitionNode node && node.Name.Value == "Query");

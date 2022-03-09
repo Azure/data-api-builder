@@ -31,7 +31,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
             List<IDefinitionNode> definitionNodes = new()
             {
-                new ObjectTypeDefinitionNode(null, new NameNode("Query"), null, new List<DirectiveNode>(), new List<NamedTypeNode>(), queryFields),
+                new ObjectTypeDefinitionNode(location : null, new NameNode("Query"), description: null, new List<DirectiveNode>(), new List<NamedTypeNode>(), queryFields),
             };
             definitionNodes.AddRange(returnTypes);
             definitionNodes.AddRange(inputTypes.Values);
@@ -41,16 +41,16 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         private static FieldDefinitionNode GenerateByPKQuery(ObjectTypeDefinitionNode objectTypeDefinitionNode, NameNode name)
         {
             return new(
-                null,
+                location: null,
                 new NameNode($"{name}_by_pk"),
                 new StringValueNode($"Get a {name} from the database by its ID/primary key"),
                 new List<InputValueDefinitionNode> {
                 new InputValueDefinitionNode(
-                    null,
+                    location : null,
                     new NameNode("id"),
-                    null,
+                    description: null,
                     objectTypeDefinitionNode.Fields.First(f => f.Name.Value == "id").Type,
-                    null,
+                    defaultValue: null,
                     new List<DirectiveNode>())
                 },
                 new NamedTypeNode(name),
@@ -69,7 +69,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 inputTypes.Add(
                     objectTypeDefinitionNode.Name.Value,
                     new(
-                        null,
+                        location: null,
                         new NameNode(filterInputName),
                         new StringValueNode($"Filter input for {objectTypeDefinitionNode.Name} GraphQL type"),
                         new List<DirectiveNode>(),
@@ -79,13 +79,13 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             }
 
             return new(
-                null,
+                location: null,
                 Pluralize(name),
                 new StringValueNode($"Get a list of all the {name} items from the database"),
                 new List<InputValueDefinitionNode> {
-                    new InputValueDefinitionNode(null, new NameNode("first"), null, new IntType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new InputValueDefinitionNode(null, new NameNode("continuation"), null, new StringType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("_filter"), new StringValueNode("Filter options for query"), new NamedTypeNode(filterInputName), null, new List<DirectiveNode>())
+                    new InputValueDefinitionNode(location : null, new NameNode("first"), description: null, new IntType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(location : null, new NameNode("continuation"), new StringValueNode("A continuation token from a previous query to continue through a paginated list"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
+                    new(location : null, new NameNode("_filter"), new StringValueNode("Filter options for query"), new NamedTypeNode(filterInputName), defaultValue: null, new List<DirectiveNode>())
                 },
                 new NonNullTypeNode(new NamedTypeNode(returnType.Name)),
                 new List<DirectiveNode>()
@@ -112,7 +112,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                             fieldTypeNode switch
                             {
                                 ObjectTypeDefinitionNode node when !inputTypes.ContainsKey(GenerateObjectInputFilterName(node)) => new(
-                                    null,
+                                    location: null,
                                     new NameNode(GenerateObjectInputFilterName(node)),
                                     new StringValueNode($"Filter input for {node.Name} GraphQL type"),
                                     new List<DirectiveNode>(),
@@ -122,13 +122,13 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                                     inputTypes[GenerateObjectInputFilterName(node)],
 
                                 EnumTypeDefinitionNode node when !inputTypes.ContainsKey(GenerateObjectInputFilterName(node)) => new(
-                                    null,
+                                    location: null,
                                     new NameNode(GenerateObjectInputFilterName(node)),
                                     new StringValueNode($"Filter input for {node.Name} GraphQL type"),
                                     new List<DirectiveNode>(),
                                     new List<InputValueDefinitionNode> {
-                                        new InputValueDefinitionNode(null, new NameNode("eq"), new StringValueNode("Equals"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>()),
-                                        new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>())
+                                        new InputValueDefinitionNode(location : null, new NameNode("eq"), new StringValueNode("Equals"), new FloatType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
+                                        new InputValueDefinitionNode(location : null, new NameNode("neq"), new StringValueNode("Not Equals"), new FloatType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>())
                                     }),
 
                                 EnumTypeDefinitionNode node =>
@@ -143,7 +143,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
                 InputObjectTypeDefinitionNode inputType = inputTypes[fieldTypeName];
 
-                inputFields.Add(new(null, field.Name, new StringValueNode($"Filter options for {field.Name}"), new NamedTypeNode(inputType.Name.Value), null, new List<DirectiveNode>()));
+                inputFields.Add(new(location: null, field.Name, new StringValueNode($"Filter options for {field.Name}"), new NamedTypeNode(inputType.Name.Value), defaultValue: null, new List<DirectiveNode>()));
             }
 
             return inputFields;
@@ -157,23 +157,23 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         private static ObjectTypeDefinitionNode GenerateReturnType(NameNode name)
         {
             return new(
-                null,
+                location: null,
                 new NameNode($"{name}Connection"),
-                null,
+                new StringValueNode("The return object from a filter query that supports a continuation token for paging through results"),
                 new List<DirectiveNode>(),
                 new List<NamedTypeNode>(),
                 new List<FieldDefinitionNode> {
                     new FieldDefinitionNode(
-                        null,
+                        location: null,
                         new NameNode("items"),
-                        null,
+                        new StringValueNode("The list of items that matched the filter"),
                         new List<InputValueDefinitionNode>(),
                         new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),
                         new List<DirectiveNode>()),
                     new FieldDefinitionNode(
-                        null,
+                        location : null,
                         new NameNode("continuation"),
-                        null,
+                        new StringValueNode("A continuation token to provide to subsequent pages of a query"),
                         new List<InputValueDefinitionNode>(),
                         new StringType().ToTypeNode(),
                         new List<DirectiveNode>())

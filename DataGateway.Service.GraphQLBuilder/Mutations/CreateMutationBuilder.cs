@@ -19,7 +19,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
             IEnumerable<InputValueDefinitionNode> inputFields =
                 objectTypeDefinitionNode.Fields
-                .Where(f => ExcludeFieldFromCreateInput(f))
+                .Where(f => FieldAllowedOnCreateInput(f))
                 .Select(f =>
                 {
                     if (!IsBuiltInType(f.Type))
@@ -48,9 +48,14 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             return input;
         }
 
-        private static bool ExcludeFieldFromCreateInput(FieldDefinitionNode f)
+        /// <summary>
+        /// This method is used to determine if a field is allowed to be sent from the client in a Create mutation (eg, id field is not settable during create).
+        /// </summary>
+        /// <param name="field">Field to check</param>
+        /// <returns>true if the field is allowed, false if it is not.</returns>
+        private static bool FieldAllowedOnCreateInput(FieldDefinitionNode field)
         {
-            return f.Name.Value != "id";
+            return field.Name.Value != "id";
         }
 
         private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f)

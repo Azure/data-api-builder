@@ -176,6 +176,13 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                         new StringValueNode("A continuation token to provide to subsequent pages of a query"),
                         new List<InputValueDefinitionNode>(),
                         new StringType().ToTypeNode(),
+                        new List<DirectiveNode>()),
+                    new FieldDefinitionNode(
+                        location: null,
+                        new NameNode("hasNextPage"),
+                        new StringValueNode("Indicates if there are more pages of items to return"),
+                        new List<InputValueDefinitionNode>(),
+                        new StringType().ToTypeNode(),
                         new List<DirectiveNode>())
                 }
             );

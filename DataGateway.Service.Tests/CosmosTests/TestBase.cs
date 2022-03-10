@@ -35,7 +35,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             _clientProvider = new CosmosClientProvider(TestHelper.DataGatewayConfig);
             _metadataStoreProvider = new MetadataStoreProviderForTest();
             string jsonString = @"
-type Character {
+type Character @model {
         id : ID,
         name : String,
         type: String,
@@ -43,7 +43,7 @@ type Character {
         primaryFunction: String
 }
 
-type Planet {
+type Planet @model {
     id : ID,
     name : String
 }";

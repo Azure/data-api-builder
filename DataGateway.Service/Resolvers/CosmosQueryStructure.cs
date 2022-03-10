@@ -63,9 +63,15 @@ namespace Azure.DataGateway.Service.Resolvers
                     continue;
                 }
 
-                if (parameter.Key == "after")
+                if (parameter.Key == "continuation")
                 {
                     Continuation = (string)parameter.Value;
+                    continue;
+                }
+
+                if (parameter.Key == "_filter")
+                {
+                    // TODO: Build out the predicates based on the filter
                     continue;
                 }
 

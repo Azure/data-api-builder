@@ -84,7 +84,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
 
                 JObject res = new(
-                   new JProperty("endCursor", Base64Encode(responseContinuation)),
+                   new JProperty("continuation", Base64Encode(responseContinuation)),
                    new JProperty("hasNextPage", responseContinuation != null),
                    new JProperty("items", jarray));
 

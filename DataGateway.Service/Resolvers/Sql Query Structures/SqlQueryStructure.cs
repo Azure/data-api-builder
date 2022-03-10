@@ -224,7 +224,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (firstObject != null)
                 {
                     // due to the way parameters get resolved,
-                    long first = (long)firstObject;
+                    int first = (int)firstObject;
 
                     if (first <= 0)
                     {

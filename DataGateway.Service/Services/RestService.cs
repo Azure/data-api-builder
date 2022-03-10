@@ -153,6 +153,11 @@ namespace Azure.DataGateway.Service.Services
         /// <returns>A result from a Find operation that has been correctly formatted for the controller.</returns>
         private JsonDocument? FormatFindResult(JsonDocument jsonDoc, FindRequestContext context)
         {
+            if (jsonDoc is null)
+            {
+                return jsonDoc;
+            }
+
             JsonElement jsonElement = jsonDoc.RootElement;
 
             // If the results are not a collection or if the query does not have a next page

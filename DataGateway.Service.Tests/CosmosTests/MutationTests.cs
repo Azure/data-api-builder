@@ -10,23 +10,23 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
     {
         private static readonly string _containerName = Guid.NewGuid().ToString();
         private static readonly string _mutationStringFormat = @"
-                                                mutation
-                                                {{
-                                                    addPlanet (id: ""{0}"", name: ""{1}"")
-                                                    {{
+                                                mutation ($id: ID!, $name: String!)
+                                                {
+                                                    addPlanet (id: $id, name: $name)
+                                                    {
                                                         id
                                                         name
-                                                    }}
-                                                }}";
+                                                    }
+                                                }";
         private static readonly string _mutationDeleteItemStringFormat = @"
-                                                mutation
-                                                {{
-                                                    deletePlanet (id: ""{0}"")
-                                                    {{
+                                                mutation ($id: ID!)
+                                                {
+                                                    deletePlanet (id: $id)
+                                                    {
                                                         id
                                                         name
-                                                    }}
-                                                }}";
+                                                    }
+                                                }";
 
         /// <summary>
         /// Executes once for the test class.
@@ -49,14 +49,14 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             // Run mutation Add planet;
             String id = Guid.NewGuid().ToString();
             string mutation = String.Format(_mutationStringFormat, id, "test_name");
-            JsonElement response = await ExecuteGraphQLRequestAsync("addPlanet", mutation);
+            JsonElement response = await ExecuteGraphQLRequestAsync("addPlanet", mutation, new() { { "$id", id }, { "$name", "test_name" } });
 
             // Validate results
             Assert.IsFalse(response.ToString().Contains("Error"));
 
             // Run mutation delete item;
             mutation = String.Format(_mutationDeleteItemStringFormat, id);
-            response = await ExecuteGraphQLRequestAsync("deletePlanet", mutation);
+            response = await ExecuteGraphQLRequestAsync("deletePlanet", mutation, new() { { "$id", id } });
 
             // Validate results
             Assert.IsFalse(response.ToString().Contains("Error"));

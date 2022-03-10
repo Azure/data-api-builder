@@ -125,13 +125,14 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         /// Executes the GraphQL request and returns the results
         /// </summary>
         /// <param name="queryName"> Name of the GraphQL query/mutation</param>
-        /// <param name="graphQLQuery"> The GraphQL query/mutation</param>
+        /// <param name="query"> The GraphQL query/mutation</param>
         /// <returns></returns>
-        internal static async Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string graphQLQuery)
+        internal static async Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string query, Dictionary<string, object> variables)
         {
             string queryJson = JObject.FromObject(new
             {
-                query = graphQLQuery
+                query,
+                variables
             }).ToString();
             _controller.ControllerContext.HttpContext = GetHttpContextWithBody(queryJson);
             JsonElement graphQLResult = await _controller.PostAsync();

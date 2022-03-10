@@ -11,15 +11,25 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
     {
         private static readonly string _containerName = Guid.NewGuid().ToString();
 
-        public static readonly string PlanetByIdQueryFormat = @"{{planetById (id: {0}){{ id, name}} }}";
+        public static readonly string PlanetByIdQueryFormat = @"
+query ($id: ID) {
+    planetById (id: $id) {
+        id
+        name
+    }
+}";
         public static readonly string PlanetListQuery = @"{planetList{ id, name}}";
         public static readonly string PlanetConnectionQueryStringFormat = @"
-            {{planets (first: {0}, after: {1}){{
-                 items{{ id  name }}
-                 endCursor
-                 hasNextPage
-                }}
-            }}";
+query ($first: Int!, $after: String) {
+    planets (first: $first, after: $after) {
+        items {
+            id
+            name
+        }
+        endCursor
+        hasNextPage
+    }
+}";
 
         private static List<string> _idList;
 
@@ -42,8 +52,8 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         public async Task TestSimpleQuery()
         {
             // Run query
-            string query = string.Format(PlanetByIdQueryFormat, arg0: "\"" + _idList[0] + "\"");
-            JsonElement response = await ExecuteGraphQLRequestAsync("planetById", query);
+            string id = _idList[0];
+            JsonElement response = await ExecuteGraphQLRequestAsync("planetById", PlanetByIdQueryFormat, new() { { "$id", id } });
 
             // Validate results
             Assert.IsFalse(response.ToString().Contains("Error"));
@@ -57,7 +67,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         public async Task TestPaginatedQuery()
         {
             // Run query
-            JsonElement response = await ExecuteGraphQLRequestAsync("planetList", PlanetListQuery);
+            JsonElement response = await ExecuteGraphQLRequestAsync("planetList", PlanetListQuery, new());
             int actualElements = response.GetArrayLength();
             // Run paginated query
             int totalElementsFromPaginatedQuery = 0;
@@ -73,8 +83,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
                     continuationToken = "\"" + continuationToken + "\"";
                 }
 
-                string paginatedQuery = string.Format(PlanetConnectionQueryStringFormat, arg0: pagesize, arg1: continuationToken);
-                JsonElement page = await ExecuteGraphQLRequestAsync("planets", paginatedQuery);
+                JsonElement page = await ExecuteGraphQLRequestAsync("planets", PlanetConnectionQueryStringFormat, new() { { "$first", pagesize }, { "$after", continuationToken } });
                 JsonElement continuation = page.GetProperty("endCursor");
                 continuationToken = continuation.ToString();
                 totalElementsFromPaginatedQuery += page.GetProperty("items").GetArrayLength();

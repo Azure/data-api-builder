@@ -215,11 +215,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }
             else
             {
+                string baseUrl = UriHelper.GetEncodedUrl(controller.HttpContext.Request);
                 expected = exception ?
                     JsonSerializer.Serialize(RestController.ErrorResponse(
                         expectedSubStatusCode.ToString(),
                         expectedErrorMessage, expectedStatusCode).Value) :
-                    $"{{\"value\":{FormatExpectedValue(await GetDatabaseResultAsync(sqlQuery))}{ExpectedNextLinkIfAny(paginated, controller, $"{expectedAfterQueryString}")}}}";
+                    $"{{\"value\":{FormatExpectedValue(await GetDatabaseResultAsync(sqlQuery))}{ExpectedNextLinkIfAny(paginated, baseUrl, $"{expectedAfterQueryString}")}}}";
             }
 
             SqlTestHelper.VerifyResult(
@@ -246,13 +247,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Helper function formats the expected value to match actual response format.
+        /// Helper function will return the expected NextLink if one is
+        /// required, and an empty string otherwise.
         /// </summary>
-        /// <param name="expected">The expected response.</param>
-        /// <returns>Formetted expected response.</returns>
-        private static string ExpectedNextLinkIfAny(bool paginated, RestController controller, string queryString)
+        /// <param name="paginated">Bool representing if the nextLink is needed.</param>
+        /// <param name="baseUrl">The base Url.</param>
+        /// <param name="queryString">The query string to add to the url.</param>
+        /// <returns></returns>
+        private static string ExpectedNextLinkIfAny(bool paginated, string baseUrl, string queryString)
         {
-            return paginated ? $",\"nextLink\":\"{UriHelper.GetEncodedUrl(controller.HttpContext.Request)}{queryString}\"" : string.Empty;
+            return paginated ? $",\"nextLink\":\"{baseUrl}{queryString}\"" : string.Empty;
         }
 
         /// <summary>

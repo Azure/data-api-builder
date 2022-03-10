@@ -81,11 +81,12 @@ namespace Azure.DataGateway.Service.Controllers
             if (resultEnumerated.Count() > 1)
             {
                 string nextLinkJsonString = JsonSerializer.Serialize(resultEnumerated.Last());
-                IEnumerable<JsonElement> value = resultEnumerated.Take(resultEnumerated.Count() - 1);
                 Dictionary<string, object>? nextLink = JsonSerializer.Deserialize<Dictionary<string, object>>(nextLinkJsonString);
+
                 // if the last element has a key of "nextLink" we have a paginated response
                 if (nextLink!.ContainsKey("nextLink"))
                 {
+                    IEnumerable<JsonElement> value = resultEnumerated.Take(resultEnumerated.Count() - 1);
                     return Ok(new
                     {
                         value = value,

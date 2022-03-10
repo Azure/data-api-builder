@@ -61,6 +61,32 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         [TestMethod]
+        public async Task MultipleResultQueryWithVariables()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"query ($first: Int!) {
+                getBooks(first: $first) {
+                    id
+                    title
+                }
+            }";
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', `subq1`.`id`, 'title', `subq1`.`title`)), '[]') AS `data`
+                FROM
+                  (SELECT `table0`.`id` AS `id`,
+                          `table0`.`title` AS `title`
+                   FROM `books` AS `table0`
+                   WHERE 1 = 1
+                   ORDER BY `table0`.`id`
+                   LIMIT 100) AS `subq1`";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController, new() { { "first", 100 } });
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        [TestMethod]
         public async Task MultipleResultJoinQuery()
         {
             string graphQLQueryName = "getBooks";

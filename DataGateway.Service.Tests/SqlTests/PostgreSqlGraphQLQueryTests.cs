@@ -53,6 +53,24 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         [TestMethod]
+        public async Task MultipleResultQueryWithVariables()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"query ($first: Int!) {
+                getBooks(first: $first) {
+                    id
+                    title
+                }
+            }";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id) as table0 LIMIT 100";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        [TestMethod]
         public async Task MultipleResultJoinQuery()
         {
             string graphQLQueryName = "getBooks";

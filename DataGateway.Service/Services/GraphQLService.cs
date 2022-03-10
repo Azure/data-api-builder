@@ -130,8 +130,16 @@ namespace Azure.DataGateway.Service.Services
         {
             using JsonDocument requestBodyJson = JsonDocument.Parse(requestBody);
             IQueryRequestBuilder requestBuilder = QueryRequestBuilder.New()
-                .SetQuery(requestBodyJson.RootElement.GetProperty("query").GetString()!)
-                .SetVariableValues(JsonConvert.DeserializeObject<Dictionary<string, object?>>(requestBodyJson.RootElement.GetProperty("variables").ToString()!));
+                .SetQuery(requestBodyJson.RootElement.GetProperty("query").GetString()!);
+
+            JsonElement variables;
+            if (requestBodyJson.RootElement.TryGetProperty("variables", out variables))
+            {
+                requestBuilder =
+                    requestBuilder.SetVariableValues(
+                        JsonConvert.DeserializeObject<Dictionary<string, object?>>(variables.ToString()!)
+                    );
+            }
 
             // Individually adds each property to requestBuilder if they are provided.
             // Avoids using SetProperties() as it detrimentally overwrites

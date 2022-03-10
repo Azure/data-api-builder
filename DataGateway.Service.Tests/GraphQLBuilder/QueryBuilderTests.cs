@@ -26,7 +26,7 @@ type Foo @model {
             DocumentNode queryRoot = QueryBuilder.Build(root);
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
-            Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"Foo_by_pk"));
+            Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"foo_by_pk"));
         }
 
         [TestMethod]
@@ -46,7 +46,7 @@ type Foo @model {
             DocumentNode queryRoot = QueryBuilder.Build(root);
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
-            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"Foo_by_pk");
+            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"foo_by_pk");
             IReadOnlyList<InputValueDefinitionNode> args = field.Arguments;
 
             Assert.AreEqual(1, args.Count);
@@ -72,7 +72,7 @@ type Foo @model {
             DocumentNode queryRoot = QueryBuilder.Build(root);
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
-            Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"Foos"));
+            Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"foos"));
         }
 
         [TestMethod]
@@ -92,7 +92,7 @@ type Foo @model {
             DocumentNode queryRoot = QueryBuilder.Build(root);
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
-            string returnTypeName = query.Fields.First(f => f.Name.Value == $"Foos").Type.NamedType().Name.Value;
+            string returnTypeName = query.Fields.First(f => f.Name.Value == $"foos").Type.NamedType().Name.Value;
             ObjectTypeDefinitionNode returnType = queryRoot.Definitions.Where(d => d is ObjectTypeDefinitionNode).Cast<ObjectTypeDefinitionNode>().First(d => d.Name.Value == returnTypeName);
             Assert.AreEqual(2, returnType.Fields.Count);
             Assert.AreEqual("items", returnType.Fields[0].Name.Value);

@@ -42,7 +42,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         {
             return new(
                 location: null,
-                new NameNode($"{name}_by_pk"),
+                new NameNode($"{FormatNameForField(name)}_by_pk"),
                 new StringValueNode($"Get a {name} from the database by its ID/primary key"),
                 new List<InputValueDefinitionNode> {
                 new InputValueDefinitionNode(

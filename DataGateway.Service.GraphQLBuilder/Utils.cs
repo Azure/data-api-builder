@@ -11,9 +11,15 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             return objectTypeDefinitionNode.Directives.Any(d => d.Name.ToString() == modelDirectiveName);
         }
 
+        public static string FormatNameForField(NameNode name)
+        {
+            string rawName = name.Value;
+            return $"{char.ToLowerInvariant(rawName[0])}{rawName[1..]}";
+        }
+
         public static NameNode Pluralize(NameNode name)
         {
-            return new NameNode($"{name}s");
+            return new NameNode($"{FormatNameForField(name)}s");
         }
 
         public static bool IsBuiltInType(ITypeNode typeNode)

@@ -9,6 +9,7 @@ using HotChocolate.Execution;
 using HotChocolate.Execution.Configuration;
 using HotChocolate.Types;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -129,7 +130,8 @@ namespace Azure.DataGateway.Service.Services
         {
             using JsonDocument requestBodyJson = JsonDocument.Parse(requestBody);
             IQueryRequestBuilder requestBuilder = QueryRequestBuilder.New()
-                .SetQuery(requestBodyJson.RootElement.GetProperty("query").GetString()!);
+                .SetQuery(requestBodyJson.RootElement.GetProperty("query").GetString()!)
+                .SetVariableValues(JsonConvert.DeserializeObject<Dictionary<string, object?>>(requestBodyJson.RootElement.GetProperty("variables").ToString()!));
 
             // Individually adds each property to requestBuilder if they are provided.
             // Avoids using SetProperties() as it detrimentally overwrites

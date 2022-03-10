@@ -20,7 +20,7 @@ query ($id: ID) {
 }";
         public static readonly string PlanetListQuery = @"{planetList{ id, name}}";
         public static readonly string PlanetConnectionQueryStringFormat = @"
-query ($first: Int!, $after: String) {
+query ($first: Int, $after: String) {
     planets (first: $first, after: $after) {
         items {
             id
@@ -53,7 +53,7 @@ query ($first: Int!, $after: String) {
         {
             // Run query
             string id = _idList[0];
-            JsonElement response = await ExecuteGraphQLRequestAsync("planetById", PlanetByIdQueryFormat, new() { { "$id", id } });
+            JsonElement response = await ExecuteGraphQLRequestAsync("planetById", PlanetByIdQueryFormat, new() { { "id", id } });
 
             // Validate results
             Assert.IsFalse(response.ToString().Contains("Error"));
@@ -71,19 +71,12 @@ query ($first: Int!, $after: String) {
             int actualElements = response.GetArrayLength();
             // Run paginated query
             int totalElementsFromPaginatedQuery = 0;
-            string continuationToken = "null";
+            string continuationToken = null;
             const int pagesize = 5;
 
             do
             {
-                if (continuationToken != "null")
-                {
-                    // We need to append an escape quote to continuation token because of the way we are using string.format
-                    // for generating the graphql paginated query stringformat for this test.
-                    continuationToken = "\"" + continuationToken + "\"";
-                }
-
-                JsonElement page = await ExecuteGraphQLRequestAsync("planets", PlanetConnectionQueryStringFormat, new() { { "$first", pagesize }, { "$after", continuationToken } });
+                JsonElement page = await ExecuteGraphQLRequestAsync("planets", PlanetConnectionQueryStringFormat, new() { { "first", pagesize }, { "after", continuationToken } });
                 JsonElement continuation = page.GetProperty("endCursor");
                 continuationToken = continuation.ToString();
                 totalElementsFromPaginatedQuery += page.GetProperty("items").GetArrayLength();

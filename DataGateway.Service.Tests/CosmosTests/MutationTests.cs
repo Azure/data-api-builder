@@ -10,7 +10,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
     {
         private static readonly string _containerName = Guid.NewGuid().ToString();
         private static readonly string _mutationStringFormat = @"
-                                                mutation ($id: ID!, $name: String!)
+                                                mutation ($id: String, $name: String)
                                                 {
                                                     addPlanet (id: $id, name: $name)
                                                     {
@@ -19,7 +19,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
                                                     }
                                                 }";
         private static readonly string _mutationDeleteItemStringFormat = @"
-                                                mutation ($id: ID!)
+                                                mutation ($id: String)
                                                 {
                                                     deletePlanet (id: $id)
                                                     {
@@ -48,15 +48,13 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         {
             // Run mutation Add planet;
             String id = Guid.NewGuid().ToString();
-            string mutation = String.Format(_mutationStringFormat, id, "test_name");
-            JsonElement response = await ExecuteGraphQLRequestAsync("addPlanet", mutation, new() { { "$id", id }, { "$name", "test_name" } });
+            JsonElement response = await ExecuteGraphQLRequestAsync("addPlanet", _mutationStringFormat, new() { { "id", id }, { "name", "test_name" } });
 
             // Validate results
             Assert.IsFalse(response.ToString().Contains("Error"));
 
             // Run mutation delete item;
-            mutation = String.Format(_mutationDeleteItemStringFormat, id);
-            response = await ExecuteGraphQLRequestAsync("deletePlanet", mutation, new() { { "$id", id } });
+            response = await ExecuteGraphQLRequestAsync("deletePlanet", _mutationDeleteItemStringFormat, new() { { "id", id } });
 
             // Validate results
             Assert.IsFalse(response.ToString().Contains("Error"));

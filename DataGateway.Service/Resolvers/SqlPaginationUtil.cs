@@ -258,12 +258,21 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="nvc">Collection of query params.</param>
         /// <param name="after">The values needed for next page.</param>
         /// <returns>The string representing nextLink.</returns>
-        public static JsonElement CreateNextLink(string path, NameValueCollection nvc, string after)
+        public static JsonElement CreateNextLink(string path, NameValueCollection? nvc, string after)
         {
-            nvc["$after"] = after;
-            string jsonString = JsonSerializer.Serialize(new
+            if (nvc is null)
             {
-                nextLink = @$"{path}?{nvc.ToString()}"
+                nvc = new();
+            }
+
+            nvc["$after"] = after;
+            // ValueKind will be array so we can differentiate from columns
+            string jsonString = JsonSerializer.Serialize(new[]
+            {
+                new
+                {
+                    nextLink = @$"{path}?{nvc.ToString()}"
+                }
             });
             return JsonSerializer.Deserialize<JsonElement>(jsonString);
         }

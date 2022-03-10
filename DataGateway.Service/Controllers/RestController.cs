@@ -77,25 +77,21 @@ namespace Azure.DataGateway.Service.Controllers
             }
 
             IEnumerable<JsonElement> resultEnumerated = jsonResult.EnumerateArray();
-            // More than 1 record indicates we may have a paginated response
-            if (resultEnumerated.Count() > 1)
+            // More than 1 record, and the last element is of type array, then we have pagination
+            if (resultEnumerated.Count() > 1 && resultEnumerated.Last().ValueKind == JsonValueKind.Array)
             {
                 string nextLinkJsonString = JsonSerializer.Serialize(resultEnumerated.Last());
-                Dictionary<string, object> nextLink = JsonSerializer.Deserialize<Dictionary<string, object>>(nextLinkJsonString)!;
-
-                // if the last element has a key of "nextLink" we have a paginated response
-                if (nextLink.ContainsKey("nextLink"))
+                Dictionary<string, object> nextLink = JsonSerializer.Deserialize<Dictionary<string, object>>(nextLinkJsonString[1..^1])!;
+                IEnumerable<JsonElement> value = resultEnumerated.Take(resultEnumerated.Count() - 1);
+                return Ok(new
                 {
-                    IEnumerable<JsonElement> value = resultEnumerated.Take(resultEnumerated.Count() - 1);
-                    return Ok(new
-                    {
-                        value = value,
-                        @nextLink = nextLink!["nextLink"]
-                    });
-                }
+                    value = value,
+                    @nextLink = nextLink["nextLink"]
+                });
+
             }
 
-            // only 1 record or no "nextLink" key in the json, so pagination not required
+            // no pagination, do not need nextLink
             return Ok(new
             {
                 value = resultEnumerated

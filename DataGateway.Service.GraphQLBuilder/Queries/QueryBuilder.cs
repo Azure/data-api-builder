@@ -182,7 +182,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                         new NameNode("hasNextPage"),
                         new StringValueNode("Indicates if there are more pages of items to return"),
                         new List<InputValueDefinitionNode>(),
-                        new StringType().ToTypeNode(),
+                        new BooleanType().ToTypeNode(),
                         new List<DirectiveNode>())
                 }
             );

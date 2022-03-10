@@ -50,7 +50,7 @@ query {{
         {
             // Run query
             string id = _idList[0];
-            string query = string.Format(PlanetByIdQueryFormat,"\"" + id + "\"");
+            string query = string.Format(PlanetByIdQueryFormat, "\"" + id + "\"");
             JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", query);
 
             // Validate results
@@ -77,7 +77,7 @@ query {{
                     continuationToken = "\"" + continuationToken + "\"";
                 }
 
-                string paginatedQuery = string.Format(PlanetConnectionQueryStringFormat,pagesize, continuationToken);
+                string paginatedQuery = string.Format(PlanetConnectionQueryStringFormat, pagesize, continuationToken);
                 JsonElement page = await ExecuteGraphQLRequestAsync("planets", paginatedQuery);
                 JsonElement continuation = page.GetProperty("continuation");
                 continuationToken = continuation.ToString();

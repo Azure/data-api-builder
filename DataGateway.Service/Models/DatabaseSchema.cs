@@ -9,7 +9,8 @@ namespace Azure.DataGateway.Service.Models
     /// </summary>
     public class DatabaseSchema
     {
-        public Dictionary<string, TableDefinition> Tables { get; set; } = new();
+        public Dictionary<string, TableDefinition> Tables { get; set; } =
+            new(StringComparer.InvariantCultureIgnoreCase);
     }
 
     public class TableDefinition
@@ -18,7 +19,8 @@ namespace Azure.DataGateway.Service.Models
         /// The list of columns that together form the primary key of the table.
         /// </summary>
         public List<string> PrimaryKey { get; set; } = new();
-        public Dictionary<string, ColumnDefinition> Columns { get; set; } = new();
+        public Dictionary<string, ColumnDefinition> Columns { get; set; } =
+            new(StringComparer.InvariantCultureIgnoreCase);
         public Dictionary<string, ForeignKeyDefinition> ForeignKeys { get; set; } = new();
         public Dictionary<string, AuthorizationRule> HttpVerbs { get; set; } = new();
     }

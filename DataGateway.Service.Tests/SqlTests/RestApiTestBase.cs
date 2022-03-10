@@ -618,7 +618,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 exception: true,
-                expectedErrorMessage: "Invalid request body. Missing field in body: publisher_id.",
+                expectedErrorMessage: "Invalid request body. Missing field in body: title.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

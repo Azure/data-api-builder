@@ -3,9 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
+using MySqlConnector;
+using Npgsql;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -14,8 +18,7 @@ namespace Azure.DataGateway.Service.Services
     /// </summary>
     /// <param name="GraphQLSchema">String Representation of graphQL schema, non escaped. This has higher priority than GraphQLSchemaFile, so if both are set this one will be used.</param>
     /// <param name="GraphQLSchemaFile">Location of the graphQL schema file</param>
-    /// <param name="DatabaseSchema">A JSON encoded version of the information that resolvers need about schema of the schema of the database.</param>
-    public record ResolverConfig(string GraphQLSchema, string GraphQLSchemaFile, DatabaseSchema DatabaseSchema)
+    public record ResolverConfig(string GraphQLSchema, string GraphQLSchemaFile)
     {
         /// <summary>
         /// A list containing metadata required to execute the different
@@ -28,6 +31,12 @@ namespace Azure.DataGateway.Service.Services
         /// types in the GraphQL schema. See GraphQLType for details.
         /// </summary>
         public Dictionary<string, GraphQLType> GraphQLTypes { get; set; } = new();
+
+        /// <summary>
+        /// A JSON encoded version of the information that resolvers
+        /// need about schema of the database.
+        /// </summary>
+        public DatabaseSchema? DatabaseSchema { get; set; }
     }
 
     /// <summary>
@@ -37,6 +46,8 @@ namespace Azure.DataGateway.Service.Services
     {
         private readonly ResolverConfig _config;
         private readonly FilterParser? _filterParser;
+        private DatabaseType _databaseType;
+        private string _connectionString;
 
         /// <summary>
         /// Stores mutation resolvers contained in configuration file.
@@ -44,10 +55,19 @@ namespace Azure.DataGateway.Service.Services
         private Dictionary<string, MutationResolver> _mutationResolvers;
 
         public FileMetadataStoreProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
-        : this(dataGatewayConfig.Value.ResolverConfigFile) { }
+        : this(dataGatewayConfig.Value.ResolverConfigFile,
+              dataGatewayConfig.Value.DatabaseType,
+              dataGatewayConfig.Value.DatabaseConnection.ConnectionString)
+        { }
 
-        public FileMetadataStoreProvider(string resolverConfigPath)
+        public FileMetadataStoreProvider(
+            string resolverConfigPath,
+            DatabaseType databaseType,
+            string connectionString)
         {
+            _databaseType = databaseType;
+            _connectionString = connectionString;
+
             string jsonString = File.ReadAllText(resolverConfigPath);
             JsonSerializerOptions options = new()
             {
@@ -78,11 +98,17 @@ namespace Azure.DataGateway.Service.Services
                 _mutationResolvers.Add(resolver.Id, resolver);
             }
 
+            if (_config.DatabaseSchema == default && databaseType != DatabaseType.Cosmos)
+            {
+                _config.DatabaseSchema = RefreshDatabaseSchemaWithTablesAsync().Result;
+            }
+
             if (_config.DatabaseSchema != default)
             {
                 _filterParser = new(_config.DatabaseSchema);
             }
         }
+
         /// <summary>
         /// Reads generated JSON configuration file with GraphQL Schema
         /// </summary>
@@ -104,7 +130,7 @@ namespace Azure.DataGateway.Service.Services
 
         public TableDefinition GetTableDefinition(string name)
         {
-            if (!_config.DatabaseSchema.Tables.TryGetValue(name, out TableDefinition? metadata))
+            if (!_config.DatabaseSchema!.Tables.TryGetValue(name, out TableDefinition? metadata))
             {
                 throw new KeyNotFoundException($"Table Definition for {name} does not exist.");
             }
@@ -136,5 +162,46 @@ namespace Azure.DataGateway.Service.Services
 
             return _filterParser;
         }
+
+        /// <inheritdoc/>
+        public Task<DatabaseSchema> RefreshDatabaseSchemaWithTablesAsync(
+            string schemaName = "")
+        {
+            IMetadataStoreProvider sqlMetadataProvider;
+            switch (_databaseType)
+            {
+                case DatabaseType.MsSql:
+                    sqlMetadataProvider =
+                        SqlMetadataProvider<
+                            SqlConnection,
+                            SqlDataAdapter,
+                            SqlCommand>.GetSqlMetadataProvider(
+                            _connectionString);
+                    schemaName = "dbo";
+                    break;
+                case DatabaseType.PostgreSql:
+                    sqlMetadataProvider =
+                        SqlMetadataProvider<
+                            NpgsqlConnection,
+                            NpgsqlDataAdapter,
+                            NpgsqlCommand>.GetSqlMetadataProvider(_connectionString);
+                    schemaName = "public";
+                    break;
+                case DatabaseType.MySql:
+                    sqlMetadataProvider =
+                    SqlMetadataProvider<
+                        MySqlConnection,
+                        MySqlDataAdapter,
+                        MySqlCommand>.GetSqlMetadataProvider(_connectionString);
+                    schemaName = "mysql";
+                    break;
+                default:
+                    throw new ArgumentException($"Refreshing tables for this database type: {_databaseType}" +
+                        $"is not supported");
+            }
+
+            return sqlMetadataProvider.RefreshDatabaseSchemaWithTablesAsync(schemaName);
+        }
+
     }
 }

@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
 
 namespace Azure.DataGateway.Service.Services
@@ -38,5 +39,10 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <returns></returns>
         FilterParser GetFilterParser();
+
+        /// <summary>
+        /// Refreshes the database schema with table information.
+        /// </summary>
+        Task<DatabaseSchema> RefreshDatabaseSchemaWithTablesAsync(string schemaName);
     }
 }

@@ -332,9 +332,9 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="first"></param>
         /// <returns></returns>
-        public static uint CheckFirstValidity(string? first)
+        public static uint CheckFirstValidity(string first)
         {
-            if (!uint.TryParse(first!, out uint firstAsUint))
+            if (!uint.TryParse(first, out uint firstAsUint))
             {
                 throw new ArgumentException("Invalid value associated with Query Parameter $first: " + first);
             }

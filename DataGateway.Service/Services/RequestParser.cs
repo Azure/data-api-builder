@@ -79,7 +79,6 @@ namespace Azure.DataGateway.Service.Services
         /// in the URL of the http request. It parses and saves the values that are needed to
         /// later generate queries in the given RestRequestContext.
         /// </summary>
-        /// <param name="nvc">NameValueCollection representing query params from the URL's query string.</param>
         /// <param name="context">The RestRequestContext holding the major components of the query.</param>
         public static void ParseQueryString(RestRequestContext context, FilterParser filterParser)
         {
@@ -101,7 +100,7 @@ namespace Azure.DataGateway.Service.Services
                         context.After = context.ParsedQueryString[key];
                         break;
                     case FIRST_URL:
-                        context.First = RequestValidator.CheckFirstValidity(context.ParsedQueryString[key]);
+                        context.First = RequestValidator.CheckFirstValidity(context.ParsedQueryString[key]!);
                         break;
                     default:
                         throw new ArgumentException("Invalid Query Parameter: " + key.ToString());

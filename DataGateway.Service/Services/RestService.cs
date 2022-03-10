@@ -151,7 +151,7 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="task">This task will return the resultant JsonDocument from the query.</param>
         /// <param name="context">The RequestContext.</param>
         /// <returns>A result from a Find operation that has been correctly formatted for the controller.</returns>
-        private JsonDocument? FormatFindResult(JsonDocument jsonDoc, FindRequestContext context)
+        private JsonDocument? FormatFindResult(JsonDocument? jsonDoc, FindRequestContext context)
         {
             if (jsonDoc is null)
             {

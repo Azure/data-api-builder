@@ -40,6 +40,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static IMetadataStoreProvider _metadataStoreProvider;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
+        protected static IMetadataStoreProvider _sqlMetadataProvider;
+        protected static string _defaultSchemaName;
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run.
@@ -52,20 +54,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _testCategory = testCategory;
 
             IOptions<DataGatewayConfig> config = SqlTestHelper.LoadConfig($"{_testCategory}IntegrationTest");
+            string connectionString = config.Value.DatabaseConnection.ConnectionString;
 
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:
                     _queryExecutor = new QueryExecutor<NpgsqlConnection>(config);
                     _queryBuilder = new PostgresQueryBuilder();
+                    _sqlMetadataProvider =
+                        SqlMetadataProvider<NpgsqlConnection, NpgsqlDataAdapter, NpgsqlCommand>.GetSqlMetadataProvider(connectionString);
+                    _defaultSchemaName = "public";
                     break;
                 case TestCategory.MSSQL:
                     _queryExecutor = new QueryExecutor<SqlConnection>(config);
                     _queryBuilder = new MsSqlQueryBuilder();
+                    _sqlMetadataProvider =
+                      SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand>.GetSqlMetadataProvider(connectionString);
+                    _defaultSchemaName = "dbo";
                     break;
                 case TestCategory.MYSQL:
                     _queryExecutor = new QueryExecutor<MySqlConnection>(config);
                     _queryBuilder = new MySqlQueryBuilder();
+                    _sqlMetadataProvider =
+                        SqlMetadataProvider<MySqlConnection, MySqlDataAdapter, MySqlCommand>.GetSqlMetadataProvider(connectionString);
+                    _defaultSchemaName = "mysql";
                     break;
             }
 
@@ -81,7 +93,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _httpContextAccessor = new Mock<IHttpContextAccessor>();
             _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
 
-            _metadataStoreProvider = new FileMetadataStoreProvider("sql-config.json");
+            _metadataStoreProvider = new FileMetadataStoreProvider(
+                "sql-config.json",
+                config.Value.DatabaseType,
+                config.Value.DatabaseConnection.ConnectionString);
             _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
             _mutationEngine = new SqlMutationEngine(_queryEngine, _metadataStoreProvider, _queryExecutor, _queryBuilder);
 

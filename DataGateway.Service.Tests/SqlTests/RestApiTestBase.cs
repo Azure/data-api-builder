@@ -19,6 +19,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static RestService _restService;
         protected static RestController _restController;
         protected static readonly string _integrationTableName = "books";
+        protected static readonly string _DefaultTestTable = "demand";
         protected static readonly string _tableWithCompositePrimaryKey = "reviews";
         protected const int STARTING_ID_FOR_TEST_INSERTS = 5001;
         protected static readonly string _integration_NonAutoGenPK_TableName = "magazines";
@@ -525,6 +526,24 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 queryString: null,
                 entity: _integration_AutoGenNonPK_TableName,
                 sqlQuery: GetQuery("PutOne_Insert_AutoGenNonPK_Test"),
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+                );
+
+            requestBody = @"
+            {
+                ""piecesAvailable"": 10
+            }";
+
+            expectedLocationHeader = $"book_id/1/id/1";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: expectedLocationHeader,
+                queryString: null,
+                entity: _DefaultTestTable,
+                sqlQuery: GetQuery("PutOne_Insert_Default_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,

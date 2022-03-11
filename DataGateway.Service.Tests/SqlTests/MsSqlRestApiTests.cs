@@ -234,6 +234,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "PutOne_Insert_Default_Test",
+                $"SELECT [id], [book_id], [piecesAvailable],[piecesRequired] FROM { _DefaultTestTable } " +
+                $"WHERE id = 1 AND [book_id] = 1 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "PatchOne_Insert_NonAutoGenPK_Test",
                 $"SELECT [id], [title], [issueNumber] FROM { _integration_NonAutoGenPK_TableName } " +
                 $"WHERE id = 2 AND [title] = 'Batman Begins' " +

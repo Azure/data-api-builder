@@ -77,9 +77,16 @@ namespace Azure.DataGateway.Service.Controllers
             }
 
             IEnumerable<JsonElement> resultEnumerated = jsonResult.EnumerateArray();
-            // More than 1 record, and the last element is of type array, then we have pagination
-            if (resultEnumerated.Count() > 1 && resultEnumerated.Last().ValueKind == JsonValueKind.Array)
+            // More than 0 records, and the last element is of type array, then we have pagination
+            if (resultEnumerated.Count() > 0 && resultEnumerated.Last().ValueKind == JsonValueKind.Array)
             {
+                // Get the nextLink
+                // resultEnumerated will be an array of the form
+                // [{object1}, {object2},...{objectlimit}, [{nextLinkObject}]]
+                // if the last element is of type array, we know it is nextLink
+                // we strip the "[" and "]" and then save the nextLink element
+                // into a dictionary with a key of "nextLink" and a value that
+                // represents the nextLink data we require.
                 string nextLinkJsonString = JsonSerializer.Serialize(resultEnumerated.Last());
                 Dictionary<string, object> nextLink = JsonSerializer.Deserialize<Dictionary<string, object>>(nextLinkJsonString[1..^1])!;
                 IEnumerable<JsonElement> value = resultEnumerated.Take(resultEnumerated.Count() - 1);

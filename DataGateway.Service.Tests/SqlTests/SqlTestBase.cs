@@ -188,11 +188,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller,
                 queryString,
                 requestBody);
-
+            string baseUrl = UriHelper.GetEncodedUrl(controller.HttpContext.Request);
             if (expectedLocationHeader != null)
             {
                 expectedLocationHeader =
-                    UriHelper.GetEncodedUrl(controller.HttpContext.Request)
+                    baseUrl
                     + @"/" + expectedLocationHeader;
             }
 
@@ -215,7 +215,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }
             else
             {
-                string baseUrl = UriHelper.GetEncodedUrl(controller.HttpContext.Request);
                 expected = exception ?
                     JsonSerializer.Serialize(RestController.ErrorResponse(
                         expectedSubStatusCode.ToString(),

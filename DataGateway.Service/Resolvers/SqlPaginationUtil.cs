@@ -265,8 +265,13 @@ namespace Azure.DataGateway.Service.Resolvers
                 nvc = new();
             }
 
-            nvc["$after"] = after;
-            // ValueKind will be array so we can differentiate from columns
+            if (!string.IsNullOrWhiteSpace(after))
+            {
+                nvc["$after"] = after;
+            }
+
+            // ValueKind will be array so we can differentiate from other objects in the response
+            // to be returned.
             string jsonString = JsonSerializer.Serialize(new[]
             {
                 new

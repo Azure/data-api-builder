@@ -268,70 +268,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Tests that when and appears in front of or, the final predicate
-        /// maintains this order
-        /// </summary>
-        [TestMethod]
-        public async Task TestAndOrFilters()
-        {
-            string graphQLQueryName = "getBooks";
-            string gqlQuery = @"{
-                getBooks(_filter: {
-                                    id: {gt: 2}
-                                    and: [
-                                        {id: {lt: 4}}
-                                    ]
-                                    or: [
-                                        {id: {eq: 4}}
-                                    ]
-                                })
-                {
-                    id
-                }
-            }";
-
-            string dbQuery = MakeQueryOnBooks(
-                new List<string> { "id" },
-                @"(id > 2 AND id < 4 OR id = 4)");
-
-            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-        }
-
-        /// <summary>
-        /// Tests that when or appears in front of and, the final predicate
-        /// maintains this order
-        /// </summary>
-        [TestMethod]
-        public async Task TestOrAndFilters()
-        {
-            string graphQLQueryName = "getBooks";
-            string gqlQuery = @"{
-                getBooks(_filter: {
-                                    id: {gt: 2}
-                                    or: [
-                                        {id: {eq: 4}}
-                                    ]
-                                    and: [
-                                        {id: {lt: 4}}
-                                    ]
-                                })
-                {
-                    id
-                }
-            }";
-
-            string dbQuery = MakeQueryOnBooks(
-                new List<string> { "id" },
-                @"(id > 2 OR id = 4 AND id < 4)");
-
-            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-        }
-
-        /// <summary>
         /// Test that:
         /// - the predicate equivalent of *FilterInput input types is put in parenthesis if the
         ///   predicate
@@ -347,10 +283,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "getBooks";
             string gqlQuery = @"{
                 getBooks(_filter: {
-                                    id:{gt: 2 lt: 4}
+                                    title: {contains: ""book""}
                                     or: [
+                                        {id:{gt: 2 lt: 4}},
                                         {id: {gte: 4}},
-                                        {title: {contains: ""book""}}
                                     ]
                                 })
                 {
@@ -361,7 +297,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             string dbQuery = MakeQueryOnBooks(
                 new List<string> { "id", "title" },
-                @"((id > 2 AND id < 4) OR (id >= 4 OR title LIKE '%book%'))");
+                @"(title LIKE '%book%' AND ((id > 2 AND id < 4) OR id >= 4))");
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -417,7 +353,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string gqlQuery = @"{
                 getBooks(_filter: {
                                     id: {gte: 2}
-                                    publisher_id: {gt: 2000}
+                                    title: {notContains: ""book""}
                                     and: [
                                         {
                                             id: {lt: 1000}
@@ -429,7 +365,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                         }
                                     ]
                                     or: [
-                                        {publisher_id: {lt: 1500}}
+                                        {publisher_id: {gt: 2000}},
+                                        {publisher_id: {lt: 1500}},
                                     ]
                                 })
                 {
@@ -441,7 +378,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             string dbQuery = MakeQueryOnBooks(
                 new List<string> { "id", "title", "publisher_id" },
-                @"((id >= 2 AND publisher_id > 2000) AND (id < 1000 AND title LIKE 'US%') OR publisher_id < 1500)");
+                @"((id >= 2 AND title NOT LIKE '%book%') AND
+                  (id < 1000 AND title LIKE 'US%') AND
+                  (publisher_id < 1500 OR publisher_id > 2000)");
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -449,48 +388,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Test that an empty and evaluates to ... and False
-        /// </summary>
-        [TestMethod]
-        public async Task TestEmptyAnd()
-        {
-            string graphQLQueryName = "getBooks";
-            string gqlQuery = @"{
-                getBooks(_filter: {id: {gt: -1} and: []})
-                {
-                    id
-                }
-            }";
-
-            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
-            SqlTestHelper.PerformTestEqualJsonStrings("[]", actual);
-        }
-
-        /// <summary>
-        /// Test that an empty or evaluates to ... or False
-        /// </summary>
-        [TestMethod]
-        public async Task TestEmptyOr()
-        {
-            string graphQLQueryName = "getBooks";
-            string gqlQuery = @"{
-                getBooks(_filter: {id: {gt: -1} or: []})
-                {
-                    id
-                }
-            }";
-
-            string dbQuery = MakeQueryOnBooks(
-                new List<string> { "id" },
-                "id > -1");
-
-            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-        }
-
-        /// <summary>
-        /// Test that only an empty and returns nothing
+        /// Test that an empty and evaluates to False
         /// </summary>
         [TestMethod]
         public async Task TestOnlyEmptyAnd()
@@ -508,7 +406,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Test that only an empty or returns nothing
+        /// Test that an empty or evaluates to False
         /// </summary>
         [TestMethod]
         public async Task TestOnlyEmptyOr()

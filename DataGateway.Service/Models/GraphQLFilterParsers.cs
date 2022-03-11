@@ -9,9 +9,6 @@ namespace Azure.DataGateway.Service.Models
     /// </summary>
     public static class GQLFilterParser
     {
-        private const string AND = "AND";
-        private const string OR = "OR";
-
         /// <summary>
         /// Parse a predicate for a *FilterInput input type
         /// </summary>
@@ -25,27 +22,21 @@ namespace Azure.DataGateway.Service.Models
             TableDefinition table,
             Func<object, string> processLiterals)
         {
-            List<(PredicateOperation, PredicateOperand)> andOrs = new();
             List<PredicateOperand> predicates = new();
 
             foreach (ObjectFieldNode field in fields)
             {
                 string name = field.Name.ToString();
 
-                bool fieldIsAnd = string.Equals(name, AND, StringComparison.OrdinalIgnoreCase);
-                bool fieldIsOr = string.Equals(name, OR, StringComparison.OrdinalIgnoreCase);
+                bool fieldIsAnd = string.Equals(name, $"{PredicateOperation.AND}", StringComparison.OrdinalIgnoreCase);
+                bool fieldIsOr = string.Equals(name, $"{PredicateOperation.OR}", StringComparison.OrdinalIgnoreCase);
 
                 if (fieldIsAnd || fieldIsOr)
                 {
                     PredicateOperation op = fieldIsAnd ? PredicateOperation.AND : PredicateOperation.OR;
 
                     List<IValueNode> otherPredicates = (List<IValueNode>)field.Value.Value!;
-                    andOrs.Push(
-                        (
-                            op,
-                            new PredicateOperand(ParseAndOr(otherPredicates, tableAlias, table, op, processLiterals))
-                        )
-                    );
+                    predicates.Push(new PredicateOperand(ParseAndOr(otherPredicates, tableAlias, table, op, processLiterals)));
                 }
                 else
                 {
@@ -54,51 +45,7 @@ namespace Azure.DataGateway.Service.Models
                 }
             }
 
-            if (predicates.Count == 0)
-            {
-                if (andOrs.Count == 1)
-                {
-                    return andOrs[0].Item2.AsPredicate()!;
-                }
-                else // andOrs.Count = 2
-                {
-                    return new Predicate(
-                        andOrs[0].Item2,
-                        andOrs[1].Item1,
-                        andOrs[1].Item2,
-                        addParenthesis: true
-                    );
-                }
-            }
-            else if (andOrs.Count == 0)
-            {
-                return MakeChainPredicate(predicates, PredicateOperation.AND);
-            }
-            else
-            {
-                if (andOrs.Count == 1)
-                {
-                    return new Predicate(
-                        new PredicateOperand(MakeChainPredicate(predicates, PredicateOperation.AND)),
-                        andOrs[0].Item1,
-                        andOrs[0].Item2,
-                        addParenthesis: true
-                    );
-                }
-                else // andOrs.Count = 2
-                {
-                    return new Predicate(
-                        new PredicateOperand(MakeChainPredicate(predicates, PredicateOperation.AND)),
-                        andOrs[0].Item1,
-                        new PredicateOperand(new Predicate(
-                            andOrs[0].Item2,
-                            andOrs[1].Item1,
-                            andOrs[1].Item2
-                        )),
-                        addParenthesis: true
-                    );
-                }
-            }
+            return MakeChainPredicate(predicates, PredicateOperation.AND);
         }
 
         /// <summary>

@@ -107,7 +107,7 @@ namespace Azure.DataGateway.Service.Models
         {
             if (predicate == null)
             {
-                throw new ArgumentNullException("Predicate predicate operand cannot be created with a null inner predicate.");
+                throw new ArgumentNullException("A predicate operand cannot be created with a null inner predicate.");
             }
 
             _columnOperand = null;

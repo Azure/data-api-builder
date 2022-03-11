@@ -184,7 +184,7 @@ namespace Azure.DataGateway.Service.Models
     /// <summary>
     /// Contains methods to parse a IntFilterInput
     /// </summary>
-    static public class IntTypeFilterParser
+    public static class IntTypeFilterParser
     {
 
         /// <summary>
@@ -193,7 +193,7 @@ namespace Azure.DataGateway.Service.Models
         /// <param name="column">A Column representing the table column being filtered by the IntFilterInput</param>
         /// <param name="fields">The fields in the IntFilterInput being processed</param>
         /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
-        static public Predicate Parse(
+        public static Predicate Parse(
             Column column,
             List<ObjectFieldNode> fields,
             Func<object, string> processLiterals)
@@ -244,7 +244,7 @@ namespace Azure.DataGateway.Service.Models
     /// <summary>
     /// Contains methods to parse a StringFilterInput
     /// </summary>
-    static public class StringTypeFilterParser
+    public static class StringTypeFilterParser
     {
 
         /// <summary>

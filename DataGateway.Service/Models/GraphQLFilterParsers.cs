@@ -253,7 +253,7 @@ namespace Azure.DataGateway.Service.Models
         /// <param name="column">A Column representing the table column being filtered by the StringFilterInput</param>
         /// <param name="fields">The fields in the StringFilterInput being processed</param>
         /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
-        static public Predicate Parse(
+        public static Predicate Parse(
             Column column,
             List<ObjectFieldNode> fields,
             Func<object, string> processLiterals)

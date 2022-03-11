@@ -219,7 +219,7 @@ namespace Azure.DataGateway.Service.Resolvers
             if (IsListQuery && queryParams.ContainsKey("first"))
             {
                 // parse first parameter for all list queries
-                object firstObject = queryParams["first"];
+                object? firstObject = queryParams["first"];
 
                 if (firstObject != null)
                 {
@@ -237,14 +237,25 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (IsListQuery && queryParams.ContainsKey("_filter"))
             {
-                object whereObject = queryParams["_filter"];
+                object? filterObject = queryParams["_filter"];
+
+                if (filterObject != null)
+                {
+                    List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
+                    Predicates.Add(GQLFilterParser.Parse(filterFields, TableAlias, GetTableDefinition(), MakeParamWithValue));
+                }
+            }
+
+            if (IsListQuery && queryParams.ContainsKey("_filterOData"))
+            {
+                object? whereObject = queryParams["_filterOData"];
 
                 if (whereObject != null)
                 {
                     string where = (string)whereObject;
 
                     ODataASTVisitor visitor = new(this);
-                    Services.FilterParser parser = MetadataStoreProvider.GetFilterParser();
+                    FilterParser parser = MetadataStoreProvider.GetFilterParser();
                     FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={where}", TableName);
                     FilterPredicates = filterClause.Expression.Accept<string>(visitor);
                 }

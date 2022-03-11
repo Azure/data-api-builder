@@ -53,11 +53,16 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private Dictionary<string, MutationResolver> _mutationResolvers;
 
-        public FileMetadataStoreProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
-        : this(dataGatewayConfig.Value.ResolverConfigFile,
-              dataGatewayConfig.Value.DatabaseType,
-              dataGatewayConfig.Value.DatabaseConnection.ConnectionString)
-        { }
+        public FileMetadataStoreProvider(IOptionsMonitor<DataGatewayConfig> dataGatewayConfig)
+        : this(dataGatewayConfig.CurrentValue.ResolverConfigFile,
+              dataGatewayConfig.CurrentValue.DatabaseType,
+              dataGatewayConfig.CurrentValue.DatabaseConnection.ConnectionString)
+        {
+            dataGatewayConfig.OnChange((newValue) =>
+            {
+                // TOOD: this(newValue);
+            });
+        }
 
         public FileMetadataStoreProvider(
             string resolverConfigPath,

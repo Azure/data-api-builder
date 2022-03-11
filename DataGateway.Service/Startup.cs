@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
@@ -12,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 using MySqlConnector;
 using Npgsql;
 
@@ -25,58 +27,142 @@ namespace Azure.DataGateway.Service
         }
 
         public IConfiguration Configuration { get; }
+        private IChangeToken _phoenixConfigChangeToken;
+
+        private DataGatewayConfig _configuration;
+
+        private void OnConfigurationChanged(object state)
+        {
+            DataGatewayConfig dataGatewayConfig = new();
+            Configuration.Bind(nameof(DataGatewayConfig), dataGatewayConfig);
+            _configuration = dataGatewayConfig;
+
+        }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
             services.Configure<DataGatewayConfig>(Configuration.GetSection(nameof(DataGatewayConfig)));
-            services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<DataGatewayConfig>, DataGatewayConfigPostConfiguration>());
-            services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<DataGatewayConfig>, DataGatewayConfigValidation>());
 
             // Read configuration and use it locally.
             DataGatewayConfig dataGatewayConfig = new();
             Configuration.Bind(nameof(DataGatewayConfig), dataGatewayConfig);
+            _configuration = dataGatewayConfig;
 
-            switch (dataGatewayConfig.DatabaseType)
+            if (Configuration is IConfigurationRoot root)
             {
-                case DatabaseType.Cosmos:
-                    services.AddSingleton<CosmosClientProvider, CosmosClientProvider>();
-                    services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
-                    services.AddSingleton<IQueryEngine, CosmosQueryEngine>();
-                    services.AddSingleton<IMutationEngine, CosmosMutationEngine>();
-                    services.AddSingleton<IConfigValidator, CosmosConfigValidator>();
-                    break;
-                case DatabaseType.MsSql:
-                    services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
-                    services.AddSingleton<IQueryExecutor, QueryExecutor<SqlConnection>>();
-                    services.AddSingleton<IQueryBuilder, MsSqlQueryBuilder>();
-                    services.AddSingleton<IQueryEngine, SqlQueryEngine>();
-                    services.AddSingleton<IMutationEngine, SqlMutationEngine>();
-                    services.AddSingleton<IConfigValidator, SqlConfigValidator>();
-                    break;
-                case DatabaseType.PostgreSql:
-                    services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
-                    services.AddSingleton<IQueryExecutor, QueryExecutor<NpgsqlConnection>>();
-                    services.AddSingleton<IQueryBuilder, PostgresQueryBuilder>();
-                    services.AddSingleton<IQueryEngine, SqlQueryEngine>();
-                    services.AddSingleton<IMutationEngine, SqlMutationEngine>();
-                    services.AddSingleton<IConfigValidator, SqlConfigValidator>();
-                    break;
-                case DatabaseType.MySql:
-                    services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
-                    services.AddSingleton<IQueryExecutor, QueryExecutor<MySqlConnection>>();
-                    services.AddSingleton<IQueryBuilder, MySqlQueryBuilder>();
-                    services.AddSingleton<IQueryEngine, SqlQueryEngine>();
-                    services.AddSingleton<IMutationEngine, SqlMutationEngine>();
-                    services.AddSingleton<IConfigValidator, SqlConfigValidator>();
-                    break;
-                default:
-                    throw new NotSupportedException(String.Format("The provided DatabaseType value: {0} is currently not supported." +
-                        "Please check the configuration file.", dataGatewayConfig.DatabaseType));
+                PhoenixConfigurationProvider? phoenixProvider = root.Providers.First(prov => prov is PhoenixConfigurationProvider) as PhoenixConfigurationProvider;
+                if (phoenixProvider != null)
+                {
+                    services.AddSingleton(phoenixProvider);
+                    _phoenixConfigChangeToken = phoenixProvider.GetReloadToken();
+                    _phoenixConfigChangeToken.RegisterChangeCallback(new Action<object>(OnConfigurationChanged), phoenixProvider);
+                }
             }
 
-            services.AddSingleton<GraphQLService, GraphQLService>();
-            services.AddSingleton<RestService, RestService>();
+            services.AddSingleton<IMetadataStoreProvider>(implementationFactory: (serviceProvider) =>
+            {
+                // TODO: Resolver config should not be a file when loaded at runtime.
+                // Will need to update the file provider metadata to some other provider instead in that scenario.
+                IOptionsMonitor<DataGatewayConfig> monitor = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
+                return new FileMetadataStoreProvider(monitor);
+            });
+
+            services.AddSingleton(implementationFactory: (serviceProvider) =>
+            {
+                IOptionsMonitor<DataGatewayConfig> monitor = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
+                return new CosmosClientProvider(monitor);
+            });
+
+            services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
+            {
+                switch (_configuration.DatabaseType)
+                {
+                    case DatabaseType.Cosmos:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<CosmosQueryEngine>(serviceProvider);
+                    case DatabaseType.MsSql:
+                    case DatabaseType.PostgreSql:
+                    case DatabaseType.MySql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<SqlQueryEngine>(serviceProvider);
+                    default:
+                        throw new NotSupportedException(String.Format("The provided DatabaseType value: {0} is currently not supported." +
+                            "Please check the configuration file.", dataGatewayConfig.DatabaseType));
+                }
+            });
+
+            services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
+            {
+                switch (_configuration.DatabaseType)
+                {
+                    case DatabaseType.Cosmos:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<CosmosMutationEngine>(serviceProvider);
+                    case DatabaseType.MsSql:
+                    case DatabaseType.PostgreSql:
+                    case DatabaseType.MySql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<SqlMutationEngine>(serviceProvider);
+                    default:
+                        throw new NotSupportedException(String.Format("The provided DatabaseType value: {0} is currently not supported." +
+                            "Please check the configuration file.", dataGatewayConfig.DatabaseType));
+                }
+            });
+
+            services.AddSingleton<IConfigValidator>(implementationFactory: (serviceProvider) =>
+            {
+                switch (_configuration.DatabaseType)
+                {
+                    case DatabaseType.Cosmos:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<CosmosConfigValidator>(serviceProvider);
+                    case DatabaseType.MsSql:
+                    case DatabaseType.PostgreSql:
+                    case DatabaseType.MySql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<SqlConfigValidator>(serviceProvider);
+                    default:
+                        throw new NotSupportedException(String.Format("The provided DatabaseType value: {0} is currently not supported." +
+                            "Please check the configuration file.", dataGatewayConfig.DatabaseType));
+                }
+            });
+
+            services.AddSingleton<IQueryExecutor>(implementationFactory: (serviceProvider) =>
+            {
+                switch (_configuration.DatabaseType)
+                {
+                    case DatabaseType.Cosmos:
+                        return null!;
+                    case DatabaseType.MsSql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<SqlConnection>>(serviceProvider);
+                    case DatabaseType.PostgreSql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<NpgsqlConnection>>(serviceProvider);
+                    case DatabaseType.MySql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<MySqlConnection>>(serviceProvider);
+                    default:
+                        throw new NotSupportedException(String.Format("The provided DatabaseType value: {0} is currently not supported." +
+                            "Please check the configuration file.", dataGatewayConfig.DatabaseType));
+                }
+            });
+
+            services.AddSingleton<IQueryBuilder>(implementationFactory: (serviceProvider) =>
+            {
+                switch (_configuration.DatabaseType)
+                {
+                    case DatabaseType.Cosmos:
+                        return null!;
+                    case DatabaseType.MsSql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlQueryBuilder>(serviceProvider);
+                    case DatabaseType.PostgreSql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<PostgresQueryBuilder>(serviceProvider);
+                    case DatabaseType.MySql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<MySqlQueryBuilder>(serviceProvider);
+                    default:
+                        throw new NotSupportedException(String.Format("The provided DatabaseType value: {0} is currently not supported." +
+                            "Please check the configuration file.", dataGatewayConfig.DatabaseType));
+                }
+            });
+
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<DataGatewayConfig>, DataGatewayConfigPostConfiguration>());
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<DataGatewayConfig>, DataGatewayConfigValidation>());
+
+            services.AddSingleton<GraphQLService>();
+            services.AddSingleton<RestService>();
 
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();

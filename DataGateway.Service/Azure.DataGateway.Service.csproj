@@ -73,4 +73,9 @@
   <ItemGroup>
     <ProjectCapability Include="CSharp;Managed;ClassDesigner" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Update="appsettings.Cosmos.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>

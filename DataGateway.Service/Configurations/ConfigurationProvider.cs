@@ -78,6 +78,19 @@ namespace Azure.DataGateway.Service.Configurations
                 throw new NotSupportedException("Either Server and Database or ConnectionString need to be provided, not both");
             }
 
+            bool isResolverConfigSet = !string.IsNullOrEmpty(options.ResolverConfig);
+            bool isResolverConfigFileSet = !string.IsNullOrEmpty(options.ResolverConfigFile);
+            bool isGraphQLSchemaSet = !string.IsNullOrEmpty(options.GraphQLSchema);
+            if (!(isResolverConfigSet ^ isResolverConfigFileSet))
+            {
+                throw new NotSupportedException("Either the Resolver Config or the Resolver Config File needs to be provided. Not both.");
+            }
+
+            if (isResolverConfigSet && !isGraphQLSchemaSet)
+            {
+                throw new NotSupportedException("The GraphQLSchema should be provided with the config.");
+            }
+
             if (string.IsNullOrWhiteSpace(options.DatabaseConnection.ConnectionString))
             {
                 if ((!serverProvided && dbProvided) || (serverProvided && !dbProvided))

@@ -461,7 +461,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [ClassInitialize]
         public static async Task InitializeTestFixture(TestContext context)
         {
-            await InitializeTestFixture(context, RestApiTestBase._integrationTableName, TestCategory.MYSQL);
+            await InitializeTestFixture(context, TestCategory.MYSQL);
 
             _restService = new RestService(_queryEngine,
                 _mutationEngine,

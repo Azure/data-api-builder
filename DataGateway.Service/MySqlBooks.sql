@@ -27,7 +27,7 @@ CREATE TABLE authors(
 CREATE TABLE reviews(
     book_id bigint NOT NULL,
     id bigint AUTO_INCREMENT,
-    content text NOT NULL,
+    content text DEFAULT ('Its a classic') NOT NULL,
     PRIMARY KEY(book_id, id),
     INDEX (id)
 );

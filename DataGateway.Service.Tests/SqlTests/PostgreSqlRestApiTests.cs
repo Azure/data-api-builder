@@ -365,7 +365,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [ClassInitialize]
         public static async Task InitializeTestFixture(TestContext context)
         {
-            await InitializeTestFixture(context, RestApiTestBase._integrationTableName, TestCategory.POSTGRESQL);
+            await InitializeTestFixture(context, TestCategory.POSTGRESQL);
 
             _restService = new RestService(_queryEngine,
                 _mutationEngine,

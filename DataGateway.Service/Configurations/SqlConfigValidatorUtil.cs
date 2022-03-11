@@ -178,7 +178,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private Dictionary<string, TableDefinition> GetDatabaseTables()
         {
-            return _config.DatabaseSchema.Tables;
+            return _config.DatabaseSchema!.Tables;
         }
 
         /// <summary>
@@ -194,7 +194,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private bool ExistsTableWithName(string tableName)
         {
-            return _config.DatabaseSchema.Tables.ContainsKey(tableName);
+            return _config.DatabaseSchema!.Tables.ContainsKey(tableName);
         }
 
         /// <summary>
@@ -211,7 +211,7 @@ namespace Azure.DataGateway.Service.Configurations
                 throw new ArgumentException("Invalid table name was provided.");
             }
 
-            return _config.DatabaseSchema.Tables[tableName];
+            return _config.DatabaseSchema!.Tables[tableName];
         }
 
         /// <summary>
@@ -540,7 +540,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <exception cref="KeyNotFoundException" />
         private ForeignKeyDefinition GetFkFromTable(string tableName, string fkName)
         {
-            return _config.DatabaseSchema.Tables[tableName].ForeignKeys[fkName];
+            return _config.DatabaseSchema!.Tables[tableName].ForeignKeys[fkName];
         }
 
         /// <summary>

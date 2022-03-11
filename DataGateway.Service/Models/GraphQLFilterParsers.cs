@@ -7,7 +7,7 @@ namespace Azure.DataGateway.Service.Models
     /// <summary>
     /// Contains methods to parse a GQL _filter parameter
     /// </summary>
-    static public class GQLFilterParser
+    public static class GQLFilterParser
     {
         private const string AND = "AND";
         private const string OR = "OR";
@@ -19,7 +19,7 @@ namespace Azure.DataGateway.Service.Models
         /// <param name="tableAlias">The table alias underlyin the *FilterInput being processed</param>
         /// <param name="table">The table underlyin the *FilterInput being processed</param>
         /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
-        static public Predicate Parse(
+        public static Predicate Parse(
             List<ObjectFieldNode> fields,
             string tableAlias,
             TableDefinition table,
@@ -32,8 +32,8 @@ namespace Azure.DataGateway.Service.Models
             {
                 string name = field.Name.ToString();
 
-                bool fieldIsAnd = String.Equals(name, AND, StringComparison.OrdinalIgnoreCase);
-                bool fieldIsOr = String.Equals(name, OR, StringComparison.OrdinalIgnoreCase);
+                bool fieldIsAnd = string.Equals(name, AND, StringComparison.OrdinalIgnoreCase);
+                bool fieldIsOr = string.Equals(name, OR, StringComparison.OrdinalIgnoreCase);
 
                 if (fieldIsAnd || fieldIsOr)
                 {
@@ -292,7 +292,7 @@ namespace Azure.DataGateway.Service.Models
                         ruleValue = $"%{EscapeLikeString(ruleValue)}";
                         break;
                     default:
-                        throw new NotSupportedException($"Operation {ruleName} on int type not supported.");
+                        throw new NotSupportedException($"Operation {ruleName} on string type not supported.");
                 }
 
                 predicates.Push(new PredicateOperand(new Predicate(

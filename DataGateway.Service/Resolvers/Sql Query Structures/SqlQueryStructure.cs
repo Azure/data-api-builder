@@ -219,7 +219,7 @@ namespace Azure.DataGateway.Service.Resolvers
             if (IsListQuery && queryParams.ContainsKey("first"))
             {
                 // parse first parameter for all list queries
-                object firstObject = queryParams["first"];
+                object? firstObject = queryParams["first"];
 
                 if (firstObject != null)
                 {
@@ -237,7 +237,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (IsListQuery && queryParams.ContainsKey("_filter"))
             {
-                object filterObject = queryParams["_filter"];
+                object? filterObject = queryParams["_filter"];
 
                 if (filterObject != null)
                 {
@@ -248,7 +248,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (IsListQuery && queryParams.ContainsKey("_filterOData"))
             {
-                object whereObject = queryParams["_filterOData"];
+                object? whereObject = queryParams["_filterOData"];
 
                 if (whereObject != null)
                 {

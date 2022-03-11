@@ -73,7 +73,7 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Initialize operand as Column
         /// </summary>
-        public PredicateOperand(Column column)
+        public PredicateOperand(Column? column)
         {
             if (column == null)
             {
@@ -88,7 +88,7 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Initialize operand as string
         /// </summary>
-        public PredicateOperand(string text)
+        public PredicateOperand(string? text)
         {
             if (text == null)
             {
@@ -103,11 +103,11 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Initialize operand as Predicate
         /// </summary>
-        public PredicateOperand(Predicate predicate)
+        public PredicateOperand(Predicate? predicate)
         {
             if (predicate == null)
             {
-                throw new ArgumentNullException("String predicate operand cannot be created with a null string.");
+                throw new ArgumentNullException("Predicate predicate operand cannot be created with a null inner predicate.");
             }
 
             _columnOperand = null;

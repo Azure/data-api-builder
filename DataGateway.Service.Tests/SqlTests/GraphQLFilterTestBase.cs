@@ -489,6 +489,66 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        /// <summary>
+        /// Test that only an empty and returns nothing
+        /// </summary>
+        [TestMethod]
+        public async Task TestOnlyEmptyAnd()
+        {
+            string graphQLQueryName = "getBooks";
+            string gqlQuery = @"{
+                getBooks(_filter: {and: []})
+                {
+                    id
+                }
+            }";
+
+            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
+            SqlTestHelper.PerformTestEqualJsonStrings("[]", actual);
+        }
+
+        /// <summary>
+        /// Test that only an empty or returns nothing
+        /// </summary>
+        [TestMethod]
+        public async Task TestOnlyEmptyOr()
+        {
+            string graphQLQueryName = "getBooks";
+            string gqlQuery = @"{
+                getBooks(_filter: {or: []})
+                {
+                    id
+                }
+            }";
+
+            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
+            SqlTestHelper.PerformTestEqualJsonStrings("[]", actual);
+        }
+
+        /// <summary>
+        /// Test that filters applied by the typed filter and the OData filter
+        /// are AND-ed
+        /// </summary>
+        [TestMethod]
+        public async Task TestFilterAndFilterODataUsedTogether()
+        {
+            string graphQLQueryName = "getBooks";
+            string gqlQuery = @"{
+                getBooks(_filter: {id: {gte: 2}}, _filterOData: ""id lt 4"")
+                {
+                    id
+                }
+            }";
+
+            string dbQuery = MakeQueryOnBooks(
+                new List<string> { "id" },
+                "id >= 2 AND id < 4");
+
+            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         /// <remarks>

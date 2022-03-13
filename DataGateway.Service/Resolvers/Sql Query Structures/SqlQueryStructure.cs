@@ -4,7 +4,7 @@ using System.Linq;
 using System.Net;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
@@ -60,7 +60,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// The maximum number of results this query should return.
         /// </summary>
-        private uint _limit = DEFAULT_LIST_LIMIT;
+        private uint? _limit = DEFAULT_LIST_LIMIT;
 
         /// <summary>
         /// If this query is built because of a GraphQL query (as opposed to
@@ -145,6 +145,12 @@ namespace Azure.DataGateway.Service.Resolvers
                 FilterPredicates = context.FilterClauseInUrl.Expression.Accept<string>(visitor);
             }
 
+            if (!string.IsNullOrWhiteSpace(context.After))
+            {
+                AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromJsonString(context.After, PaginationMetadata));
+            }
+
+            _limit = context.First is not null ? context.First + 1 : DEFAULT_LIST_LIMIT + 1;
             ParametrizeColumns();
         }
 
@@ -219,7 +225,7 @@ namespace Azure.DataGateway.Service.Resolvers
             if (IsListQuery && queryParams.ContainsKey("first"))
             {
                 // parse first parameter for all list queries
-                object firstObject = queryParams["first"];
+                object? firstObject = queryParams["first"];
 
                 if (firstObject != null)
                 {
@@ -237,14 +243,25 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (IsListQuery && queryParams.ContainsKey("_filter"))
             {
-                object whereObject = queryParams["_filter"];
+                object? filterObject = queryParams["_filter"];
+
+                if (filterObject != null)
+                {
+                    List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
+                    Predicates.Add(GQLFilterParser.Parse(filterFields, TableAlias, GetTableDefinition(), MakeParamWithValue));
+                }
+            }
+
+            if (IsListQuery && queryParams.ContainsKey("_filterOData"))
+            {
+                object? whereObject = queryParams["_filterOData"];
 
                 if (whereObject != null)
                 {
                     string where = (string)whereObject;
 
                     ODataASTVisitor visitor = new(this);
-                    Services.FilterParser parser = MetadataStoreProvider.GetFilterParser();
+                    FilterParser parser = MetadataStoreProvider.GetFilterParser();
                     FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={where}", TableName);
                     FilterPredicates = filterClause.Expression.Accept<string>(visitor);
                 }
@@ -254,7 +271,8 @@ namespace Azure.DataGateway.Service.Resolvers
             // TableName, TableAlias, Columns, and _limit
             if (PaginationMetadata.IsPaginated)
             {
-                AddPaginationPredicate(queryParams);
+                IDictionary<string, object>? afterJsonValues = SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata);
+                AddPaginationPredicate(afterJsonValues);
 
                 if (PaginationMetadata.RequestedEndCursor)
                 {
@@ -315,10 +333,8 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Add the predicates associated with the "after" parameter of paginated queries
         /// </summary>
-        void AddPaginationPredicate(IDictionary<string, object> queryParams)
+        void AddPaginationPredicate(IDictionary<string, object> afterJsonValues)
         {
-            IDictionary<string, object> afterJsonValues = SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata);
-
             if (!afterJsonValues.Any())
             {
                 // no need to create a predicate for pagination
@@ -557,7 +573,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// The maximum number of results this query should return.
         /// </summary>
-        public uint Limit()
+        public uint? Limit()
         {
             if (IsListQuery || PaginationMetadata.IsPaginated)
             {

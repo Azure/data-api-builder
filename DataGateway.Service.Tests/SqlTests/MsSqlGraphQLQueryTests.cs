@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
@@ -16,7 +16,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         #region Test Fixture Setup
         private static GraphQLService _graphQLService;
         private static GraphQLController _graphQLController;
-        private static readonly string _integrationTableName = "books";
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
@@ -26,7 +25,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [ClassInitialize]
         public static async Task InitializeTestFixture(TestContext context)
         {
-            await InitializeTestFixture(context, _integrationTableName, TestCategory.MSSQL);
+            await InitializeTestFixture(context, TestCategory.MSSQL);
 
             // Setup GraphQL Components
             //
@@ -405,17 +404,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <sumary>
-        /// Test if filter param successfully filters the query results
+        /// Test if filter and filterOData param successfully filters the query results
         /// </summary>
         [TestMethod]
-        public async Task TestFilterParamForListQueries()
+        public async Task TestFilterAndFilterODataParamForListQueries()
         {
             string graphQLQueryName = "getBooks";
             string graphQLQuery = @"{
-                getBooks(_filter: ""id ge 1 and id le 4"") {
+                getBooks(_filter: {id: {gte: 1} and: [{id: {lte: 4}}]}) {
                     id
                     publisher {
-                        books(first: 3, _filter: ""id ne 2"") {
+                        books(first: 3, _filterOData: ""id ne 2"") {
                             id
                         }
                     }
@@ -483,7 +482,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string graphQLQueryName = "getBooks";
             string graphQLQuery = @"{
-                getBooks(_filter: ""INVALID"") {
+                getBooks(_filterOData: ""INVALID"") {
                     id
                     title
                 }

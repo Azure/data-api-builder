@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
 
@@ -53,7 +53,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Executes the given IMiddlewareContext of the GraphQL query and
         /// expecting a single Json and its related pagination metadata back.
         /// </summary>
-        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
+        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters)
         {
             SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider);
 

@@ -3,28 +3,23 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Service.Services;
-using Azure.DataGateway.Services;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
+using MySqlConnector;
+using Npgsql;
 
-namespace Azure.DataGateway.Service
+namespace Azure.DataGateway.Service.Services
 {
     /// <summary>
     /// A class describing the format of the JSON resolver configuration file.
     /// </summary>
     /// <param name="GraphQLSchema">String Representation of graphQL schema, non escaped. This has higher priority than GraphQLSchemaFile, so if both are set this one will be used.</param>
     /// <param name="GraphQLSchemaFile">Location of the graphQL schema file</param>
-    /// <param name="DatabaseSchema">A JSON encoded version of the information that resolvers need about schema of the schema of the database.</param>
-    public record ResolverConfig(string GraphQLSchema, string GraphQLSchemaFile, DatabaseSchema DatabaseSchema)
+    public record ResolverConfig(string GraphQLSchema, string GraphQLSchemaFile)
     {
-        /// <summary>
-        /// A list containing metadata required to resolve the different
-        /// queries in the GraphQL schema. See GraphQLQueryResolver for details.
-        /// </summary>
-        public List<GraphQLQueryResolver> QueryResolvers { get; set; } = new();
-
         /// <summary>
         /// A list containing metadata required to execute the different
         /// mutations in the GraphQL schema. See MutationResolver for details.
@@ -36,6 +31,12 @@ namespace Azure.DataGateway.Service
         /// types in the GraphQL schema. See GraphQLType for details.
         /// </summary>
         public Dictionary<string, GraphQLType> GraphQLTypes { get; set; } = new();
+
+        /// <summary>
+        /// A JSON encoded version of the information that resolvers
+        /// need about schema of the database.
+        /// </summary>
+        public DatabaseSchema? DatabaseSchema { get; set; }
     }
 
     /// <summary>
@@ -45,11 +46,8 @@ namespace Azure.DataGateway.Service
     {
         private readonly ResolverConfig _config;
         private readonly FilterParser? _filterParser;
-
-        /// <summary>
-        /// Stores query resolvers contained in configuration file.
-        /// </summary>
-        private Dictionary<string, GraphQLQueryResolver> _queryResolvers;
+        private DatabaseType _databaseType;
+        private string _connectionString;
 
         /// <summary>
         /// Stores mutation resolvers contained in configuration file.
@@ -57,10 +55,19 @@ namespace Azure.DataGateway.Service
         private Dictionary<string, MutationResolver> _mutationResolvers;
 
         public FileMetadataStoreProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
-        : this(dataGatewayConfig.Value.ResolverConfigFile) { }
+        : this(dataGatewayConfig.Value.ResolverConfigFile,
+              dataGatewayConfig.Value.DatabaseType,
+              dataGatewayConfig.Value.DatabaseConnection.ConnectionString)
+        { }
 
-        public FileMetadataStoreProvider(string resolverConfigPath)
+        public FileMetadataStoreProvider(
+            string resolverConfigPath,
+            DatabaseType databaseType,
+            string connectionString)
         {
+            _databaseType = databaseType;
+            _connectionString = connectionString;
+
             string jsonString = File.ReadAllText(resolverConfigPath);
             JsonSerializerOptions options = new()
             {
@@ -85,16 +92,15 @@ namespace Azure.DataGateway.Service
                 _config = _config with { GraphQLSchema = File.ReadAllText(_config.GraphQLSchemaFile ?? "schema.gql") };
             }
 
-            _queryResolvers = new();
-            foreach (GraphQLQueryResolver resolver in _config.QueryResolvers)
-            {
-                _queryResolvers.Add(resolver.Id, resolver);
-            }
-
             _mutationResolvers = new();
             foreach (MutationResolver resolver in _config.MutationResolvers)
             {
                 _mutationResolvers.Add(resolver.Id, resolver);
+            }
+
+            if (_config.DatabaseSchema == default && databaseType != DatabaseType.Cosmos)
+            {
+                _config.DatabaseSchema = RefreshDatabaseSchemaWithTablesAsync().Result;
             }
 
             if (_config.DatabaseSchema != default)
@@ -102,6 +108,7 @@ namespace Azure.DataGateway.Service
                 _filterParser = new(_config.DatabaseSchema);
             }
         }
+
         /// <summary>
         /// Reads generated JSON configuration file with GraphQL Schema
         /// </summary>
@@ -121,19 +128,9 @@ namespace Azure.DataGateway.Service
             return resolver;
         }
 
-        public GraphQLQueryResolver GetQueryResolver(string name)
-        {
-            if (!_queryResolvers.TryGetValue(name, out GraphQLQueryResolver? resolver))
-            {
-                throw new KeyNotFoundException("Query Resolver does not exist.");
-            }
-
-            return resolver;
-        }
-
         public TableDefinition GetTableDefinition(string name)
         {
-            if (!_config.DatabaseSchema.Tables.TryGetValue(name, out TableDefinition? metadata))
+            if (!_config.DatabaseSchema!.Tables.TryGetValue(name, out TableDefinition? metadata))
             {
                 throw new KeyNotFoundException($"Table Definition for {name} does not exist.");
             }
@@ -165,5 +162,46 @@ namespace Azure.DataGateway.Service
 
             return _filterParser;
         }
+
+        /// <inheritdoc/>
+        public Task<DatabaseSchema> RefreshDatabaseSchemaWithTablesAsync(
+            string schemaName = "")
+        {
+            IMetadataStoreProvider sqlMetadataProvider;
+            switch (_databaseType)
+            {
+                case DatabaseType.MsSql:
+                    sqlMetadataProvider =
+                        SqlMetadataProvider<
+                            SqlConnection,
+                            SqlDataAdapter,
+                            SqlCommand>.GetSqlMetadataProvider(
+                            _connectionString);
+                    schemaName = "dbo";
+                    break;
+                case DatabaseType.PostgreSql:
+                    sqlMetadataProvider =
+                        SqlMetadataProvider<
+                            NpgsqlConnection,
+                            NpgsqlDataAdapter,
+                            NpgsqlCommand>.GetSqlMetadataProvider(_connectionString);
+                    schemaName = "public";
+                    break;
+                case DatabaseType.MySql:
+                    sqlMetadataProvider =
+                    SqlMetadataProvider<
+                        MySqlConnection,
+                        MySqlDataAdapter,
+                        MySqlCommand>.GetSqlMetadataProvider(_connectionString);
+                    schemaName = "mysql";
+                    break;
+                default:
+                    throw new ArgumentException($"Refreshing tables for this database type: {_databaseType}" +
+                        $"is not supported");
+            }
+
+            return sqlMetadataProvider.RefreshDatabaseSchemaWithTablesAsync(schemaName);
+        }
+
     }
 }

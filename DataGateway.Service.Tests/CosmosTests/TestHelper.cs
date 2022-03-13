@@ -16,7 +16,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             DataGatewayConfig dataGatewayConfig = new();
             IConfigurationRoot config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.Test.json")
+                .AddJsonFile($"appsettings.Cosmos.json")
                 .Build();
 
             config.Bind(nameof(DataGatewayConfig), dataGatewayConfig);

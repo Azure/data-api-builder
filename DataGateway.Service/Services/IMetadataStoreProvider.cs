@@ -1,8 +1,7 @@
-using Azure.DataGateway.Service;
+using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Service.Services;
 
-namespace Azure.DataGateway.Services
+namespace Azure.DataGateway.Service.Services
 {
     /// <summary>
     /// To resolve queries and requests certain metadata is necessary. This is
@@ -19,11 +18,7 @@ namespace Azure.DataGateway.Services
         /// given name.
         /// </summary>
         MutationResolver GetMutationResolver(string name);
-        /// <summary>
-        /// Gets metadata required to resolve the GraphQL query with the given
-        /// name.
-        /// </summary>
-        GraphQLQueryResolver GetQueryResolver(string name);
+
         /// <summary>
         /// Gets the database schema information for the given table.
         /// </summary>
@@ -44,5 +39,10 @@ namespace Azure.DataGateway.Services
         /// </summary>
         /// <returns></returns>
         FilterParser GetFilterParser();
+
+        /// <summary>
+        /// Refreshes the database schema with table information.
+        /// </summary>
+        Task<DatabaseSchema> RefreshDatabaseSchemaWithTablesAsync(string schemaName);
     }
 }

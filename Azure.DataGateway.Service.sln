@@ -6,8 +6,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataGateway.Service",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataGateway.Service.Tests", "DataGateway.Service.Tests\Azure.DataGateway.Service.Tests.csproj", "{4E50C9B0-818E-4041-B18B-5BB17E4D409F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Azure.DataGateway.Service.Functions", "DataGateway.Service.Functions\Azure.DataGateway.Service.Functions.csproj", "{B5806EF5-E26E-4E2B-9076-CDDCA97BCCE6}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Configs", "Configs", "{EFA9C661-D8FD-469A-9372-284387C4BEFC}"
 	ProjectSection(SolutionItems) = preProject
 		DataGateway.Service\appsettings.Cosmos.json = DataGateway.Service\appsettings.Cosmos.json
@@ -19,11 +17,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Configs", "Configs", "{EFA9
 		DataGateway.Service\appsettings.PostgreSql.json = DataGateway.Service\appsettings.PostgreSql.json
 		DataGateway.Service\appsettings.PostgreSqlIntegrationTest.json = DataGateway.Service\appsettings.PostgreSqlIntegrationTest.json
 		DataGateway.Service\appsettings.PostgreSqlIntegrationTest.overrides.json = DataGateway.Service\appsettings.PostgreSqlIntegrationTest.overrides.json
-		DataGateway.Service\appsettings.Test.json = DataGateway.Service\appsettings.Test.json
-		DataGateway.Service\config.json = DataGateway.Service\config.json
 		DataGateway.Service\cosmos-config.json = DataGateway.Service\cosmos-config.json
-		DataGateway.Service\sql-config.json = DataGateway.Service\sql-config.json
 		DataGateway.Service\schema.gql = DataGateway.Service\schema.gql
+		DataGateway.Service\sql-config.json = DataGateway.Service\sql-config.json
 	EndProjectSection
 EndProject
 Global
@@ -40,10 +36,6 @@ Global
 		{4E50C9B0-818E-4041-B18B-5BB17E4D409F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4E50C9B0-818E-4041-B18B-5BB17E4D409F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4E50C9B0-818E-4041-B18B-5BB17E4D409F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B5806EF5-E26E-4E2B-9076-CDDCA97BCCE6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B5806EF5-E26E-4E2B-9076-CDDCA97BCCE6}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B5806EF5-E26E-4E2B-9076-CDDCA97BCCE6}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B5806EF5-E26E-4E2B-9076-CDDCA97BCCE6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

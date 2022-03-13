@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Types;
 
@@ -92,6 +93,14 @@ namespace Azure.DataGateway.Service.Resolvers
         public List<string> PrimaryKey()
         {
             return GetTableDefinition().PrimaryKey;
+        }
+
+        /// <summary>
+        /// get all columns of the table
+        /// </summary>
+        public List<string> AllColumns()
+        {
+            return GetTableDefinition().Columns.Select(col => col.Key).ToList();
         }
 
         /// <summary>

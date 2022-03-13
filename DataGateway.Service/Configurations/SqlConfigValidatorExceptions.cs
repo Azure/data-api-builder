@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using HotChocolate;
 using HotChocolate.Language;
 using HotChocolate.Types;
@@ -130,7 +130,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateDatabaseHasTables()
         {
-            if (_config.DatabaseSchema.Tables == null || _config.DatabaseSchema.Tables.Count == 0)
+            if (_config.DatabaseSchema!.Tables == null || _config.DatabaseSchema!.Tables.Count == 0)
             {
                 throw new ConfigValidationException(
                     "Database schema must have a non empty \"Tables\" element.",

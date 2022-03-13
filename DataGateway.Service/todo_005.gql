@@ -22,8 +22,8 @@ type Mutation {
 type Todo {
     id: Int!
     title: String!
-    completed: Int!
-    category_id: Int!
+    completed: Int!   
+    category: Category!
     owner_id: Int!
 }
 
@@ -50,6 +50,7 @@ type UserConnection {
 type Category {
     id: Int!
     category: String!
+    todos: [Todo!]!
 }
 
 type CategoryConnection {

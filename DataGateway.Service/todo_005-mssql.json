@@ -50,7 +50,13 @@
   ],
   "GraphqlTypes": {
     "Todo": {
-      "Table": "todos"
+      "Table": "todos",
+      "Fields": {
+        "category": {
+          "RelationshipType": "ManyToOne",
+          "LeftForeignKey": "fk__todo__category"
+        }
+      }
     },
     "TodoConnection": {
       "IsPaginationType": true
@@ -62,7 +68,13 @@
       "IsPaginationType": true
     },
     "Category": {
-      "Table": "categories"
+      "Table": "categories",
+      "Fields": {
+        "todos": {
+          "RelationshipType": "OneToMany",
+          "RightForeignKey": "fk__todo__category"
+        }
+      }
     },
     "CategoryConnection": {
       "IsPaginationType": true
@@ -74,6 +86,14 @@
         "PrimaryKey": [
           "id"
         ],
+        "ForeignKeys": {
+          "fk__todo__category": {
+            "ReferencedTable": "categories",
+            "Columns": [
+              "category_id"
+            ]
+          }
+        },
         "Columns": {
           "id": {
             "Type": "int",
@@ -153,7 +173,7 @@
       "categories": {
         "PrimaryKey": [
           "id"
-        ],
+        ],        
         "Columns": {
           "id": {
             "Type": "int",

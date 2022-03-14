@@ -1,8 +1,10 @@
 using System.Net;
 using System.Threading.Tasks;
+using System.Web;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -280,8 +282,78 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/567/book_id/1",
                 queryString: "?_f=id,content",
-                entity: "reviews",
+                entity: _tableWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithPrimaryKeyContainingForeignKey)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned with a single primary
+        /// key in the table.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstSingleKeyPagination()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=1",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyPagination)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"id\":1}"))}",
+                paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned with multiple column
+        /// primary key in the table.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstMultiKeyPagination()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=1",
+                entity: _tableWithCompositePrimaryKey,
+                sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyPagination)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"book_id\":1,\"id\":567}"))}",
+                paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $after to
+        /// get the desired page with a single column primary key.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithAfterSingleKeyPagination()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"id\":7}"))}",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithAfterSingleKeyPagination)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $after to
+        /// get the desired page with a multi column primary key.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithAfterMultiKeyPagination()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"book_id\":1,\"id\":567}"))}",
+                entity: _tableWithCompositePrimaryKey,
+                sqlQuery: GetQuery(nameof(FindTestWithAfterMultiKeyPagination)),
                 controller: _restController
             );
         }

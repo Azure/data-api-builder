@@ -101,14 +101,6 @@ namespace Azure.DataGateway.Service.Services
                 {
                     string tableName = table["TABLE_NAME"].ToString()!;
 
-                    // For MySQL, the schema name restriction doesn't seem to
-                    // work so we could end up seeing same table name.
-                    // Ignore such tables.
-                    if (DatabaseSchema.Tables.ContainsKey(tableName))
-                    {
-                        continue;
-                    }
-
                     TableDefinition tableDefinition = new();
 
                     DataAdapterT adapterForTable = new();

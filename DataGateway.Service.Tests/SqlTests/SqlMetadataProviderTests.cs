@@ -9,7 +9,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     public abstract class SqlMetadataProviderTests : SqlTestBase
     {
         [TestMethod]
-        public async Task TestDerivedDatabaseSchemaIsValid()
+        public virtual async Task TestDerivedDatabaseSchemaIsValid()
         {
             ResolverConfig runtimeConfig = _metadataStoreProvider.GetResolvedConfig();
             DatabaseSchema expectedSchema = runtimeConfig.DatabaseSchema;

@@ -592,6 +592,27 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         #endregion
 
         #region Negative Tests
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first=0
+        /// to request 0 records, which should throw a DataGateway
+        /// Exception.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstZeroSingleKeyPagination()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=0",
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "Invalid number of items request, $first must be an intger greater than 0. Actual value: 0",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
         /// <summary>
         /// Tests the InsertOne functionality with disallowed URL composition: contains Query String.
         /// </summary>

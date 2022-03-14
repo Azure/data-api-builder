@@ -336,7 +336,10 @@ namespace Azure.DataGateway.Service.Services
         {
             if (!uint.TryParse(first, out uint firstAsUint) || firstAsUint == 0)
             {
-                throw new ArgumentException("Invalid value associated with Query Parameter $first: " + first);
+                throw new DataGatewayException(
+                        message: "Invalid number of items request, $first must be an intger greater than 0. Actual value: " + first,
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
 
             return firstAsUint;

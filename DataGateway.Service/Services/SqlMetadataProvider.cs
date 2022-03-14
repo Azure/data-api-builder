@@ -109,32 +109,24 @@ namespace Azure.DataGateway.Service.Services
                         continue;
                     }
 
-                    try
-                    {
-                        TableDefinition tableDefinition = new();
+                    TableDefinition tableDefinition = new();
 
-                        DataAdapterT adapterForTable = new();
-                        CommandT selectCommand = new();
-                        selectCommand.Connection = conn;
-                        selectCommand.CommandText = ($"SELECT * FROM {tableName}");
-                        adapterForTable.SelectCommand = selectCommand;
+                    DataAdapterT adapterForTable = new();
+                    CommandT selectCommand = new();
+                    selectCommand.Connection = conn;
+                    selectCommand.CommandText = ($"SELECT * FROM {tableName}");
+                    adapterForTable.SelectCommand = selectCommand;
 
-                        adapterForTable.FillSchema(_dataSet, SchemaType.Source, tableName);
+                    adapterForTable.FillSchema(_dataSet, SchemaType.Source, tableName);
 
-                        AddColumnDefinition(tableName, tableDefinition);
+                    AddColumnDefinition(tableName, tableDefinition);
 
-                        await PopulateColumnDefinitionWithHasDefaultAsync(
-                            schemaName,
-                            tableName,
-                            tableDefinition);
+                    await PopulateColumnDefinitionWithHasDefaultAsync(
+                        schemaName,
+                        tableName,
+                        tableDefinition);
 
-                        DatabaseSchema.Tables.Add(tableName, tableDefinition);
-                    }
-                    catch (DbException db)
-                    {
-                        Console.WriteLine($"Unable to get information about: {tableName}" +
-                            $" due to this exception: {db.Message}");
-                    }
+                    DatabaseSchema.Tables.Add(tableName, tableDefinition);
                 }
             }
 

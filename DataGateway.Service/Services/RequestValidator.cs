@@ -328,13 +328,13 @@ namespace Azure.DataGateway.Service.Services
 
         /// <summary>
         /// Helper function checks the $first query param
-        /// to be sure that it can parse to a positive number
+        /// to be sure that it can parse to a uint > 0
         /// </summary>
-        /// <param name="first"></param>
-        /// <returns></returns>
+        /// <param name="first">String representing value associated with $first</param>
+        /// <returns>uint > 0 representing $first</returns>
         public static uint CheckFirstValidity(string first)
         {
-            if (!uint.TryParse(first, out uint firstAsUint))
+            if (!uint.TryParse(first, out uint firstAsUint) || firstAsUint == 0)
             {
                 throw new ArgumentException("Invalid value associated with Query Parameter $first: " + first);
             }

@@ -325,5 +325,21 @@ namespace Azure.DataGateway.Service.Services
                 return insertPayload.RootElement.Clone();
             }
         }
+
+        /// <summary>
+        /// Helper function checks the $first query param
+        /// to be sure that it can parse to a positive number
+        /// </summary>
+        /// <param name="first"></param>
+        /// <returns></returns>
+        public static uint CheckFirstValidity(string first)
+        {
+            if (!uint.TryParse(first, out uint firstAsUint))
+            {
+                throw new ArgumentException("Invalid value associated with Query Parameter $first: " + first);
+            }
+
+            return firstAsUint;
+        }
     }
 }

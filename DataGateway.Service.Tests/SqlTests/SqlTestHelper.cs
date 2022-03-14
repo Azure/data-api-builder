@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Net;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
@@ -135,12 +136,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string expectedLocationHeader,
             bool isJson = false)
         {
+            JsonSerializerOptions options = new()
+            {
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            };
             string actual;
             switch (actionResult)
             {
                 case OkObjectResult okResult:
                     Assert.AreEqual((int)expectedStatusCode, okResult.StatusCode);
-                    actual = JsonSerializer.Serialize(okResult.Value);
+                    actual = JsonSerializer.Serialize(okResult.Value, options);
                     break;
                 case CreatedResult createdResult:
                     Assert.AreEqual((int)expectedStatusCode, createdResult.StatusCode);

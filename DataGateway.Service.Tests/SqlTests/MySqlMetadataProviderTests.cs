@@ -13,6 +13,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         [TestMethod]
+        [Ignore]
         public override async Task TestDerivedDatabaseSchemaIsValid()
         {
             await base.TestDerivedDatabaseSchemaIsValid();

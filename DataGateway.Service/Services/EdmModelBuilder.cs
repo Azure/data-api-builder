@@ -49,7 +49,7 @@ namespace Azure.DataGateway.Service.Services
                 foreach (string column in schema.Tables[entityName].Columns.Keys)
                 {
                     // need to convert our column type to an Edm type
-                    ColumnType columnType = schema.Tables[entityName].Columns[column].Type;
+                    ColumnType columnType = schema.Tables[entityName].Columns[column].SystemType;
                     string systemTypeName = ColumnDefinition.ResolveColumnTypeToSystemType(columnType).Name;
                     EdmPrimitiveTypeKind type = EdmPrimitiveTypeKind.None;
                     if (systemTypeName == typeof(string).Name)

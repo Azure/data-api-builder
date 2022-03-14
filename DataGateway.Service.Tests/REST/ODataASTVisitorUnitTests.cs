@@ -113,7 +113,7 @@ namespace Azure.DataGateway.Service.Tests.REST
 
         /// <summary>
         /// Verifies that we throw an exception for values that can
-        /// not be parsed into a valid Edm Type Kind. Create a constant
+        /// not be parsed into a valid Edm SystemType Kind. Create a constant
         /// node with a valid type and a value that can not be parsed into
         /// that type and then invoke the visit function from our visitor
         /// using that node.

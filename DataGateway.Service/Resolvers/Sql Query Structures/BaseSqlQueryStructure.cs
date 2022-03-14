@@ -71,7 +71,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             if (GetTableDefinition().Columns.TryGetValue(columnName, out ColumnDefinition? column))
             {
-                return column.Type;
+                return column.SystemType;
             }
             else
             {

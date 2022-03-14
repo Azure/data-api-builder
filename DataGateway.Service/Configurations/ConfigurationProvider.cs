@@ -9,6 +9,7 @@ namespace Azure.DataGateway.Service.Configurations
     /// </summary>
     public enum DatabaseType
     {
+        None,
         Cosmos,
         MsSql,
         PostgreSql,
@@ -25,6 +26,8 @@ namespace Azure.DataGateway.Service.Configurations
          "DataGatewayConfig": {
             "DatabaseType": "",
             "ResolverConfigFile" : ""
+            "ResolverConfig" : ""
+            "GraphQLSchema": ""
             "DatabaseConnection": {
                 "ServerEndpointUrl": "",
                 "AuthorizationKey": "",
@@ -39,7 +42,9 @@ namespace Azure.DataGateway.Service.Configurations
 
         // This should be renamed to databaseConnection but need to coordiate with moderakh on CI configuration.
         public DatabaseConnectionConfig DatabaseConnection { get; set; } = null!;
-        public string ResolverConfigFile { get; set; } = null!;
+        public string? ResolverConfigFile { get; set; }
+        public string? ResolverConfig { get; set; }
+        public string? GraphQLSchema { get; set; }
     }
 
     /// <summary>
@@ -66,6 +71,11 @@ namespace Azure.DataGateway.Service.Configurations
     {
         public void PostConfigure(string name, DataGatewayConfig options)
         {
+            if (options.DatabaseType == DatabaseType.None)
+            {
+                return;
+            }
+
             bool connStringProvided = !string.IsNullOrEmpty(options.DatabaseConnection.ConnectionString);
             bool serverProvided = !string.IsNullOrEmpty(options.DatabaseConnection.Server);
             bool dbProvided = !string.IsNullOrEmpty(options.DatabaseConnection.Database);
@@ -118,6 +128,11 @@ namespace Azure.DataGateway.Service.Configurations
     {
         public ValidateOptionsResult Validate(string name, DataGatewayConfig options)
         {
+            if (options.DatabaseType == DatabaseType.None)
+            {
+                return ValidateOptionsResult.Success;
+            }
+
             return string.IsNullOrWhiteSpace(options.DatabaseConnection.ConnectionString)
                 ? ValidateOptionsResult.Fail("Invalid connection string.")
                 : ValidateOptionsResult.Success;

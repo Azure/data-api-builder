@@ -155,6 +155,53 @@ type Bar {
             Assert.AreEqual(1, inputObj.Fields.Count);
         }
 
+        [TestMethod]
+        [TestCategory("Mutation Builder - Delete")]
+        [TestCategory("Schema Builder - Simple Type")]
+        public void CanGenerateDeleteMutationWith_SimpleType()
+        {
+            string gql =
+                @"
+type Foo @model {
+    id: ID!
+    bar: String!
+}
+                ";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
+            DocumentNode mutationRoot = MutationBuilder.Build(root);
+
+            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
+            Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"deleteFoo"));
+        }
+
+        [TestMethod]
+        [TestCategory("Mutation Builder - Delete")]
+        [TestCategory("Schema Builder - Simple Type")]
+        public void DeleteMutationIdAsInput_SimpleType()
+        {
+            string gql =
+                @"
+type Foo @model {
+    id: ID!
+    bar: String!
+}
+                ";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
+            DocumentNode mutationRoot = MutationBuilder.Build(root);
+
+            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
+            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"deleteFoo");
+            Assert.AreEqual(1, field.Arguments.Count);
+            Assert.AreEqual("id", field.Arguments[0].Name.Value);
+            Assert.AreEqual("ID", field.Arguments[0].Type.NamedType().Name.Value);
+            Assert.IsTrue(field.Arguments[0].Type.IsNonNullType());
+        }
+
+
         private static ObjectTypeDefinitionNode GetMutationNode(DocumentNode mutationRoot)
         {
             return (ObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is ObjectTypeDefinitionNode node && node.Name.Value == "Mutation");

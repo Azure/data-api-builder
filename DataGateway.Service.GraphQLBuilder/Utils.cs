@@ -33,5 +33,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             return false;
         }
 
+        public static FieldDefinitionNode FindIdField(ObjectTypeDefinitionNode node)
+        {
+            return node.Fields.First(f => f.Name.Value == "id");
+        }
     }
 }

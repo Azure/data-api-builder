@@ -18,6 +18,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                     NameNode name = objectTypeDefinitionNode.Name;
 
                     mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root));
+                    mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root));
                     mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode));
                 }
             }

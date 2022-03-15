@@ -201,6 +201,77 @@ type Foo @model {
             Assert.IsTrue(field.Arguments[0].Type.IsNonNullType());
         }
 
+        [TestMethod]
+        [TestCategory("Mutation Builder - Update")]
+        [TestCategory("Schema Builder - Simple Type")]
+        public void CanGenerateUpdateMutationWith_SimpleType()
+        {
+            string gql =
+                @"
+type Foo @model {
+    id: ID!
+    bar: String!
+}
+                ";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
+            DocumentNode mutationRoot = MutationBuilder.Build(root);
+
+            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
+            Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"updateFoo"));
+        }
+
+        [TestMethod]
+        [TestCategory("Mutation Builder - Update")]
+        [TestCategory("Schema Builder - Simple Type")]
+        public void UpdateMutationInputAllFieldsOptionable_SimpleType()
+        {
+            string gql =
+                @"
+type Foo @model {
+    id: ID!
+    bar: String!
+}
+                ";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
+            DocumentNode mutationRoot = MutationBuilder.Build(root);
+
+            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
+            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"updateFoo");
+            Assert.AreEqual(2, field.Arguments.Count);
+
+            InputObjectTypeDefinitionNode argType = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is INamedSyntaxNode node && node.Name == field.Arguments[1].Type.NamedType().Name);
+            Assert.AreEqual(1, argType.Fields.Count);
+            Assert.AreEqual("bar", argType.Fields[0].Name.Value);
+        }
+
+        [TestMethod]
+        [TestCategory("Mutation Builder - Update")]
+        [TestCategory("Schema Builder - Simple Type")]
+        public void UpdateMutationIdFieldAsArgument_SimpleType()
+        {
+            string gql =
+                @"
+type Foo @model {
+    id: ID!
+    bar: String!
+}
+                ";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
+            DocumentNode mutationRoot = MutationBuilder.Build(root);
+
+            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
+            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"updateFoo");
+            Assert.AreEqual(2, field.Arguments.Count);
+            Assert.AreEqual("id", field.Arguments[0].Name.Value);
+            Assert.AreEqual("ID", field.Arguments[0].Type.NamedType().Name.Value);
+            Assert.IsTrue(field.Arguments[0].Type.IsNonNullType());
+        }
 
         private static ObjectTypeDefinitionNode GetMutationNode(DocumentNode mutationRoot)
         {

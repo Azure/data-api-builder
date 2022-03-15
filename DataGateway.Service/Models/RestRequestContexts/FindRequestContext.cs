@@ -9,6 +9,7 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Constructor.
         /// </summary>
+
         public FindRequestContext(string entityName, bool isList)
             : base(HttpRestVerbs.GET, entityName)
         {

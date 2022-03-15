@@ -270,6 +270,56 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "FindTestWithFirstSingleKeyPagination",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        ORDER BY id
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFirstMultiKeyPagination",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _tableWithCompositePrimaryKey + @"
+                        ORDER BY book_id, id
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithAfterSingleKeyPagination",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE id > 7
+                        ORDER BY id
+                        LIMIT 100
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithAfterMultiKeyPagination",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _tableWithCompositePrimaryKey + @"
+                        WHERE book_id > 1 OR (book_id = 1 AND id > 567)
+                        ORDER BY book_id, id
+                        LIMIT 100
+                    ) AS subq
+                "
+            },
+            {
                 "InsertOneTest",
                 @"
                     SELECT to_jsonb(subq) AS data

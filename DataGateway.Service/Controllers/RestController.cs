@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
@@ -65,20 +67,41 @@ namespace Azure.DataGateway.Service.Controllers
         /// <param name="jsonElement">Value representing the Json results of the client's request.</param>
         /// <param name="url">Value represents the complete url needed to continue with paged results.</param>
         /// <returns></returns>
-        private OkObjectResult OkResponse(JsonElement jsonResult, string url)
+        private OkObjectResult OkResponse(JsonElement jsonResult)
         {
-            if (string.IsNullOrWhiteSpace(url))
+            // For consistency we return all values as type Array
+            if (jsonResult.ValueKind != JsonValueKind.Array)
             {
-                return Ok(new
-                {
-                    value = jsonResult,
-                });
+                string jsonString = $"[{JsonSerializer.Serialize(jsonResult)}]";
+                jsonResult = JsonSerializer.Deserialize<JsonElement>(jsonString);
             }
 
+            IEnumerable<JsonElement> resultEnumerated = jsonResult.EnumerateArray();
+            // More than 0 records, and the last element is of type array, then we have pagination
+            if (resultEnumerated.Count() > 0 && resultEnumerated.Last().ValueKind == JsonValueKind.Array)
+            {
+                // Get the nextLink
+                // resultEnumerated will be an array of the form
+                // [{object1}, {object2},...{objectlimit}, [{nextLinkObject}]]
+                // if the last element is of type array, we know it is nextLink
+                // we strip the "[" and "]" and then save the nextLink element
+                // into a dictionary with a key of "nextLink" and a value that
+                // represents the nextLink data we require.
+                string nextLinkJsonString = JsonSerializer.Serialize(resultEnumerated.Last());
+                Dictionary<string, object> nextLink = JsonSerializer.Deserialize<Dictionary<string, object>>(nextLinkJsonString[1..^1])!;
+                IEnumerable<JsonElement> value = resultEnumerated.Take(resultEnumerated.Count() - 1);
+                return Ok(new
+                {
+                    value = value,
+                    @nextLink = nextLink["nextLink"]
+                });
+
+            }
+
+            // no pagination, do not need nextLink
             return Ok(new
             {
-                value = jsonResult,
-                @nextLink = url
+                value = resultEnumerated
             });
         }
 
@@ -236,7 +259,7 @@ namespace Azure.DataGateway.Service.Controllers
                     // Clones the root element to a new JsonElement that can be
                     // safely stored beyond the lifetime of the original JsonDocument.
                     JsonElement resultElement = result.RootElement.Clone();
-                    OkObjectResult formattedResult = OkResponse(resultElement, string.Empty);
+                    OkObjectResult formattedResult = OkResponse(resultElement);
 
                     switch (operationType)
                     {

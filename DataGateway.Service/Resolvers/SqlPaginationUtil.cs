@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
@@ -69,7 +70,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (returnedElemNo > 0)
                 {
                     JsonElement lastElemInRoot = rootEnumerated.ElementAtOrDefault(returnedElemNo - 1);
-                    connectionJson.Add("endCursor", MakeCursorFromJsonElement(lastElemInRoot, paginationMetadata));
+                    connectionJson.Add("endCursor", MakeCursorFromJsonElement(lastElemInRoot, paginationMetadata.Structure!.PrimaryKey()));
                 }
             }
 
@@ -104,10 +105,9 @@ namespace Azure.DataGateway.Service.Resolvers
         /// The JSON is encoded in base64 for opaqueness. The cursor should function as a token that the user copies and pastes
         /// and doesn't need to know how it works
         /// </summary>
-        private static string MakeCursorFromJsonElement(JsonElement element, PaginationMetadata paginationMetadata)
+        public static string MakeCursorFromJsonElement(JsonElement element, List<string> primaryKey)
         {
             Dictionary<string, object> cursorJson = new();
-            List<string> primaryKey = paginationMetadata.Structure!.PrimaryKey();
 
             foreach (string column in primaryKey)
             {
@@ -123,30 +123,42 @@ namespace Azure.DataGateway.Service.Resolvers
         public static IDictionary<string, object> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
         {
             Dictionary<string, object> after = new();
-            List<string> primaryKey = paginationMetadata.Structure!.PrimaryKey();
-
             object afterObject = queryParams["after"];
-            string afterJsonString;
 
             if (afterObject != null)
             {
-                try
+                string afterPlainText = (string)afterObject;
+                after = ParseAfterFromJsonString(afterPlainText, paginationMetadata);
+
+            }
+
+            return after;
+        }
+
+        /// <summary>
+        /// Validate the value associated with $after, and return the json object it stores
+        /// </summary>
+        public static Dictionary<string, object> ParseAfterFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
+        {
+            Dictionary<string, object> after = new();
+            List<string> primaryKey = paginationMetadata.Structure!.PrimaryKey();
+
+            try
+            {
+                afterJsonString = Base64Decode(afterJsonString);
+                Dictionary<string, JsonElement> afterDeserialized = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(afterJsonString)!;
+
+                if (!ListsAreEqual(afterDeserialized.Keys.ToList(), primaryKey))
                 {
-                    string afterPlainText = (string)afterObject;
-                    afterJsonString = Base64Decode(afterPlainText);
-                    Dictionary<string, JsonElement> afterDeserialized = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(afterJsonString)!;
+                    string incorrectValues = $"Parameter \"after\" with values {afterJsonString} does not contain all the required" +
+                                                $"values <{string.Join(", ", primaryKey.Select(c => $"\"{c}\""))}>";
 
-                    if (!ListsAreEqual(afterDeserialized.Keys.ToList(), primaryKey))
-                    {
-                        string incorrectValues = $"Parameter \"after\" with values {afterJsonString} does not contain all the required" +
-                                                    $"values <{string.Join(", ", primaryKey.Select(c => $"\"{c}\""))}>";
+                    throw new ArgumentException(incorrectValues);
+                }
 
-                        throw new ArgumentException(incorrectValues);
-                    }
-
-                    foreach (KeyValuePair<string, JsonElement> keyValuePair in afterDeserialized)
-                    {
-                        object value = ResolveJsonElementToScalarVariable(keyValuePair.Value);
+                foreach (KeyValuePair<string, JsonElement> keyValuePair in afterDeserialized)
+                {
+                    object value = ResolveJsonElementToScalarVariable(keyValuePair.Value);
 
                         Type columnType = paginationMetadata.Structure.GetColumnSystemType(keyValuePair.Key);
                         if (!ReferenceEquals(value.GetType(), columnType))
@@ -155,35 +167,34 @@ namespace Azure.DataGateway.Service.Resolvers
                                 $"incorrect type {value.GetType()} for primary key column {keyValuePair.Key} with type {columnType}.");
                         }
 
-                        after.Add(keyValuePair.Key, value);
-                    }
+                    after.Add(keyValuePair.Key, value);
                 }
-                catch (Exception e)
-                {
-                    // Possible sources of exceptions:
-                    // stringObject cannot be converted to string
-                    // afterPlainText cannot be successfully decoded
-                    // afterJsonString cannot be deserialized
-                    // keys of afterDeserialized do not correspond to the primary key
-                    // values given for the primary keys are of incorrect format
+            }
+            catch (Exception e)
+            {
+                // Possible sources of exceptions:
+                // stringObject cannot be converted to string
+                // afterPlainText cannot be successfully decoded
+                // afterJsonString cannot be deserialized
+                // keys of afterDeserialized do not correspond to the primary key
+                // values given for the primary keys are of incorrect format
 
-                    if (e is InvalidCastException ||
-                        e is ArgumentException ||
-                        e is ArgumentNullException ||
-                        e is FormatException ||
-                        e is System.Text.DecoderFallbackException ||
-                        e is JsonException ||
-                        e is NotSupportedException
-                        )
-                    {
-                        Console.Error.WriteLine(e);
-                        string notValidString = $"Parameter after with value {afterObject} is not a valid pagination token.";
-                        throw new DataGatewayException(notValidString, HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
-                    }
-                    else
-                    {
-                        throw;
-                    }
+                if (e is InvalidCastException ||
+                    e is ArgumentException ||
+                    e is ArgumentNullException ||
+                    e is FormatException ||
+                    e is System.Text.DecoderFallbackException ||
+                    e is JsonException ||
+                    e is NotSupportedException
+                    )
+                {
+                    Console.Error.WriteLine(e);
+                    string notValidString = $"Parameter after with value {afterJsonString} is not a valid pagination token.";
+                    throw new DataGatewayException(notValidString, HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
+                }
+                else
+                {
+                    throw;
                 }
             }
 
@@ -238,6 +249,53 @@ namespace Azure.DataGateway.Service.Resolvers
             IEnumerable<string> inList2NotInList1 = list2.Except(list1);
 
             return !inList1NotInList2.Any() && !inList2NotInList1.Any();
+        }
+
+        /// <summary>
+        /// Create the URL that will provide for the next page of results
+        /// using the same query options.
+        /// </summary>
+        /// <param name="path">The request path.</param>
+        /// <param name="nvc">Collection of query params.</param>
+        /// <param name="after">The values needed for next page.</param>
+        /// <returns>The string representing nextLink.</returns>
+        public static JsonElement CreateNextLink(string path, NameValueCollection? nvc, string after)
+        {
+            if (nvc is null)
+            {
+                nvc = new();
+            }
+
+            if (!string.IsNullOrWhiteSpace(after))
+            {
+                nvc["$after"] = after;
+            }
+
+            // ValueKind will be array so we can differentiate from other objects in the response
+            // to be returned.
+            string jsonString = JsonSerializer.Serialize(new[]
+            {
+                new
+                {
+                    nextLink = @$"{path}?{nvc.ToString()}"
+                }
+            });
+            return JsonSerializer.Deserialize<JsonElement>(jsonString);
+        }
+
+        /// <summary>
+        /// Returns true if the table has more records that
+        /// match the query options than were requested.
+        /// </summary>
+        /// <param name="jsonResult">Results plus one extra record if more exist.</param>
+        /// <param name="first">Client provided limit if one exists, otherwise 0.</param>
+        /// <returns>Bool representing if more records are available.</returns>
+        public static bool HasNext(JsonElement jsonResult, uint? first)
+        {
+            // When first is 0 we use default limit of 100, otherwise we use first
+            uint numRecords = (uint)jsonResult.GetArrayLength();
+            uint? limit = first is not null ? first : 100;
+            return numRecords > limit;
         }
     }
 }

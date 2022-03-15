@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -11,6 +13,7 @@ using Azure.DataGateway.Service.Resolvers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -21,10 +24,9 @@ namespace Azure.DataGateway.Service.Services
     {
         private readonly IQueryEngine _queryEngine;
         private readonly IMutationEngine _mutationEngine;
-        private readonly IMetadataStoreProvider _metadataStoreProvider;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationService _authorizationService;
-
+        public IMetadataStoreProvider MetadataStoreProvider { get; }
         public RestService(
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
@@ -35,7 +37,7 @@ namespace Azure.DataGateway.Service.Services
         {
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
-            _metadataStoreProvider = metadataStoreProvider;
+            MetadataStoreProvider = metadataStoreProvider;
             _httpContextAccessor = httpContextAccessor;
             _authorizationService = authorizationService;
         }
@@ -52,7 +54,8 @@ namespace Azure.DataGateway.Service.Services
             Operation operationType,
             string? primaryKeyRoute)
         {
-            string queryString = GetHttpContext().Request.QueryString.ToString();
+            QueryString? query = GetHttpContext().Request.QueryString;
+            string queryString = query is null ? string.Empty : GetHttpContext().Request.QueryString.ToString();
 
             string requestBody = string.Empty;
             using (StreamReader reader = new(GetHttpContext().Request.Body))
@@ -74,7 +77,7 @@ namespace Azure.DataGateway.Service.Services
                         operationType);
                     RequestValidator.ValidateInsertRequestContext(
                         (InsertRequestContext)context,
-                        _metadataStoreProvider);
+                        MetadataStoreProvider);
                     break;
                 case Operation.Delete:
                     context = new DeleteRequestContext(entityName, isList: false);
@@ -84,7 +87,7 @@ namespace Azure.DataGateway.Service.Services
                 case Operation.UpsertIncremental:
                     JsonElement upsertPayloadRoot = RequestValidator.ValidateUpsertRequest(primaryKeyRoute, requestBody);
                     context = new UpsertRequestContext(entityName, upsertPayloadRoot, GetHttpVerb(operationType), operationType);
-                    RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _metadataStoreProvider);
+                    RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, MetadataStoreProvider);
                     break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
@@ -92,19 +95,20 @@ namespace Azure.DataGateway.Service.Services
 
             if (!string.IsNullOrEmpty(primaryKeyRoute))
             {
-                // After parsing primary key, the context will be populated with the
+                // After parsing primary key, the Context will be populated with the
                 // correct PrimaryKeyValuePairs.
                 RequestParser.ParsePrimaryKey(primaryKeyRoute, context);
-                RequestValidator.ValidatePrimaryKey(context, _metadataStoreProvider);
+                RequestValidator.ValidatePrimaryKey(context, MetadataStoreProvider);
             }
 
-            if (!string.IsNullOrEmpty(queryString))
+            if (!string.IsNullOrWhiteSpace(queryString))
             {
-                RequestParser.ParseQueryString(HttpUtility.ParseQueryString(queryString), context, _metadataStoreProvider.GetFilterParser());
+                context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
+                RequestParser.ParseQueryString(context, MetadataStoreProvider.GetFilterParser());
             }
 
-            // At this point for DELETE, the primary key should be populated in the Request context. 
-            RequestValidator.ValidateRequestContext(context, _metadataStoreProvider);
+            // At this point for DELETE, the primary key should be populated in the Request Context. 
+            RequestValidator.ValidateRequestContext(context, MetadataStoreProvider);
 
             // RestRequestContext is finalized for QueryBuilding and QueryExecution.
             // Perform Authorization check prior to moving forward in request pipeline.
@@ -119,7 +123,7 @@ namespace Azure.DataGateway.Service.Services
                 switch (operationType)
                 {
                     case Operation.Find:
-                        return await _queryEngine.ExecuteAsync(context);
+                        return FormatFindResult(await _queryEngine.ExecuteAsync(context), (FindRequestContext)context);
                     case Operation.Insert:
                     case Operation.Delete:
                     case Operation.Upsert:
@@ -140,6 +144,56 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
+        /// Format the results from a Find operation. Check if there is a requirement
+        /// for a nextLink, and if so, add this value to the array of JsonElements to
+        /// be used later to format the response in the RestController.
+        /// </summary>
+        /// <param name="task">This task will return the resultant JsonDocument from the query.</param>
+        /// <param name="context">The RequestContext.</param>
+        /// <returns>A result from a Find operation that has been correctly formatted for the controller.</returns>
+        private JsonDocument? FormatFindResult(JsonDocument? jsonDoc, FindRequestContext context)
+        {
+            if (jsonDoc is null)
+            {
+                return jsonDoc;
+            }
+
+            JsonElement jsonElement = jsonDoc.RootElement;
+
+            // If the results are not a collection or if the query does not have a next page
+            // no nextLink is needed, return JsonDocument as is
+            if (jsonElement.ValueKind != JsonValueKind.Array || !SqlPaginationUtil.HasNext(jsonElement, context.First))
+            {
+                return jsonDoc;
+            }
+
+            // More records exist than requested, we know this by requesting 1 extra record,
+            // that extra record is removed here.
+            IEnumerable<JsonElement> rootEnumerated = jsonElement.EnumerateArray();
+            rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
+            string after = string.Empty;
+
+            // If there are more records after we remove the extra that means limit was > 0,
+            // so nextLink will need after value
+            if (rootEnumerated.Count() > 0)
+            {
+                after = SqlPaginationUtil.MakeCursorFromJsonElement(
+                               element: rootEnumerated.Last(),
+                               primaryKey: MetadataStoreProvider.GetTableDefinition(context.EntityName).PrimaryKey);
+            }
+
+            // nextLink is the URL needed to get the next page of records using the same query options
+            // with $after base64 encoded for opaqueness
+            string path = UriHelper.GetEncodedUrl(GetHttpContext().Request).Split('?')[0];
+            JsonElement nextLink = SqlPaginationUtil.CreateNextLink(
+                                  path,
+                                  nvc: context!.ParsedQueryString,
+                                  after);
+            rootEnumerated = rootEnumerated.Append(nextLink);
+            return JsonDocument.Parse(JsonSerializer.Serialize(rootEnumerated));
+        }
+
+        /// <summary>
         /// For the given entity, constructs the primary key route
         /// using the primary key names from metadata and their values from the JsonElement
         /// representing one instance of the entity.
@@ -151,7 +205,7 @@ namespace Azure.DataGateway.Service.Services
         /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
         public string ConstructPrimaryKeyRoute(string entityName, JsonElement entity)
         {
-            TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(entityName);
+            TableDefinition tableDefinition = MetadataStoreProvider.GetTableDefinition(entityName);
             StringBuilder newPrimaryKeyRoute = new();
 
             foreach (string primaryKey in tableDefinition.PrimaryKey)

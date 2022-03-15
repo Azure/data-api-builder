@@ -320,11 +320,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <returns>JsonDocument</returns>
         protected static async Task<JsonElement> GetGraphQLControllerResultAsync(string query, string graphQLQueryName, GraphQLController graphQLController, Dictionary<string, object> variables = null)
         {
-            string graphqlQueryJson = JObject.FromObject(new
-            {
-                query,
-                variables
-            }).ToString();
+            string graphqlQueryJson = variables == null ?
+                JObject.FromObject(new { query }).ToString() :
+                JObject.FromObject(new
+                {
+                    query,
+                    variables
+                }).ToString();
 
             Console.WriteLine(graphqlQueryJson);
 

@@ -313,6 +313,75 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        /// <summary>
+        /// This deeply nests a many-to-many join multiple times to show that
+        /// it still results in a valid query.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task DeeplyNestedManyToManyJoinQueryWithVariables()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"query ($first: Int) {
+              getBooks(first: $first) {
+                title
+                authors(first: $first) {
+                  name
+                  books(first: $first) {
+                    title
+                    authors(first: $first) {
+                      name
+                    }
+                  }
+                }
+              }
+            }";
+
+            string msSqlQuery = @"
+                SELECT TOP 100 [table0].[title] AS [title],
+                    JSON_QUERY(COALESCE([table6_subq].[data], '[]')) AS [authors]
+                FROM [books] AS [table0]
+                OUTER APPLY (
+                    SELECT TOP 100 [table6].[name] AS [name],
+                        JSON_QUERY(COALESCE([table7_subq].[data], '[]')) AS [books]
+                    FROM [authors] AS [table6]
+                    INNER JOIN [book_author_link] AS [table11] ON [table11].[author_id] = [table6].[id]
+                    OUTER APPLY (
+                        SELECT TOP 100 [table7].[title] AS [title],
+                            JSON_QUERY(COALESCE([table8_subq].[data], '[]')) AS [authors]
+                        FROM [books] AS [table7]
+                        INNER JOIN [book_author_link] AS [table10] ON [table10].[book_id] = [table7].[id]
+                        OUTER APPLY (
+                            SELECT TOP 100 [table8].[name] AS [name]
+                            FROM [authors] AS [table8]
+                            INNER JOIN [book_author_link] AS [table9] ON [table9].[author_id] = [table8].[id]
+                            WHERE [table7].[id] = [table9].[book_id]
+                            ORDER BY [id]
+                            FOR JSON PATH,
+                                INCLUDE_NULL_VALUES
+                            ) AS [table8_subq]([data])
+                        WHERE [table6].[id] = [table10].[author_id]
+                        ORDER BY [id]
+                        FOR JSON PATH,
+                            INCLUDE_NULL_VALUES
+                        ) AS [table7_subq]([data])
+                    WHERE [table0].[id] = [table11].[book_id]
+                    ORDER BY [id]
+                    FOR JSON PATH,
+                        INCLUDE_NULL_VALUES
+                    ) AS [table6_subq]([data])
+                WHERE 1 = 1
+                ORDER BY [id]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController, new() { { "first", 100 } });
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         [TestMethod]
         public async Task QueryWithSingleColumnPrimaryKey()
         {

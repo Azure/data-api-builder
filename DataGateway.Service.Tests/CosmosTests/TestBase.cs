@@ -159,17 +159,24 @@ type Planet {
         /// <param name="queryName"> Name of the GraphQL query/mutation</param>
         /// <param name="query"> The GraphQL query/mutation</param>
         /// <returns></returns>
-        internal static async Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string query, Dictionary<string, object> variables)
+        internal static async Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string query, Dictionary<string, object> variables = null)
         {
-            string queryJson = JObject.FromObject(new
-            {
-                query,
-                variables
-            }).ToString();
+            string queryJson = variables == null ?
+                JObject.FromObject(new { query }).ToString() :
+                JObject.FromObject(new
+                {
+                    query,
+                    variables
+                }).ToString();
             _controller.ControllerContext.HttpContext = GetHttpContextWithBody(queryJson);
             JsonElement graphQLResult = await _controller.PostAsync();
+
+            if(graphQLResult.TryGetProperty("errors", out JsonElement errors))
+            {
+                Assert.Fail(errors.GetRawText());
+            }
+
             return graphQLResult.GetProperty("data").GetProperty(queryName);
         }
-
     }
 }

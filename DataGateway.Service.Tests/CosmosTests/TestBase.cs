@@ -171,7 +171,7 @@ type Planet {
             _controller.ControllerContext.HttpContext = GetHttpContextWithBody(queryJson);
             JsonElement graphQLResult = await _controller.PostAsync();
 
-            if(graphQLResult.TryGetProperty("errors", out JsonElement errors))
+            if (graphQLResult.TryGetProperty("errors", out JsonElement errors))
             {
                 Assert.Fail(errors.GetRawText());
             }

@@ -172,27 +172,23 @@ namespace Azure.DataGateway.Service.Services
             {
                 case DatabaseType.MsSql:
                     sqlMetadataProvider =
-                        SqlMetadataProvider<
+                        new SqlMetadataProvider<
                             SqlConnection,
                             SqlDataAdapter,
-                            SqlCommand>.GetSqlMetadataProvider(
-                            _connectionString);
+                            SqlCommand>(_connectionString);
                     schemaName = "dbo";
                     break;
                 case DatabaseType.PostgreSql:
-                    sqlMetadataProvider =
+                    sqlMetadataProvider = new
                         SqlMetadataProvider<
                             NpgsqlConnection,
                             NpgsqlDataAdapter,
-                            NpgsqlCommand>.GetSqlMetadataProvider(_connectionString);
+                            NpgsqlCommand>(_connectionString);
                     schemaName = "public";
                     break;
                 case DatabaseType.MySql:
-                    sqlMetadataProvider =
-                    SqlMetadataProvider<
-                        MySqlConnection,
-                        MySqlDataAdapter,
-                        MySqlCommand>.GetSqlMetadataProvider(_connectionString);
+                    sqlMetadataProvider = new
+                    MySqlMetadataProvider(_connectionString);
                     schemaName = "mysql";
                     break;
                 default:

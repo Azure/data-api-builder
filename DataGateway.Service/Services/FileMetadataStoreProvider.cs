@@ -189,7 +189,6 @@ namespace Azure.DataGateway.Service.Services
                 case DatabaseType.MySql:
                     sqlMetadataProvider = new
                     MySqlMetadataProvider(_connectionString);
-                    schemaName = "mysql";
                     break;
                 default:
                     throw new ArgumentException($"Refreshing tables for this database type: {_databaseType}" +

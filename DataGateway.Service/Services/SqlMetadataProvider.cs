@@ -17,10 +17,11 @@ namespace Azure.DataGateway.Service.Services
         where CommandT : DbCommand, new()
     {
         private const int NUMBER_OF_RESTRICTIONS = 4;
-        private readonly string _connectionString;
         private DataSet _dataSet = new();
-        private static readonly object _syncLock = new();
-        private static SqlMetadataProvider<ConnectionT, DataAdapterT, CommandT>? _singleton;
+
+        protected const string TABLE_TYPE = "BASE TABLE";
+
+        protected string ConnectionString { get; init; }
 
         /// <summary>
         /// The derived database schema.
@@ -29,7 +30,7 @@ namespace Azure.DataGateway.Service.Services
 
         public SqlMetadataProvider(string connectionString)
         {
-            _connectionString = connectionString;
+            ConnectionString = connectionString;
             DatabaseSchema = new();
         }
 
@@ -53,40 +54,77 @@ namespace Azure.DataGateway.Service.Services
         {
             if (!string.IsNullOrEmpty(schemaName))
             {
-                using ConnectionT conn = new();
-                conn.ConnectionString = _connectionString;
-                await conn.OpenAsync();
-
                 DatabaseSchema.Tables.Clear();
 
-                DataTable allBaseTables = await GetSchemaAsync(conn, schemaName);
+                DataTable allBaseTables = await GetSchemaAsync(schemaName);
 
-                foreach (DataRow table in allBaseTables.Rows)
-                {
-                    string tableName = table["TABLE_NAME"].ToString()!;
-
-                    TableDefinition tableDefinition = new();
-
-                    DataAdapterT adapterForTable = new();
-                    CommandT selectCommand = new();
-                    selectCommand.Connection = conn;
-                    selectCommand.CommandText = ($"SELECT * FROM {tableName}");
-                    adapterForTable.SelectCommand = selectCommand;
-
-                    adapterForTable.FillSchema(_dataSet, SchemaType.Source, tableName);
-
-                    AddColumnDefinition(tableName, tableDefinition);
-
-                    await PopulateColumnDefinitionWithHasDefaultAsync(
-                        schemaName,
-                        tableName,
-                        tableDefinition);
-
-                    DatabaseSchema.Tables.Add(tableName, tableDefinition);
-                }
+                await PopulateDatabaseSchemaWithTableDefinition(allBaseTables);
             }
 
             return DatabaseSchema;
+        }
+
+        /// <summary>
+        /// Get the schema information for one database.
+        /// </summary>
+        /// <param name="schemaName">schema name</param>
+        /// <returns>a datatable contains tables</returns>
+        protected virtual async Task<DataTable> GetSchemaAsync(string schemaName)
+        {
+            using ConnectionT conn = new();
+            conn.ConnectionString = ConnectionString;
+            await conn.OpenAsync();
+
+            // We can specify the Catalog, Schema, Table Name, Table Type to get
+            // the specified table(s).
+            // We can use four restrictions for Table, so we create a 4 members array.
+            // These restrictions are used to limit the amount of schema information returned.
+            string[] tableRestrictions = new string[NUMBER_OF_RESTRICTIONS];
+
+            // For the array, 0-member represents Catalog; 1-member represents Schema;
+            // 2-member represents Table Name; 3-member represents Table Type.
+            // We only need to get all the base tables, not views or system tables.
+            tableRestrictions[1] = schemaName;
+            tableRestrictions[3] = TABLE_TYPE;
+
+            DataTable allBaseTables = await conn.GetSchemaAsync("Tables", tableRestrictions);
+
+            return allBaseTables;
+        }
+
+        /// <summary>
+        /// Populates the database schema with all the table definitions
+        /// obtained from the DataTable format of the base tables.
+        /// </summary>
+        private async Task PopulateDatabaseSchemaWithTableDefinition(DataTable allBaseTables)
+        {
+            using ConnectionT conn = new();
+            conn.ConnectionString = ConnectionString;
+            await conn.OpenAsync();
+
+            foreach (DataRow table in allBaseTables.Rows)
+            {
+                string tableName = table["TABLE_NAME"].ToString()!;
+                string schemaName = table["TABLE_SCHEMA"].ToString()!;
+                TableDefinition tableDefinition = new();
+
+                DataAdapterT adapterForTable = new();
+                CommandT selectCommand = new();
+                selectCommand.Connection = conn;
+                selectCommand.CommandText = ($"SELECT * FROM {tableName}");
+                adapterForTable.SelectCommand = selectCommand;
+
+                adapterForTable.FillSchema(_dataSet, SchemaType.Source, tableName);
+
+                AddColumnDefinition(tableName, tableDefinition);
+
+                await PopulateColumnDefinitionWithHasDefaultAsync(
+                    schemaName,
+                    tableName,
+                    tableDefinition);
+
+                DatabaseSchema.Tables.Add(tableName, tableDefinition);
+            }
         }
 
         /// <summary>
@@ -117,32 +155,6 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
-        /// Get the schema information for one database.
-        /// </summary>
-        /// <param name="conn">database connection</param>
-        /// <param name="schemaName">schema name</param>
-        /// <returns>a datatable contains tables</returns>
-        protected virtual async Task<DataTable> GetSchemaAsync(ConnectionT conn, string schemaName)
-        {
-            // We can specify the Catalog, Schema, Table Name, Table Type to get
-            // the specified table(s).
-            // We can use four restrictions for Table, so we create a 4 members array.
-            // These restrictions are used to limit the amount of schema information returned.
-            string[] tableRestrictions = new string[NUMBER_OF_RESTRICTIONS];
-
-            // For the array, 0-member represents Catalog; 1-member represents Schema;
-            // 2-member represents Table Name; 3-member represents Table Type.
-            // We only need to get all the base tables, not views or system tables.
-            const string TABLE_TYPE = "BASE TABLE";
-            tableRestrictions[1] = schemaName;
-            tableRestrictions[3] = TABLE_TYPE;
-
-            DataTable allBaseTables = await conn.GetSchemaAsync("Tables", tableRestrictions);
-
-            return allBaseTables;
-        }
-
-        /// <summary>
         /// Populates the column definition with HasDefault property.
         /// </summary>
         private async Task PopulateColumnDefinitionWithHasDefaultAsync(
@@ -151,7 +163,7 @@ namespace Azure.DataGateway.Service.Services
             TableDefinition tableDefinition)
         {
             using ConnectionT conn = new();
-            conn.ConnectionString = _connectionString;
+            conn.ConnectionString = ConnectionString;
             await conn.OpenAsync();
 
             // We can specify the Catalog, Schema, Table Name, Column Name to get

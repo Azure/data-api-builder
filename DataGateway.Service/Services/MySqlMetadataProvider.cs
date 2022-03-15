@@ -21,17 +21,18 @@ namespace Azure.DataGateway.Service.Services
         /// Get the schema information for one database.
         /// Since MySQL connector doesn't support filtering, filter the table manually here
         /// </summary>
-        /// <param name="conn">database connection</param>
         /// <param name="schemaName">not used</param>
         /// <returns>a datatable contains tables</returns>
-        protected override async Task<DataTable> GetSchemaAsync(MySqlConnection conn, string schemaName)
+        protected override async Task<DataTable> GetSchemaAsync(string schemaName)
         {
-            string[] tableRestrictions = new string[1];
-            const string TABLE_TYPE = "BASE TABLE";
-            DataTable alltables = await conn.GetSchemaAsync("Tables", tableRestrictions);
+            using MySqlConnection conn = new();
+            conn.ConnectionString = ConnectionString;
+            await conn.OpenAsync();
+
+            DataTable alltables = await conn.GetSchemaAsync("Tables");
 
             // Manually filter here
-            // MySQL uses scema as catalog
+            // MySQL uses schema as catalog
             List<DataRow> removetables =
                 alltables
                 .AsEnumerable()

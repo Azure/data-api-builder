@@ -153,22 +153,6 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate that all columns have a type specified
-        /// </summary>
-        private void ValidateTableColumnsHaveType(TableDefinition table)
-        {
-            IEnumerable<string> colsWithoutType = table.Columns.Keys.Where(colName => table.Columns[colName].SystemType == );
-            if (colsWithoutType.Any())
-            {
-                throw new ConfigValidationException(
-                    $"All columns must have a type. Columns [{string.Join(", ", colsWithoutType)}] " +
-                    $"don't have a \"SystemType\" whose value is not {ColumnType.None}.",
-                    _configValidationStack
-                );
-            }
-        }
-
-        /// <summary>
         /// Validate table has primary key
         /// </summary>
         private void ValidateTableHasPrimaryKey(TableDefinition table)
@@ -343,11 +327,11 @@ namespace Azure.DataGateway.Service.Configurations
         {
             string columnName = foreignKey.Columns[columnIndex];
             TableDefinition referencedTable = GetTableWithName(foreignKey.ReferencedTable);
-            ColumnType columnType = foreignKeyTable.Columns[columnName].SystemType;
+            Type columnType = foreignKeyTable.Columns[columnName].SystemType;
             string referencedPrimaryKeyColumnName = referencedTable.PrimaryKey[columnIndex];
             ColumnDefinition referencedPrimaryKeyColumn = referencedTable.Columns[referencedPrimaryKeyColumnName];
 
-            if (!ColumnDefinition.TypesAreEqual(columnType, referencedPrimaryKeyColumn.SystemType))
+            if (!ReferenceEquals(columnType, referencedPrimaryKeyColumn.SystemType))
             {
                 throw new ConfigValidationException(
                     $"SystemType mismatch between foreign key column \"{columnName}\" with type \"{columnType}\" and " +
@@ -688,9 +672,9 @@ namespace Azure.DataGateway.Service.Configurations
 
             List<string> mismatchedFieldColumnTypeMessages = new();
 
-            foreach (String matchedName in matchedColumnAndFieldNames)
+            foreach (string matchedName in matchedColumnAndFieldNames)
             {
-                ColumnType columnType = tableColumns[matchedName].SystemType;
+                Type columnType = tableColumns[matchedName].SystemType;
                 ITypeNode fieldType = typeFields[matchedName].Type;
 
                 if (!GraphQLTypeEqualsColumnType(fieldType, columnType))

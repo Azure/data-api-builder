@@ -444,7 +444,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Checks if a GraphQL type is equal to a ColumnType
         /// </summary>
-        private static bool GraphQLTypeEqualsColumnType(ITypeNode gqlType, ColumnType columnType)
+        private static bool GraphQLTypeEqualsColumnType(ITypeNode gqlType, Type columnType)
         {
             return GetGraphQLTypeForColumnType(columnType) == gqlType.NullableType().ToString();
         }
@@ -452,10 +452,9 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Get the GraphQL type equivalent from ColumnType
         /// </summary>
-        private static string GetGraphQLTypeForColumnType(ColumnType type)
+        private static string GetGraphQLTypeForColumnType(Type type)
         {
-            Type systemType = ColumnDefinition.ResolveColumnTypeToSystemType(type);
-            switch (systemType.Name)
+            switch (type.Name)
             {
                 case "String":
                     return "String";

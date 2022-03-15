@@ -82,14 +82,14 @@ namespace Azure.DataGateway.Service.Services
 
                 DatabaseSchema.Tables.Clear();
 
-                // We can specify the Catalog, Schema, Table Name, Table SystemType to get
+                // We can specify the Catalog, Schema, Table Name, Table type to get
                 // the specified table(s).
                 // We can use four restrictions for Table, so we create a 4 members array.
                 // These restrictions are used to limit the amount of schema information returned.
                 string[] tableRestrictions = new string[NUMBER_OF_RESTRICTIONS];
 
                 // For the array, 0-member represents Catalog; 1-member represents Schema;
-                // 2-member represents Table Name; 3-member represents Table SystemType.
+                // 2-member represents Table Name; 3-member represents Table type.
                 // We only need to get all the base tables, not views or system tables.
                 const string TABLE_TYPE = "BASE TABLE";
                 tableRestrictions[1] = schemaName;

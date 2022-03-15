@@ -48,21 +48,21 @@ namespace Azure.DataGateway.Service.Services
                 // each column represents a property of the current entity we are adding
                 foreach (string column in schema.Tables[entityName].Columns.Keys)
                 {
-                    // need to convert our column type to an Edm type
-                    ColumnType columnType = schema.Tables[entityName].Columns[column].SystemType;
-                    string systemTypeName = ColumnDefinition.ResolveColumnTypeToSystemType(columnType).Name;
+                    // need to convert our column system type to an Edm type
+                    Type columnSystemType = schema.Tables[entityName].Columns[column].SystemType;
                     EdmPrimitiveTypeKind type = EdmPrimitiveTypeKind.None;
-                    if (systemTypeName == typeof(string).Name)
+                    if (ReferenceEquals(typeof(string), columnSystemType))
                     {
                         type = EdmPrimitiveTypeKind.String;
                     }
-                    else if (systemTypeName == typeof(Int64).Name)
+                    else if (ReferenceEquals(typeof(long), columnSystemType))
                     {
                         type = EdmPrimitiveTypeKind.Int64;
                     }
                     else
                     {
-                        throw new ArgumentException($"No resolver for column type {columnType}");
+                        throw new ArgumentException($"No resolver for column type" +
+                            $" {columnSystemType.Name}");
                     }
 
                     // if column is in our list of keys we add as a key to entity

@@ -66,6 +66,22 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
             if (!inputTypes.ContainsKey(objectTypeDefinitionNode.Name.Value))
             {
+                inputFields.Add(new(
+                    location: null,
+                    new("and"),
+                    new("Conditions to be treated as AND operations"),
+                    new ListTypeNode(new NamedTypeNode(filterInputName)),
+                    defaultValue: null,
+                    new List<DirectiveNode>()));
+
+                inputFields.Add(new(
+                    location: null,
+                    new("or"),
+                    new("Conditions to be treated as OR operations"),
+                    new ListTypeNode(new NamedTypeNode(filterInputName)),
+                    defaultValue: null,
+                    new List<DirectiveNode>()));
+
                 inputTypes.Add(
                     objectTypeDefinitionNode.Name.Value,
                     new(

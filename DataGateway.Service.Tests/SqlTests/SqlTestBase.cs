@@ -62,21 +62,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _queryExecutor = new QueryExecutor<NpgsqlConnection>(config);
                     _queryBuilder = new PostgresQueryBuilder();
                     _sqlMetadataProvider =
-                        SqlMetadataProvider<NpgsqlConnection, NpgsqlDataAdapter, NpgsqlCommand>.GetSqlMetadataProvider(connectionString);
+                       new SqlMetadataProvider<NpgsqlConnection, NpgsqlDataAdapter, NpgsqlCommand>(connectionString);
                     _defaultSchemaName = "public";
                     break;
                 case TestCategory.MSSQL:
                     _queryExecutor = new QueryExecutor<SqlConnection>(config);
                     _queryBuilder = new MsSqlQueryBuilder();
                     _sqlMetadataProvider =
-                      SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand>.GetSqlMetadataProvider(connectionString);
+                      new SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand>(connectionString);
                     _defaultSchemaName = "dbo";
                     break;
                 case TestCategory.MYSQL:
                     _queryExecutor = new QueryExecutor<MySqlConnection>(config);
                     _queryBuilder = new MySqlQueryBuilder();
                     _sqlMetadataProvider =
-                        SqlMetadataProvider<MySqlConnection, MySqlDataAdapter, MySqlCommand>.GetSqlMetadataProvider(connectionString);
+                        new MySqlMetadataProvider(connectionString);
                     _defaultSchemaName = "mysql";
                     break;
             }

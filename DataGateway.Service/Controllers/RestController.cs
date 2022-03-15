@@ -325,11 +325,11 @@ namespace Azure.DataGateway.Service.Controllers
         {
             if (headers.ContainsKey("If-Match"))
             {
-                operation = Operation.Update;
+                operation = Operation.Update; // if record exists update, otherwise do nothing (query structure already exists) PR 1
             }
             else if (headers.ContainsKey("If-None-Match"))
             {
-                operation = headers["If-None-Match"] == "\"*\"" ? Operation.Insert : operation;
+                operation = headers["If-None-Match"] == "\"*\"" ? Operation.InsertWithNoUpdate : operation; // if record matches already do nothing (make new query structure look at upsert query) PR 2
             }
 
             return operation;

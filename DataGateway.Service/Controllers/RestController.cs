@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 
@@ -69,10 +70,11 @@ namespace Azure.DataGateway.Service.Controllers
         /// <returns></returns>
         private OkObjectResult OkResponse(JsonElement jsonResult)
         {
+            string jsonString = string.Empty;
             // For consistency we return all values as type Array
             if (jsonResult.ValueKind != JsonValueKind.Array)
             {
-                string jsonString = $"[{JsonSerializer.Serialize(jsonResult)}]";
+                jsonString = $"[{JsonSerializer.Serialize(jsonResult)}]";
                 jsonResult = JsonSerializer.Deserialize<JsonElement>(jsonString);
             }
 
@@ -103,6 +105,7 @@ namespace Azure.DataGateway.Service.Controllers
             {
                 value = resultEnumerated
             });
+            ;
         }
 
         /// <summary>
@@ -247,6 +250,7 @@ namespace Azure.DataGateway.Service.Controllers
                     this.HttpContext.User = new ClaimsPrincipal(identity);
                 }
 
+                operationType = operationType == Operation.Upsert || operationType == Operation.UpsertIncremental ? HandlePatchPutSemantics(Request.Headers, operationType) : operationType;
                 // Utilizes C#8 using syntax which does not require brackets.
                 using JsonDocument? result
                     = await _restService.ExecuteAsync(
@@ -269,7 +273,7 @@ namespace Azure.DataGateway.Service.Controllers
                             primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
                             string location =
                                 UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute;
-                            return new CreatedResult(location: location, formattedResult);
+                            return new CreatedResult(location: location, formattedResult.Value);
                         case Operation.Delete:
                             return new NoContentResult();
                         case Operation.Upsert:
@@ -277,7 +281,7 @@ namespace Azure.DataGateway.Service.Controllers
                             primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
                             location =
                                 UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute;
-                            return new CreatedResult(location: location, formattedResult);
+                            return new CreatedResult(location: location, formattedResult.Value);
                         default:
                             throw new NotSupportedException($"Unsupported Operation: \" {operationType}\".");
                     }
@@ -315,6 +319,20 @@ namespace Azure.DataGateway.Service.Controllers
                     SERVER_ERROR,
                     HttpStatusCode.InternalServerError);
             }
+        }
+
+        private static Operation HandlePatchPutSemantics(IHeaderDictionary headers, Operation operation)
+        {
+            if (headers.ContainsKey("If-Match"))
+            {
+                operation = Operation.Update;
+            }
+            else if (headers.ContainsKey("If-None-Match"))
+            {
+                operation = headers["If-None-Match"] == "\"*\"" ? Operation.Insert : operation;
+            }
+
+            return operation;
         }
     }
 }

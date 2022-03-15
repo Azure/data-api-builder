@@ -150,8 +150,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case CreatedResult createdResult:
                     Assert.AreEqual((int)expectedStatusCode, createdResult.StatusCode);
                     Assert.AreEqual(expectedLocationHeader, createdResult.Location);
-                    OkObjectResult innerResult = (OkObjectResult)createdResult.Value;
-                    actual = JsonSerializer.Serialize(innerResult.Value);
+                    //OkObjectResult innerResult = (OkObjectResult)createdResult.Value;
+                    actual = JsonSerializer.Serialize(createdResult.Value);
                     break;
                 // NoContentResult does not have value property for messages
                 case NoContentResult noContentResult:

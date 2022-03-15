@@ -120,27 +120,26 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Parse the value of "after" parameter from query parameters, validate it, and return the json object it stores
         /// </summary>
-        public static IDictionary<string, object> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
+        public static IDictionary<string, object> ParseContinuationFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
         {
-            Dictionary<string, object> after = new();
-            object afterObject = queryParams["after"];
+            Dictionary<string, object> continuation = new();
+            object conitainuationObject = queryParams["continuation"];
 
-            if (afterObject != null)
+            if (conitainuationObject != null)
             {
-                string afterPlainText = (string)afterObject;
-                after = ParseAfterFromJsonString(afterPlainText, paginationMetadata);
-
+                string afterPlainText = (string)conitainuationObject;
+                continuation = ParseContinuationFromJsonString(afterPlainText, paginationMetadata);
             }
 
-            return after;
+            return continuation;
         }
 
         /// <summary>
         /// Validate the value associated with $after, and return the json object it stores
         /// </summary>
-        public static Dictionary<string, object> ParseAfterFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
+        public static Dictionary<string, object> ParseContinuationFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
         {
-            Dictionary<string, object> after = new();
+            Dictionary<string, object> continuation = new();
             List<string> primaryKey = paginationMetadata.Structure!.PrimaryKey();
 
             try
@@ -150,7 +149,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 if (!ListsAreEqual(afterDeserialized.Keys.ToList(), primaryKey))
                 {
-                    string incorrectValues = $"Parameter \"after\" with values {afterJsonString} does not contain all the required" +
+                    string incorrectValues = $"Parameter \"continuation\" with values {afterJsonString} does not contain all the required" +
                                                 $"values <{string.Join(", ", primaryKey.Select(c => $"\"{c}\""))}>";
 
                     throw new ArgumentException(incorrectValues);
@@ -163,10 +162,10 @@ namespace Azure.DataGateway.Service.Resolvers
                     ColumnType columnType = paginationMetadata.Structure.GetColumnType(keyValuePair.Key);
                     if (value.GetType() != ColumnDefinition.ResolveColumnTypeToSystemType(columnType))
                     {
-                        throw new ArgumentException($"After param has incorrect type {value.GetType()} for primary key column {keyValuePair.Key} with type {columnType}.");
+                        throw new ArgumentException($"Continuation param has incorrect type {value.GetType()} for primary key column {keyValuePair.Key} with type {columnType}.");
                     }
 
-                    after.Add(keyValuePair.Key, value);
+                    continuation.Add(keyValuePair.Key, value);
                 }
             }
             catch (Exception e)
@@ -197,7 +196,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            return after;
+            return continuation;
         }
 
         /// <summary>

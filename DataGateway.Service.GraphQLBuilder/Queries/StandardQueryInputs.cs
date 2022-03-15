@@ -39,7 +39,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 new List<InputValueDefinitionNode> {
                     new InputValueDefinitionNode(null, new NameNode("eq"), new StringValueNode("Equals"), new IntType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new InputValueDefinitionNode(null, new NameNode("gt"), new StringValueNode("Greater Than"), new IntType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("gte"), new StringValueNode("Greater Than or Equal To"), new IntType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new InputValueDefinitionNode(null, new NameNode("lt"), new StringValueNode("Less Than"), new IntType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new IntType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new IntType().ToTypeNode(), null, new List<DirectiveNode>())
                 }
             );
@@ -53,7 +55,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 new List<InputValueDefinitionNode> {
                     new InputValueDefinitionNode(null, new NameNode("eq"), new StringValueNode("Equals"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new InputValueDefinitionNode(null, new NameNode("gt"), new StringValueNode("Greater Than"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("gte"), new StringValueNode("Greater Than or Equal To"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new InputValueDefinitionNode(null, new NameNode("lt"), new StringValueNode("Less Than"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>())
                 }
             );

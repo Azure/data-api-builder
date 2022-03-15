@@ -300,7 +300,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="graphQLQueryName"></param>
         /// <param name="graphQLController"></param>
         /// <returns>string in JSON format</returns>
-        protected static async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController)
+        protected virtual async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController)
         {
             JsonElement graphQLResult = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, graphQLController);
             Console.WriteLine(graphQLResult.ToString());

@@ -1,7 +1,7 @@
+using System;
 using Azure.DataGateway.Service.Configurations;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Fluent;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -12,11 +12,21 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             dataGatewayConfig.OnChange((newValue) =>
             {
+                if (newValue.DatabaseType != DatabaseType.Cosmos)
+                {
+                    throw new InvalidOperationException("We shouldn't need a CosmosClientProvider if we're not accessing a CosmosDb");
+                }
+
                 Client = new CosmosClientBuilder(dataGatewayConfig.CurrentValue.DatabaseConnection.ConnectionString).WithContentResponseOnWrite(true).Build();
             });
 
             if (dataGatewayConfig.CurrentValue is not null)
             {
+                if (dataGatewayConfig.CurrentValue.DatabaseType != DatabaseType.Cosmos)
+                {
+                    throw new InvalidOperationException("We shouldn't need a CosmosClientProvider if we're not accessing a CosmosDb");
+                }
+
                 Client = new CosmosClientBuilder(dataGatewayConfig.CurrentValue.DatabaseConnection.ConnectionString).WithContentResponseOnWrite(true).Build();
             }
         }

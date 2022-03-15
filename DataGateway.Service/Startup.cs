@@ -28,13 +28,12 @@ namespace Azure.DataGateway.Service
         }
 
         public IConfiguration Configuration { get; }
-        private IChangeToken _phoenixConfigChangeToken;
+        private IChangeToken? _phoenixConfigChangeToken;
 
         private void OnConfigurationChanged(object state)
         {
             DataGatewayConfig dataGatewayConfig = new();
             Configuration.Bind(nameof(DataGatewayConfig), dataGatewayConfig);
-
         }
 
         // This method gets called by the runtime. Use this method to add services to the container.
@@ -57,29 +56,8 @@ namespace Azure.DataGateway.Service
                 }
             }
 
-            services.AddSingleton<IMetadataStoreProvider>(implementationFactory: (serviceProvider) =>
-            {
-                IOptionsMonitor<DataGatewayConfig> monitor = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
-                if (string.IsNullOrEmpty(monitor.CurrentValue.ResolverConfigFile))
-                {
-                    return new PhoenixMetadataStoreProvider(monitor);
-                }
-                else
-                {
-                    return new FileMetadataStoreProvider(monitor);
-                }
-            });
-
-            services.AddSingleton(implementationFactory: (serviceProvider) =>
-            {
-                IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
-                if (dataGatewayConfig.CurrentValue.DatabaseType != DatabaseType.Cosmos)
-                {
-                    throw new InvalidOperationException("We shouldn't need a CosmosClientProvider if we're not accessing a CosmosDb");
-                }
-
-                return new CosmosClientProvider(dataGatewayConfig);
-            });
+            services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
+            services.AddSingleton<CosmosClientProvider>();
 
             services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
             {
@@ -187,9 +165,21 @@ namespace Azure.DataGateway.Service
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            // validate the configuration after the services have been built
-            // but before the application is built
-            //app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
+            IOptionsMonitor<DataGatewayConfig>? dataGatewayConfig = app.ApplicationServices.GetService<IOptionsMonitor<DataGatewayConfig>>();
+            if (dataGatewayConfig != null && dataGatewayConfig.CurrentValue.DatabaseType.HasValue)
+            {
+                // If the configuration has been set, validate it after the services have been built but
+                // before the application is built. If it hasn't been set yet, skip validation, it will
+                // happen when the config changes.
+                app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
+            }
+            else
+            {
+                dataGatewayConfig.OnChange((newConfig) =>
+                {
+                    app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
+                });
+            }
 
             if (env.IsDevelopment())
             {
@@ -203,20 +193,16 @@ namespace Azure.DataGateway.Service
             {
                 IOptionsMonitor<DataGatewayConfig>? dataGatewayConfig = context.RequestServices.GetService<IOptionsMonitor<DataGatewayConfig>>();
 
-                bool isConfigSetup = (dataGatewayConfig != null && dataGatewayConfig.CurrentValue.DatabaseType != DatabaseType.None);
-                bool isConfigPath = context.Request.Path.StartsWithSegments("/configuration") && context.Request.Method == HttpMethods.Post;
+                bool isConfigSetup = (dataGatewayConfig != null && dataGatewayConfig.CurrentValue.DatabaseType.HasValue);
+                bool isConfigPath = context.Request.Path.StartsWithSegments("/configuration");
 
-                if (isConfigSetup)
-                {
-                    await next.Invoke();
-                }
-                else if (isConfigPath)
+                if (isConfigSetup || isConfigPath)
                 {
                     await next.Invoke();
                 }
                 else
                 {
-                    context.Response.StatusCode = 503;
+                    context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
                 }
             });
             app.UseAuthentication();

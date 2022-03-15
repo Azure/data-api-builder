@@ -4,24 +4,24 @@
   "MutationResolvers": [
     {
       "id": "addPlanet",
-      "databaseName": "mydb",
+      "databaseName": "graphqldb",
       "containerName": "planet",
       "operationType": "Upsert"
     },
     {
       "id": "deletePlanet",
-      "databaseName": "mydb",
+      "databaseName": "graphqldb",
       "containerName": "planet",
       "operationType": "Delete"
     }
   ],
   "GraphQLTypes": {
     "Planet": {
-      "databaseName": "mydb",
+      "databaseName": "graphqldb",
       "containerName": "planet"
     },
     "Character": {
-      "databaseName": "mydb",
+      "databaseName": "graphqldb",
       "containerName": "character"
     },
     "PlanetConnection": {

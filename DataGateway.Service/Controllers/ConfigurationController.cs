@@ -11,7 +11,9 @@ namespace Azure.DataGateway.Service.Controllers
     {
         PhoenixConfigurationProvider _configurationProvider;
         IConfiguration _configuration;
-        public ConfigurationController(PhoenixConfigurationProvider configurationProvider, IConfiguration configuration)
+        public ConfigurationController(
+            PhoenixConfigurationProvider configurationProvider,
+            IConfiguration configuration)
         {
             _configuration = configuration;
             _configurationProvider = configurationProvider;
@@ -35,7 +37,8 @@ namespace Azure.DataGateway.Service.Controllers
         {
             foreach ((string key, string value) in configuration)
             {
-                if (_configuration.GetValue<string>(key) != null)
+                string configValue = _configuration.GetValue<string>(key);
+                if (configValue != null && !string.IsNullOrWhiteSpace(configValue))
                 {
                     return new ConflictObjectResult($"{key}:{value}");
                 }
@@ -43,7 +46,6 @@ namespace Azure.DataGateway.Service.Controllers
 
             _configurationProvider.SetMany(configuration);
 
-            
             return new OkResult();
         }
     }

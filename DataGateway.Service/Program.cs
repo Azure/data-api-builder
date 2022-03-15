@@ -13,6 +13,7 @@ namespace Azure.DataGateway.Service
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
+
             Host.CreateDefaultBuilder(args)
                 .ConfigureAppConfiguration((_, configuration) =>
                 {

@@ -1,9 +1,6 @@
-using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Tests.CosmosTests;
-using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 
 namespace Azure.DataGateway.Service.Tests
 {
@@ -14,7 +11,7 @@ namespace Azure.DataGateway.Service.Tests
 
         public MetadataProviderTests()
         {
-            _fileProvider = new FileMetadataStoreProvider(TestHelper.DataGatewayConfigMonitor);
+            _fileProvider = new FileMetadataStoreProvider(TestHelper.DataGatewayConfig);
         }
 
         [TestMethod]

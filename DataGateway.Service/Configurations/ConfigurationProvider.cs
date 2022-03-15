@@ -9,7 +9,6 @@ namespace Azure.DataGateway.Service.Configurations
     /// </summary>
     public enum DatabaseType
     {
-        None,
         Cosmos,
         MsSql,
         PostgreSql,
@@ -38,7 +37,7 @@ namespace Azure.DataGateway.Service.Configurations
               }
             }
          */
-        public DatabaseType DatabaseType { get; set; }
+        public DatabaseType? DatabaseType { get; set; }
 
         // This should be renamed to databaseConnection but need to coordiate with moderakh on CI configuration.
         public DatabaseConnectionConfig DatabaseConnection { get; set; } = null!;
@@ -71,7 +70,7 @@ namespace Azure.DataGateway.Service.Configurations
     {
         public void PostConfigure(string name, DataGatewayConfig options)
         {
-            if (options.DatabaseType == DatabaseType.None)
+            if (!options.DatabaseType.HasValue)
             {
                 return;
             }
@@ -128,7 +127,7 @@ namespace Azure.DataGateway.Service.Configurations
     {
         public ValidateOptionsResult Validate(string name, DataGatewayConfig options)
         {
-            if (options.DatabaseType == DatabaseType.None)
+            if (!options.DatabaseType.HasValue)
             {
                 return ValidateOptionsResult.Success;
             }

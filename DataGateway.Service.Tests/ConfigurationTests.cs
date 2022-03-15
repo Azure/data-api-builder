@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Net.Http.Json;
 using System.IO;
-using Azure.DataGateway.Service.Resolvers;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Service.Resolvers;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
-using Npgsql;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MySqlConnector;
+using Npgsql;
 
 namespace Azure.DataGateway.Service.Tests
 {
@@ -18,9 +18,8 @@ namespace Azure.DataGateway.Service.Tests
     public class ConfigurationTests
     {
         private const string ASP_NET_CORE_ENVIRONMENT_VAR_NAME = "ASPNETCORE_ENVIRONMENT";
-        private string _CosmosResolverConfig = File.ReadAllText("cosmos-config.json");
-        private string _GraphQLSchema = File.ReadAllText("schema.gql");
-
+        private string _cosmosResolverConfig = File.ReadAllText("cosmos-config.json");
+        private string _graphqlSchema = File.ReadAllText("schema.gql");
 
         [TestMethod("Validates that querying for a config that's not set returns a 404.")]
         public async Task TestNoConfigReturnsServiceUnavailable()
@@ -185,8 +184,8 @@ namespace Azure.DataGateway.Service.Tests
             Dictionary<string, string> config = new()
             {
                 { "DataGatewayConfig:DatabaseType", "Cosmos" },
-                { "DataGatewayConfig:ResolverConfig", _CosmosResolverConfig },
-                { "DataGatewayConfig:GraphQLSchema", _GraphQLSchema },
+                { "DataGatewayConfig:ResolverConfig", _cosmosResolverConfig },
+                { "DataGatewayConfig:GraphQLSchema", _graphqlSchema },
                 { "DataGatewayConfig:DatabaseConnection:ConnectionString", "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==" }
             };
 
@@ -202,7 +201,7 @@ namespace Azure.DataGateway.Service.Tests
             Dictionary<string, string> config = new()
             {
                 { "DataGatewayConfig:DatabaseType", "Cosmos" },
-                { "DataGatewayConfig:ResolverConfig", _CosmosResolverConfig },
+                { "DataGatewayConfig:ResolverConfig", _cosmosResolverConfig },
                 { "DataGatewayConfig:DatabaseConnection:ConnectionString", "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==" }
             };
 
@@ -221,7 +220,7 @@ namespace Azure.DataGateway.Service.Tests
             Dictionary<string, string> config = new()
             {
                 { "DataGatewayConfig:DatabaseType", "Cosmos" },
-                { "DataGatewayConfig:ResolverConfig", _CosmosResolverConfig },
+                { "DataGatewayConfig:ResolverConfig", _cosmosResolverConfig },
                 { "DataGatewayConfig:ResolverConfigFile", "cosmos-config.json" },
                 { "DataGatewayConfig:DatabaseConnection:ConnectionString", "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==" }
             };
@@ -272,7 +271,7 @@ namespace Azure.DataGateway.Service.Tests
                 aggregate.Handle(HandleException<T>);
                 exceptionThrown = true;
             }
-            catch (T e)
+            catch (T)
             {
                 exceptionThrown = true;
             }

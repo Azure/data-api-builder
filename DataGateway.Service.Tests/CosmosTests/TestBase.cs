@@ -158,6 +158,7 @@ type Planet {
         /// </summary>
         /// <param name="queryName"> Name of the GraphQL query/mutation</param>
         /// <param name="query"> The GraphQL query/mutation</param>
+        /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
         /// <returns></returns>
         internal static async Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string query, Dictionary<string, object> variables = null)
         {

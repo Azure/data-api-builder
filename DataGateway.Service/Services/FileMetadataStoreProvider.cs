@@ -8,7 +8,6 @@ using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
-using MySqlConnector;
 using Npgsql;
 
 namespace Azure.DataGateway.Service.Services

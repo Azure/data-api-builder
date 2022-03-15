@@ -11,12 +11,5 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             await InitializeTestFixture(context, TestCategory.MYSQL);
         }
-
-        [TestMethod]
-        [Ignore]
-        public override async Task TestDerivedDatabaseSchemaIsValid()
-        {
-            await base.TestDerivedDatabaseSchemaIsValid();
-        }
     }
 }

@@ -27,29 +27,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         public DatabaseSchema DatabaseSchema { get; init; }
 
-        /// <summary>
-        /// Retrieves the singleton for SqlMetadataProvider
-        /// with the given connection string.
-        /// </summary>
-        public static
-        SqlMetadataProvider<ConnectionT, DataAdapterT, CommandT>
-        GetSqlMetadataProvider(string connectionString)
-        {
-            if (_singleton == null)
-            {
-                lock (_syncLock)
-                {
-                    if (_singleton == null)
-                    {
-                        _singleton = new(connectionString);
-                    }
-                }
-            }
-
-            return _singleton;
-        }
-
-        private SqlMetadataProvider(string connectionString)
+        public SqlMetadataProvider(string connectionString)
         {
             _connectionString = connectionString;
             DatabaseSchema = new();
@@ -81,20 +59,7 @@ namespace Azure.DataGateway.Service.Services
 
                 DatabaseSchema.Tables.Clear();
 
-                // We can specify the Catalog, Schema, Table Name, Table Type to get
-                // the specified table(s).
-                // We can use four restrictions for Table, so we create a 4 members array.
-                // These restrictions are used to limit the amount of schema information returned.
-                string[] tableRestrictions = new string[NUMBER_OF_RESTRICTIONS];
-
-                // For the array, 0-member represents Catalog; 1-member represents Schema;
-                // 2-member represents Table Name; 3-member represents Table Type.
-                // We only need to get all the base tables, not views or system tables.
-                const string TABLE_TYPE = "BASE TABLE";
-                tableRestrictions[1] = schemaName;
-                tableRestrictions[3] = TABLE_TYPE;
-
-                DataTable allBaseTables = await conn.GetSchemaAsync("Tables", tableRestrictions);
+                DataTable allBaseTables = await GetSchemaAsync(conn, schemaName);
 
                 foreach (DataRow table in allBaseTables.Rows)
                 {
@@ -149,6 +114,32 @@ namespace Azure.DataGateway.Service.Services
                     tableDefinition.Columns.Add(columnName, column);
                 }
             }
+        }
+
+        /// <summary>
+        /// Get the schema information for one database.
+        /// </summary>
+        /// <param name="conn">database connection</param>
+        /// <param name="schemaName">schema name</param>
+        /// <returns>a datatable contains tables</returns>
+        protected virtual async Task<DataTable> GetSchemaAsync(ConnectionT conn, string schemaName)
+        {
+            // We can specify the Catalog, Schema, Table Name, Table Type to get
+            // the specified table(s).
+            // We can use four restrictions for Table, so we create a 4 members array.
+            // These restrictions are used to limit the amount of schema information returned.
+            string[] tableRestrictions = new string[NUMBER_OF_RESTRICTIONS];
+
+            // For the array, 0-member represents Catalog; 1-member represents Schema;
+            // 2-member represents Table Name; 3-member represents Table Type.
+            // We only need to get all the base tables, not views or system tables.
+            const string TABLE_TYPE = "BASE TABLE";
+            tableRestrictions[1] = schemaName;
+            tableRestrictions[3] = TABLE_TYPE;
+
+            DataTable allBaseTables = await conn.GetSchemaAsync("Tables", tableRestrictions);
+
+            return allBaseTables;
         }
 
         /// <summary>

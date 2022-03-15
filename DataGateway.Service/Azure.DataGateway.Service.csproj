@@ -55,6 +55,11 @@
     <Watch Include="**\*.json;**\*.gql" Exclude="obj\**\*;bin\**\*" />
   </ItemGroup>
 
+
+  <ItemGroup>
+    <Watch Remove="appsettings.MySqlIntegrationTest.overrides.json" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="HotChocolate" Version="$(HotChocolateVersion)" />
     <PackageReference Include="HotChocolate.AspNetCore" Version="$(HotChocolateVersion)" />
@@ -71,5 +76,10 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectCapability Include="CSharp;Managed;ClassDesigner" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Update="appsettings.MySqlIntegrationTest.overrides.json">
+      <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>

@@ -16,8 +16,8 @@
     In Debug/Release, we'll copy the config, appsettings, sql and gql files, but not in Docker configuration since we don't want them to end up in the docker image.
   -->
   <PropertyGroup>
-    <CopyToOutputDirectoryAction Condition="'$(Configuration)' == 'Debug'">PreserveNewest</CopyToOutputDirectoryAction>
-    <CopyToOutputDirectoryAction Condition="'$(Configuration)' == 'Release'">PreserveNewest</CopyToOutputDirectoryAction>
+    <CopyToOutputDirectoryAction Condition="'$(Configuration)' == 'Debug'">Always</CopyToOutputDirectoryAction>
+    <CopyToOutputDirectoryAction Condition="'$(Configuration)' == 'Release'">Always</CopyToOutputDirectoryAction>
     <CopyToOutputDirectoryAction Condition="'$(Configuration)'=='Docker'">Never</CopyToOutputDirectoryAction>
   </PropertyGroup>
 
@@ -54,6 +54,7 @@
     <!-- extends watching group to include .json and .gql files -->
     <Watch Include="**\*.json;**\*.gql" Exclude="obj\**\*;bin\**\*" />
   </ItemGroup>
+
 
   <ItemGroup>
     <PackageReference Include="HotChocolate" Version="$(HotChocolateVersion)" />

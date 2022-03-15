@@ -8,7 +8,6 @@ using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
-using MySqlConnector;
 using Npgsql;
 
 namespace Azure.DataGateway.Service.Services
@@ -172,28 +171,23 @@ namespace Azure.DataGateway.Service.Services
             {
                 case DatabaseType.MsSql:
                     sqlMetadataProvider =
-                        SqlMetadataProvider<
+                        new SqlMetadataProvider<
                             SqlConnection,
                             SqlDataAdapter,
-                            SqlCommand>.GetSqlMetadataProvider(
-                            _connectionString);
+                            SqlCommand>(_connectionString);
                     schemaName = "dbo";
                     break;
                 case DatabaseType.PostgreSql:
-                    sqlMetadataProvider =
+                    sqlMetadataProvider = new
                         SqlMetadataProvider<
                             NpgsqlConnection,
                             NpgsqlDataAdapter,
-                            NpgsqlCommand>.GetSqlMetadataProvider(_connectionString);
+                            NpgsqlCommand>(_connectionString);
                     schemaName = "public";
                     break;
                 case DatabaseType.MySql:
-                    sqlMetadataProvider =
-                    SqlMetadataProvider<
-                        MySqlConnection,
-                        MySqlDataAdapter,
-                        MySqlCommand>.GetSqlMetadataProvider(_connectionString);
-                    schemaName = "mysql";
+                    sqlMetadataProvider = new
+                    MySqlMetadataProvider(_connectionString);
                     break;
                 default:
                     throw new ArgumentException($"Refreshing tables for this database type: {_databaseType}" +

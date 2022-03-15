@@ -4,7 +4,8 @@ services:
     image: "hawaiiacr.azurecr.io/hawaii:latest"
     ports:
       - "5000:5000"
+    restart: "no"
     volumes:
       - "./DataGateway.Service/appsettings.mssql.json:/App/appsettings.json"
-      - "./DataGateway.Service/sql-config.json:/App/config.json"
-      - "./DataGateway.Service/books.gql:/App/books.gql"
+      - "./DataGateway.Service/todo-sql.json:/App/todo-sql.json"
+      - "./DataGateway.Service/todo.gql:/App/todo.gql"

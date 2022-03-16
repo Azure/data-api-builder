@@ -18,39 +18,33 @@ namespace Azure.DataGateway.Service.Services
         where CommandT : DbCommand, new()
     {
         private const int NUMBER_OF_RESTRICTIONS = 4;
-        private DataSet _dataSet = new();
-        private static readonly object _syncLock = new();
-        private static SqlMetadataProvider<ConnectionT, DataAdapterT, CommandT>? _singleton;
-
         protected const string TABLE_TYPE = "BASE TABLE";
 
         protected string ConnectionString { get; init; }
 
+        protected DataSet EntitiesDataSet { get; init; }
+
         public SqlMetadataProvider(string connectionString)
         {
             ConnectionString = connectionString;
+            EntitiesDataSet = new();
         }
 
         /// <summary>
-        /// Retrieves the singleton for SqlMetadataProvider
-        /// with the given connection string.
+        /// Gets the DataTable from the EntitiesDataSet if already present.
+        /// If not present, fills it first and returns the same.
         /// </summary>
-        public static
-        SqlMetadataProvider<ConnectionT, DataAdapterT, CommandT>
-        GetSqlMetadataProvider(string connectionString)
+        public virtual async Task<DataTable> GetTableWithSchemaFromDataSet(
+            string schemaName,
+            string tableName)
         {
-            if (_singleton == null)
+            DataTable? dataTable = EntitiesDataSet.Tables[tableName];
+            if (dataTable == null)
             {
-                lock (_syncLock)
-                {
-                    if (_singleton == null)
-                    {
-                        _singleton = new(connectionString);
-                    }
-                }
+                dataTable = await FillSchemaForTable(schemaName, tableName);
             }
 
-            return _singleton;
+            return dataTable;
         }
 
         /// <summary>
@@ -65,11 +59,7 @@ namespace Azure.DataGateway.Service.Services
             string tableName,
             TableDefinition tableDefinition)
         {
-            DataTable? dataTable = _dataSet.Tables[tableName];
-            if (dataTable == null)
-            {
-                dataTable = await FillSchemaForTable(schemaName, tableName);
-            }
+            DataTable dataTable = await GetTableWithSchemaFromDataSet(schemaName, tableName);
 
             List<DataColumn> primaryKeys = new(dataTable.PrimaryKey);
             tableDefinition.PrimaryKey = new(primaryKeys.Select(primaryKey => primaryKey.ColumnName));
@@ -131,10 +121,12 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
-        /// Populates the database schema with all the table definitions
-        /// obtained from the DataTable format of the base tables.
+        /// Using a data adapter, obtains the schema of the given table name
+        /// and adds the corresponding entity in the data set.
         /// </summary>
-        private async Task<DataTable> FillSchemaForTable(string schemaName, string tableName)
+        protected virtual async Task<DataTable> FillSchemaForTable(
+            string schemaName,
+            string tableName)
         {
             using ConnectionT conn = new();
             conn.ConnectionString = ConnectionString;
@@ -146,7 +138,7 @@ namespace Azure.DataGateway.Service.Services
             selectCommand.CommandText = ($"SELECT * FROM {schemaName}.{tableName}");
             adapterForTable.SelectCommand = selectCommand;
 
-            DataTable[] dataTable = adapterForTable.FillSchema(_dataSet, SchemaType.Source, tableName);
+            DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableName);
             return dataTable[0];
         }
     }

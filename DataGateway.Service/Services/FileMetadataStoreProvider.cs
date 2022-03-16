@@ -10,7 +10,6 @@ using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services.MetadataProviders;
 using Microsoft.Extensions.Options;
-using Npgsql;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -47,27 +46,45 @@ namespace Azure.DataGateway.Service.Services
     {
         private readonly ResolverConfig _config;
         private FilterParser? _filterParser;
-        private DatabaseType _databaseType;
-        private string _connectionString;
+        private readonly MsSqlMetadataProvider? _msSqlMetadataProvider;
+        private readonly PostgreSqlMetadataProvider? _postgreSqlMetadataProvider;
+        private readonly MySqlMetadataProvider? _mySqlMetadataProvider;
 
         /// <summary>
         /// Stores mutation resolvers contained in configuration file.
         /// </summary>
         private Dictionary<string, MutationResolver> _mutationResolvers;
 
+        public DatabaseType CloudDbType { get; init;}
+
         public FileMetadataStoreProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
         : this(dataGatewayConfig.Value.ResolverConfigFile,
               dataGatewayConfig.Value.DatabaseType,
-              dataGatewayConfig.Value.DatabaseConnection.ConnectionString)
+              msSqlMetadataProvider: null,
+              postgreSqlMetadataProvider: null,
+              mySqlMetadataProvider: null)
+        { }
+
+        public FileMetadataStoreProvider(
+            IOptions<DataGatewayConfig> dataGatewayConfig,
+            MsSqlMetadataProvider? msSqlMetadataProvider,
+            PostgreSqlMetadataProvider? postgreSqlMetadataProvider,
+            MySqlMetadataProvider? mySqlMetadataProvider)
+            : this(dataGatewayConfig.Value.ResolverConfigFile,
+                   dataGatewayConfig.Value.DatabaseType,
+                   msSqlMetadataProvider,
+                   postgreSqlMetadataProvider,
+                   mySqlMetadataProvider)
         { }
 
         public FileMetadataStoreProvider(
             string resolverConfigPath,
             DatabaseType databaseType,
-            string connectionString)
+            MsSqlMetadataProvider? msSqlMetadataProvider,
+            PostgreSqlMetadataProvider? postgreSqlMetadataProvider,
+            MySqlMetadataProvider? mySqlMetadataProvider)
         {
-            _databaseType = databaseType;
-            _connectionString = connectionString;
+            CloudDbType = databaseType;
 
             string jsonString = File.ReadAllText(resolverConfigPath);
             JsonSerializerOptions options = new()
@@ -98,6 +115,10 @@ namespace Azure.DataGateway.Service.Services
             {
                 _mutationResolvers.Add(resolver.Id, resolver);
             }
+
+            _msSqlMetadataProvider = msSqlMetadataProvider;
+            _postgreSqlMetadataProvider = postgreSqlMetadataProvider;
+            _mySqlMetadataProvider = mySqlMetadataProvider;
         }
 
         /// <summary>
@@ -154,6 +175,10 @@ namespace Azure.DataGateway.Service.Services
             return _filterParser;
         }
 
+        /// <summary>
+        /// Enrich the database schema with the missing information
+        /// from file but the runtime still needs.
+        /// </summary>
         public async Task EnrichDatabaseSchemaWithTableMetadata()
         {
             if (_config == null || _config.DatabaseSchema == null)
@@ -167,30 +192,30 @@ namespace Azure.DataGateway.Service.Services
             string schemaName = string.Empty;
             foreach ((string tableName, TableDefinition tableDefinition) in _config.DatabaseSchema.Tables)
             {
-                switch (_databaseType)
+                switch (CloudDbType)
                 {
                     case DatabaseType.MsSql:
                         schemaName = "dbo";
-                        await MsSqlMetadataProvider.GetSqlMetadataProvider(_connectionString)
-                            .PopulateTableDefinition(schemaName, tableName, tableDefinition);
+                        await _msSqlMetadataProvider!.PopulateTableDefinition(schemaName, tableName, tableDefinition);
                         break;
                     case DatabaseType.PostgreSql:
                         schemaName = "public";
-                        await PostgreSqlMetadataProvider.GetSqlMetadataProvider(_connectionString)
-                            .PopulateTableDefinition(schemaName, tableName, tableDefinition);
+                        await _postgreSqlMetadataProvider!.PopulateTableDefinition(schemaName, tableName, tableDefinition);
                         break;
                     case DatabaseType.MySql:
-                        await MySqlMetadataProvider.GetSqlMetadataProvider(_connectionString)
-                            .PopulateTableDefinition(schemaName, tableName, tableDefinition);
+                        await _mySqlMetadataProvider!.PopulateTableDefinition(schemaName, tableName, tableDefinition);
                         break;
                     default:
                         throw new ArgumentException($"Enriching database schema " +
-                            $"for this database type: {_databaseType} " +
+                            $"for this database type: {CloudDbType} " +
                             $"is not supported");
                 }
             }
         }
 
+        /// <summary>
+        /// Initializes the filter parser using the database schema.
+        /// </summary>
         public void InitFilterParser()
         {
             if (_config == null || _config.DatabaseSchema == null)

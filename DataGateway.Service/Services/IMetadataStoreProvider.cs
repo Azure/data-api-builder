@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
 
 namespace Azure.DataGateway.Service.Services

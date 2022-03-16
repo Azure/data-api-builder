@@ -193,6 +193,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "InsertOneInDefaultTestTable",
+                $"SELECT [id], [book_id], [piecesAvailable],[piecesRequired] FROM { _DefaultTestTable } " +
+                $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS } AND [book_id] = 2 AND [piecesAvailable] = 0 AND [piecesRequired]=0 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "DeleteOneTest",
                 // This query is used to confirm that the item no longer exists, not the
                 // actual delete query.
@@ -204,6 +210,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
                 $"WHERE id = 7 AND [title] = 'The Hobbit Returns to The Shire' " +
                 $"AND [publisher_id] = 1234" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PutOne_Update_Default_Test",
+                $"SELECT [id], [book_id], [piecesAvailable],[piecesRequired] FROM { _DefaultTestTable } " +
+                $"WHERE [id] = 1 AND [book_id] = 1 AND [piecesAvailable]=14 AND [piecesRequired]=0 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
@@ -234,9 +246,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "PutOne_Insert_Default_Test",
-                $"SELECT [id], [book_id], [piecesAvailable],[piecesRequired] FROM { _DefaultTestTable } " +
-                $"WHERE id = 1 AND [book_id] = 1 " +
+                "PutOne_Update_NonAutoGenPK_Test",
+                $"SELECT [categoryId], [pieceId], [categoryName] FROM { _Composite_NonAutoGenPK } " +
+                $"WHERE [categoryId] = 3 AND [pieceId] = 1 AND [categoryName]='comics'" +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
@@ -251,6 +263,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
                 $"WHERE id = 8 AND [title] = 'Heart of Darkness' " +
                 $"AND [publisher_id] = 2324 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PatchOne_Update_Default_Test",
+                $"SELECT [id], [book_id], [piecesAvailable],[piecesRequired] FROM { _DefaultTestTable } " +
+                $"WHERE id = 1 AND [book_id] = 1 AND [piecesAvailable] = 11 AND [piecesRequired]=0 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {

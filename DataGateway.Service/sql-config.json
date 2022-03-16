@@ -148,24 +148,53 @@
             "HasDefault": true
           },
           "piecesAvailable": {
-            "Type": "int"
+            "Type": "int",
+            "HasDefault": true
           }
         },
-        "Operations": {
+        "HttpVerbs": {
           "POST": {
-            "Authorization": "Anonymous"
+            "Authorization": "Authenticated"
           },
           "GET": {
             "Authorization": "Anonymous"
           },
           "PUT": {
-            "Authorization": "Anonymous"
+            "Authorization": "Authenticated"
+          },
+          "PATCH": {
+            "Authorization": "Authenticated"
           }
         },
         "ForeignKeys": {
           "demand_books_fk": {
             "ReferencedTable": "books",
             "Columns": [ "book_id" ]
+          }
+        }
+      },
+      "stocks": {
+        "PrimaryKey": [ "categoryId", "pieceId" ],
+        "Columns": {
+          "categoryId": {
+            "Type": "bigint"
+          },
+          "pieceId": {
+            "Type": "bigint"
+          },
+          "categoryName": {
+            "Type": "text"
+          }
+        },
+        "HttpVerbs": {
+          "GET": {
+            "AuthorizationType": "Anonymous"
+          },
+          "PUT": {
+            "Authorization": "Authenticated"
+          },
+          "PATCH": {
+            "Authorization": "Authenticated"
           }
         }
       },

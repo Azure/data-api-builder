@@ -39,10 +39,5 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <returns></returns>
         FilterParser GetFilterParser();
-
-        /// <summary>
-        /// Refreshes the database schema with table information.
-        /// </summary>
-        Task<DatabaseSchema> RefreshDatabaseSchemaWithTablesAsync(string schemaName);
     }
 }

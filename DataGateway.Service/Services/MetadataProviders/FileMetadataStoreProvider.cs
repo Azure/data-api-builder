@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
-using Microsoft.Data.SqlClient;
+using Azure.DataGateway.Service.Services.MetadataProviders;
 using Microsoft.Extensions.Options;
 using Npgsql;
 
@@ -44,7 +46,7 @@ namespace Azure.DataGateway.Service.Services
     public class FileMetadataStoreProvider : IMetadataStoreProvider
     {
         private readonly ResolverConfig _config;
-        private readonly FilterParser? _filterParser;
+        private FilterParser? _filterParser;
         private DatabaseType _databaseType;
         private string _connectionString;
 
@@ -95,16 +97,6 @@ namespace Azure.DataGateway.Service.Services
             foreach (MutationResolver resolver in _config.MutationResolvers)
             {
                 _mutationResolvers.Add(resolver.Id, resolver);
-            }
-
-            if (_config.DatabaseSchema == default && databaseType != DatabaseType.Cosmos)
-            {
-                _config.DatabaseSchema = RefreshDatabaseSchemaWithTablesAsync().Result;
-            }
-
-            if (_config.DatabaseSchema != default)
-            {
-                _filterParser = new(_config.DatabaseSchema);
             }
         }
 
@@ -162,40 +154,54 @@ namespace Azure.DataGateway.Service.Services
             return _filterParser;
         }
 
-        /// <inheritdoc/>
-        public Task<DatabaseSchema> RefreshDatabaseSchemaWithTablesAsync(
-            string schemaName = "")
+        public async Task EnrichDatabaseSchemaWithTableMetadata()
         {
-            IMetadataStoreProvider sqlMetadataProvider;
-            switch (_databaseType)
+            if (_config == null || _config.DatabaseSchema == null)
             {
-                case DatabaseType.MsSql:
-                    sqlMetadataProvider =
-                        new SqlMetadataProvider<
-                            SqlConnection,
-                            SqlDataAdapter,
-                            SqlCommand>(_connectionString);
-                    schemaName = "dbo";
-                    break;
-                case DatabaseType.PostgreSql:
-                    sqlMetadataProvider = new
-                        SqlMetadataProvider<
-                            NpgsqlConnection,
-                            NpgsqlDataAdapter,
-                            NpgsqlCommand>(_connectionString);
-                    schemaName = "public";
-                    break;
-                case DatabaseType.MySql:
-                    sqlMetadataProvider = new
-                    MySqlMetadataProvider(_connectionString);
-                    break;
-                default:
-                    throw new ArgumentException($"Refreshing tables for this database type: {_databaseType}" +
-                        $"is not supported");
+                throw new DataGatewayException(
+                    message: "Developer configuration file has not been initialized.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
             }
 
-            return sqlMetadataProvider.RefreshDatabaseSchemaWithTablesAsync(schemaName);
+            string schemaName = string.Empty;
+            foreach ((string tableName, TableDefinition tableDefinition) in _config.DatabaseSchema.Tables)
+            {
+                switch (_databaseType)
+                {
+                    case DatabaseType.MsSql:
+                        schemaName = "dbo";
+                        await MsSqlMetadataProvider.GetSqlMetadataProvider(_connectionString)
+                            .PopulateTableDefinition(schemaName, tableName, tableDefinition);
+                        break;
+                    case DatabaseType.PostgreSql:
+                        schemaName = "public";
+                        await PostgreSqlMetadataProvider.GetSqlMetadataProvider(_connectionString)
+                            .PopulateTableDefinition(schemaName, tableName, tableDefinition);
+                        break;
+                    case DatabaseType.MySql:
+                        await MySqlMetadataProvider.GetSqlMetadataProvider(_connectionString)
+                            .PopulateTableDefinition(schemaName, tableName, tableDefinition);
+                        break;
+                    default:
+                        throw new ArgumentException($"Enriching database schema " +
+                            $"for this database type: {_databaseType} " +
+                            $"is not supported");
+                }
+            }
         }
 
+        public void InitFilterParser()
+        {
+            if (_config == null || _config.DatabaseSchema == null)
+            {
+                throw new DataGatewayException(
+                    message: "Developer configuration file has not been initialized.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
+            }
+
+            _filterParser = new(_config.DatabaseSchema);
+        }
     }
 }

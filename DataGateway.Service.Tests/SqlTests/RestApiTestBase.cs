@@ -51,7 +51,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/1",
-                queryString: "?_f=id,title",
+                queryString: "?$f=id,title",
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindByIdTestWithQueryStringFields)),
                 controller: _restController
@@ -67,7 +67,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?_f=id",
+                queryString: "?$f=id",
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithQueryStringOneField)),
                 controller: _restController);
@@ -281,7 +281,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/567/book_id/1",
-                queryString: "?_f=id,content",
+                queryString: "?$f=id,content",
                 entity: _tableWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithPrimaryKeyContainingForeignKey)),
                 controller: _restController
@@ -608,7 +608,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: "Invalid number of items request, $first must be an intger greater than 0. Actual value: 0",
+                expectedErrorMessage: "Invalid number of items requested, $first must be an integer greater than 0. Actual value: 0",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }
@@ -1103,7 +1103,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/5671",
-                queryString: "?_f=id,content",
+                queryString: "?$f=id,content",
                 entity: _integrationTableName,
                 sqlQuery: string.Empty,
                 controller: _restController,
@@ -1122,7 +1122,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?_f=id,null",
+                queryString: "?$f=id,null",
                 entity: _integrationTableName,
                 sqlQuery: string.Empty,
                 controller: _restController,
@@ -1142,7 +1142,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?_f=id,content",
+                queryString: "?$f=id,content",
                 entity: _integrationTableName,
                 sqlQuery: string.Empty,
                 controller: _restController,

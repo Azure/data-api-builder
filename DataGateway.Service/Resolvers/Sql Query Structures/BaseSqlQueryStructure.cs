@@ -142,7 +142,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     e is ArgumentNullException ||
                     e is OverflowException)
                 {
-                    throw new ArgumentException($"Parameter \"{param}\" cannot be resolved as column \"{columnName}\"" +
+                    throw new ArgumentException($"Parameter \"{param}\" cannot be resolved as column \"{columnName}\" " +
                         $"with type \"{systemType.Name}\".");
                 }
 

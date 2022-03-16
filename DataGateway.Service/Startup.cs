@@ -66,6 +66,7 @@ namespace Azure.DataGateway.Service
                     services.AddSingleton<IQueryEngine, SqlQueryEngine>();
                     services.AddSingleton<IMutationEngine, SqlMutationEngine>();
                     services.AddSingleton<IConfigValidator, SqlConfigValidator>();
+                    services.AddHostedService<SqlHostedService>();
                     break;
                 case DatabaseType.PostgreSql:
                     services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
@@ -74,6 +75,7 @@ namespace Azure.DataGateway.Service
                     services.AddSingleton<IQueryEngine, SqlQueryEngine>();
                     services.AddSingleton<IMutationEngine, SqlMutationEngine>();
                     services.AddSingleton<IConfigValidator, SqlConfigValidator>();
+                    services.AddHostedService<SqlHostedService>();
                     break;
                 case DatabaseType.MySql:
                     services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
@@ -82,6 +84,7 @@ namespace Azure.DataGateway.Service
                     services.AddSingleton<IQueryEngine, SqlQueryEngine>();
                     services.AddSingleton<IMutationEngine, SqlMutationEngine>();
                     services.AddSingleton<IConfigValidator, SqlConfigValidator>();
+                    services.AddHostedService<SqlHostedService>();
                     break;
                 default:
                     throw new NotSupportedException(String.Format("The provided DatabaseType value: {0} is currently not supported." +

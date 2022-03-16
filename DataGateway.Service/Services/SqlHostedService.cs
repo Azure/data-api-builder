@@ -6,6 +6,10 @@ using Microsoft.Extensions.Hosting;
 
 namespace Azure.DataGateway.Service.Services
 {
+    /// <summary>
+    /// Use SqlHostedService to gather metadata information
+    /// asynchronously from Sql-like databases.
+    /// </summary>
     public class SqlHostedService : IHostedService
     {
         private readonly IServiceProvider _serviceProvider;
@@ -14,6 +18,12 @@ namespace Azure.DataGateway.Service.Services
             _serviceProvider = serviceProvider;
         }
 
+        /// <summary>
+        /// As soon as this service is created, this task is started before
+        /// the app can serve requests.
+        /// The need for this is to have the metadata information gathered from the database
+        /// before requests can be served.
+        /// </summary>
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             // Gets the FileMetadataStoreProvider instance

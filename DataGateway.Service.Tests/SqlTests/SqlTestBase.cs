@@ -12,6 +12,7 @@ using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using Azure.DataGateway.Service.Services.MetadataProviders;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -37,10 +38,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static IQueryBuilder _queryBuilder;
         protected static IQueryEngine _queryEngine;
         protected static IMutationEngine _mutationEngine;
-        protected static IMetadataStoreProvider _metadataStoreProvider;
+        protected static FileMetadataStoreProvider _metadataStoreProvider;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
-        protected static IMetadataStoreProvider _sqlMetadataProvider;
         protected static string _defaultSchemaName;
 
         /// <summary>
@@ -61,22 +61,34 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case TestCategory.POSTGRESQL:
                     _queryExecutor = new QueryExecutor<NpgsqlConnection>(config);
                     _queryBuilder = new PostgresQueryBuilder();
-                    _sqlMetadataProvider =
-                       new SqlMetadataProvider<NpgsqlConnection, NpgsqlDataAdapter, NpgsqlCommand>(connectionString);
+                    _metadataStoreProvider = new FileMetadataStoreProvider(
+                        "sql-config.json",
+                        config.Value.DatabaseType,
+                        msSqlMetadataProvider: null,
+                        new PostgreSqlMetadataProvider(connectionString),
+                        mySqlMetadataProvider: null);
                     _defaultSchemaName = "public";
                     break;
                 case TestCategory.MSSQL:
                     _queryExecutor = new QueryExecutor<SqlConnection>(config);
                     _queryBuilder = new MsSqlQueryBuilder();
-                    _sqlMetadataProvider =
-                      new SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand>(connectionString);
+                    _metadataStoreProvider = new FileMetadataStoreProvider(
+                        "sql-config.json",
+                        config.Value.DatabaseType,
+                        new MsSqlMetadataProvider(connectionString),
+                        postgreSqlMetadataProvider: null,
+                        mySqlMetadataProvider: null);
                     _defaultSchemaName = "dbo";
                     break;
                 case TestCategory.MYSQL:
                     _queryExecutor = new QueryExecutor<MySqlConnection>(config);
                     _queryBuilder = new MySqlQueryBuilder();
-                    _sqlMetadataProvider =
-                        new MySqlMetadataProvider(connectionString);
+                    _metadataStoreProvider = new FileMetadataStoreProvider(
+                        "sql-config.json",
+                        config.Value.DatabaseType,
+                        msSqlMetadataProvider: null,
+                        postgreSqlMetadataProvider: null,
+                        mySqlMetadataProvider: new MySqlMetadataProvider(connectionString));
                     _defaultSchemaName = "mysql";
                     break;
             }
@@ -93,10 +105,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _httpContextAccessor = new Mock<IHttpContextAccessor>();
             _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
 
-            _metadataStoreProvider = new FileMetadataStoreProvider(
-                "sql-config.json",
-                config.Value.DatabaseType,
-                config.Value.DatabaseConnection.ConnectionString);
             _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
             _mutationEngine = new SqlMutationEngine(_queryEngine, _metadataStoreProvider, _queryExecutor, _queryBuilder);
 

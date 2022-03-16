@@ -11,11 +11,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public virtual async Task TestDerivedDatabaseSchemaIsValid()
         {
-            ResolverConfig runtimeConfig = _metadataStoreProvider.GetResolvedConfig();
-            DatabaseSchema expectedSchema = runtimeConfig.DatabaseSchema;
-            DatabaseSchema derivedDatabaseSchema =
-                await _sqlMetadataProvider.RefreshDatabaseSchemaWithTablesAsync(_defaultSchemaName);
+            FileMetadataStoreProvider fileMetadataStoreProvider = new("sql-config-test.json",
+                _metadataStoreProvider.CloudDbType,
+                msSqlMetadataProvider: null,
+                postgreSqlMetadataProvider: null,
+                mySqlMetadataProvider: null);
+            ResolverConfig runtimeTestConfig = fileMetadataStoreProvider.GetResolvedConfig();
+            DatabaseSchema expectedSchema = runtimeTestConfig.DatabaseSchema!;
 
+            await _metadataStoreProvider.EnrichDatabaseSchemaWithTableMetadata();
+
+            DatabaseSchema derivedDatabaseSchema = _metadataStoreProvider.GetResolvedConfig().DatabaseSchema!;
             foreach ((string tableName, TableDefinition expectedTableDefinition) in expectedSchema.Tables)
             {
                 TableDefinition actualTableDefinition;

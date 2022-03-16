@@ -3,6 +3,7 @@ using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using Azure.DataGateway.Service.Services.MetadataProviders;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -60,6 +61,8 @@ namespace Azure.DataGateway.Service
                     services.AddSingleton<IConfigValidator, CosmosConfigValidator>();
                     break;
                 case DatabaseType.MsSql:
+                    services.AddSingleton(new MsSqlMetadataProvider
+                        (dataGatewayConfig.DatabaseConnection.ConnectionString));
                     services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
                     services.AddSingleton<IQueryExecutor, QueryExecutor<SqlConnection>>();
                     services.AddSingleton<IQueryBuilder, MsSqlQueryBuilder>();
@@ -69,6 +72,8 @@ namespace Azure.DataGateway.Service
                     services.AddHostedService<SqlHostedService>();
                     break;
                 case DatabaseType.PostgreSql:
+                    services.AddSingleton(new PostgreSqlMetadataProvider
+                        (dataGatewayConfig.DatabaseConnection.ConnectionString));
                     services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
                     services.AddSingleton<IQueryExecutor, QueryExecutor<NpgsqlConnection>>();
                     services.AddSingleton<IQueryBuilder, PostgresQueryBuilder>();
@@ -78,6 +83,8 @@ namespace Azure.DataGateway.Service
                     services.AddHostedService<SqlHostedService>();
                     break;
                 case DatabaseType.MySql:
+                    services.AddSingleton(new MySqlMetadataProvider
+                        (dataGatewayConfig.DatabaseConnection.ConnectionString));
                     services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
                     services.AddSingleton<IQueryExecutor, QueryExecutor<MySqlConnection>>();
                     services.AddSingleton<IQueryBuilder, MySqlQueryBuilder>();
@@ -87,7 +94,7 @@ namespace Azure.DataGateway.Service
                     services.AddHostedService<SqlHostedService>();
                     break;
                 default:
-                    throw new NotSupportedException(String.Format("The provided DatabaseType value: {0} is currently not supported." +
+                    throw new NotSupportedException(string.Format("The provided DatabaseType value: {0} is currently not supported." +
                         "Please check the configuration file.", dataGatewayConfig.DatabaseType));
             }
 

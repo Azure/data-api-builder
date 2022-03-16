@@ -18,7 +18,7 @@ namespace Azure.DataGateway.Service.Services
         {
             // Gets the FileMetadataStoreProvider instance
             FileMetadataStoreProvider metadataStoreProvider =
-                _serviceProvider.GetRequiredService<FileMetadataStoreProvider>();
+                (FileMetadataStoreProvider)_serviceProvider.GetRequiredService<IMetadataStoreProvider>();
 
             // Enriches the database schema asynchronously
             await metadataStoreProvider.EnrichDatabaseSchemaWithTableMetadata();

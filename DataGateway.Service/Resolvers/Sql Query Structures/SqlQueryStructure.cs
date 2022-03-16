@@ -230,7 +230,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (firstObject != null)
                 {
                     // due to the way parameters get resolved,
-                    long first = (long)firstObject;
+                    int first = (int)firstObject;
 
                     if (first <= 0)
                     {
@@ -477,11 +477,12 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     IObjectField? subschemaField = _underlyingFieldType.Fields[fieldName];
 
-                    IDictionary<string, object> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field);
                     if (_ctx == null)
                     {
-                        throw new InvalidOperationException("No GraphQL context exists");
+                        throw new DataGatewayException("No GraphQL context exists", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
                     }
+
+                    IDictionary<string, object> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
 
                     SqlQueryStructure subquery = new(_ctx, subqueryParams, MetadataStoreProvider, subschemaField, field, Counter);
 

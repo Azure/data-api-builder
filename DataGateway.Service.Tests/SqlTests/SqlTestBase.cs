@@ -107,13 +107,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
             _mutationEngine = new SqlMutationEngine(_queryEngine, _metadataStoreProvider, _queryExecutor, _queryBuilder);
-
             await ResetDbStateAsync();
         }
 
         protected static async Task ResetDbStateAsync()
         {
             using DbDataReader _ = await _queryExecutor.ExecuteQueryAsync(File.ReadAllText($"{_testCategory}Books.sql"), parameters: null);
+            await _metadataStoreProvider.EnrichDatabaseSchemaWithTableMetadata();
+            _metadataStoreProvider.InitFilterParser();
         }
 
         /// <summary>

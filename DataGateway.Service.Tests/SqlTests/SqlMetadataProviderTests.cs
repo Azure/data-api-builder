@@ -19,8 +19,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             ResolverConfig runtimeTestConfig = fileMetadataStoreProvider.GetResolvedConfig();
             DatabaseSchema expectedSchema = runtimeTestConfig.DatabaseSchema!;
 
-            await _metadataStoreProvider.EnrichDatabaseSchemaWithTableMetadata();
-
             DatabaseSchema derivedDatabaseSchema = _metadataStoreProvider.GetResolvedConfig().DatabaseSchema!;
             foreach ((string tableName, TableDefinition expectedTableDefinition) in expectedSchema.Tables)
             {

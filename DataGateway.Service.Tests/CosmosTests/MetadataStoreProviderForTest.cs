@@ -56,10 +56,5 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         {
             return _filterParser;
         }
-
-        public Task<DatabaseSchema> RefreshDatabaseSchemaWithTablesAsync(string? schemaName)
-        {
-            throw new System.NotImplementedException();
-        }
     }
 }

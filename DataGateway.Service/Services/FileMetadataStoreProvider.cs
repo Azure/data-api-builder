@@ -55,7 +55,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private Dictionary<string, MutationResolver> _mutationResolvers;
 
-        public DatabaseType CloudDbType { get; init;}
+        public DatabaseType CloudDbType { get; init; }
 
         public FileMetadataStoreProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
         : this(dataGatewayConfig.Value.ResolverConfigFile,
@@ -208,7 +208,7 @@ namespace Azure.DataGateway.Service.Services
                     default:
                         throw new ArgumentException($"Enriching database schema " +
                             $"for this database type: {CloudDbType} " +
-                            $"is not supported");
+                            $"is not supported.");
                 }
             }
         }

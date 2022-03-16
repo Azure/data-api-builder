@@ -234,7 +234,10 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     if (first <= 0)
                     {
-                        throw new DataGatewayException($"first must be a positive integer for {schemaField.Name}", HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
+                        throw new DataGatewayException(
+                        message: $"Invalid number of items requested, $first must be an integer greater than 0 for {schemaField.Name}. Actual value: {first.ToString()}",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }
 
                     _limit = (uint)first;

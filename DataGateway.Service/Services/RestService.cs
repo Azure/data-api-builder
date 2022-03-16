@@ -171,20 +171,13 @@ namespace Azure.DataGateway.Service.Services
             // that extra record is removed here.
             IEnumerable<JsonElement> rootEnumerated = jsonElement.EnumerateArray();
             rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
-            string after = string.Empty;
-
-            // If there are more records after we remove the extra that means limit was > 0,
-            // so nextLink will need after value
-            if (rootEnumerated.Count() > 0)
-            {
-                after = SqlPaginationUtil.MakeCursorFromJsonElement(
-                               element: rootEnumerated.Last(),
-                               primaryKey: MetadataStoreProvider.GetTableDefinition(context.EntityName).PrimaryKey);
-            }
 
             // nextLink is the URL needed to get the next page of records using the same query options
             // with $after base64 encoded for opaqueness
             string path = UriHelper.GetEncodedUrl(GetHttpContext().Request).Split('?')[0];
+            string after = SqlPaginationUtil.MakeCursorFromJsonElement(
+                               element: rootEnumerated.Last(),
+                               primaryKey: MetadataStoreProvider.GetTableDefinition(context.EntityName).PrimaryKey);
             JsonElement nextLink = SqlPaginationUtil.CreateNextLink(
                                   path,
                                   nvc: context!.ParsedQueryString,

@@ -97,7 +97,6 @@ namespace Azure.DataGateway.Service.Controllers
                     value = value,
                     @nextLink = nextLink["nextLink"]
                 });
-
             }
 
             // no pagination, do not need nextLink

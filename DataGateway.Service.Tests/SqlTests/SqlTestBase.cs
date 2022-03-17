@@ -299,10 +299,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="graphQLQuery"></param>
         /// <param name="graphQLQueryName"></param>
         /// <param name="graphQLController"></param>
+        /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
         /// <returns>string in JSON format</returns>
-        protected static async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController)
+        protected static async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController, Dictionary<string, object> variables = null)
         {
-            JsonElement graphQLResult = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, graphQLController);
+            JsonElement graphQLResult = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, graphQLController, variables);
             Console.WriteLine(graphQLResult.ToString());
             JsonElement graphQLResultData = graphQLResult.GetProperty("data").GetProperty(graphQLQueryName);
 
@@ -314,16 +315,20 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Sends graphQL query through graphQL service, consisting of gql engine processing (resolvers, object serialization)
         /// returning the result as a JsonDocument
         /// </summary>
-        /// <param name="graphQLQuery"></param>
+        /// <param name="query"></param>
         /// <param name="graphQLQueryName"></param>
         /// <param name="graphQLController"></param>
+        /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
         /// <returns>JsonDocument</returns>
-        protected static async Task<JsonElement> GetGraphQLControllerResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController)
+        protected static async Task<JsonElement> GetGraphQLControllerResultAsync(string query, string graphQLQueryName, GraphQLController graphQLController, Dictionary<string, object> variables = null)
         {
-            string graphqlQueryJson = JObject.FromObject(new
-            {
-                query = graphQLQuery
-            }).ToString();
+            string graphqlQueryJson = variables == null ?
+                JObject.FromObject(new { query }).ToString() :
+                JObject.FromObject(new
+                {
+                    query,
+                    variables
+                }).ToString();
 
             Console.WriteLine(graphqlQueryJson);
 

@@ -17,6 +17,10 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private const string FIELDS_URL = "_f";
         /// <summary>
+        /// Prefix used for specifying the fields in the query string of the URL.
+        /// </summary>
+        private const string SORT_URL = "$orderby";
+        /// <summary>
         /// Prefix used for specifying filter in the query string of the URL.
         /// </summary>
         public const string FILTER_URL = "$filter";
@@ -80,7 +84,7 @@ namespace Azure.DataGateway.Service.Services
         /// later generate queries in the given RestRequestContext.
         /// </summary>
         /// <param name="context">The RestRequestContext holding the major components of the query.</param>
-        public static void ParseQueryString(RestRequestContext context, FilterParser filterParser)
+        public static void ParseQueryString(RestRequestContext context, string path, FilterParser filterParser)
         {
             foreach (string key in context.ParsedQueryString!.Keys)
             {
@@ -93,8 +97,12 @@ namespace Azure.DataGateway.Service.Services
                     case FILTER_URL:
                         // save the AST that represents the filter for the query
                         // ?$filter=<filter clause using microsoft api guidelines>
-                        string filterQueryString = "?" + FILTER_URL + "=" + context.ParsedQueryString[key];
+                        string filterQueryString = $"?{FILTER_URL}={context.ParsedQueryString[key]}";
                         context.FilterClauseInUrl = filterParser.GetFilterClause(filterQueryString, context.EntityName);
+                        break;
+                    case SORT_URL:
+                        string sortQueryString = $"?{SORT_URL}={context.ParsedQueryString[key]}";
+                        context.OrderByClauseInUrl = filterParser.GetOrderByClause(sortQueryString, context.EntityName);
                         break;
                     case AFTER_URL:
                         context.After = context.ParsedQueryString[key];
@@ -103,7 +111,7 @@ namespace Azure.DataGateway.Service.Services
                         context.First = RequestValidator.CheckFirstValidity(context.ParsedQueryString[key]!);
                         break;
                     default:
-                        throw new ArgumentException("Invalid Query Parameter: " + key.ToString());
+                        throw new ArgumentException($"Invalid Query Parameter: {key.ToString()}");
                 }
             }
         }

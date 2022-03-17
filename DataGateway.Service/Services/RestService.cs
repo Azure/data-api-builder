@@ -104,7 +104,8 @@ namespace Azure.DataGateway.Service.Services
             if (!string.IsNullOrWhiteSpace(queryString))
             {
                 context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
-                RequestParser.ParseQueryString(context, MetadataStoreProvider.GetFilterParser());
+                string path = UriHelper.GetEncodedUrl(GetHttpContext().Request).Split('?')[0];
+                RequestParser.ParseQueryString(context, path, MetadataStoreProvider.GetFilterParser());
             }
 
             // At this point for DELETE, the primary key should be populated in the Request Context. 

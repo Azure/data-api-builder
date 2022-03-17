@@ -41,5 +41,20 @@ namespace Azure.DataGateway.Service.Services
                 throw new DataGatewayException(e.Message, HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
             }
         }
+
+        public OrderByClause GetOrderByClause(string sortQueryString, string path)
+        {
+            try
+            {
+                Uri relativeUri = new(path + '/' + sortQueryString, UriKind.Relative);
+                //Uri serviceRoot = new(path);
+                ODataUriParser parser = new(_model, relativeUri);
+                return parser.ParseOrderBy();
+            }
+            catch (ODataException e)
+            {
+                throw new DataGatewayException(e.Message, HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
+            }
+        }
     }
 }

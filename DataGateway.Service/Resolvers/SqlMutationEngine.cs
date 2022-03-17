@@ -135,6 +135,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     case Operation.Insert:
                     case Operation.Update:
+                    case Operation.UpdateIncremental:
                         jsonResultString = JsonSerializer.Serialize(resultRecord);
                         break;
 
@@ -207,9 +208,10 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryParameters = insertQueryStruct.Parameters;
                     break;
                 case Operation.Update:
-                    SqlUpdateStructure updateStructure = new(tableName, _metadataStoreProvider, parameters);
-                    queryString = _queryBuilder.Build(updateStructure);
-                    queryParameters = updateStructure.Parameters;
+                case Operation.UpdateIncremental:
+                    SqlUpdateStructure updateIncrementalStructure = new(tableName, _metadataStoreProvider, parameters);
+                    queryString = _queryBuilder.Build(updateIncrementalStructure);
+                    queryParameters = updateIncrementalStructure.Parameters;
                     break;
                 case Operation.Delete:
                     SqlDeleteStructure deleteStructure = new(tableName, _metadataStoreProvider, parameters);

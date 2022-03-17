@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Web;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Models.RestRequestContexts;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
@@ -83,6 +84,12 @@ namespace Azure.DataGateway.Service.Services
                     context = new DeleteRequestContext(entityName, isList: false);
                     RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                     break;
+                case Operation.Update:
+                case Operation.UpdateIncremental:
+                    JsonElement updatePayloadRoot = RequestValidator.ValidateUpdateRequest(primaryKeyRoute, requestBody);
+                    context = new UpdateRequestContext(entityName, updatePayloadRoot, GetHttpVerb(operationType), operationType);
+                    RequestValidator.ValidateUdateRequestContext((UpdateRequestContext)context, MetadataStoreProvider);
+                    break;
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
                     JsonElement upsertPayloadRoot = RequestValidator.ValidateUpsertRequest(primaryKeyRoute, requestBody);
@@ -126,6 +133,8 @@ namespace Azure.DataGateway.Service.Services
                         return FormatFindResult(await _queryEngine.ExecuteAsync(context), (FindRequestContext)context);
                     case Operation.Insert:
                     case Operation.Delete:
+                    case Operation.Update:
+                    case Operation.UpdateIncremental:
                     case Operation.Upsert:
                     case Operation.UpsertIncremental:
                         return await _mutationEngine.ExecuteAsync(context);
@@ -224,8 +233,10 @@ namespace Azure.DataGateway.Service.Services
         {
             switch (operation)
             {
+                case Operation.Update:
                 case Operation.Upsert:
                     return HttpRestVerbs.PUT;
+                case Operation.UpdateIncremental:
                 case Operation.UpsertIncremental:
                     return HttpRestVerbs.PATCH;
                 case Operation.Delete:

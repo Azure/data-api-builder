@@ -108,11 +108,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case Operation.Delete:
                     actionResult = await controller.Delete(entityName, primaryKeyRoute);
                     break;
-                case Operation.UpdateNonIncremental:
+                case Operation.Update:
+                case Operation.UpdateRest:
                 case Operation.Upsert:
                     actionResult = await controller.Upsert(entityName, primaryKeyRoute);
                     break;
-                case Operation.Update:
+                case Operation.UpdateIncremental:
                 case Operation.UpsertIncremental:
                     actionResult = await controller.UpsertIncremental(entityName, primaryKeyRoute);
                     break;

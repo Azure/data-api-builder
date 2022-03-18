@@ -135,8 +135,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     case Operation.Insert:
                         jsonResultString = JsonSerializer.Serialize(resultRecord);
                         break;
-                    case Operation.UpdateNonIncremental:
-                    case Operation.Update:
+                    case Operation.UpdateRest:
+                    case Operation.UpdateIncremental:
                         // Updates return empty result set
                         jsonResultString = null;
                         break;
@@ -209,12 +209,17 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryParameters = insertQueryStruct.Parameters;
                     break;
                 case Operation.Update:
-                    SqlUpdateStructure updateStructure = new(tableName, _metadataStoreProvider, parameters, true);
+                    SqlUpdateStructure updateStructure = new(tableName, _metadataStoreProvider, parameters);
                     queryString = _queryBuilder.Build(updateStructure);
                     queryParameters = updateStructure.Parameters;
                     break;
-                case Operation.UpdateNonIncremental:
-                    SqlUpdateStructure updateIncrementalStructure = new(tableName, _metadataStoreProvider, parameters, false);
+                case Operation.UpdateRest:
+                    SqlUpdateStructure updateRestStructure = new(tableName, _metadataStoreProvider, parameters, isIncrementalUpdate: false);
+                    queryString = _queryBuilder.Build(updateRestStructure);
+                    queryParameters = updateRestStructure.Parameters;
+                    break;
+                case Operation.UpdateIncremental:
+                    SqlUpdateStructure updateIncrementalStructure = new(tableName, _metadataStoreProvider, parameters, isIncrementalUpdate: true);
                     queryString = _queryBuilder.Build(updateIncrementalStructure);
                     queryParameters = updateIncrementalStructure.Parameters;
                     break;
@@ -295,8 +300,9 @@ namespace Azure.DataGateway.Service.Resolvers
             }
             else if (context.OperationType == Operation.Upsert ||
                      context.OperationType == Operation.UpsertIncremental ||
-                     context.OperationType == Operation.UpdateNonIncremental ||
-                     context.OperationType == Operation.Update)
+                     context.OperationType == Operation.Update ||
+                     context.OperationType == Operation.UpdateRest ||
+                     context.OperationType == Operation.UpdateIncremental)
             {
                 // Combine both PrimaryKey/Field ValuePairs
                 // because we create an update statement.

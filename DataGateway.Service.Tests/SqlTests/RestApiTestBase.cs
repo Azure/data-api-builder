@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using System.Web;
@@ -6,6 +7,8 @@ using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
@@ -461,6 +464,35 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Tests the PutOne functionality with a REST PUT request using
+        /// headers that include as a key "If-Match" with an item that does not exist,
+        /// resulting in no insert occuring.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutOne_Update_IfMatchHeaders_Test()
+        {
+            Dictionary<string, StringValues> headerDictionary = new();
+            headerDictionary.Add("If-Match", "*");
+            string requestBody = @"
+            {
+                ""title"": ""The Hobbit Returns to The Shire"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/17",
+                    queryString: null,
+                    entity: _integrationTableName,
+                    sqlQuery: GetQuery(nameof(PutOne_Update_IfMatchHeaders_Test)),
+                    controller: _restController,
+                    operationType: Operation.Upsert,
+                    headers: new HeaderDictionary(headerDictionary),
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.NoContent
+                );
+        }
+
+        /// <summary>
         /// Tests the PutOne functionality with a REST PUT request
         /// with item that does NOT exist, results in an insert with
         /// the specified ID as table does NOT have Identity() PK column.
@@ -584,6 +616,35 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     sqlQuery: GetQuery(nameof(PatchOne_Update_Test)),
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.NoContent
+                );
+        }
+
+        /// <summary>
+        /// Tests the PatchOne functionality with a REST PUT request using
+        /// headers that include as a key "If-Match" with an item that does not exist,
+        /// resulting in no insert occuring.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Update_IfMatchHeaders_Test()
+        {
+            Dictionary<string, StringValues> headerDictionary = new();
+            headerDictionary.Add("If-Match", "*");
+            string requestBody = @"
+            {
+                ""title"": ""The Hobbit Returns to The Shire"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/18",
+                    queryString: null,
+                    entity: _integrationTableName,
+                    sqlQuery: GetQuery(nameof(PatchOne_Update_IfMatchHeaders_Test)),
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    headers: new HeaderDictionary(headerDictionary),
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.NoContent
                 );

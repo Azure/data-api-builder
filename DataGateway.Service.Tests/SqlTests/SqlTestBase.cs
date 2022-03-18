@@ -15,6 +15,7 @@ using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
@@ -117,9 +118,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// and request body (if any) as a stream of utf-8 bytes.</returns>
         protected static DefaultHttpContext GetRequestHttpContext(
             string queryStringUrl = null,
+            IHeaderDictionary headers = null,
             string bodyData = null)
         {
-            DefaultHttpContext httpContext = new();
+
+            DefaultHttpContext httpContext;
+            if (headers is not null)
+            {
+                IFeatureCollection features = new FeatureCollection();
+                features.Set<IHttpRequestFeature>(new HttpRequestFeature { Headers = headers });
+                features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(new MemoryStream()));
+                httpContext = new(features);
+            }
+            else
+            {
+                httpContext = new();
+            }
 
             if (!string.IsNullOrEmpty(queryStringUrl))
             {
@@ -190,6 +204,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string sqlQuery,
             RestController controller,
             Operation operationType = Operation.Find,
+            IHeaderDictionary headers = null,
             string requestBody = null,
             bool exception = false,
             string expectedErrorMessage = "",
@@ -202,6 +217,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             ConfigureRestController(
                 controller,
                 queryString,
+                headers,
                 requestBody);
             string baseUrl = UriHelper.GetEncodedUrl(controller.HttpContext.Request);
             if (expectedLocationHeader != null)
@@ -223,7 +239,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             // Initial DELETE request results in 204 no content, no exception thrown.
             // Subsequent DELETE requests result in 404, which result in an exception.
             string expected;
-            if ((operationType == Operation.Delete || operationType == Operation.Upsert || operationType == Operation.UpsertIncremental)
+            if ((operationType == Operation.Delete ||
+                 operationType == Operation.Upsert ||
+                 operationType == Operation.UpsertIncremental ||
+                 operationType == Operation.UpdateNonIncremental ||
+                 operationType == Operation.Update)
                 && actionResult is NoContentResult)
             {
                 expected = null;
@@ -252,12 +272,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <returns>Formatted expected response.</returns>
         private static string FormatExpectedValue(string expected)
         {
-            if (!string.Equals(expected[0], '['))
-            {
-                expected = $"[{expected}]";
-            }
-
-            return expected;
+            return string.IsNullOrWhiteSpace(expected) ? string.Empty : (!Equals(expected[0], '[')) ? $"[{expected}]" : expected;
         }
 
         /// <summary>
@@ -282,11 +297,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static void ConfigureRestController(
             RestController restController,
             string queryString,
+            IHeaderDictionary headers = null,
             string requestBody = null)
         {
             restController.ControllerContext.HttpContext =
                 GetRequestHttpContext(
                     queryString,
+                    headers,
                     bodyData: requestBody);
 
             // Set the mock context accessor's request same as the controller's request.

@@ -381,6 +381,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "PutOne_Update_IfMatchHeaders_Test",
+                @"
+                    SELECT JSON_OBJECT('id', id) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 17 AND title = 'The Hobbit Returns to The Shire'
+                        AND publisher_id = 1234
+                    ) AS subq
+                "
+            },
+            {
                 "PutOne_Insert_Test",
                 @"
                     SELECT JSON_OBJECT('id', id, 'title', title, 'issueNumber', issueNumber ) AS data
@@ -433,6 +445,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         SELECT id, title, publisher_id
                         FROM " + _integrationTableName + @"
                         WHERE id = 8 AND title = 'Heart of Darkness'
+                        AND publisher_id = 2324
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOne_Update_IfMatchHeaders_Test",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 18 AND title = 'Heart of Darkness'
                         AND publisher_id = 2324
                     ) AS subq
                 "

@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using System.Web;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Service.Models.RestRequestContexts;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
@@ -86,14 +85,10 @@ namespace Azure.DataGateway.Service.Services
                     break;
                 case Operation.Update:
                 case Operation.UpdateIncremental:
-                    JsonElement updatePayloadRoot = RequestValidator.ValidateUpdateRequest(primaryKeyRoute, requestBody);
-                    context = new UpdateRequestContext(entityName, updatePayloadRoot, GetHttpVerb(operationType), operationType);
-                    RequestValidator.ValidateUdateRequestContext((UpdateRequestContext)context, MetadataStoreProvider);
-                    break;
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
-                    JsonElement upsertPayloadRoot = RequestValidator.ValidateUpsertRequest(primaryKeyRoute, requestBody);
-                    context = new UpsertRequestContext(entityName, upsertPayloadRoot, GetHttpVerb(operationType), operationType);
+                    JsonElement payloadRoot = RequestValidator.ValidateUpdateOrUpsertRequest(primaryKeyRoute, requestBody);
+                    context = new UpsertRequestContext(entityName, payloadRoot, GetHttpVerb(operationType), operationType);
                     RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, MetadataStoreProvider);
                     break;
                 default:

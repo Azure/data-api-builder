@@ -17,7 +17,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<Predicate> UpdateOperations { get; }
 
-        public SqlUpdateStructure(string tableName, IMetadataStoreProvider metadataStore, IDictionary<string, object> mutationParams)
+        public SqlUpdateStructure(string tableName, IMetadataStoreProvider metadataStore, IDictionary<string, object> mutationParams, bool isIncrementalUpdate)
         : base(metadataStore, tableName: tableName)
         {
             UpdateOperations = new();
@@ -48,6 +48,13 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     UpdateOperations.Add(predicate);
                 }
+
+                columns.Remove(param.Key);
+            }
+
+            if (!isIncrementalUpdate)
+            {
+                AddNullifiedUnspecifiedFields(columns, UpdateOperations, tableDefinition);
             }
 
             if (UpdateOperations.Count == 0)

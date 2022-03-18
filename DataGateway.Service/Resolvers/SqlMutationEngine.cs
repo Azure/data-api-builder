@@ -136,10 +136,9 @@ namespace Azure.DataGateway.Service.Resolvers
                     case Operation.Insert:
                     case Operation.Update:
                     case Operation.UpdateIncremental:
+                        // Updates return empty result set
                         jsonResultString = null;
-                        ;
                         break;
-
                     case Operation.Upsert:
                     case Operation.UpsertIncremental:
                         /// Processes a second result set from DbDataReader if it exists.
@@ -209,8 +208,12 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryParameters = insertQueryStruct.Parameters;
                     break;
                 case Operation.Update:
+                    SqlUpdateStructure updateStructure = new(tableName, _metadataStoreProvider, parameters, false);
+                    queryString = _queryBuilder.Build(updateStructure);
+                    queryParameters = updateStructure.Parameters;
+                    break;
                 case Operation.UpdateIncremental:
-                    SqlUpdateStructure updateIncrementalStructure = new(tableName, _metadataStoreProvider, parameters);
+                    SqlUpdateStructure updateIncrementalStructure = new(tableName, _metadataStoreProvider, parameters, true);
                     queryString = _queryBuilder.Build(updateIncrementalStructure);
                     queryParameters = updateIncrementalStructure.Parameters;
                     break;

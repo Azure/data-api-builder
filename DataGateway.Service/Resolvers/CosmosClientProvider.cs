@@ -8,29 +8,28 @@ namespace Azure.DataGateway.Service.Resolvers
 {
     public class CosmosClientProvider
     {
+        public CosmosClient? Client { get; private set; }
         public CosmosClientProvider(IOptionsMonitor<DataGatewayConfig> dataGatewayConfig)
         {
             dataGatewayConfig.OnChange((newValue) =>
             {
-                if (newValue.DatabaseType != DatabaseType.Cosmos)
-                {
-                    throw new InvalidOperationException("We shouldn't need a CosmosClientProvider if we're not accessing a CosmosDb");
-                }
-
-                Client = new CosmosClientBuilder(dataGatewayConfig.CurrentValue.DatabaseConnection.ConnectionString).WithContentResponseOnWrite(true).Build();
+                InitializeClient(newValue);
             });
 
             if (dataGatewayConfig.CurrentValue is not null)
             {
-                if (dataGatewayConfig.CurrentValue.DatabaseType != DatabaseType.Cosmos)
-                {
-                    throw new InvalidOperationException("We shouldn't need a CosmosClientProvider if we're not accessing a CosmosDb");
-                }
-
-                Client = new CosmosClientBuilder(dataGatewayConfig.CurrentValue.DatabaseConnection.ConnectionString).WithContentResponseOnWrite(true).Build();
+                InitializeClient(dataGatewayConfig.CurrentValue);
             }
         }
 
-        public CosmosClient? Client { get; private set; }
+        private void InitializeClient(DataGatewayConfig configuration)
+        {
+            if (configuration.DatabaseType != DatabaseType.Cosmos)
+            {
+                throw new InvalidOperationException("We shouldn't need a CosmosClientProvider if we're not accessing a CosmosDb");
+            }
+
+            Client = new CosmosClientBuilder(configuration.DatabaseConnection.ConnectionString).WithContentResponseOnWrite(true).Build();
+        }
     }
 }

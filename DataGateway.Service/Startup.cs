@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service
         }
 
         public IConfiguration Configuration { get; }
-        private IChangeToken? _phoenixConfigChangeToken;
+        private IChangeToken? _inMemoryConfigChangeToken;
 
         private void OnConfigurationChanged(object state)
         {
@@ -47,12 +47,11 @@ namespace Azure.DataGateway.Service
 
             if (Configuration is IConfigurationRoot root)
             {
-                PhoenixConfigurationProvider? phoenixProvider = root.Providers.First(prov => prov is PhoenixConfigurationProvider) as PhoenixConfigurationProvider;
-                if (phoenixProvider != null)
+                if (root.Providers.First(prov => prov is InMemoryUpdateableConfigurationProvider) is InMemoryUpdateableConfigurationProvider provider)
                 {
-                    services.AddSingleton(phoenixProvider);
-                    _phoenixConfigChangeToken = phoenixProvider.GetReloadToken();
-                    _phoenixConfigChangeToken.RegisterChangeCallback(new Action<object>(OnConfigurationChanged), phoenixProvider);
+                    services.AddSingleton(provider);
+                    _inMemoryConfigChangeToken = provider.GetReloadToken();
+                    _inMemoryConfigChangeToken.RegisterChangeCallback(new Action<object>(OnConfigurationChanged), provider);
                 }
             }
 

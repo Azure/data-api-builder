@@ -8,6 +8,7 @@ using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MySqlConnector;
 using Npgsql;
@@ -230,6 +231,47 @@ namespace Azure.DataGateway.Service.Tests
                 HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(config));
                 Assert.AreEqual(System.Net.HttpStatusCode.OK, postResult.StatusCode);
             });
+        }
+
+        [TestMethod("Validates that change notifications are raised by the InMemoryUpdateableConfigurationProvider.")]
+        public void TestChangeNotificationsInMemoryUpdateableConfigurationProvider()
+        {
+            InMemoryUpdateableConfigurationProvider provider = new();
+            Dictionary<string, string> config = new()
+            {
+                { "DataGatewayConfig:DatabaseType", "Cosmos" },
+            };
+            provider.SetManyAndReload(config);
+
+            IChangeToken token = provider.GetReloadToken();
+            string finalDatabaseType;
+            string finalResolverConfigFile = "";
+            if (!provider.TryGet("DataGatewayConfig:DatabaseType", out finalDatabaseType))
+            {
+                Assert.Fail("The key wasn't found in the provider.");
+            }
+
+            token.RegisterChangeCallback((state) =>
+            {
+                if (!provider.TryGet("DataGatewayConfig:DatabaseType", out finalDatabaseType))
+                {
+                    Assert.Fail("The key wasn't found in the provider.");
+                }
+
+                if (!provider.TryGet("DataGatewayConfig:ResolverConfigFile", out finalResolverConfigFile))
+                {
+                    Assert.Fail("The key wasn't found in the provider.");
+                }
+            }, null);
+
+            Dictionary<string, string> toUpdate = new()
+            {
+                { "DataGatewayConfig:DatabaseType", "PostgreSql" },
+                { "DataGatewayConfig:ResolverConfigFile", "some-file.json" }
+            };
+            provider.SetManyAndReload(toUpdate);
+            Assert.AreEqual("PostgreSql", finalDatabaseType);
+            Assert.AreEqual("some-file.json", finalResolverConfigFile);
         }
 
         [TestCleanup]

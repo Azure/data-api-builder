@@ -9,10 +9,10 @@ namespace Azure.DataGateway.Service.Controllers
     [Route("[controller]")]
     public class ConfigurationController : Controller
     {
-        PhoenixConfigurationProvider _configurationProvider;
+        InMemoryUpdateableConfigurationProvider _configurationProvider;
         IConfiguration _configuration;
         public ConfigurationController(
-            PhoenixConfigurationProvider configurationProvider,
+            InMemoryUpdateableConfigurationProvider configurationProvider,
             IConfiguration configuration)
         {
             _configuration = configuration;
@@ -44,7 +44,7 @@ namespace Azure.DataGateway.Service.Controllers
                 }
             }
 
-            _configurationProvider.SetMany(configuration);
+            _configurationProvider.SetManyAndReload(configuration);
 
             return new OkResult();
         }

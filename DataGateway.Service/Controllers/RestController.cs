@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 
@@ -240,13 +242,6 @@ namespace Azure.DataGateway.Service.Controllers
         {
             try
             {
-                // Parse App Service's EasyAuth injected headers into MiddleWare usable Security Principal
-                ClaimsIdentity? identity = AppServiceAuthentication.Parse(this.HttpContext);
-                if (identity != null)
-                {
-                    this.HttpContext.User = new ClaimsPrincipal(identity);
-                }
-
                 // Utilizes C#8 using syntax which does not require brackets.
                 using JsonDocument? result
                     = await _restService.ExecuteAsync(

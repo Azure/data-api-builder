@@ -32,7 +32,11 @@ namespace Azure.DataGateway.Service.Configurations
                 "Database": "",
                 "Container": "",
                 "ConnectionString": ""
-              }
+              },
+            "JwtAuth": {
+                "Type":"",
+                "Audience":"",
+                "Issuer":""
             }
          */
         public DatabaseType DatabaseType { get; set; }
@@ -40,6 +44,7 @@ namespace Azure.DataGateway.Service.Configurations
         // This should be renamed to databaseConnection but need to coordiate with moderakh on CI configuration.
         public DatabaseConnectionConfig DatabaseConnection { get; set; } = null!;
         public string ResolverConfigFile { get; set; } = null!;
+        public JwtAuthProviderConfig JwtAuth { get; set; } = null!;
     }
 
     /// <summary>
@@ -53,6 +58,17 @@ namespace Azure.DataGateway.Service.Configurations
         public string Database { get; set; } = null!;
         public string Container { get; set; } = null!;
         public string ConnectionString { get; set; } = null!;
+    }
+
+    /// <summary>
+    /// Jwt Auth Provider Config
+    /// </summary>
+    public class JwtAuthProviderConfig
+    {
+        //Type is Identity Provider such as AzureAD. If set to EasyAuth, no Audience, or issuer expected.
+        public string Type { get; set; } = null!;
+        public string Audience { get; set; } = null!;
+        public string Issuer { get; set; } = null!;
     }
 
     /// <summary>

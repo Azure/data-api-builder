@@ -1,8 +1,10 @@
 using System;
+using Azure.DataGateway.Service.AuthenticationHelpers;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -93,8 +95,23 @@ namespace Azure.DataGateway.Service
 
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
-            services.AddAuthorization();
 
+            // Setting defaultScheme for AddAuthentication() will ensure the JwtBearerHandler (within AddJwtBearer)
+            // is called for every request, and populate the httpContext.User. No defaultScheme requires manually calling
+            // JwtBearerHandler.HandleAuthenticateAsync() for usage of JwtBearerDefaults.AuthenticationScheme.
+            // Then proceed to register the JwtBearer scheme with AddJwtBearer().
+            // Reference: https://docs.microsoft.com/aspnet/core/security/authorization/limitingidentitybyscheme?view=aspnetcore-6.0
+            if (dataGatewayConfig.JwtAuth != null)
+            {
+                services.AddAuthentication(defaultScheme: JwtBearerDefaults.AuthenticationScheme)
+                    .AddJwtBearer(options =>
+                    {
+                        options.Audience = dataGatewayConfig.JwtAuth.Audience;
+                        options.Authority = dataGatewayConfig.JwtAuth.Issuer;
+                    });
+            }
+
+            services.AddAuthorization();
             services.AddSingleton<IAuthorizationHandler, RequestAuthorizationHandler>();
             services.AddControllers();
         }
@@ -116,6 +133,14 @@ namespace Azure.DataGateway.Service
             app.UseRouting();
 
             app.UseAuthentication();
+
+            // Conditionally add EasyAuth middleware if no JwtAuth configuration supplied.
+            // If EasyAuth not present, this will result in all requests being anonymous.
+            if (app.ApplicationServices.GetService<DataGatewayConfig>()!.JwtAuth == null)
+            {
+                app.UseEasyAuth();
+            }
+
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>

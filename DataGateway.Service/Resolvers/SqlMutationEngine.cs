@@ -138,7 +138,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         break;
                     case Operation.UpdateRest:
                     case Operation.UpdateIncremental:
-                        // Updates return empty result set
+                        // REST updates return empty result set
                         jsonResultString = null;
                         break;
                     case Operation.Upsert:

@@ -35,7 +35,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 Predicate predicate = new(
                     new PredicateOperand(new Column(null, param.Key)),
                     PredicateOperation.Equal,
-                    new PredicateOperand($"@{MakeParamWithValue(param.Value)}")
+                    new PredicateOperand($"@{MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, param.Key))}")
                 );
 
                 // primary keys used as predicates

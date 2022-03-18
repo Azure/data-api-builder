@@ -136,7 +136,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     case Operation.Insert:
                     case Operation.Update:
                     case Operation.UpdateIncremental:
-                        jsonResultString = JsonSerializer.Serialize(resultRecord);
+                        jsonResultString = null;
+                        ;
                         break;
 
                     case Operation.Upsert:
@@ -288,10 +289,13 @@ namespace Azure.DataGateway.Service.Resolvers
                 // DeleteOne based off primary key in request.
                 parameters = new(context.PrimaryKeyValuePairs);
             }
-            else if (context.OperationType == Operation.Upsert || context.OperationType == Operation.UpsertIncremental)
+            else if (context.OperationType == Operation.Upsert ||
+                     context.OperationType == Operation.UpsertIncremental ||
+                     context.OperationType == Operation.Update ||
+                     context.OperationType == Operation.UpdateIncremental)
             {
                 // Combine both PrimaryKey/Field ValuePairs
-                // because we create both an insert and an update statement.
+                // because we create an update statement.
                 parameters = new(context.PrimaryKeyValuePairs);
                 foreach (KeyValuePair<string, object> pair in context.FieldValuePairsInBody)
                 {

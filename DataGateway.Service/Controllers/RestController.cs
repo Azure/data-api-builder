@@ -277,6 +277,7 @@ namespace Azure.DataGateway.Service.Controllers
                             return new NoContentResult();
                         case Operation.Update:
                         case Operation.UpdateIncremental:
+                            return formattedResult;
                         case Operation.Upsert:
                         case Operation.UpsertIncremental:
                             primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
@@ -291,6 +292,8 @@ namespace Azure.DataGateway.Service.Controllers
                 {
                     switch (operationType)
                     {
+                        case Operation.Update:
+                        case Operation.UpdateIncremental:
                         case Operation.Upsert:
                         case Operation.UpsertIncremental:
                             // Empty result set indicates an Update successfully occurred.

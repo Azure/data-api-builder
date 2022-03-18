@@ -83,8 +83,8 @@ namespace Azure.DataGateway.Service.Services
                     context = new DeleteRequestContext(entityName, isList: false);
                     RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                     break;
+                case Operation.UpdateNonIncremental:
                 case Operation.Update:
-                case Operation.UpdateIncremental:
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
                     JsonElement payloadRoot = RequestValidator.ValidateUpdateOrUpsertRequest(primaryKeyRoute, requestBody);
@@ -128,8 +128,8 @@ namespace Azure.DataGateway.Service.Services
                         return FormatFindResult(await _queryEngine.ExecuteAsync(context), (FindRequestContext)context);
                     case Operation.Insert:
                     case Operation.Delete:
+                    case Operation.UpdateNonIncremental:
                     case Operation.Update:
-                    case Operation.UpdateIncremental:
                     case Operation.Upsert:
                     case Operation.UpsertIncremental:
                         return await _mutationEngine.ExecuteAsync(context);
@@ -228,10 +228,10 @@ namespace Azure.DataGateway.Service.Services
         {
             switch (operation)
             {
-                case Operation.Update:
+                case Operation.UpdateNonIncremental:
                 case Operation.Upsert:
                     return HttpRestVerbs.PUT;
-                case Operation.UpdateIncremental:
+                case Operation.Update:
                 case Operation.UpsertIncremental:
                     return HttpRestVerbs.PATCH;
                 case Operation.Delete:

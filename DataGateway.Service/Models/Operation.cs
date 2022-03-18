@@ -18,7 +18,7 @@ namespace Azure.DataGateway.Service.Models
         Insert, Update,
 
         // Additional
-        UpsertIncremental, UpdateIncremental
+        UpsertIncremental, UpdateNonIncremental
     }
 
     /// <summary>

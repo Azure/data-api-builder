@@ -275,8 +275,8 @@ namespace Azure.DataGateway.Service.Controllers
                             return new CreatedResult(location: location, formattedResult.Value);
                         case Operation.Delete:
                             return new NoContentResult();
+                        case Operation.UpdateNonIncremental:
                         case Operation.Update:
-                        case Operation.UpdateIncremental:
                             return formattedResult;
                         case Operation.Upsert:
                         case Operation.UpsertIncremental:
@@ -292,8 +292,8 @@ namespace Azure.DataGateway.Service.Controllers
                 {
                     switch (operationType)
                     {
+                        case Operation.UpdateNonIncremental:
                         case Operation.Update:
-                        case Operation.UpdateIncremental:
                         case Operation.Upsert:
                         case Operation.UpsertIncremental:
                             // Empty result set indicates an Update successfully occurred.
@@ -340,10 +340,10 @@ namespace Azure.DataGateway.Service.Controllers
                 switch (operation)
                 {
                     case Operation.Upsert:
-                        operation = Operation.Update;
+                        operation = Operation.UpdateNonIncremental;
                         break;
                     case Operation.UpsertIncremental:
-                        operation = Operation.UpdateIncremental;
+                        operation = Operation.Update;
                         break;
                 }
             }

@@ -132,13 +132,12 @@ namespace Azure.DataGateway.Service.Resolvers
                         }
 
                         break;
-
-                    case Operation.Insert:
                     case Operation.Update:
                     case Operation.UpdateIncremental:
                         // Updates return empty result set
                         jsonResultString = null;
                         break;
+                    case Operation.Insert:
                     case Operation.Upsert:
                     case Operation.UpsertIncremental:
                         /// Processes a second result set from DbDataReader if it exists.

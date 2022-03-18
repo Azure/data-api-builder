@@ -325,6 +325,14 @@ namespace Azure.DataGateway.Service.Controllers
             }
         }
 
+        /// <summary>
+        /// Helper function determines the correct operation based on the client
+        /// provided headers. Client can indicate if operation should follow
+        /// insert, update, or upsert semantics.
+        /// </summary>
+        /// <param name="headers">Headers indicating operation to use.</param>
+        /// <param name="operation">opertion to be used.</param>
+        /// <returns>correct opertion based on headers.</returns>
         private static Operation HandlePatchPutSemantics(IHeaderDictionary headers, Operation operation)
         {
             if (headers.ContainsKey("If-Match"))
@@ -339,10 +347,6 @@ namespace Azure.DataGateway.Service.Controllers
                         break;
                 }
             }
-            //else if (headers.ContainsKey("If-None-Match"))
-            //{
-            //    operation = headers["If-None-Match"] == "\"*\"" ? Operation.InsertWithNoUpdate : operation; // if record matches already do nothing (make new query structure look at upsert query) PR 2
-            //}
 
             return operation;
         }

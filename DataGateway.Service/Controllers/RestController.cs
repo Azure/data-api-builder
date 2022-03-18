@@ -70,11 +70,10 @@ namespace Azure.DataGateway.Service.Controllers
         /// <returns></returns>
         private OkObjectResult OkResponse(JsonElement jsonResult)
         {
-            string jsonString = string.Empty;
             // For consistency we return all values as type Array
             if (jsonResult.ValueKind != JsonValueKind.Array)
             {
-                jsonString = $"[{JsonSerializer.Serialize(jsonResult)}]";
+                string jsonString = $"[{JsonSerializer.Serialize(jsonResult)}]";
                 jsonResult = JsonSerializer.Deserialize<JsonElement>(jsonString);
             }
 
@@ -104,7 +103,6 @@ namespace Azure.DataGateway.Service.Controllers
             {
                 value = resultEnumerated
             });
-            ;
         }
 
         /// <summary>

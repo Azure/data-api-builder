@@ -38,7 +38,7 @@ namespace Azure.DataGateway.Service.Controllers
             foreach ((string key, string value) in configuration)
             {
                 string configValue = _configuration.GetValue<string>(key);
-                if (configValue != null && !string.IsNullOrWhiteSpace(configValue))
+                if (!string.IsNullOrWhiteSpace(configValue))
                 {
                     return new ConflictObjectResult($"{key}:{value}");
                 }

@@ -133,6 +133,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                         break;
                     case Operation.Insert:
+                    case Operation.Update:
                         jsonResultString = JsonSerializer.Serialize(resultRecord);
                         break;
                     case Operation.UpdateRest:

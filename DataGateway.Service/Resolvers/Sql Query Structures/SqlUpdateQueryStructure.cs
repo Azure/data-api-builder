@@ -12,10 +12,6 @@ namespace Azure.DataGateway.Service.Resolvers
     ///</summary>
     public class SqlUpdateStructure : BaseSqlQueryStructure
     {
-        private string _tableName;
-        private IMetadataStoreProvider _metadataStoreProvider;
-        private IDictionary<string, object> _parameters;
-
         /// <summary>
         /// Updates to be applied to selected row
         /// </summary>

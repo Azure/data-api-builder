@@ -61,9 +61,13 @@ namespace Azure.DataGateway.Service
                     services.AddSingleton<IConfigValidator, CosmosConfigValidator>();
                     break;
                 case DatabaseType.MsSql:
-                    services.AddSingleton(new MsSqlMetadataProvider
-                        (dataGatewayConfig.DatabaseConnection.ConnectionString));
-                    services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
+                    services.AddSingleton(
+                        new MsSqlMetadataProvider(dataGatewayConfig.DatabaseConnection.ConnectionString));
+                    services.AddSingleton<IMetadataStoreProvider>(provider =>
+                        new FileMetadataStoreProvider(
+                            dataGatewayConfig.ResolverConfigFile,
+                            dataGatewayConfig.DatabaseType,
+                            provider.GetRequiredService<ISqlMetadataProvider>()));
                     services.AddSingleton<IQueryExecutor, QueryExecutor<SqlConnection>>();
                     services.AddSingleton<IQueryBuilder, MsSqlQueryBuilder>();
                     services.AddSingleton<IQueryEngine, SqlQueryEngine>();
@@ -72,9 +76,12 @@ namespace Azure.DataGateway.Service
                     services.AddHostedService<SqlHostedService>();
                     break;
                 case DatabaseType.PostgreSql:
-                    services.AddSingleton(new PostgreSqlMetadataProvider
-                        (dataGatewayConfig.DatabaseConnection.ConnectionString));
-                    services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
+                    services.AddSingleton(new PostgreSqlMetadataProvider(dataGatewayConfig.DatabaseConnection.ConnectionString));
+                    services.AddSingleton<IMetadataStoreProvider>(provider =>
+                        new FileMetadataStoreProvider(
+                            dataGatewayConfig.ResolverConfigFile,
+                            dataGatewayConfig.DatabaseType,
+                            provider.GetRequiredService<ISqlMetadataProvider>()));
                     services.AddSingleton<IQueryExecutor, QueryExecutor<NpgsqlConnection>>();
                     services.AddSingleton<IQueryBuilder, PostgresQueryBuilder>();
                     services.AddSingleton<IQueryEngine, SqlQueryEngine>();
@@ -83,9 +90,13 @@ namespace Azure.DataGateway.Service
                     services.AddHostedService<SqlHostedService>();
                     break;
                 case DatabaseType.MySql:
-                    services.AddSingleton(new MySqlMetadataProvider
-                        (dataGatewayConfig.DatabaseConnection.ConnectionString));
-                    services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
+                    services.AddSingleton(
+                        new MySqlMetadataProvider(dataGatewayConfig.DatabaseConnection.ConnectionString));
+                    services.AddSingleton<IMetadataStoreProvider>(provider =>
+                        new FileMetadataStoreProvider(
+                            dataGatewayConfig.ResolverConfigFile,
+                            dataGatewayConfig.DatabaseType,
+                            provider.GetRequiredService<ISqlMetadataProvider>()));
                     services.AddSingleton<IQueryExecutor, QueryExecutor<MySqlConnection>>();
                     services.AddSingleton<IQueryBuilder, MySqlQueryBuilder>();
                     services.AddSingleton<IQueryEngine, SqlQueryEngine>();

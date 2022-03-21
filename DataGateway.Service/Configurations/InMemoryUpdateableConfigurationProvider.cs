@@ -5,7 +5,7 @@ namespace Azure.DataGateway.Service.Configurations
 {
     /// <summary>
     /// In-memory implementation of <see cref="IConfigurationProvider"/> that supports updating
-    /// updating multiple configs and change tracking.
+    /// multiple configs and change tracking.
     /// </summary>
     public class InMemoryUpdateableConfigurationProvider : ConfigurationProvider
     {

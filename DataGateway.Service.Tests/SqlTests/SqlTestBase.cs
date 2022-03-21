@@ -64,9 +64,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _metadataStoreProvider = new FileMetadataStoreProvider(
                         "sql-config.json",
                         config.Value.DatabaseType,
-                        msSqlMetadataProvider: null,
-                        new PostgreSqlMetadataProvider(connectionString),
-                        mySqlMetadataProvider: null);
+                        new PostgreSqlMetadataProvider(connectionString));
                     _defaultSchemaName = "public";
                     break;
                 case TestCategory.MSSQL:
@@ -75,9 +73,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _metadataStoreProvider = new FileMetadataStoreProvider(
                         "sql-config.json",
                         config.Value.DatabaseType,
-                        new MsSqlMetadataProvider(connectionString),
-                        postgreSqlMetadataProvider: null,
-                        mySqlMetadataProvider: null);
+                        new MsSqlMetadataProvider(connectionString));
                     _defaultSchemaName = "dbo";
                     break;
                 case TestCategory.MYSQL:
@@ -86,9 +82,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _metadataStoreProvider = new FileMetadataStoreProvider(
                         "sql-config.json",
                         config.Value.DatabaseType,
-                        msSqlMetadataProvider: null,
-                        postgreSqlMetadataProvider: null,
-                        mySqlMetadataProvider: new MySqlMetadataProvider(connectionString));
+                        new MySqlMetadataProvider(connectionString));
                     _defaultSchemaName = "mysql";
                     break;
             }

@@ -23,7 +23,6 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         internal static GraphQLService _graphQLService;
         internal static CosmosClientProvider _clientProvider;
         internal static MetadataStoreProviderForTest _metadataStoreProvider;
-        internal static IMetadataStoreProvider _metaStoreProvider;
         internal static CosmosQueryEngine _queryEngine;
         internal static CosmosMutationEngine _mutationEngine;
         internal static GraphQLController _controller;

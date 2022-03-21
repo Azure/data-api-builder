@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 
@@ -54,6 +55,16 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         public FilterParser GetFilterParser()
         {
             return _filterParser;
+        }
+
+        public Task EnrichDatabaseSchemaWithTableMetadata()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public void InitFilterParser()
+        {
+            throw new System.NotImplementedException();
         }
     }
 }

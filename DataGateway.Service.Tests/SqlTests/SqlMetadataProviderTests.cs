@@ -12,9 +12,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             FileMetadataStoreProvider fileMetadataStoreProvider = new("sql-config-test.json",
                 _metadataStoreProvider.CloudDbType,
-                msSqlMetadataProvider: null,
-                postgreSqlMetadataProvider: null,
-                mySqlMetadataProvider: null);
+                sqlMetadataProvider: null);
             ResolverConfig runtimeTestConfig = fileMetadataStoreProvider.GetResolvedConfig();
             DatabaseSchema expectedSchema = runtimeTestConfig.DatabaseSchema!;
 

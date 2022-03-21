@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
 
@@ -31,26 +32,12 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// </inheritdoc>
-        public virtual async Task<DataTable> GetTableWithSchemaFromDataSet(
-            string schemaName,
-            string tableName)
-        {
-            DataTable? dataTable = EntitiesDataSet.Tables[tableName];
-            if (dataTable == null)
-            {
-                dataTable = await FillSchemaForTable(schemaName, tableName);
-            }
-
-            return dataTable;
-        }
-
-        /// </inheritdoc>
-        public virtual async Task PopulateTableDefinition(
+        public virtual async Task PopulateTableDefinitionAsync(
             string schemaName,
             string tableName,
             TableDefinition tableDefinition)
         {
-            DataTable dataTable = await GetTableWithSchemaFromDataSet(schemaName, tableName);
+            DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(schemaName, tableName);
 
             List<DataColumn> primaryKeys = new(dataTable.PrimaryKey);
             tableDefinition.PrimaryKey = new(primaryKeys.Select(primaryKey => primaryKey.ColumnName));
@@ -71,6 +58,20 @@ namespace Azure.DataGateway.Service.Services
                 schemaName,
                 tableName,
                 tableDefinition);
+        }
+
+        /// </inheritdoc>
+        public virtual async Task<DataTable> GetTableWithSchemaFromDataSetAsync(
+            string schemaName,
+            string tableName)
+        {
+            DataTable? dataTable = EntitiesDataSet.Tables[tableName];
+            if (dataTable == null)
+            {
+                dataTable = await FillSchemaForTableAsync(schemaName, tableName);
+            }
+
+            return dataTable;
         }
 
         /// <summary>
@@ -115,7 +116,7 @@ namespace Azure.DataGateway.Service.Services
         /// Using a data adapter, obtains the schema of the given table name
         /// and adds the corresponding entity in the data set.
         /// </summary>
-        protected virtual async Task<DataTable> FillSchemaForTable(
+        protected virtual async Task<DataTable> FillSchemaForTableAsync(
             string schemaName,
             string tableName)
         {
@@ -126,7 +127,13 @@ namespace Azure.DataGateway.Service.Services
             DataAdapterT adapterForTable = new();
             CommandT selectCommand = new();
             selectCommand.Connection = conn;
-            selectCommand.CommandText = ($"SELECT * FROM {schemaName}.{tableName}");
+            StringBuilder tablePrefix = new(conn.Database);
+            if (!string.IsNullOrEmpty(schemaName))
+            {
+                tablePrefix.Append($".{schemaName}");
+            }
+
+            selectCommand.CommandText = ($"SELECT * FROM {tablePrefix}.{tableName}");
             adapterForTable.SelectCommand = selectCommand;
 
             DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableName);

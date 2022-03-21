@@ -174,14 +174,14 @@ namespace Azure.DataGateway.Service.Services
                 {
                     case DatabaseType.MsSql:
                         schemaName = "dbo";
-                        await _sqlMetadataProvider!.PopulateTableDefinition(schemaName, tableName, tableDefinition);
+                        await _sqlMetadataProvider!.PopulateTableDefinitionAsync(schemaName, tableName, tableDefinition);
                         break;
                     case DatabaseType.PostgreSql:
                         schemaName = "public";
-                        await _sqlMetadataProvider!.PopulateTableDefinition(schemaName, tableName, tableDefinition);
+                        await _sqlMetadataProvider!.PopulateTableDefinitionAsync(schemaName, tableName, tableDefinition);
                         break;
                     case DatabaseType.MySql:
-                        await _sqlMetadataProvider!.PopulateTableDefinition(schemaName, tableName, tableDefinition);
+                        await _sqlMetadataProvider!.PopulateTableDefinitionAsync(schemaName, tableName, tableDefinition);
                         break;
                     default:
                         throw new ArgumentException($"Enriching database schema " +

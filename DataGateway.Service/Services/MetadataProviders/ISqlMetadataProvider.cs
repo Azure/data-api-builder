@@ -11,7 +11,7 @@ public interface ISqlMetadataProvider
     /// Gets the DataTable from the EntitiesDataSet if already present.
     /// If not present, fills it first and returns the same.
     /// </summary>
-    public Task<DataTable> GetTableWithSchemaFromDataSet(
+    public Task<DataTable> GetTableWithSchemaFromDataSetAsync(
         string schemaName,
         string tableName);
 
@@ -22,7 +22,7 @@ public interface ISqlMetadataProvider
     /// <param name="schemaName">Name of the schema.</param>
     /// <param name="tableName">Name of the table.</param>
     /// <param name="tableDefinition">Table definition to fill.</param>
-    public Task PopulateTableDefinition(
+    public Task PopulateTableDefinitionAsync(
         string schemaName,
         string tableName,
         TableDefinition tableDefinition);

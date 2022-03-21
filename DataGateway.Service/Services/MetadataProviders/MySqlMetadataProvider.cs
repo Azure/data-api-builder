@@ -61,27 +61,5 @@ namespace Azure.DataGateway.Service.Services
                 }
             }
         }
-
-        /// <summary>
-        /// Using a data adapter, obtains the schema of the given table name
-        /// and adds the corresponding entity in the data set.
-        /// </summary>
-        protected override async Task<DataTable> FillSchemaForTable(
-            string schemaName,
-            string tableName)
-        {
-            using MySqlConnection conn = new();
-            conn.ConnectionString = ConnectionString;
-            await conn.OpenAsync();
-
-            MySqlDataAdapter adapterForTable = new();
-            MySqlCommand selectCommand = new();
-            selectCommand.Connection = conn;
-            selectCommand.CommandText = ($"SELECT * FROM {conn.Database}.{tableName}");
-            adapterForTable.SelectCommand = selectCommand;
-
-            DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableName);
-            return dataTable[0];
-        }
     }
 }

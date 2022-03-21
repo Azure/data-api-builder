@@ -15,7 +15,7 @@ namespace Azure.DataGateway.Service.Services
         /// <summary>
         /// Prefix used for specifying the fields in the query string of the URL.
         /// </summary>
-        private const string FIELDS_URL = "_f";
+        private const string FIELDS_URL = "$f";
         /// <summary>
         /// Prefix used for specifying filter in the query string of the URL.
         /// </summary>

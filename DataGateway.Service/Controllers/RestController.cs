@@ -95,7 +95,6 @@ namespace Azure.DataGateway.Service.Controllers
                     value = value,
                     @nextLink = nextLink["nextLink"]
                 });
-
             }
 
             // no pagination, do not need nextLink
@@ -269,7 +268,7 @@ namespace Azure.DataGateway.Service.Controllers
                             primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
                             string location =
                                 UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute;
-                            return new CreatedResult(location: location, formattedResult);
+                            return new CreatedResult(location: location, formattedResult.Value);
                         case Operation.Delete:
                             return new NoContentResult();
                         case Operation.Upsert:
@@ -277,7 +276,7 @@ namespace Azure.DataGateway.Service.Controllers
                             primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
                             location =
                                 UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute;
-                            return new CreatedResult(location: location, formattedResult);
+                            return new CreatedResult(location: location, formattedResult.Value);
                         default:
                             throw new NotSupportedException($"Unsupported Operation: \" {operationType}\".");
                     }

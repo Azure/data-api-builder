@@ -17,7 +17,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public string Container { get; internal set; }
         public string Database { get; internal set; }
         public string? Continuation { get; internal set; }
-        public long MaxItemCount { get; internal set; }
+        public int MaxItemCount { get; internal set; }
 
         public CosmosQueryStructure(IMiddlewareContext context,
             IDictionary<string, object> parameters,
@@ -59,7 +59,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 // TODO: Revisit 'first' while adding support for TOP queries
                 if (parameter.Key == "first")
                 {
-                    MaxItemCount = (long)parameter.Value;
+                    MaxItemCount = (int)parameter.Value;
                     continue;
                 }
 

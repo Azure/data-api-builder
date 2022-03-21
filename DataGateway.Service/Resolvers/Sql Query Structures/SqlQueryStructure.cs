@@ -230,11 +230,14 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (firstObject != null)
                 {
                     // due to the way parameters get resolved,
-                    long first = (long)firstObject;
+                    int first = (int)firstObject;
 
                     if (first <= 0)
                     {
-                        throw new DataGatewayException($"first must be a positive integer for {schemaField.Name}", HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
+                        throw new DataGatewayException(
+                        message: $"Invalid number of items requested, $first must be an integer greater than 0 for {schemaField.Name}. Actual value: {first.ToString()}",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }
 
                     _limit = (uint)first;
@@ -474,11 +477,12 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     IObjectField? subschemaField = _underlyingFieldType.Fields[fieldName];
 
-                    IDictionary<string, object> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field);
                     if (_ctx == null)
                     {
-                        throw new InvalidOperationException("No GraphQL context exists");
+                        throw new DataGatewayException("No GraphQL context exists", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
                     }
+
+                    IDictionary<string, object> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
 
                     SqlQueryStructure subquery = new(_ctx, subqueryParams, MetadataStoreProvider, subschemaField, field, Counter);
 

@@ -5,7 +5,9 @@ using System.Data.Common;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models;
+using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -25,9 +27,9 @@ namespace Azure.DataGateway.Service.Services
 
         protected DataSet EntitiesDataSet { get; init; }
 
-        public SqlMetadataProvider(string connectionString)
+        public SqlMetadataProvider(IOptionsMonitor<DataGatewayConfig> dataGatewayConfig)
         {
-            ConnectionString = connectionString;
+            ConnectionString = dataGatewayConfig.CurrentValue.DatabaseConnection.ConnectionString;
             EntitiesDataSet = new();
         }
 

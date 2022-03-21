@@ -32,6 +32,12 @@ namespace Azure.DataGateway.Service.Controllers
             }
         }
 
+        /// <summary>
+        /// Takes in KeyValuePairs and sets them all. In case of conflict with an
+        /// existing key, this will return a Conflict result with the conflicting key:value.
+        /// </summary>
+        /// <param name="configuration">The list of configurations to set.</param>
+        /// <returns>Ok in case of success or Conflict with the key:value.</returns>
         [HttpPost]
         public ActionResult Index([FromBody] Dictionary<string, string> configuration)
         {

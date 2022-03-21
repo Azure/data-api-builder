@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
@@ -21,15 +22,16 @@ namespace Azure.DataGateway.Service.Tests
         private const string ASP_NET_CORE_ENVIRONMENT_VAR_NAME = "ASPNETCORE_ENVIRONMENT";
         private string _cosmosResolverConfig = File.ReadAllText("cosmos-config.json");
         private string _graphqlSchema = File.ReadAllText("schema.gql");
+        private const string COMSMOS_DEFAULT_CONNECTION_STRING = "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
 
-        [TestMethod("Validates that querying for a config that's not set returns a 404.")]
+        [TestMethod("Validates that querying for a config that's not set returns a 503.")]
         public async Task TestNoConfigReturnsServiceUnavailable()
         {
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             HttpResponseMessage result = await httpClient.GetAsync("/graphql");
-            Assert.AreEqual(System.Net.HttpStatusCode.ServiceUnavailable, result.StatusCode);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, result.StatusCode);
         }
 
         [TestMethod("Validates that querying for a config that's not set returns a 404.")]
@@ -39,7 +41,7 @@ namespace Azure.DataGateway.Service.Tests
             HttpClient httpClient = server.CreateClient();
 
             HttpResponseMessage result = await httpClient.GetAsync("/configuration?key=test");
-            Assert.AreEqual(System.Net.HttpStatusCode.NotFound, result.StatusCode);
+            Assert.AreEqual(HttpStatusCode.NotFound, result.StatusCode);
         }
 
         [TestMethod("Validates that configurations are set and can be retrieved.")]
@@ -55,12 +57,12 @@ namespace Azure.DataGateway.Service.Tests
                 { "DataGatewayConfig:DatabaseConnection:ConnectionString", "Cosmos" }
             };
             HttpResponseMessage postResult = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
-            Assert.AreEqual(System.Net.HttpStatusCode.OK, postResult.StatusCode);
+            Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
 
             foreach (KeyValuePair<string, string> setting in config)
             {
                 HttpResponseMessage result = await httpClient.GetAsync($"/configuration?key={setting.Key}");
-                Assert.AreEqual(System.Net.HttpStatusCode.OK, result.StatusCode);
+                Assert.AreEqual(HttpStatusCode.OK, result.StatusCode);
 
                 string text = await result.Content.ReadAsStringAsync();
                 Assert.AreEqual(setting.Value, text);
@@ -155,7 +157,9 @@ namespace Azure.DataGateway.Service.Tests
             };
 
             HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(config));
-            Assert.AreEqual(System.Net.HttpStatusCode.Conflict, postResult.StatusCode);
+            Assert.AreEqual(HttpStatusCode.Conflict, postResult.StatusCode);
+            // Since the body of the response when there's a conflict is the conflicting key:value pair, here we
+            // expect DatabaseType:MsSql.
             Assert.AreEqual("DataGatewayConfig:DatabaseType:MsSql", await postResult.Content.ReadAsStringAsync());
         }
 
@@ -168,11 +172,11 @@ namespace Azure.DataGateway.Service.Tests
             {
                 { "DataGatewayConfig:DatabaseType", "Cosmos" },
                 { "DataGatewayConfig:ResolverConfigFile", "cosmos-config.json" },
-                { "DataGatewayConfig:DatabaseConnection:ConnectionString", "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==" }
+                { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
             };
 
             HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(config));
-            Assert.AreEqual(System.Net.HttpStatusCode.OK, postResult.StatusCode);
+            Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
 
             ValidateCosmosDbSetup(server);
         }
@@ -187,11 +191,11 @@ namespace Azure.DataGateway.Service.Tests
                 { "DataGatewayConfig:DatabaseType", "Cosmos" },
                 { "DataGatewayConfig:ResolverConfig", _cosmosResolverConfig },
                 { "DataGatewayConfig:GraphQLSchema", _graphqlSchema },
-                { "DataGatewayConfig:DatabaseConnection:ConnectionString", "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==" }
+                { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
             };
 
             HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(config));
-            Assert.AreEqual(System.Net.HttpStatusCode.OK, postResult.StatusCode);
+            Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
         }
 
         [TestMethod("Validates that setting the resolver config without setting the schema fails.")]
@@ -203,13 +207,12 @@ namespace Azure.DataGateway.Service.Tests
             {
                 { "DataGatewayConfig:DatabaseType", "Cosmos" },
                 { "DataGatewayConfig:ResolverConfig", _cosmosResolverConfig },
-                { "DataGatewayConfig:DatabaseConnection:ConnectionString", "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==" }
+                { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
             };
 
             await VerifyThrowsException<NotSupportedException>(async () =>
             {
                 HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(config));
-                Assert.AreEqual(System.Net.HttpStatusCode.OK, postResult.StatusCode);
             });
         }
 
@@ -223,13 +226,12 @@ namespace Azure.DataGateway.Service.Tests
                 { "DataGatewayConfig:DatabaseType", "Cosmos" },
                 { "DataGatewayConfig:ResolverConfig", _cosmosResolverConfig },
                 { "DataGatewayConfig:ResolverConfigFile", "cosmos-config.json" },
-                { "DataGatewayConfig:DatabaseConnection:ConnectionString", "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==" }
+                { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
             };
 
             await VerifyThrowsException<NotSupportedException>(async () =>
             {
                 HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(config));
-                Assert.AreEqual(System.Net.HttpStatusCode.OK, postResult.StatusCode);
             });
         }
 
@@ -248,19 +250,23 @@ namespace Azure.DataGateway.Service.Tests
             string finalResolverConfigFile = "";
             if (!provider.TryGet("DataGatewayConfig:DatabaseType", out finalDatabaseType))
             {
-                Assert.Fail("The key wasn't found in the provider.");
+                Assert.Fail("DataGatewayConfig:DatabaseType wasn't found in the provider.");
+            }
+            else
+            {
+                Assert.AreEqual("Cosmos", finalDatabaseType);
             }
 
             token.RegisterChangeCallback((state) =>
             {
                 if (!provider.TryGet("DataGatewayConfig:DatabaseType", out finalDatabaseType))
                 {
-                    Assert.Fail("The key wasn't found in the provider.");
+                    Assert.Fail("DataGatewayConfig:DatabaseType wasn't found in the provider.");
                 }
 
                 if (!provider.TryGet("DataGatewayConfig:ResolverConfigFile", out finalResolverConfigFile))
                 {
-                    Assert.Fail("The key wasn't found in the provider.");
+                    Assert.Fail("DataGatewayConfig:ResolverConfigFile wasn't found in the provider.");
                 }
             }, null);
 

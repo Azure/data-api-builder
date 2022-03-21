@@ -301,7 +301,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="graphQLController"></param>
         /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
         /// <returns>string in JSON format</returns>
-        protected static async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController, Dictionary<string, object> variables = null)
+        protected virtual async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController, Dictionary<string, object> variables = null)
         {
             JsonElement graphQLResult = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, graphQLController, variables);
             Console.WriteLine(graphQLResult.ToString());

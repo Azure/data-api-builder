@@ -489,9 +489,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </remarks>
         protected abstract string MakeQueryOnBooks(List<string> queriedColumns, string predicate);
 
-        protected override async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController)
+        protected override async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController, Dictionary<string, object> variables = null)
         {
-            string dataResult = await base.GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, graphQLController);
+            string dataResult = await base.GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, graphQLController, variables);
 
             return JsonDocument.Parse(dataResult).RootElement.GetProperty("items").ToString();
         }

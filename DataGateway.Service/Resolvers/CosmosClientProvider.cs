@@ -8,7 +8,7 @@ namespace Azure.DataGateway.Service.Resolvers
 {
     public class CosmosClientProvider
     {
-        private string _connectionString;
+        private string? _connectionString;
         public CosmosClient? Client { get; private set; }
         public CosmosClientProvider(IOptionsMonitor<DataGatewayConfig> dataGatewayConfig)
         {

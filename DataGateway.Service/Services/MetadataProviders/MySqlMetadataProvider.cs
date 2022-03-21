@@ -10,7 +10,7 @@ namespace Azure.DataGateway.Service.Services
     /// <summary>
     /// MySQL specific override for SqlMetadataProvider
     /// </summary>
-    public class MySqlMetadataProvider : SqlMetadataProvider<MySqlConnection, MySqlDataAdapter, MySqlCommand>
+    public class MySqlMetadataProvider : SqlMetadataProvider<MySqlConnection, MySqlDataAdapter, MySqlCommand>, ISqlMetadataProvider
     {
         public MySqlMetadataProvider(string connectionString)
             : base(connectionString)

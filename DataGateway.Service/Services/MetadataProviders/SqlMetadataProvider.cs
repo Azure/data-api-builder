@@ -12,7 +12,7 @@ namespace Azure.DataGateway.Service.Services
     /// Reads schema information from the database to make it
     /// available for the GraphQL/REST services.
     /// </summary>
-    public class SqlMetadataProvider<ConnectionT, DataAdapterT, CommandT>
+    public class SqlMetadataProvider<ConnectionT, DataAdapterT, CommandT> : ISqlMetadataProvider
         where ConnectionT : DbConnection, new()
         where DataAdapterT : DbDataAdapter, new()
         where CommandT : DbCommand, new()
@@ -30,10 +30,7 @@ namespace Azure.DataGateway.Service.Services
             EntitiesDataSet = new();
         }
 
-        /// <summary>
-        /// Gets the DataTable from the EntitiesDataSet if already present.
-        /// If not present, fills it first and returns the same.
-        /// </summary>
+        /// </inheritdoc>
         public virtual async Task<DataTable> GetTableWithSchemaFromDataSet(
             string schemaName,
             string tableName)
@@ -47,13 +44,7 @@ namespace Azure.DataGateway.Service.Services
             return dataTable;
         }
 
-        /// <summary>
-        /// Fills the table definition with information of all columns and
-        /// primary keys.
-        /// </summary>
-        /// <param name="schemaName">Name of the schema.</param>
-        /// <param name="tableName">Name of the table.</param>
-        /// <param name="tableDefinition">Table definition to fill.</param>
+        /// </inheritdoc>
         public virtual async Task PopulateTableDefinition(
             string schemaName,
             string tableName,

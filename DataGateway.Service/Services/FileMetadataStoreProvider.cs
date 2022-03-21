@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Service.Services.MetadataProviders;
 using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Services
@@ -46,43 +45,24 @@ namespace Azure.DataGateway.Service.Services
     {
         private readonly ResolverConfig _config;
         private FilterParser? _filterParser;
-        private readonly MsSqlMetadataProvider? _msSqlMetadataProvider;
-        private readonly PostgreSqlMetadataProvider? _postgreSqlMetadataProvider;
-        private readonly MySqlMetadataProvider? _mySqlMetadataProvider;
+        private readonly ISqlMetadataProvider? _sqlMetadataProvider;
 
         /// <summary>
         /// Stores mutation resolvers contained in configuration file.
         /// </summary>
         private Dictionary<string, MutationResolver> _mutationResolvers;
 
-        public DatabaseType CloudDbType { get; init; }
+        public DatabaseType CloudDbType { get; set; }
 
         public FileMetadataStoreProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
         : this(dataGatewayConfig.Value.ResolverConfigFile,
-              dataGatewayConfig.Value.DatabaseType,
-              msSqlMetadataProvider: null,
-              postgreSqlMetadataProvider: null,
-              mySqlMetadataProvider: null)
-        { }
-
-        public FileMetadataStoreProvider(
-            IOptions<DataGatewayConfig> dataGatewayConfig,
-            MsSqlMetadataProvider? msSqlMetadataProvider,
-            PostgreSqlMetadataProvider? postgreSqlMetadataProvider,
-            MySqlMetadataProvider? mySqlMetadataProvider)
-            : this(dataGatewayConfig.Value.ResolverConfigFile,
-                   dataGatewayConfig.Value.DatabaseType,
-                   msSqlMetadataProvider,
-                   postgreSqlMetadataProvider,
-                   mySqlMetadataProvider)
+              dataGatewayConfig.Value.DatabaseType)
         { }
 
         public FileMetadataStoreProvider(
             string resolverConfigPath,
             DatabaseType databaseType,
-            MsSqlMetadataProvider? msSqlMetadataProvider,
-            PostgreSqlMetadataProvider? postgreSqlMetadataProvider,
-            MySqlMetadataProvider? mySqlMetadataProvider)
+            ISqlMetadataProvider? sqlMetadataProvider = null)
         {
             CloudDbType = databaseType;
 
@@ -116,9 +96,7 @@ namespace Azure.DataGateway.Service.Services
                 _mutationResolvers.Add(resolver.Id, resolver);
             }
 
-            _msSqlMetadataProvider = msSqlMetadataProvider;
-            _postgreSqlMetadataProvider = postgreSqlMetadataProvider;
-            _mySqlMetadataProvider = mySqlMetadataProvider;
+            _sqlMetadataProvider = sqlMetadataProvider;
         }
 
         /// <summary>
@@ -196,14 +174,14 @@ namespace Azure.DataGateway.Service.Services
                 {
                     case DatabaseType.MsSql:
                         schemaName = "dbo";
-                        await _msSqlMetadataProvider!.PopulateTableDefinition(schemaName, tableName, tableDefinition);
+                        await _sqlMetadataProvider!.PopulateTableDefinition(schemaName, tableName, tableDefinition);
                         break;
                     case DatabaseType.PostgreSql:
                         schemaName = "public";
-                        await _postgreSqlMetadataProvider!.PopulateTableDefinition(schemaName, tableName, tableDefinition);
+                        await _sqlMetadataProvider!.PopulateTableDefinition(schemaName, tableName, tableDefinition);
                         break;
                     case DatabaseType.MySql:
-                        await _mySqlMetadataProvider!.PopulateTableDefinition(schemaName, tableName, tableDefinition);
+                        await _sqlMetadataProvider!.PopulateTableDefinition(schemaName, tableName, tableDefinition);
                         break;
                     default:
                         throw new ArgumentException($"Enriching database schema " +

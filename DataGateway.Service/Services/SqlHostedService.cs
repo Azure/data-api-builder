@@ -1,7 +1,5 @@
-using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace Azure.DataGateway.Service.Services
@@ -12,10 +10,10 @@ namespace Azure.DataGateway.Service.Services
     /// </summary>
     public class SqlHostedService : IHostedService
     {
-        private readonly IServiceProvider _serviceProvider;
-        public SqlHostedService(IServiceProvider serviceProvider)
+        private readonly IMetadataStoreProvider _fileMetadataProvider;
+        public SqlHostedService(IMetadataStoreProvider fileMetadataProvider)
         {
-            _serviceProvider = serviceProvider;
+            _fileMetadataProvider = fileMetadataProvider;
         }
 
         /// <summary>
@@ -23,16 +21,13 @@ namespace Azure.DataGateway.Service.Services
         /// the app can serve requests.
         /// The need for this is to have the metadata information gathered from the database
         /// before requests can be served.
+        /// Configure is not called unless StartAsync completes.
         /// </summary>
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            // Gets the FileMetadataStoreProvider instance
-            FileMetadataStoreProvider metadataStoreProvider =
-                (FileMetadataStoreProvider)_serviceProvider.GetRequiredService<IMetadataStoreProvider>();
-
             // Enriches the database schema asynchronously
-            await metadataStoreProvider.EnrichDatabaseSchemaWithTableMetadata();
-            metadataStoreProvider.InitFilterParser();
+            await _fileMetadataProvider.EnrichDatabaseSchemaWithTableMetadata();
+            _fileMetadataProvider.InitFilterParser();
         }
 
         // noop

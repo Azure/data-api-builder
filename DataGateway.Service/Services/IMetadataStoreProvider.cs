@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
 
 namespace Azure.DataGateway.Service.Services
@@ -38,5 +39,16 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <returns></returns>
         FilterParser GetFilterParser();
+
+        /// <summary>
+        /// Enrich the database schema with the missing information
+        /// from file but the runtime still needs.
+        /// </summary>
+        public Task EnrichDatabaseSchemaWithTableMetadata();
+
+        /// <summary>
+        /// Initializes the filter parser using the database schema.
+        /// </summary>
+        public void InitFilterParser();
     }
 }

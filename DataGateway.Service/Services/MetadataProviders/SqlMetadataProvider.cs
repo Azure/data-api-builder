@@ -32,6 +32,20 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// </inheritdoc>
+        public virtual async Task<DataTable> GetTableWithSchemaFromDataSetAsync(
+            string schemaName,
+            string tableName)
+        {
+            DataTable? dataTable = EntitiesDataSet.Tables[tableName];
+            if (dataTable == null)
+            {
+                dataTable = await FillSchemaForTableAsync(schemaName, tableName);
+            }
+
+            return dataTable;
+        }
+
+        /// </inheritdoc>
         public virtual async Task PopulateTableDefinitionAsync(
             string schemaName,
             string tableName,
@@ -54,69 +68,18 @@ namespace Azure.DataGateway.Service.Services
                 tableDefinition.Columns.TryAdd(columnName, column);
             }
 
-            await PopulateColumnDefinitionWithHasDefaultAsync(
-                schemaName,
-                tableName,
-                tableDefinition);
-        }
+            DataTable columnsInTable = await GetColumnsAsync(schemaName, tableName);
 
-        /// </inheritdoc>
-        public virtual async Task<DataTable> GetTableWithSchemaFromDataSetAsync(
-            string schemaName,
-            string tableName)
-        {
-            DataTable? dataTable = EntitiesDataSet.Tables[tableName];
-            if (dataTable == null)
-            {
-                dataTable = await FillSchemaForTableAsync(schemaName, tableName);
-            }
-
-            return dataTable;
-        }
-
-        /// <summary>
-        /// Populates the column definition with HasDefault property.
-        /// </summary>
-        protected virtual async Task PopulateColumnDefinitionWithHasDefaultAsync(
-            string schemaName,
-            string tableName,
-            TableDefinition tableDefinition)
-        {
-            using ConnectionT conn = new();
-            conn.ConnectionString = ConnectionString;
-            await conn.OpenAsync();
-
-            // We can specify the Catalog, Schema, Table Name, Column Name to get
-            // the specified column(s).
-            // Hence, we should create a 4 members array.
-            string[] columnRestrictions = new string[NUMBER_OF_RESTRICTIONS];
-
-            // To restrict the columns for the current table, specify the table's name
-            // in column restrictions.
-            columnRestrictions[0] = conn.Database;
-            columnRestrictions[1] = schemaName;
-            columnRestrictions[2] = tableName;
-
-            // Each row in the columnsInTable table corresponds to a single column of the table.
-            DataTable columnsInTable = await conn.GetSchemaAsync("Columns", columnRestrictions);
-
-            foreach (DataRow columnInfo in columnsInTable.Rows)
-            {
-                string columnName = (string)columnInfo["COLUMN_NAME"];
-                bool hasDefault = !string.IsNullOrEmpty(columnInfo["COLUMN_DEFAULT"].ToString());
-                ColumnDefinition? columnDefinition;
-                if (tableDefinition.Columns.TryGetValue(columnName, out columnDefinition))
-                {
-                    columnDefinition.HasDefault = hasDefault;
-                }
-            }
+            PopulateColumnDefinitionWithHasDefault(
+                tableDefinition,
+                columnsInTable);
         }
 
         /// <summary>
         /// Using a data adapter, obtains the schema of the given table name
         /// and adds the corresponding entity in the data set.
         /// </summary>
-        protected virtual async Task<DataTable> FillSchemaForTableAsync(
+        protected async Task<DataTable> FillSchemaForTableAsync(
             string schemaName,
             string tableName)
         {
@@ -139,5 +102,59 @@ namespace Azure.DataGateway.Service.Services
             DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableName);
             return dataTable[0];
         }
+
+        /// <summary>
+        /// Gets the metadata information of each column of
+        /// the given schema.table
+        /// </summary>
+        /// <returns>A data table where each row corresponds to a
+        /// column of the table.</returns>
+        protected virtual async Task<DataTable> GetColumnsAsync(
+            string schemaName,
+            string tableName)
+        {
+            using ConnectionT conn = new();
+            conn.ConnectionString = ConnectionString;
+            await conn.OpenAsync();
+
+            // We can specify the Catalog, Schema, Table Name, Column Name to get
+            // the specified column(s).
+            // Hence, we should create a 4 members array.
+            string[] columnRestrictions = new string[NUMBER_OF_RESTRICTIONS];
+
+            // To restrict the columns for the current table, specify the table's name
+            // in column restrictions.
+            columnRestrictions[0] = conn.Database;
+            columnRestrictions[1] = schemaName;
+            columnRestrictions[2] = tableName;
+
+            // Each row in the columnsInTable DataTable corresponds to
+            // a single column of the table.
+            DataTable columnsInTable = await conn.GetSchemaAsync("Columns", columnRestrictions);
+
+            return columnsInTable;
+        }
+
+        /// <summary>
+        /// Populates the column definition with HasDefault property.
+        /// </summary>
+        protected void PopulateColumnDefinitionWithHasDefault(
+            TableDefinition tableDefinition,
+            DataTable allColumnsInTable)
+        {
+            foreach (DataRow columnInfo in allColumnsInTable.Rows)
+            {
+                string columnName = (string)columnInfo["COLUMN_NAME"];
+                bool hasDefault =
+                    Type.GetTypeCode(columnInfo["COLUMN_DEFAULT"].GetType()) != TypeCode.DBNull;
+                ColumnDefinition? columnDefinition;
+                if (tableDefinition.Columns.TryGetValue(columnName, out columnDefinition))
+                {
+                    columnDefinition.HasDefault = hasDefault;
+                }
+            }
+        }
+
+
     }
 }

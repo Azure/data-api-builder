@@ -454,11 +454,11 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private static string GetGraphQLTypeForColumnType(Type type)
         {
-            switch (type.Name)
+            switch (Type.GetTypeCode(type))
             {
-                case "String":
+                case TypeCode.String:
                     return "String";
-                case "Int64":
+                case TypeCode.Int64:
                     return "Int";
                 default:
                     throw new ArgumentException($"ColumnType {type} not handled by case. Please add a case resolving " +

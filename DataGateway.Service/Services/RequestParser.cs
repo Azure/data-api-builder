@@ -104,7 +104,7 @@ namespace Azure.DataGateway.Service.Services
                         break;
                     case SORT_URL:
                         string sortQueryString = $"?{SORT_URL}={context.ParsedQueryString[key]}";
-                        context.OrderByClauseInUrl = GenerateOrderByList(filterParser.GetOrderByClause(sortQueryString, context.EntityName), context.EntityName);
+                        context.OrderByClauseInUrl = GenerateOrderByList(filterParser.GetOrderByClause(sortQueryString, context.EntityName), context.EntityName, context.PrimaryKeyValuePairs);
                         break;
                     case AFTER_URL:
                         context.After = context.ParsedQueryString[key];
@@ -125,8 +125,14 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="node">The OrderByClause.</param>
         /// <param name="tableAlias">The name of the Table the columns are from.</param>
         /// <returns>A List<Column> where the elements are OrderByColumns.</Column></returns>
-        private static List<Column>? GenerateOrderByList(OrderByClause node, string tableAlias)
+        private static List<Column>? GenerateOrderByList(OrderByClause node, string tableAlias, Dictionary<string, object> primaryKeys)
         {
+            HashSet<string> remainingKeys = new();
+            foreach (string key in primaryKeys.Keys)
+            {
+                remainingKeys.Add(key);
+            }
+
             List<Column> orderByList = new();
             while (node is not null)
             {
@@ -134,7 +140,13 @@ namespace Azure.DataGateway.Service.Services
                 string columnName = expression!.Property.Name;
                 Models.OrderByDirection direction = GetDirectionFromString(node.Direction.ToString());
                 orderByList.Add(new OrderByColumn(tableAlias, columnName, direction));
+                remainingKeys.Remove(columnName);
                 node = node.ThenBy;
+            }
+
+            foreach (string column in remainingKeys)
+            {
+                orderByList.Add(new OrderByColumn(tableAlias, column));
             }
 
             return orderByList;

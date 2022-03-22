@@ -43,7 +43,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Columns to use for sorting.
         /// </summary>
-        public List<Column> OrderByColumns { get; set; }
+        public List<Column>? OrderByColumns { get; set; }
 
         /// <summary>
         /// Hold the pagination metadata for the query
@@ -139,8 +139,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
             }
 
-            OrderByColumns = context.OrderByClauseInUrl is not null ? context.OrderByClauseInUrl : PrimaryKeyAsColumns();
-            OrderByColumns = GetPrimaryKeyAsOrderByColumns(OrderByColumns);
+            OrderByColumns = context.OrderByClauseInUrl is not null ? context.OrderByClauseInUrl : PrimaryKeyAsOrderByColumns(PrimaryKeyAsColumns());
 
             if (context.FilterClauseInUrl is not null)
             {
@@ -275,8 +274,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            OrderByColumns = PrimaryKeyAsColumns();
-            OrderByColumns = GetPrimaryKeyAsOrderByColumns(OrderByColumns);
+            OrderByColumns = PrimaryKeyAsOrderByColumns(PrimaryKeyAsColumns());
 
             // need to run after the rest of the query has been processed since it relies on
             // TableName, TableAlias, Columns, and _limit
@@ -620,7 +618,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Exposes the primary key of the underlying table of the structure
         /// as a list of OrderByColumn
         /// </summary>
-        public List<Column> GetPrimaryKeyAsOrderByColumns(List<Column> primaryKey)
+        public List<Column> PrimaryKeyAsOrderByColumns(List<Column> primaryKey)
         {
             List<Column> orderByList = new();
             foreach (Column column in primaryKey)

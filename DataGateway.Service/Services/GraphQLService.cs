@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
+using System.Diagnostics.CodeAnalysis;
+using System.Text;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder;
@@ -12,8 +13,8 @@ using HotChocolate.Execution;
 using HotChocolate.Execution.Configuration;
 using HotChocolate.Language;
 using HotChocolate.Types;
+using HotChocolate.Utilities;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -139,18 +140,23 @@ namespace Azure.DataGateway.Service.Services
         /// <returns></returns>
         private static IQueryRequest CompileRequest(string requestBody, Dictionary<string, object> requestProperties)
         {
-            using JsonDocument requestBodyJson = JsonDocument.Parse(requestBody);
-            IQueryRequestBuilder requestBuilder = QueryRequestBuilder.New()
-                .SetQuery(requestBodyJson.RootElement.GetProperty("query").GetString()!);
+            byte[] graphQLData = Encoding.UTF8.GetBytes(requestBody);
+            ParserOptions _parserOptions = new();
+            IDocumentHashProvider _documentHashProvider = new Sha256DocumentHashProvider();
+            IDocumentCache _documentCache = new DocumentCache();
 
-            JsonElement variables;
-            if (requestBodyJson.RootElement.TryGetProperty("variables", out variables))
-            {
-                requestBuilder =
-                    requestBuilder.SetVariableValues(
-                        JsonConvert.DeserializeObject<Dictionary<string, object?>>(variables.ToString()!)
-                    );
-            }
+            Utf8GraphQLRequestParser requestParser = new(
+                graphQLData,
+                _parserOptions,
+                _documentCache,
+                _documentHashProvider);
+
+            IReadOnlyList<GraphQLRequest> parsed = requestParser.Parse();
+
+            // TODO: Overhaul this to support batch queries
+            // right now we have only assumed a single query/mutation in the request
+            // but HotChocolate supports batching and we're just ignoring it for now
+            QueryRequestBuilder requestBuilder = QueryRequestBuilder.From(parsed[0]);
 
             // Individually adds each property to requestBuilder if they are provided.
             // Avoids using SetProperties() as it detrimentally overwrites
@@ -165,5 +171,35 @@ namespace Azure.DataGateway.Service.Services
 
             return requestBuilder.Create();
         }
+    }
+
+    // This class shouldn't be inlined like this
+    // need to review this service to better leverage
+    // HotChocolate and how it handles things such as
+    // caching, but one change at a time.
+    class DocumentCache : IDocumentCache
+    {
+        private readonly Cache<DocumentNode> _cache;
+
+        public DocumentCache(int capacity = 100)
+        {
+            _cache = new Cache<DocumentNode>(capacity);
+        }
+
+        public int Capacity => _cache.Size;
+
+        public int Count => _cache.Usage;
+
+        public void TryAddDocument(
+            string documentId,
+            DocumentNode document) =>
+            _cache.GetOrCreate(documentId, () => document);
+
+        public bool TryGetDocument(
+            string documentId,
+            [NotNullWhen(true)] out DocumentNode document) =>
+            _cache.TryGet(documentId, out document!);
+
+        public void Clear() => _cache.Clear();
     }
 }

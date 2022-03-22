@@ -9,20 +9,16 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
     public class MutationTests : TestBase
     {
         private static readonly string _containerName = Guid.NewGuid().ToString();
-        private static readonly string _mutationStringFormat = @"
-                                                mutation ($id: String, $name: String)
-                                                {
-                                                    createPlanet (id: $id, name: $name)
-                                                    {
+        private static readonly string _createPlanetMutation = @"
+                                                mutation ($item: CreatePlanetInput!) {
+                                                    createPlanet (item: $item) {
                                                         id
                                                         name
                                                     }
                                                 }";
-        private static readonly string _mutationDeleteItemStringFormat = @"
-                                                mutation ($id: String)
-                                                {
-                                                    deletePlanet (id: $id)
-                                                    {
+        private static readonly string _deletePlanetMutation = @"
+                                                mutation ($id: String) {
+                                                    deletePlanet (id: $id) {
                                                         id
                                                         name
                                                     }
@@ -48,7 +44,12 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         {
             // Run mutation Add planet;
             string id = Guid.NewGuid().ToString();
-            JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", _mutationStringFormat, new() { { "id", id }, { "name", "test_name" } });
+            var input = new
+            {
+                //id,
+                name = "test_name"
+            };
+            JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } });
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
@@ -59,10 +60,10 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         {
             // Pop an item in to delete
             string id = Guid.NewGuid().ToString();
-            _ = await ExecuteGraphQLRequestAsync("createPlanet", _mutationStringFormat, new() { { "id", id }, { "name", "test_name" } });
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "id", id }, { "name", "test_name" } });
 
             // Run mutation delete item;
-            JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanet", _mutationDeleteItemStringFormat, new() { { "id", id } });
+            JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanet", _deletePlanetMutation, new() { { "id", id } });
 
             // Validate results
             Assert.IsNull(response.GetProperty("id").GetString());

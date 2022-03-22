@@ -294,28 +294,29 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             Dictionary<string, object> parameters;
 
-            if (context.OperationType == Operation.Delete)
+            switch (context.OperationType)
             {
-                // DeleteOne based off primary key in request.
-                parameters = new(context.PrimaryKeyValuePairs);
-            }
-            else if (context.OperationType == Operation.Upsert ||
-                     context.OperationType == Operation.UpsertIncremental ||
-                     context.OperationType == Operation.Update ||
-                     context.OperationType == Operation.UpdateRest ||
-                     context.OperationType == Operation.UpdateIncremental)
-            {
-                // Combine both PrimaryKey/Field ValuePairs
-                // because we create an update statement.
-                parameters = new(context.PrimaryKeyValuePairs);
-                foreach (KeyValuePair<string, object> pair in context.FieldValuePairsInBody)
-                {
-                    parameters.Add(pair.Key, pair.Value);
-                }
-            }
-            else
-            {
-                parameters = new(context.FieldValuePairsInBody);
+                case Operation.Delete:
+                    // DeleteOne based off primary key in request.
+                    parameters = new(context.PrimaryKeyValuePairs);
+                    break;
+                case Operation.Upsert:
+                case Operation.UpsertIncremental:
+                case Operation.Update:
+                case Operation.UpdateRest:
+                case Operation.UpdateIncremental:
+                    // Combine both PrimaryKey/Field ValuePairs
+                    // because we create an update statement.
+                    parameters = new(context.PrimaryKeyValuePairs);
+                    foreach (KeyValuePair<string, object> pair in context.FieldValuePairsInBody)
+                    {
+                        parameters.Add(pair.Key, pair.Value);
+                    }
+
+                    break;
+                default:
+                    parameters = new(context.FieldValuePairsInBody);
+                    break;
             }
 
             return parameters;

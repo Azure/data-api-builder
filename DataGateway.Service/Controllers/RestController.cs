@@ -247,7 +247,7 @@ namespace Azure.DataGateway.Service.Controllers
                     this.HttpContext.User = new ClaimsPrincipal(identity);
                 }
 
-                operationType = operationType == Operation.Upsert || operationType == Operation.UpsertIncremental ? HandlePatchPutSemantics(Request.Headers, operationType) : operationType;
+                operationType = HandlePatchPutSemantics(Request.Headers, operationType);
                 // Utilizes C#8 using syntax which does not require brackets.
                 using JsonDocument? result
                     = await _restService.ExecuteAsync(

@@ -24,11 +24,11 @@ namespace Azure.DataGateway.Services
         private readonly IMetadataStoreProvider _metadataStoreProvider;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationService _authorizationService;
-
+        public SqlGraphQLFileMetadataProvider MetadataStoreProvider { get; }
         public RestService(
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
-            IMetadataStoreProvider metadataStoreProvider,
+            SqlGraphQLFileMetadataProvider metadataStoreProvider,
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationService authorizationService
             )
@@ -99,7 +99,7 @@ namespace Azure.DataGateway.Services
 
             if (!string.IsNullOrEmpty(queryString))
             {
-                RequestParser.ParseQueryString(HttpUtility.ParseQueryString(queryString), context, _metadataStoreProvider.GetFilterParser());
+                RequestParser.ParseQueryString(HttpUtility.ParseQueryString(queryString), context, MetadataStoreProvider.FilterParser());
             }
 
             // At this point for DELETE, the primary key should be populated in the Request context. 

@@ -17,16 +17,16 @@ namespace Azure.DataGateway.Service.Resolvers
     //</summary>
     public class SqlQueryEngine : IQueryEngine
     {
-        private readonly IMetadataStoreProvider _metadataStoreProvider;
+        private readonly SqlGraphQLFileMetadataProvider _metadataStoreProvider;
         private readonly IQueryExecutor _queryExecutor;
         private readonly IQueryBuilder _queryBuilder;
 
         // <summary>
         // Constructor.
         // </summary>
-        public SqlQueryEngine(IMetadataStoreProvider metadataStoreProvider, IQueryExecutor queryExecutor, IQueryBuilder queryBuilder)
+        public SqlQueryEngine(IGraphQLMetadataProvider metadataStoreProvider, IQueryExecutor queryExecutor, IQueryBuilder queryBuilder)
         {
-            _metadataStoreProvider = metadataStoreProvider;
+            _metadataStoreProvider = (SqlGraphQLFileMetadataProvider)metadataStoreProvider;
             _queryExecutor = queryExecutor;
             _queryBuilder = queryBuilder;
         }

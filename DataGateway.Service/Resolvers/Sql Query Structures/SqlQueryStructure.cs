@@ -81,7 +81,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// information.
         /// Only use as constructor for the outermost queries not subqueries
         /// </summary>
-        public SqlQueryStructure(IResolverContext ctx, IDictionary<string, object> queryParams, IMetadataStoreProvider metadataStoreProvider)
+        public SqlQueryStructure(IResolverContext ctx, IDictionary<string, object> queryParams, SqlGraphQLFileMetadataProvider metadataStoreProvider)
             // This constructor simply forwards to the more general constructor
             // that is used to create GraphQL queries. We give it some values
             // that make sense for the outermost query.
@@ -107,7 +107,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Generate the structure for a SQL query based on FindRequestContext,
         /// which is created by a FindById or FindMany REST request.
         /// </summary>
-        public SqlQueryStructure(RestRequestContext context, IMetadataStoreProvider metadataStoreProvider) :
+        public SqlQueryStructure(RestRequestContext context, SqlGraphQLFileMetadataProvider metadataStoreProvider) :
             this(metadataStoreProvider, new IncrementingInteger(), tableName: context.EntityName)
         {
             TableAlias = TableName;
@@ -156,7 +156,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private SqlQueryStructure(
                 IResolverContext ctx,
                 IDictionary<string, object> queryParams,
-                IMetadataStoreProvider metadataStoreProvider,
+                SqlGraphQLFileMetadataProvider metadataStoreProvider,
                 IObjectField schemaField,
                 FieldNode? queryField,
                 IncrementingInteger counter
@@ -235,6 +235,32 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
+            if (IsListQuery && queryParams.ContainsKey("_filter"))
+            {
+                object? filterObject = queryParams["_filter"];
+
+                if (filterObject != null)
+                {
+                    List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
+                    Predicates.Add(GQLFilterParser.Parse(filterFields, TableAlias, GetTableDefinition(), MakeParamWithValue));
+                }
+            }
+
+            if (IsListQuery && queryParams.ContainsKey("_filterOData"))
+            {
+                object? whereObject = queryParams["_filterOData"];
+
+                if (whereObject != null)
+                {
+                    string where = (string)whereObject;
+
+                    ODataASTVisitor visitor = new(this);
+                    FilterParser parser = MetadataStoreProvider.FilterParser();
+                    FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={where}", TableName);
+                    FilterPredicates = filterClause.Expression.Accept<string>(visitor);
+                }
+            }
+
             // need to run after the rest of the query has been processed since it relies on
             // TableName, TableAlias, Columns, and _limit
             if (PaginationMetadata.IsPaginated)
@@ -272,7 +298,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Private constructor that is used as a base by all public
         /// constructors.
         /// </summary>
-        private SqlQueryStructure(IMetadataStoreProvider metadataStoreProvider, IncrementingInteger counter, string tableName = "")
+        private SqlQueryStructure(SqlGraphQLFileMetadataProvider metadataStoreProvider, IncrementingInteger counter, string tableName = "")
             : base(metadataStoreProvider, counter: counter, tableName: tableName)
         {
             JoinQueries = new();

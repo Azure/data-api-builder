@@ -16,14 +16,14 @@ namespace Azure.DataGateway.Services
     {
         private readonly IQueryEngine _queryEngine;
         private readonly IMutationEngine _mutationEngine;
-        private readonly IMetadataStoreProvider _metadataStoreProvider;
+        private readonly IGraphQLMetadataProvider _metadataStoreProvider;
         public ISchema? Schema { private set; get; }
         public IRequestExecutor? Executor { private set; get; }
 
         public GraphQLService(
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
-            IMetadataStoreProvider metadataStoreProvider)
+            IGraphQLMetadataProvider metadataStoreProvider)
         {
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;

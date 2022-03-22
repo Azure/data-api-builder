@@ -21,12 +21,12 @@ namespace Azure.DataGateway.Services
         internal readonly FieldDelegate _next;
         internal readonly IQueryEngine _queryEngine;
         internal readonly IMutationEngine _mutationEngine;
-        internal readonly IMetadataStoreProvider _metadataStoreProvider;
+        internal readonly IGraphQLMetadataProvider _metadataStoreProvider;
 
         public ResolverMiddleware(FieldDelegate next,
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
-            IMetadataStoreProvider metadataStoreProvider)
+            IGraphQLMetadataProvider metadataStoreProvider)
         {
             _next = next;
             _queryEngine = queryEngine;

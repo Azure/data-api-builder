@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
-using HotChocolate.Language;
-using HotChocolate.Types;
+using Azure.DataGateway.Service.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -12,8 +10,10 @@ namespace Azure.DataGateway.Service.Resolvers
     /// Holds shared properties and methods among
     /// Sql*QueryStructure classes
     /// </summary>
-    public abstract class BaseSqlQueryStructure
+    public abstract class BaseSqlQueryStructure : BaseQueryStructure
     {
+        protected SqlGraphQLFileMetadataProvider MetadataStoreProvider { get; }
+
         /// <summary>
         /// The name of the main table to be queried.
         /// </summary>
@@ -22,43 +22,23 @@ namespace Azure.DataGateway.Service.Resolvers
         /// The alias of the main table to be queried.
         /// </summary>
         public string TableAlias { get; protected set; }
-        /// <summary>
-        /// The columns which the query selects
-        /// </summary>
-        public List<LabelledColumn> Columns { get; }
-        /// <summary>
-        /// Predicates that should filter the result set of the query.
-        /// </summary>
-        public List<Predicate> Predicates { get; }
+
         /// <summary>
         /// FilterPredicates is a string that represents the filter portion of our query
         /// in the WHERE Clause. This is generated specifically from the $filter portion
         /// of the query string.
         /// </summary>
         public string? FilterPredicates { get; set; }
-        /// <summary>
-        /// Parameters values required to execute the query.
-        /// </summary>
-        public Dictionary<string, object?> Parameters { get; set; }
-        /// <summary>
-        /// Counter.Next() can be used to get a unique integer within this
-        /// query, which can be used to create unique aliases, parameters or
-        /// other identifiers.
-        /// </summary>
-        public IncrementingInteger Counter { get; }
 
-        protected IMetadataStoreProvider MetadataStoreProvider { get; }
-
-        public BaseSqlQueryStructure(IMetadataStoreProvider metadataStore,
-            IncrementingInteger? counter = null, string tableName = "")
+        public BaseSqlQueryStructure(
+            SqlGraphQLFileMetadataProvider metadataStoreProvider,
+            IncrementingInteger? counter = null,
+            string tableName = "")
+            : base(counter)
         {
-            Columns = new();
-            Predicates = new();
-            Parameters = new();
-            MetadataStoreProvider = metadataStore;
-            TableName = tableName;
-            Counter = counter ?? new IncrementingInteger();
+            MetadataStoreProvider = metadataStoreProvider;
 
+            TableName = tableName;
             // Default the alias to the table name
             TableAlias = tableName;
         }
@@ -95,14 +75,11 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        ///  Add parameter to Parameters and return the name associated with it
+        /// get all columns of the table
         /// </summary>
-        /// <param name="value">Value to be assigned to parameter, which can be null for nullable columns.</param>
-        public string MakeParamWithValue(object? value)
+        public List<string> AllColumns()
         {
-            string paramName = $"param{Counter.Next()}";
-            Parameters.Add(paramName, value);
-            return paramName;
+            return GetTableDefinition().Columns.Select(col => col.Key).ToList();
         }
 
         ///<summary>
@@ -140,57 +117,5 @@ namespace Azure.DataGateway.Service.Resolvers
                 throw;
             }
         }
-
-        /// <summary>
-        /// Extracts the *Connection.items query field from the *Connection query field
-        /// </summary>
-        /// <returns> The query field or null if **Conneciton.items is not requested in the query</returns>
-        internal static FieldNode? ExtractItemsQueryField(FieldNode connectionQueryField)
-        {
-            FieldNode? itemsField = null;
-            foreach (ISelectionNode node in connectionQueryField.SelectionSet!.Selections)
-            {
-                FieldNode field = (FieldNode)node;
-                string fieldName = field.Name.Value;
-
-                if (fieldName == "items")
-                {
-                    itemsField = field;
-                    break;
-                }
-            }
-
-            return itemsField;
-        }
-
-        /// <summary>
-        /// UnderlyingType is the type main GraphQL type that is described by
-        /// this type. This strips all modifiers, such as List and Non-Null.
-        /// So the following GraphQL types would all have the underlyingType Book:
-        /// - Book
-        /// - [Book]
-        /// - Book!
-        /// - [Book]!
-        /// - [Book!]!
-        /// </summary>
-        internal static ObjectType UnderlyingType(IType type)
-        {
-            ObjectType? underlyingType = type as ObjectType;
-            if (underlyingType != null)
-            {
-                return underlyingType;
-            }
-
-            return UnderlyingType(type.InnerType());
-        }
-
-        /// <summary>
-        /// Extracts the *Connection.items schema field from the *Connection schema field
-        /// </summary>
-        internal static IObjectField ExtractItemsSchemaField(IObjectField connectionSchemaField)
-        {
-            return UnderlyingType(connectionSchemaField.Type).Fields["items"];
-        }
-
     }
 }

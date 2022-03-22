@@ -269,6 +269,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
+            OrderByColumns = PrimaryKeyAsOrderByColumns();
+
             // need to run after the rest of the query has been processed since it relies on
             // TableName, TableAlias, Columns, and _limit
             if (PaginationMetadata.IsPaginated)

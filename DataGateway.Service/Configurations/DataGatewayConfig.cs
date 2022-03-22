@@ -25,6 +25,8 @@ namespace Azure.DataGateway.Service.Configurations
          "DataGatewayConfig": {
             "DatabaseType": "",
             "ResolverConfigFile" : ""
+            "ResolverConfig" : ""
+            "GraphQLSchema": ""
             "DatabaseConnection": {
                 "ServerEndpointUrl": "",
                 "AuthorizationKey": "",
@@ -39,11 +41,13 @@ namespace Azure.DataGateway.Service.Configurations
                 "Issuer":""
             }
          */
-        public DatabaseType DatabaseType { get; set; }
+        public DatabaseType? DatabaseType { get; set; }
 
         // This should be renamed to databaseConnection but need to coordiate with moderakh on CI configuration.
         public DatabaseConnectionConfig DatabaseConnection { get; set; } = null!;
-        public string ResolverConfigFile { get; set; } = null!;
+        public string? ResolverConfigFile { get; set; }
+        public string? ResolverConfig { get; set; }
+        public string? GraphQLSchema { get; set; }
         public JwtAuthProviderConfig JwtAuth { get; set; } = null!;
     }
 
@@ -82,6 +86,11 @@ namespace Azure.DataGateway.Service.Configurations
     {
         public void PostConfigure(string name, DataGatewayConfig options)
         {
+            if (!options.DatabaseType.HasValue)
+            {
+                return;
+            }
+
             bool connStringProvided = !string.IsNullOrEmpty(options.DatabaseConnection.ConnectionString);
             bool serverProvided = !string.IsNullOrEmpty(options.DatabaseConnection.Server);
             bool dbProvided = !string.IsNullOrEmpty(options.DatabaseConnection.Database);
@@ -92,6 +101,19 @@ namespace Azure.DataGateway.Service.Configurations
             else if (connStringProvided && (serverProvided || dbProvided))
             {
                 throw new NotSupportedException("Either Server and Database or ConnectionString need to be provided, not both");
+            }
+
+            bool isResolverConfigSet = !string.IsNullOrEmpty(options.ResolverConfig);
+            bool isResolverConfigFileSet = !string.IsNullOrEmpty(options.ResolverConfigFile);
+            bool isGraphQLSchemaSet = !string.IsNullOrEmpty(options.GraphQLSchema);
+            if (!(isResolverConfigSet ^ isResolverConfigFileSet))
+            {
+                throw new NotSupportedException("Either the Resolver Config or the Resolver Config File needs to be provided. Not both.");
+            }
+
+            if (isResolverConfigSet && !isGraphQLSchemaSet)
+            {
+                throw new NotSupportedException("The GraphQLSchema should be provided with the config.");
             }
 
             if (string.IsNullOrWhiteSpace(options.DatabaseConnection.ConnectionString))
@@ -121,6 +143,11 @@ namespace Azure.DataGateway.Service.Configurations
     {
         public ValidateOptionsResult Validate(string name, DataGatewayConfig options)
         {
+            if (!options.DatabaseType.HasValue)
+            {
+                return ValidateOptionsResult.Success;
+            }
+
             return string.IsNullOrWhiteSpace(options.DatabaseConnection.ConnectionString)
                 ? ValidateOptionsResult.Fail("Invalid connection string.")
                 : ValidateOptionsResult.Success;

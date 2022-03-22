@@ -6,7 +6,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 
-namespace Azure.DataGateway.Service.Models
+namespace Azure.DataGateway.Service.AuthenticationHelpers
 {
     /// <summary>
     /// Helper class which parses AppService's injected headers into a ClaimsIdentity object

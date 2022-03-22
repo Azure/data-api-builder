@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 

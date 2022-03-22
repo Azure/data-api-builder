@@ -3,7 +3,7 @@ using System.IO;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.AuthenticationHelpers;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Mvc;
 

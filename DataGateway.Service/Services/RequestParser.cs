@@ -4,6 +4,8 @@ using System.Linq;
 using System.Net;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Microsoft.OData.UriParser;
+using static Azure.DataGateway.Service.Exceptions.DataGatewayException;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -102,7 +104,7 @@ namespace Azure.DataGateway.Service.Services
                         break;
                     case SORT_URL:
                         string sortQueryString = $"?{SORT_URL}={context.ParsedQueryString[key]}";
-                        context.OrderByClauseInUrl = filterParser.GetOrderByClause(sortQueryString, context.EntityName);
+                        context.OrderByClauseInUrl = GenerateOrderByList(filterParser.GetOrderByClause(sortQueryString, context.EntityName), context.EntityName);
                         break;
                     case AFTER_URL:
                         context.After = context.ParsedQueryString[key];
@@ -113,6 +115,48 @@ namespace Azure.DataGateway.Service.Services
                     default:
                         throw new ArgumentException($"Invalid Query Parameter: {key.ToString()}");
                 }
+            }
+        }
+
+        /// <summary>
+        /// Create List of OrderByColumn from an OrderByClause Abstract Syntax Tree
+        /// and return that list as List<Column> since OrderByColumn is a Column.
+        /// </summary>
+        /// <param name="node">The OrderByClause.</param>
+        /// <param name="tableAlias">The name of the Table the columns are from.</param>
+        /// <returns>A List<Column> where the elements are OrderByColumns.</Column></returns>
+        private static List<Column>? GenerateOrderByList(OrderByClause node, string tableAlias)
+        {
+            List<Column> orderByList = new();
+            while (node is not null)
+            {
+                SingleValuePropertyAccessNode? expression = node.Expression as SingleValuePropertyAccessNode;
+                string columnName = expression!.Property.Name;
+                Models.OrderByDirection direction = GetDirectionFromString(node.Direction.ToString());
+                orderByList.Add(new OrderByColumn(tableAlias, columnName, direction));
+                node = node.ThenBy;
+            }
+
+            return orderByList;
+        }
+
+        /// <summary>
+        /// Helper function returns the OrderByDirection associated with a given string
+        /// </summary>
+        /// <param name="direction">String reprenting the orderby direction.</param>
+        /// <returns>Enum representing the direction.</returns>
+        private static Models.OrderByDirection GetDirectionFromString(string direction)
+        {
+            switch (direction)
+            {
+                case "Descending":
+                    return Models.OrderByDirection.Desc;
+                case "Ascending":
+                    return Models.OrderByDirection.Asc;
+                default:
+                    throw new DataGatewayException(message: "Invalid OrderBy",
+                                                   statusCode: HttpStatusCode.BadRequest,
+                                                   subStatusCode: SubStatusCodes.BadRequest);
             }
         }
 

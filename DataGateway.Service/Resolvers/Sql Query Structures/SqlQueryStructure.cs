@@ -134,6 +134,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
             }
 
+            OrderByColumns = context.OrderByClauseInUrl is not null ? context.OrderByClauseInUrl : PrimaryKeyAsOrderByColumns();
+
             if (context.FilterClauseInUrl is not null)
             {
                 // We use the visitor pattern here to traverse the Filter Clause AST
@@ -599,6 +601,25 @@ namespace Azure.DataGateway.Service.Resolvers
                 foreach (string column in PrimaryKey())
                 {
                     _primaryKey.Add(new Column(TableAlias, column));
+                }
+            }
+
+            return _primaryKey;
+        }
+
+        /// <summary>
+        /// Exposes the primary key of the underlying table of the structure
+        /// as a list of OrderByColumn
+        /// </summary>
+        public List<Column> PrimaryKeyAsOrderByColumns()
+        {
+            if (_primaryKey == null)
+            {
+                _primaryKey = new();
+
+                foreach (string column in PrimaryKey())
+                {
+                    _primaryKey.Add(new OrderByColumn(TableAlias, column));
                 }
             }
 

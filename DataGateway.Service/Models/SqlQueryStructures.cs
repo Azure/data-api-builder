@@ -25,6 +25,19 @@ namespace Azure.DataGateway.Service.Models
     }
 
     /// <summary>
+    /// Extends Column with direction for orderby.
+    /// </summary>
+    public class OrderByColumn : Column
+    {
+        public string Direction { get; }
+        public OrderByColumn(string? tableAlias, string columnName, OrderByDirection direction = OrderByDirection.Asc)
+            : base(tableAlias, columnName)
+        {
+            Direction = direction.ToString();
+        }
+    }
+
+    /// <summary>
     /// Extends Column with a label
     /// </summary>
     public class LabelledColumn : Column
@@ -39,6 +52,14 @@ namespace Azure.DataGateway.Service.Models
         {
             Label = label;
         }
+    }
+
+    /// <summary>
+    /// Represents the directions an OrderByColumn can have.
+    /// </summary>
+    public enum OrderByDirection
+    {
+        Asc, Desc
     }
 
     /// <summary>

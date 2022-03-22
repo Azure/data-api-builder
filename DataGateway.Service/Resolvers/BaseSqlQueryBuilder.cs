@@ -84,6 +84,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         protected virtual string Build(Column column)
         {
+            if (column is OrderByColumn)
+            {
+                return Build(column as OrderByColumn);
+            }
+
             if (column.TableAlias != null)
             {
                 return QuoteIdentifier(column.TableAlias) + "." + QuoteIdentifier(column.ColumnName);
@@ -91,6 +96,24 @@ namespace Azure.DataGateway.Service.Resolvers
             else
             {
                 return QuoteIdentifier(column.ColumnName);
+            }
+        }
+
+        /// <summary>
+        /// Build column as
+        /// {TableAlias}.{ColumnName} {direction}
+        /// If TableAlias is null
+        /// {ColumnName} {direction}
+        /// </summary>
+        protected virtual string Build(OrderByColumn column)
+        {
+            if (column.TableAlias != null)
+            {
+                return QuoteIdentifier(column.TableAlias) + "." + QuoteIdentifier(column.ColumnName) + " " + column.Direction;
+            }
+            else
+            {
+                return QuoteIdentifier(column.ColumnName) + " " + column.Direction;
             }
         }
 

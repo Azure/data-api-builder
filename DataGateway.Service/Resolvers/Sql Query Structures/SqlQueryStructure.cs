@@ -41,6 +41,11 @@ namespace Azure.DataGateway.Service.Resolvers
         public bool IsListQuery { get; set; }
 
         /// <summary>
+        /// Columns to use for sorting.
+        /// </summary>
+        public List<Column> OrderByColumns { get; set; }
+
+        /// <summary>
         /// Hold the pagination metadata for the query
         /// </summary>
         public PaginationMetadata PaginationMetadata { get; set; }
@@ -134,7 +139,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
             }
 
-            OrderByColumns = context.OrderByClauseInUrl is not null ? context.OrderByClauseInUrl : PrimaryKeyAsOrderByColumns();
+            OrderByColumns = context.OrderByClauseInUrl is not null ? context.OrderByClauseInUrl : PrimaryKeyAsColumns();
+            OrderByColumns = GetPrimaryKeyAsOrderByColumns(OrderByColumns);
 
             if (context.FilterClauseInUrl is not null)
             {
@@ -269,7 +275,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            OrderByColumns = PrimaryKeyAsOrderByColumns();
+            OrderByColumns = PrimaryKeyAsColumns();
+            OrderByColumns = GetPrimaryKeyAsOrderByColumns(OrderByColumns);
 
             // need to run after the rest of the query has been processed since it relies on
             // TableName, TableAlias, Columns, and _limit
@@ -613,19 +620,15 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Exposes the primary key of the underlying table of the structure
         /// as a list of OrderByColumn
         /// </summary>
-        public List<Column> PrimaryKeyAsOrderByColumns()
+        public List<Column> GetPrimaryKeyAsOrderByColumns(List<Column> primaryKey)
         {
-            if (_primaryKey == null)
+            List<Column> orderByList = new();
+            foreach (Column column in primaryKey)
             {
-                _primaryKey = new();
-
-                foreach (string column in PrimaryKey())
-                {
-                    _primaryKey.Add(new OrderByColumn(TableAlias, column));
-                }
+                orderByList.Add(new OrderByColumn(column.TableAlias, column.ColumnName));
             }
 
-            return _primaryKey;
+            return orderByList;
         }
 
         /// <summary>

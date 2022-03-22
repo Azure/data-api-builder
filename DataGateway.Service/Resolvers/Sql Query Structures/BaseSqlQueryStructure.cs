@@ -40,7 +40,6 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Parameters values required to execute the query.
         /// </summary>
-        public List<Column> OrderByColumns { get; set; }
         public Dictionary<string, object?> Parameters { get; set; }
         /// <summary>
         /// Counter.Next() can be used to get a unique integer within this

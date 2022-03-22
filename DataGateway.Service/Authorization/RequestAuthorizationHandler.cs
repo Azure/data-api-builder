@@ -23,12 +23,13 @@ namespace Azure.DataGateway.Service.Authorization
     /// </summary>
     public class RequestAuthorizationHandler : AuthorizationHandler<OperationAuthorizationRequirement, RestRequestContext>
     {
-        private readonly IMetadataStoreProvider _configurationProvider;
+        private readonly SqlGraphQLFileMetadataProvider _configurationProvider;
 
-        public RequestAuthorizationHandler(IMetadataStoreProvider metadataStoreProvider)
+        public RequestAuthorizationHandler(IGraphQLMetadataProvider metadataStoreProvider)
         {
-            _configurationProvider = metadataStoreProvider;
+            _configurationProvider = (SqlGraphQLFileMetadataProvider)metadataStoreProvider;
         }
+
         protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,
                                                   OperationAuthorizationRequirement requirement,
                                                   RestRequestContext resource)

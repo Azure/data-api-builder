@@ -8,7 +8,7 @@ using HotChocolate.Resolvers;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
-    public class CosmosQueryStructure : BaseSqlQueryStructure
+    public class CosmosQueryStructure : BaseQueryStructure
     {
         private IMiddlewareContext _context;
         public bool IsPaginated { get; internal set; }
@@ -19,10 +19,14 @@ namespace Azure.DataGateway.Service.Resolvers
         public string? Continuation { get; internal set; }
         public int MaxItemCount { get; internal set; }
 
+        protected CosmosGraphQLFileMetadataProvider MetadataStoreProvider { get; }
+
         public CosmosQueryStructure(IMiddlewareContext context,
             IDictionary<string, object> parameters,
-            IMetadataStoreProvider metadataStoreProvider) : base(metadataStoreProvider)
+            CosmosGraphQLFileMetadataProvider metadataStoreProvider)
+            : base()
         {
+            MetadataStoreProvider = metadataStoreProvider;
             _context = context;
             Init(parameters);
         }

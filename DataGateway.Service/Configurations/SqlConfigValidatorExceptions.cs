@@ -30,7 +30,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Sets the config and schema for the validator
         /// </summary>
-        public SqlConfigValidator(IMetadataStoreProvider metadataStoreProvider, GraphQLService graphQLService)
+        public SqlConfigValidator(IGraphQLMetadataProvider metadataStoreProvider, GraphQLService graphQLService)
         {
             _configValidationStack = MakeConfigPosition(Enumerable.Empty<string>());
             _schemaValidationStack = MakeSchemaPosition(Enumerable.Empty<string>());

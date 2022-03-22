@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Services.MetadataProviders;
 using Microsoft.Extensions.Hosting;
 
 namespace Azure.DataGateway.Service.Services
@@ -10,10 +11,10 @@ namespace Azure.DataGateway.Service.Services
     /// </summary>
     public class SqlHostedService : IHostedService
     {
-        private readonly IMetadataStoreProvider _fileMetadataProvider;
-        public SqlHostedService(IMetadataStoreProvider fileMetadataProvider)
+        private readonly SqlGraphQLFileMetadataProvider _sqlGraphQLMetadataProvider;
+        public SqlHostedService(IGraphQLMetadataProvider fileMetadataProvider)
         {
-            _fileMetadataProvider = fileMetadataProvider;
+            _sqlGraphQLMetadataProvider = (SqlGraphQLFileMetadataProvider)fileMetadataProvider;
         }
 
         /// <summary>
@@ -26,8 +27,8 @@ namespace Azure.DataGateway.Service.Services
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             // Enriches the database schema asynchronously
-            await _fileMetadataProvider.EnrichDatabaseSchemaWithTableMetadata();
-            _fileMetadataProvider.InitFilterParser();
+            await _sqlGraphQLMetadataProvider.EnrichDatabaseSchemaWithTableMetadata();
+            _sqlGraphQLMetadataProvider.InitFilterParser();
         }
 
         // noop

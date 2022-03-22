@@ -21,7 +21,9 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="context">Request context containing the REST operation fields and their values.</param>
         /// <param name="configurationProvider">Configuration provider that enables referencing DB schema in config.</param>
         /// <exception cref="DataGatewayException"></exception>
-        public static void ValidateRequestContext(RestRequestContext context, IMetadataStoreProvider configurationProvider)
+        public static void ValidateRequestContext(
+            RestRequestContext context,
+            SqlGraphQLFileMetadataProvider configurationProvider)
         {
             TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, configurationProvider);
 
@@ -44,7 +46,9 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="context">Request context containing the primary keys and their values.</param>
         /// <param name="configurationProvider">Configuration provider that enables referencing DB schema in config.</param>
         /// <exception cref="DataGatewayException"></exception>
-        public static void ValidatePrimaryKey(RestRequestContext context, IMetadataStoreProvider configurationProvider)
+        public static void ValidatePrimaryKey(
+            RestRequestContext context,
+            SqlGraphQLFileMetadataProvider configurationProvider)
         {
             TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, configurationProvider);
 
@@ -150,8 +154,8 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="configurationProvider">Configuration provider that enables referencing DB schema in config.</param>
         /// <exception cref="DataGatewayException"></exception>
         public static void ValidateInsertRequestContext(
-        InsertRequestContext insertRequestCtx,
-        IMetadataStoreProvider configurationProvider)
+            InsertRequestContext insertRequestCtx,
+            SqlGraphQLFileMetadataProvider configurationProvider)
         {
             IEnumerable<string> fieldsInRequestBody = insertRequestCtx.FieldValuePairsInBody.Keys;
             TableDefinition tableDefinition =
@@ -191,8 +195,8 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="configurationProvider">Configuration provider that enables referencing DB schema in config.</param>
         /// <exception cref="DataGatewayException"></exception>
         public static void ValidateUpsertRequestContext(
-        UpsertRequestContext upsertRequestCtx,
-        IMetadataStoreProvider configurationProvider)
+            UpsertRequestContext upsertRequestCtx,
+            SqlGraphQLFileMetadataProvider configurationProvider)
         {
             IEnumerable<string> fieldsInRequestBody = upsertRequestCtx.FieldValuePairsInBody.Keys;
             TableDefinition tableDefinition =
@@ -287,7 +291,7 @@ namespace Azure.DataGateway.Service.Services
         /// enables referencing DB schema in config.</param>
         /// <exception cref="DataGatewayException"></exception>
 
-        private static TableDefinition TryGetTableDefinition(string entityName, IMetadataStoreProvider configurationProvider)
+        private static TableDefinition TryGetTableDefinition(string entityName, SqlGraphQLFileMetadataProvider configurationProvider)
         {
             try
             {

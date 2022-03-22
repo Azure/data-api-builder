@@ -20,17 +20,17 @@ namespace Azure.DataGateway.Service.Resolvers
     public class SqlMutationEngine : IMutationEngine
     {
         private readonly IQueryEngine _queryEngine;
-        private readonly IMetadataStoreProvider _metadataStoreProvider;
+        private readonly SqlGraphQLFileMetadataProvider _metadataStoreProvider;
         private readonly IQueryExecutor _queryExecutor;
         private readonly IQueryBuilder _queryBuilder;
 
         /// <summary>
         /// Constructor
         /// </summary>
-        public SqlMutationEngine(IQueryEngine queryEngine, IMetadataStoreProvider metadataStoreProvider, IQueryExecutor queryExecutor, IQueryBuilder queryBuilder)
+        public SqlMutationEngine(IQueryEngine queryEngine, IGraphQLMetadataProvider metadataStoreProvider, IQueryExecutor queryExecutor, IQueryBuilder queryBuilder)
         {
             _queryEngine = queryEngine;
-            _metadataStoreProvider = metadataStoreProvider;
+            _metadataStoreProvider = (SqlGraphQLFileMetadataProvider)metadataStoreProvider;
             _queryExecutor = queryExecutor;
             _queryBuilder = queryBuilder;
         }

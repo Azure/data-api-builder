@@ -65,8 +65,7 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.Cosmos:
                         return null!;
                     case DatabaseType.MsSql:
-                        return ActivatorUtilities.
-                            GetServiceOrCreateInstance<MsSqlMetadataProvider>(serviceProvider);
+                        return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlMetadataProvider>(serviceProvider);
                     case DatabaseType.PostgreSql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlMetadataProvider>(serviceProvider);
                     case DatabaseType.MySql:
@@ -186,23 +185,6 @@ namespace Azure.DataGateway.Service
                 }
             });
 
-            services.AddSingleton<IHostedService>(implementationFactory: (serviceProvider) =>
-            {
-                IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
-                switch (dataGatewayConfig.CurrentValue.DatabaseType)
-                {
-                    case DatabaseType.Cosmos:
-                        return null!;
-                    case DatabaseType.MsSql:
-                    case DatabaseType.PostgreSql:
-                    case DatabaseType.MySql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<SqlHostedService>(serviceProvider);
-                    default:
-                        throw new NotSupportedException(string.Format("The provided DatabaseType value: {0} is currently not supported." +
-                            "Please check the configuration file.", dataGatewayConfig.CurrentValue.DatabaseType));
-                }
-            });
-
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<DataGatewayConfig>, DataGatewayConfigPostConfiguration>());
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<DataGatewayConfig>, DataGatewayConfigValidation>());
 
@@ -220,19 +202,16 @@ namespace Azure.DataGateway.Service
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            IOptionsMonitor<DataGatewayConfig>? dataGatewayConfig = app.ApplicationServices.GetService<IOptionsMonitor<DataGatewayConfig>>();
-            if (dataGatewayConfig != null && dataGatewayConfig.CurrentValue.DatabaseType.HasValue)
+            IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = app.ApplicationServices.GetService<IOptionsMonitor<DataGatewayConfig>>()!;
+            if (dataGatewayConfig.CurrentValue.DatabaseType.HasValue)
             {
-                // If the configuration has been set, validate it after the services have been built but
-                // before the application is built. If it hasn't been set yet, skip validation, it will
-                // happen when the config changes.
-                app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
+                PerformOnConfigChange(dataGatewayConfig.CurrentValue, app);
             }
             else
             {
                 dataGatewayConfig.OnChange((newConfig) =>
                 {
-                    app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
+                    PerformOnConfigChange(dataGatewayConfig.CurrentValue, app);
                 });
             }
 
@@ -268,6 +247,37 @@ namespace Azure.DataGateway.Service
                 endpoints.MapControllers();
                 endpoints.MapBananaCakePop("/graphql");
             });
+        }
+
+        private static void PerformOnConfigChange(
+            DataGatewayConfig dataGatewayConfig,
+            IApplicationBuilder app)
+        {
+            if (dataGatewayConfig.DatabaseType != DatabaseType.Cosmos)
+            {
+                IGraphQLMetadataProvider metadataProvider =
+                    app.ApplicationServices.GetService<IGraphQLMetadataProvider>()!;
+                DoSqlMetadataInference(metadataProvider);
+            }
+
+            // If the configuration has been set, validate it after the services have been built but
+            // before the application is built. If it hasn't been set yet, skip validation, it will
+            // happen when the config changes.
+            app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
+        }
+
+        private static void DoSqlMetadataInference(
+            IGraphQLMetadataProvider metadataProvider)
+        {
+            System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
+
+            SqlGraphQLFileMetadataProvider fileMetadataProvider =
+                    (SqlGraphQLFileMetadataProvider)metadataProvider;
+                fileMetadataProvider.EnrichDatabaseSchemaWithTableMetadata().Wait();
+                fileMetadataProvider.InitFilterParser();
+
+            timer.Stop();
+            Console.WriteLine($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
         }
     }
 }

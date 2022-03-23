@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
+using System.Text;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
 using HotChocolate;
 using HotChocolate.Execution;
 using HotChocolate.Execution.Configuration;
+using HotChocolate.Language;
 using HotChocolate.Types;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -18,18 +18,24 @@ namespace Azure.DataGateway.Service.Services
         private readonly IQueryEngine _queryEngine;
         private readonly IMutationEngine _mutationEngine;
         private readonly IMetadataStoreProvider _metadataStoreProvider;
+        private readonly IDocumentCache _documentCache;
+        private readonly IDocumentHashProvider _documentHashProvider;
+
         public ISchema? Schema { private set; get; }
         public IRequestExecutor? Executor { private set; get; }
 
         public GraphQLService(
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
-            IMetadataStoreProvider metadataStoreProvider)
+            IMetadataStoreProvider metadataStoreProvider,
+            IDocumentCache documentCache,
+            IDocumentHashProvider documentHashProvider)
         {
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
             _metadataStoreProvider = metadataStoreProvider;
-
+            _documentCache = documentCache;
+            _documentHashProvider = documentHashProvider;
             InitializeSchemaAndResolvers();
         }
 
@@ -126,20 +132,23 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="requestBody">Http Request Body</param>
         /// <param name="requestProperties">Key/Value Pair of Https Headers intended to be used in GraphQL service</param>
         /// <returns></returns>
-        private static IQueryRequest CompileRequest(string requestBody, Dictionary<string, object> requestProperties)
+        private IQueryRequest CompileRequest(string requestBody, Dictionary<string, object> requestProperties)
         {
-            using JsonDocument requestBodyJson = JsonDocument.Parse(requestBody);
-            IQueryRequestBuilder requestBuilder = QueryRequestBuilder.New()
-                .SetQuery(requestBodyJson.RootElement.GetProperty("query").GetString()!);
+            byte[] graphQLData = Encoding.UTF8.GetBytes(requestBody);
+            ParserOptions _parserOptions = new();
 
-            JsonElement variables;
-            if (requestBodyJson.RootElement.TryGetProperty("variables", out variables))
-            {
-                requestBuilder =
-                    requestBuilder.SetVariableValues(
-                        JsonConvert.DeserializeObject<Dictionary<string, object?>>(variables.ToString()!)
-                    );
-            }
+            Utf8GraphQLRequestParser requestParser = new(
+                graphQLData,
+                _parserOptions,
+                _documentCache,
+                _documentHashProvider);
+
+            IReadOnlyList<GraphQLRequest> parsed = requestParser.Parse();
+
+            // TODO: Overhaul this to support batch queries
+            // right now we have only assumed a single query/mutation in the request
+            // but HotChocolate supports batching and we're just ignoring it for now
+            QueryRequestBuilder requestBuilder = QueryRequestBuilder.From(parsed[0]);
 
             // Individually adds each property to requestBuilder if they are provided.
             // Avoids using SetProperties() as it detrimentally overwrites

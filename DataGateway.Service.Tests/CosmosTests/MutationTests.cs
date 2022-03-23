@@ -46,7 +46,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             string id = Guid.NewGuid().ToString();
             var input = new
             {
-                //id,
+                id,
                 name = "test_name"
             };
             JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } });

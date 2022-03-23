@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
@@ -23,18 +24,21 @@ namespace Azure.DataGateway.Service.Services
         private readonly IQueryEngine _queryEngine;
         private readonly IMutationEngine _mutationEngine;
         private readonly IMetadataStoreProvider _metadataStoreProvider;
+        private readonly DataGatewayConfig _config;
+
         public ISchema? Schema { private set; get; }
         public IRequestExecutor? Executor { private set; get; }
 
         public GraphQLService(
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
-            IMetadataStoreProvider metadataStoreProvider)
+            IMetadataStoreProvider metadataStoreProvider,
+            DataGatewayConfig config)
         {
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
             _metadataStoreProvider = metadataStoreProvider;
-
+            _config = config;
             InitializeSchemaAndResolvers();
         }
 
@@ -46,7 +50,14 @@ namespace Azure.DataGateway.Service.Services
                 .AddDocument(root)
                 .AddDirectiveType(CustomDirectives.ModelTypeDirective())
                 .AddDocument(QueryBuilder.Build(root))
-                .AddDocument(MutationBuilder.Build(root));
+                .AddDocument(MutationBuilder.Build(root, _config.DatabaseType switch
+                {
+                    DatabaseType.Cosmos => SchemaBuilderType.Cosmos,
+                    DatabaseType.MsSql => SchemaBuilderType.MSSQL,
+                    DatabaseType.PostgreSql => SchemaBuilderType.PostgreSQL,
+                    DatabaseType.MySql => SchemaBuilderType.MySQL,
+                    _ => throw new NotImplementedException()
+                }));
 
             Schema = sb
                 .AddAuthorizeDirectiveType()

@@ -50,7 +50,7 @@ type Planet @model {
             _metadataStoreProvider.GraphQLSchema = jsonString;
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
-            _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider);
+            _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider, new Configurations.DataGatewayConfig { DatabaseType = Configurations.DatabaseType.Cosmos });
             _controller = new GraphQLController(_graphQLService);
             Client = _clientProvider.Client;
         }

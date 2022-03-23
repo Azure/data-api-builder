@@ -6,7 +6,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 {
     public static class MutationBuilder
     {
-        public static DocumentNode Build(DocumentNode root)
+        public static DocumentNode Build(DocumentNode root, SchemaBuilderType databaseType)
         {
             List<FieldDefinitionNode> mutationFields = new();
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs = new();
@@ -17,7 +17,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                 {
                     NameNode name = objectTypeDefinitionNode.Name;
 
-                    mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root));
+                    mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType));
                     mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root));
                     mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode));
                 }

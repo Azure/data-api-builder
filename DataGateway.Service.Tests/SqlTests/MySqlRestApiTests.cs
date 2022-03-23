@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
@@ -346,6 +347,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "InsertOneInCompositeNonAutoGenPKTest",
+                @"
+                    SELECT JSON_OBJECT('categoryId', categoryId, 'pieceId', pieceId, 'categoryName', categoryName,'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryId, pieceId, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK + @"
+                        WHERE categoryId = 5 AND pieceId = 2 AND categoryName ='Thriller' AND piecesAvailable = 0 AND piecesRequired = 0
+                    ) AS subq
+                "
+            },
+            {
                 "InsertOneInCompositeKeyTableTest",
                 @"
                     SELECT JSON_OBJECT('id', id, 'content', content, 'book_id', book_id) AS data
@@ -354,6 +366,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         FROM " + _tableWithCompositePrimaryKey + @"
                         WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
                         AND book_id = 1
+                    ) AS subq
+                "
+            },
+            {
+                "InsertOneInDefaultTestTable",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'content', content, 'book_id', book_id) AS data
+                    FROM (
+                        SELECT id, content, book_id
+                        FROM " + _tableWithCompositePrimaryKey +
+                        "WHERE id = " + $"{STARTING_ID_FOR_TEST_INSERTS + 1}" + @"
+                        AND book_id = 2 AND content = 'Its a classic'
                     ) AS subq
                 "
             },
@@ -377,6 +401,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         FROM " + _integrationTableName + @"
                         WHERE id = 7 AND title = 'The Hobbit Returns to The Shire'
                         AND publisher_id = 1234
+                    ) AS subq
+                "
+            },
+            {
+                "PutOne_Update_Default_Test",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'content', content, 'book_id', book_id) AS data
+                    FROM (
+                        SELECT id, content, book_id
+                        FROM " + _tableWithCompositePrimaryKey +@"
+                        WHERE id = 568 AND book_id = 1 AND content = 'Good book to read'
+                    ) AS subq
+                "
+            },
+            {
+                "PutOne_Update_CompositeNonAutoGenPK_Test",
+                @"
+                    SELECT JSON_OBJECT('categoryId', categoryId, 'pieceId', pieceId, 'categoryName', categoryName,'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryId, pieceId, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK + @"
+                        WHERE categoryId = 2 AND pieceId = 1 AND categoryName ='History' AND piecesAvailable = 10 AND piecesRequired = 5
                     ) AS subq
                 "
             },
@@ -415,6 +461,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "PutOne_Insert_CompositeNonAutoGenPK_Test",
+                @"
+                    SELECT JSON_OBJECT('categoryId', categoryId, 'pieceId', pieceId, 'categoryName', categoryName,'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryId, pieceId, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK + @"
+                        WHERE categoryId = 3 AND pieceId = 1 AND categoryName ='comics' AND piecesAvailable = 2 AND piecesRequired = 1
+                    ) AS subq
+                "
+            },
+            {
+                "PutOne_Insert_Default_Test",
+                @"
+                    SELECT JSON_OBJECT('categoryId', categoryId, 'pieceId', pieceId, 'categoryName', categoryName,'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryId, pieceId, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK + @"
+                        WHERE categoryId = 8 AND pieceId = 1 AND categoryName ='SciFi' AND piecesAvailable = 0 AND piecesRequired = 0
+                    ) AS subq
+                "
+            },
+            {
                 "PatchOne_Insert_NonAutoGenPK_Test",
                 @"SELECT JSON_OBJECT('id', id, 'title', title, 'issueNumber', issueNumber ) AS data
                     FROM (
@@ -426,6 +494,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "PatchOne_Insert_CompositeNonAutoGenPK_Test",
+                @"
+                    SELECT JSON_OBJECT('categoryId', categoryId, 'pieceId', pieceId, 'categoryName', categoryName,'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryId, pieceId, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK + @"
+                        WHERE categoryId = 4 AND pieceId = 1 AND categoryName ='Suspense' AND piecesAvailable = 5 AND piecesRequired = 4
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOne_Insert_Default_Test",
+                @"
+                    SELECT JSON_OBJECT('categoryId', categoryId, 'pieceId', pieceId, 'categoryName', categoryName,'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryId, pieceId, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK + @"
+                        WHERE categoryId = 7 AND pieceId = 1 AND categoryName ='Drama' AND piecesAvailable = 0 AND piecesRequired = 0
+                    ) AS subq
+                "
+            },
+            {
                 "PatchOne_Update_Test",
                 @"
                     SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
@@ -434,6 +524,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         FROM " + _integrationTableName + @"
                         WHERE id = 8 AND title = 'Heart of Darkness'
                         AND publisher_id = 2324
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOne_Update_Default_Test",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'content', content, 'book_id', book_id) AS data
+                    FROM (
+                        SELECT id, content, book_id
+                        FROM " + _tableWithCompositePrimaryKey + @"
+                        WHERE id = 567 AND book_id = 1 AND content = 'That's a great book'
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOne_Update_CompositeNonAutoGenPK_Test",
+                @"
+                    SELECT JSON_OBJECT('categoryId', categoryId, 'pieceId', pieceId, 'categoryName', categoryName,'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryId, pieceId, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK + @"
+                        WHERE categoryId = 1 AND pieceId = 1 AND categoryName ='books' AND piecesAvailable = 10 AND piecesRequired = 0
                     ) AS subq
                 "
             },
@@ -486,5 +598,41 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             return _queryMap[key];
         }
+
+        [TestMethod]
+        [Ignore]
+        public override Task InsertOneInCompositeKeyTableTest()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task InsertOneTest()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOne_Insert_NonAutoGenPK_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOne_Update_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOne_Insert_Test()
+        {
+            throw new NotImplementedException();
+        }
+
     }
 }

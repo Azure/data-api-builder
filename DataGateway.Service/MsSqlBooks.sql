@@ -1,4 +1,3 @@
-DROP TABLE IF EXISTS demand;
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
@@ -54,18 +53,12 @@ CREATE TABLE comics(
     volume bigint IDENTITY(5001,1)
 );
 
-CREATE TABLE demand(
-    id bigint IDENTITY(5001, 1),
-    book_id bigint NOT NULL,
-    piecesRequired int DEFAULT 0,
-    piecesAvailable int DEFAULT 0,
-    PRIMARY KEY(id,book_id)
-);
-
 CREATE TABLE stocks(
     categoryId bigint NOT NULL,
     pieceId bigint NOT NULL,
     categoryName varchar(max) NOT NULL,
+    piecesAvailable bigint DEFAULT 0,
+    piecesRequired bigint DEFAULT 0 NOT NULL,
     PRIMARY KEY(categoryId,pieceId)
 );
 
@@ -93,12 +86,6 @@ FOREIGN KEY (author_id)
 REFERENCES authors (id)
 ON DELETE CASCADE;
 
-ALTER TABLE demand
-ADD CONSTRAINT demand_books_fk
-FOREIGN KEY (book_id)
-REFERENCES books (id)
-ON DELETE CASCADE;
-
 SET IDENTITY_INSERT publishers ON
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd');
 SET IDENTITY_INSERT publishers OFF
@@ -117,9 +104,4 @@ SET IDENTITY_INSERT reviews ON
 INSERT INTO reviews(id, book_id, content) VALUES (567, 1, 'Indeed a great book'), (568, 1, 'I loved it'), (569, 1, 'best book I read in years');
 SET IDENTITY_INSERT reviews OFF
 
-SET IDENTITY_INSERT demand ON
-INSERT INTO demand(id, book_id, piecesAvailable,piecesRequired) VALUES (1, 1, 8,4);
-SET IDENTITY_INSERT demand OFF
-
-INSERT INTO stocks(categoryId, pieceId,categoryName) VALUES (1, 1, 'books');
-INSERT INTO stocks(categoryId, pieceId,categoryName) VALUES (2, 1, 'magazines');
+INSERT INTO stocks(categoryId, pieceId,categoryName) VALUES (1, 1, 'books'), (2, 1, 'magazines');

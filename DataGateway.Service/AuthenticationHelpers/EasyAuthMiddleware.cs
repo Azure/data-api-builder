@@ -15,26 +15,26 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
             _nextMiddleware = next;
         }
 
-        public async Task InvokeAsync(HttpContext context)
+        public async Task InvokeAsync(HttpContext httpContext)
         {
-            if (context.Request.Headers[EASY_AUTH_HEADER].Count > 0)
+            if (httpContext.Request.Headers[EASY_AUTH_HEADER].Count > 0)
             {
-                ClaimsIdentity? identity = AppServiceAuthentication.Parse(context);
+                ClaimsIdentity? identity = AppServiceAuthentication.Parse(httpContext);
 
                 // Parse App Service's EasyAuth injected headers into MiddleWare usable Security Principal
                 if (identity == null)
                 {
-                    identity = AppServiceAuthentication.Parse(context);
+                    identity = AppServiceAuthentication.Parse(httpContext);
                 }
 
                 if (identity != null)
                 {
-                    context.User = new ClaimsPrincipal(identity);
+                    httpContext.User = new ClaimsPrincipal(identity);
                 }
             }
 
             // Call the next delegate/middleware in the pipeline.
-            await _nextMiddleware(context);
+            await _nextMiddleware(httpContext);
         }
     }
 

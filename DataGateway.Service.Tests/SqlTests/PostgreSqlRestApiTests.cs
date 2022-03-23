@@ -336,7 +336,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   FROM (
                       SELECT *
                       FROM " + _integrationTableName + @"
-                      ORDER BY content desc, id
+                      ORDER BY publisher_id desc, id
                   ) AS subq"
             },
             {

@@ -197,7 +197,7 @@ namespace Azure.DataGateway.Service.Controllers
         {
             return await HandleOperation(
                 entityName,
-                Operation.Upsert,
+                HandlePatchPutSemantics(Operation.Upsert),
                 primaryKeyRoute);
         }
 
@@ -222,7 +222,7 @@ namespace Azure.DataGateway.Service.Controllers
         {
             return await HandleOperation(
                 entityName,
-                Operation.UpsertIncremental,
+                HandlePatchPutSemantics(Operation.UpsertIncremental),
                 primaryKeyRoute);
         }
 
@@ -247,7 +247,7 @@ namespace Azure.DataGateway.Service.Controllers
                     this.HttpContext.User = new ClaimsPrincipal(identity);
                 }
 
-                operationType = HandlePatchPutSemantics(Request.Headers, operationType);
+                //operationType = HandlePatchPutSemantics(Request.Headers, operationType);
                 // Utilizes C#8 using syntax which does not require brackets.
                 using JsonDocument? result
                     = await _restService.ExecuteAsync(
@@ -273,9 +273,6 @@ namespace Azure.DataGateway.Service.Controllers
                             return new CreatedResult(location: location, formattedResult.Value);
                         case Operation.Delete:
                             return new NoContentResult();
-                        case Operation.UpdateRest:
-                        case Operation.UpdateIncremental:
-                            return formattedResult;
                         case Operation.Upsert:
                         case Operation.UpsertIncremental:
                             primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
@@ -331,9 +328,10 @@ namespace Azure.DataGateway.Service.Controllers
         /// <param name="headers">Headers indicating operation to use.</param>
         /// <param name="operation">opertion to be used.</param>
         /// <returns>correct opertion based on headers.</returns>
-        private static Operation HandlePatchPutSemantics(IHeaderDictionary headers, Operation operation)
+        private Operation HandlePatchPutSemantics(Operation operation)
         {
-            if (headers.ContainsKey("If-Match"))
+
+            if (HttpContext.Request.Headers.ContainsKey("If-Match"))
             {
                 switch (operation)
                 {

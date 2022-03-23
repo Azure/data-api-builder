@@ -141,6 +141,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 // Process remaining columns in schemaColumns.
                 if (!isIncrementalUpdate)
                 {
+                    // UpdateOperations will be modified and have nullable values added for update when appropriate
                     AddNullifiedUnspecifiedFields(schemaColumns, UpdateOperations, tableDefinition);
                 }
             }

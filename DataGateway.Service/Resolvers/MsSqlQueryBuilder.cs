@@ -42,7 +42,7 @@ namespace Azure.DataGateway.Service.Resolvers
             string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)}"
                 + $" FROM {fromSql}"
                 + $" WHERE {predicates}"
-                + $" ORDER BY {Build(structure.PrimaryKeyAsColumns())}"; // build using custom ORDER BY information
+                + $" ORDER BY {Build(structure.PrimaryKeyAsColumns())}";
 
             query += FOR_JSON_SUFFIX;
             if (!structure.IsListQuery)

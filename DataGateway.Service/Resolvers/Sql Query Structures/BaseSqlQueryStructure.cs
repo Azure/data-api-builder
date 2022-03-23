@@ -72,6 +72,8 @@ namespace Azure.DataGateway.Service.Resolvers
         /// There will not be any columns leftover that are PK, since they are handled in request validation.
         /// </summary>
         /// <param name="leftoverSchemaColumns"></param>
+        /// <param name="updateOperations">List of Predicates representing UpdateOperations.</param>
+        /// <param name="tableDefinition">The definition for the table.</param>
         public void AddNullifiedUnspecifiedFields(List<string> leftoverSchemaColumns, List<Predicate> updateOperations, TableDefinition tableDefinition)
         {
             //result of adding (TableDefinition.Columns - MutationFields) to UpdateOperations

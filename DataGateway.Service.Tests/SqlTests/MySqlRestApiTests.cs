@@ -374,7 +374,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   FROM (
                       SELECT *
                       FROM " + _tableWithCompositePrimaryKey + @"
-                      ORDER BY publisher_id desc, book_id, id
+                      ORDER BY content desc, book_id, id
                       LIMIT 1
                   ) AS subq"
             },

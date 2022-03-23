@@ -375,8 +375,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     SELECT JSON_OBJECT('id', id, 'content', content, 'book_id', book_id) AS data
                     FROM (
                         SELECT id, content, book_id
-                        FROM " + _tableWithCompositePrimaryKey +
-                        "WHERE id = " + $"{STARTING_ID_FOR_TEST_INSERTS + 1}" + @"
+                        FROM " + _tableWithCompositePrimaryKey + @"
+                        WHERE id = " + $"{STARTING_ID_FOR_TEST_INSERTS + 1}" + @"
                         AND book_id = 2 AND content = 'Its a classic'
                     ) AS subq
                 "

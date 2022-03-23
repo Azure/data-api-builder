@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 
@@ -293,8 +294,19 @@ namespace Azure.DataGateway.Service.Controllers
             {
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine(ex.StackTrace);
-                Response.StatusCode = (int)ex.StatusCode;
-                return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
+                if (ex.Message == "Unauthorized")
+                {
+                    return new ForbidResult();
+                }
+                else if (ex.Message == "CHALLENGE")
+                {
+                    return new ChallengeResult(authenticationScheme: JwtBearerDefaults.AuthenticationScheme);
+                }
+                else
+                {
+                    Response.StatusCode = (int)ex.StatusCode;
+                    return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
+                }
             }
             catch (Exception ex)
             {

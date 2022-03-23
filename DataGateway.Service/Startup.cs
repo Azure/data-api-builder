@@ -229,6 +229,10 @@ namespace Azure.DataGateway.Service
             {
                 app.UseEasyAuth();
             }
+            else
+            {
+                app.UseJwtAuthenticationMiddleware();
+            }
 
             app.UseAuthorization();
 

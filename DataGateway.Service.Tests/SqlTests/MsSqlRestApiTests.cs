@@ -174,6 +174,31 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTestWithQueryStringAllFieldsOrderByAsc",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"ORDER BY title, id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithQueryStringAllFieldsOrderByDesc",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"ORDER BY publisher_id desc, id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFirstSingleKeyPaginationAndOrderBy",
+                $"SELECT TOP 1 * FROM { _integrationTableName } " +
+                $"ORDER BY title, id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFirstMultiKeyPaginationAndOrderBy",
+                $"SELECT TOP 1 * FROM REVIEWS " +
+                $"WHERE 1=1 " +
+                $"ORDER BY content desc, book_id, id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "InsertOneTest",
                 // This query is the query for the result we get back from the database
                 // after the insert operation. Not the query that we generate to perform

@@ -7,6 +7,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Web;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Models;
@@ -234,7 +235,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     JsonSerializer.Serialize(RestController.ErrorResponse(
                         expectedSubStatusCode.ToString(),
                         expectedErrorMessage, expectedStatusCode).Value) :
-                    $"{{\"value\":{FormatExpectedValue(await GetDatabaseResultAsync(sqlQuery))}{ExpectedNextLinkIfAny(paginated, baseUrl, $"{expectedAfterQueryString}")}}}";
+                    $"{{\"value\":{FormatExpectedValue(await GetDatabaseResultAsync(sqlQuery))}{ExpectedNextLinkIfAny(paginated, EncodeQueryString(baseUrl), $"{expectedAfterQueryString}")}}}";
             }
 
             SqlTestHelper.VerifyResult(
@@ -243,6 +244,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expectedStatusCode,
                 expectedLocationHeader,
                 !exception);
+        }
+
+        /// <summary>
+        /// Helper function encodes the query string into the correct
+        /// format. We utilize the toString() of the HttpValueCollection
+        /// which is used by the NameValueCollection returned from
+        /// ParseQueryString to avoid writing this ourselves.
+        /// </summary>
+        /// <param name="baseUrl">Url to be encoded as query string.</param>
+        /// <returns>query string encoded url.</returns>
+        private static string EncodeQueryString(string baseUrl)
+        {
+            return HttpUtility.ParseQueryString(baseUrl).ToString();
         }
 
         /// <summary>

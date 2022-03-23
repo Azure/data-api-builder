@@ -86,7 +86,7 @@ namespace Azure.DataGateway.Service.Services
         /// later generate queries in the given RestRequestContext.
         /// </summary>
         /// <param name="context">The RestRequestContext holding the major components of the query.</param>
-        public static void ParseQueryString(RestRequestContext context, string path, FilterParser filterParser)
+        public static void ParseQueryString(RestRequestContext context, string path, FilterParser filterParser, List<string> primaryKeys)
         {
             foreach (string key in context.ParsedQueryString!.Keys)
             {
@@ -104,7 +104,7 @@ namespace Azure.DataGateway.Service.Services
                         break;
                     case SORT_URL:
                         string sortQueryString = $"?{SORT_URL}={context.ParsedQueryString[key]}";
-                        context.OrderByClauseInUrl = GenerateOrderByList(filterParser.GetOrderByClause(sortQueryString, context.EntityName), context.EntityName, context.PrimaryKeyValuePairs);
+                        context.OrderByClauseInUrl = GenerateOrderByList(filterParser.GetOrderByClause(sortQueryString, context.EntityName), context.EntityName, primaryKeys);
                         break;
                     case AFTER_URL:
                         context.After = context.ParsedQueryString[key];
@@ -125,10 +125,10 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="node">The OrderByClause.</param>
         /// <param name="tableAlias">The name of the Table the columns are from.</param>
         /// <returns>A List<Column> where the elements are OrderByColumns.</Column></returns>
-        private static List<Column>? GenerateOrderByList(OrderByClause node, string tableAlias, Dictionary<string, object> primaryKeys)
+        private static List<Column>? GenerateOrderByList(OrderByClause node, string tableAlias, List<string> primaryKeys)
         {
             HashSet<string> remainingKeys = new();
-            foreach (string key in primaryKeys.Keys)
+            foreach (string key in primaryKeys)
             {
                 remainingKeys.Add(key);
             }

@@ -359,6 +359,76 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Tests the REST Api for Find operation for all records
+        /// order by title in ascending order.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithQueryStringAllFieldsOrderByAsc()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby=title",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithQueryStringAllFieldsOrderByAsc)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation for all records
+        /// order by publisher_id in descending order.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithQueryStringAllFieldsOrderByDesc()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby=publisher_id desc",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithQueryStringAllFieldsOrderByDesc)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned and then sorting by title,
+        /// with a single primary key in the table.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstSingleKeyPaginationAndOrderBy()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=1&$orderby=title",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyPaginationAndOrderBy)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"id\":2}"))}",
+                paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned and then sorting by
+        /// content, with multiple column primary key in the table.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstMultiKeyPaginationAndOrderBy()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=1&$orderby=content desc",
+                entity: _tableWithCompositePrimaryKey,
+                sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyPaginationAndOrderBy)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"book_id\":1,\"id\":567}"))}",
+                paginated: true
+            );
+        }
+
+        /// <summary>
         /// Tests the InsertOne functionality with a REST POST request.
         /// </summary>
         [TestMethod]

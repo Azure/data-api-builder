@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Services;
+using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
@@ -29,7 +30,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             // Setup GraphQL Components
             //
-            _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _metadataStoreProvider, new Configurations.DataGatewayConfig { DatabaseType = Configurations.DatabaseType.MsSql });
+            _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _metadataStoreProvider, new DocumentCache(), new Sha256DocumentHashProvider(), new Configurations.DataGatewayConfig { DatabaseType = Configurations.DatabaseType.MsSql });
             _graphQLController = new GraphQLController(_graphQLService);
         }
 

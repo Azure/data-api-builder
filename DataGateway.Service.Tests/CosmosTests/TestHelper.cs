@@ -3,6 +3,7 @@ using System.IO;
 using Azure.DataGateway.Service.Configurations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using Moq;
 
 namespace Azure.DataGateway.Service.Tests.CosmosTests
 {
@@ -27,6 +28,14 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         public static IOptions<DataGatewayConfig> DataGatewayConfig
         {
             get { return _dataGatewayConfig.Value; }
+        }
+
+        public static IOptionsMonitor<DataGatewayConfig> DataGatewayConfigMonitor
+        {
+            get
+            {
+                return Mock.Of<IOptionsMonitor<DataGatewayConfig>>(_ => _.CurrentValue == DataGatewayConfig.Value);
+            }
         }
 
         public static object GetItem(string id)

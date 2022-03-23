@@ -55,20 +55,29 @@ namespace Azure.DataGateway.Service.Services
         private Dictionary<string, MutationResolver> _mutationResolvers;
 
         public FileMetadataStoreProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
-        : this(dataGatewayConfig.Value.ResolverConfigFile,
-              dataGatewayConfig.Value.DatabaseType,
-              dataGatewayConfig.Value.DatabaseConnection.ConnectionString)
-        { }
-
-        public FileMetadataStoreProvider(
-            string resolverConfigPath,
-            DatabaseType databaseType,
-            string connectionString)
         {
-            _databaseType = databaseType;
-            _connectionString = connectionString;
+            DataGatewayConfig config = dataGatewayConfig.Value;
+            if (!config.DatabaseType.HasValue)
+            {
+                throw new ArgumentNullException("dataGatewayConfig.DatabaseType", "The database type should be set before creating a MetadataStoreProvider");
+            }
 
-            string jsonString = File.ReadAllText(resolverConfigPath);
+            string? resolverConfigJson = config.ResolverConfig;
+            string? graphQLSchema = config.GraphQLSchema;
+
+            _databaseType = config.DatabaseType.Value;
+            _connectionString = config.DatabaseConnection.ConnectionString;
+
+            if (string.IsNullOrEmpty(resolverConfigJson) && !string.IsNullOrEmpty(config.ResolverConfigFile))
+            {
+                resolverConfigJson = File.ReadAllText(config.ResolverConfigFile);
+            }
+
+            if (string.IsNullOrEmpty(resolverConfigJson))
+            {
+                throw new ArgumentNullException("dataGatewayConfig.ResolverConfig", "The resolver config should be set either via ResolverConfig or ResolverConfigFile.");
+            }
+
             JsonSerializerOptions options = new()
             {
                 PropertyNameCaseInsensitive = true,
@@ -78,7 +87,7 @@ namespace Azure.DataGateway.Service.Services
             // This feels verbose but it avoids having to make _config nullable - which would result in more
             // down the line issues and null check requirements
             ResolverConfig? deserializedConfig;
-            if ((deserializedConfig = JsonSerializer.Deserialize<ResolverConfig>(jsonString, options)) == null)
+            if ((deserializedConfig = JsonSerializer.Deserialize<ResolverConfig>(resolverConfigJson, options)) == null)
             {
                 throw new JsonException("Failed to get a ResolverConfig from the provided config");
             }
@@ -89,7 +98,12 @@ namespace Azure.DataGateway.Service.Services
 
             if (string.IsNullOrEmpty(_config.GraphQLSchema))
             {
-                _config = _config with { GraphQLSchema = File.ReadAllText(_config.GraphQLSchemaFile ?? "schema.gql") };
+                if (string.IsNullOrEmpty(graphQLSchema))
+                {
+                    graphQLSchema = File.ReadAllText(_config.GraphQLSchemaFile ?? "schema.gql");
+                }
+
+                _config = _config with { GraphQLSchema = graphQLSchema };
             }
 
             _mutationResolvers = new();
@@ -98,7 +112,7 @@ namespace Azure.DataGateway.Service.Services
                 _mutationResolvers.Add(resolver.Id, resolver);
             }
 
-            if (_config.DatabaseSchema == default && databaseType != DatabaseType.Cosmos)
+            if (_config.DatabaseSchema == default && _databaseType != DatabaseType.Cosmos)
             {
                 _config.DatabaseSchema = RefreshDatabaseSchemaWithTablesAsync().Result;
             }

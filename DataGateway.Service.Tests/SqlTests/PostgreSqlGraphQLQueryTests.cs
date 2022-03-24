@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
@@ -15,7 +15,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         #region Test Fixture Setup
         private static GraphQLService _graphQLService;
         private static GraphQLController _graphQLController;
-        private static readonly string _integrationTableName = "books";
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
@@ -25,7 +24,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [ClassInitialize]
         public static async Task InitializeTestFixture(TestContext context)
         {
-            await InitializeTestFixture(context, _integrationTableName, TestCategory.POSTGRESQL);
+            await InitializeTestFixture(context, TestCategory.POSTGRESQL);
 
             // Setup GraphQL Components
             _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _metadataStoreProvider);
@@ -48,6 +47,24 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id) as table0 LIMIT 100";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        [TestMethod]
+        public async Task MultipleResultQueryWithVariables()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"query ($first: Int!) {
+                getBooks(first: $first) {
+                    id
+                    title
+                }
+            }";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id) as table0 LIMIT 100";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController, new() { { "first", 100 } });
             string expected = await GetDatabaseResultAsync(postgresQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
@@ -406,6 +423,59 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        /// <sumary>
+        /// Test if filter and filterOData param successfully filters the query results
+        /// </summary>
+        [TestMethod]
+        public async Task TestFilterAndFilterODataParamForListQueries()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(_filter: {id: {gte: 1} and: [{id: {lte: 4}}]}) {
+                    id
+                    publisher {
+                        books(first: 3, _filterOData: ""id ne 2"") {
+                            id
+                        }
+                    }
+                }
+            }";
+
+            string postgresQuery = @"
+                SELECT COALESCE(jsonb_agg(to_jsonb(subq12)), '[]') AS data
+                FROM
+                  (SELECT table0.id AS id,
+                          table1_subq.data AS publisher
+                   FROM books AS table0
+                   LEFT OUTER JOIN LATERAL
+                     (SELECT to_jsonb(subq11) AS data
+                      FROM
+                        (SELECT table2_subq.data AS books
+                         FROM publishers AS table1
+                         LEFT OUTER JOIN LATERAL
+                           (SELECT COALESCE(jsonb_agg(to_jsonb(subq10)), '[]') AS data
+                            FROM
+                              (SELECT table2.id AS id
+                               FROM books AS table2
+                               WHERE (id != 2)
+                                 AND table1.id = table2.publisher_id
+                               ORDER BY table2.id
+                               LIMIT 3) AS subq10) AS table2_subq ON TRUE
+                         WHERE table0.publisher_id = table1.id
+                         ORDER BY table1.id
+                         LIMIT 1) AS subq11) AS table1_subq ON TRUE
+                   WHERE ((id >= 1)
+                          AND (id <= 4))
+                   ORDER BY table0.id
+                   LIMIT 100) AS subq12
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Negative Tests
@@ -416,6 +486,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "getBooks";
             string graphQLQuery = @"{
                 getBooks(first: -1) {
+                    id
+                    title
+                }
+            }";
+
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
+        }
+
+        [TestMethod]
+        public async Task TestInvalidFilterParamQuery()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(_filterOData: ""INVALID"") {
                     id
                     title
                 }

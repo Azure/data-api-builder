@@ -9,8 +9,9 @@ using HotChocolate.Execution;
 using HotChocolate.Execution.Configuration;
 using HotChocolate.Types;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 
-namespace Azure.DataGateway.Services
+namespace Azure.DataGateway.Service.Services
 {
     public class GraphQLService
     {
@@ -130,6 +131,15 @@ namespace Azure.DataGateway.Services
             using JsonDocument requestBodyJson = JsonDocument.Parse(requestBody);
             IQueryRequestBuilder requestBuilder = QueryRequestBuilder.New()
                 .SetQuery(requestBodyJson.RootElement.GetProperty("query").GetString()!);
+
+            JsonElement variables;
+            if (requestBodyJson.RootElement.TryGetProperty("variables", out variables))
+            {
+                requestBuilder =
+                    requestBuilder.SetVariableValues(
+                        JsonConvert.DeserializeObject<Dictionary<string, object?>>(variables.ToString()!)
+                    );
+            }
 
             // Individually adds each property to requestBuilder if they are provided.
             // Avoids using SetProperties() as it detrimentally overwrites

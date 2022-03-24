@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
 using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json;
@@ -44,11 +45,39 @@ namespace Azure.DataGateway.Service.Resolvers
 
             Container container = _clientProvider.Client.GetDatabase(resolver.DatabaseName)
                 .GetContainer(resolver.ContainerName);
-            // TODO: check insertion type
+            // TODO: As of now id is the partition key. This has to be changed when partition key support is added. Issue #215
+            string id;
+            PartitionKey partitionKey;
+            if (jObject.TryGetValue("id", out JToken? idObj))
+            {
+                id = idObj.ToString();
+                partitionKey = new(id);
+            }
+            else
+            {
+                throw new InvalidDataException("id field is mandatory");
+            }
 
-            Microsoft.Azure.Cosmos.ItemResponse<JObject> response = await container.UpsertItemAsync(jObject);
-            JObject res = response.Resource;
-            return res;
+            ItemResponse<JObject>? response;
+            switch (resolver.OperationType)
+            {
+                case Operation.Upsert:
+                    response = await container.UpsertItemAsync(jObject);
+                    break;
+                case Operation.Delete:
+                    response = await container.DeleteItemAsync<JObject>(id, partitionKey);
+                    if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+                    {
+                        // Delete item doesnt return the actual item, so we return emtpy json
+                        return new JObject();
+                    }
+
+                    break;
+                default:
+                    throw new NotSupportedException($"unsupprted operation type: {resolver.OperationType.ToString()}");
+            }
+
+            return response.Resource;
         }
 
         /// <summary>
@@ -62,7 +91,6 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             string graphQLMutationName = context.Selection.Field.Name.Value;
             MutationResolver resolver = _metadataStoreProvider.GetMutationResolver(graphQLMutationName);
-
             // TODO: we are doing multiple round of serialization/deserialization
             // fixme
             JObject jObject = await ExecuteAsync(parameters, resolver);

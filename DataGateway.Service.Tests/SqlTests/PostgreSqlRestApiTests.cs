@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
@@ -270,6 +270,56 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "FindTestWithFirstSingleKeyPagination",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        ORDER BY id
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFirstMultiKeyPagination",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _tableWithCompositePrimaryKey + @"
+                        ORDER BY book_id, id
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithAfterSingleKeyPagination",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE id > 7
+                        ORDER BY id
+                        LIMIT 100
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithAfterMultiKeyPagination",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _tableWithCompositePrimaryKey + @"
+                        WHERE book_id > 1 OR (book_id = 1 AND id > 567)
+                        ORDER BY book_id, id
+                        LIMIT 100
+                    ) AS subq
+                "
+            },
+            {
                 "InsertOneTest",
                 @"
                     SELECT to_jsonb(subq) AS data
@@ -315,7 +365,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [ClassInitialize]
         public static async Task InitializeTestFixture(TestContext context)
         {
-            await InitializeTestFixture(context, RestApiTestBase._integrationTableName, TestCategory.POSTGRESQL);
+            await InitializeTestFixture(context, TestCategory.POSTGRESQL);
 
             _restService = new RestService(_queryEngine,
                 _mutationEngine,
@@ -377,6 +427,41 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         [Ignore]
         public override Task PutOne_Insert_PKAutoGen_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOne_Insert_BadReq_AutoGen_NonNullable_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOne_Insert_NonAutoGenPK_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOne_Update_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOne_Insert_PKAutoGen_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOne_Insert_WithoutNonNullableField_Test()
         {
             throw new NotImplementedException();
         }

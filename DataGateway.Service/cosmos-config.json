@@ -7,6 +7,12 @@
       "databaseName": "graphqldb",
       "containerName": "planet",
       "operationType": "Upsert"
+    },
+    {
+      "id": "deletePlanet",
+      "databaseName": "graphqldb",
+      "containerName": "planet",
+      "operationType": "Delete"
     }
   ],
   "GraphQLTypes": {

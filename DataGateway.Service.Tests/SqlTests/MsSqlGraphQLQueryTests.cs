@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
@@ -16,7 +16,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         #region Test Fixture Setup
         private static GraphQLService _graphQLService;
         private static GraphQLController _graphQLController;
-        private static readonly string _integrationTableName = "books";
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
@@ -26,7 +25,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [ClassInitialize]
         public static async Task InitializeTestFixture(TestContext context)
         {
-            await InitializeTestFixture(context, _integrationTableName, TestCategory.MSSQL);
+            await InitializeTestFixture(context, TestCategory.MSSQL);
 
             // Setup GraphQL Components
             //
@@ -54,6 +53,24 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string msSqlQuery = $"SELECT id, title FROM books ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        [TestMethod]
+        public async Task MultipleResultQueryWithVariables()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"query ($first: Int!) {
+                getBooks(first: $first) {
+                    id
+                    title
+                }
+            }";
+            string msSqlQuery = $"SELECT id, title FROM books ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController, new() { { "first", 100 } });
             string expected = await GetDatabaseResultAsync(msSqlQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
@@ -296,6 +313,75 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        /// <summary>
+        /// This deeply nests a many-to-many join multiple times to show that
+        /// it still results in a valid query.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task DeeplyNestedManyToManyJoinQueryWithVariables()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"query ($first: Int) {
+              getBooks(first: $first) {
+                title
+                authors(first: $first) {
+                  name
+                  books(first: $first) {
+                    title
+                    authors(first: $first) {
+                      name
+                    }
+                  }
+                }
+              }
+            }";
+
+            string msSqlQuery = @"
+                SELECT TOP 100 [table0].[title] AS [title],
+                    JSON_QUERY(COALESCE([table6_subq].[data], '[]')) AS [authors]
+                FROM [books] AS [table0]
+                OUTER APPLY (
+                    SELECT TOP 100 [table6].[name] AS [name],
+                        JSON_QUERY(COALESCE([table7_subq].[data], '[]')) AS [books]
+                    FROM [authors] AS [table6]
+                    INNER JOIN [book_author_link] AS [table11] ON [table11].[author_id] = [table6].[id]
+                    OUTER APPLY (
+                        SELECT TOP 100 [table7].[title] AS [title],
+                            JSON_QUERY(COALESCE([table8_subq].[data], '[]')) AS [authors]
+                        FROM [books] AS [table7]
+                        INNER JOIN [book_author_link] AS [table10] ON [table10].[book_id] = [table7].[id]
+                        OUTER APPLY (
+                            SELECT TOP 100 [table8].[name] AS [name]
+                            FROM [authors] AS [table8]
+                            INNER JOIN [book_author_link] AS [table9] ON [table9].[author_id] = [table8].[id]
+                            WHERE [table7].[id] = [table9].[book_id]
+                            ORDER BY [id]
+                            FOR JSON PATH,
+                                INCLUDE_NULL_VALUES
+                            ) AS [table8_subq]([data])
+                        WHERE [table6].[id] = [table10].[author_id]
+                        ORDER BY [id]
+                        FOR JSON PATH,
+                            INCLUDE_NULL_VALUES
+                        ) AS [table7_subq]([data])
+                    WHERE [table0].[id] = [table11].[book_id]
+                    ORDER BY [id]
+                    FOR JSON PATH,
+                        INCLUDE_NULL_VALUES
+                    ) AS [table6_subq]([data])
+                WHERE 1 = 1
+                ORDER BY [id]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController, new() { { "first", 100 } });
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         [TestMethod]
         public async Task QueryWithSingleColumnPrimaryKey()
         {
@@ -404,6 +490,61 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        /// <sumary>
+        /// Test if filter and filterOData param successfully filters the query results
+        /// </summary>
+        [TestMethod]
+        public async Task TestFilterAndFilterODataParamForListQueries()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(_filter: {id: {gte: 1} and: [{id: {lte: 4}}]}) {
+                    id
+                    publisher {
+                        books(first: 3, _filterOData: ""id ne 2"") {
+                            id
+                        }
+                    }
+                }
+            }";
+
+            string msSqlQuery = @"
+                SELECT TOP 100 [table0].[id] AS [id],
+                    JSON_QUERY([table1_subq].[data]) AS [publisher]
+                FROM [books] AS [table0]
+                OUTER APPLY (
+                    SELECT TOP 1 JSON_QUERY(COALESCE([table2_subq].[data], '[]')) AS [books]
+                    FROM [publishers] AS [table1]
+                    OUTER APPLY (
+                        SELECT TOP 3 [table2].[id] AS [id]
+                        FROM [books] AS [table2]
+                        WHERE (id != 2)
+                            AND [table1].[id] = [table2].[publisher_id]
+                        ORDER BY [table2].[id]
+                        FOR JSON PATH,
+                            INCLUDE_NULL_VALUES
+                        ) AS [table2_subq]([data])
+                    WHERE [table0].[publisher_id] = [table1].[id]
+                    ORDER BY [table1].[id]
+                    FOR JSON PATH,
+                        INCLUDE_NULL_VALUES,
+                        WITHOUT_ARRAY_WRAPPER
+                    ) AS [table1_subq]([data])
+                WHERE (
+                        (id >= 1)
+                        AND (id <= 4)
+                        )
+                ORDER BY [table0].[id]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Negative Tests
@@ -422,6 +563,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
+
+        [TestMethod]
+        public async Task TestInvalidFilterParamQuery()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(_filterOData: ""INVALID"") {
+                    id
+                    title
+                }
+            }";
+
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
+        }
+
         #endregion
     }
 }

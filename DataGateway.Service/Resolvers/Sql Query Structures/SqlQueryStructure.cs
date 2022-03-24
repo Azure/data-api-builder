@@ -4,10 +4,11 @@ using System.Linq;
 using System.Net;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using Microsoft.OData.UriParser;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -59,7 +60,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// The maximum number of results this query should return.
         /// </summary>
-        private uint _limit = DEFAULT_LIST_LIMIT;
+        private uint? _limit = DEFAULT_LIST_LIMIT;
 
         /// <summary>
         /// If this query is built because of a GraphQL query (as opposed to
@@ -112,7 +113,6 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             TableAlias = TableName;
             IsListQuery = context.IsMany;
-            FilterPredicates = string.Empty;
 
             context.FieldsToBeReturned.ForEach(fieldName => AddColumn(fieldName));
             if (Columns.Count == 0)
@@ -145,6 +145,12 @@ namespace Azure.DataGateway.Service.Resolvers
                 FilterPredicates = context.FilterClauseInUrl.Expression.Accept<string>(visitor);
             }
 
+            if (!string.IsNullOrWhiteSpace(context.After))
+            {
+                AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromJsonString(context.After, PaginationMetadata));
+            }
+
+            _limit = context.First is not null ? context.First + 1 : DEFAULT_LIST_LIMIT + 1;
             ParametrizeColumns();
         }
 
@@ -219,16 +225,19 @@ namespace Azure.DataGateway.Service.Resolvers
             if (IsListQuery && queryParams.ContainsKey("first"))
             {
                 // parse first parameter for all list queries
-                object firstObject = queryParams["first"];
+                object? firstObject = queryParams["first"];
 
                 if (firstObject != null)
                 {
                     // due to the way parameters get resolved,
-                    long first = (long)firstObject;
+                    int first = (int)firstObject;
 
                     if (first <= 0)
                     {
-                        throw new DataGatewayException($"first must be a positive integer for {schemaField.Name}", HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
+                        throw new DataGatewayException(
+                        message: $"Invalid number of items requested, $first must be an integer greater than 0 for {schemaField.Name}. Actual value: {first.ToString()}",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }
 
                     _limit = (uint)first;
@@ -265,7 +274,8 @@ namespace Azure.DataGateway.Service.Resolvers
             // TableName, TableAlias, Columns, and _limit
             if (PaginationMetadata.IsPaginated)
             {
-                AddPaginationPredicate(queryParams);
+                IDictionary<string, object>? afterJsonValues = SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata);
+                AddPaginationPredicate(afterJsonValues);
 
                 if (PaginationMetadata.RequestedEndCursor)
                 {
@@ -305,6 +315,7 @@ namespace Azure.DataGateway.Service.Resolvers
             Joins = new();
             PaginationMetadata = new(this);
             ColumnLabelToParam = new();
+            FilterPredicates = string.Empty;
         }
 
         ///<summary>
@@ -325,10 +336,8 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Add the predicates associated with the "after" parameter of paginated queries
         /// </summary>
-        void AddPaginationPredicate(IDictionary<string, object> queryParams)
+        void AddPaginationPredicate(IDictionary<string, object> afterJsonValues)
         {
-            IDictionary<string, object> afterJsonValues = SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata);
-
             if (!afterJsonValues.Any())
             {
                 // no need to create a predicate for pagination
@@ -468,11 +477,12 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     IObjectField? subschemaField = _underlyingFieldType.Fields[fieldName];
 
-                    IDictionary<string, object> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field);
                     if (_ctx == null)
                     {
-                        throw new InvalidOperationException("No GraphQL context exists");
+                        throw new DataGatewayException("No GraphQL context exists", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
                     }
+
+                    IDictionary<string, object> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
 
                     SqlQueryStructure subquery = new(_ctx, subqueryParams, MetadataStoreProvider, subschemaField, field, Counter);
 
@@ -567,7 +577,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// The maximum number of results this query should return.
         /// </summary>
-        public uint Limit()
+        public uint? Limit()
         {
             if (IsListQuery || PaginationMetadata.IsPaginated)
             {

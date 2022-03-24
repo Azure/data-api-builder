@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 
@@ -17,7 +17,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public string Container { get; internal set; }
         public string Database { get; internal set; }
         public string? Continuation { get; internal set; }
-        public long MaxItemCount { get; internal set; }
+        public int MaxItemCount { get; internal set; }
 
         protected CosmosGraphQLFileMetadataProvider MetadataStoreProvider { get; }
 
@@ -63,7 +63,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 // TODO: Revisit 'first' while adding support for TOP queries
                 if (parameter.Key == "first")
                 {
-                    MaxItemCount = (long)parameter.Value;
+                    MaxItemCount = (int)parameter.Value;
                     continue;
                 }
 

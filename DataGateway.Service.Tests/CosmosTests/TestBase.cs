@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.Cosmos;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -32,9 +32,41 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         [ClassInitialize]
         public static void Init(TestContext context)
         {
-            _clientProvider = new CosmosClientProvider(TestHelper.DataGatewayConfig);
+            _clientProvider = new CosmosClientProvider(TestHelper.DataGatewayConfigMonitor);
             _metadataStoreProvider = new MetadataStoreProviderForTest();
-            string jsonString = File.ReadAllText("schema.gql");
+            string jsonString = @"
+type Query {
+    characterList: [Character]
+    characterById (id : ID!): Character
+    planetById (id: ID! = 1): Planet
+    getPlanet(id: ID, name: String): Planet
+    planetList: [Planet]
+    planets(first: Int, after: String): PlanetConnection
+}
+
+type Mutation {
+    addPlanet(id: String, name: String): Planet
+    deletePlanet(id: String): Planet
+}
+
+type PlanetConnection {
+    items: [Planet]
+    endCursor: String
+    hasNextPage: Boolean
+}
+
+type Character {
+    id : ID,
+    name : String,
+    type: String,
+    homePlanet: Int,
+    primaryFunction: String
+}
+
+type Planet {
+    id : ID,
+    name : String
+}";
             _metadataStoreProvider.GraphQLSchema = jsonString;
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
@@ -125,18 +157,27 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         /// Executes the GraphQL request and returns the results
         /// </summary>
         /// <param name="queryName"> Name of the GraphQL query/mutation</param>
-        /// <param name="graphQLQuery"> The GraphQL query/mutation</param>
+        /// <param name="query"> The GraphQL query/mutation</param>
+        /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
         /// <returns></returns>
-        internal static async Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string graphQLQuery)
+        internal static async Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string query, Dictionary<string, object> variables = null)
         {
-            string queryJson = JObject.FromObject(new
-            {
-                query = graphQLQuery
-            }).ToString();
+            string queryJson = variables == null ?
+                JObject.FromObject(new { query }).ToString() :
+                JObject.FromObject(new
+                {
+                    query,
+                    variables
+                }).ToString();
             _controller.ControllerContext.HttpContext = GetHttpContextWithBody(queryJson);
             JsonElement graphQLResult = await _controller.PostAsync();
+
+            if (graphQLResult.TryGetProperty("errors", out JsonElement errors))
+            {
+                Assert.Fail(errors.GetRawText());
+            }
+
             return graphQLResult.GetProperty("data").GetProperty(queryName);
         }
-
     }
 }

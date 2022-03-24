@@ -8,7 +8,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Services;
+using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
 
@@ -36,7 +36,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Executes the mutation query and returns result as JSON object asynchronously.
+        /// Executes the GraphQL mutation query and returns result as JSON object asynchronously.
         /// </summary>
         /// <param name="context">context of graphql mutation</param>
         /// <param name="parameters">parameters in the mutation query.</param>
@@ -60,7 +60,11 @@ namespace Azure.DataGateway.Service.Resolvers
                 // compute the mutation result before removing the element
                 result = await _queryEngine.ExecuteAsync(
                     context,
+                // Disabling the warning since trying to fix this opens up support for nullability
+                // tracked in #235 on REST and #201 on GraphQL.
+#pragma warning disable CS8620
                     parameters);
+#pragma warning restore CS8620
             }
 
             using DbDataReader dbDataReader =
@@ -71,7 +75,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (!context.Selection.Type.IsScalarType() && mutationResolver.OperationType != Operation.Delete)
             {
-                Dictionary<string, object>? searchParams = await ExtractRowFromDbDataReader(dbDataReader);
+                Dictionary<string, object?>? searchParams = await ExtractRowFromDbDataReader(dbDataReader);
 
                 if (searchParams == null)
                 {
@@ -94,7 +98,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Executes the mutation query and returns result as JSON object asynchronously.
+        /// Executes the REST mutation query and returns result as JSON object asynchronously.
         /// </summary>
         /// <param name="context">context of REST mutation request.</param>
         /// <param name="parameters">parameters in the mutation query.</param>
@@ -111,35 +115,57 @@ namespace Azure.DataGateway.Service.Resolvers
                     context.OperationType,
                     parameters);
 
-                Dictionary<string, object>? resultRecord = new();
+                Dictionary<string, object?>? resultRecord = new();
                 resultRecord = await ExtractRowFromDbDataReader(dbDataReader);
 
                 string? jsonResultString = null;
 
-                /// Processes a second result set from DbDataReader if it exists.
-                /// In MsSQL upsert:
-                /// result set #1: result of the UPDATE operation.
-                /// result set #2: result of the INSERT operation.
-                if (await dbDataReader.NextResultAsync())
+                switch (context.OperationType)
                 {
-                    // Since no first result set exists, we overwrite Dictionary here.
-                    resultRecord = await ExtractRowFromDbDataReader(dbDataReader);
-                    jsonResultString = JsonSerializer.Serialize(resultRecord);
-                }
+                    case Operation.Delete:
+                        // Records affected tells us that item was successfully deleted.
+                        // No records affected happens for a DELETE request on nonexistent object
+                        // Returning empty JSON result triggers a NoContent result in calling REST service.
+                        if (dbDataReader.RecordsAffected > 0)
+                        {
+                            jsonResultString = "{}";
+                        }
 
-                if (context.OperationType == Operation.Delete)
-                {
-                    // Records affected tells us that item was successfully deleted.
-                    // No records affected happens for a DELETE request on nonexistent object
-                    // Returning empty JSON result triggers a NoContent result in calling REST service.
-                    if (dbDataReader.RecordsAffected > 0)
-                    {
-                        jsonResultString = "{}";
-                    }
-                }
-                else if (context.OperationType == Operation.Insert || context.OperationType == Operation.Update)
-                {
-                    jsonResultString = JsonSerializer.Serialize(resultRecord);
+                        break;
+
+                    case Operation.Insert:
+                    case Operation.Update:
+                        jsonResultString = JsonSerializer.Serialize(resultRecord);
+                        break;
+
+                    case Operation.Upsert:
+                    case Operation.UpsertIncremental:
+                        /// Processes a second result set from DbDataReader if it exists.
+                        /// In MsSQL upsert:
+                        /// result set #1: result of the UPDATE operation.
+                        /// result set #2: result of the INSERT operation.
+                        if (resultRecord != null)
+                        {
+                            // We give empty result set for updates
+                            jsonResultString = null;
+                        }
+                        else if (await dbDataReader.NextResultAsync())
+                        {
+                            // Since no first result set exists, we overwrite Dictionary here.
+                            resultRecord = await ExtractRowFromDbDataReader(dbDataReader);
+                            jsonResultString = JsonSerializer.Serialize(resultRecord);
+                        }
+                        else
+                        {
+                            // If there is no resultset, raise dbexception
+                            // this is needed for MySQL.
+                            throw new DataGatewayException(
+                                message: $"Could not perform the given mutation on entity {context.EntityName}.",
+                                statusCode: HttpStatusCode.InternalServerError,
+                                subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
+                        }
+
+                        break;
                 }
 
                 if (jsonResultString == null)
@@ -159,20 +185,11 @@ namespace Azure.DataGateway.Service.Resolvers
                     statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
             }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine(ex.StackTrace);
-                throw new DataGatewayException(
-                    message: $"Could not perform the given mutation on entity {context.EntityName}.",
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
-            }
         }
 
         /// <summary>
-        /// Performs the given mutation operation type on the table and
-        /// returns result as JSON object asynchronously.
+        /// Performs the given REST and GraphQL mutation operation type
+        /// on the table and returns result as JSON object asynchronously.
         /// </summary>
         private async Task<DbDataReader> PerformMutationOperation(
             string tableName,
@@ -190,9 +207,9 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryParameters = insertQueryStruct.Parameters;
                     break;
                 case Operation.Update:
-                    SqlUpdateStructure updateQueryStruct = new(tableName, _metadataStoreProvider, parameters);
-                    queryString = _queryBuilder.Build(updateQueryStruct);
-                    queryParameters = updateQueryStruct.Parameters;
+                    SqlUpdateStructure updateStructure = new(tableName, _metadataStoreProvider, parameters);
+                    queryString = _queryBuilder.Build(updateStructure);
+                    queryParameters = updateStructure.Parameters;
                     break;
                 case Operation.Delete:
                     SqlDeleteStructure deleteStructure = new(tableName, _metadataStoreProvider, parameters);
@@ -200,9 +217,14 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryParameters = deleteStructure.Parameters;
                     break;
                 case Operation.Upsert:
-                    SqlUpsertQueryStructure upsertStructure = new(tableName, _metadataStoreProvider, parameters);
+                    SqlUpsertQueryStructure upsertStructure = new(tableName, _metadataStoreProvider, parameters, incrementalUpdate: false);
                     queryString = _queryBuilder.Build(upsertStructure);
                     queryParameters = upsertStructure.Parameters;
+                    break;
+                case Operation.UpsertIncremental:
+                    SqlUpsertQueryStructure upsertIncrementalStructure = new(tableName, _metadataStoreProvider, parameters, incrementalUpdate: true);
+                    queryString = _queryBuilder.Build(upsertIncrementalStructure);
+                    queryParameters = upsertIncrementalStructure.Parameters;
                     break;
                 default:
                     throw new NotSupportedException($"Unexpected mutation operation \" {operationType}\" requested.");
@@ -217,9 +239,9 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Extracts a single row from DbDataReader and format it so it can be used as a parameter to a query execution
         ///</summary>
         ///<returns>A dictionary representating the row in <c>ColumnName: Value</c> format, null if no row was found</returns>
-        private static async Task<Dictionary<string, object>?> ExtractRowFromDbDataReader(DbDataReader dbDataReader)
+        private static async Task<Dictionary<string, object?>?> ExtractRowFromDbDataReader(DbDataReader dbDataReader)
         {
-            Dictionary<string, object> row = new();
+            Dictionary<string, object?> row = new();
 
             if (await dbDataReader.ReadAsync())
             {
@@ -232,7 +254,15 @@ namespace Azure.DataGateway.Service.Resolvers
                         foreach (DataRow schemaRow in schemaTable.Rows)
                         {
                             string columnName = (string)schemaRow["ColumnName"];
-                            row.Add(columnName, dbDataReader[columnName]);
+                            int colIndex = dbDataReader.GetOrdinal(columnName);
+                            if (!dbDataReader.IsDBNull(colIndex))
+                            {
+                                row.Add(columnName, dbDataReader[columnName]);
+                            }
+                            else
+                            {
+                                row.Add(columnName, value: null);
+                            }
                         }
                     }
                 }
@@ -256,7 +286,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 // DeleteOne based off primary key in request.
                 parameters = new(context.PrimaryKeyValuePairs);
             }
-            else if (context.OperationType == Operation.Upsert)
+            else if (context.OperationType == Operation.Upsert || context.OperationType == Operation.UpsertIncremental)
             {
                 // Combine both PrimaryKey/Field ValuePairs
                 // because we create both an insert and an update statement.

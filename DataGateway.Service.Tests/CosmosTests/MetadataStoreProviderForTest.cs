@@ -1,7 +1,7 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
-using Azure.DataGateway.Services;
 
 namespace Azure.DataGateway.Service.Tests.CosmosTests
 {
@@ -55,6 +55,11 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         public FilterParser GetFilterParser()
         {
             return _filterParser;
+        }
+
+        public Task<DatabaseSchema> RefreshDatabaseSchemaWithTablesAsync(string? schemaName)
+        {
+            throw new System.NotImplementedException();
         }
     }
 }

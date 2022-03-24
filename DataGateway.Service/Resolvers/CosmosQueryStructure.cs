@@ -19,11 +19,11 @@ namespace Azure.DataGateway.Service.Resolvers
         public string? Continuation { get; internal set; }
         public int MaxItemCount { get; internal set; }
 
-        protected CosmosGraphQLFileMetadataProvider MetadataStoreProvider { get; }
+        protected IGraphQLMetadataProvider MetadataStoreProvider { get; }
 
         public CosmosQueryStructure(IMiddlewareContext context,
             IDictionary<string, object> parameters,
-            CosmosGraphQLFileMetadataProvider metadataStoreProvider)
+            IGraphQLMetadataProvider metadataStoreProvider)
             : base()
         {
             MetadataStoreProvider = metadataStoreProvider;

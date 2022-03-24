@@ -27,7 +27,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await InitializeTestFixture(context, TestCategory.POSTGRESQL);
 
             // Setup GraphQL Components
-            _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _metadataStoreProvider);
+            _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _graphQLMetadataProvider);
             _graphQLController = new GraphQLController(_graphQLService);
         }
 

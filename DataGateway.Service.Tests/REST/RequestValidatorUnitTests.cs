@@ -16,12 +16,12 @@ namespace Azure.DataGateway.Service.Tests.REST
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class RequestValidatorUnitTests
     {
-        private static Mock<IMetadataStoreProvider> _metadataStore;
+        private static Mock<SqlGraphQLFileMetadataProvider> _metadataStore;
 
         [ClassInitialize]
         public static void InitializeTestFixture(TestContext context)
         {
-            _metadataStore = new Mock<IMetadataStoreProvider>();
+            _metadataStore = new Mock<SqlGraphQLFileMetadataProvider>();
         }
 
         #region Positive Tests
@@ -224,13 +224,13 @@ namespace Azure.DataGateway.Service.Tests.REST
         /// of negative tests, vs downstream service failure.
         /// </summary>
         /// <param name="findRequestContext">Client simulated request</param>
-        /// <param name="metadataStore">Mocked Config provider</param>
+        /// <param name="metadataStore">Mocked GraphQLResolverConfig provider</param>
         /// <param name="expectsException">True/False whether we expect validation to fail.</param>
         /// <param name="statusCode">Integer which represents the http status code expected to return.</param>
         /// <param name="subStatusCode">Represents the sub status code that we expect to return.</param>
         public static void PerformTest(
             FindRequestContext findRequestContext,
-            IMetadataStoreProvider metadataStore,
+            IGraphQLMetadataProvider metadataStore,
             bool expectsException,
             HttpStatusCode statusCode = HttpStatusCode.BadRequest,
             DataGatewayException.SubStatusCodes subStatusCode = DataGatewayException.SubStatusCodes.BadRequest)

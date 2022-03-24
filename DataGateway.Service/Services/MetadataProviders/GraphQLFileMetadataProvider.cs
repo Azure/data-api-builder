@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models;
 using Microsoft.Extensions.Options;
@@ -17,7 +15,7 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
     /// </summary>
     public abstract class GraphQLFileMetadataProvider : IGraphQLMetadataProvider
     {
-        protected ResolverConfig GraphQLResolverConfig { get; init; }
+        public ResolverConfig GraphQLResolverConfig { get; set; }
 
         /// <summary>
         /// Stores mutation resolvers contained in configuration file.
@@ -32,13 +30,14 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
             DataGatewayConfig config = dataGatewayConfig.Value;
             if (!config.DatabaseType.HasValue)
             {
-                throw new ArgumentNullException("dataGatewayConfig.DatabaseType", "The database type should be set before creating a MetadataStoreProvider");
+                throw new ArgumentNullException("dataGatewayConfig.DatabaseType",
+                    "The database type should be set before creating a MetadataStoreProvider");
             }
+
+            CloudDbType = config.DatabaseType.Value;
 
             string? resolverConfigJson = config.ResolverConfig;
             string? graphQLSchema = config.GraphQLSchema;
-
-            CloudDbType = config.DatabaseType.Value;
 
             if (string.IsNullOrEmpty(resolverConfigJson) && !string.IsNullOrEmpty(config.ResolverConfigFile))
             {
@@ -47,26 +46,11 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
 
             if (string.IsNullOrEmpty(resolverConfigJson))
             {
-                throw new ArgumentNullException("dataGatewayConfig.ResolverConfig", "The resolver config should be set either via ResolverConfig or ResolverConfigFile.");
+                throw new ArgumentNullException("dataGatewayConfig.ResolverConfig",
+                    "The resolver config should be set either via ResolverConfig or ResolverConfigFile.");
             }
 
-            JsonSerializerOptions options = new()
-            {
-                PropertyNameCaseInsensitive = true,
-            };
-            options.Converters.Add(new JsonStringEnumConverter());
-
-            // This feels verbose but it avoids having to make _config nullable - which would result in more
-            // down the line issues and null check requirements
-            ResolverConfig? deserializedConfig;
-            if ((deserializedConfig = JsonSerializer.Deserialize<ResolverConfig>(resolverConfigJson, options)) == null)
-            {
-                throw new JsonException("Failed to get a ResolverConfig from the provided config");
-            }
-            else
-            {
-                GraphQLResolverConfig = deserializedConfig;
-            }
+            GraphQLResolverConfig = GetDeserializedConfig(resolverConfigJson);
 
             if (string.IsNullOrEmpty(GraphQLResolverConfig.GraphQLSchema))
             {
@@ -83,6 +67,14 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
             {
                 _mutationResolvers.Add(resolver.Id, resolver);
             }
+        }
+
+        public GraphQLFileMetadataProvider(
+            GraphQLFileMetadataProvider source)
+        {
+            GraphQLResolverConfig = source.GraphQLResolverConfig;
+            _mutationResolvers = source._mutationResolvers;
+            CloudDbType = source.CloudDbType;
         }
 
         /// <summary>
@@ -117,6 +109,25 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
         public ResolverConfig GetResolvedConfig()
         {
             return GraphQLResolverConfig;
+        }
+
+        public static ResolverConfig GetDeserializedConfig(string resolverConfigJson)
+        {
+            JsonSerializerOptions options = new()
+            {
+                PropertyNameCaseInsensitive = true,
+            };
+            options.Converters.Add(new JsonStringEnumConverter());
+
+            // This feels verbose but it avoids having to make _config nullable - which would result in more
+            // down the line issues and null check requirements
+            ResolverConfig? deserializedConfig;
+            if ((deserializedConfig = JsonSerializer.Deserialize<ResolverConfig>(resolverConfigJson, options)) == null)
+            {
+                throw new JsonException("Failed to get a ResolverConfig from the provided config");
+            }
+
+            return deserializedConfig!;
         }
     }
 }

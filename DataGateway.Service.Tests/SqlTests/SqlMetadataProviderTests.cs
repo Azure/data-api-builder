@@ -1,5 +1,7 @@
+using System.IO;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
+using Azure.DataGateway.Service.Services.MetadataProviders;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
@@ -10,13 +12,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public void TestDerivedDatabaseSchemaIsValid()
         {
-            FileMetadataStoreProvider fileMetadataStoreProvider = new("sql-config-test.json",
-                _metadataStoreProvider.CloudDbType,
-                sqlMetadataProvider: null);
-            ResolverConfig runtimeTestConfig = fileMetadataStoreProvider.GetResolvedConfig();
-            DatabaseSchema expectedSchema = runtimeTestConfig.DatabaseSchema!;
+            SqlGraphQLFileMetadataProvider expectedMetadataProvider
+                = new(_graphQLMetadataProvider);
+            string testResolverConfigJson = File.ReadAllText("sql-config-test.json");
+            expectedMetadataProvider.GraphQLResolverConfig =
+                GraphQLFileMetadataProvider.GetDeserializedConfig(testResolverConfigJson);
+            DatabaseSchema expectedSchema =
+                expectedMetadataProvider.GraphQLResolverConfig.DatabaseSchema!;
 
-            DatabaseSchema derivedDatabaseSchema = _metadataStoreProvider.GetResolvedConfig().DatabaseSchema!;
+            DatabaseSchema derivedDatabaseSchema = _graphQLMetadataProvider.GetResolvedConfig().DatabaseSchema!;
             foreach ((string tableName, TableDefinition expectedTableDefinition) in expectedSchema.Tables)
             {
                 TableDefinition actualTableDefinition;

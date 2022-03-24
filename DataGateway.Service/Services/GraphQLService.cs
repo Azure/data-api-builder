@@ -135,11 +135,11 @@ namespace Azure.DataGateway.Service.Services
         private IQueryRequest CompileRequest(string requestBody, Dictionary<string, object> requestProperties)
         {
             byte[] graphQLData = Encoding.UTF8.GetBytes(requestBody);
-            ParserOptions _parserOptions = new();
+            ParserOptions parserOptions = new();
 
             Utf8GraphQLRequestParser requestParser = new(
                 graphQLData,
-                _parserOptions,
+                parserOptions,
                 _documentCache,
                 _documentHashProvider);
 

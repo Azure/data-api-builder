@@ -31,6 +31,12 @@ namespace Azure.DataGateway.Service.Services
             _sqlMetadataProvider = source._sqlMetadataProvider;
         }
 
+        /// Default Constructor for Mock tests.
+        public SqlGraphQLFileMetadataProvider():base()
+        {
+            _sqlMetadataProvider = new MsSqlMetadataProvider();
+        }
+
         /// <summary>
         /// Enrich the database schema with the missing information
         /// from file but the runtime still needs.
@@ -69,7 +75,7 @@ namespace Azure.DataGateway.Service.Services
             }
         }
 
-        public TableDefinition GetTableDefinition(string name)
+        public virtual TableDefinition GetTableDefinition(string name)
         {
             if (!GraphQLResolverConfig.DatabaseSchema!.Tables.TryGetValue(name, out TableDefinition? metadata))
             {

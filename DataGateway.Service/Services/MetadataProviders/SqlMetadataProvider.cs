@@ -27,9 +27,18 @@ namespace Azure.DataGateway.Service.Services
 
         protected DataSet EntitiesDataSet { get; init; }
 
-        public SqlMetadataProvider(IOptionsMonitor<DataGatewayConfig> dataGatewayConfig)
+        public SqlMetadataProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
         {
-            ConnectionString = dataGatewayConfig.CurrentValue.DatabaseConnection.ConnectionString;
+            ConnectionString = dataGatewayConfig.Value.DatabaseConnection.ConnectionString;
+            EntitiesDataSet = new();
+        }
+
+        /// <summary>
+        /// Default Constructor for Mock tests.
+        /// </summary>
+        public SqlMetadataProvider()
+        {
+            ConnectionString = new(string.Empty);
             EntitiesDataSet = new();
         }
 

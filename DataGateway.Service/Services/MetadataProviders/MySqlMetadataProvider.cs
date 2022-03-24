@@ -13,7 +13,7 @@ namespace Azure.DataGateway.Service.Services
     /// </summary>
     public class MySqlMetadataProvider : SqlMetadataProvider<MySqlConnection, MySqlDataAdapter, MySqlCommand>, ISqlMetadataProvider
     {
-        public MySqlMetadataProvider(IOptionsMonitor<DataGatewayConfig> dataGatewayConfig)
+        public MySqlMetadataProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
             : base(dataGatewayConfig)
         {
         }

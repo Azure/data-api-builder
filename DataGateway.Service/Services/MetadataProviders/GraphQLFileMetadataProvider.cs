@@ -77,6 +77,14 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
             CloudDbType = source.CloudDbType;
         }
 
+        /// Default Constructor for Mock tests.
+        public GraphQLFileMetadataProvider()
+        {
+            GraphQLResolverConfig = new(string.Empty, string.Empty);
+            _mutationResolvers = new();
+            CloudDbType = DatabaseType.None;
+        }
+
         /// <summary>
         /// Reads generated JSON configuration file with GraphQL Schema
         /// </summary>

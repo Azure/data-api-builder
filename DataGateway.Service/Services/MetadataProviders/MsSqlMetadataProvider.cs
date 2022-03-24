@@ -13,9 +13,12 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
     public class MsSqlMetadataProvider :
         SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand>
     {
-        public MsSqlMetadataProvider(IOptionsMonitor<DataGatewayConfig> dataGatewayConfig)
+        public MsSqlMetadataProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
             : base(dataGatewayConfig)
         {
         }
+
+        /// Default Constructor for Mock tests.
+        public MsSqlMetadataProvider(): base() { }
     }
 }

@@ -15,10 +15,12 @@ namespace Azure.DataGateway.Service.Resolvers
         where ConnectionT : DbConnection, new()
     {
         private readonly DataGatewayConfig _dataGatewayConfig;
+        private readonly IDbExceptionParser _dbExceptionParser;
 
-        public QueryExecutor(IOptions<DataGatewayConfig> dataGatewayConfig)
+        public QueryExecutor(IOptions<DataGatewayConfig> dataGatewayConfig, IDbExceptionParser dbExceptionParser)
         {
             _dataGatewayConfig = dataGatewayConfig.Value;
+            _dbExceptionParser = dbExceptionParser;
         }
 
         /// <summary>
@@ -46,7 +48,14 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            return await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
+            try
+            {
+                return await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
+            }
+            catch (DbException e)
+            {
+                throw _dbExceptionParser.Parse(e);
+            }
         }
     }
 }

@@ -41,6 +41,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
         protected static IMetadataStoreProvider _sqlMetadataProvider;
+        protected static IDbExceptionParser _dbExceptionParser;
         protected static string _defaultSchemaName;
 
         /// <summary>
@@ -59,25 +60,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:
-                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(config);
                     _queryBuilder = new PostgresQueryBuilder();
                     _sqlMetadataProvider =
                        new SqlMetadataProvider<NpgsqlConnection, NpgsqlDataAdapter, NpgsqlCommand>(connectionString);
                     _defaultSchemaName = "public";
+                    _dbExceptionParser = new PostgresDbExceptionParser();
+                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(config, _dbExceptionParser);
                     break;
                 case TestCategory.MSSQL:
-                    _queryExecutor = new QueryExecutor<SqlConnection>(config);
                     _queryBuilder = new MsSqlQueryBuilder();
                     _sqlMetadataProvider =
                       new SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand>(connectionString);
                     _defaultSchemaName = "dbo";
+                    _dbExceptionParser = new MsSqlDbExceptionParser();
+                    _queryExecutor = new QueryExecutor<SqlConnection>(config, _dbExceptionParser);
                     break;
                 case TestCategory.MYSQL:
-                    _queryExecutor = new QueryExecutor<MySqlConnection>(config);
                     _queryBuilder = new MySqlQueryBuilder();
                     _sqlMetadataProvider =
                         new MySqlMetadataProvider(connectionString);
                     _defaultSchemaName = "mysql";
+                    _dbExceptionParser = new MySqlDbExceptionParser();
+                    _queryExecutor = new QueryExecutor<MySqlConnection>(config, _dbExceptionParser);
                     break;
             }
 

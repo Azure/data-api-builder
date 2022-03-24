@@ -7,11 +7,11 @@ namespace Azure.DataGateway.Service.Tests
     [TestClass]
     public class MetadataProviderTests
     {
-        IMetadataStoreProvider _fileProvider;
+        IGraphQLMetadataProvider _fileProvider;
 
         public MetadataProviderTests()
         {
-            _fileProvider = new FileMetadataStoreProvider(TestHelper.DataGatewayConfig);
+            _fileProvider = new CosmosGraphQLFileMetadataProvider(TestHelper.DataGatewayConfig);
         }
 
         [TestMethod]

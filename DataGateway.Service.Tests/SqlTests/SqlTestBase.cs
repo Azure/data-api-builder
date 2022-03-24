@@ -37,7 +37,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static IQueryBuilder _queryBuilder;
         protected static IQueryEngine _queryEngine;
         protected static IMutationEngine _mutationEngine;
-        protected static IMetadataStoreProvider _metadataStoreProvider;
+        protected static SqlGraphQLFileMetadataProvider _graphQLMetadataProvider;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
         protected static IMetadataStoreProvider _sqlMetadataProvider;
@@ -54,8 +54,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _testCategory = testCategory;
 
             IOptions<DataGatewayConfig> config = SqlTestHelper.LoadConfig($"{_testCategory}IntegrationTest");
-            string connectionString = config.Value.DatabaseConnection.ConnectionString;
-
+            IOptionsMonitor<DataGatewayConfig> monitoredConfig = (IOptionsMonitor<DataGatewayConfig>)config;
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:

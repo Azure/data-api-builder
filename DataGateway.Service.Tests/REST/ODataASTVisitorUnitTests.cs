@@ -212,7 +212,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             string filterString,
             string expected)
         {
-            Mock<IMetadataStoreProvider> metaDataStore = new();
+            Mock<SqlGraphQLFileMetadataProvider> metaDataStore = new();
             TableDefinition tableDef = new()
             {
                 Columns = new()
@@ -220,7 +220,8 @@ namespace Azure.DataGateway.Service.Tests.REST
             metaDataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext context = new(entityName, false);
             Mock<SqlQueryStructure> structure = new(context, metaDataStore.Object);
-            FilterClause ast = _filterParser.GetFilterClause(filterString, entityName);
+            FilterClause ast = _graphQLMetadataProvider.ODataFilterParser.
+                GetFilterClause(filterString, entityName);
             ODataASTVisitor visitor = new(structure.Object);
             string actual = ast.Expression.Accept<string>(visitor);
             Assert.AreEqual(expected, actual);
@@ -236,7 +237,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             string entityName,
             bool isList = false)
         {
-            Mock<IMetadataStoreProvider> metaDataStore = new();
+            Mock<SqlGraphQLFileMetadataProvider> metaDataStore = new();
             TableDefinition tableDef = new()
             {
                 Columns = new()

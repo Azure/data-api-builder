@@ -17,7 +17,7 @@ namespace Azure.DataGateway.Service.Tests.REST
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class RequestAuthorizationHandlerUnitTests
     {
-        private Mock<IMetadataStoreProvider> _metadataStore;
+        private Mock<SqlGraphQLFileMetadataProvider> _metadataStore;
 
         #region Positive Tests
         /// <summary>
@@ -101,7 +101,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             TableDefinition table = new();
             table.HttpVerbs.Add(httpOperation, CreateAuthZRule(authZType));
 
-            _metadataStore = new Mock<IMetadataStoreProvider>();
+            _metadataStore = new Mock<SqlGraphQLFileMetadataProvider>();
             _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(table);
         }
 

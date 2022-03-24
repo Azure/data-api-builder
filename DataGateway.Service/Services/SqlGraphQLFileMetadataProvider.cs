@@ -11,7 +11,7 @@ namespace Azure.DataGateway.Service.Services
 {
     public class SqlGraphQLFileMetadataProvider : GraphQLFileMetadataProvider
     {
-        private FilterParser? _filterParser;
+        public FilterParser ODataFilterParser { get; private set; } = new();
 
         public SqlGraphQLFileMetadataProvider(
             IOptions<DataGatewayConfig> dataGatewayConfig)
@@ -27,18 +27,7 @@ namespace Azure.DataGateway.Service.Services
             CloudDbType = DatabaseType.None;
         }
 
-        /// <summary>
-        /// Returns the Filter Parser
-        /// </summary>
-        public FilterParser FilterParser()
-        {
-            if (_filterParser == null)
-            {
-                throw new InvalidOperationException("No filter parser has been initialised");
-            }
 
-            return _filterParser;
-        }
 
         public TableDefinition GetTableDefinition(string name)
         {
@@ -50,9 +39,6 @@ namespace Azure.DataGateway.Service.Services
             return metadata;
         }
 
-        /// <summary>
-        /// Initializes the filter parser using the database schema.
-        /// </summary>
         public void InitFilterParser()
         {
             if (GraphQLResolverConfig == null || GraphQLResolverConfig.DatabaseSchema == null)
@@ -63,7 +49,7 @@ namespace Azure.DataGateway.Service.Services
                     subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
             }
 
-            _filterParser = new(GraphQLResolverConfig.DatabaseSchema);
+            ODataFilterParser = new(GraphQLResolverConfig.DatabaseSchema);
         }
     }
 }

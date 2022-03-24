@@ -54,12 +54,12 @@ CREATE TABLE comics(
 );
 
 CREATE TABLE stocks(
-    categoryId bigint NOT NULL,
-    pieceId bigint NOT NULL,
+    categoryid bigint NOT NULL,
+    pieceid bigint NOT NULL,
     categoryName varchar(max) NOT NULL,
     piecesAvailable bigint DEFAULT 0,
     piecesRequired bigint DEFAULT 0 NOT NULL,
-    PRIMARY KEY(categoryId,pieceId)
+    PRIMARY KEY(categoryid,pieceid)
 );
 
 ALTER TABLE books
@@ -104,4 +104,4 @@ SET IDENTITY_INSERT reviews ON
 INSERT INTO reviews(id, book_id, content) VALUES (567, 1, 'Indeed a great book'), (568, 1, 'I loved it'), (569, 1, 'best book I read in years');
 SET IDENTITY_INSERT reviews OFF
 
-INSERT INTO stocks(categoryId, pieceId,categoryName) VALUES (1, 1, 'books'), (2, 1, 'magazines');
+INSERT INTO stocks(categoryid, pieceid,categoryName) VALUES (1, 1, 'books'), (2, 1, 'magazines');

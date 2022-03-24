@@ -386,12 +386,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             requestBody = @"
             {
-                ""categoryId"": ""5"",
-                ""pieceId"": ""2"",
+                ""categoryid"": ""5"",
+                ""pieceid"": ""2"",
                 ""categoryName"":""Thriller""
             }";
 
-            expectedLocationHeader = $"categoryId/5/pieceId/2";
+            expectedLocationHeader = $"categoryid/5/pieceid/2";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
@@ -523,7 +523,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                ""piecesRequired"":""5""
             }";
 
-            expectedLocationHeader = $"categoryId/2/pieceId/1";
+            expectedLocationHeader = $"categoryid/2/pieceid/1";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
@@ -616,7 +616,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                ""piecesRequired"":""1""
             }";
 
-            expectedLocationHeader = $"categoryId/3/pieceId/1";
+            expectedLocationHeader = $"categoryid/3/pieceid/1";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
@@ -634,7 +634,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                ""categoryName"":""SciFi""
             }";
 
-            expectedLocationHeader = $"categoryId/8/pieceId/1";
+            expectedLocationHeader = $"categoryid/8/pieceid/1";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
@@ -683,7 +683,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 ""piecesAvailable"":""5"",
                 ""piecesRequired"":""4""
             }";
-            expectedLocationHeader = $"categoryId/4/pieceId/1";
+            expectedLocationHeader = $"categoryid/4/pieceid/1";
 
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: expectedLocationHeader,
@@ -701,7 +701,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 ""categoryName"": ""Drama""
             }";
-            expectedLocationHeader = $"categoryId/7/pieceId/1";
+            expectedLocationHeader = $"categoryid/7/pieceid/1";
 
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: expectedLocationHeader,
@@ -763,7 +763,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "categoryId/1/pieceId/1",
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
                     queryString: null,
                     entity: _Composite_NonAutoGenPK,
                     sqlQuery: GetQuery("PatchOne_Update_CompositeNonAutoGenPK_Test"),
@@ -983,8 +983,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             requestBody = @"
             {
-                ""categoryId"":""6"",
-                ""pieceId"":""1""
+                ""categoryid"":""6"",
+                ""pieceid"":""1""
             }";
 
             await SetupAndRunRestApiTest(
@@ -1010,7 +1010,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 ""piecesRequired"":""6""
             }";
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: "categoryId/1/pieceId/1",
+                primaryKeyRoute: "categoryid/1/pieceid/1",
                 queryString: string.Empty,
                 entity: _Composite_NonAutoGenPK,
                 sqlQuery: string.Empty,

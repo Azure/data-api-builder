@@ -134,12 +134,12 @@
         }
       },
       "stocks": {
-        "PrimaryKey": [ "categoryId", "pieceId" ],
+        "PrimaryKey": [ "categoryid", "pieceid" ],
         "Columns": {
-          "categoryId": {
+          "categoryid": {
             "Type": "bigint"
           },
-          "pieceId": {
+          "pieceid": {
             "Type": "bigint"
           },
           "categoryName": {
@@ -148,7 +148,8 @@
           },
           "piecesAvailable": {
             "Type": "bigint",
-            "HasDefault": true
+            "HasDefault": true,
+            "IsNullable": true
           },
           "piecesRequired": {
             "Type": "bigint",

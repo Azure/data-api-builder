@@ -54,7 +54,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _testCategory = testCategory;
 
             IOptions<DataGatewayConfig> config = SqlTestHelper.LoadConfig($"{_testCategory}IntegrationTest");
-            IOptionsMonitor<DataGatewayConfig> monitoredConfig = (IOptionsMonitor<DataGatewayConfig>)config;
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:
@@ -62,7 +61,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _queryBuilder = new PostgresQueryBuilder();
                     _graphQLMetadataProvider = new SqlGraphQLFileMetadataProvider(
                         config,
-                        new PostgreSqlMetadataProvider(monitoredConfig));
+                        new PostgreSqlMetadataProvider(config));
                     _defaultSchemaName = "public";
                     break;
                 case TestCategory.MSSQL:
@@ -70,7 +69,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _queryBuilder = new MsSqlQueryBuilder();
                     _graphQLMetadataProvider = new SqlGraphQLFileMetadataProvider(
                         config,
-                        new MsSqlMetadataProvider(monitoredConfig));
+                        new MsSqlMetadataProvider(config));
                     _defaultSchemaName = "dbo";
                     break;
                 case TestCategory.MYSQL:
@@ -78,7 +77,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _queryBuilder = new MySqlQueryBuilder();
                     _graphQLMetadataProvider = new SqlGraphQLFileMetadataProvider(
                         config,
-                        new MySqlMetadataProvider(monitoredConfig));
+                        new MySqlMetadataProvider(config));
                     _defaultSchemaName = "mysql";
                     break;
             }

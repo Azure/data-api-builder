@@ -5,7 +5,6 @@ using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using HotChocolate.Language;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;

@@ -124,7 +124,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
             StringValues headerValue = GetChallengeHeader(postMiddlewareContext);
             Assert.IsTrue(headerValue[0].Contains("invalid_token") && headerValue[0].Contains($"The issuer '{BAD_ISSUER}' is invalid"));
         }
-        
+
         [TestMethod("JWT signed with unrecognized/unconfigured cert, with unknown (kid) claim, results in signature key not found")]
         public async Task TestInvalidToken_InvalidSigningKey()
         {
@@ -134,7 +134,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
             SecurityKey key = new X509SecurityKey(selfSignedCert);
             SecurityKey badKey = new X509SecurityKey(altCert);
 
-            string token = CreateJwt(audience: AUDIENCE, issuer: LOCAL_ISSUER, signingKey:badKey );
+            string token = CreateJwt(audience: AUDIENCE, issuer: LOCAL_ISSUER, signingKey: badKey);
 
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(key, token);
             Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);

@@ -1,10 +1,12 @@
 using Azure.DataGateway.Service.Configurations;
-using Microsoft.Extensions.Options;
 using Azure.DataGateway.Service.Services.MetadataProviders;
+using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Services
 {
-
+    /// <summary>
+    /// GraphQL Metadata Provider specific to Cosmos Db.
+    /// </summary>
     public class CosmosGraphQLFileMetadataProvider : GraphQLFileMetadataProvider
     {
         public CosmosGraphQLFileMetadataProvider(
@@ -12,6 +14,5 @@ namespace Azure.DataGateway.Service.Services
             : base(dataGatewayConfig)
         {
         }
-
     }
 }

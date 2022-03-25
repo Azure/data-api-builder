@@ -2,9 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
@@ -26,6 +28,14 @@ namespace Azure.DataGateway.Service.Resolvers
         // </summary>
         public SqlQueryEngine(IGraphQLMetadataProvider metadataStoreProvider, IQueryExecutor queryExecutor, IQueryBuilder queryBuilder)
         {
+            if (metadataStoreProvider.GetType() != typeof(SqlGraphQLFileMetadataProvider))
+            {
+                throw new DataGatewayException(
+                    message: "Unable to instantiate the SQL query engine.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError
+            }
+
             _metadataStoreProvider = (SqlGraphQLFileMetadataProvider)metadataStoreProvider;
             _queryExecutor = queryExecutor;
             _queryBuilder = queryBuilder;

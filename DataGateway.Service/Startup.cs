@@ -63,7 +63,7 @@ namespace Azure.DataGateway.Service
                 {
                     case DatabaseType.Cosmos:
                         return ActivatorUtilities.
-                            GetServiceOrCreateInstance<CosmosGraphQLFileMetadataProvider>(serviceProvider);
+                            GetServiceOrCreateInstance<GraphQLFileMetadataProvider>(serviceProvider);
                     case DatabaseType.MsSql:
                     case DatabaseType.PostgreSql:
                     case DatabaseType.MySql:

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Net;
 using Azure.DataGateway.Service.Configurations;
@@ -26,8 +25,6 @@ namespace Azure.DataGateway.Service.Services
             _mutationResolvers = new();
             CloudDbType = DatabaseType.None;
         }
-
-
 
         public TableDefinition GetTableDefinition(string name)
         {

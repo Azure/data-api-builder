@@ -11,7 +11,7 @@ namespace Azure.DataGateway.Service.Services
     /// Reads schema information from the database to make it
     /// available for the GraphQL/REST services.
     /// </summary>
-    public class SqlMetadataProvider<ConnectionT, DataAdapterT, CommandT> : IMetadataStoreProvider
+    public class SqlMetadataProvider<ConnectionT, DataAdapterT, CommandT>
         where ConnectionT : DbConnection, new()
         where DataAdapterT : DbDataAdapter, new()
         where CommandT : DbCommand, new()
@@ -193,30 +193,6 @@ namespace Azure.DataGateway.Service.Services
 
         /// <inheritdoc/>
         public string GetGraphQLSchema()
-        {
-            throw new System.NotImplementedException();
-        }
-
-        /// <inheritdoc/>
-        public MutationResolver GetMutationResolver(string name)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        /// <inheritdoc/>
-        public GraphQLType GetGraphQLType(string name)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        /// <inheritdoc/>
-        public ResolverConfig GetResolvedConfig()
-        {
-            throw new System.NotImplementedException();
-        }
-
-        /// <inheritdoc/>
-        public FilterParser GetFilterParser()
         {
             throw new System.NotImplementedException();
         }

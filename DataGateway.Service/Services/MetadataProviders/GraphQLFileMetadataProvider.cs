@@ -7,7 +7,7 @@ using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models;
 using Microsoft.Extensions.Options;
 
-namespace Azure.DataGateway.Service.Services.MetadataProviders
+namespace Azure.DataGateway.Service.Services
 {
     /// <summary>
     /// Reads GraphQL Schema and resolver config

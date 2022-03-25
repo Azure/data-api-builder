@@ -190,11 +190,5 @@ namespace Azure.DataGateway.Service.Services
                 }
             }
         }
-
-        /// <inheritdoc/>
-        public string GetGraphQLSchema()
-        {
-            throw new System.NotImplementedException();
-        }
     }
 }

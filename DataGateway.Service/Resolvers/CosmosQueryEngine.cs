@@ -19,7 +19,7 @@ namespace Azure.DataGateway.Service.Resolvers
     public class CosmosQueryEngine : IQueryEngine
     {
         private readonly CosmosClientProvider _clientProvider;
-        private readonly CosmosGraphQLFileMetadataProvider _metadataStoreProvider;
+        private readonly IGraphQLMetadataProvider _metadataStoreProvider;
         private readonly CosmosQueryBuilder _queryBuilder;
 
         // <summary>
@@ -30,7 +30,7 @@ namespace Azure.DataGateway.Service.Resolvers
             IGraphQLMetadataProvider metadataStoreProvider)
         {
             _clientProvider = clientProvider;
-            _metadataStoreProvider = (CosmosGraphQLFileMetadataProvider)metadataStoreProvider;
+            _metadataStoreProvider = metadataStoreProvider;
             _queryBuilder = new CosmosQueryBuilder();
         }
 

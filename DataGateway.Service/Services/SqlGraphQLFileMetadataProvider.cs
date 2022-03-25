@@ -19,6 +19,12 @@ namespace Azure.DataGateway.Service.Services
             FilterParser = new(GraphQLResolverConfig.DatabaseSchema!);
         }
 
+        /// Default Constructor for Mock tests.
+        public SqlGraphQLFileMetadataProvider() : base()
+        {
+            FilterParser = new(GraphQLResolverConfig.DatabaseSchema!);
+        }
+
         public virtual TableDefinition GetTableDefinition(string name)
         {
             if (!GraphQLResolverConfig.DatabaseSchema!.Tables.TryGetValue(name, out TableDefinition? metadata))

@@ -18,6 +18,7 @@ namespace Azure.DataGateway.Service.Tests.REST
     public class RequestAuthorizationHandlerUnitTests
     {
         private Mock<IMetadataStoreProvider> _metadataStore;
+        private const string TEST_ENTITY = "TEST_ENTITY";
 
         #region Positive Tests
         /// <summary>
@@ -63,14 +64,47 @@ namespace Azure.DataGateway.Service.Tests.REST
         [TestMethod]
         public async Task AnonymousGetRequestToAuthenticatedGetEntity()
         {
-            //Create Unauthenticated user by NOT defining authenticationType
+            // Create Unauthenticated user by NOT defining authenticationType
             ClaimsPrincipal user = new(new ClaimsIdentity());
 
             SetupTable(HttpMethod.Get.ToString(), AuthorizationType.Authenticated);
 
-            bool result = await IsAuthorizationSuccessful(entityName: "books", user);
+            bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, user);
 
             Assert.IsFalse(result);
+        }
+
+        [TestMethod]
+        public async Task TableDef_NoPerms_NoDefaultAnonymous()
+        {
+            // Create Unauthenticated user by NOT defining authenticationType
+            // User will be populated in httpContext but IsAuthenticated() is FALSE.
+            ClaimsPrincipal user = new(new ClaimsIdentity());
+
+            // Create table with no HttpVerbs (permissions) config
+            SetupTable(HttpMethod.Get.ToString(), authZType: null);
+
+            bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, user);
+
+            Assert.IsFalse(result);
+
+        }
+
+        [TestMethod]
+        public async Task TableDef_HasPerms_NoMatchingAction()
+        {
+            // Create Unauthenticated user by NOT defining authenticationType
+            // User will be populated in httpContext but IsAuthenticated() is FALSE.
+            ClaimsPrincipal user = new(new ClaimsIdentity());
+
+            // Create table with permission config that does not match request action.
+            // Request is GET by default, so POST will not match.
+            SetupTable(HttpMethod.Post.ToString(), authZType: null);
+
+            bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, user);
+
+            Assert.IsFalse(result);
+
         }
         #endregion
         #region Helper Methods
@@ -96,10 +130,14 @@ namespace Azure.DataGateway.Service.Tests.REST
         /// </summary>
         /// <param name="httpOperation">Allowed Http HttpVerbs for table,</param>
         /// <param name="authZType">AuthorizationType for Http Operation for table.</param>
-        private void SetupTable(string httpOperation, AuthorizationType authZType)
+        private void SetupTable(string httpOperation, AuthorizationType? authZType)
         {
             TableDefinition table = new();
-            table.HttpVerbs.Add(httpOperation, CreateAuthZRule(authZType));
+
+            if(authZType != null)
+            {
+                table.HttpVerbs.Add(httpOperation, CreateAuthZRule((AuthorizationType)authZType));
+            }
 
             _metadataStore = new Mock<IMetadataStoreProvider>();
             _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(table);

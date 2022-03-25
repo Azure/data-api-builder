@@ -37,9 +37,12 @@ namespace Azure.DataGateway.Service.Authorization
             TableDefinition tableDefinition = _configurationProvider.GetTableDefinition(resource.EntityName);
 
             string requestedOperation = resource.HttpVerb.Name;
-
+            if (tableDefinition.HttpVerbs == null || tableDefinition.HttpVerbs.Count == 0)
+            {
+                context.Fail();
+            }
             //Check current operation against tableDefinition supported operations.
-            if (tableDefinition.HttpVerbs.ContainsKey(requestedOperation))
+            else if (tableDefinition.HttpVerbs.ContainsKey(requestedOperation))
             {
                 switch (tableDefinition.HttpVerbs[requestedOperation].AuthorizationType)
                 {

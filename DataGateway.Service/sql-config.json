@@ -151,6 +151,45 @@
           }
         }
       },
+      "stocks": {
+        "PrimaryKey": [ "categoryid", "pieceid" ],
+        "Columns": {
+          "categoryid": {
+            "Type": "bigint"
+          },
+          "pieceid": {
+            "Type": "bigint"
+          },
+          "categoryName": {
+            "Type": "text",
+            "IsNullable": false
+          },
+          "piecesAvailable": {
+            "Type": "bigint",
+            "HasDefault": true,
+            "IsNullable": true
+          },
+          "piecesRequired": {
+            "Type": "bigint",
+            "HasDefault": true,
+            "IsNullable": false
+          }
+        },
+        "HttpVerbs": {
+          "GET": {
+            "AuthorizationType": "Anonymous"
+          },
+          "POST": {
+            "AuthorizationType": "Authenticated"
+          },
+          "PUT": {
+            "Authorization": "Authenticated"
+          },
+          "PATCH": {
+            "Authorization": "Authenticated"
+          }
+        }
+      },
       "books": {
         "PrimaryKey": [ "id" ],
         "Columns": {

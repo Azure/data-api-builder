@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataGateway.Service.AuthenticationHelpers
 {
@@ -27,14 +28,32 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         {
             if (httpContext != null && httpContext.Request.Headers[JWT_AUTH_HEADER].Count > 0)
             {
-                await httpContext.AuthenticateAsync(scheme: JwtBearerDefaults.AuthenticationScheme);
-                // AuthN Failures (Token Validation issues) should terminate the request with HTTP 401.
-                /*if (authNResult.Failure != null)
+                // When calling parameterless version of AddAuthentication() with no default scheme,
+                // the result of context.AuthenticateAsync(scheme) must be used to populate the context.User object.
+                AuthenticateResult authNResult = await httpContext.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
+
+                if (authNResult != null && authNResult.Succeeded)
                 {
-                    httpContext.Response.StatusCode = 401; //UnAuthorized
-                    await httpContext.Response.StartAsync();
-                    return;
-                }*/
+                    httpContext.User = authNResult.Principal!;
+                }
+
+                if (httpContext.Request.Headers[JWT_AUTH_HEADER].Count > 0)
+                {
+                    // User not being authenticated means validation failed.
+                    // A challenge result will add WWW-Authenticate header to indicate failure reason
+                    // Failure reasons: no bearer token, invalid token (specific validation failure)
+                    if (!httpContext.User.Identity!.IsAuthenticated)
+                    {
+                        IActionResult result = new ChallengeResult(JwtBearerDefaults.AuthenticationScheme);
+                        await result.ExecuteResultAsync(new ActionContext
+                        {
+                            HttpContext = httpContext
+                        });
+
+                        // Terminate middleware request pipeline
+                        return;
+                    }
+                }
             }
 
             await _nextMiddleware(httpContext!);

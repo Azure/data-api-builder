@@ -158,14 +158,12 @@ namespace Azure.DataGateway.Service
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
 
-            // Setting defaultScheme for AddAuthentication() will ensure the JwtBearerHandler (within AddJwtBearer)
-            // is called for every request, and populate the httpContext.User. No defaultScheme requires manually calling
-            // JwtBearerHandler.HandleAuthenticateAsync() for usage of JwtBearerDefaults.AuthenticationScheme.
-            // Then proceed to register the JwtBearer scheme with AddJwtBearer().
-            // Reference: https://docs.microsoft.com/aspnet/core/security/authorization/limitingidentitybyscheme?view=aspnetcore-6.0
+            // Parameterless AddAuthentication() , i.e. No defaultScheme, allows the custom JWT middleware
+            // to manually call JwtBearerHandler.HandleAuthenticateAsync() and populate the User if successful.
+            // This also enables the custom middleware to send the AuthN failure reason in the challenge header.
             if (dataGatewayConfig.JwtAuth != null)
             {
-                services.AddAuthentication(defaultScheme: JwtBearerDefaults.AuthenticationScheme)
+                services.AddAuthentication()
                     .AddJwtBearer(options =>
                     {
                         options.Audience = dataGatewayConfig.JwtAuth.Audience;

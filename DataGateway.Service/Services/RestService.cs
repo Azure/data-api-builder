@@ -133,7 +133,7 @@ namespace Azure.DataGateway.Service.Services
                         throw new NotSupportedException("This operation is not yet supported.");
                 };
             }
-            else if (GetHttpContext().User.Identity!.IsAuthenticated)
+            else if (!GetHttpContext().User.Identity!.IsAuthenticated)
             {
                 throw new DataGatewayException(
                     message: "Unauthorized",

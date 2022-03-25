@@ -294,13 +294,9 @@ namespace Azure.DataGateway.Service.Controllers
             {
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine(ex.StackTrace);
-                if (ex.Message == "Unauthorized")
+                if (ex.SubStatusCode == DataGatewayException.SubStatusCodes.AuthorizationCheckFailed)
                 {
                     return new ForbidResult();
-                }
-                else if (ex.Message == "CHALLENGE")
-                {
-                    return new ChallengeResult(authenticationScheme: JwtBearerDefaults.AuthenticationScheme);
                 }
                 else
                 {

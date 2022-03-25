@@ -1,6 +1,6 @@
 using System;
-using Azure.DataGateway.Service.AuthenticationHelpers;
 using System.Linq;
+using Azure.DataGateway.Service.AuthenticationHelpers;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;

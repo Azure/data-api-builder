@@ -11,6 +11,7 @@ namespace Azure.DataGateway.Service.Authorization
     /// </summary>
     public enum AuthorizationType
     {
+        NoAccess,
         Anonymous,
         Authenticated
     }
@@ -44,6 +45,9 @@ namespace Azure.DataGateway.Service.Authorization
             {
                 switch (tableDefinition.HttpVerbs[requestedOperation].AuthorizationType)
                 {
+                    case AuthorizationType.NoAccess:
+                        context.Fail();
+                        break;
                     case AuthorizationType.Anonymous:
                         context.Succeed(requirement);
                         break;

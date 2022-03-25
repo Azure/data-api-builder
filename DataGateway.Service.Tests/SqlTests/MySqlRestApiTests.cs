@@ -381,16 +381,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
-                "PutOne_Update_IfMatchHeaders_Test",
+                "PutOne_Update_IfMatchHeader_Test_Confirm_Update",
                 @"
-                    SELECT JSON_OBJECT('id', id) AS data
-                    FROM (
-                        SELECT id, title, publisher_id
-                        FROM " + _integrationTableName + @"
-                        WHERE id = 17 AND title = 'The Hobbit Returns to The Shire'
-                        AND publisher_id = 1234
-                    ) AS subq
-                "
+                  SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE id = 1 and title = 'The Return of the King'
+                      ORDER BY id
+                      LIMIT 1
+                  ) AS subq"
             },
             {
                 "PutOne_Insert_Test",
@@ -450,16 +450,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
-                "PatchOne_Update_IfMatchHeaders_Test",
+                "PatchOne_Update_IfMatchHeader_Test_Confirm_Update",
                 @"
-                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
-                    FROM (
-                        SELECT id, title, publisher_id
-                        FROM " + _integrationTableName + @"
-                        WHERE id = 18 AND title = 'Heart of Darkness'
-                        AND publisher_id = 2324
-                    ) AS subq
-                "
+                  SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE id = 1 and title = 'The Hobbit Returns to The Shire' and publisher_id = 1234
+                      ORDER BY id
+                      LIMIT 1
+                  ) AS subq"
             },
             {
                 "PatchOne_Insert_PKAutoGen_Test",

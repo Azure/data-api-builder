@@ -465,8 +465,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         /// <summary>
         /// Tests the PutOne functionality with a REST PUT request using
-        /// headers that include as a key "If-Match" with an item that does not exist,
-        /// resulting in no insert occuring.
+        /// headers that include as a key "If-Match" with an item that does exist,
+        /// resulting in an update occuring. We then verify that the update occurred.
         /// </summary>
         [TestMethod]
         public virtual async Task PutOne_Update_IfMatchHeaders_Test()
@@ -475,21 +475,29 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             headerDictionary.Add("If-Match", "*");
             string requestBody = @"
             {
-                ""title"": ""The Hobbit Returns to The Shire"",
+                ""title"": ""The Return of the King"",
                 ""publisher_id"": 1234
             }";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/17",
+                    primaryKeyRoute: "id/1",
                     queryString: null,
                     entity: _integrationTableName,
-                    sqlQuery: GetQuery(nameof(PutOne_Update_IfMatchHeaders_Test)),
+                    sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Upsert,
                     headers: new HeaderDictionary(headerDictionary),
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.NoContent
                 );
+            await SetupAndRunRestApiTest(
+                  primaryKeyRoute: "id/1",
+                  queryString: "?$filter=title eq 'The Return of the King'",
+                  entity: _integrationTableName,
+                  sqlQuery: GetQuery("PutOne_Update_IfMatchHeader_Test_Confirm_Update"),
+                  controller: _restController,
+                  operationType: Operation.Find,
+                  expectedStatusCode: HttpStatusCode.OK);
         }
 
         /// <summary>
@@ -623,8 +631,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         /// <summary>
         /// Tests the PatchOne functionality with a REST PUT request using
-        /// headers that include as a key "If-Match" with an item that does not exist,
-        /// resulting in no insert occuring.
+        /// headers that include as a key "If-Match" with an item that does exist,
+        /// resulting in an update occuring. Verify update with Find.
         /// </summary>
         [TestMethod]
         public virtual async Task PatchOne_Update_IfMatchHeaders_Test()
@@ -638,15 +646,24 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/18",
+                    primaryKeyRoute: "id/1",
                     queryString: null,
                     entity: _integrationTableName,
-                    sqlQuery: GetQuery(nameof(PatchOne_Update_IfMatchHeaders_Test)),
+                    sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     headers: new HeaderDictionary(headerDictionary),
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.NoContent
+                );
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/1",
+                    queryString: "?$filter=title eq 'The Hobbit Returns to The Shire' and publisher_id eq 1234",
+                    entity: _integrationTableName,
+                    sqlQuery: GetQuery("PatchOne_Update_IfMatchHeaders_Test_Confirm_Update"),
+                    controller: _restController,
+                    operationType: Operation.Find
                 );
         }
 
@@ -919,6 +936,39 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Tests the PatchOne functionality with a REST PUT request using
+        /// headers that include as a key "If-Match" with an item that does not exist,
+        /// resulting in a DataGatewayException with status code of Precondition Failed.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Update_IfMatchHeaders_NoUpdatePerformed_Test()
+        {
+            Dictionary<string, StringValues> headerDictionary = new();
+            headerDictionary.Add("If-Match", "*");
+            headerDictionary.Add("StatusCode", "200");
+            string requestBody = @"
+            {
+                ""title"": ""The Return of the King"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/18",
+                    queryString: string.Empty,
+                    entity: _integrationTableName,
+                    sqlQuery: string.Empty,
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    headers: new HeaderDictionary(headerDictionary),
+                    requestBody: requestBody,
+                    exception: true,
+                    expectedErrorMessage: "No Update could be performed, record not found",
+                    expectedStatusCode: HttpStatusCode.PreconditionFailed,
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed.ToString()
+                );
+        }
+
+        /// <summary>
         /// Tests the PutOne functionality with a REST PUT request
         /// with item that does NOT exist, AND parameters incorrectly match schema, results in BadRequest.
         /// sqlQuery represents the query used to get 'expected' result of zero items.
@@ -1031,6 +1081,39 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 requestBody: requestBody,
                 expectedErrorMessage: @"Invalid request body. Either insufficient or extra fields supplied.",
                 expectedStatusCode: HttpStatusCode.BadRequest
+                );
+        }
+
+        /// <summary>
+        /// Tests the PutOne functionality with a REST PUT request using
+        /// headers that include as a key "If-Match" with an item that does not exist,
+        /// resulting in a DataGatewayException with status code of Precondition Failed.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutOne_Update_IfMatchHeaders_NoUpdatePerformed_Test()
+        {
+            Dictionary<string, StringValues> headerDictionary = new();
+            headerDictionary.Add("If-Match", "*");
+            headerDictionary.Add("StatusCode", "200");
+            string requestBody = @"
+            {
+                ""title"": ""The Return of the King"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/18",
+                    queryString: string.Empty,
+                    entity: _integrationTableName,
+                    sqlQuery: string.Empty,
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    headers: new HeaderDictionary(headerDictionary),
+                    requestBody: requestBody,
+                    exception: true,
+                    expectedErrorMessage: "No Update could be performed, record not found",
+                    expectedStatusCode: HttpStatusCode.PreconditionFailed,
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed.ToString()
                 );
         }
 

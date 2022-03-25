@@ -138,7 +138,14 @@ namespace Azure.DataGateway.Service.Resolvers
                         break;
                     case Operation.UpdateRest:
                     case Operation.UpdateIncremental:
-                        // REST updates return empty result set
+                        // Nothing to update means we throw Exception
+                        if (resultRecord is null || resultRecord.Count == 0)
+                        {
+                            throw new DataGatewayException(message: "No Update could be performed, record not found",
+                                                           statusCode: HttpStatusCode.PreconditionFailed,
+                                                           subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
+                        }
+                        // Valid REST updates return empty result set
                         jsonResultString = null;
                         break;
                     case Operation.Upsert:

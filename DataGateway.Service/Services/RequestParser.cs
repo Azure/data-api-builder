@@ -86,7 +86,7 @@ namespace Azure.DataGateway.Service.Services
         /// later generate queries in the given RestRequestContext.
         /// </summary>
         /// <param name="context">The RestRequestContext holding the major components of the query.</param>
-        public static void ParseQueryString(RestRequestContext context, string path, FilterParser filterParser, List<string> primaryKeys)
+        public static void ParseQueryString(RestRequestContext context, FilterParser filterParser, List<string> primaryKeys)
         {
             foreach (string key in context.ParsedQueryString!.Keys)
             {
@@ -127,6 +127,10 @@ namespace Azure.DataGateway.Service.Services
         /// <returns>A List<Column> where the elements are OrderByColumns.</Column></returns>
         private static List<Column>? GenerateOrderByList(OrderByClause node, string tableAlias, List<string> primaryKeys)
         {
+            // Create set of primary key columns
+            // we always have the primary keys in
+            // the order by statement for the case
+            // of tie breaking and pagination
             HashSet<string> remainingKeys = new();
             foreach (string key in primaryKeys)
             {
@@ -134,16 +138,33 @@ namespace Azure.DataGateway.Service.Services
             }
 
             List<Column> orderByList = new();
+            // OrderBy AST is in the form of a linked list
+            // so we traverse by calling node.ThenBy until
+            // node is null
             while (node is not null)
             {
+                // Column name is stored in node.Expression as a SingleValuePropertyAccessNode
                 SingleValuePropertyAccessNode? expression = node.Expression as SingleValuePropertyAccessNode;
-                string columnName = expression!.Property.Name;
-                Models.OrderByDirection direction = GetDirectionFromString(node.Direction.ToString());
+                string columnName;
+                if (expression is null)
+                {
+                    throw new DataGatewayException(message: "OrderBy property is null.", HttpStatusCode.BadRequest, SubStatusCodes.BadRequest);
+                }
+                else
+                {
+                    columnName = expression.Property.Name;
+                }
+
+                // Sorting order is stored in node.Direction as OrderByDirection Enum
+                // We convert to an Enum of our own that matches the SQL text we want
+                Models.OrderByDir direction = GetDirection(node.Direction);
+                // Add OrderByColumn and remove any matching columns from our primary key set
                 orderByList.Add(new OrderByColumn(tableAlias, columnName, direction));
                 remainingKeys.Remove(columnName);
                 node = node.ThenBy;
             }
 
+            // Remaining primary key columns are added here
             foreach (string column in remainingKeys)
             {
                 orderByList.Add(new OrderByColumn(tableAlias, column));
@@ -157,14 +178,14 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="direction">String reprenting the orderby direction.</param>
         /// <returns>Enum representing the direction.</returns>
-        private static Models.OrderByDirection GetDirectionFromString(string direction)
+        private static Models.OrderByDir GetDirection(OrderByDirection direction)
         {
             switch (direction)
             {
-                case "Descending":
-                    return Models.OrderByDirection.Desc;
-                case "Ascending":
-                    return Models.OrderByDirection.Asc;
+                case OrderByDirection.Descending:
+                    return Models.OrderByDir.Desc;
+                case OrderByDirection.Ascending:
+                    return Models.OrderByDir.Asc;
                 default:
                     throw new DataGatewayException(message: "Invalid OrderBy",
                                                    statusCode: HttpStatusCode.BadRequest,

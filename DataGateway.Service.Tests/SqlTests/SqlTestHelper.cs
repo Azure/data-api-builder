@@ -163,7 +163,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     break;
                 default:
                     JsonResult actualResult = (JsonResult)actionResult;
-                    actual = JsonSerializer.Serialize(actualResult.Value);
+                    actual = JsonSerializer.Serialize(actualResult.Value, options);
                     break;
             }
 

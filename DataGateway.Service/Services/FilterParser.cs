@@ -47,7 +47,6 @@ namespace Azure.DataGateway.Service.Services
             try
             {
                 Uri relativeUri = new(path + '/' + sortQueryString, UriKind.Relative);
-                //Uri serviceRoot = new(path);
                 ODataUriParser parser = new(_model, relativeUri);
                 return parser.ParseOrderBy();
             }

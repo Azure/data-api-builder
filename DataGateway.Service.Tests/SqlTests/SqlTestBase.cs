@@ -5,6 +5,7 @@ using System.IO;
 using System.Net;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
@@ -231,10 +232,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }
             else
             {
+                JsonSerializerOptions options = new()
+                {
+                    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                };
                 expected = exception ?
                     JsonSerializer.Serialize(RestController.ErrorResponse(
                         expectedSubStatusCode.ToString(),
-                        expectedErrorMessage, expectedStatusCode).Value) :
+                        expectedErrorMessage,
+                        expectedStatusCode).Value,
+                        options) :
                     $"{{\"value\":{FormatExpectedValue(await GetDatabaseResultAsync(sqlQuery))}{ExpectedNextLinkIfAny(paginated, EncodeQueryString(baseUrl), $"{expectedAfterQueryString}")}}}";
             }
 

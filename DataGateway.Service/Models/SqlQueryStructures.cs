@@ -30,7 +30,7 @@ namespace Azure.DataGateway.Service.Models
     public class OrderByColumn : Column
     {
         public string Direction { get; }
-        public OrderByColumn(string? tableAlias, string columnName, OrderByDirection direction = OrderByDirection.Asc)
+        public OrderByColumn(string? tableAlias, string columnName, OrderByDir direction = OrderByDir.Asc)
             : base(tableAlias, columnName)
         {
             Direction = direction.ToString();
@@ -57,7 +57,7 @@ namespace Azure.DataGateway.Service.Models
     /// <summary>
     /// Represents the directions an OrderByColumn can have.
     /// </summary>
-    public enum OrderByDirection
+    public enum OrderByDir
     {
         Asc, Desc
     }

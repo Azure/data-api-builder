@@ -1183,6 +1183,60 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Tests the REST Api for Find operation with an invalid OrderByDirection.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestInvalidOrderByDirection()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby=id random",
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: HttpUtility.UrlDecode("Syntax error at position 9 in \u0027id random\u0027."),
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with an invalid column name for sorting.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestInvalidOrderByColumn()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby=Pinecone",
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "Could not find a property named 'Pinecone' on type 'default_namespace.books'.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with a null for sorting.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestInvalidOrderByNullQueryParam()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby=null",
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "OrderBy property is null.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
         /// Tests the REST Api for the correct error condition format when
         /// a DataGatewayException is thrown
         /// </summary>

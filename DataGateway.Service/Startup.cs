@@ -6,6 +6,7 @@ using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using HotChocolate.Language;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -152,6 +153,8 @@ namespace Azure.DataGateway.Service
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<DataGatewayConfig>, DataGatewayConfigPostConfiguration>());
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<DataGatewayConfig>, DataGatewayConfigValidation>());
 
+            services.AddSingleton<IDocumentHashProvider, Sha256DocumentHashProvider>();
+            services.AddSingleton<IDocumentCache, DocumentCache>();
             services.AddSingleton<GraphQLService>();
             services.AddSingleton<RestService>();
 

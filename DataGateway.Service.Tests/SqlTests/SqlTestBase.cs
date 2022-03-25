@@ -40,7 +40,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static SqlGraphQLFileMetadataProvider _metadataStoreProvider;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
-        protected static  _sqlMetadataProvider;
+        protected static ISqlMetadataProvider _sqlMetadataProvider;
         protected static string _defaultSchemaName;
 
         /// <summary>

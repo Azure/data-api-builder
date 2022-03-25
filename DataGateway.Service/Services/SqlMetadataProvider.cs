@@ -11,7 +11,7 @@ namespace Azure.DataGateway.Service.Services
     /// Reads schema information from the database to make it
     /// available for the GraphQL/REST services.
     /// </summary>
-    public class SqlMetadataProvider<ConnectionT, DataAdapterT, CommandT>
+    public class SqlMetadataProvider<ConnectionT, DataAdapterT, CommandT> : ISqlMetadataProvider
         where ConnectionT : DbConnection, new()
         where DataAdapterT : DbDataAdapter, new()
         where CommandT : DbCommand, new()

@@ -33,7 +33,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 throw new DataGatewayException(
                     message: "Unable to instantiate the SQL query engine.",
                     statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError
+                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
             }
 
             _metadataStoreProvider = (SqlGraphQLFileMetadataProvider)metadataStoreProvider;

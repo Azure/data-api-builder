@@ -26,7 +26,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await InitializeTestFixture(context, TestCategory.MYSQL);
 
             // Setup GraphQL Components
-            _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _graphQLMetadataProvider);
+            _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _metadataStoreProvider);
             _graphQLController = new GraphQLController(_graphQLService);
         }
 

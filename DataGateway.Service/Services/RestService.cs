@@ -38,7 +38,7 @@ namespace Azure.DataGateway.Service.Services
         {
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
-            GraphQLMetadataProvider  = graphQLMetadataProvider;
+            GraphQLMetadataProvider = graphQLMetadataProvider;
             _httpContextAccessor = httpContextAccessor;
             _authorizationService = authorizationService;
         }
@@ -78,7 +78,7 @@ namespace Azure.DataGateway.Service.Services
                         operationType);
                     RequestValidator.ValidateInsertRequestContext(
                         (InsertRequestContext)context,
-                        GraphQLMetadataProvider );
+                        GraphQLMetadataProvider);
                     break;
                 case Operation.Delete:
                     context = new DeleteRequestContext(entityName, isList: false);
@@ -88,7 +88,7 @@ namespace Azure.DataGateway.Service.Services
                 case Operation.UpsertIncremental:
                     JsonElement upsertPayloadRoot = RequestValidator.ValidateUpsertRequest(primaryKeyRoute, requestBody);
                     context = new UpsertRequestContext(entityName, upsertPayloadRoot, GetHttpVerb(operationType), operationType);
-                    RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, GraphQLMetadataProvider );
+                    RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, GraphQLMetadataProvider);
                     break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
@@ -99,17 +99,17 @@ namespace Azure.DataGateway.Service.Services
                 // After parsing primary key, the Context will be populated with the
                 // correct PrimaryKeyValuePairs.
                 RequestParser.ParsePrimaryKey(primaryKeyRoute, context);
-                RequestValidator.ValidatePrimaryKey(context, GraphQLMetadataProvider );
+                RequestValidator.ValidatePrimaryKey(context, GraphQLMetadataProvider);
             }
 
             if (!string.IsNullOrWhiteSpace(queryString))
             {
                 context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
-                RequestParser.ParseQueryString(context, GraphQLMetadataProvider .FilterParser);
+                RequestParser.ParseQueryString(context, GraphQLMetadataProvider.FilterParser);
             }
 
             // At this point for DELETE, the primary key should be populated in the Request Context. 
-            RequestValidator.ValidateRequestContext(context, GraphQLMetadataProvider );
+            RequestValidator.ValidateRequestContext(context, GraphQLMetadataProvider);
 
             // RestRequestContext is finalized for QueryBuilding and QueryExecution.
             // Perform Authorization check prior to moving forward in request pipeline.
@@ -178,7 +178,7 @@ namespace Azure.DataGateway.Service.Services
             string path = UriHelper.GetEncodedUrl(GetHttpContext().Request).Split('?')[0];
             string after = SqlPaginationUtil.MakeCursorFromJsonElement(
                                element: rootEnumerated.Last(),
-                               primaryKey: GraphQLMetadataProvider .GetTableDefinition(context.EntityName).PrimaryKey);
+                               primaryKey: GraphQLMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey);
             JsonElement nextLink = SqlPaginationUtil.CreateNextLink(
                                   path,
                                   nvc: context!.ParsedQueryString,
@@ -199,7 +199,7 @@ namespace Azure.DataGateway.Service.Services
         /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
         public string ConstructPrimaryKeyRoute(string entityName, JsonElement entity)
         {
-            TableDefinition tableDefinition = GraphQLMetadataProvider .GetTableDefinition(entityName);
+            TableDefinition tableDefinition = GraphQLMetadataProvider.GetTableDefinition(entityName);
             StringBuilder newPrimaryKeyRoute = new();
 
             foreach (string primaryKey in tableDefinition.PrimaryKey)

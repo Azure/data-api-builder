@@ -177,7 +177,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         private static AuthorizationRule CreateAuthZRule(AuthorizationType authZType)
         {
             AuthorizationRule rule = new();
-            rule.AuthorizationType = authZType;          
+            rule.AuthorizationType = authZType;
             return rule;
         }
         #endregion

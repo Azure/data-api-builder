@@ -27,6 +27,11 @@ namespace Azure.DataGateway.Service.Authorization
     {
         private readonly SqlGraphQLFileMetadataProvider _configurationProvider;
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="metadataStoreProvider">The metadata provider.</param>
+        /// <param name="isMock">True, if the provided metadata provider is a mock.</param>
         public RequestAuthorizationHandler(
             IGraphQLMetadataProvider metadataStoreProvider,
             bool isMock = false)

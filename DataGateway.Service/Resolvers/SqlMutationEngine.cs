@@ -29,6 +29,14 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public SqlMutationEngine(IQueryEngine queryEngine, IGraphQLMetadataProvider metadataStoreProvider, IQueryExecutor queryExecutor, IQueryBuilder queryBuilder)
         {
+            if (metadataStoreProvider.GetType() != typeof(SqlGraphQLFileMetadataProvider))
+            {
+                throw new DataGatewayException(
+                    message: "Unable to instantiate the SQL mutation engine.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
+            }
+
             _queryEngine = queryEngine;
             _metadataStoreProvider = (SqlGraphQLFileMetadataProvider)metadataStoreProvider;
             _queryExecutor = queryExecutor;

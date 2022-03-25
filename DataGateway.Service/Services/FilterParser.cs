@@ -14,9 +14,7 @@ namespace Azure.DataGateway.Service.Services
     /// </summary>
     public class FilterParser
     {
-        private IEdmModel? _model;
-
-        public FilterParser() { }
+        private IEdmModel _model;
 
         public FilterParser(DatabaseSchema schema)
         {
@@ -35,7 +33,7 @@ namespace Azure.DataGateway.Service.Services
             try
             {
                 Uri relativeUri = new(resourcePath + '/' + filterQueryString, UriKind.Relative);
-                ODataUriParser parser = new(_model!, relativeUri);
+                ODataUriParser parser = new(_model, relativeUri);
                 return parser.ParseFilter();
             }
             catch (ODataException e)

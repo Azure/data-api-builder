@@ -69,12 +69,12 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
             }
         }
 
-        public GraphQLFileMetadataProvider(
-            GraphQLFileMetadataProvider source)
+        /// Default Constructor for Mock tests.
+        public GraphQLFileMetadataProvider()
         {
-            GraphQLResolverConfig = source.GraphQLResolverConfig;
-            _mutationResolvers = source._mutationResolvers;
-            CloudDbType = source.CloudDbType;
+            GraphQLResolverConfig = new(string.Empty, string.Empty);
+            _mutationResolvers = new();
+            CloudDbType = DatabaseType.None;
         }
 
         /// <summary>

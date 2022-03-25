@@ -10,20 +10,12 @@ namespace Azure.DataGateway.Service.Services
 {
     public class SqlGraphQLFileMetadataProvider : GraphQLFileMetadataProvider
     {
-        public FilterParser ODataFilterParser { get; private set; } = new();
+        public FilterParser FilterParser { get; private set; } = new();
 
         public SqlGraphQLFileMetadataProvider(
             IOptions<DataGatewayConfig> dataGatewayConfig)
             : base(dataGatewayConfig)
         {
-        }
-
-        /// Default Constructor for Mock tests.
-        public GraphQLFileMetadataProvider()
-        {
-            GraphQLResolverConfig = new(string.Empty, string.Empty);
-            _mutationResolvers = new();
-            CloudDbType = DatabaseType.None;
         }
 
         public TableDefinition GetTableDefinition(string name)
@@ -46,7 +38,7 @@ namespace Azure.DataGateway.Service.Services
                     subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
             }
 
-            ODataFilterParser = new(GraphQLResolverConfig.DatabaseSchema);
+            FilterParser = new(GraphQLResolverConfig.DatabaseSchema);
         }
     }
 }

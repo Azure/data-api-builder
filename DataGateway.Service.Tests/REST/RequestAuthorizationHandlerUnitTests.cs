@@ -87,7 +87,6 @@ namespace Azure.DataGateway.Service.Tests.REST
             bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, user);
 
             Assert.IsFalse(result);
-
         }
 
         [TestMethod]
@@ -104,7 +103,6 @@ namespace Azure.DataGateway.Service.Tests.REST
             bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, user);
 
             Assert.IsFalse(result);
-
         }
         #endregion
         #region Helper Methods

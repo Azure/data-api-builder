@@ -12,9 +12,7 @@ namespace Azure.DataGateway.Service.Authorization
     public enum AuthorizationType
     {
         Anonymous,
-        Authenticated,
-        Roles,
-        Attributes
+        Authenticated
     }
 
     /// <summary>

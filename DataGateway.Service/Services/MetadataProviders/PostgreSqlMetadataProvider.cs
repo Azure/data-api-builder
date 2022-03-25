@@ -1,6 +1,6 @@
 using Npgsql;
 
-namespace Azure.DataGateway.Service.Services.MetadataProviders
+namespace Azure.DataGateway.Service.Services
 {
     /// <summary>
     /// PostgreSql specific override for SqlMetadataProvider.

@@ -1,6 +1,6 @@
 using Microsoft.Data.SqlClient;
 
-namespace Azure.DataGateway.Service.Services.MetadataProviders
+namespace Azure.DataGateway.Service.Services
 {
     /// <summary>
     /// MsSQL specific override for SqlMetadataProvider.

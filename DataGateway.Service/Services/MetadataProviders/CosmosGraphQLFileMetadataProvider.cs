@@ -1,5 +1,4 @@
 using Azure.DataGateway.Service.Configurations;
-using Azure.DataGateway.Service.Services.MetadataProviders;
 using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Services

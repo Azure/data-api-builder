@@ -10,7 +10,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
     /// <summary>
     /// This middlware validates JWT tokens when EasyAuth is not configured
     /// and an Authorization HTTP header is present with a token.
-    /// This is required snce Asp.Net Core UseAuthentication() does not make
+    /// This is required since Asp.Net Core UseAuthentication() does not make
     /// AuthZ decisions nor does it terminate requests.
     /// https://github.com/aspnet/Security/issues/1613#issuecomment-358843214
     /// </summary>

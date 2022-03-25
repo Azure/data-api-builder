@@ -27,6 +27,10 @@ namespace Azure.DataGateway.Service.Exceptions
             /// </summary>
             AuthorizationCheckFailed,
             /// <summary>
+            /// Request failed authentication. i.e. No/Invalid JWT token
+            /// </summary>
+            AuthenticationChallenge,
+            /// <summary>
             /// The requested operation failed on the database.
             /// </summary>
             DatabaseOperationFailed,

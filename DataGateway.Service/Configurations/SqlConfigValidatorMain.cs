@@ -166,7 +166,6 @@ namespace Azure.DataGateway.Service.Configurations
                 ValidateForeignKeyHasRefTable(foreignKey);
                 ValidateForeignKeyRefTableExists(foreignKey);
 
-                ValidateForeignKeyHasColumns(foreignKey);
                 ValidateForeignKeyColumns(foreignKey, table);
 
                 ConfigStepOutOf(foreignKeyName);
@@ -176,19 +175,42 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate foreign key columns
+        /// Validate foreign key columns and referenced columns
         /// </summary>
         private void ValidateForeignKeyColumns(ForeignKeyDefinition foreignKey, TableDefinition table)
         {
-            ValidateNoDuplicateFkColumns(foreignKey);
-            ValidateFKColCountMatchesRefTablePKColCount(foreignKey);
-            ValidateFKColumnsHaveMatchingTableColumns(foreignKey, table);
+            List<string> columns;
+            List<string> refColumns;
 
-            for (int columnIndex = 0; columnIndex < foreignKey.Columns.Count; columnIndex++)
+            TableDefinition refTable = GetTableWithName(foreignKey.ReferencedTable);
+
+            if (HasExplicitColumns(foreignKey))
             {
-                _ = foreignKey.Columns[columnIndex];
-                ValidateFKColTypeMatchesRefTabPKColType(foreignKey, columnIndex, table);
+                ValidateNoDuplicateFkColumns(foreignKey.Columns, refColumns: false);
+                columns = foreignKey.Columns;
+                ValidateFKColumnsHaveMatchingTableColumns(foreignKey, table);
             }
+            else
+            {
+                columns = table.PrimaryKey;
+            }
+
+            if (HasExplicitReferencedColumns(foreignKey))
+            {
+                ValidateNoDuplicateFkColumns(foreignKey.ReferencedColumns, refColumns: true);
+                refColumns = foreignKey.ReferencedColumns;
+                ValidateRefColumnsExistInRefTable(foreignKey.ReferencedColumns, foreignKey.ReferencedTable);
+            }
+            else
+            {
+                refColumns = refTable.PrimaryKey;
+            }
+
+            ValidateColCountMatchesRefColCount(columns, refColumns, foreignKey.ReferencedTable);
+            ValidateFKColTypesMatchRefTabPKColTypes(
+                columns, table,
+                refColumns, foreignKey.ReferencedTable, refTable
+            );
         }
 
         /// <summary>
@@ -329,6 +351,7 @@ namespace Azure.DataGateway.Service.Configurations
 
                 List<GraphQLRelationshipType> validRelationshipTypes = new()
                 {
+                    GraphQLRelationshipType.OneToOne,
                     GraphQLRelationshipType.ManyToMany,
                     GraphQLRelationshipType.OneToMany,
                     GraphQLRelationshipType.ManyToOne
@@ -338,6 +361,9 @@ namespace Azure.DataGateway.Service.Configurations
 
                 switch (field.RelationshipType)
                 {
+                    case GraphQLRelationshipType.OneToOne:
+                        ValidateOneToOneField(field, fieldDefinition, typeName, returnedType);
+                        break;
                     case GraphQLRelationshipType.OneToMany:
                         ValidateOneToManyField(field, fieldDefinition, typeName, returnedType);
                         break;
@@ -411,6 +437,40 @@ namespace Azure.DataGateway.Service.Configurations
         {
             Dictionary<string, InputValueDefinitionNode> fieldArguments = GetArgumentsFromField(field);
             ValidateFieldArguments(fieldArguments.Keys, requiredArguments: Enumerable.Empty<string>());
+        }
+
+        /// <summary>
+        /// Validate field with One-To-One relationship to the type that owns it
+        /// </summary>
+        private void ValidateOneToOneField(GraphQLField field, FieldDefinitionNode fieldDefinition, string type, string returnedType)
+        {
+            bool hasLeftFk = HasLeftForeignKey(field);
+
+            ValidateReturnTypeNotPagination(field, fieldDefinition);
+            ValidateFieldReturnsCustomType(fieldDefinition, typeNullable: !hasLeftFk);
+            ValidateNoFieldArguments(fieldDefinition);
+
+            ValidateNoAssociationTable(field);
+            ValidateHasLeftXOrRightForeignKey(field);
+            if (hasLeftFk)
+            {
+                ValidateLeftForeignKey(field, type);
+            }
+            else
+            {
+                ValidateRightForeignKey(field, returnedType);
+            }
+
+            if (hasLeftFk)
+            {
+                ForeignKeyDefinition leftFk = GetFkFromTable(GetTypeTable(type), field.LeftForeignKey);
+                ValidateLeftFkRefTableIsReturnedTypeTable(leftFk, returnedType);
+            }
+            else
+            {
+                ForeignKeyDefinition rightFk = GetFkFromTable(GetTypeTable(returnedType), field.RightForeignKey);
+                ValidateRightFkRefTableIsTypeTable(rightFk, type);
+            }
         }
 
         /// <summary>

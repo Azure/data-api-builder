@@ -1,6 +1,7 @@
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
+DROP TABLE IF EXISTS book_website_placements;
 DROP TABLE IF EXISTS books;
 DROP TABLE IF EXISTS publishers;
 DROP TABLE IF EXISTS magazines;
@@ -19,6 +20,12 @@ CREATE TABLE books(
     id bigint IDENTITY(5001, 1) PRIMARY KEY,
     title varchar(max) NOT NULL,
     publisher_id bigint NOT NULL
+);
+
+CREATE TABLE book_website_placements(
+    id bigint IDENTITY(5001, 1) PRIMARY KEY,
+    book_id bigint UNIQUE NOT NULL,
+    price bigint NOT NULL
 );
 
 CREATE TABLE authors(
@@ -58,6 +65,12 @@ FOREIGN KEY (publisher_id)
 REFERENCES publishers (id)
 ON DELETE CASCADE;
 
+ALTER TABLE book_website_placements
+ADD CONSTRAINT book_website_placement_book_fk
+FOREIGN KEY (book_id)
+REFERENCES books (id)
+ON DELETE CASCADE;
+
 ALTER TABLE reviews
 ADD CONSTRAINT review_book_fk
 FOREIGN KEY (book_id)
@@ -88,9 +101,13 @@ SET IDENTITY_INSERT books ON
 INSERT INTO books(id, title, publisher_id) VALUES (1, 'Awesome book', 1234), (2, 'Also Awesome book', 1234), (3, 'Great wall of china explained', 2345), (4, 'US history in a nutshell', 2345), (5, 'Chernobyl Diaries', 2323), (6, 'The Palace Door', 2324), (7, 'The Groovy Bar', 2324), (8, 'Time to Eat', 2324);
 SET IDENTITY_INSERT books OFF
 
+SET IDENTITY_INSERT book_website_placements ON
+INSERT INTO book_website_placements(id, book_id, price) VALUES (1, 1, 100), (2, 2, 50), (3, 3, 23), (4, 5, 33);
+SET IDENTITY_INSERT book_website_placements OFF
+
 INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 123), (3, 124), (4, 123), (4, 124);
 
 SET IDENTITY_INSERT reviews ON
 INSERT INTO reviews(id, book_id, content) VALUES (567, 1, 'Indeed a great book'), (568, 1, 'I loved it'), (569, 1, 'best book I read in years');
 SET IDENTITY_INSERT reviews OFF
- 
+

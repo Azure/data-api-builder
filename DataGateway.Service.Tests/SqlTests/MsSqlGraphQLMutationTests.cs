@@ -365,6 +365,26 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.EntityNotFound}");
         }
+
+        /// <summary>
+        /// Test adding a website placement to a book which already has a website
+        /// placement
+        /// </summary>
+        [TestMethod]
+        public async Task TestViolatingOneToOneRelashionShip()
+        {
+            string graphQLMutationName = "insertWebsitePlacement";
+            string graphQLMutation = @"
+                mutation {
+                    insertWebsitePlacement(book_id: 1, price: 25) {
+                        id
+                    }
+                }
+            ";
+
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
+        }
         #endregion
     }
 }

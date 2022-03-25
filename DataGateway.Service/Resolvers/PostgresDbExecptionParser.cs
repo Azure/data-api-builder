@@ -13,10 +13,15 @@ namespace Azure.DataGateway.Service.Resolvers
             // for error codes
             switch (e.SqlState)
             {
-                case "23503": // foreign key violation
+                case "23503":
+                    return new DataGatewayException(
+                        message: $"PostgreSql Error {e.SqlState}: Foreign Key Constraint Violation.",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed
+                    );
                 case "23505": // unique constraint violation
                     return new DataGatewayException(
-                        message: e.Message,
+                        message: $"PostgreSql Error {e.SqlState}: Unique Constraint Violation.",
                         statusCode: HttpStatusCode.InternalServerError,
                         subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed
                     );

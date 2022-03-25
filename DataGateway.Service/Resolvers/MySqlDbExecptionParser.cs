@@ -13,9 +13,9 @@ namespace Azure.DataGateway.Service.Resolvers
             // for error codes
             switch (e.SqlState)
             {
-                case "23000": // integrity constrain violation
+                case "23000":
                     return new DataGatewayException(
-                        message: e.Message,
+                        message: $"MySql Error {e.SqlState}: Integrity Contraint Violation.",
                         statusCode: HttpStatusCode.InternalServerError,
                         subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed
                     );

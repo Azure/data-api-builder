@@ -23,13 +23,13 @@ namespace Azure.DataGateway.Service.Exceptions
             /// </summary>
             EntityNotFound,
             /// <summary>
-            /// Request failed authorization.
-            /// </summary>
-            AuthorizationCheckFailed,
-            /// <summary>
             /// Request failed authentication. i.e. No/Invalid JWT token
             /// </summary>
             AuthenticationChallenge,
+            /// <summary>
+            /// Request failed authorization.
+            /// </summary>
+            AuthorizationCheckFailed,
             /// <summary>
             /// The requested operation failed on the database.
             /// </summary>

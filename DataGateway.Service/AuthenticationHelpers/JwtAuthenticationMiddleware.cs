@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Azure.DataGateway.Service.AuthenticationHelpers
 {
     /// <summary>
-    /// This middlware validates JWT tokens when EasyAuth is not configured
+    /// This middlware validates JWT tokens when JWT Auth is configured
     /// and an Authorization HTTP header is present with a token.
     /// This is required since Asp.Net Core UseAuthentication() does not make
     /// AuthZ decisions nor does it terminate requests.
@@ -24,6 +24,13 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
             _nextMiddleware = next;
         }
 
+        /// <summary>
+        /// Explicitly authenticates using JWT authentication scheme.
+        /// A successful result contains validated token data that is
+        /// used to populate the user object in the HttpContext for use
+        /// in downstream middleware.
+        /// </summary>
+        /// <param name="httpContext"></param>
         public async Task Invoke(HttpContext httpContext)
         {
             if (httpContext != null && httpContext.Request.Headers[JWT_AUTH_HEADER].Count > 0)

@@ -43,6 +43,10 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         private const string CHALLENGE_HEADER = "WWW-Authenticate";
 
         #region Positive Tests
+        /// <summary>
+        /// JWT is valid as it contains no errors caught by negative tests
+        /// library(Microsoft.AspNetCore.Authentication.JwtBearer) validation methods
+        /// </summary>
         [TestMethod]
         public async Task TestValidToken()
         {
@@ -59,8 +63,11 @@ namespace Azure.DataGateway.Service.Tests.Authentication
             Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
         }
-        #endregion       
+        #endregion
         #region Negative Tests
+        /// <summary>
+        /// JWT is expired and should not be accepted.
+        /// </summary>
         [TestMethod]
         public async Task TestInvalidToken_LifetimeExpired()
         {
@@ -80,6 +87,10 @@ namespace Azure.DataGateway.Service.Tests.Authentication
             Assert.IsTrue(headerValue[0].Contains("invalid_token") && headerValue[0].Contains($"The token expired at"));
         }
 
+        /// <summary>
+        /// JWT notBefore date is in the future.
+        /// JWT is not YET valid and causes validation failure.
+        /// </summary>
         [TestMethod]
         public async Task TestInvalidToken_NotYetValid()
         {
@@ -99,6 +110,10 @@ namespace Azure.DataGateway.Service.Tests.Authentication
             Assert.IsTrue(headerValue[0].Contains("invalid_token") && headerValue[0].Contains($"The token is not valid before"));
         }
 
+        /// <summary>
+        /// JWT contains audience not configured in TestServer Authentication options.
+        /// Mismatch to configuration causes validation failure.
+        /// </summary>
         [TestMethod]
         public async Task TestInvalidToken_BadAudience()
         {
@@ -112,6 +127,10 @@ namespace Azure.DataGateway.Service.Tests.Authentication
             Assert.IsTrue(headerValue[0].Contains("invalid_token") && headerValue[0].Contains($"The audience '{BAD_AUDIENCE}' is invalid"));
         }
 
+        /// <summary>
+        /// JWT contains issuer not configured in TestServer Authentication options.
+        /// Mismatch to configuration causes validation failure.
+        /// </summary>
         [TestMethod]
         public async Task TestInvalidToken_BadIssuer()
         {
@@ -125,7 +144,11 @@ namespace Azure.DataGateway.Service.Tests.Authentication
             Assert.IsTrue(headerValue[0].Contains("invalid_token") && headerValue[0].Contains($"The issuer '{BAD_ISSUER}' is invalid"));
         }
 
-        [TestMethod("JWT signed with unrecognized/unconfigured cert, with unknown (kid) claim, results in signature key not found")]
+        /// <summary>
+        /// JWT signed with unrecognized/unconfigured cert.
+        /// Resulting in unrecognized (kid) claim value
+        /// </summary>
+        [TestMethod]
         public async Task TestInvalidToken_InvalidSigningKey()
         {
             X509Certificate2 selfSignedCert = AuthTestCertHelper.CreateSelfSignedCert(hostName: LOCAL_ISSUER);
@@ -143,6 +166,10 @@ namespace Azure.DataGateway.Service.Tests.Authentication
             Assert.IsTrue(headerValue[0].Contains("invalid_token") && headerValue[0].Contains($"The signature key was not found"));
         }
 
+        /// <summary>
+        /// JWT with intentionally scrambled signature.
+        /// JWT signed with RSASecurityKey, not a cert, so no KID (keyID) claim in token.
+        /// </summary>
         [TestMethod("JWT signed with unrecognized/unconfigured key, results in signature key not found")]
         public async Task TestInvalidToken_InvalidSignature()
         {
@@ -157,7 +184,12 @@ namespace Azure.DataGateway.Service.Tests.Authentication
             Assert.IsTrue(headerValue[0].Contains("invalid_token") && headerValue[0].Contains($"The signature is invalid"));
         }
 
-        [TestMethod("JWT signed with unrecognized/unconfigured key, results in signature key not found")]
+        /// <summary>
+        /// JWT with intentionally scrambled signature.
+        /// JWT signed with cert adding KID (keyID) claim to token.
+        /// Even with valid key, invalid signature still fails validation.
+        /// </summary>
+        [TestMethod]
         public async Task TestInvalidToken_InvalidSignatureUsingCert()
         {
             X509Certificate2 selfSignedCert = AuthTestCertHelper.CreateSelfSignedCert(hostName: LOCAL_ISSUER);
@@ -173,6 +205,10 @@ namespace Azure.DataGateway.Service.Tests.Authentication
             Assert.IsTrue(headerValue[0].Contains("invalid_token") && headerValue[0].Contains($"The signature is invalid"));
         }
 
+        /// <summary>
+        /// JWT token striped of signature should fail (401) even if all other validation passes.
+        /// Challenge header (WWW-Authenticate) only states invalid_token here.
+        /// </summary>
         [TestMethod("JWT with no signature should result in 401")]
         public async Task TestInvalidToken_NoSignature()
         {
@@ -188,6 +224,12 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         }
         #endregion
         #region Helper Methods
+        /// <summary>
+        /// Configures test server with bare minimum middleware
+        /// and configures Authentication options with passed in SecurityKey
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns>IHost</returns>
         private static async Task<IHost> CreateWebHostCustomIssuer(SecurityKey key)
         {
             return await new HostBuilder()
@@ -245,9 +287,16 @@ namespace Azure.DataGateway.Service.Tests.Authentication
                 .StartAsync();
         }
 
+        /// <summary>
+        /// Creates the TestServer with the minimum middleware setup necessary to
+        /// test JwtAuthenticationMiddlware
+        /// Sends a request with the passed in token to the TestServer created.
+        /// </summary>
+        /// <param name="key">The JST signing key to setup the TestServer</param>
+        /// <param name="token">The JWT value to test against the TestServer</param>
+        /// <returns></returns>
         private static async Task<HttpContext> SendRequestAndGetHttpContextState(SecurityKey key, string token)
         {
-            // Creates host using intented cert to validate tokens
             using IHost host = await CreateWebHostCustomIssuer(key);
             TestServer server = host.GetTestServer();
 
@@ -259,6 +308,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
                 context.Request.Scheme = "https";
             });
         }
+
         /// <summary>
         /// Creates a JWT token with self signed cert.
         /// Resources:
@@ -320,6 +370,13 @@ namespace Azure.DataGateway.Service.Tests.Authentication
             }
         }
 
+        /// <summary>
+        /// Returns the value of the challenge header
+        /// index[0] value:
+        /// "Bearer error=\"invalid_token\", error_description=\"The audience '1337-314159' is invalid\""
+        /// </summary>
+        /// <param name="context"></param>
+        /// <returns></returns>
         private static StringValues GetChallengeHeader(HttpContext context)
         {
             Assert.IsTrue(context.Response.Headers.ContainsKey(CHALLENGE_HEADER));

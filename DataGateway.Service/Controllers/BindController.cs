@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
+using System.Text;
 
 namespace Azure.DataGateway.Service.Controllers
 {
@@ -47,8 +48,8 @@ namespace Azure.DataGateway.Service.Controllers
             Dictionary<string, string> properties = new()
             {
                 { "DataGatewayConfig:DatabaseConnection:ConnectionString", connectionString },
-                { "DataGatewayConfig:GraphQLSchema", bindRequest.GraphQLSchema },
-                { "DataGatewayConfig:ResolverConfig", bindRequest.DatabaseConfig },
+                { "DataGatewayConfig:GraphQLSchema", Encoding.UTF8.GetString(Convert.FromBase64String(bindRequest.GraphQLSchema)) },
+                { "DataGatewayConfig:ResolverConfig", Encoding.UTF8.GetString(Convert.FromBase64String(bindRequest.DatabaseConfig)) },
                 { "DataGatewayConfig:DatabaseType", "Cosmos" }
             };
 

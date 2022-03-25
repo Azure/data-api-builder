@@ -26,9 +26,6 @@ namespace Azure.DataGateway.Service.Controllers
         [JsonProperty("userId")]
         public string UserId { get; set; }
 
-        [JsonProperty("name")]
-        public string Name { get; set; }
-
         [JsonProperty("graphqlschema")]
         public string GraphQLSchema { get; set; }
 

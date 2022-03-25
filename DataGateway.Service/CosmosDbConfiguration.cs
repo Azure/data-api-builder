@@ -18,8 +18,6 @@ namespace Azure.DataGateway.Service
 
         public string AadToken { set; get; }
 
-        public string UserName { private set; get; }
-
         public string UserId { private set; get; }
 
         public string TenantId { private set; get; }
@@ -53,7 +51,6 @@ namespace Azure.DataGateway.Service
             this.AadToken = token;
             this.TenantId = tenantId;
             this.UserId = bindRequest.UserId;
-            this.UserName = bindRequest.Name;
 
             this.SubscriptionId = bindRequest.SubscriptionId;
             this.ResourceGroup = bindRequest.ResourceGroup;

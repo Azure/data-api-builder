@@ -19,7 +19,7 @@ namespace Azure.DataGateway.Service.Services
             FilterParser = new(GraphQLResolverConfig.DatabaseSchema!);
         }
 
-        public TableDefinition GetTableDefinition(string name)
+        public virtual TableDefinition GetTableDefinition(string name)
         {
             if (!GraphQLResolverConfig.DatabaseSchema!.Tables.TryGetValue(name, out TableDefinition? metadata))
             {

@@ -27,9 +27,12 @@ namespace Azure.DataGateway.Service.Authorization
     {
         private readonly SqlGraphQLFileMetadataProvider _configurationProvider;
 
-        public RequestAuthorizationHandler(IGraphQLMetadataProvider metadataStoreProvider)
+        public RequestAuthorizationHandler(
+            IGraphQLMetadataProvider metadataStoreProvider,
+            bool isMock = false)
         {
-            if (metadataStoreProvider.GetType() != typeof(SqlGraphQLFileMetadataProvider))
+            if (metadataStoreProvider.GetType() != typeof(SqlGraphQLFileMetadataProvider)
+                && !isMock)
             {
                 throw new DataGatewayException(
                     message: "Unable to instantiate the request authorization service.",

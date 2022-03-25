@@ -91,7 +91,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             FindRequestContext request = new(entityName, isList: false);
             AuthorizationHandlerContext context = new(new List<IAuthorizationRequirement> { HttpRestVerbs.GET }, user, request);
-            RequestAuthorizationHandler handler = new(_metadataStore.Object);
+            RequestAuthorizationHandler handler = new(_metadataStore.Object, isMock: true);
 
             await handler.HandleAsync(context);
 

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
@@ -13,14 +12,19 @@ namespace Azure.DataGateway.Service.Services
     public class SqlGraphQLFileMetadataProvider : GraphQLFileMetadataProvider
     {
         private FilterParser? _filterParser;
-        private readonly ISqlMetadataProvider _sqlMetadataProvider;
 
         public SqlGraphQLFileMetadataProvider(
-            IOptions<DataGatewayConfig> dataGatewayConfig,
-            ISqlMetadataProvider sqlMetadataProvider)
+            IOptions<DataGatewayConfig> dataGatewayConfig)
             : base(dataGatewayConfig)
         {
-            _sqlMetadataProvider = sqlMetadataProvider;
+        }
+
+        /// Default Constructor for Mock tests.
+        public GraphQLFileMetadataProvider()
+        {
+            GraphQLResolverConfig = new(string.Empty, string.Empty);
+            _mutationResolvers = new();
+            CloudDbType = DatabaseType.None;
         }
 
         /// <summary>
@@ -34,44 +38,6 @@ namespace Azure.DataGateway.Service.Services
             }
 
             return _filterParser;
-        }
-
-        /// <summary>
-        /// Enrich the database schema with the missing information
-        /// from file but the runtime still needs.
-        /// </summary>
-        public async Task EnrichDatabaseSchemaWithTableMetadata()
-        {
-            if (GraphQLResolverConfig == null || GraphQLResolverConfig.DatabaseSchema == null)
-            {
-                throw new DataGatewayException(
-                    message: "Developer configuration file has not been initialized.",
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
-            }
-
-            string schemaName = string.Empty;
-            foreach ((string tableName, TableDefinition tableDefinition) in GraphQLResolverConfig.DatabaseSchema.Tables)
-            {
-                switch (CloudDbType)
-                {
-                    case DatabaseType.MsSql:
-                        schemaName = "dbo";
-                        await _sqlMetadataProvider!.PopulateTableDefinitionAsync(schemaName, tableName, tableDefinition);
-                        break;
-                    case DatabaseType.PostgreSql:
-                        schemaName = "public";
-                        await _sqlMetadataProvider!.PopulateTableDefinitionAsync(schemaName, tableName, tableDefinition);
-                        break;
-                    case DatabaseType.MySql:
-                        await _sqlMetadataProvider!.PopulateTableDefinitionAsync(schemaName, tableName, tableDefinition);
-                        break;
-                    default:
-                        throw new ArgumentException($"Enriching database schema " +
-                            $"for this database type: {CloudDbType} " +
-                            $"is not supported.");
-                }
-            }
         }
 
         public TableDefinition GetTableDefinition(string name)

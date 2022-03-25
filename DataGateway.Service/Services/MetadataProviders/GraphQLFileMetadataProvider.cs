@@ -69,6 +69,18 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
             }
         }
 
+        /// <summary>
+        /// Copy constructor
+        /// </summary>
+        /// <param name="source">Source to copy from.</param>
+        public GraphQLFileMetadataProvider(
+            GraphQLFileMetadataProvider source)
+        {
+            GraphQLResolverConfig = source.GraphQLResolverConfig;
+            _mutationResolvers = source._mutationResolvers;
+            CloudDbType = source.CloudDbType;
+        }
+
         /// Default Constructor for Mock tests.
         public GraphQLFileMetadataProvider()
         {

@@ -19,6 +19,17 @@ namespace Azure.DataGateway.Service.Services
             FilterParser = new(GraphQLResolverConfig.DatabaseSchema!);
         }
 
+        /// <summary>
+        ///  Copy Constructor
+        /// </summary>
+        /// <param name="source">Source to copy from</param>
+        public SqlGraphQLFileMetadataProvider(
+                SqlGraphQLFileMetadataProvider source)
+            : base(source)
+        {
+            FilterParser = source.FilterParser;
+        }
+
         /// Default Constructor for Mock tests.
         public SqlGraphQLFileMetadataProvider() : base()
         {

@@ -173,17 +173,13 @@ namespace Azure.DataGateway.Service.Resolvers
                     continue;
                 }
 
-                if (tableDefinition.Columns[leftOverColumn].IsNullable)
-                {
-                    Predicate predicate = new(
-                        new PredicateOperand(new Column(null, leftOverColumn)),
-                        PredicateOperation.Equal,
-                        new PredicateOperand($"@{MakeParamWithValue(null)}")
-                    );
+                Predicate predicate = new(
+                    new PredicateOperand(new Column(null, leftOverColumn)),
+                    PredicateOperation.Equal,
+                    new PredicateOperand($"@{MakeParamWithValue(null)}")
+                );
 
-                    UpdateOperations.Add(predicate);
-                }
-
+                UpdateOperations.Add(predicate);
             }
         }
 

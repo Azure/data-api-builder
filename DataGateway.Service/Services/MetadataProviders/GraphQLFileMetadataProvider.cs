@@ -13,7 +13,7 @@ namespace Azure.DataGateway.Service.Services
     /// Reads GraphQL Schema and resolver config
     /// from text files to make available to GraphQL service.
     /// </summary>
-    public abstract class GraphQLFileMetadataProvider : IGraphQLMetadataProvider
+    public class GraphQLFileMetadataProvider : IGraphQLMetadataProvider
     {
         public ResolverConfig GraphQLResolverConfig { get; set; }
 

@@ -197,7 +197,6 @@ namespace Azure.DataGateway.Service.Tests.Authentication
                         .UseTestServer()
                         .ConfigureServices(services =>
                         {
-                            //defaultScheme: JwtBearerDefaults.AuthenticationScheme
                             services.AddAuthentication(defaultScheme: JwtBearerDefaults.AuthenticationScheme)
                                 .AddJwtBearer(options =>
                                 {
@@ -214,7 +213,6 @@ namespace Azure.DataGateway.Service.Tests.Authentication
 
                                         // The signing key must match
                                         ValidateIssuerSigningKey = true,
-                                        //IssuerSigningKey = new X509SecurityKey(cert),
                                         IssuerSigningKey = key,
 
                                         // Lifetime
@@ -246,8 +244,6 @@ namespace Azure.DataGateway.Service.Tests.Authentication
                 })
                 .StartAsync();
         }
-
-        //private static async Task<HttpContext> SendRequestAndGetHttpContextState(X509Certificate2 certificate, string token)
 
         private static async Task<HttpContext> SendRequestAndGetHttpContextState(SecurityKey key, string token)
         {

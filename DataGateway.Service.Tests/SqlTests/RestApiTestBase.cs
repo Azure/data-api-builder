@@ -1194,6 +1194,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
                 );
+
+            requestBody = @"
+            {
+                ""piecesAvailable"": ""7""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: string.Empty,
+                    entity: _Composite_NonAutoGenPK,
+                    sqlQuery: string.Empty,
+                    controller: _restController,
+                    operationType: Operation.Upsert,
+                    requestBody: requestBody,
+                    exception: true,
+                    expectedErrorMessage: $"Invalid request body. Missing field in body: categoryName.",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
+                );
         }
 
         /// <summary>

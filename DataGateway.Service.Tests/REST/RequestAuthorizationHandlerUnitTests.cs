@@ -158,7 +158,8 @@ namespace Azure.DataGateway.Service.Tests.REST
             {
                 table.HttpVerbs.Add(httpOperation, CreateAuthZRule(authZType));
             }
-            else if (defaultAuthZRule){
+            else if (defaultAuthZRule)
+            {
                 table.HttpVerbs.Add(httpOperation, new AuthorizationRule());
             }
 

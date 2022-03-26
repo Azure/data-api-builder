@@ -1,9 +1,11 @@
 using System;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
+using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -14,14 +16,16 @@ namespace Azure.DataGateway.Service.Tests.REST
     /// occurs for REST requests for FindOne().
     /// </summary>
     [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class RequestValidatorUnitTests
+    public class RequestValidatorUnitTests : SqlTestBase
     {
-        private static Mock<IMetadataStoreProvider> _metadataStore;
+        private static Mock<SqlGraphQLFileMetadataProvider> _mockMetadataStore;
 
         [ClassInitialize]
-        public static void InitializeTestFixture(TestContext context)
+        public static async Task InitializeTestFixture(TestContext context)
         {
-            _metadataStore = new Mock<IMetadataStoreProvider>();
+            await InitializeTestFixture(context, TestCategory.MSSQL);
+            _mockMetadataStore =
+                new Mock<SqlGraphQLFileMetadataProvider>(_metadataStoreProvider);
         }
 
         #region Positive Tests
@@ -37,13 +41,13 @@ namespace Azure.DataGateway.Service.Tests.REST
             {
                 PrimaryKey = new(primaryKeys)
             };
-            _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
 
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
             string primaryKeyRoute = "id/1";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
-            PerformTest(findRequestContext, _metadataStore.Object, expectsException: false);
+            PerformTest(findRequestContext, _mockMetadataStore.Object, expectsException: false);
         }
 
         /// <summary>
@@ -58,12 +62,12 @@ namespace Azure.DataGateway.Service.Tests.REST
             {
                 PrimaryKey = new(primaryKeys)
             };
-            _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
             string primaryKeyRoute = "id/2/isbn/12345";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
-            PerformTest(findRequestContext, _metadataStore.Object, expectsException: false);
+            PerformTest(findRequestContext, _mockMetadataStore.Object, expectsException: false);
         }
 
         /// <summary>
@@ -79,12 +83,12 @@ namespace Azure.DataGateway.Service.Tests.REST
             {
                 PrimaryKey = new(primaryKeys)
             };
-            _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
             string primaryKeyRoute = "isbn/12345/id/2";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
-            PerformTest(findRequestContext, _metadataStore.Object, expectsException: false);
+            PerformTest(findRequestContext, _mockMetadataStore.Object, expectsException: false);
         }
 
         #endregion
@@ -102,13 +106,13 @@ namespace Azure.DataGateway.Service.Tests.REST
             {
                 PrimaryKey = new(primaryKeys)
             };
-            _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
             string primaryKeyRoute = "name/Catch22";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
             PerformTest(findRequestContext,
-                _metadataStore.Object,
+                _mockMetadataStore.Object,
                 expectsException: true,
                 statusCode: HttpStatusCode.BadRequest,
                 subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
@@ -149,12 +153,12 @@ namespace Azure.DataGateway.Service.Tests.REST
             {
                 PrimaryKey = new(primaryKeys)
             };
-            _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
             string primaryKeyRoute = "name/1";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
-            PerformTest(findRequestContext, _metadataStore.Object, expectsException: true);
+            PerformTest(findRequestContext, _mockMetadataStore.Object, expectsException: true);
         }
 
         /// <summary>
@@ -169,12 +173,12 @@ namespace Azure.DataGateway.Service.Tests.REST
             {
                 PrimaryKey = new(primaryKeys)
             };
-            _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
             string primaryKeyRoute = "id/12345/name/2";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
-            PerformTest(findRequestContext, _metadataStore.Object, expectsException: true);
+            PerformTest(findRequestContext, _mockMetadataStore.Object, expectsException: true);
         }
 
         /// <summary>
@@ -189,12 +193,12 @@ namespace Azure.DataGateway.Service.Tests.REST
             {
                 PrimaryKey = new(primaryKeys)
             };
-            _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
             string primaryKeyRoute = "id/12345/isbn/2/name/TwoTowers";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
-            PerformTest(findRequestContext, _metadataStore.Object, expectsException: true);
+            PerformTest(findRequestContext, _mockMetadataStore.Object, expectsException: true);
         }
 
         /// <summary>
@@ -224,20 +228,20 @@ namespace Azure.DataGateway.Service.Tests.REST
         /// of negative tests, vs downstream service failure.
         /// </summary>
         /// <param name="findRequestContext">Client simulated request</param>
-        /// <param name="metadataStore">Mocked Config provider</param>
+        /// <param name="metadataStore">Mocked GraphQLResolverConfig provider</param>
         /// <param name="expectsException">True/False whether we expect validation to fail.</param>
         /// <param name="statusCode">Integer which represents the http status code expected to return.</param>
         /// <param name="subStatusCode">Represents the sub status code that we expect to return.</param>
         public static void PerformTest(
             FindRequestContext findRequestContext,
-            IMetadataStoreProvider metadataStore,
+            IGraphQLMetadataProvider metadataStore,
             bool expectsException,
             HttpStatusCode statusCode = HttpStatusCode.BadRequest,
             DataGatewayException.SubStatusCodes subStatusCode = DataGatewayException.SubStatusCodes.BadRequest)
         {
             try
             {
-                RequestValidator.ValidatePrimaryKey(findRequestContext, _metadataStore.Object);
+                RequestValidator.ValidatePrimaryKey(findRequestContext, _mockMetadataStore.Object);
 
                 //If expecting an exception, the code should not reach this point.
                 if (expectsException)

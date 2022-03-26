@@ -86,7 +86,7 @@ namespace Azure.DataGateway.Service.Services
         {
             GraphQLResolverConfig = new(string.Empty, string.Empty);
             _mutationResolvers = new();
-            CloudDbType = DatabaseType.None;
+            CloudDbType = DatabaseType.MsSql;
         }
 
         /// <summary>

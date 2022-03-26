@@ -23,6 +23,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected const int STARTING_ID_FOR_TEST_INSERTS = 5001;
         protected static readonly string _integration_NonAutoGenPK_TableName = "magazines";
         protected static readonly string _integration_AutoGenNonPK_TableName = "comics";
+        protected static readonly string _Composite_NonAutoGenPK = "stocks";
 
         public abstract string GetQuery(string key);
 
@@ -382,6 +383,26 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
             );
+
+            requestBody = @"
+            {
+                ""categoryid"": ""5"",
+                ""pieceid"": ""2"",
+                ""categoryName"":""Thriller""
+            }";
+
+            expectedLocationHeader = $"categoryid/5/pieceid/2";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: GetQuery("InsertOneInCompositeNonAutoGenPKTest"),
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
         }
 
         /// <summary>
@@ -403,6 +424,24 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 queryString: null,
                 entity: _tableWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(InsertOneInCompositeKeyTableTest)),
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
+
+            requestBody = @"
+            {
+                 ""book_id"": ""2""
+            }";
+
+            expectedLocationHeader = $"book_id/2/id/{STARTING_ID_FOR_TEST_INSERTS + 1}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entity: _tableWithCompositePrimaryKey,
+                sqlQuery: GetQuery("InsertOneInDefaultTestTable"),
                 controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
@@ -457,6 +496,44 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.NoContent
+                );
+
+            requestBody = @"
+            {
+                ""content"": ""Good book to read""
+            }";
+
+            string expectedLocationHeader = $"book_id/1/id/568";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: expectedLocationHeader,
+                queryString: null,
+                entity: _tableWithCompositePrimaryKey,
+                sqlQuery: GetQuery("PutOne_Update_Default_Test"),
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedLocationHeader: expectedLocationHeader
+                );
+
+            requestBody = @"
+            {
+               ""categoryName"":""History"",
+               ""piecesAvailable"":""10"",
+               ""piecesRequired"":""5""
+            }";
+
+            expectedLocationHeader = $"categoryid/2/pieceid/1";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: expectedLocationHeader,
+                queryString: null,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: GetQuery("PutOne_Update_CompositeNonAutoGenPK_Test"),
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedLocationHeader: expectedLocationHeader
                 );
         }
 
@@ -531,6 +608,44 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
                 );
+
+            requestBody = @"
+            {
+               ""categoryName"":""comics"",
+               ""piecesAvailable"":""2"",
+               ""piecesRequired"":""1""
+            }";
+
+            expectedLocationHeader = $"categoryid/3/pieceid/1";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: expectedLocationHeader,
+                queryString: null,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: GetQuery("PutOne_Insert_CompositeNonAutoGenPK_Test"),
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+                );
+
+            requestBody = @"
+            {
+               ""categoryName"":""SciFi""
+            }";
+
+            expectedLocationHeader = $"categoryid/8/pieceid/1";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: expectedLocationHeader,
+                queryString: null,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: GetQuery("PutOne_Insert_Default_Test"),
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+                );
         }
 
         /// <summary>
@@ -561,6 +676,44 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: expectedLocationHeader
                 );
+
+            requestBody = @"
+            {
+                ""categoryName"": ""Suspense"",
+                ""piecesAvailable"":""5"",
+                ""piecesRequired"":""4""
+            }";
+            expectedLocationHeader = $"categoryid/4/pieceid/1";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entity: _Composite_NonAutoGenPK,
+                    sqlQuery: GetQuery("PatchOne_Insert_CompositeNonAutoGenPK_Test"),
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: expectedLocationHeader
+                );
+
+            requestBody = @"
+            {
+                ""categoryName"": ""Drama""
+            }";
+            expectedLocationHeader = $"categoryid/7/pieceid/1";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entity: _Composite_NonAutoGenPK,
+                    sqlQuery: GetQuery("PatchOne_Insert_Default_Test"),
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: expectedLocationHeader
+                );
         }
 
         /// <summary>
@@ -582,6 +735,38 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     queryString: null,
                     entity: _integrationTableName,
                     sqlQuery: GetQuery(nameof(PatchOne_Update_Test)),
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.NoContent
+                );
+
+            requestBody = @"
+            {
+                ""content"": ""That's a great book""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/567/book_id/1",
+                    queryString: null,
+                    entity: _tableWithCompositePrimaryKey,
+                    sqlQuery: GetQuery("PatchOne_Update_Default_Test"),
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.NoContent
+                );
+
+            requestBody = @"
+            {
+                ""piecesAvailable"": ""10""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entity: _Composite_NonAutoGenPK,
+                    sqlQuery: GetQuery("PatchOne_Update_CompositeNonAutoGenPK_Test"),
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
@@ -795,6 +980,48 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
             );
+
+            requestBody = @"
+            {
+                ""categoryid"":""6"",
+                ""pieceid"":""1""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: string.Empty,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Invalid request body. Missing field in body: categoryName.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: "BadRequest"
+            );
+        }
+
+        [TestMethod]
+        public virtual async Task PutOneWithNonNullableFieldMissingInJsonBodyTest()
+        {
+            string requestBody = @"
+            {
+                ""piecesRequired"":""6""
+            }";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1",
+                queryString: string.Empty,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Invalid request body. Missing field in body: categoryName.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: "BadRequest"
+            );
         }
 
         /// <summary>
@@ -917,6 +1144,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 );
         }
 
+        [TestMethod]
+        public virtual async Task PutOne_Insert_CompositePKAutoGen_Test()
+        {
+            string requestBody = @"
+            {
+               ""content"":""Great book to read""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: $"id/{STARTING_ID_FOR_TEST_INSERTS + 1}/book_id/1",
+                    queryString: string.Empty,
+                    entity: _tableWithCompositePrimaryKey,
+                    sqlQuery: string.Empty,
+                    controller: _restController,
+                    operationType: Operation.Upsert,
+                    requestBody: requestBody,
+                    exception: true,
+                    expectedErrorMessage: $"Could not perform the given mutation on entity reviews.",
+                    expectedStatusCode: HttpStatusCode.InternalServerError,
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed.ToString()
+                );
+        }
         /// <summary>
         /// Tests the PutOne functionality with a REST PUT request
         /// with item that does NOT exist, AND primary key defined is autogenerated in schema,
@@ -942,6 +1191,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     requestBody: requestBody,
                     exception: true,
                     expectedErrorMessage: $"Invalid request body. Missing field in body: publisher_id.",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
+                );
+
+            requestBody = @"
+            {
+                ""piecesAvailable"": ""7""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: string.Empty,
+                    entity: _Composite_NonAutoGenPK,
+                    sqlQuery: string.Empty,
+                    controller: _restController,
+                    operationType: Operation.Upsert,
+                    requestBody: requestBody,
+                    exception: true,
+                    expectedErrorMessage: $"Invalid request body. Missing field in body: categoryName.",
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
                 );

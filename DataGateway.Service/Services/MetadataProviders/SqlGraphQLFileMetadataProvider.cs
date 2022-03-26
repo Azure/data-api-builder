@@ -23,8 +23,12 @@ namespace Azure.DataGateway.Service.Services
             _sqlMetadataProvider = sqlMetadataProvider;
         }
 
+        /// <summary>
+        ///  Copy Constructor
+        /// </summary>
+        /// <param name="source">Source to copy from</param>
         public SqlGraphQLFileMetadataProvider(
-            SqlGraphQLFileMetadataProvider source)
+                SqlGraphQLFileMetadataProvider source)
             : base(source)
         {
             _sqlMetadataProvider = source._sqlMetadataProvider;
@@ -54,7 +58,7 @@ namespace Azure.DataGateway.Service.Services
             foreach ((string tableName, TableDefinition tableDefinition) in GraphQLResolverConfig.DatabaseSchema.Tables)
             {
                 switch (CloudDbType)
-                {
+        {
                     case DatabaseType.MsSql:
                         schemaName = "dbo";
                         await _sqlMetadataProvider!.PopulateTableDefinitionAsync(schemaName, tableName, tableDefinition);

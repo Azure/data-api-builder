@@ -13,7 +13,7 @@ namespace Azure.DataGateway.Service.Services
     /// Reads GraphQL Schema and resolver config
     /// from text files to make available to GraphQL service.
     /// </summary>
-    public abstract class GraphQLFileMetadataProvider : IGraphQLMetadataProvider
+    public class GraphQLFileMetadataProvider : IGraphQLMetadataProvider
     {
         public ResolverConfig GraphQLResolverConfig { get; set; }
 
@@ -69,6 +69,10 @@ namespace Azure.DataGateway.Service.Services
             }
         }
 
+        /// <summary>
+        /// Copy constructor
+        /// </summary>
+        /// <param name="source">Source to copy from.</param>
         public GraphQLFileMetadataProvider(
             GraphQLFileMetadataProvider source)
         {
@@ -82,7 +86,7 @@ namespace Azure.DataGateway.Service.Services
         {
             GraphQLResolverConfig = new(string.Empty, string.Empty);
             _mutationResolvers = new();
-            CloudDbType = DatabaseType.None;
+            CloudDbType = DatabaseType.MsSql;
         }
 
         /// <summary>

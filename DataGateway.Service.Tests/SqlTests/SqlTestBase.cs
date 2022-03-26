@@ -38,9 +38,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static IQueryBuilder _queryBuilder;
         protected static IQueryEngine _queryEngine;
         protected static IMutationEngine _mutationEngine;
-        protected static SqlGraphQLFileMetadataProvider _graphQLMetadataProvider;
+        protected static SqlGraphQLFileMetadataProvider _metadataStoreProvider;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
+        protected static ISqlMetadataProvider _sqlMetadataProvider;
         protected static string _defaultSchemaName;
 
         /// <summary>

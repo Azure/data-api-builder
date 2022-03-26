@@ -9,6 +9,7 @@ using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using HotChocolate.Language;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.Cosmos;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -69,7 +70,7 @@ type Planet {
             _metadataStoreProvider.GraphQLSchema = jsonString;
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
-            _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider);
+            _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider, new DocumentCache(), new Sha256DocumentHashProvider());
             _controller = new GraphQLController(_graphQLService);
             Client = _clientProvider.Client;
         }

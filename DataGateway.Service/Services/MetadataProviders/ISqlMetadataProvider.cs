@@ -26,4 +26,9 @@ public interface ISqlMetadataProvider
         string schemaName,
         string tableName,
         TableDefinition tableDefinition);
+
+    /// <summary>
+    /// Gets the database schema information for the given table.
+    /// </summary>
+    public TableDefinition GetTableDefinition(string name);
 }

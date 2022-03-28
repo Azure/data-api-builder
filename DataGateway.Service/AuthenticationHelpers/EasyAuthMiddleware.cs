@@ -19,12 +19,12 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         {
             if (httpContext.Request.Headers[EASY_AUTH_HEADER].Count > 0)
             {
-                ClaimsIdentity? identity = AppServiceAuthentication.Parse(httpContext);
+                ClaimsIdentity? identity = EasyAuthAuthentication.Parse(httpContext);
 
-                // Parse App Service's EasyAuth injected headers into MiddleWare usable Security Principal
+                // Parse EasyAuth injected headers into MiddleWare usable Security Principal
                 if (identity == null)
                 {
-                    identity = AppServiceAuthentication.Parse(httpContext);
+                    identity = EasyAuthAuthentication.Parse(httpContext);
                 }
 
                 if (identity != null)
@@ -40,7 +40,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
 
     public static class EasyAuthMiddlewareExtensions
     {
-        public static IApplicationBuilder UseEasyAuth(
+        public static IApplicationBuilder UseEasyAuthMiddleware(
             this IApplicationBuilder builder)
         {
             return builder.UseMiddleware<EasyAuthMiddleware>();

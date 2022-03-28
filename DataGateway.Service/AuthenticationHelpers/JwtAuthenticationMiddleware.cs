@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Azure.DataGateway.Service.AuthenticationHelpers
 {
     /// <summary>
-    /// This middlware validates JWT tokens when JWT Auth is configured
+    /// This middleware validates JWT tokens when JWT Auth is configured
     /// and an Authorization HTTP header is present with a token.
     /// This is required since Asp.Net Core UseAuthentication() does not make
     /// AuthZ decisions nor does it terminate requests.
@@ -31,9 +31,9 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         /// in downstream middleware.
         /// </summary>
         /// <param name="httpContext"></param>
-        public async Task Invoke(HttpContext httpContext)
+        public async Task InvokeAsync(HttpContext httpContext)
         {
-            if (httpContext != null && httpContext.Request.Headers[JWT_AUTH_HEADER].Count > 0)
+            if (httpContext.Request.Headers[JWT_AUTH_HEADER].Count > 0)
             {
                 // When calling parameterless version of AddAuthentication() with no default scheme,
                 // the result of context.AuthenticateAsync(scheme) must be used to populate the context.User object.
@@ -44,26 +44,23 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
                     httpContext.User = authNResult.Principal!;
                 }
 
-                if (httpContext.Request.Headers[JWT_AUTH_HEADER].Count > 0)
+                // User not being authenticated means validation failed.
+                // A challenge result will add WWW-Authenticate header to indicate failure reason
+                // Failure reasons: no bearer token, invalid token (specific validation failure)
+                if (!httpContext.User.Identity!.IsAuthenticated)
                 {
-                    // User not being authenticated means validation failed.
-                    // A challenge result will add WWW-Authenticate header to indicate failure reason
-                    // Failure reasons: no bearer token, invalid token (specific validation failure)
-                    if (!httpContext.User.Identity!.IsAuthenticated)
+                    IActionResult result = new ChallengeResult(JwtBearerDefaults.AuthenticationScheme);
+                    await result.ExecuteResultAsync(new ActionContext
                     {
-                        IActionResult result = new ChallengeResult(JwtBearerDefaults.AuthenticationScheme);
-                        await result.ExecuteResultAsync(new ActionContext
-                        {
-                            HttpContext = httpContext
-                        });
+                        HttpContext = httpContext
+                    });
 
-                        // Terminate middleware request pipeline
-                        return;
-                    }
+                    // Terminate middleware request pipeline
+                    return;
                 }
             }
 
-            await _nextMiddleware(httpContext!);
+            await _nextMiddleware(httpContext);
         }
     }
 

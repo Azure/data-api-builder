@@ -227,7 +227,7 @@ namespace Azure.DataGateway.Service
             // If EasyAuth not present, this will result in all requests being anonymous.
             if (dataGatewayConfig != null && dataGatewayConfig.CurrentValue.JwtAuth == null)
             {
-                app.UseEasyAuth();
+                app.UseEasyAuthMiddleware();
             }
             else
             {

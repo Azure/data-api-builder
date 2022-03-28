@@ -90,9 +90,6 @@ namespace Azure.DataGateway.Service.Configurations
 
                 ValidateTableHasColumns(tableDefinition);
 
-                ConfigStepInto("Columns");
-                ConfigStepOutOf("Columns");
-
                 ValidateTableHasPrimaryKey(tableDefinition);
 
                 ConfigStepOutOf(tableName);

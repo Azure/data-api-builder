@@ -267,10 +267,8 @@ namespace Azure.DataGateway.Service
                 app.ApplicationServices.GetService<IGraphQLMetadataProvider>()!;
                 await graphQLMetadataProvider.InitializeAsync();
 
-                // If the configuration has been set, validate it after the services have been built but
-                // before the application is built. If it hasn't been set yet, skip validation, it will
-                // happen when the config changes.
-                app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
+            // Now that the configuration has been set, perform validation. 
+            app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
 
                 return true;
             }

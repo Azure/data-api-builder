@@ -39,7 +39,7 @@ jobs:
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 'DataGateway.Service/appsettings.PostgreSqlIntegrationTest.json'
+      targetFiles: 'DataGateway.Service/appsettings.PostgreSql*.json'
 
   - task: DotNetCoreCLI@2
     displayName: Build

@@ -39,7 +39,7 @@ jobs:
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 'DataGateway.Service/appsettings.MsSqlIntegrationTest.json'
+      targetFiles: 'DataGateway.Service/appsettings.MsSql*.json'
 
   - task: DotNetCoreCLI@2
     displayName: Build
@@ -109,7 +109,7 @@ jobs:
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 'DataGateway.Service/appsettings.MsSqlIntegrationTest.json'
+      targetFiles: 'DataGateway.Service/appsettings.MsSql*.json'
 
   - task: DotNetCoreCLI@2
     displayName: Build

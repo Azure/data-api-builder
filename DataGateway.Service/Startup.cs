@@ -264,9 +264,7 @@ namespace Azure.DataGateway.Service
                 await DoSqlMetadataInferenceAsync(metadataProvider);
             }
 
-            // If the configuration has been set, validate it after the services have been built but
-            // before the application is built. If it hasn't been set yet, skip validation, it will
-            // happen when the config changes.
+            // Now that the configuration has been set, perform validation. 
             app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
 
             return true;

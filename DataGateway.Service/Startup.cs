@@ -1,5 +1,7 @@
 using System;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
@@ -205,15 +207,18 @@ namespace Azure.DataGateway.Service
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = app.ApplicationServices.GetService<IOptionsMonitor<DataGatewayConfig>>()!;
+            bool isRuntimeReady = false;
             if (dataGatewayConfig.CurrentValue.DatabaseType.HasValue)
             {
-                PerformOnConfigChange(dataGatewayConfig.CurrentValue, app);
+                isRuntimeReady =
+                    PerformOnConfigChangeAsync(dataGatewayConfig.CurrentValue, app).Result;
             }
             else
             {
-                dataGatewayConfig.OnChange((newConfig) =>
+                dataGatewayConfig.OnChange(async (newConfig) =>
                 {
-                    PerformOnConfigChange(dataGatewayConfig.CurrentValue, app);
+                    isRuntimeReady =
+                        await PerformOnConfigChangeAsync(dataGatewayConfig.CurrentValue, app);
                 });
             }
 
@@ -229,10 +234,8 @@ namespace Azure.DataGateway.Service
             {
                 IOptionsMonitor<DataGatewayConfig>? dataGatewayConfig = context.RequestServices.GetService<IOptionsMonitor<DataGatewayConfig>>();
 
-                bool isConfigSetup = (dataGatewayConfig != null && dataGatewayConfig.CurrentValue.DatabaseType.HasValue);
                 bool isConfigPath = context.Request.Path.StartsWithSegments("/configuration");
-
-                if (isConfigSetup || isConfigPath)
+                if (isRuntimeReady || isConfigPath)
                 {
                     await next.Invoke();
                 }
@@ -251,7 +254,7 @@ namespace Azure.DataGateway.Service
             });
         }
 
-        private static void PerformOnConfigChange(
+        private static async Task<bool> PerformOnConfigChangeAsync(
             DataGatewayConfig dataGatewayConfig,
             IApplicationBuilder app)
         {
@@ -259,25 +262,25 @@ namespace Azure.DataGateway.Service
             {
                 IGraphQLMetadataProvider metadataProvider =
                     app.ApplicationServices.GetService<IGraphQLMetadataProvider>()!;
-                DoSqlMetadataInference(metadataProvider);
+                await DoSqlMetadataInferenceAsync(metadataProvider);
             }
 
             // If the configuration has been set, validate it after the services have been built but
             // before the application is built. If it hasn't been set yet, skip validation, it will
             // happen when the config changes.
             app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
+
+            return true;
         }
 
-        private static void DoSqlMetadataInference(
+        private static async Task DoSqlMetadataInferenceAsync(
             IGraphQLMetadataProvider metadataProvider)
         {
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
-
             SqlGraphQLFileMetadataProvider fileMetadataProvider =
                     (SqlGraphQLFileMetadataProvider)metadataProvider;
-                fileMetadataProvider.EnrichDatabaseSchemaWithTableMetadata().Wait();
-                fileMetadataProvider.InitFilterParser();
-
+            await fileMetadataProvider.EnrichDatabaseSchemaWithTableMetadata();
+            fileMetadataProvider.InitFilterParser();
             timer.Stop();
             Console.WriteLine($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
         }

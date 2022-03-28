@@ -6,8 +6,10 @@ using static Azure.DataGateway.Service.GraphQLBuilder.Utils;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 {
-    internal static class UpdateMutationBuilder
+    public static class UpdateMutationBuilder
     {
+        public const string INPUT_ARGUMENT_NAME = "item";
+
         /// <summary>
         /// This method is used to determine if a field is allowed to be sent from the client in a Update mutation (eg, id field is not settable during update).
         /// </summary>
@@ -131,7 +133,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                     new List<DirectiveNode>()),
                 new InputValueDefinitionNode(
                     location: null,
-                    new NameNode("item"),
+                    new NameNode(INPUT_ARGUMENT_NAME),
                     new StringValueNode($"Input representing all the fields for updating {name}"),
                     new NonNullTypeNode(new NamedTypeNode(input.Name)),
                     defaultValue: null,

@@ -996,7 +996,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 exception: true,
-                expectedErrorMessage: "Invalid request body. Missing field in body: categoryname.",
+                expectedErrorMessage: "Invalid request body. Missing field in body: categoryName.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
             );

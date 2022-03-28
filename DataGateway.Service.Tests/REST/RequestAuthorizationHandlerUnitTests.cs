@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
-using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -16,7 +15,7 @@ namespace Azure.DataGateway.Service.Tests.REST
     /// Tests that the RequestAuthorizationHandler issues correct AuthZ decisions for REST endpoints.
     /// </summary>
     [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class RequestAuthorizationHandlerUnitTests : SqlTestBase
+    public class RequestAuthorizationHandlerUnitTests
     {
         private Mock<SqlGraphQLFileMetadataProvider> _metadataStore;
 

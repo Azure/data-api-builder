@@ -40,11 +40,34 @@ namespace Azure.DataGateway.Service.Services
             _sqlMetadataProvider = new MsSqlMetadataProvider();
         }
 
+        /// </inheritdoc>
+        public override async Task InitializeAsync()
+        {
+            System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
+            await EnrichDatabaseSchemaWithTableMetadata();
+            InitFilterParser();
+            timer.Stop();
+            Console.WriteLine($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
+        }
+
+        /// <summary>
+        /// Obtains the underlying TableDefinition for the given table from the DatabaseSchema.
+        /// </summary>
+        public virtual TableDefinition GetTableDefinition(string name)
+        {
+            if (!GraphQLResolverConfig.DatabaseSchema!.Tables.TryGetValue(name, out TableDefinition? metadata))
+            {
+                throw new KeyNotFoundException($"Table Definition for {name} does not exist.");
+            }
+
+            return metadata;
+        }
+
         /// <summary>
         /// Enrich the database schema with the missing information
         /// from config file but the runtime still needs.
         /// </summary>
-        public async Task EnrichDatabaseSchemaWithTableMetadata()
+        private async Task EnrichDatabaseSchemaWithTableMetadata()
         {
             if (GraphQLResolverConfig == null || GraphQLResolverConfig.DatabaseSchema == null)
             {
@@ -78,17 +101,7 @@ namespace Azure.DataGateway.Service.Services
             }
         }
 
-        public virtual TableDefinition GetTableDefinition(string name)
-        {
-            if (!GraphQLResolverConfig.DatabaseSchema!.Tables.TryGetValue(name, out TableDefinition? metadata))
-            {
-                throw new KeyNotFoundException($"Table Definition for {name} does not exist.");
-            }
-
-            return metadata;
-        }
-
-        public void InitFilterParser()
+        private void InitFilterParser()
         {
             if (GraphQLResolverConfig == null || GraphQLResolverConfig.DatabaseSchema == null)
             {

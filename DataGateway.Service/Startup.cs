@@ -210,14 +210,14 @@ namespace Azure.DataGateway.Service
             if (dataGatewayConfig.CurrentValue.DatabaseType.HasValue)
             {
                 isRuntimeReady =
-                    PerformOnConfigChangeAsync(dataGatewayConfig.CurrentValue, app).Result;
+                    PerformOnConfigChangeAsync(app).Result;
             }
             else
             {
                 dataGatewayConfig.OnChange(async (newConfig) =>
                 {
                     isRuntimeReady =
-                        await PerformOnConfigChangeAsync(dataGatewayConfig.CurrentValue, app);
+                        await PerformOnConfigChangeAsync(app);
                 });
             }
 
@@ -253,35 +253,33 @@ namespace Azure.DataGateway.Service
             });
         }
 
-        private static async Task<bool> PerformOnConfigChangeAsync(
-            DataGatewayConfig dataGatewayConfig,
-            IApplicationBuilder app)
+        /// <summary>
+        /// Perform these additional steps once the configuration has been bound
+        /// to a particular database type.
+        /// </summary>
+        /// <param name="app"></param>
+        /// <returns>Indicates if the runtime is ready to accept requests.</returns>
+        private static async Task<bool> PerformOnConfigChangeAsync(IApplicationBuilder app)
         {
-            if (dataGatewayConfig.DatabaseType != DatabaseType.Cosmos)
+            try
             {
-                IGraphQLMetadataProvider metadataProvider =
-                    app.ApplicationServices.GetService<IGraphQLMetadataProvider>()!;
-                await DoSqlMetadataInferenceAsync(metadataProvider);
+                IGraphQLMetadataProvider graphQLMetadataProvider =
+                app.ApplicationServices.GetService<IGraphQLMetadataProvider>()!;
+                await graphQLMetadataProvider.InitializeAsync();
+
+                // If the configuration has been set, validate it after the services have been built but
+                // before the application is built. If it hasn't been set yet, skip validation, it will
+                // happen when the config changes.
+                app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
+
+                return true;
             }
-
-            // If the configuration has been set, validate it after the services have been built but
-            // before the application is built. If it hasn't been set yet, skip validation, it will
-            // happen when the config changes.
-            app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
-
-            return true;
-        }
-
-        private static async Task DoSqlMetadataInferenceAsync(
-            IGraphQLMetadataProvider metadataProvider)
-        {
-            System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
-            SqlGraphQLFileMetadataProvider fileMetadataProvider =
-                    (SqlGraphQLFileMetadataProvider)metadataProvider;
-            await fileMetadataProvider.EnrichDatabaseSchemaWithTableMetadata();
-            fileMetadataProvider.InitFilterParser();
-            timer.Stop();
-            Console.WriteLine($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
+            catch(Exception ex)
+            {
+                Console.WriteLine($"Unable to complete runtime " +
+                    $"intialization operations due to: {ex.Message}.");
+                return false;
+            }
         }
     }
 }

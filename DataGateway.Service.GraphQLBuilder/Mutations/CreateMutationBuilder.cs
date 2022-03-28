@@ -6,8 +6,9 @@ using static Azure.DataGateway.Service.GraphQLBuilder.Utils;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 {
-    internal static class CreateMutationBuilder
+    public static class CreateMutationBuilder
     {
+        public const string INPUT_ARGUMENT_NAME = "item";
         private static InputObjectTypeDefinitionNode GenerateCreateInputType(Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs, ObjectTypeDefinitionNode objectTypeDefinitionNode, NameNode name, IEnumerable<HotChocolate.Language.IHasName> definitions, SchemaBuilderType databaseType)
         {
             NameNode inputName = GenerateInputTypeName(name.Value);
@@ -114,7 +115,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                 new List<InputValueDefinitionNode> {
                 new InputValueDefinitionNode(
                     null,
-                    new NameNode("item"),
+                    new NameNode(INPUT_ARGUMENT_NAME),
                     new StringValueNode($"Input representing all the fields for creating {name}"),
                     new NonNullTypeNode(new NamedTypeNode(input.Name)),
                     null,

@@ -17,7 +17,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
                                                     }
                                                 }";
         private static readonly string _deletePlanetMutation = @"
-                                                mutation ($id: String) {
+                                                mutation ($id: ID!) {
                                                     deletePlanet (id: $id) {
                                                         id
                                                         name
@@ -60,7 +60,12 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         {
             // Pop an item in to delete
             string id = Guid.NewGuid().ToString();
-            _ = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "id", id }, { "name", "test_name" } });
+            var input = new
+            {
+                id,
+                name = "test_name"
+            };
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } });
 
             // Run mutation delete item;
             JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanet", _deletePlanetMutation, new() { { "id", id } });
@@ -77,7 +82,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             const string name = "test_name";
             string mutation = $@"
 mutation {{
-    createPlanet (id: ""{id}"", name: ""{name}"") {{
+    createPlanet (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
         id
         name
     }}
@@ -94,14 +99,14 @@ mutation {{
             // Pop an item in to delete
             string id = Guid.NewGuid().ToString();
             const string name = "test_name";
-            string addMutation = $@"
+            string mutation = $@"
 mutation {{
-    createPlanet (id: ""{id}"", name: ""{name}"") {{
+    createPlanet (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
         id
         name
     }}
 }}";
-            _ = await ExecuteGraphQLRequestAsync("createPlanet", addMutation, new());
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", mutation, new());
 
             // Run mutation delete item;
             string deleteMutation = $@"

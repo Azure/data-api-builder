@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
-using Azure.DataGateway.Service.GraphQLBuilder;
 using Azure.DataGateway.Service.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;

@@ -267,12 +267,12 @@ namespace Azure.DataGateway.Service
                 app.ApplicationServices.GetService<IGraphQLMetadataProvider>()!;
                 await graphQLMetadataProvider.InitializeAsync();
 
-            // Now that the configuration has been set, perform validation. 
-            app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
+                // Now that the configuration has been set, perform validation.
+                app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
 
                 return true;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine($"Unable to complete runtime " +
                     $"intialization operations due to: {ex.Message}.");

@@ -92,20 +92,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
                 books(first: 100) {
-                    id
-                    title
-                    publisher_id
-                    publisher {
+                    items {
                         id
-                        name
-                    }
-                    reviews(first: 100) {
-                        id
-                        content
-                    }
-                    authors(first: 100) {
-                        id
-                        name
+                        title
+                        publisher_id
+                        publisher {
+                            id
+                            name
+                        }
+                        reviews(first: 100) {
+                            id
+                            content
+                        }
+                        authors(first: 100) {
+                            id
+                            name
+                        }
                     }
                 }
             }";

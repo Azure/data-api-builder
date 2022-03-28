@@ -48,7 +48,7 @@
           "RelationshipType": "OneToMany",
           "RightForeignKey": "review_book_fk"
         },
-        "paginatedReviews":{
+        "paginatedReviews": {
           "RelationshipType": "OneToMany",
           "RightForeignKey": "review_book_fk"
         },
@@ -93,13 +93,16 @@
       }
     },
     "BookConnection": {
-     "IsPaginationType": true
+      "IsPaginationType": true
     },
     "AuthorConnection": {
-    "IsPaginationType": true
+      "IsPaginationType": true
     },
     "ReviewConnection": {
-    "IsPaginationType": true
+      "IsPaginationType": true
+    },
+    "PublisherConnection": {
+      "IsPaginationType": true
     }
   },
   "DatabaseSchema": {

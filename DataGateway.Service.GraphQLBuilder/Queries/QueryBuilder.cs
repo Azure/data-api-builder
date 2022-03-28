@@ -9,6 +9,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 {
     public static class QueryBuilder
     {
+        public const string PAGINATION_FIELD_NAME = "items";
+        public const string CONTINUATION_TOKEN_FIELD_NAME = "continuation";
+        public const string HAS_NEXT_PAGE_FIELD_NAME = "hasNextPage";
+        public const string PAGE_START_ARGUMENT_NAME = "first";
+
         public static DocumentNode Build(DocumentNode root)
         {
             List<FieldDefinitionNode> queryFields = new();
@@ -99,8 +104,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 Pluralize(name),
                 new StringValueNode($"Get a list of all the {name} items from the database"),
                 new List<InputValueDefinitionNode> {
-                    new InputValueDefinitionNode(location : null, new NameNode("first"), description: null, new IntType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
-                    new InputValueDefinitionNode(location : null, new NameNode("continuation"), new StringValueNode("A continuation token from a previous query to continue through a paginated list"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(location : null, new NameNode(PAGE_START_ARGUMENT_NAME), description: null, new IntType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(location : null, new NameNode(CONTINUATION_TOKEN_FIELD_NAME), new StringValueNode("A continuation token from a previous query to continue through a paginated list"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
                     new(location : null, new NameNode("_filter"), new StringValueNode("Filter options for query"), new NamedTypeNode(filterInputName), defaultValue: null, new List<DirectiveNode>())
                 },
                 new NonNullTypeNode(new NamedTypeNode(returnType.Name)),
@@ -181,24 +186,24 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 new List<FieldDefinitionNode> {
                     new FieldDefinitionNode(
                         location: null,
-                        new NameNode("items"),
+                        new NameNode(PAGINATION_FIELD_NAME),
                         new StringValueNode("The list of items that matched the filter"),
                         new List<InputValueDefinitionNode>(),
                         new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),
                         new List<DirectiveNode>()),
                     new FieldDefinitionNode(
                         location : null,
-                        new NameNode("continuation"),
+                        new NameNode(CONTINUATION_TOKEN_FIELD_NAME),
                         new StringValueNode("A continuation token to provide to subsequent pages of a query"),
                         new List<InputValueDefinitionNode>(),
                         new StringType().ToTypeNode(),
                         new List<DirectiveNode>()),
                     new FieldDefinitionNode(
                         location: null,
-                        new NameNode("hasNextPage"),
+                        new NameNode(HAS_NEXT_PAGE_FIELD_NAME),
                         new StringValueNode("Indicates if there are more pages of items to return"),
                         new List<InputValueDefinitionNode>(),
-                        new BooleanType().ToTypeNode(),
+                        new NonNullType(new BooleanType()).ToTypeNode(),
                         new List<DirectiveNode>())
                 }
             );

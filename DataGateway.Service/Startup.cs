@@ -45,6 +45,7 @@ namespace Azure.DataGateway.Service
             // Read configuration and use it locally.
             DataGatewayConfig dataGatewayConfig = new();
             Configuration.Bind(nameof(DataGatewayConfig), dataGatewayConfig);
+            services.AddSingleton(dataGatewayConfig);
 
             if (Configuration is IConfigurationRoot root)
             {

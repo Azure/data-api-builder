@@ -53,10 +53,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task InsertMutation()
         {
-            string graphQLMutationName = "insertBook";
+            string graphQLMutationName = "createBook";
             string graphQLMutation = @"
                 mutation {
-                    insertBook(title: ""My New Book"", publisher_id: 1234) {
+                    createBook(item: { title: ""My New Book"", publisher_id: 1234 }) {
                         id
                         title
                     }
@@ -77,6 +77,39 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             ";
 
             string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        [TestMethod]
+        public async Task InsertMutationWithVariable()
+        {
+            string graphQLMutationName = "createBook";
+            string graphQLMutation = @"
+                mutation ($item: CreateBookInput!) {
+                    createBook(item: $item) {
+                        id
+                        title
+                    }
+                }
+            ";
+            var variables = new { title = "My New Book", publisher_id = 1234 };
+
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.id AS id,
+                          table0.title AS title
+                   FROM books AS table0
+                   WHERE id = 5001
+                     AND title = 'My New Book'
+                     AND publisher_id = 1234
+                   ORDER BY id
+                   LIMIT 1) AS subq
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController, new() { { "item", variables } });
             string expected = await GetDatabaseResultAsync(postgresQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);

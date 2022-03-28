@@ -1,4 +1,6 @@
+using System.Net;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -23,12 +25,29 @@ namespace Azure.DataGateway.Service.Authorization
     /// </summary>
     public class RequestAuthorizationHandler : AuthorizationHandler<OperationAuthorizationRequirement, RestRequestContext>
     {
-        private readonly IMetadataStoreProvider _configurationProvider;
+        private readonly SqlGraphQLFileMetadataProvider _configurationProvider;
 
-        public RequestAuthorizationHandler(IMetadataStoreProvider metadataStoreProvider)
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="metadataStoreProvider">The metadata provider.</param>
+        /// <param name="isMock">True, if the provided metadata provider is a mock.</param>
+        public RequestAuthorizationHandler(
+            IGraphQLMetadataProvider metadataStoreProvider,
+            bool isMock = false)
         {
-            _configurationProvider = metadataStoreProvider;
+            if (metadataStoreProvider.GetType() != typeof(SqlGraphQLFileMetadataProvider)
+                && !isMock)
+            {
+                throw new DataGatewayException(
+                    message: "Unable to instantiate the request authorization service.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
+            }
+
+            _configurationProvider = (SqlGraphQLFileMetadataProvider)metadataStoreProvider;
         }
+
         protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,
                                                   OperationAuthorizationRequirement requirement,
                                                   RestRequestContext resource)

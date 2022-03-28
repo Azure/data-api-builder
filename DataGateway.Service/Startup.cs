@@ -57,7 +57,25 @@ namespace Azure.DataGateway.Service
                 }
             }
 
-            services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
+            services.AddSingleton<IGraphQLMetadataProvider>(implementationFactory: (serviceProvider) =>
+            {
+                IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
+                switch (dataGatewayConfig.CurrentValue.DatabaseType)
+                {
+                    case DatabaseType.Cosmos:
+                        return ActivatorUtilities.
+                            GetServiceOrCreateInstance<GraphQLFileMetadataProvider>(serviceProvider);
+                    case DatabaseType.MsSql:
+                    case DatabaseType.PostgreSql:
+                    case DatabaseType.MySql:
+                        return ActivatorUtilities.
+                            GetServiceOrCreateInstance<SqlGraphQLFileMetadataProvider>(serviceProvider);
+                    default:
+                        throw new NotSupportedException(string.Format("The provided DatabaseType value: {0} is currently not supported." +
+                            "Please check the configuration file.", dataGatewayConfig.CurrentValue.DatabaseType));
+                }
+            });
+
             services.AddSingleton<CosmosClientProvider>();
 
             services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
@@ -144,7 +162,7 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.MySql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<MySqlQueryBuilder>(serviceProvider);
                     default:
-                        throw new NotSupportedException(String.Format("The provided DatabaseType value: {0} is currently not supported." +
+                        throw new NotSupportedException(string.Format("The provided DatabaseType value: {0} is currently not supported." +
                             "Please check the configuration file.", dataGatewayConfig.CurrentValue.DatabaseType));
                 }
             });

@@ -79,7 +79,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                 location: null,
                 f.Name,
                 new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(name.Value)}"),
-                f.Type,
+                f.Type.NullableType(),
                 defaultValue: null,
                 f.Directives
             );

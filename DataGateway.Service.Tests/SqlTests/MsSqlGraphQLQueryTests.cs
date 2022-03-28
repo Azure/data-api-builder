@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
@@ -44,11 +45,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task MultipleResultQuery()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                getBooks(first: 100) {
-                    id
-                    title
+                books(first: 100) {
+                    items {
+                        id
+                        title
+                    }
                 }
             }";
             string msSqlQuery = $"SELECT id, title FROM books ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
@@ -62,11 +65,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task MultipleResultQueryWithVariables()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"query ($first: Int!) {
-                getBooks(first: $first) {
-                    id
-                    title
+                books(first: $first) {
+                    items {
+                        id
+                        title
+                    }
                 }
             }";
             string msSqlQuery = $"SELECT id, title FROM books ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
@@ -84,9 +89,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task MultipleResultJoinQuery()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                getBooks(first: 100) {
+                books(first: 100) {
                     id
                     title
                     publisher_id
@@ -160,9 +165,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task DeeplyNestedManyToOneJoinQuery()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"{
-              getBooks(first: 100) {
+              books(first: 100) {
                 title
                 publisher {
                   name
@@ -253,9 +258,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task DeeplyNestedManyToManyJoinQuery()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"{
-              getBooks(first: 100) {
+              books(first: 100) {
                 title
                 authors(first: 100) {
                   name
@@ -322,9 +327,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task DeeplyNestedManyToManyJoinQueryWithVariables()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"query ($first: Int) {
-              getBooks(first: $first) {
+              books(first: $first) {
                 title
                 authors(first: $first) {
                   name
@@ -444,9 +449,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestFirstParamForListQueries()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                getBooks(first: 1) {
+                books(first: 1) {
                     title
                     publisher {
                         name
@@ -497,9 +502,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestFilterAndFilterODataParamForListQueries()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                getBooks(_filter: {id: {gte: 1} and: [{id: {lte: 4}}]}) {
+                books(_filter: {id: {gte: 1} and: [{id: {lte: 4}}]}) {
                     id
                     publisher {
                         books(first: 3, _filterOData: ""id ne 2"") {
@@ -553,9 +558,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestInvalidFirstParamQuery()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                getBooks(first: -1) {
+                books(first: -1) {
                     id
                     title
                 }
@@ -568,9 +573,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestInvalidFilterParamQuery()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                getBooks(_filterOData: ""INVALID"") {
+                books(_filterOData: ""INVALID"") {
                     id
                     title
                 }
@@ -581,5 +586,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         #endregion
+
+        protected override async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController, Dictionary<string, object> variables = null, bool failOnErrors = true)
+        {
+            string dataResult = await base.GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, graphQLController, variables, failOnErrors);
+
+            return JsonDocument.Parse(dataResult).RootElement.GetProperty("items").ToString();
+        }
     }
 }

@@ -19,6 +19,6 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// Default Constructor for Mock tests.
-        public MsSqlMetadataProvider(): base() { }
+        public MsSqlMetadataProvider() : base() { }
     }
 }

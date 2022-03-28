@@ -35,14 +35,14 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// Default Constructor for Mock tests.
-        public SqlGraphQLFileMetadataProvider():base()
+        public SqlGraphQLFileMetadataProvider() : base()
         {
             _sqlMetadataProvider = new MsSqlMetadataProvider();
         }
 
         /// <summary>
         /// Enrich the database schema with the missing information
-        /// from file but the runtime still needs.
+        /// from config file but the runtime still needs.
         /// </summary>
         public async Task EnrichDatabaseSchemaWithTableMetadata()
         {
@@ -58,7 +58,7 @@ namespace Azure.DataGateway.Service.Services
             foreach ((string tableName, TableDefinition tableDefinition) in GraphQLResolverConfig.DatabaseSchema.Tables)
             {
                 switch (CloudDbType)
-        {
+                {
                     case DatabaseType.MsSql:
                         schemaName = "dbo";
                         await _sqlMetadataProvider!.PopulateTableDefinitionAsync(schemaName, tableName, tableDefinition);

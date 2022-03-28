@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
@@ -89,8 +88,8 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.MsSql:
                     case DatabaseType.PostgreSql:
                     case DatabaseType.MySql:
-                    return ActivatorUtilities.
-                        GetServiceOrCreateInstance<SqlGraphQLFileMetadataProvider>(serviceProvider);
+                        return ActivatorUtilities.
+                            GetServiceOrCreateInstance<SqlGraphQLFileMetadataProvider>(serviceProvider);
                     default:
                         throw new NotSupportedException(string.Format("The provided DatabaseType value: {0} is currently not supported." +
                             "Please check the configuration file.", dataGatewayConfig.CurrentValue.DatabaseType));

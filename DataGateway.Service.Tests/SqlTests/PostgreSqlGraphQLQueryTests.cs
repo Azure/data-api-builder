@@ -38,9 +38,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task MultipleResultQuery()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                getBooks(first: 100) {
+                books(first: 100) {
                     items {
                         id
                         title
@@ -58,9 +58,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task MultipleResultQueryWithVariables()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"query ($first: Int!) {
-                getBooks(first: $first) {
+                books(first: $first) {
                     items {
                         id
                         title
@@ -78,23 +78,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task MultipleResultJoinQuery()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                getBooks(first: 100) {
-                    id
-                    title
-                    publisher_id
-                    publisher {
+                books(first: 100) {
+                    items {
                         id
-                        name
-                    }
-                    reviews(first: 100) {
-                        id
-                        content
-                    }
-                    authors(first: 100) {
-                        id
-                        name
+                        title
+                        publisher_id
+                        publisher {
+                            id
+                            name
+                        }
+                        reviews(first: 100) {
+                            id
+                            content
+                        }
+                        authors(first: 100) {
+                            id
+                            name
+                        }
                     }
                 }
             }";
@@ -155,13 +157,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task DeeplyNestedManyToOneJoinQuery()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"{
-              getBooks(first: 100) {
-                title
-                publisher {
-                  name
-                  books(first: 100) {
+              books(first: 100) {
+                items {
                     title
                     publisher {
                       name
@@ -169,10 +168,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         title
                         publisher {
                           name
+                          books(first: 100) {
+                            title
+                            publisher {
+                              name
+                            }
+                          }
                         }
                       }
                     }
-                  }
                 }
               }
             }";
@@ -246,20 +250,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task DeeplyNestedManyToManyJoinQuery()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"{
-              getBooks(first: 100) {
-                title
-                authors(first: 100) {
-                  name
-                  books(first: 100) {
-                    title
-                    authors(first: 100) {
-                      name
+              books(first: 100) {
+                    items {
+                        title
+                        authors(first: 100) {
+                          name
+                            books(first: 100) {
+                            title
+                            authors(first: 100) {
+                                name
+                            }
+                        }
                     }
-                  }
                 }
-              }
             }";
 
             string postgresQuery = @"
@@ -311,9 +316,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task QueryWithSingleColumnPrimaryKey()
         {
-            string graphQLQueryName = "getBook";
+            string graphQLQueryName = "book_by_pk";
             string graphQLQuery = @"{
-                getBook(id: 2) {
+                book_by_pk(id: 2) {
                     title
                 }
             }";
@@ -363,9 +368,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task QueryWithNullResult()
         {
-            string graphQLQueryName = "getBook";
+            string graphQLQueryName = "book_by_pk";
             string graphQLQuery = @"{
-                getBook(id: -9999) {
+                book_by_pk(id: -9999) {
                     title
                 }
             }";
@@ -381,14 +386,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestFirstParamForListQueries()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                getBooks(first: 1) {
-                    title
-                    publisher {
-                        name
-                        books(first: 3) {
-                            title
+                books(first: 1) {
+                    items {
+                        title
+                        publisher {
+                            name
+                            books(first: 3) {
+                                title
+                            }
                         }
                     }
                 }
@@ -434,13 +441,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestFilterAndFilterODataParamForListQueries()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                getBooks(_filter: {id: {gte: 1} and: [{id: {lte: 4}}]}) {
-                    id
-                    publisher {
-                        books(first: 3, _filterOData: ""id ne 2"") {
-                            id
+                books(_filter: {id: {gte: 1} and: [{id: {lte: 4}}]}) {
+                    items {
+                        id
+                        publisher {
+                            books(first: 3, _filterOData: ""id ne 2"") {
+                                id
+                            }
                         }
                     }
                 }
@@ -488,11 +497,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestInvalidFirstParamQuery()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                getBooks(first: -1) {
-                    id
-                    title
+                books(first: -1) {
+                    items {
+                        id
+                        title
+                    }
                 }
             }";
 
@@ -503,11 +514,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestInvalidFilterParamQuery()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                getBooks(_filterOData: ""INVALID"") {
-                    id
-                    title
+                books(_filterOData: ""INVALID"") {
+                    items {
+                        id
+                        title
+                    }
                 }
             }";
 

@@ -170,10 +170,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
               books(first: 100) {
-                title
-                publisher {
-                  name
-                  books(first: 100) {
+                items {
                     title
                     publisher {
                       name
@@ -181,8 +178,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         title
                         publisher {
                           name
+                          books(first: 100) {
+                            title
+                            publisher {
+                              name
+                            }
+                          }
                         }
-                      }
                     }
                   }
                 }
@@ -262,18 +264,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
-              books(first: 100) {
-                title
-                authors(first: 100) {
-                  name
-                  books(first: 100) {
-                    title
-                    authors(first: 100) {
-                      name
+                books(first: 100) {
+                    items {
+                        title
+                        authors(first: 100) {
+                          name
+                            books(first: 100) {
+                            title
+                            authors(first: 100) {
+                                name
+                            }
+                        }
                     }
-                  }
                 }
-              }
             }";
 
             string msSqlQuery = @"
@@ -330,19 +333,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task DeeplyNestedManyToManyJoinQueryWithVariables()
         {
             string graphQLQueryName = "books";
-            string graphQLQuery = @"query ($first: Int) {
-              books(first: $first) {
-                title
-                authors(first: $first) {
-                  name
-                  books(first: $first) {
-                    title
-                    authors(first: $first) {
-                      name
+            string graphQLQuery = @"
+            query ($first: Int) {
+                books(first: $first) {
+                    items {
+                        title
+                        authors(first: $first) {
+                            name
+                            books(first: $first) {
+                                title
+                                authors(first: $first) {
+                                    name
+                                }
+                            }
+                        }
                     }
-                  }
                 }
-              }
             }";
 
             string msSqlQuery = @"
@@ -393,9 +399,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task QueryWithSingleColumnPrimaryKey()
         {
-            string graphQLQueryName = "getBook";
+            string graphQLQueryName = "book_by_pk";
             string graphQLQuery = @"{
-                getBook(id: 2) {
+                book_by_pk(id: 2) {
                     title
                 }
             }";
@@ -433,9 +439,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task QueryWithNullResult()
         {
-            string graphQLQueryName = "getBook";
+            string graphQLQueryName = "book_by_pk";
             string graphQLQuery = @"{
-                getBook(id: -9999) {
+                book_by_pk(id: -9999) {
                     title
                 }
             }";
@@ -454,11 +460,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
                 books(first: 1) {
-                    title
-                    publisher {
-                        name
-                        books(first: 3) {
-                            title
+                    items {
+                        title
+                        publisher {
+                            name
+                            books(first: 3) {
+                                title
+                            }
                         }
                     }
                 }
@@ -507,10 +515,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
                 books(_filter: {id: {gte: 1} and: [{id: {lte: 4}}]}) {
-                    id
-                    publisher {
-                        books(first: 3, _filterOData: ""id ne 2"") {
-                            id
+                    items {
+                        id
+                        publisher {
+                            books(first: 3, _filterOData: ""id ne 2"") {
+                                id
+                            }
                         }
                     }
                 }
@@ -563,8 +573,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
                 books(first: -1) {
-                    id
-                    title
+                    items {
+                        id
+                        title
+                    }
                 }
             }";
 
@@ -578,8 +590,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
                 books(_filterOData: ""INVALID"") {
-                    id
-                    title
+                    items {
+                        id
+                        title
+                    }
                 }
             }";
 

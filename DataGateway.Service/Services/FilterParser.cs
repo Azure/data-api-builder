@@ -32,6 +32,14 @@ namespace Azure.DataGateway.Service.Services
         /// <returns>An AST FilterClause that represents the filter portion of the WHERE clause.</returns>
         public FilterClause GetFilterClause(string filterQueryString, string resourcePath)
         {
+            if (_model == null)
+            {
+                throw new DataGatewayException(
+                    message: "The runtime has not been initialized with an Edm model.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
+            }
+
             try
             {
                 Uri relativeUri = new(resourcePath + '/' + filterQueryString, UriKind.Relative);

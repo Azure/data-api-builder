@@ -53,10 +53,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task InsertMutation()
         {
-            string graphQLMutationName = "insertBook";
+            string graphQLMutationName = "createBook";
             string graphQLMutation = @"
                 mutation {
-                    insertBook(title: ""My New Book"", publisher_id: 1234) {
+                    createBook(item: { title: ""My New Book"", publisher_id: 1234 }) {
                         id
                         title
                     }

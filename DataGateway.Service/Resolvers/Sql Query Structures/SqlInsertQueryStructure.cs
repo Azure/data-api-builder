@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
+using HotChocolate.Language;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -38,9 +41,32 @@ namespace Azure.DataGateway.Service.Resolvers
 
             // return primary key so the inserted row can be identified
             //ReturnColumns = tableDefinition.PrimaryKey;
-            ReturnColumns = tableDefinition.Columns.Keys.ToList<string>();
+            ReturnColumns = tableDefinition.Columns.Keys.ToList();
 
-            foreach (KeyValuePair<string, object> param in mutationParams)
+            object item = mutationParams[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
+
+            Dictionary<string, object?> createInput;
+            // An inline argument was set
+            if (item is List<ObjectFieldNode> createInputRaw)
+            {
+                createInput = new Dictionary<string, object?>();
+                foreach (ObjectFieldNode node in createInputRaw)
+                {
+                    createInput.Add(node.Name.Value, node.Value.Value);
+                }
+            }
+            // Variables were provided to the mutation
+            else if (item is Dictionary<string, object?> dict)
+            {
+                createInput = dict;
+            }
+            
+            else
+            {
+                throw new InvalidDataException("The type of argument for the provided data is unsupported.");
+            }
+
+            foreach (KeyValuePair<string, object?> param in createInput)
             {
                 PopulateColumnsAndParams(param.Key, param.Value);
             }
@@ -52,7 +78,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         /// <param name="columnName">The name of the column.</param>
         /// <param name="value">The value of the column.</param>
-        private void PopulateColumnsAndParams(string columnName, object value)
+        private void PopulateColumnsAndParams(string columnName, object? value)
         {
             InsertColumns.Add(columnName);
             string paramName;

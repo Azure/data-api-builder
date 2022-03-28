@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Azure.DataGateway.Service.Models;
 using HotChocolate.Language;
-using Microsoft.AspNetCore.Http.Extensions;
 
 namespace Azure.DataGateway.Service.Configurations
 {
@@ -276,10 +275,12 @@ namespace Azure.DataGateway.Service.Configurations
         {
             Dictionary<string, FieldDefinitionNode> fields = GetTypeFields(typeName);
 
-            List<string> paginationTypeRequiredFields = new() {
+            List<string> paginationTypeRequiredFields = new()
+            {
                 GraphQLBuilder.Queries.QueryBuilder.PAGINATION_FIELD_NAME,
                 GraphQLBuilder.Queries.QueryBuilder.CONTINUATION_TOKEN_FIELD_NAME,
-                GraphQLBuilder.Queries.QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME };
+                GraphQLBuilder.Queries.QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME
+            };
 
             ValidatePaginationTypeHasRequiredFields(fields, paginationTypeRequiredFields);
             ValidatePaginationFieldsHaveNoArguments(fields, paginationTypeRequiredFields);

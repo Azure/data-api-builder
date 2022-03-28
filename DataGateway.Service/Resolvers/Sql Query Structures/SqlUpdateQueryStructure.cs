@@ -45,7 +45,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 // Unpack the input argument type as columns to update
                 else if (param.Key == UpdateMutationBuilder.INPUT_ARGUMENT_NAME)
                 {
-                    Dictionary<string, object?> updateFields = ArgumentToDictionary(mutationParams, UpdateMutationBuilder.INPUT_ARGUMENT_NAME);
+                    IDictionary<string, object?> updateFields = ArgumentToDictionary(mutationParams, UpdateMutationBuilder.INPUT_ARGUMENT_NAME);
 
                     foreach (KeyValuePair<string, object?> field in updateFields)
                     {

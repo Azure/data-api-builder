@@ -121,30 +121,34 @@ namespace Azure.DataGateway.Service.Resolvers
             }
         }
 
-        internal static Dictionary<string, object?> ArgumentToDictionary(IDictionary<string, object> mutationParams, string argumentName)
+        internal static IDictionary<string, object?> ArgumentToDictionary(IDictionary<string, object> mutationParams, string argumentName)
         {
-            object item = mutationParams[argumentName];
-            Dictionary<string, object?> createInput;
-            // An inline argument was set
-            if (item is List<ObjectFieldNode> createInputRaw)
+            if (mutationParams.TryGetValue(argumentName, out object? item))
             {
-                createInput = new Dictionary<string, object?>();
-                foreach (ObjectFieldNode node in createInputRaw)
+                Dictionary<string, object?> createInput;
+                // An inline argument was set
+                if (item is List<ObjectFieldNode> createInputRaw)
                 {
-                    createInput.Add(node.Name.Value, node.Value.Value);
+                    createInput = new Dictionary<string, object?>();
+                    foreach (ObjectFieldNode node in createInputRaw)
+                    {
+                        createInput.Add(node.Name.Value, node.Value.Value);
+                    }
                 }
-            }
-            // Variables were provided to the mutation
-            else if (item is Dictionary<string, object?> dict)
-            {
-                createInput = dict;
-            }
-            else
-            {
-                throw new InvalidDataException("The type of argument for the provided data is unsupported.");
+                // Variables were provided to the mutation
+                else if (item is Dictionary<string, object?> dict)
+                {
+                    createInput = dict;
+                }
+                else
+                {
+                    throw new InvalidDataException("The type of argument for the provided data is unsupported.");
+                }
+
+                return createInput;
             }
 
-            return createInput;
+            return (IDictionary<string, object?>)mutationParams;
         }
     }
 }

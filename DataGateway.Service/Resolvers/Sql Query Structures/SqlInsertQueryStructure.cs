@@ -41,7 +41,7 @@ namespace Azure.DataGateway.Service.Resolvers
             //ReturnColumns = tableDefinition.PrimaryKey;
             ReturnColumns = tableDefinition.Columns.Keys.ToList();
 
-            Dictionary<string, object?> createInput = ArgumentToDictionary(mutationParams, CreateMutationBuilder.INPUT_ARGUMENT_NAME);
+            IDictionary<string, object?> createInput = ArgumentToDictionary(mutationParams, CreateMutationBuilder.INPUT_ARGUMENT_NAME);
 
             foreach (KeyValuePair<string, object?> param in createInput)
             {

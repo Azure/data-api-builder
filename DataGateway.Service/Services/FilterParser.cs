@@ -18,7 +18,7 @@ namespace Azure.DataGateway.Service.Services
 
         public FilterParser() { }
 
-        public FilterParser(DatabaseSchema schema)
+        public void BuildModel(DatabaseSchema schema)
         {
             EdmModelBuilder builder = new();
             _model = builder.BuildModel(schema).GetModel();
@@ -34,6 +34,7 @@ namespace Azure.DataGateway.Service.Services
         {
             if (_model == null)
             {
+
                 throw new DataGatewayException(
                     message: "The runtime has not been initialized with an Edm model.",
                     statusCode: HttpStatusCode.InternalServerError,

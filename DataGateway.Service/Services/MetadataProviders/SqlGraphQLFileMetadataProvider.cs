@@ -111,7 +111,7 @@ namespace Azure.DataGateway.Service.Services
                     subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
             }
 
-            ODataFilterParser = new(GraphQLResolverConfig.DatabaseSchema);
+            ODataFilterParser.BuildModel(GraphQLResolverConfig.DatabaseSchema);
         }
     }
 }

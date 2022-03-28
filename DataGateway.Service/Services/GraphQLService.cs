@@ -21,7 +21,7 @@ namespace Azure.DataGateway.Service.Services
     {
         private readonly IQueryEngine _queryEngine;
         private readonly IMutationEngine _mutationEngine;
-        private readonly IMetadataStoreProvider _metadataStoreProvider;
+        private readonly IGraphQLMetadataProvider _graphQLMetadataProvider;
         private readonly DataGatewayConfig _config;
         private readonly IDocumentCache _documentCache;
         private readonly IDocumentHashProvider _documentHashProvider;
@@ -32,14 +32,14 @@ namespace Azure.DataGateway.Service.Services
         public GraphQLService(
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
-            IMetadataStoreProvider metadataStoreProvider,
+            IGraphQLMetadataProvider graphQLMetadataProvider,
             IDocumentCache documentCache,
             IDocumentHashProvider documentHashProvider,
             DataGatewayConfig config)
         {
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
-            _metadataStoreProvider = metadataStoreProvider;
+            _graphQLMetadataProvider = graphQLMetadataProvider;
             _config = config;
             _documentCache = documentCache;
             _documentHashProvider = documentHashProvider;
@@ -65,7 +65,7 @@ namespace Azure.DataGateway.Service.Services
 
             Schema = sb
                 .AddAuthorizeDirectiveType()
-                .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine, _metadataStoreProvider))
+                .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine, _graphQLMetadataProvider))
                 .Create();
 
             // Below is pretty much an inlined version of
@@ -137,7 +137,7 @@ namespace Azure.DataGateway.Service.Services
         private void InitializeSchemaAndResolvers()
         {
             // Attempt to get schema from the metadata store.
-            string graphqlSchema = _metadataStoreProvider.GetGraphQLSchema();
+            string graphqlSchema = _graphQLMetadataProvider.GetGraphQLSchema();
 
             // If the schema is available, parse it and attach resolvers.
             if (!string.IsNullOrEmpty(graphqlSchema))
@@ -156,19 +156,11 @@ namespace Azure.DataGateway.Service.Services
         private IQueryRequest CompileRequest(string requestBody, Dictionary<string, object> requestProperties)
         {
             byte[] graphQLData = Encoding.UTF8.GetBytes(requestBody);
-<<<<<<< HEAD
             ParserOptions _parserOptions = new();
 
             Utf8GraphQLRequestParser requestParser = new(
                 graphQLData,
                 _parserOptions,
-=======
-            ParserOptions parserOptions = new();
-
-            Utf8GraphQLRequestParser requestParser = new(
-                graphQLData,
-                parserOptions,
->>>>>>> main
                 _documentCache,
                 _documentHashProvider);
 

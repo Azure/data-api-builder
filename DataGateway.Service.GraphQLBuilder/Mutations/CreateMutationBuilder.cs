@@ -20,7 +20,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
             IEnumerable<InputValueDefinitionNode> inputFields =
                 objectTypeDefinitionNode.Fields
-                .Where(f => FieldAllowedOnCreateInput(f, databaseType))
+                .Where(f => FieldAllowedOnCreateInput(f, databaseType, definitions))
                 .Select(f =>
                 {
                     if (!IsBuiltInType(f.Type))
@@ -53,15 +53,29 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
         /// This method is used to determine if a field is allowed to be sent from the client in a Create mutation (eg, id field is not settable during create).
         /// </summary>
         /// <param name="field">Field to check</param>
+        /// <param name="databaseType">The type of database to generate for</param>
+        /// <param name="definitions">The other named types in the schema</param>
         /// <returns>true if the field is allowed, false if it is not.</returns>
-        private static bool FieldAllowedOnCreateInput(FieldDefinitionNode field, SchemaBuilderType databaseType)
+        private static bool FieldAllowedOnCreateInput(FieldDefinitionNode field, SchemaBuilderType databaseType, IEnumerable<HotChocolate.Language.IHasName> definitions)
         {
-            // With Cosmos we need to have the id field included, as Cosmos doesn't do auto-increment or anything
-            return databaseType switch
+            if (IsBuiltInType(field.Type))
             {
-                SchemaBuilderType.Cosmos => true,
-                _ => field.Name.Value != "id"
-            };
+                // With Cosmos we need to have the id field included, as Cosmos doesn't do auto-increment or anything
+                return databaseType switch
+                {
+                    SchemaBuilderType.Cosmos => true,
+                    _ => field.Name.Value != "id"
+                };
+            }
+
+            HotChocolate.Language.IHasName? definition = definitions.FirstOrDefault(d => d.Name.Value == field.Type.NamedType().Name.Value);
+            // When creating, you don't need to provide the data for nested models, but you will for other nested types
+            if (definition != null && definition is ObjectTypeDefinitionNode objectType && IsModelType(objectType))
+            {
+                return false;
+            }
+
+            return true;
         }
 
         private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f)

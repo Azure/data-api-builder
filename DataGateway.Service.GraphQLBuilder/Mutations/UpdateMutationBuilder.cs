@@ -12,10 +12,23 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
         /// This method is used to determine if a field is allowed to be sent from the client in a Update mutation (eg, id field is not settable during update).
         /// </summary>
         /// <param name="field">Field to check</param>
+        /// <param name="definitions">The other named types in the schema</param>
         /// <returns>true if the field is allowed, false if it is not.</returns>
-        private static bool FieldAllowedOnUpdateInput(FieldDefinitionNode field)
+        private static bool FieldAllowedOnUpdateInput(FieldDefinitionNode field, IEnumerable<HotChocolate.Language.IHasName> definitions)
         {
-            return field.Name.Value != "id";
+            if (IsBuiltInType(field.Type))
+            {
+                return field.Name.Value != "id";
+            }
+
+            HotChocolate.Language.IHasName? definition = definitions.FirstOrDefault(d => d.Name.Value == field.Type.NamedType().Name.Value);
+            // When updating, you don't need to provide the data for nested models, but you will for other nested types
+            if (definition != null && definition is ObjectTypeDefinitionNode objectType && IsModelType(objectType))
+            {
+                return false;
+            }
+
+            return true;
         }
 
         private static InputObjectTypeDefinitionNode GenerateUpdateInputType(Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs, ObjectTypeDefinitionNode objectTypeDefinitionNode, NameNode name, IEnumerable<HotChocolate.Language.IHasName> definitions)
@@ -29,7 +42,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
             IEnumerable<InputValueDefinitionNode> inputFields =
                 objectTypeDefinitionNode.Fields
-                .Where(FieldAllowedOnUpdateInput)
+                .Where(f => FieldAllowedOnUpdateInput(f, definitions))
                 .Select(f =>
                 {
                     if (!IsBuiltInType(f.Type))

@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
-using HotChocolate.Language;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -44,7 +42,7 @@ namespace Azure.DataGateway.Service.Resolvers
             ReturnColumns = tableDefinition.Columns.Keys.ToList();
 
             Dictionary<string, object?> createInput = ArgumentToDictionary(mutationParams, CreateMutationBuilder.INPUT_ARGUMENT_NAME);
-            
+
             foreach (KeyValuePair<string, object?> param in createInput)
             {
                 PopulateColumnsAndParams(param.Key, param.Value);

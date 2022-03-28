@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
@@ -277,7 +278,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 IDictionary<string, object>? afterJsonValues = SqlPaginationUtil.ParseContinuationFromQueryParams(queryParams, PaginationMetadata);
                 AddPaginationPredicate(afterJsonValues);
 
-                if (PaginationMetadata.RequestedEndCursor)
+                if (PaginationMetadata.RequestedContinuationToken)
                 {
                     // add the primary keys in the selected columns if they are missing
                     IEnumerable<string> extraNeededColumns = PrimaryKey().Except(Columns.Select(c => c.Label));
@@ -442,13 +443,13 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 switch (fieldName)
                 {
-                    case "items":
+                    case QueryBuilder.PAGINATION_FIELD_NAME:
                         PaginationMetadata.RequestedItems = true;
                         break;
-                    case "endCursor":
-                        PaginationMetadata.RequestedEndCursor = true;
+                    case QueryBuilder.CONTINUATION_TOKEN_FIELD_NAME:
+                        PaginationMetadata.RequestedContinuationToken = true;
                         break;
-                    case "hasNextPage":
+                    case QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME:
                         PaginationMetadata.RequestedHasNextPage = true;
                         break;
                 }

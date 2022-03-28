@@ -549,9 +549,9 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate the type of <see cref="QueryBuilder.CONTINUATION_TOKEN_FIELD_NAME"/> field in a Pagination type
         /// </summary>
-        private void ValidateContinuationFieldType(FieldDefinitionNode endCursorField)
+        private void ValidateContinuationFieldType(FieldDefinitionNode continuationField)
         {
-            ITypeNode continuationFieldType = endCursorField.Type;
+            ITypeNode continuationFieldType = continuationField.Type;
             if (IsListType(continuationFieldType) ||
                 InnerTypeStr(continuationFieldType) != "String" ||
                 continuationFieldType.IsNonNullType())

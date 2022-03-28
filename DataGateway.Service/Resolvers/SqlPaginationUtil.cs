@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Text.Json;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -37,7 +38,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 hasExtraElement = rootEnumerated.Count() == paginationMetadata.Structure!.Limit();
 
                 // add hasNextPage to connection elements
-                connectionJson.Add("hasNextPage", hasExtraElement ? true : false);
+                connectionJson.Add(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, hasExtraElement ? true : false);
 
                 if (hasExtraElement)
                 {
@@ -54,23 +55,23 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     // use rootEnumerated to make the *Connection.items since the last element of rootEnumerated
                     // is removed if the result has an extra element
-                    connectionJson.Add("items", JsonSerializer.Serialize(rootEnumerated.ToArray()));
+                    connectionJson.Add(QueryBuilder.PAGINATION_FIELD_NAME, JsonSerializer.Serialize(rootEnumerated.ToArray()));
                 }
                 else
                 {
                     // if the result doesn't have an extra element, just return the dbResult for *Conneciton.items
-                    connectionJson.Add("items", root.ToString()!);
+                    connectionJson.Add(QueryBuilder.PAGINATION_FIELD_NAME, root.ToString()!);
                 }
             }
 
-            if (paginationMetadata.RequestedEndCursor)
+            if (paginationMetadata.RequestedContinuationToken)
             {
                 // parse *Connection.endCursor if there are no elements
                 // if no endCursor is added, but it has been requested HotChocolate will report it as null
                 if (returnedElemNo > 0)
                 {
                     JsonElement lastElemInRoot = rootEnumerated.ElementAtOrDefault(returnedElemNo - 1);
-                    connectionJson.Add("endCursor", MakeCursorFromJsonElement(lastElemInRoot, paginationMetadata.Structure!.PrimaryKey()));
+                    connectionJson.Add(QueryBuilder.CONTINUATION_TOKEN_FIELD_NAME, MakeCursorFromJsonElement(lastElemInRoot, paginationMetadata.Structure!.PrimaryKey()));
                 }
             }
 

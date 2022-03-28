@@ -9,7 +9,6 @@ namespace Azure.DataGateway.Service.Configurations
     /// </summary>
     public enum DatabaseType
     {
-        None,
         Cosmos,
         MsSql,
         PostgreSql,

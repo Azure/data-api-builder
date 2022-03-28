@@ -41,8 +41,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "getBooks";
             string graphQLQuery = @"{
                 getBooks(first: 100) {
-                    id
-                    title
+                    items {
+                        id
+                        title
+                    }
                 }
             }";
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id) as table0 LIMIT 100";
@@ -59,8 +61,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "getBooks";
             string graphQLQuery = @"query ($first: Int!) {
                 getBooks(first: $first) {
-                    id
-                    title
+                    items {
+                        id
+                        title
+                    }
                 }
             }";
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id) as table0 LIMIT 100";

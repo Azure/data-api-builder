@@ -18,12 +18,12 @@ namespace Azure.DataGateway.Service.Tests.REST
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class RequestValidatorUnitTests : SqlTestBase
     {
-        private static Mock<SqlGraphQLFileMetadataProvider> _metadataStore;
+        private static Mock<SqlGraphQLFileMetadataProvider> _mockMetadataStore;
 
         [ClassInitialize]
-        public static async Task InitializeTestFixture(TestContext context)
+        public static void InitializeTestFixture(TestContext context)
         {
-            _metadataStore = new Mock<SqlGraphQLFileMetadataProvider>();
+            _mockMetadataStore = new Mock<SqlGraphQLFileMetadataProvider>();
         }
 
         #region Positive Tests

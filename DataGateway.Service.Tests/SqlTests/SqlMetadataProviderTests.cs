@@ -12,14 +12,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void TestDerivedDatabaseSchemaIsValid()
         {
             SqlGraphQLFileMetadataProvider expectedMetadataProvider
-                = new(_graphQLMetadataProvider);
+                = new(_metadataStoreProvider);
             string testResolverConfigJson = File.ReadAllText("sql-config-test.json");
             expectedMetadataProvider.GraphQLResolverConfig =
                 GraphQLFileMetadataProvider.GetDeserializedConfig(testResolverConfigJson);
             DatabaseSchema expectedSchema =
                 expectedMetadataProvider.GraphQLResolverConfig.DatabaseSchema!;
 
-            DatabaseSchema derivedDatabaseSchema = _graphQLMetadataProvider.GetResolvedConfig().DatabaseSchema!;
+            DatabaseSchema derivedDatabaseSchema = _metadataStoreProvider.GetResolvedConfig().DatabaseSchema!;
             foreach ((string tableName, TableDefinition expectedTableDefinition) in expectedSchema.Tables)
             {
                 TableDefinition actualTableDefinition;

@@ -209,7 +209,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             metaDataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext context = new(entityName, false);
             Mock<SqlQueryStructure> structure = new(context, metaDataStore.Object);
-            FilterClause ast = _graphQLMetadataProvider.ODataFilterParser.
+            FilterClause ast = _metadataStoreProvider.ODataFilterParser.
                 GetFilterClause(filterString, entityName);
             ODataASTVisitor visitor = new(structure.Object);
             string actual = ast.Expression.Accept<string>(visitor);

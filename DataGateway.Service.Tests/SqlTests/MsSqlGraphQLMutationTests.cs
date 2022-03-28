@@ -82,6 +82,39 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        [TestMethod]
+        public async Task InsertMutationWithVariable()
+        {
+            string graphQLMutationName = "createBook";
+            string graphQLMutation = @"
+                mutation ($item: CreateBookInput!) {
+                    createBook(item: $item) {
+                        id
+                        title
+                    }
+                }
+            ";
+            var variables = new { title = "My New Book", publisher_id = 1234 };
+
+            string msSqlQuery = @"
+                SELECT TOP 1 [table0].[id] AS [id],
+                    [table0].[title] AS [title]
+                FROM [books] AS [table0]
+                WHERE [table0].[id] = 5001
+                    AND [table0].[title] = 'My New Book'
+                    AND [table0].[publisher_id] = 1234
+                ORDER BY [id]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController, new() { { "item", variables } });
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         /// <summary>
         /// <code>Do: </code>Update book in database and return its updated fields
         /// <code>Check: </code>if the book with the id of the edited book and the new values exists in the database

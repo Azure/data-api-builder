@@ -26,6 +26,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static readonly string _Composite_NonAutoGenPK = "stocks";
 
         public abstract string GetQuery(string key);
+        public abstract DataGatewayException GetExpectedException(string key);
 
         #region Positive Tests
         /// <summary>
@@ -1048,9 +1049,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: $"Could not perform the given mutation on entity books.",
-                    expectedStatusCode: HttpStatusCode.InternalServerError,
-                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed.ToString()
+                    expectedErrorMessage: GetExpectedException(nameof(PatchOne_Insert_PKAutoGen_Test)).Message,
+                    expectedStatusCode: GetExpectedException(nameof(PatchOne_Insert_PKAutoGen_Test)).StatusCode,
+                    expectedSubStatusCode: GetExpectedException(nameof(PatchOne_Insert_PKAutoGen_Test)).SubStatusCode.ToString()
                 );
         }
 
@@ -1078,9 +1079,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: "Could not perform the given mutation on entity magazines.",
-                    expectedStatusCode: HttpStatusCode.InternalServerError,
-                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed.ToString()
+                    expectedErrorMessage: GetExpectedException(nameof(PatchOne_Insert_WithoutNonNullableField_Test)).Message,
+                    expectedStatusCode: GetExpectedException(nameof(PatchOne_Insert_WithoutNonNullableField_Test)).StatusCode,
+                    expectedSubStatusCode: GetExpectedException(nameof(PatchOne_Insert_WithoutNonNullableField_Test)).SubStatusCode.ToString()
                 );
         }
 
@@ -1138,9 +1139,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: $"Could not perform the given mutation on entity books.",
-                    expectedStatusCode: HttpStatusCode.InternalServerError,
-                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed.ToString()
+                    expectedErrorMessage: GetExpectedException(nameof(PutOne_Insert_PKAutoGen_Test)).Message,
+                    expectedStatusCode: GetExpectedException(nameof(PutOne_Insert_PKAutoGen_Test)).StatusCode,
+                    expectedSubStatusCode: GetExpectedException(nameof(PutOne_Insert_PKAutoGen_Test)).SubStatusCode.ToString()
                 );
         }
 
@@ -1161,9 +1162,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: $"Could not perform the given mutation on entity reviews.",
-                    expectedStatusCode: HttpStatusCode.InternalServerError,
-                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed.ToString()
+                    expectedErrorMessage: GetExpectedException(nameof(PutOne_Insert_PKAutoGen_Test)).Message,
+                    expectedStatusCode: GetExpectedException(nameof(PutOne_Insert_PKAutoGen_Test)).StatusCode,
+                    expectedSubStatusCode: GetExpectedException(nameof(PutOne_Insert_PKAutoGen_Test)).SubStatusCode.ToString()
                 );
         }
         /// <summary>

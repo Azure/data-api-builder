@@ -41,7 +41,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
         protected static IMetadataStoreProvider _sqlMetadataProvider;
-        protected static IDbExceptionParser _dbExceptionParser;
+        protected static DbExceptionParserBase _dbExceptionParser;
         protected static string _defaultSchemaName;
 
         /// <summary>
@@ -72,7 +72,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _sqlMetadataProvider =
                       new SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand>(connectionString);
                     _defaultSchemaName = "dbo";
-                    _dbExceptionParser = new MsSqlDbExceptionParser();
+                    _dbExceptionParser = new DbExceptionParserBase();
                     _queryExecutor = new QueryExecutor<SqlConnection>(config, _dbExceptionParser);
                     break;
                 case TestCategory.MYSQL:
@@ -169,7 +169,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }
             else
             {
-                using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader));
+                using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader, _queryExecutor));
                 result = sqlResult.RootElement.ToString();
             }
 

@@ -5,9 +5,11 @@ using Azure.DataGateway.Service.Exceptions;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
-    public class MySqlDbExceptionParser : IDbExceptionParser
+    public class MySqlDbExceptionParser : DbExceptionParserBase
     {
-        public Exception Parse(DbException e)
+        public const string INTEGRITY_CONSTRAINT_VIOLATION = "MySql Error 23000: Integrity Contraint Violation.";
+
+        public override Exception Parse(DbException e)
         {
             // refer to https://dev.mysql.com/doc/connector-odbc/en/connector-odbc-reference-errorcodes.html
             // for error codes
@@ -15,12 +17,12 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 case "23000":
                     return new DataGatewayException(
-                        message: $"MySql Error {e.SqlState}: Integrity Contraint Violation.",
-                        statusCode: HttpStatusCode.InternalServerError,
+                        message: INTEGRITY_CONSTRAINT_VIOLATION,
+                        statusCode: HttpStatusCode.Conflict,
                         subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed
                     );
                 default:
-                    return e;
+                    return base.Parse(e);
             }
         }
     }

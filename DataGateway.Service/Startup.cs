@@ -148,7 +148,7 @@ namespace Azure.DataGateway.Service
                 }
             });
 
-            services.AddSingleton<IDbExceptionParser>(implementationFactory: (serviceProvider) =>
+            services.AddSingleton<DbExceptionParserBase>(implementationFactory: (serviceProvider) =>
             {
                 IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
                 switch (dataGatewayConfig.CurrentValue.DatabaseType)
@@ -156,7 +156,7 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.Cosmos:
                         return null!;
                     case DatabaseType.MsSql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlDbExceptionParser>(serviceProvider);
+                        return ActivatorUtilities.GetServiceOrCreateInstance<DbExceptionParserBase>(serviceProvider);
                     case DatabaseType.PostgreSql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<PostgresDbExceptionParser>(serviceProvider);
                     case DatabaseType.MySql:

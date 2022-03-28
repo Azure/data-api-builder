@@ -15,9 +15,9 @@ namespace Azure.DataGateway.Service.Resolvers
         where ConnectionT : DbConnection, new()
     {
         private readonly DataGatewayConfig _dataGatewayConfig;
-        private readonly IDbExceptionParser _dbExceptionParser;
+        private readonly DbExceptionParserBase _dbExceptionParser;
 
-        public QueryExecutor(IOptions<DataGatewayConfig> dataGatewayConfig, IDbExceptionParser dbExceptionParser)
+        public QueryExecutor(IOptions<DataGatewayConfig> dataGatewayConfig, DbExceptionParserBase dbExceptionParser)
         {
             _dataGatewayConfig = dataGatewayConfig.Value;
             _dbExceptionParser = dbExceptionParser;
@@ -51,6 +51,19 @@ namespace Azure.DataGateway.Service.Resolvers
             try
             {
                 return await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
+            }
+            catch (DbException e)
+            {
+                throw _dbExceptionParser.Parse(e);
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<bool> ReadAsync(DbDataReader reader)
+        {
+            try
+            {
+                return await reader.ReadAsync();
             }
             catch (DbException e)
             {

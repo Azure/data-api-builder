@@ -29,10 +29,13 @@ namespace Azure.DataGateway.Service.Services
             conn.ConnectionString = ConnectionString;
             await conn.OpenAsync();
 
-            // Each row in the allColumns table corresponds to a single column of the table.
+            // Each row in the allColumns table corresponds to a single column.
+            // Since column restrictions are ignored, this retrieves all the columns
+            // in the engine irrespective of database and table name.
             DataTable allColumns = await conn.GetSchemaAsync("Columns");
 
-            // Manually filter here
+            // Manually filter here to find out which columns need to be removed
+            // by checking the database name and table name.
             // MySQL uses schema as catalog
             List<DataRow> removeColumns =
                 allColumns
@@ -41,7 +44,7 @@ namespace Azure.DataGateway.Service.Services
                         column["TABLE_NAME"].ToString()! != tableName)
                 .ToList();
 
-            // Remove selected rows.
+            // Remove unnecessary columns.
             foreach (DataRow row in removeColumns)
             {
                 allColumns.Rows.Remove(row);

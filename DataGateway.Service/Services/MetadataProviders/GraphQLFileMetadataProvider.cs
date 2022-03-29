@@ -11,8 +11,8 @@ using Microsoft.Extensions.Options;
 namespace Azure.DataGateway.Service.Services
 {
     /// <summary>
-    /// Reads GraphQL Schema and resolver config
-    /// from text files to make available to GraphQL service.
+    /// Provides functionality to read GraphQL Schema and resolver config
+    /// from text file to make available to GraphQL service.
     /// </summary>
     public class GraphQLFileMetadataProvider : IGraphQLMetadataProvider
     {

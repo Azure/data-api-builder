@@ -9,6 +9,13 @@ using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Services
 {
+    /// <summary>
+    /// Sql specific version of GraphQLFileMetadataProvider.
+    /// Currently, also serves as the developer configuration file
+    /// that specifies which tables from the database schema are to be exposed.
+    /// This database schema is further enriched using the SqlMetadataProvider
+    /// for the required tables.
+    /// </summary>
     public class SqlGraphQLFileMetadataProvider : GraphQLFileMetadataProvider
     {
         private readonly ISqlMetadataProvider _sqlMetadataProvider;

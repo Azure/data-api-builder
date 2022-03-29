@@ -1,0 +1,18 @@
+{
+  "$schema": "hawaii.schema.json",
+  "data-source": {
+    "database-type": "mssql",
+    "connection-string": ""
+  },
+  "entities": {
+    "todo": {
+      "source": "s001.todo",
+      "permissions": [
+        {
+          "role": "public",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
+    }
+  }
+}

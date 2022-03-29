@@ -512,7 +512,7 @@ namespace Azure.DataGateway.Service.Configurations
                 List<Operation> supportedOperations = new()
                 {
                     Operation.Insert,
-                    Operation.Update,
+                    Operation.UpdateIncremental,
                     Operation.Delete
                 };
 

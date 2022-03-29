@@ -494,7 +494,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   primaryKeyRoute: "id/1",
                   queryString: "?$filter=title eq 'The Return of the King'",
                   entity: _integrationTableName,
-                  sqlQuery: GetQuery("PutOne_Update_IfMatchHeader_Test_Confirm_Update"),
+                  sqlQuery: GetQuery("PutOne_Update_IfMatchHeaders_Test_Confirm_Update"),
                   controller: _restController,
                   operationType: Operation.Find,
                   expectedStatusCode: HttpStatusCode.OK);
@@ -1107,7 +1107,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     entity: _integrationTableName,
                     sqlQuery: string.Empty,
                     controller: _restController,
-                    operationType: Operation.UpsertIncremental,
+                    operationType: Operation.Upsert,
                     headers: new HeaderDictionary(headerDictionary),
                     requestBody: requestBody,
                     exception: true,

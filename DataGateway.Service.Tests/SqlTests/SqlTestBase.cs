@@ -128,6 +128,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 IFeatureCollection features = new FeatureCollection();
                 features.Set<IHttpRequestFeature>(new HttpRequestFeature { Headers = headers });
                 features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(new MemoryStream()));
+                // set Response StatusCode here to avoid null reference when returning exception in test with supplied headers
                 features.Set<IHttpResponseFeature>(new HttpResponseFeature { StatusCode = 200 });
                 httpContext = new(features);
             }

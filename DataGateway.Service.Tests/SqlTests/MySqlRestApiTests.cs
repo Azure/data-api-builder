@@ -381,7 +381,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
-                "PutOne_Update_IfMatchHeader_Test_Confirm_Update",
+                "PutOne_Update_IfMatchHeaders_Test_Confirm_Update",
                 @"
                   SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
                   FROM (

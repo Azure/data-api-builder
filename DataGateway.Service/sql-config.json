@@ -10,7 +10,7 @@
     {
       "Id": "editBook",
       "Table": "books",
-      "OperationType": "Update"
+      "OperationType": "UpdateIncremental"
     },
     {
       "Id": "addAuthorToBook",

@@ -84,7 +84,7 @@ namespace Azure.DataGateway.Service.Services
                     context = new DeleteRequestContext(entityName, isList: false);
                     RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                     break;
-                case Operation.UpdateRest:
+                case Operation.Update:
                 case Operation.UpdateIncremental:
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
@@ -129,7 +129,7 @@ namespace Azure.DataGateway.Service.Services
                         return FormatFindResult(await _queryEngine.ExecuteAsync(context), (FindRequestContext)context);
                     case Operation.Insert:
                     case Operation.Delete:
-                    case Operation.UpdateRest:
+                    case Operation.Update:
                     case Operation.UpdateIncremental:
                     case Operation.Upsert:
                     case Operation.UpsertIncremental:
@@ -230,7 +230,6 @@ namespace Azure.DataGateway.Service.Services
             switch (operation)
             {
                 case Operation.Update:
-                case Operation.UpdateRest:
                 case Operation.Upsert:
                     return HttpRestVerbs.PUT;
                 case Operation.UpdateIncremental:

@@ -251,7 +251,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             if ((operationType == Operation.Delete ||
                  operationType == Operation.Upsert ||
                  operationType == Operation.UpsertIncremental ||
-                 operationType == Operation.UpdateRest ||
+                 operationType == Operation.Update ||
                  operationType == Operation.UpdateIncremental)
                 && actionResult is NoContentResult)
             {

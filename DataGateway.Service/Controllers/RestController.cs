@@ -286,7 +286,7 @@ namespace Azure.DataGateway.Service.Controllers
                 {
                     switch (operationType)
                     {
-                        case Operation.UpdateRest:
+                        case Operation.Update:
                         case Operation.UpdateIncremental:
                         case Operation.Upsert:
                         case Operation.UpsertIncremental:
@@ -342,7 +342,7 @@ namespace Azure.DataGateway.Service.Controllers
                 switch (operation)
                 {
                     case Operation.Upsert:
-                        operation = Operation.UpdateRest;
+                        operation = Operation.Update;
                         break;
                     case Operation.UpsertIncremental:
                         operation = Operation.UpdateIncremental;

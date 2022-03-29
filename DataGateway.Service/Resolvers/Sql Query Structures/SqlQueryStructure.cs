@@ -363,8 +363,8 @@ namespace Azure.DataGateway.Service.Resolvers
             foreach (KeyValuePair<string, object[]> keyValuePair in afterJsonValues)
             {
                 // public OrderByColumn(string? tableAlias, string columnName, OrderByDir direction = OrderByDir.Asc)
-                columns.Add(new OrderByColumn(TableAlias, keyValuePair.Key, GetDirection(keyValuePair.Value[1] as string)));
-                values.Add(keyValuePair.Value[0] as string);
+                columns.Add(new OrderByColumn(TableAlias, keyValuePair.Key, GetDirection((keyValuePair.Value[1] as string)!)));
+                values.Add((keyValuePair.Value[0] as string)!);
             }
 
             //List<Column> primaryKey = PrimaryKeyAsColumns();

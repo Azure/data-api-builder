@@ -38,9 +38,19 @@ namespace Azure.DataGateway.Service.Services
         {
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
-            GraphQLMetadataProvider = (SqlGraphQLFileMetadataProvider) graphQLMetadataProvider;
             _httpContextAccessor = httpContextAccessor;
             _authorizationService = authorizationService;
+
+            if (graphQLMetadataProvider is SqlGraphQLFileMetadataProvider)
+            {
+                GraphQLMetadataProvider = (SqlGraphQLFileMetadataProvider)graphQLMetadataProvider;
+            }
+            else
+            {
+                throw new ArgumentException(
+                    $"${nameof(SqlGraphQLFileMetadataProvider)} expected to be injected for ${nameof(IGraphQLMetadataProvider)}.");
+            }
+
         }
 
         /// <summary>

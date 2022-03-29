@@ -31,16 +31,26 @@ namespace Azure.DataGateway.Service.Services
         public RestService(
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
-            SqlGraphQLFileMetadataProvider graphQLMetadataProvider,
+            IGraphQLMetadataProvider graphQLMetadataProvider,
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationService authorizationService
             )
         {
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
-            GraphQLMetadataProvider = graphQLMetadataProvider;
             _httpContextAccessor = httpContextAccessor;
             _authorizationService = authorizationService;
+
+            if (graphQLMetadataProvider is SqlGraphQLFileMetadataProvider sqlGraphQLFileMetadataProvider)
+            {
+                GraphQLMetadataProvider = sqlGraphQLFileMetadataProvider;
+            }
+            else
+            {
+                throw new ArgumentException(
+                    $"${nameof(SqlGraphQLFileMetadataProvider)} expected to be injected for ${nameof(IGraphQLMetadataProvider)}.");
+            }
+
         }
 
         /// <summary>
@@ -108,7 +118,7 @@ namespace Azure.DataGateway.Service.Services
                 RequestParser.ParseQueryString(context, GraphQLMetadataProvider.FilterParser);
             }
 
-            // At this point for DELETE, the primary key should be populated in the Request Context. 
+            // At this point for DELETE, the primary key should be populated in the Request Context.
             RequestValidator.ValidateRequestContext(context, GraphQLMetadataProvider);
 
             // RestRequestContext is finalized for QueryBuilding and QueryExecution.

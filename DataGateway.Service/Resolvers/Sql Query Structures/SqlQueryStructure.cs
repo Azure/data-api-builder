@@ -156,13 +156,6 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (!string.IsNullOrWhiteSpace(context.After))
             {
-                // with OrderBy need way to determine ASC or DESC
-                // One option is to add ASC or DESC to the Json String we use for After
-                // ie:
-                // {
-                //   "id":[7, "desc"],
-                //   "title":["The Two Towers", "asc"]
-                // }
                 AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromJsonString(context.After, PaginationMetadata));
             }
 
@@ -363,22 +356,21 @@ namespace Azure.DataGateway.Service.Resolvers
             List<string> values = new();
             foreach (KeyValuePair<string, object[]> keyValuePair in afterJsonValues)
             {
-                // public OrderByColumn(string? tableAlias, string columnName, OrderByDir direction = OrderByDir.Asc)
+                // direction is always a string
                 string direction = ((JsonElement)keyValuePair.Value[1]).GetString();
                 columns.Add(new OrderByColumn(TableAlias, keyValuePair.Key, GetDirection(direction)));
+                // safe to save ToString(), we get correct typing for column later
                 values.Add(keyValuePair.Value[0].ToString());
             }
-
-            //List<Column> primaryKey = PrimaryKeyAsColumns();
-            //List<string> pkValues = new();
-            //foreach (Column column in primaryKey)
-            //{
-            //    pkValues.Add($"@{MakeParamWithValue(afterJsonValues[column.ColumnName])}");
-            //}
 
             PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(columns, values);
         }
 
+        /// <summary>
+        /// Helper function converts a string direction to OrderByDir
+        /// </summary>
+        /// <param name="direction">The string direction to convert.</param>
+        /// <returns>OrderByDir representing the direction.</returns>
         private static Models.OrderByDir GetDirection(string direction)
         {
             switch (direction)

@@ -101,9 +101,9 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Extracts the primary keys from the json elem, puts them in a string in json format and base64 encodes it
+        /// Extracts the columns from the json element needed for pagination, represents them as a string in json format and base64 encodes.
         /// The JSON is encoded in base64 for opaqueness. The cursor should function as a token that the user copies and pastes
-        /// and doesn't need to know how it works
+        /// without needing to understand how it works.
         /// </summary>
         public static string MakeCursorFromJsonElement(JsonElement element, List<string> primaryKey, JsonElement nextElement = default, List<Column>? orderByColumns = null)
         {
@@ -165,17 +165,6 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 afterJsonString = Base64Decode(afterJsonString);
                 Dictionary<string, JsonElement> afterDeserialized = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(afterJsonString)!;
-
-                // No Longer will the $After only be Ascending order by primary key
-                // now can be ascending or descending order for any column
-
-                //if (!ListsAreEqual(afterDeserialized.Keys.ToList(), primaryKey))
-                //{
-                //    string incorrectValues = $"Parameter \"after\" with values {afterJsonString} does not contain all the required" +
-                //                                $"values <{string.Join(", ", primaryKey.Select(c => $"\"{c}\""))}>";
-
-                //    throw new ArgumentException(incorrectValues);
-                //}
 
                 foreach (KeyValuePair<string, JsonElement> keyValuePair in afterDeserialized)
                 {

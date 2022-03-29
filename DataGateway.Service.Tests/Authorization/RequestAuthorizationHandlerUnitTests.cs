@@ -19,7 +19,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization
     public class RequestAuthorizationHandlerUnitTests : SqlTestBase
     {
         private Mock<SqlGraphQLFileMetadataProvider> _metadataStore;
-        private Mock<IMetadataStoreProvider> _metadataStore;
         private const string TEST_ENTITY = "TEST_ENTITY";
 
         [ClassInitialize]

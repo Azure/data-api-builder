@@ -154,8 +154,16 @@ namespace Azure.DataGateway.Service.Resolvers
                         /// result set #2: result of the INSERT operation.
                         if (resultRecord != null)
                         {
-                            // We give empty result set for updates
-                            jsonResultString = null;
+                            if (_metadataStoreProvider.CloudDbType == Configurations.DatabaseType.PostgreSql &&
+                                PostgresQueryBuilder.IsInsert(resultRecord))
+                            {
+                                jsonResultString = JsonSerializer.Serialize(resultRecord);
+                            }
+                            else
+                            {
+                                // We give empty result set for updates
+                                jsonResultString = null;
+                            }
                         }
                         else if (await dbDataReader.NextResultAsync())
                         {

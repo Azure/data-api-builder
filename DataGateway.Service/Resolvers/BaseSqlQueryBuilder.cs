@@ -44,7 +44,6 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
 
                 result.Append(")");
-
                 return result.ToString();
             }
             else
@@ -54,8 +53,8 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Create an inequality where all primary key columns up to untilIndex are equilized to the
-        /// respective pkValue, and the primary key colum at untilIndex has to be greater than its pkValue
+        /// Create an inequality where all columns up to untilIndex are equilized to the
+        /// respective values, and the colum at untilIndex has to be compared to its Value
         /// E.g. for
         /// primaryKey: [a, b, c, d, e, f]
         /// pkValues: [A, B, C, D, E, F]
@@ -71,7 +70,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (columns[i] is OrderByColumn)
                 {
                     op = i == untilIndex ? GetComparisonFromDirection((columns[i] as OrderByColumn)!.Direction) : "=";
-                    result.Append($"{Build(columns[i], isOrdered: false)} {op} {values[i]}");
+                    result.Append($"{Build(columns[i], printDirection: false)} {op} {values[i]}");
                 }
                 else
                 {
@@ -88,6 +87,12 @@ namespace Azure.DataGateway.Service.Resolvers
             return result.ToString();
         }
 
+        /// <summary>
+        /// Helper function returns the comparison operator appropriate
+        /// for the given direction.
+        /// </summary>
+        /// <param name="direction">String represents direction.</param>
+        /// <returns>Correct comparison operator.</returns>
         private static string GetComparisonFromDirection(string direction)
         {
             switch (direction)
@@ -109,9 +114,9 @@ namespace Azure.DataGateway.Service.Resolvers
         /// If TableAlias is null
         /// {ColumnName}
         /// </summary>
-        protected virtual string Build(Column column, bool isOrdered = true)
+        protected virtual string Build(Column column, bool printDirection = true)
         {
-            if (isOrdered && column is OrderByColumn)
+            if (printDirection && column is OrderByColumn)
             {
                 return Build(column as OrderByColumn);
             }

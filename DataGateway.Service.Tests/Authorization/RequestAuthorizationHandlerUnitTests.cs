@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
-namespace Azure.DataGateway.Service.Tests.REST
+namespace Azure.DataGateway.Service.Tests.Authorization
 {
     /// <summary>
     /// Tests that the RequestAuthorizationHandler issues correct AuthZ decisions for REST endpoints.
@@ -113,9 +113,10 @@ namespace Azure.DataGateway.Service.Tests.REST
             // User will be populated in httpContext but IsAuthenticated() is FALSE.
             ClaimsPrincipal user = new(new ClaimsIdentity());
 
-            // Create table with permission config that does not match request action.
-            // Request is GET by default, so POST will not match.
-            SetupTable(HttpMethod.Post.ToString(), defaultAuthZRule: true);
+            // httpOperation matches config. Though defaultAuthZRule is true,
+            // the result should be false because AuthorizationType enum default is
+            // NoAccess.
+            SetupTable(HttpMethod.Get.ToString(), defaultAuthZRule: true);
 
             bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, user);
 
@@ -142,6 +143,10 @@ namespace Azure.DataGateway.Service.Tests.REST
 
         /// <summary>
         /// Create Test method table definition with operation and authorization rules defined.
+        /// If defaultAuthZRule is true, then an AuthorizationRule is created using the first
+        /// value in the AuthorizationType enum which is NoAccess.
+        /// Using first value in enum imitates scenario when config does not set value
+        /// for AuthorizationType.
         /// </summary>
         /// <param name="httpOperation">Allowed Http HttpVerbs for table,</param>
         /// <param name="setupHttpPerms">TableDefinition.HttpVerbs is populated/not null</param>
@@ -168,10 +173,8 @@ namespace Azure.DataGateway.Service.Tests.REST
         }
 
         /// <summary>
-        /// Create authorization rule for the TableDefinition's Operation.
-        /// If defaultConfig is true, do not set AuthorizationType on rule creation,
-        /// to imitate config not setting value for type. This will result in first
-        /// Enum value in AuthorizationType to be used.
+        /// Create authorization rule for the TableDefinition's Operation,
+        /// that is configured with the passed in AuthorizationType.
         /// </summary>
         /// <param name="authZType"></param>
         /// <returns></returns>

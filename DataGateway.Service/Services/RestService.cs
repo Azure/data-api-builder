@@ -41,9 +41,9 @@ namespace Azure.DataGateway.Service.Services
             _httpContextAccessor = httpContextAccessor;
             _authorizationService = authorizationService;
 
-            if (graphQLMetadataProvider is SqlGraphQLFileMetadataProvider)
+            if (graphQLMetadataProvider is SqlGraphQLFileMetadataProvider sqlGraphQLFileMetadataProvider)
             {
-                GraphQLMetadataProvider = (SqlGraphQLFileMetadataProvider)graphQLMetadataProvider;
+                GraphQLMetadataProvider = sqlGraphQLFileMetadataProvider;
             }
             else
             {

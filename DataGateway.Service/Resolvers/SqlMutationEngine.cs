@@ -217,7 +217,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryParameters = insertQueryStruct.Parameters;
                     break;
                 case Operation.Update:
-                    SqlUpdateStructure updateStructure = new(tableName, _metadataStoreProvider, parameters);
+                    SqlUpdateStructure updateStructure = new(tableName, _metadataStoreProvider, parameters, true);
                     queryString = _queryBuilder.Build(updateStructure);
                     queryParameters = updateStructure.Parameters;
                     break;

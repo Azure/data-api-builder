@@ -122,7 +122,7 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="primaryKeyRoute">Primary key route from the url.</param>
         /// <param name="requestBody">The body of the request.</param>
         /// <exception cref="DataGatewayException"></exception>
-        /// <returns>JsonElement representing the boy of the request.</returns>
+        /// <returns>JsonElement representing the body of the request.</returns>
         public static JsonElement ValidateUpdateOrUpsertRequest(string? primaryKeyRoute, string requestBody)
         {
             if (string.IsNullOrEmpty(primaryKeyRoute))

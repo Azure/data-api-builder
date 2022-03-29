@@ -197,7 +197,7 @@ namespace Azure.DataGateway.Service.Controllers
         {
             return await HandleOperation(
                 entityName,
-                HandlePatchPutSemantics(Operation.Upsert),
+                DeterminePatchPutSemantics(Operation.Upsert),
                 primaryKeyRoute);
         }
 
@@ -222,7 +222,7 @@ namespace Azure.DataGateway.Service.Controllers
         {
             return await HandleOperation(
                 entityName,
-                HandlePatchPutSemantics(Operation.UpsertIncremental),
+                DeterminePatchPutSemantics(Operation.UpsertIncremental),
                 primaryKeyRoute);
         }
 
@@ -247,7 +247,6 @@ namespace Azure.DataGateway.Service.Controllers
                     this.HttpContext.User = new ClaimsPrincipal(identity);
                 }
 
-                //operationType = HandlePatchPutSemantics(Request.Headers, operationType);
                 // Utilizes C#8 using syntax which does not require brackets.
                 using JsonDocument? result
                     = await _restService.ExecuteAsync(
@@ -328,11 +327,18 @@ namespace Azure.DataGateway.Service.Controllers
         /// <param name="headers">Headers indicating operation to use.</param>
         /// <param name="operation">opertion to be used.</param>
         /// <returns>correct opertion based on headers.</returns>
-        private Operation HandlePatchPutSemantics(Operation operation)
+        private Operation DeterminePatchPutSemantics(Operation operation)
         {
 
             if (HttpContext.Request.Headers.ContainsKey("If-Match"))
             {
+                if (!string.Equals(HttpContext.Request.Headers["If-Match"], "*"))
+                {
+                    throw new DataGatewayException(message: "Etags not supported, use '*'",
+                                                   statusCode: HttpStatusCode.BadRequest,
+                                                   subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                }
+
                 switch (operation)
                 {
                     case Operation.Upsert:

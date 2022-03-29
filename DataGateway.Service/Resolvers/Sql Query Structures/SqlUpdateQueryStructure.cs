@@ -17,7 +17,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<Predicate> UpdateOperations { get; }
 
-        public SqlUpdateStructure(string tableName, IMetadataStoreProvider metadataStore, IDictionary<string, object> mutationParams, bool isIncrementalUpdate)
+        public SqlUpdateStructure(string tableName, SqlGraphQLFileMetadataProvider metadataStore, IDictionary<string, object> mutationParams, bool isIncrementalUpdate)
         : base(metadataStore, tableName: tableName)
         {
             UpdateOperations = new();

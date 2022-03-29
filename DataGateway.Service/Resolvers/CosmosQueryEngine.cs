@@ -19,13 +19,15 @@ namespace Azure.DataGateway.Service.Resolvers
     public class CosmosQueryEngine : IQueryEngine
     {
         private readonly CosmosClientProvider _clientProvider;
-        private readonly IMetadataStoreProvider _metadataStoreProvider;
+        private readonly IGraphQLMetadataProvider _metadataStoreProvider;
         private readonly CosmosQueryBuilder _queryBuilder;
 
         // <summary>
         // Constructor.
         // </summary>
-        public CosmosQueryEngine(CosmosClientProvider clientProvider, IMetadataStoreProvider metadataStoreProvider)
+        public CosmosQueryEngine(
+            CosmosClientProvider clientProvider,
+            IGraphQLMetadataProvider metadataStoreProvider)
         {
             _clientProvider = clientProvider;
             _metadataStoreProvider = metadataStoreProvider;

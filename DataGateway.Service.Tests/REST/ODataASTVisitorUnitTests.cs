@@ -1,11 +1,10 @@
 using System;
-using System.IO;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -18,24 +17,14 @@ namespace Azure.DataGateway.Service.Tests.REST
     /// testing.
     /// </summary>
     [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class ODataASTVisitorUnitTests
+    public class ODataASTVisitorUnitTests : SqlTestBase
     {
-        private static FilterParser _filterParser;
         private const string DEFAULT_ENTITY = "books";
 
         [ClassInitialize]
-        public static void InitializeTestFixture(TestContext context)
+        public static async Task InitializeTestFixture(TestContext context)
         {
-            string jsonString = File.ReadAllText("sql-config.json");
-            JsonSerializerOptions options = new()
-            {
-                PropertyNameCaseInsensitive = true,
-            };
-            options.Converters.Add(new JsonStringEnumConverter());
-
-            ResolverConfig? deserializedConfig;
-            deserializedConfig = JsonSerializer.Deserialize<ResolverConfig>(jsonString, options);
-            _filterParser = new(deserializedConfig.DatabaseSchema);
+            await InitializeTestFixture(context, TestCategory.MSSQL);
         }
 
         #region Positive Tests
@@ -212,7 +201,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             string filterString,
             string expected)
         {
-            Mock<IMetadataStoreProvider> metaDataStore = new();
+            Mock<SqlGraphQLFileMetadataProvider> metaDataStore = new(_metadataStoreProvider);
             TableDefinition tableDef = new()
             {
                 Columns = new()
@@ -220,7 +209,8 @@ namespace Azure.DataGateway.Service.Tests.REST
             metaDataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext context = new(entityName, false);
             Mock<SqlQueryStructure> structure = new(context, metaDataStore.Object);
-            FilterClause ast = _filterParser.GetFilterClause(filterString, entityName);
+            FilterClause ast = _metadataStoreProvider.FilterParser.
+                GetFilterClause(filterString, entityName);
             ODataASTVisitor visitor = new(structure.Object);
             string actual = ast.Expression.Accept<string>(visitor);
             Assert.AreEqual(expected, actual);
@@ -236,7 +226,8 @@ namespace Azure.DataGateway.Service.Tests.REST
             string entityName,
             bool isList = false)
         {
-            Mock<IMetadataStoreProvider> metaDataStore = new();
+            Mock<SqlGraphQLFileMetadataProvider> metaDataStore
+                = new(_metadataStoreProvider);
             TableDefinition tableDef = new()
             {
                 Columns = new()

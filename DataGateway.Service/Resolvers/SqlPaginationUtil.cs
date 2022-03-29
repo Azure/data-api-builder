@@ -228,7 +228,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Resolves a JsonElement representing a variable to the appropriate type
         /// </summary>
         /// <exception cref="ArgumentException" />
-        private static object ResolveJsonElementToScalarVariable(JsonElement element)
+        public static object ResolveJsonElementToScalarVariable(JsonElement element)
         {
             switch (element.ValueKind)
             {

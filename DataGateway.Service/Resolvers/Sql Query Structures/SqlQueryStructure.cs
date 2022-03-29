@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Text.Json;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -363,8 +364,9 @@ namespace Azure.DataGateway.Service.Resolvers
             foreach (KeyValuePair<string, object[]> keyValuePair in afterJsonValues)
             {
                 // public OrderByColumn(string? tableAlias, string columnName, OrderByDir direction = OrderByDir.Asc)
-                columns.Add(new OrderByColumn(TableAlias, keyValuePair.Key, GetDirection((keyValuePair.Value[1] as string)!)));
-                values.Add((keyValuePair.Value[0] as string)!);
+                string direction = ((JsonElement)keyValuePair.Value[1]).GetString();
+                columns.Add(new OrderByColumn(TableAlias, keyValuePair.Key, GetDirection(direction)));
+                values.Add(keyValuePair.Value[0].ToString());
             }
 
             //List<Column> primaryKey = PrimaryKeyAsColumns();
@@ -381,9 +383,9 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             switch (direction)
             {
-                case "asc":
+                case "Asc":
                     return Models.OrderByDir.Asc;
-                case "desc":
+                case "Desc":
                     return Models.OrderByDir.Desc;
                 default:
                     throw new DataGatewayException(message: $"Unsupported sorting direction for pagination: {direction}",

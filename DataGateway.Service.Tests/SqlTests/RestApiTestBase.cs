@@ -302,7 +302,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyPagination)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"id\":1}"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"id\":[1,\"Asc\"]}"))}",
                 paginated: true
             );
         }
@@ -321,7 +321,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _tableWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyPagination)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"book_id\":1,\"id\":567}"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"book_id\":[1,\"Asc\"],\"id\":[567,\"Asc\"]}"))}",
                 paginated: true
             );
         }
@@ -335,7 +335,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"id\":7}"))}",
+                queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"id\":[7,\"Asc\"]}"))}",
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithAfterSingleKeyPagination)),
                 controller: _restController
@@ -351,7 +351,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"book_id\":1,\"id\":567}"))}",
+                queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"book_id\":[1,\"Asc\"],\"id\":[567, \"Asc\"]}"))}",
                 entity: _tableWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithAfterMultiKeyPagination)),
                 controller: _restController
@@ -404,7 +404,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyPaginationAndOrderBy)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"id\":2}"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"title\":[\"Also Awesome book\",\"Asc\"]}"))}",
                 paginated: true
             );
         }
@@ -423,7 +423,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _tableWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyPaginationAndOrderBy)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"book_id\":1,\"id\":567}"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"content\":[\"Indeed a great book\",\"Desc\"]}"))}",
                 paginated: true
             );
         }

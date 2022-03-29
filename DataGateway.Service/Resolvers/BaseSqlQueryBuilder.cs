@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using static Azure.DataGateway.Service.Exceptions.DataGatewayException;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -64,10 +67,17 @@ namespace Azure.DataGateway.Service.Resolvers
             StringBuilder result = new();
             for (int i = 0; i <= untilIndex; i++)
             {
-                string op = i == untilIndex && columns[i] is OrderByColumn ? (columns[i] as OrderByColumn)!.Direction :
-                            i == untilIndex ? ">" : "=";
-                // Check if OrderBy type breaks this call
-                result.Append($"{Build(columns[i])} {op} {values[i]}");
+                string op;
+                if (columns[i] is OrderByColumn)
+                {
+                    op = i == untilIndex ? GetComparisonFromDirection((columns[i] as OrderByColumn)!.Direction) : "=";
+                    result.Append($"{Build(columns[i], isOrdered: false)} {op} {values[i]}");
+                }
+                else
+                {
+                    op = i == untilIndex ? ">" : "=";
+                    result.Append($"{Build(columns[i])} {op} {values[i]}");
+                }
 
                 if (i < untilIndex)
                 {
@@ -78,15 +88,30 @@ namespace Azure.DataGateway.Service.Resolvers
             return result.ToString();
         }
 
+        private static string GetComparisonFromDirection(string direction)
+        {
+            switch (direction)
+            {
+                case "Asc":
+                    return ">";
+                case "Desc":
+                    return "<";
+                default:
+                    throw new DataGatewayException(message: $"Invalid sorting direction for pagination: {direction}",
+                                                   statusCode: HttpStatusCode.BadRequest,
+                                                   subStatusCode: SubStatusCodes.BadRequest);
+            }
+        }
+
         /// <summary>
         /// Build column as
         /// {TableAlias}.{ColumnName}
         /// If TableAlias is null
         /// {ColumnName}
         /// </summary>
-        protected virtual string Build(Column column)
+        protected virtual string Build(Column column, bool isOrdered = true)
         {
-            if (column is OrderByColumn)
+            if (isOrdered && column is OrderByColumn)
             {
                 return Build(column as OrderByColumn);
             }

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
+using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -15,10 +16,17 @@ namespace Azure.DataGateway.Service.Tests.Authorization
     /// Tests that the RequestAuthorizationHandler issues correct AuthZ decisions for REST endpoints.
     /// </summary>
     [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class RequestAuthorizationHandlerUnitTests
+    public class RequestAuthorizationHandlerUnitTests : SqlTestBase
     {
+        private Mock<SqlGraphQLFileMetadataProvider> _metadataStore;
         private Mock<IMetadataStoreProvider> _metadataStore;
         private const string TEST_ENTITY = "TEST_ENTITY";
+
+        [ClassInitialize]
+        public static async Task InitializeTestFixture(TestContext context)
+        {
+            await InitializeTestFixture(context, TestCategory.MSSQL);
+        }
 
         #region Positive Tests
         /// <summary>
@@ -134,7 +142,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         {
             FindRequestContext request = new(entityName, isList: false);
             AuthorizationHandlerContext context = new(new List<IAuthorizationRequirement> { HttpRestVerbs.GET }, user, request);
-            RequestAuthorizationHandler handler = new(_metadataStore.Object);
+            RequestAuthorizationHandler handler =
+                new(_metadataStore.Object,
+                isMock: true); // indicates the metadata provider specified is a mock object.
 
             await handler.HandleAsync(context);
 
@@ -168,7 +178,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 table.HttpVerbs.Add(httpOperation, new AuthorizationRule());
             }
 
-            _metadataStore = new Mock<IMetadataStoreProvider>();
+            _metadataStore = new Mock<SqlGraphQLFileMetadataProvider>(_metadataStoreProvider);
             _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(table);
         }
 

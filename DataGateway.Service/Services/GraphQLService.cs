@@ -17,7 +17,7 @@ namespace Azure.DataGateway.Service.Services
     {
         private readonly IQueryEngine _queryEngine;
         private readonly IMutationEngine _mutationEngine;
-        private readonly IMetadataStoreProvider _metadataStoreProvider;
+        private readonly IGraphQLMetadataProvider _metadataStoreProvider;
         private readonly IDocumentCache _documentCache;
         private readonly IDocumentHashProvider _documentHashProvider;
 
@@ -27,7 +27,7 @@ namespace Azure.DataGateway.Service.Services
         public GraphQLService(
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
-            IMetadataStoreProvider metadataStoreProvider,
+            IGraphQLMetadataProvider metadataStoreProvider,
             IDocumentCache documentCache,
             IDocumentHashProvider documentHashProvider)
         {

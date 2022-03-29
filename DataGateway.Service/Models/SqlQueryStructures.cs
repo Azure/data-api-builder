@@ -218,19 +218,19 @@ namespace Azure.DataGateway.Service.Models
     public class KeysetPaginationPredicate
     {
         /// <summary>
-        /// List of primary key columns used to generate the
+        /// List of columns used to generate the
         /// keyset pagination predicate
         /// </summary>
-        public List<Column> PrimaryKey { get; }
+        public List<Column> Columns { get; }
         /// <summary>
         /// List of values to compare the primary key with
         /// to create the pagination predicate
         /// </summary>
         public List<string> Values { get; }
 
-        public KeysetPaginationPredicate(List<Column> primaryKey, List<string> values)
+        public KeysetPaginationPredicate(List<Column> columns, List<string> values)
         {
-            PrimaryKey = primaryKey;
+            Columns = columns;
             Values = values;
         }
     }

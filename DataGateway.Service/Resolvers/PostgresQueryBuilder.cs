@@ -93,10 +93,10 @@ namespace Azure.DataGateway.Service.Resolvers
                 return string.Empty;
             }
 
-            string left = Build(predicate.PrimaryKey);
+            string left = Build(predicate.Columns);
             string right = string.Join(", ", predicate.Values);
 
-            if (predicate.PrimaryKey.Count > 1)
+            if (predicate.Columns.Count > 1)
             {
                 return $"({left}) > ({right})";
             }

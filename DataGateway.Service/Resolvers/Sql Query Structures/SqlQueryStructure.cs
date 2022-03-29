@@ -9,6 +9,7 @@ using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using Microsoft.OData.UriParser;
+using static Azure.DataGateway.Service.Exceptions.DataGatewayException;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -154,6 +155,13 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (!string.IsNullOrWhiteSpace(context.After))
             {
+                // with OrderBy need way to determine ASC or DESC
+                // One option is to add ASC or DESC to the Json String we use for After
+                // ie:
+                // {
+                //   "id":[7, "desc"],
+                //   "title":["The Two Towers", "asc"]
+                // }
                 AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromJsonString(context.After, PaginationMetadata));
             }
 
@@ -280,7 +288,7 @@ namespace Azure.DataGateway.Service.Resolvers
             // TableName, TableAlias, Columns, and _limit
             if (PaginationMetadata.IsPaginated)
             {
-                IDictionary<string, object>? afterJsonValues = SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata);
+                IDictionary<string, object[]>? afterJsonValues = SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata);
                 AddPaginationPredicate(afterJsonValues);
 
                 if (PaginationMetadata.RequestedEndCursor)
@@ -342,7 +350,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Add the predicates associated with the "after" parameter of paginated queries
         /// </summary>
-        void AddPaginationPredicate(IDictionary<string, object> afterJsonValues)
+        void AddPaginationPredicate(IDictionary<string, object[]> afterJsonValues)
         {
             if (!afterJsonValues.Any())
             {
@@ -350,14 +358,38 @@ namespace Azure.DataGateway.Service.Resolvers
                 return;
             }
 
-            List<Column> primaryKey = PrimaryKeyAsColumns();
-            List<string> pkValues = new();
-            foreach (Column column in primaryKey)
+            List<Column> columns = new();
+            List<string> values = new();
+            foreach (KeyValuePair<string, object[]> keyValuePair in afterJsonValues)
             {
-                pkValues.Add($"@{MakeParamWithValue(afterJsonValues[column.ColumnName])}");
+                // public OrderByColumn(string? tableAlias, string columnName, OrderByDir direction = OrderByDir.Asc)
+                columns.Add(new OrderByColumn(TableAlias, keyValuePair.Key, GetDirection(keyValuePair.Value[1] as string)));
+                values.Add(keyValuePair.Value[0] as string);
             }
 
-            PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(primaryKey, pkValues);
+            //List<Column> primaryKey = PrimaryKeyAsColumns();
+            //List<string> pkValues = new();
+            //foreach (Column column in primaryKey)
+            //{
+            //    pkValues.Add($"@{MakeParamWithValue(afterJsonValues[column.ColumnName])}");
+            //}
+
+            PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(columns, values);
+        }
+
+        private static Models.OrderByDir GetDirection(string direction)
+        {
+            switch (direction)
+            {
+                case "asc":
+                    return Models.OrderByDir.Asc;
+                case "desc":
+                    return Models.OrderByDir.Desc;
+                default:
+                    throw new DataGatewayException(message: $"Unsupported sorting direction for pagination: {direction}",
+                                                   statusCode: HttpStatusCode.BadRequest,
+                                                   subStatusCode: SubStatusCodes.BadRequest);
+            }
         }
 
         /// <summary>

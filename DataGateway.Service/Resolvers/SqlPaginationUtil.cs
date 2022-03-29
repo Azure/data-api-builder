@@ -105,13 +105,31 @@ namespace Azure.DataGateway.Service.Resolvers
         /// The JSON is encoded in base64 for opaqueness. The cursor should function as a token that the user copies and pastes
         /// and doesn't need to know how it works
         /// </summary>
-        public static string MakeCursorFromJsonElement(JsonElement element, List<string> primaryKey)
+        public static string MakeCursorFromJsonElement(JsonElement element, List<string> primaryKey, JsonElement nextElement = default, List<Column>? orderByColumns = null)
         {
-            Dictionary<string, object> cursorJson = new();
+            Dictionary<string, object[]> cursorJson = new();
+            // If we have orderByColumns need to check if any of these
+            // columns are not tied between element and nextElement
+            // in which case the first non-tie will determine pagination order
+            if (orderByColumns is not null)
+            {
+                foreach (Column column in orderByColumns)
+                {
+                    object value = ResolveJsonElementToScalarVariable(element.GetProperty(column.ColumnName));
+                    object nextValue = ResolveJsonElementToScalarVariable(nextElement.GetProperty(column.ColumnName));
+
+                    if ((value is string && !string.Equals(value, nextValue) ||
+                        value is long && !value.Equals(nextValue)))
+                    {
+                        cursorJson.Add(column.ColumnName, new object[] { ResolveJsonElementToScalarVariable(element.GetProperty(column.ColumnName)), (column as OrderByColumn)!.Direction });
+                        return Base64Encode(JsonSerializer.Serialize(cursorJson));
+                    }
+                }
+            }
 
             foreach (string column in primaryKey)
             {
-                cursorJson.Add(column, ResolveJsonElementToScalarVariable(element.GetProperty(column)));
+                cursorJson.Add(column, new object[] { ResolveJsonElementToScalarVariable(element.GetProperty(column)), "Asc" });
             }
 
             return Base64Encode(JsonSerializer.Serialize(cursorJson));
@@ -120,9 +138,9 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Parse the value of "after" parameter from query parameters, validate it, and return the json object it stores
         /// </summary>
-        public static IDictionary<string, object> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
+        public static IDictionary<string, object[]> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
         {
-            Dictionary<string, object> after = new();
+            Dictionary<string, object[]> after = new();
             object afterObject = queryParams["after"];
 
             if (afterObject != null)
@@ -138,35 +156,41 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Validate the value associated with $after, and return the json object it stores
         /// </summary>
-        public static Dictionary<string, object> ParseAfterFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
+        public static Dictionary<string, object[]> ParseAfterFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
         {
-            Dictionary<string, object> after = new();
-            List<string> primaryKey = paginationMetadata.Structure!.PrimaryKey();
+            Dictionary<string, object[]> after = new();
+            //List<string> primaryKey = paginationMetadata.Structure!.PrimaryKey();
 
             try
             {
                 afterJsonString = Base64Decode(afterJsonString);
                 Dictionary<string, JsonElement> afterDeserialized = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(afterJsonString)!;
 
-                if (!ListsAreEqual(afterDeserialized.Keys.ToList(), primaryKey))
-                {
-                    string incorrectValues = $"Parameter \"after\" with values {afterJsonString} does not contain all the required" +
-                                                $"values <{string.Join(", ", primaryKey.Select(c => $"\"{c}\""))}>";
+                // No Longer will the $After only be Ascending order by primary key
+                // now can be ascending or descending order for any column
 
-                    throw new ArgumentException(incorrectValues);
-                }
+                //if (!ListsAreEqual(afterDeserialized.Keys.ToList(), primaryKey))
+                //{
+                //    string incorrectValues = $"Parameter \"after\" with values {afterJsonString} does not contain all the required" +
+                //                                $"values <{string.Join(", ", primaryKey.Select(c => $"\"{c}\""))}>";
+
+                //    throw new ArgumentException(incorrectValues);
+                //}
 
                 foreach (KeyValuePair<string, JsonElement> keyValuePair in afterDeserialized)
                 {
-                    object value = ResolveJsonElementToScalarVariable(keyValuePair.Value);
+                    IEnumerable<JsonElement> enumeratedValue = keyValuePair.Value.EnumerateArray();
+                    object value = ResolveJsonElementToScalarVariable(enumeratedValue.First());
+                    object direction = enumeratedValue.Last();
+                    object[] valueAndDirection = { value, direction };
 
-                    ColumnType columnType = paginationMetadata.Structure.GetColumnType(keyValuePair.Key);
+                    ColumnType columnType = paginationMetadata.Structure!.GetColumnType(keyValuePair.Key);
                     if (value.GetType() != ColumnDefinition.ResolveColumnTypeToSystemType(columnType))
                     {
                         throw new ArgumentException($"After param has incorrect type {value.GetType()} for primary key column {keyValuePair.Key} with type {columnType}.");
                     }
 
-                    after.Add(keyValuePair.Key, value);
+                    after.Add(keyValuePair.Key, valueAndDirection);
                 }
             }
             catch (Exception e)

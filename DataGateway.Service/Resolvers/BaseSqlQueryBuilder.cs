@@ -27,17 +27,17 @@ namespace Azure.DataGateway.Service.Resolvers
                 return string.Empty;
             }
 
-            if (predicate.PrimaryKey.Count > 1)
+            if (predicate.Columns.Count > 1)
             {
                 StringBuilder result = new("(");
-                for (int i = 0; i < predicate.PrimaryKey.Count; i++)
+                for (int i = 0; i < predicate.Columns.Count; i++)
                 {
                     if (i > 0)
                     {
                         result.Append(" OR ");
                     }
 
-                    result.Append($"({MakePaginationInequality(predicate.PrimaryKey, predicate.Values, i)})");
+                    result.Append($"({MakePaginationInequality(predicate.Columns, predicate.Values, i)})");
                 }
 
                 result.Append(")");
@@ -46,7 +46,7 @@ namespace Azure.DataGateway.Service.Resolvers
             }
             else
             {
-                return MakePaginationInequality(predicate.PrimaryKey, predicate.Values, 0);
+                return MakePaginationInequality(predicate.Columns, predicate.Values, 0);
             }
         }
 
@@ -59,13 +59,15 @@ namespace Azure.DataGateway.Service.Resolvers
         /// untilIndex: 2
         /// generate <c>a = A AND b = B AND c > C</c>
         /// </summary>
-        private string MakePaginationInequality(List<Column> primaryKey, List<string> pkValues, int untilIndex)
+        private string MakePaginationInequality(List<Column> columns, List<string> values, int untilIndex)
         {
             StringBuilder result = new();
             for (int i = 0; i <= untilIndex; i++)
             {
-                string op = i == untilIndex ? ">" : "=";
-                result.Append($"{Build(primaryKey[i])} {op} {pkValues[i]}");
+                string op = i == untilIndex && columns[i] is OrderByColumn ? (columns[i] as OrderByColumn)!.Direction :
+                            i == untilIndex ? ">" : "=";
+                // Check if OrderBy type breaks this call
+                result.Append($"{Build(columns[i])} {op} {values[i]}");
 
                 if (i < untilIndex)
                 {

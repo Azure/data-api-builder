@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
-namespace Azure.DataGateway.Service.Tests.REST
+namespace Azure.DataGateway.Service.Tests.Authorization
 {
     /// <summary>
     /// Tests that the RequestAuthorizationHandler issues correct AuthZ decisions for REST endpoints.
@@ -19,6 +19,7 @@ namespace Azure.DataGateway.Service.Tests.REST
     public class RequestAuthorizationHandlerUnitTests : SqlTestBase
     {
         private Mock<SqlGraphQLFileMetadataProvider> _metadataStore;
+        private const string TEST_ENTITY = "TEST_ENTITY";
 
         [ClassInitialize]
         public static async Task InitializeTestFixture(TestContext context)
@@ -37,9 +38,9 @@ namespace Azure.DataGateway.Service.Tests.REST
             //Create Unauthenticated user by NOT defining authenticationType
             ClaimsPrincipal user = new(new ClaimsIdentity());
 
-            SetupTable(HttpMethod.Get.ToString(), AuthorizationType.Anonymous);
+            SetupTable(HttpMethod.Get.ToString(), authZType: AuthorizationType.Anonymous);
 
-            bool result = await IsAuthorizationSuccessful(entityName: "books", user);
+            bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, user);
 
             //Evaluate Result
             Assert.IsTrue(result);
@@ -52,12 +53,13 @@ namespace Azure.DataGateway.Service.Tests.REST
         [TestMethod]
         public async Task AuthenticatedGetRequestToAnonymousGetEntity()
         {
-            //Create Authenticated user by defining authenticationType
-            ClaimsPrincipal user = new(new ClaimsIdentity(authenticationType: "aad"));
+            // Create Authenticated user by defining authenticationType
+            // Bearer adheres to JwtBearerDefaults.AuthenticationScheme constant
+            ClaimsPrincipal user = new(new ClaimsIdentity(authenticationType: "Bearer"));
 
-            SetupTable(HttpMethod.Get.ToString(), AuthorizationType.Authenticated);
+            SetupTable(HttpMethod.Get.ToString(), authZType: AuthorizationType.Anonymous);
 
-            bool result = await IsAuthorizationSuccessful(entityName: "books", user);
+            bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, user);
 
             Assert.IsTrue(result);
         }
@@ -70,12 +72,60 @@ namespace Azure.DataGateway.Service.Tests.REST
         [TestMethod]
         public async Task AnonymousGetRequestToAuthenticatedGetEntity()
         {
-            //Create Unauthenticated user by NOT defining authenticationType
+            // Create Unauthenticated user by NOT defining authenticationType
             ClaimsPrincipal user = new(new ClaimsIdentity());
 
-            SetupTable(HttpMethod.Get.ToString(), AuthorizationType.Authenticated);
+            SetupTable(HttpMethod.Get.ToString(), authZType: AuthorizationType.Authenticated);
 
-            bool result = await IsAuthorizationSuccessful(entityName: "books", user);
+            bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, user);
+
+            Assert.IsFalse(result);
+        }
+
+        [TestMethod]
+        public async Task TableDef_HttpVerbCountZero_DoesNotDefaultAnonymous()
+        {
+            // Create Unauthenticated user by NOT defining authenticationType
+            // User will be populated in httpContext but IsAuthenticated() is FALSE.
+            ClaimsPrincipal user = new(new ClaimsIdentity());
+
+            // Create table with no HttpVerbs (permissions) config
+            SetupTable(HttpMethod.Get.ToString(), setupHttpVerbs: false);
+
+            bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, user);
+
+            Assert.IsFalse(result);
+        }
+
+        [TestMethod]
+        public async Task TableDef_HasPerms_NoMatchingAction()
+        {
+            // Create Unauthenticated user by NOT defining authenticationType
+            // User will be populated in httpContext but IsAuthenticated() is FALSE.
+            ClaimsPrincipal user = new(new ClaimsIdentity());
+
+            // Create table with permission config that does not match request action.
+            // Request is GET by default, so POST will not match.
+            SetupTable(HttpMethod.Post.ToString());
+
+            bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, user);
+
+            Assert.IsFalse(result);
+        }
+
+        [TestMethod]
+        public async Task TableDef_HasHttpVerbs_NoAuthNTypeDefinedForRule()
+        {
+            // Create Unauthenticated user by NOT defining authenticationType
+            // User will be populated in httpContext but IsAuthenticated() is FALSE.
+            ClaimsPrincipal user = new(new ClaimsIdentity());
+
+            // httpOperation matches config. Though defaultAuthZRule is true,
+            // the result should be false because AuthorizationType enum default is
+            // NoAccess.
+            SetupTable(HttpMethod.Get.ToString(), defaultAuthZRule: true);
+
+            bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, user);
 
             Assert.IsFalse(result);
         }
@@ -102,20 +152,38 @@ namespace Azure.DataGateway.Service.Tests.REST
 
         /// <summary>
         /// Create Test method table definition with operation and authorization rules defined.
+        /// If defaultAuthZRule is true, then an AuthorizationRule is created using the first
+        /// value in the AuthorizationType enum which is NoAccess.
+        /// Using first value in enum imitates scenario when config does not set value
+        /// for AuthorizationType.
         /// </summary>
         /// <param name="httpOperation">Allowed Http HttpVerbs for table,</param>
+        /// <param name="setupHttpPerms">TableDefinition.HttpVerbs is populated/not null</param>
         /// <param name="authZType">AuthorizationType for Http Operation for table.</param>
-        private void SetupTable(string httpOperation, AuthorizationType authZType)
+        private void SetupTable(
+            string httpOperation,
+            bool setupHttpVerbs = true,
+            bool defaultAuthZRule = false,
+            AuthorizationType authZType = AuthorizationType.NoAccess)
         {
             TableDefinition table = new();
-            table.HttpVerbs.Add(httpOperation, CreateAuthZRule(authZType));
+
+            if (setupHttpVerbs && !defaultAuthZRule)
+            {
+                table.HttpVerbs.Add(httpOperation, CreateAuthZRule(authZType));
+            }
+            else if (defaultAuthZRule)
+            {
+                table.HttpVerbs.Add(httpOperation, new AuthorizationRule());
+            }
 
             _metadataStore = new Mock<SqlGraphQLFileMetadataProvider>(_metadataStoreProvider);
             _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(table);
         }
 
         /// <summary>
-        /// Create authorization rule for the TableDefinition's Operation.
+        /// Create authorization rule for the TableDefinition's Operation,
+        /// that is configured with the passed in AuthorizationType.
         /// </summary>
         /// <param name="authZType"></param>
         /// <returns></returns>

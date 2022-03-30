@@ -19,7 +19,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private const string FIELDS_URL = "_f";
         /// <summary>
-        /// Prefix used for specifying the fields in the query string of the URL.
+        /// Prefix used for specifying the fields to be used to sort the result in the query string of the URL.
         /// </summary>
         private const string SORT_URL = "$orderby";
         /// <summary>

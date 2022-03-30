@@ -27,7 +27,7 @@ namespace Azure.DataGateway.Service.Resolvers
             return queryStringBuilder.ToString();
         }
 
-        protected string Build(Column column)
+        protected override string Build(Column column)
         {
             return _containerAlias + "." + column.ColumnName;
         }
@@ -35,12 +35,6 @@ namespace Azure.DataGateway.Service.Resolvers
         protected override string Build(KeysetPaginationPredicate? predicate)
         {
             // Cosmos doesnt do keyset pagination
-            return string.Empty;
-        }
-
-        protected override string Build(Column column, bool printDirection)
-        {
-            // From base class for orderBy
             return string.Empty;
         }
 

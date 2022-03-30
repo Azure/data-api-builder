@@ -113,14 +113,28 @@ namespace Azure.DataGateway.Service.Resolvers
         /// {TableAlias}.{ColumnName}
         /// If TableAlias is null
         /// {ColumnName}
+        /// If column is OrderByColumn
+        /// and Direction is intended to be used,
+        /// call Build with type OrderByColumn
         /// </summary>
         protected virtual string Build(Column column, bool printDirection = true)
         {
             if (printDirection && column is OrderByColumn)
             {
-                return Build(column as OrderByColumn);
+                return Build((column as OrderByColumn)!);
             }
 
+            return Build(column);
+        }
+
+        /// <summary>
+        /// Build column as
+        /// {TableAlias}.{ColumnName}
+        /// If TableAlias is null
+        /// {ColumnName}
+        /// </summary>
+        protected virtual string Build(Column column)
+        {
             if (column.TableAlias != null)
             {
                 return QuoteIdentifier(column.TableAlias) + "." + QuoteIdentifier(column.ColumnName);

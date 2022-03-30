@@ -23,5 +23,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// be reported to the user
         /// </summary>
         public Task<bool> ReadAsync(DbDataReader reader);
+
+        ///<summary>
+        /// Extracts a single row from DbDataReader and format it so it can be used as a parameter to a query execution
+        ///</summary>
+        ///<returns>A dictionary representating the row in <c>ColumnName: Value</c> format, null if no row was found</returns>
+        public Task<Dictionary<string, object?>?> ExtractRowFromDbDataReader(DbDataReader dbDataReader);
     }
 }

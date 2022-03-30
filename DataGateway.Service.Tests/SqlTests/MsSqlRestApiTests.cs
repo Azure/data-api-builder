@@ -1,9 +1,6 @@
 using System.Collections.Generic;
-using System.Net;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -335,42 +332,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }
         };
 
-        private static Dictionary<string, DataGatewayException> _expectedExceptionMap = new()
-        {
-            {
-                "PatchOne_Insert_PKAutoGen_Test",
-                new DataGatewayException(
-                    DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
-                    HttpStatusCode.InternalServerError,
-                    DataGatewayException.SubStatusCodes.DatabaseOperationFailed
-                )
-            },
-            {
-                "PatchOne_Insert_WithoutNonNullableField_Test",
-                new DataGatewayException(
-                    DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
-                    HttpStatusCode.InternalServerError,
-                    DataGatewayException.SubStatusCodes.DatabaseOperationFailed
-                )
-            },
-            {
-                "PutOne_Insert_PKAutoGen_Test",
-                new DataGatewayException(
-                    DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
-                    HttpStatusCode.InternalServerError,
-                    DataGatewayException.SubStatusCodes.DatabaseOperationFailed
-                )
-            },
-            {
-                "PutOne_Insert_CompositePKAutoGen_Test",
-                new DataGatewayException(
-                    DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
-                    HttpStatusCode.InternalServerError,
-                    DataGatewayException.SubStatusCodes.DatabaseOperationFailed
-                )
-            }
-        };
-
         #region Test Fixture Setup
 
         /// <summary>
@@ -406,11 +367,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public override string GetQuery(string key)
         {
             return _queryMap[key];
-        }
-
-        public override DataGatewayException GetExpectedException(string key)
-        {
-            return _expectedExceptionMap[key];
         }
     }
 }

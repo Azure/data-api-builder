@@ -75,7 +75,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (!context.Selection.Type.IsScalarType() && mutationResolver.OperationType != Operation.Delete)
             {
-                Dictionary<string, object?>? searchParams = await ExtractRowFromDbDataReader(dbDataReader);
+                Dictionary<string, object?>? searchParams = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
 
                 if (searchParams == null)
                 {
@@ -114,7 +114,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 parameters);
 
             Dictionary<string, object?>? resultRecord = new();
-            resultRecord = await ExtractRowFromDbDataReader(dbDataReader);
+            resultRecord = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
 
             string? jsonResultString = null;
 
@@ -150,7 +150,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     else if (await dbDataReader.NextResultAsync())
                     {
                         // Since no first result set exists, we overwrite Dictionary here.
-                        resultRecord = await ExtractRowFromDbDataReader(dbDataReader);
+                        resultRecord = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
                         jsonResultString = JsonSerializer.Serialize(resultRecord);
                     }
                     else
@@ -220,48 +220,6 @@ namespace Azure.DataGateway.Service.Resolvers
             Console.WriteLine(queryString);
 
             return await _queryExecutor.ExecuteQueryAsync(queryString, queryParameters);
-        }
-
-        ///<summary>
-        /// Extracts a single row from DbDataReader and format it so it can be used as a parameter to a query execution
-        ///</summary>
-        ///<returns>A dictionary representating the row in <c>ColumnName: Value</c> format, null if no row was found</returns>
-        private async Task<Dictionary<string, object?>?> ExtractRowFromDbDataReader(DbDataReader dbDataReader)
-        {
-            Dictionary<string, object?> row = new();
-
-            if (await _queryExecutor.ReadAsync(dbDataReader))
-            {
-                if (dbDataReader.HasRows)
-                {
-                    DataTable? schemaTable = dbDataReader.GetSchemaTable();
-
-                    if (schemaTable != null)
-                    {
-                        foreach (DataRow schemaRow in schemaTable.Rows)
-                        {
-                            string columnName = (string)schemaRow["ColumnName"];
-                            int colIndex = dbDataReader.GetOrdinal(columnName);
-                            if (!dbDataReader.IsDBNull(colIndex))
-                            {
-                                row.Add(columnName, dbDataReader[columnName]);
-                            }
-                            else
-                            {
-                                row.Add(columnName, value: null);
-                            }
-                        }
-                    }
-                }
-            }
-
-            // no row was read
-            if (row.Count == 0)
-            {
-                return null;
-            }
-
-            return row;
         }
 
         private static Dictionary<string, object> PrepareParameters(RestRequestContext context)

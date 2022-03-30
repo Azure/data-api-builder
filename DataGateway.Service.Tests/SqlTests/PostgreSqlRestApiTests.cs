@@ -385,11 +385,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             return _queryMap[key];
         }
 
-        public override DataGatewayException GetExpectedException(string key)
-        {
-            return _expectedExceptionMap[key];
-        }
-
         [TestMethod]
         [Ignore]
         public override Task InsertOneTest()

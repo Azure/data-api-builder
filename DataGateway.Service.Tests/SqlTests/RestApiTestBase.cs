@@ -26,7 +26,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static readonly string _Composite_NonAutoGenPK = "stocks";
 
         public abstract string GetQuery(string key);
-        public abstract DataGatewayException GetExpectedException(string key);
 
         #region Positive Tests
         /// <summary>
@@ -1049,9 +1048,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: GetExpectedException(nameof(PatchOne_Insert_PKAutoGen_Test)).Message,
-                    expectedStatusCode: GetExpectedException(nameof(PatchOne_Insert_PKAutoGen_Test)).StatusCode,
-                    expectedSubStatusCode: GetExpectedException(nameof(PatchOne_Insert_PKAutoGen_Test)).SubStatusCode.ToString()
+                    expectedErrorMessage: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
+                    expectedStatusCode: HttpStatusCode.InternalServerError,
+                    expectedSubStatusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
                 );
         }
 
@@ -1079,9 +1078,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: GetExpectedException(nameof(PatchOne_Insert_WithoutNonNullableField_Test)).Message,
-                    expectedStatusCode: GetExpectedException(nameof(PatchOne_Insert_WithoutNonNullableField_Test)).StatusCode,
-                    expectedSubStatusCode: GetExpectedException(nameof(PatchOne_Insert_WithoutNonNullableField_Test)).SubStatusCode.ToString()
+                    expectedErrorMessage: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
+                    expectedStatusCode: HttpStatusCode.InternalServerError,
+                    expectedSubStatusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
                 );
         }
 
@@ -1139,9 +1138,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: GetExpectedException(nameof(PutOne_Insert_PKAutoGen_Test)).Message,
-                    expectedStatusCode: GetExpectedException(nameof(PutOne_Insert_PKAutoGen_Test)).StatusCode,
-                    expectedSubStatusCode: GetExpectedException(nameof(PutOne_Insert_PKAutoGen_Test)).SubStatusCode.ToString()
+                    expectedErrorMessage: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
+                    expectedStatusCode: HttpStatusCode.InternalServerError,
+                    expectedSubStatusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
                 );
         }
 
@@ -1162,9 +1161,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: GetExpectedException(nameof(PutOne_Insert_PKAutoGen_Test)).Message,
-                    expectedStatusCode: GetExpectedException(nameof(PutOne_Insert_PKAutoGen_Test)).StatusCode,
-                    expectedSubStatusCode: GetExpectedException(nameof(PutOne_Insert_PKAutoGen_Test)).SubStatusCode.ToString()
+                    expectedErrorMessage: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
+                    expectedStatusCode: HttpStatusCode.InternalServerError,
+                    expectedSubStatusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
                 );
         }
         /// <summary>

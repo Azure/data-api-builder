@@ -70,5 +70,44 @@ namespace Azure.DataGateway.Service.Resolvers
                 throw _dbExceptionParser.Parse(e);
             }
         }
+
+        /// <inheritdoc />
+        public async Task<Dictionary<string, object?>?> ExtractRowFromDbDataReader(DbDataReader dbDataReader)
+        {
+            Dictionary<string, object?> row = new();
+
+            if (await ReadAsync(dbDataReader))
+            {
+                if (dbDataReader.HasRows)
+                {
+                    DataTable? schemaTable = dbDataReader.GetSchemaTable();
+
+                    if (schemaTable != null)
+                    {
+                        foreach (DataRow schemaRow in schemaTable.Rows)
+                        {
+                            string columnName = (string)schemaRow["ColumnName"];
+                            int colIndex = dbDataReader.GetOrdinal(columnName);
+                            if (!dbDataReader.IsDBNull(colIndex))
+                            {
+                                row.Add(columnName, dbDataReader[columnName]);
+                            }
+                            else
+                            {
+                                row.Add(columnName, value: null);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // no row was read
+            if (row.Count == 0)
+            {
+                return null;
+            }
+
+            return row;
+        }
     }
 }

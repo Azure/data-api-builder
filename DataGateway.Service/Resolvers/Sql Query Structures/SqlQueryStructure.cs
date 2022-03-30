@@ -89,7 +89,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// information.
         /// Only use as constructor for the outermost queries not subqueries
         /// </summary>
-        public SqlQueryStructure(IResolverContext ctx, IDictionary<string, object> queryParams, IMetadataStoreProvider metadataStoreProvider)
+        public SqlQueryStructure(IResolverContext ctx, IDictionary<string, object> queryParams, SqlGraphQLFileMetadataProvider metadataStoreProvider)
             // This constructor simply forwards to the more general constructor
             // that is used to create GraphQL queries. We give it some values
             // that make sense for the outermost query.
@@ -115,7 +115,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Generate the structure for a SQL query based on FindRequestContext,
         /// which is created by a FindById or FindMany REST request.
         /// </summary>
-        public SqlQueryStructure(RestRequestContext context, IMetadataStoreProvider metadataStoreProvider) :
+        public SqlQueryStructure(RestRequestContext context, SqlGraphQLFileMetadataProvider metadataStoreProvider) :
             this(metadataStoreProvider, new IncrementingInteger(), tableName: context.EntityName)
         {
             TableAlias = TableName;
@@ -171,7 +171,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private SqlQueryStructure(
                 IResolverContext ctx,
                 IDictionary<string, object> queryParams,
-                IMetadataStoreProvider metadataStoreProvider,
+                SqlGraphQLFileMetadataProvider metadataStoreProvider,
                 IObjectField schemaField,
                 FieldNode? queryField,
                 IncrementingInteger counter
@@ -243,7 +243,10 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     if (first <= 0)
                     {
-                        throw new DataGatewayException($"first must be a positive integer for {schemaField.Name}", HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
+                        throw new DataGatewayException(
+                        message: $"Invalid number of items requested, $first must be an integer greater than 0 for {schemaField.Name}. Actual value: {first.ToString()}",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }
 
                     _limit = (uint)first;
@@ -270,7 +273,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     string where = (string)whereObject;
 
                     ODataASTVisitor visitor = new(this);
-                    FilterParser parser = MetadataStoreProvider.GetFilterParser();
+                    FilterParser parser = MetadataStoreProvider.FilterParser;
                     FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={where}", TableName);
                     FilterPredicates = filterClause.Expression.Accept<string>(visitor);
                 }
@@ -316,7 +319,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Private constructor that is used as a base by all public
         /// constructors.
         /// </summary>
-        private SqlQueryStructure(IMetadataStoreProvider metadataStoreProvider, IncrementingInteger counter, string tableName = "")
+        private SqlQueryStructure(SqlGraphQLFileMetadataProvider metadataStoreProvider, IncrementingInteger counter, string tableName = "")
             : base(metadataStoreProvider, counter: counter, tableName: tableName)
         {
             JoinQueries = new();

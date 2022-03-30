@@ -9,6 +9,7 @@ using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using HotChocolate.Language;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.Cosmos;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -23,7 +24,6 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         internal static GraphQLService _graphQLService;
         internal static CosmosClientProvider _clientProvider;
         internal static MetadataStoreProviderForTest _metadataStoreProvider;
-        internal static IMetadataStoreProvider _metaStoreProvider;
         internal static CosmosQueryEngine _queryEngine;
         internal static CosmosMutationEngine _mutationEngine;
         internal static GraphQLController _controller;
@@ -32,7 +32,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         [ClassInitialize]
         public static void Init(TestContext context)
         {
-            _clientProvider = new CosmosClientProvider(TestHelper.DataGatewayConfig);
+            _clientProvider = new CosmosClientProvider(TestHelper.DataGatewayConfigMonitor);
             _metadataStoreProvider = new MetadataStoreProviderForTest();
             string jsonString = @"
 type Query {
@@ -70,7 +70,7 @@ type Planet {
             _metadataStoreProvider.GraphQLSchema = jsonString;
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
-            _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider);
+            _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider, new DocumentCache(), new Sha256DocumentHashProvider());
             _controller = new GraphQLController(_graphQLService);
             Client = _clientProvider.Client;
         }

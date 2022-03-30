@@ -598,6 +598,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Request zero entries for a pagination page
+        /// </summary>
+        [TestMethod]
+        public async Task RequestInvalidZeroFirst()
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"{
+                books(first: 0) {
+                    items {
+                        id
+                    }
+                }
+            }";
+
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
+        }
+
+        /// <summary>
         /// Supply a non JSON after parameter
         /// </summary>
         [TestMethod]

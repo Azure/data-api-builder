@@ -171,7 +171,7 @@ namespace Azure.DataGateway.Service.Services
                 // Request body must have value defined for included non-nullable columns
                 if (!column.Value.IsNullable && fieldsInRequestBody.Contains(column.Key))
                 {
-                    if(insertRequestCtx.FieldValuePairsInBody[column.Key] == null ||
+                    if (insertRequestCtx.FieldValuePairsInBody[column.Key] == null ||
                         string.IsNullOrWhiteSpace(insertRequestCtx.FieldValuePairsInBody[column.Key].ToString()))
                     {
                         throw new DataGatewayException(

@@ -101,7 +101,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     // Create Parameter and map it to column for downstream logic to utilize.
                     string paramIdentifier;
-                    if(param.Value != null)
+                    if (param.Value != null)
                     {
                         paramIdentifier = MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, param.Key));
                     }

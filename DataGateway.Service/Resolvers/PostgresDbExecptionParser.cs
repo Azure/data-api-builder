@@ -7,8 +7,10 @@ namespace Azure.DataGateway.Service.Resolvers
 {
     public class PostgresDbExceptionParser : DbExceptionParserBase
     {
-        public const string FK_VIOLATION = "PostgreSql Error 23503: Foreign Key Constraint Violation.";
-        public const string UNQIUE_VIOLATION = "PostgreSql Error 23505: Unique Constraint Violation.";
+        public const string FK_VIOLATION_MESSAGE = "PostgreSql Error 23503: Foreign Key Constraint Violation.";
+        public const string FK_VIOLATION_CODE = "23503";
+        public const string UNQIUE_VIOLATION_MESSAGE = "PostgreSql Error 23505: Unique Constraint Violation.";
+        public const string UNQIUE_VIOLATION_CODE = "23505";
 
         public override Exception Parse(DbException e)
         {
@@ -16,15 +18,15 @@ namespace Azure.DataGateway.Service.Resolvers
             // for error codes
             switch (e.SqlState)
             {
-                case "23503":
+                case FK_VIOLATION_CODE:
                     return new DataGatewayException(
-                        message: FK_VIOLATION,
+                        message: FK_VIOLATION_MESSAGE,
                         statusCode: HttpStatusCode.Conflict,
                         subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed
                     );
-                case "23505": // unique constraint violation
+                case UNQIUE_VIOLATION_CODE: // unique constraint violation
                     return new DataGatewayException(
-                        message: UNQIUE_VIOLATION,
+                        message: UNQIUE_VIOLATION_MESSAGE,
                         statusCode: HttpStatusCode.Conflict,
                         subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed
                     );

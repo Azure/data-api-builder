@@ -267,7 +267,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             SqlTestHelper.TestForErrorInGraphQLResponse(
                 result.ToString(),
-                message: MySqlDbExceptionParser.INTEGRITY_CONSTRAINT_VIOLATION,
+                message: MySqlDbExceptionParser.INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE,
                 statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
             );
 
@@ -306,7 +306,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             SqlTestHelper.TestForErrorInGraphQLResponse(
                 result.ToString(),
-                message: MySqlDbExceptionParser.INTEGRITY_CONSTRAINT_VIOLATION,
+                message: MySqlDbExceptionParser.INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE,
                 statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
             );
 

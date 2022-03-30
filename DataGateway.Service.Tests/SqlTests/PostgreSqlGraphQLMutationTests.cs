@@ -269,7 +269,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             SqlTestHelper.TestForErrorInGraphQLResponse(
                 result.ToString(),
-                message: PostgresDbExceptionParser.FK_VIOLATION,
+                message: PostgresDbExceptionParser.FK_VIOLATION_MESSAGE,
                 statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
             );
 
@@ -307,7 +307,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             SqlTestHelper.TestForErrorInGraphQLResponse(
                 result.ToString(),
-                message: PostgresDbExceptionParser.FK_VIOLATION,
+                message: PostgresDbExceptionParser.FK_VIOLATION_MESSAGE,
                 statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
             );
 

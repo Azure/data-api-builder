@@ -31,7 +31,7 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
-        ///  Copy Constructor
+        ///  Copy Constructor required for tests.
         /// </summary>
         /// <param name="source">Source to copy from</param>
         public SqlGraphQLFileMetadataProvider(

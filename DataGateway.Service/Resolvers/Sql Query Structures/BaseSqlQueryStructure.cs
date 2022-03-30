@@ -45,7 +45,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Get column type from table underlying the query strucutre.
+        /// Get column type from table underlying the query structure.
         /// </summary>
         public Type GetColumnSystemType(string columnName)
         {

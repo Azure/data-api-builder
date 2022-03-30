@@ -8,7 +8,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     [TestClass]
     public abstract class SqlMetadataProviderTests : SqlTestBase
     {
-        [TestMethod]
+        [TestMethod("Validates the schema read from database is what we expect.")]
         public void TestDerivedDatabaseSchemaIsValid()
         {
             SqlGraphQLFileMetadataProvider expectedMetadataProvider

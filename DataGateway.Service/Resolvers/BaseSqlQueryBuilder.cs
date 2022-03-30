@@ -124,17 +124,6 @@ namespace Azure.DataGateway.Service.Resolvers
                 return Build((column as OrderByColumn)!);
             }
 
-            return Build(column);
-        }
-
-        /// <summary>
-        /// Build column as
-        /// {TableAlias}.{ColumnName}
-        /// If TableAlias is null
-        /// {ColumnName}
-        /// </summary>
-        protected virtual string Build(Column column)
-        {
             if (column.TableAlias != null)
             {
                 return QuoteIdentifier(column.TableAlias) + "." + QuoteIdentifier(column.ColumnName);

@@ -37,11 +37,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static IQueryBuilder _queryBuilder;
         protected static IQueryEngine _queryEngine;
         protected static IMutationEngine _mutationEngine;
-        protected static IMetadataStoreProvider _metadataStoreProvider;
+        protected static SqlGraphQLFileMetadataProvider _metadataStoreProvider;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
-        protected static IMetadataStoreProvider _sqlMetadataProvider;
         protected static DbExceptionParserBase _dbExceptionParser;
+        protected static ISqlMetadataProvider _sqlMetadataProvider;
         protected static string _defaultSchemaName;
 
         /// <summary>
@@ -107,7 +107,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             };
 
-            _metadataStoreProvider = new FileMetadataStoreProvider(Options.Create(dataGatewayConfig));
+            _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(Options.Create(dataGatewayConfig));
             _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
             _mutationEngine = new SqlMutationEngine(_queryEngine, _metadataStoreProvider, _queryExecutor, _queryBuilder);
 

@@ -1,4 +1,6 @@
+using System.Net;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -11,10 +13,9 @@ namespace Azure.DataGateway.Service.Authorization
     /// </summary>
     public enum AuthorizationType
     {
+        NoAccess,
         Anonymous,
-        Authenticated,
-        Roles,
-        Attributes
+        Authenticated
     }
 
     /// <summary>
@@ -23,12 +24,29 @@ namespace Azure.DataGateway.Service.Authorization
     /// </summary>
     public class RequestAuthorizationHandler : AuthorizationHandler<OperationAuthorizationRequirement, RestRequestContext>
     {
-        private readonly IMetadataStoreProvider _configurationProvider;
+        private readonly SqlGraphQLFileMetadataProvider _configurationProvider;
 
-        public RequestAuthorizationHandler(IMetadataStoreProvider metadataStoreProvider)
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="metadataStoreProvider">The metadata provider.</param>
+        /// <param name="isMock">True, if the provided metadata provider is a mock.</param>
+        public RequestAuthorizationHandler(
+            IGraphQLMetadataProvider metadataStoreProvider,
+            bool isMock = false)
         {
-            _configurationProvider = metadataStoreProvider;
+            if (metadataStoreProvider.GetType() != typeof(SqlGraphQLFileMetadataProvider)
+                && !isMock)
+            {
+                throw new DataGatewayException(
+                    message: "Unable to instantiate the request authorization service.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
+            }
+
+            _configurationProvider = (SqlGraphQLFileMetadataProvider)metadataStoreProvider;
         }
+
         protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,
                                                   OperationAuthorizationRequirement requirement,
                                                   RestRequestContext resource)
@@ -37,12 +55,18 @@ namespace Azure.DataGateway.Service.Authorization
             TableDefinition tableDefinition = _configurationProvider.GetTableDefinition(resource.EntityName);
 
             string requestedOperation = resource.HttpVerb.Name;
-
+            if (tableDefinition.HttpVerbs == null || tableDefinition.HttpVerbs.Count == 0)
+            {
+                context.Fail();
+            }
             //Check current operation against tableDefinition supported operations.
-            if (tableDefinition.HttpVerbs.ContainsKey(requestedOperation))
+            else if (tableDefinition.HttpVerbs.ContainsKey(requestedOperation))
             {
                 switch (tableDefinition.HttpVerbs[requestedOperation].AuthorizationType)
                 {
+                    case AuthorizationType.NoAccess:
+                        context.Fail();
+                        break;
                     case AuthorizationType.Anonymous:
                         context.Succeed(requirement);
                         break;

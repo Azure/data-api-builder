@@ -253,17 +253,6 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Does set-like compare for two string lists.
-        /// <summary>
-        private static bool ListsAreEqual(List<string> list1, List<string> list2)
-        {
-            IEnumerable<string> inList1NotInList2 = list1.Except(list2);
-            IEnumerable<string> inList2NotInList1 = list2.Except(list1);
-
-            return !inList1NotInList2.Any() && !inList2NotInList1.Any();
-        }
-
-        /// <summary>
         /// Create the URL that will provide for the next page of results
         /// using the same query options.
         /// </summary>

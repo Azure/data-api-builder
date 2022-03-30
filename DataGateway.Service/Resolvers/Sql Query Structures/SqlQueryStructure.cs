@@ -360,10 +360,10 @@ namespace Azure.DataGateway.Service.Resolvers
             foreach (KeyValuePair<string, object[]> keyValuePair in afterJsonValues)
             {
                 // direction is always a string
-                string direction = ((JsonElement)keyValuePair.Value[1]).GetString();
+                string direction = ((JsonElement)keyValuePair.Value[1]).GetString()!;
                 columns.Add(new OrderByColumn(TableAlias, keyValuePair.Key, GetDirection(direction)));
                 // safe to save ToString(), we get correct typing for column later
-                values.Add(keyValuePair.Value[0].ToString());
+                values.Add(keyValuePair.Value[0].ToString()!);
             }
 
             PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(columns, values);

@@ -92,7 +92,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 return $"UPDATE {QuoteIdentifier(structure.TableName)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                     $"WHERE {Build(structure.Predicates)} " +
-                    $"RETURNING *, '{UPDATE_UPSERT}' AS {UPSERT_IDENTIFIER_COLUMN_NAME};";
+                    $"RETURNING {Build(structure.ReturnColumns)}, '{UPDATE_UPSERT}' AS {UPSERT_IDENTIFIER_COLUMN_NAME};";
             }
             else
             {
@@ -100,7 +100,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     $"VALUES ({string.Join(", ", (structure.Values))}) " +
                     $"ON CONFLICT ({Build(structure.PrimaryKey())}) DO UPDATE " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
-                    $"RETURNING *, " +
+                    $"RETURNING {Build(structure.ReturnColumns)}, " +
                     $"case when xmax::text::int > 0 then '{UPDATE_UPSERT}' else '{INSERT_UPSERT}' end AS {UPSERT_IDENTIFIER_COLUMN_NAME};";
             }
         }

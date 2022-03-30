@@ -442,32 +442,30 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate field with One-To-One relationship to the type that owns it
         /// </summary>
+        /// <param name="type">The type which owns the field</param>
+        /// <param name="returnedType">The type returned by the field</param>
         private void ValidateOneToOneField(GraphQLField field, FieldDefinitionNode fieldDefinition, string type, string returnedType)
         {
             bool hasLeftFk = HasLeftForeignKey(field);
+            bool hasRightFk = HasRightForeignKey(field);
 
             ValidateReturnTypeNotPagination(field, fieldDefinition);
             ValidateFieldReturnsCustomType(fieldDefinition, typeNullable: !hasLeftFk);
             ValidateNoFieldArguments(fieldDefinition);
 
             ValidateNoAssociationTable(field);
-            ValidateHasLeftXOrRightForeignKey(field);
-            if (hasLeftFk)
-            {
-                ValidateLeftForeignKey(field, type);
-            }
-            else
-            {
-                ValidateRightForeignKey(field, returnedType);
-            }
+            ValidateHasLeftOrRightForeignKey(field);
 
             if (hasLeftFk)
             {
+                ValidateLeftForeignKey(field, type);
                 ForeignKeyDefinition leftFk = GetFkFromTable(GetTypeTable(type), field.LeftForeignKey);
                 ValidateLeftFkRefTableIsReturnedTypeTable(leftFk, returnedType);
             }
-            else
+
+            if (hasRightFk)
             {
+                ValidateRightForeignKey(field, returnedType);
                 ForeignKeyDefinition rightFk = GetFkFromTable(GetTypeTable(returnedType), field.RightForeignKey);
                 ValidateRightFkRefTableIsTypeTable(rightFk, type);
             }
@@ -476,6 +474,8 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate field with One-To-Many relationship to the type that owns it
         /// </summary>
+        /// <param name="type">The type which owns the field</param>
+        /// <param name="returnedType">The type returned by the field</param>
         private void ValidateOneToManyField(GraphQLField field, FieldDefinitionNode fieldDefinition, string type, string returnedType)
         {
             if (IsPaginationType(fieldDefinition.Type))
@@ -501,6 +501,8 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate field with Many-To-One relationship to the type that owns it
         /// </summary>
+        /// <param name="type">The type which owns the field</param>
+        /// <param name="returnedType">The type returned by the field</param>
         private void ValidateManyToOneField(GraphQLField field, FieldDefinitionNode fieldDefinition, string type, string returnedType)
         {
             ValidateReturnTypeNotPagination(field, fieldDefinition);
@@ -518,6 +520,8 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate field with Many-To-Many relationship to the type that owns it
         /// </summary>
+        /// <param name="type">The type which owns the field</param>
+        /// <param name="returnedType">The type returned by the field</param>
         private void ValidateManyToManyField(GraphQLField field, FieldDefinitionNode fieldDefinition, string type, string returnedType)
         {
             if (IsPaginationType(fieldDefinition.Type))

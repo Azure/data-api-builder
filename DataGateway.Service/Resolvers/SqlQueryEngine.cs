@@ -118,7 +118,7 @@ namespace Azure.DataGateway.Service.Resolvers
             else
             {
                 //TODO: Try to avoid additional deserialization/serialization here.
-                string stringElement = element.ToString();
+                string? stringElement = element.ToString();
 
                 if (string.IsNullOrEmpty(stringElement))
                 {

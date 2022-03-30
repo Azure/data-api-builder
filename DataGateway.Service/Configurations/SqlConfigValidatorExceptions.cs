@@ -993,14 +993,14 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validates that field has either only left foreign key or only right foreign key
+        /// Validates that field has left foreign key or right foreign key
         /// </summary>
-        private void ValidateHasLeftXOrRightForeignKey(GraphQLField field)
+        private void ValidateHasLeftOrRightForeignKey(GraphQLField field)
         {
-            if (!(HasLeftForeignKey(field) ^ HasRightForeignKey(field)))
+            if (!(HasLeftForeignKey(field) || HasRightForeignKey(field)))
             {
                 throw new ConfigValidationException(
-                    $"{field.RelationshipType} field must have only left foreign key or only right foreign key.",
+                    $"{field.RelationshipType} field must have a left foreign key or right foreign key.",
                     _configValidationStack);
             }
         }

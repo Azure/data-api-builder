@@ -173,10 +173,11 @@ namespace Azure.DataGateway.Service.Resolvers
                     object direction = enumeratedValue.Last();
                     object[] valueAndDirection = { value, direction };
 
-                    ColumnType columnType = paginationMetadata.Structure!.GetColumnType(keyValuePair.Key);
-                    if (value.GetType() != ColumnDefinition.ResolveColumnTypeToSystemType(columnType))
+                    Type columnType = paginationMetadata.Structure!.GetColumnSystemType(keyValuePair.Key);
+                    if (!ReferenceEquals(value.GetType(), columnType))
                     {
-                        throw new ArgumentException($"After param has incorrect type {value.GetType()} for primary key column {keyValuePair.Key} with type {columnType}.");
+                        throw new ArgumentException($"After param has " +
+                            $"incorrect type {value.GetType()} for primary key column {keyValuePair.Key} with type {columnType}.");
                     }
 
                     after.Add(keyValuePair.Key, valueAndDirection);

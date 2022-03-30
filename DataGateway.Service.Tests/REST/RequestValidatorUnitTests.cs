@@ -1,11 +1,9 @@
 using System;
 using System.Net;
 using System.Text;
-using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
-using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -16,16 +14,14 @@ namespace Azure.DataGateway.Service.Tests.REST
     /// occurs for REST requests for FindOne().
     /// </summary>
     [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class RequestValidatorUnitTests : SqlTestBase
+    public class RequestValidatorUnitTests
     {
         private static Mock<SqlGraphQLFileMetadataProvider> _mockMetadataStore;
 
         [ClassInitialize]
-        public static async Task InitializeTestFixture(TestContext context)
+        public static void InitializeTestFixture(TestContext context)
         {
-            await InitializeTestFixture(context, TestCategory.MSSQL);
-            _mockMetadataStore =
-                new Mock<SqlGraphQLFileMetadataProvider>(_metadataStoreProvider);
+            _mockMetadataStore = new Mock<SqlGraphQLFileMetadataProvider>();
         }
 
         #region Positive Tests

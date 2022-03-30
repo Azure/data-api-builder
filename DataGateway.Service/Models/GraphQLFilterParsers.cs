@@ -60,7 +60,7 @@ namespace Azure.DataGateway.Service.Models
             Func<object, string> processLiterals)
         {
             Column column = new(tableAlias, name);
-            Type columnType = ColumnDefinition.ResolveColumnTypeToSystemType(table.Columns[name].Type);
+            Type columnType = table.Columns[name].SystemType;
             switch (columnType.ToString())
             {
                 case "System.String":

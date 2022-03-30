@@ -38,6 +38,12 @@ namespace Azure.DataGateway.Service.Resolvers
             return string.Empty;
         }
 
+        protected override string Build(Column column, bool printDirection)
+        {
+            // From base class for orderBy
+            return string.Empty;
+        }
+
         protected override string QuoteIdentifier(string ident)
         {
             throw new System.NotImplementedException();

@@ -86,7 +86,7 @@ namespace Azure.DataGateway.Service.Services
         /// later generate queries in the given RestRequestContext.
         /// </summary>
         /// <param name="context">The RestRequestContext holding the major components of the query.</param>
-        public static void ParseQueryString(RestRequestContext context, FilterParser filterParser, List<string> primaryKeys)
+        public static void ParseQueryString(RestRequestContext context, FilterParser filterParser)
         {
             foreach (string key in context.ParsedQueryString!.Keys)
             {
@@ -104,7 +104,7 @@ namespace Azure.DataGateway.Service.Services
                         break;
                     case SORT_URL:
                         string sortQueryString = $"?{SORT_URL}={context.ParsedQueryString[key]}";
-                        context.OrderByClauseInUrl = GenerateOrderByList(filterParser.GetOrderByClause(sortQueryString, context.EntityName), context.EntityName, primaryKeys);
+                        context.OrderByClauseInUrl = GenerateOrderByList(filterParser.GetOrderByClause(sortQueryString, context.EntityName), context.EntityName, context.PrimaryKeyValuePairs);
                         break;
                     case AFTER_URL:
                         context.After = context.ParsedQueryString[key];
@@ -125,14 +125,14 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="node">The OrderByClause.</param>
         /// <param name="tableAlias">The name of the Table the columns are from.</param>
         /// <returns>A List<Column> where the elements are OrderByColumns.</Column></returns>
-        private static List<Column>? GenerateOrderByList(OrderByClause node, string tableAlias, List<string> primaryKeys)
+        private static List<Column>? GenerateOrderByList(OrderByClause node, string tableAlias, Dictionary<string, object> primaryKeys)
         {
             // Create set of primary key columns
             // we always have the primary keys in
             // the order by statement for the case
             // of tie breaking and pagination
             HashSet<string> remainingKeys = new();
-            foreach (string key in primaryKeys)
+            foreach (string key in primaryKeys.Keys)
             {
                 remainingKeys.Add(key);
             }
@@ -160,7 +160,7 @@ namespace Azure.DataGateway.Service.Services
                 Models.OrderByDir direction = GetDirection(node.Direction);
                 // Add OrderByColumn and remove any matching columns from our primary key set
                 orderByList.Add(new OrderByColumn(tableAlias, columnName, direction));
-                remainingKeys.Remove(columnName);
+                primaryKeys.Remove(columnName);
                 node = node.ThenBy;
             }
 

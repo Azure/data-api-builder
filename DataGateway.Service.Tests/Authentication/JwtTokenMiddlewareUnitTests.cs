@@ -310,7 +310,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         }
 
         /// <summary>
-        /// Creates a JWT token with self signed cert.
+        /// Creates a JWT token with self signed cert or RSAKey.
         /// Resources:
         /// https://devblogs.microsoft.com/dotnet/jwt-validation-and-authorization-in-asp-net-core/
         /// https://stackoverflow.com/questions/59255124/postman-returns-401-despite-the-valid-token-distributed-for-a-secure-endpoint
@@ -336,6 +336,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
                 SigningCredentials = new(key: signingKey, algorithm: SecurityAlgorithms.RsaSsaPssSha256)
             };
 
+            // Usage of RsaSsaPssSha256 results in token signature being different even with same contents.
             SecurityToken token = tokenHandler.CreateToken(tokenDescriptor);
             SecurityToken token2 = tokenHandler.CreateToken(tokenDescriptor);
             Assert.AreNotEqual(token, token2);

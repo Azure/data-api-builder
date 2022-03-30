@@ -10,7 +10,7 @@ namespace Azure.DataGateway.Service.Resolvers
     ///</summary>
     public class DbExceptionParserBase
     {
-        public const string GENERIC_DB_EXCEPTION_MESSAGE = "While processing your request the database ran into an unexpected error.";
+        public const string GENERIC_DB_EXCEPTION_MESSAGE = "While processing your request the database ran into an error.";
         public virtual Exception Parse(DbException e)
         {
             return new DataGatewayException(

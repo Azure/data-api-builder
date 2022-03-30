@@ -193,15 +193,12 @@ namespace Azure.DataGateway.Service.Services
                                element: rootEnumerated.Last(),
                                nextElement: lastElement,
                                orderByColumns: context.OrderByClauseInUrl,
-                               primaryKey: MetadataStoreProvider.GetTableDefinition(context.EntityName).PrimaryKey);
+                               primaryKey: GraphQLMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey);
             }
 
             // nextLink is the URL needed to get the next page of records using the same query options
             // with $after base64 encoded for opaqueness
             string path = UriHelper.GetEncodedUrl(GetHttpContext().Request).Split('?')[0];
-            string after = SqlPaginationUtil.MakeCursorFromJsonElement(
-                               element: rootEnumerated.Last(),
-                               primaryKey: GraphQLMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey);
             JsonElement nextLink = SqlPaginationUtil.CreateNextLink(
                                   path,
                                   nvc: context!.ParsedQueryString,

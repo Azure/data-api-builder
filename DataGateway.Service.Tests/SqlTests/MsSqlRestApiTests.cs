@@ -238,6 +238,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "PutOne_Update_Nulled_Test",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"WHERE [categoryid] = 2 AND [pieceid] = 1 AND [categoryName] = 'Romcom' " +
+                $"AND [piecesAvailable] is NULL  AND [piecesRequired] = 5 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "PutOne_Insert_Test",
                 $"SELECT [id], [title], [issueNumber] FROM { _integration_NonAutoGenPK_TableName } " +
                 $"WHERE id = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'Batman Returns' " +
@@ -281,6 +289,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "PutOne_Insert_Nulled_Test",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"WHERE [categoryid] = 4 AND [pieceid] = 1 AND [categoryName] = 'Fantasy' " +
+                $"AND [piecesAvailable] is NULL AND [piecesRequired] = 4 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "PatchOne_Insert_NonAutoGenPK_Test",
                 $"SELECT [id], [title], [issueNumber] FROM { _integration_NonAutoGenPK_TableName } " +
                 $"WHERE id = 2 AND [title] = 'Batman Begins' " +
@@ -304,6 +320,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "PatchOne_Insert_Nulled_Test",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"WHERE [categoryid] = 3 AND [pieceid] = 1 AND [categoryName] = 'Fantasy' " +
+                $"AND [piecesAvailable] is NULL AND [piecesRequired] = 4 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "PatchOne_Update_Test",
                 $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
                 $"WHERE id = 8 AND [title] = 'Heart of Darkness' " +
@@ -322,6 +346,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
                 $"WHERE [categoryid] = 1 AND [pieceid] = 1 AND [categoryName] = 'books' " +
                 $"AND [piecesAvailable]= 10 AND [piecesRequired] = 0 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PatchOne_Update_Nulled_Test",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"WHERE [categoryid] = 1 AND [pieceid] = 1 AND [categoryName] = 'books' " +
+                $"AND [piecesAvailable] is NULL AND [piecesRequired] = 0 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "InsertOneWithNullFieldValue",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"WHERE [categoryid] = 3 AND [pieceid] = 1 AND [categoryName] = 'Fantasy' " +
+                $"AND [piecesAvailable] is NULL AND [piecesRequired] = 1 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {

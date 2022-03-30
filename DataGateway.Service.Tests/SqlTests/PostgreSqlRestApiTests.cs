@@ -479,5 +479,33 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             throw new NotImplementedException();
         }
+
+        [TestMethod]
+        [Ignore]
+        public override Task InsertOneWithNullFieldValue()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task InsertOneWithNonNullableFieldAsNull()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneWithNonNullableFieldAsNull()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOneWithNonNullableFieldAsNull()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

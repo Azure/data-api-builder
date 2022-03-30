@@ -535,6 +535,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expectedStatusCode: HttpStatusCode.NoContent,
                 expectedLocationHeader: expectedLocationHeader
                 );
+
+            requestBody = @"
+            {
+               ""categoryName"":""Romcom"",
+               ""piecesAvailable"":null
+            }";
+
+            expectedLocationHeader = $"categoryid/2/pieceid/1";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: expectedLocationHeader,
+                queryString: null,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: GetQuery("PutOne_Update_Nulled_Test"),
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedLocationHeader: expectedLocationHeader
+                );
         }
 
         /// <summary>
@@ -646,6 +665,26 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
                 );
+
+            requestBody = @"
+            {
+                ""categoryName"": ""Fantasy"",
+                ""piecesAvailable"": null,
+                ""piecesRequired"": 4
+            }";
+            expectedLocationHeader = $"categoryid/4/pieceid/1";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entity: _Composite_NonAutoGenPK,
+                    sqlQuery: GetQuery("PutOne_Insert_Nulled_Test"),
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: expectedLocationHeader
+                );
         }
 
         /// <summary>
@@ -714,6 +753,26 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: expectedLocationHeader
                 );
+
+            requestBody = @"
+            {
+                ""categoryName"": ""Fantasy"",
+                ""piecesAvailable"": null,
+                ""piecesRequired"": 4
+            }";
+            expectedLocationHeader = $"categoryid/3/pieceid/1";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entity: _Composite_NonAutoGenPK,
+                    sqlQuery: GetQuery("PatchOne_Insert_Nulled_Test"),
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: expectedLocationHeader
+                );
         }
 
         /// <summary>
@@ -772,8 +831,49 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.NoContent
                 );
+
+            requestBody = @"
+            {
+                ""piecesAvailable"": null
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entity: _Composite_NonAutoGenPK,
+                    sqlQuery: GetQuery("PatchOne_Update_Nulled_Test"),
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.NoContent
+                );
         }
 
+        [TestMethod]
+        public virtual async Task InsertOneWithNullFieldValue()
+        {
+            string requestBody = @"
+            {
+                ""categoryid"": ""3"",
+                ""pieceid"": ""1"",
+                ""piecesAvailable"": null,
+                ""piecesRequired"": 1,
+                ""categoryName"":""Fantasy""
+            }";
+
+            string expectedLocationHeader = $"categoryid/3/pieceid/1";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: GetQuery("InsertOneWithNullFieldValue"),
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
         #endregion
 
         #region Negative Tests
@@ -1416,6 +1516,146 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController,
                 exception: true,
                 expectedErrorMessage: "Invalid Column name requested: content",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        [TestMethod]
+        public virtual async Task InsertOneWithNonNullableFieldAsNull()
+        {
+            string requestBody = @"
+            {
+                ""categoryid"": ""3"",
+                ""pieceid"": ""1"",
+                ""piecesAvailable"": 1,
+                ""piecesRequired"": null,
+                ""categoryName"":""Fantasy""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Invalid value for field piecesRequired in request body.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+
+            requestBody = @"
+            {
+                ""categoryid"": ""3"",
+                ""pieceid"": ""1"",
+                ""piecesAvailable"": 1,
+                ""piecesRequired"": 1,
+                ""categoryName"":null
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Invalid value for field categoryName in request body.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        [TestMethod]
+        public virtual async Task PutOneWithNonNullableFieldAsNull()
+        {
+            //Negative test case for Put resulting in a failed update
+            string requestBody = @"
+            {
+                ""piecesAvailable"": ""3"",
+                ""piecesRequired"": ""1"",
+                ""categoryName"":null
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/2/pieceid/1",
+                queryString: string.Empty,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Invalid value for field categoryName in request body.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+
+            //Negative test case for Put resulting in a failed insert
+            requestBody = @"
+            {
+                ""piecesAvailable"": ""3"",
+                ""piecesRequired"": ""1"",
+                ""categoryName"":null
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/3/pieceid/1",
+                queryString: string.Empty,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Invalid value for field categoryName in request body.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        [TestMethod]
+        public virtual async Task PatchOneWithNonNullableFieldAsNull()
+        {
+            //Negative test case for Patch resulting in a failed update
+            string requestBody = @"
+            {
+                ""piecesAvailable"": ""3"",
+                ""piecesRequired"": ""1"",
+                ""categoryName"":null
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/2/pieceid/1",
+                queryString: string.Empty,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.UpsertIncremental,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Invalid value for field categoryName in request body.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+
+            //Negative test case for Patch resulting in a failed insert
+            requestBody = @"
+            {
+                ""piecesAvailable"": ""3"",
+                ""piecesRequired"": ""1"",
+                ""categoryName"":null
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/3/pieceid/1",
+                queryString: string.Empty,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.UpsertIncremental,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Invalid value for field categoryName in request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

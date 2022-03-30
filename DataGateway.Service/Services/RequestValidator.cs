@@ -168,6 +168,19 @@ namespace Azure.DataGateway.Service.Services
 
             foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
             {
+                // Request body must have value defined for included non-nullable columns
+                if (!column.Value.IsNullable && fieldsInRequestBody.Contains(column.Key))
+                {
+                    if(insertRequestCtx.FieldValuePairsInBody[column.Key] == null ||
+                        string.IsNullOrWhiteSpace(insertRequestCtx.FieldValuePairsInBody[column.Key].ToString()))
+                    {
+                        throw new DataGatewayException(
+                        message: $"Invalid value for field {column.Key} in request body.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                    }
+                }
+
                 // The insert operation behaves like a replacement update, since it
                 // requires nullable fields to be defined in the request.
                 if (ValidateColumn(column, fieldsInRequestBody, isReplacementUpdate: true))
@@ -220,18 +233,16 @@ namespace Azure.DataGateway.Service.Services
 
                 bool isReplacementUpdate = (upsertRequestCtx.OperationType == Operation.Upsert) ? true : false;
 
-                if (!isReplacementUpdate)
+                // Request body must have value defined for included non-nullable columns
+                if (!column.Value.IsNullable && fieldsInRequestBody.Contains(column.Key))
                 {
-                    if (!column.Value.IsNullable && fieldsInRequestBody.Contains(column.Key))
+                    if (upsertRequestCtx.FieldValuePairsInBody[column.Key] == null ||
+                        string.IsNullOrWhiteSpace(upsertRequestCtx.FieldValuePairsInBody[column.Key].ToString()))
                     {
-                        // Request body must have value defined for included non-nullable columns.
-                        if (string.IsNullOrWhiteSpace(upsertRequestCtx.FieldValuePairsInBody[column.Key].ToString()))
-                        {
-                            throw new DataGatewayException(
-                                message: $"Invalid value for field {column.Key} in request body.",
-                                statusCode: HttpStatusCode.BadRequest,
-                                subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
-                        }
+                        throw new DataGatewayException(
+                        message: $"Invalid value for field {column.Key} in request body.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }
                 }
 

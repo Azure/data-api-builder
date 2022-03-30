@@ -4,7 +4,6 @@ using System.Text;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
-using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -15,7 +14,7 @@ namespace Azure.DataGateway.Service.Tests.REST
     /// occurs for REST requests for FindOne().
     /// </summary>
     [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class RequestValidatorUnitTests : SqlTestBase
+    public class RequestValidatorUnitTests
     {
         private static Mock<SqlGraphQLFileMetadataProvider> _mockMetadataStore;
 

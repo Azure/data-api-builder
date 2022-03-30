@@ -174,7 +174,7 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.Cosmos:
                         return null!;
                     case DatabaseType.MsSql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<DbExceptionParserBase>(serviceProvider);
+                        return new DbExceptionParserBase();
                     case DatabaseType.PostgreSql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<PostgresDbExceptionParser>(serviceProvider);
                     case DatabaseType.MySql:

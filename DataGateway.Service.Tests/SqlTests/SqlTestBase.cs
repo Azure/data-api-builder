@@ -40,6 +40,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static SqlGraphQLFileMetadataProvider _metadataStoreProvider;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
+        protected static DbExceptionParserBase _dbExceptionParser;
         protected static ISqlMetadataProvider _sqlMetadataProvider;
         protected static string _defaultSchemaName;
 
@@ -57,28 +58,31 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:
-                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(config);
                     _queryBuilder = new PostgresQueryBuilder();
                     _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
                         config,
                         new PostgreSqlMetadataProvider(config));
                     _defaultSchemaName = "public";
+                    _dbExceptionParser = new PostgresDbExceptionParser();
+                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(config, _dbExceptionParser);
                     break;
                 case TestCategory.MSSQL:
-                    _queryExecutor = new QueryExecutor<SqlConnection>(config);
                     _queryBuilder = new MsSqlQueryBuilder();
                     _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
                         config,
                         new MsSqlMetadataProvider(config));
                     _defaultSchemaName = "dbo";
+                    _dbExceptionParser = new DbExceptionParserBase();
+                    _queryExecutor = new QueryExecutor<SqlConnection>(config, _dbExceptionParser);
                     break;
                 case TestCategory.MYSQL:
-                    _queryExecutor = new QueryExecutor<MySqlConnection>(config);
                     _queryBuilder = new MySqlQueryBuilder();
                     _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
                         config,
                         new MySqlMetadataProvider(config));
                     _defaultSchemaName = "mysql";
+                    _dbExceptionParser = new MySqlDbExceptionParser();
+                    _queryExecutor = new QueryExecutor<MySqlConnection>(config, _dbExceptionParser);
                     break;
             }
 
@@ -155,7 +159,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }
             else
             {
-                using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader));
+                using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader, _queryExecutor));
                 result = sqlResult.RootElement.ToString();
             }
 

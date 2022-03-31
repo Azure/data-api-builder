@@ -1,0 +1,93 @@
+using System;
+using System.IO;
+using System.Reflection;
+using System.Text;
+using System.Threading.Tasks;
+using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Services;
+using Azure.DataGateway.Service.Tests.SqlTests;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+namespace Azure.DataGateway.Service.Tests.REST
+{
+    /// <summary>
+    /// Unit Tests for Rest components that have
+    /// hard to test code paths.
+    /// </summary>
+    [TestClass, TestCategory(TestCategory.MSSQL)]
+    public class RestUnitTests : SqlTestBase
+    {
+        private static RestService _restService;
+        private static RestController _restController;
+
+        #region Positive Tests
+
+        [ClassInitialize]
+        public static async Task InitializeTestFixture(TestContext context)
+        {
+            await InitializeTestFixture(context, TestCategory.MSSQL);
+
+            // Setup REST Components
+            _restService = new RestService(_queryEngine,
+                _mutationEngine,
+                _metadataStoreProvider,
+                _httpContextAccessor.Object,
+                _authorizationService.Object);
+            _restController = new(_restService);
+        }
+
+        [TestMethod]
+        public async Task HandleAndExecuteNoneOperationUnitTestAsync()
+        {
+            string expected = "{\"error\":{\"code\":\"UnexpectedError\",\"message\":\"While processing your request the server ran into an unexpected error.\",\"status\":500}}";
+            // need header to instantiate identity in controller
+            HeaderDictionary headers = new();
+            headers.Add("x-ms-client-principal", Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"hello\":\"world\"}")));
+
+            // Features are used to setup the httpcontext such that the test will run without null references
+            IFeatureCollection features = new FeatureCollection();
+            features.Set<IHttpRequestFeature>(new HttpRequestFeature { Headers = headers });
+            features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(new MemoryStream()));
+            features.Set<IHttpResponseFeature>(new HttpResponseFeature { StatusCode = 200 });
+            DefaultHttpContext httpContext = new(features);
+
+            ConfigureRestController(_restController, string.Empty);
+            _restController.ControllerContext.HttpContext = httpContext;
+
+            // Reflection to invoke a private method to unit test all code paths
+            PrivateObject testObject = new(_restController);
+            IActionResult actionResult = await testObject.Invoke("HandleOperation", new object[] { string.Empty, Azure.DataGateway.Service.Models.Operation.None, string.Empty });
+            SqlTestHelper.VerifyResult(actionResult, expected, System.Net.HttpStatusCode.BadRequest, string.Empty);
+        }
+
+        #endregion
+
+        /// <summary>
+        /// Helper function uses reflection to invoke
+        /// private methods from outside class.
+        /// Expects async method returning Task<IActionResult>.
+        /// </summary>
+        class PrivateObject
+        {
+            private readonly object _classToInvoke;
+            public PrivateObject(object classToInvoke)
+            {
+                _classToInvoke = classToInvoke;
+            }
+
+            public Task<IActionResult> Invoke(string privateMethodName, params object[] privateMethodArgs)
+            {
+                MethodInfo methodInfo = _classToInvoke.GetType().GetMethod(privateMethodName, BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (methodInfo is null)
+                {
+                    throw new System.Exception($"{privateMethodName} not found in class '{_classToInvoke.GetType()}'");
+                }
+
+                return (Task<IActionResult>)methodInfo.Invoke(_classToInvoke, privateMethodArgs);
+            }
+        }
+    }
+}

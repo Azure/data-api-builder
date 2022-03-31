@@ -713,5 +713,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             throw new NotImplementedException();
         }
 
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOne_Nulled_Test()
+        {
+            throw new NotImplementedException();
+        }
+
     }
 }

@@ -535,25 +535,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expectedStatusCode: HttpStatusCode.NoContent,
                 expectedLocationHeader: expectedLocationHeader
                 );
-
-            requestBody = @"
-            {
-               ""categoryName"":""Romcom"",
-               ""piecesAvailable"":null
-            }";
-
-            expectedLocationHeader = $"categoryid/2/pieceid/1";
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: expectedLocationHeader,
-                queryString: null,
-                entity: _Composite_NonAutoGenPK,
-                sqlQuery: GetQuery("PutOne_Update_Nulled_Test"),
-                controller: _restController,
-                operationType: Operation.Upsert,
-                requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.NoContent,
-                expectedLocationHeader: expectedLocationHeader
-                );
         }
 
         /// <summary>
@@ -665,14 +646,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
                 );
+        }
 
-            requestBody = @"
+        /// <summary>
+        /// Tests the PutOne functionality with a REST PUT request
+        /// with a nullable column specified as NULL.
+        /// The test should pass successfully for update as well as insert.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutOne_Nulled_Test()
+        {
+            //Performs a successful PUT insert when a nullable column
+            //is specified as null in the request body.
+            string requestBody = @"
             {
                 ""categoryName"": ""Fantasy"",
                 ""piecesAvailable"": null,
                 ""piecesRequired"": 4
             }";
-            expectedLocationHeader = $"categoryid/4/pieceid/1";
+            string expectedLocationHeader = $"categoryid/4/pieceid/1";
 
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: expectedLocationHeader,
@@ -685,8 +677,77 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: expectedLocationHeader
                 );
+
+            //Performs a successful PUT update when a nullable column
+            //is specified as null in the request body.
+            requestBody = @"
+            {
+               ""categoryName"":""Romcom"",
+               ""piecesAvailable"":null
+            }";
+
+            expectedLocationHeader = $"categoryid/2/pieceid/1";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: expectedLocationHeader,
+                queryString: null,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: GetQuery("PutOne_Update_Nulled_Test"),
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedLocationHeader: expectedLocationHeader
+                );
         }
 
+        /// <summary>
+        /// Tests the PatchOne functionality with a REST PUT request
+        /// with a nullable column specified as NULL.
+        /// The test should pass successfully for update as well as insert.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Nulled_Test()
+        {
+            //Performs a successful PATCH insert when a nullable column
+            //is specified as null in the request body.
+            string requestBody = @"
+            {
+                ""categoryName"": ""Fantasy"",
+                ""piecesAvailable"": null,
+                ""piecesRequired"": 4
+            }";
+            string expectedLocationHeader = $"categoryid/3/pieceid/1";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entity: _Composite_NonAutoGenPK,
+                    sqlQuery: GetQuery("PatchOne_Insert_Nulled_Test"),
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: expectedLocationHeader
+                );
+
+            //Performs a successful PATCH update when a nullable column
+            //is specified as null in the request body.
+            requestBody = @"
+            {
+                ""piecesAvailable"": null
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entity: _Composite_NonAutoGenPK,
+                    sqlQuery: GetQuery("PatchOne_Update_Nulled_Test"),
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.NoContent
+                );
+        }
         /// <summary>
         /// Tests REST PatchOne which results in an insert.
         /// URI Path: PK of record that does not exist.
@@ -753,26 +814,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: expectedLocationHeader
                 );
-
-            requestBody = @"
-            {
-                ""categoryName"": ""Fantasy"",
-                ""piecesAvailable"": null,
-                ""piecesRequired"": 4
-            }";
-            expectedLocationHeader = $"categoryid/3/pieceid/1";
-
-            await SetupAndRunRestApiTest(
-                    primaryKeyRoute: expectedLocationHeader,
-                    queryString: null,
-                    entity: _Composite_NonAutoGenPK,
-                    sqlQuery: GetQuery("PatchOne_Insert_Nulled_Test"),
-                    controller: _restController,
-                    operationType: Operation.UpsertIncremental,
-                    requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.Created,
-                    expectedLocationHeader: expectedLocationHeader
-                );
         }
 
         /// <summary>
@@ -826,22 +867,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     queryString: null,
                     entity: _Composite_NonAutoGenPK,
                     sqlQuery: GetQuery("PatchOne_Update_CompositeNonAutoGenPK_Test"),
-                    controller: _restController,
-                    operationType: Operation.UpsertIncremental,
-                    requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
-                );
-
-            requestBody = @"
-            {
-                ""piecesAvailable"": null
-            }";
-
-            await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "categoryid/1/pieceid/1",
-                    queryString: null,
-                    entity: _Composite_NonAutoGenPK,
-                    sqlQuery: GetQuery("PatchOne_Update_Nulled_Test"),
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
@@ -1568,6 +1593,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             );
         }
 
+        /// <summary>
+        /// Tests the Put functionality with a REST PUT request
+        /// with the request body having null value for non-nullable column
+        /// We expect a failure and so no sql query is provided.
+        /// </summary>
         [TestMethod]
         public virtual async Task PutOneWithNonNullableFieldAsNull()
         {
@@ -1614,6 +1644,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             );
         }
 
+        /// <summary>
+        /// Tests the Patch functionality with a REST PATCH request
+        /// with the request body having null value for non-nullable column
+        /// We expect a failure and so no sql query is provided.
+        /// </summary>
         [TestMethod]
         public virtual async Task PatchOneWithNonNullableFieldAsNull()
         {

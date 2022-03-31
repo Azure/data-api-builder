@@ -10,6 +10,7 @@ type Query {
 type Mutation {
     editBook(id: Int!, title: String, publisher_id: Int): Book
     insertBook(title: String!, publisher_id: Int!): Book
+    insertWebsitePlacement(book_id: Int!, price: Int!): BookWebsitePlacement
     addAuthorToBook(author_id: Int!, book_id: Int!): Boolean
     deleteBook(id: Int!): Book
 }
@@ -26,10 +27,18 @@ type Book {
     title: String!
     publisher_id: Int!
     publisher: Publisher!
+    website_placement: BookWebsitePlacement
     reviews(first: Int = 100, _filter: ReviewFilterInput, _filterOData: String): [Review!]!
     paginatedReviews(first: Int, after: String, _filter: ReviewFilterInput, _filterOData: String): ReviewConnection!
     authors(first: Int = 100, _filter: AuthorFilterInput, _filterOData: String): [Author!]!
     paginatedAuthors(first: Int, after: String, _filter: AuthorFilterInput, _filterOData: String): AuthorConnection!
+}
+
+type BookWebsitePlacement {
+    id: Int!,
+    book_id: Int!,
+    price: Int!,
+    book: Book!
 }
 
 type Author {

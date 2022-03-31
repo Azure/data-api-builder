@@ -41,7 +41,7 @@ namespace Azure.DataGateway.Service.Resolvers
             _queryBuilder = queryBuilder;
         }
 
-        public static async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader)
+        public static async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader, IQueryExecutor executor)
         {
             StringBuilder jsonString = new();
             // Even though we only return a single cell, we need this loop for
@@ -51,7 +51,7 @@ namespace Azure.DataGateway.Service.Resolvers
             // 1. https://docs.microsoft.com/en-us/sql/relational-databases/json/format-query-results-as-json-with-for-json-sql-server?view=sql-server-2017#output-of-the-for-json-clause
             // 2. https://stackoverflow.com/questions/54973536/for-json-path-results-in-ssms-truncated-to-2033-characters/54973676
             // 3. https://docs.microsoft.com/en-us/sql/relational-databases/json/use-for-json-output-in-sql-server-and-in-client-apps-sql-server?view=sql-server-2017#use-for-json-output-in-a-c-client-app
-            while (await dbDataReader.ReadAsync())
+            while (await executor.ReadAsync(dbDataReader))
             {
                 jsonString.Append(dbDataReader.GetString(0));
             }
@@ -100,7 +100,7 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return new Tuple<IEnumerable<JsonDocument>, IMetadata>(
-                JsonSerializer.Deserialize<List<JsonDocument>>(await GetJsonStringFromDbReader(dbDataReader)),
+                JsonSerializer.Deserialize<List<JsonDocument>>(await GetJsonStringFromDbReader(dbDataReader, _queryExecutor)),
                 structure.PaginationMetadata
             );
         }
@@ -157,7 +157,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             // Parse Results into Json and return
             //
-            if (await dbDataReader.ReadAsync())
+            if (await _queryExecutor.ReadAsync(dbDataReader))
             {
                 jsonDocument = JsonDocument.Parse(dbDataReader.GetString(0));
             }

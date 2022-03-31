@@ -1,6 +1,7 @@
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
+DROP TABLE IF EXISTS book_website_placements;
 DROP TABLE IF EXISTS books;
 DROP TABLE IF EXISTS publishers;
 DROP TABLE IF EXISTS magazines;

@@ -299,24 +299,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Assert.AreEqual("some-file.json", finalResolverConfigFile);
         }
 
-        [TestMethod("Validates exception thrown if Authentication config not set")]
-        public async Task TestNoAuthenticationConfigFails()
-        {
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
-            HttpClient client = server.CreateClient();
-            Dictionary<string, string> config = new()
-            {
-                { "DataGatewayConfig:DatabaseType", "Cosmos" },
-                { "DataGatewayConfig:ResolverConfig", _cosmosResolverConfig },
-                { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
-            };
-
-            await VerifyThrowsException<NotSupportedException>(async () =>
-            {
-                HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(config));
-            });
-        }
-
         [TestCleanup]
         public void Cleanup()
         {

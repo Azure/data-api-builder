@@ -383,7 +383,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             ";
 
             JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
+            SqlTestHelper.TestForErrorInGraphQLResponse(
+                result.ToString(),
+                message: PostgresDbExceptionParser.UNQIUE_VIOLATION_MESSAGE,
+                statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
+            );
         }
         #endregion
     }

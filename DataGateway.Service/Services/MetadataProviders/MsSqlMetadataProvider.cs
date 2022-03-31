@@ -1,4 +1,6 @@
+using Azure.DataGateway.Service.Configurations;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -11,9 +13,12 @@ namespace Azure.DataGateway.Service.Services
     public class MsSqlMetadataProvider :
         SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand>
     {
-        public MsSqlMetadataProvider(string connectionString)
-            : base(connectionString)
+        public MsSqlMetadataProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
+            : base(dataGatewayConfig)
         {
         }
+
+        /// Default Constructor for Mock tests.
+        public MsSqlMetadataProvider() : base() { }
     }
 }

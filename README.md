@@ -84,7 +84,7 @@ Schema and data population files are included that are necessary for running sam
 - Runtime config: `sql-config.json`
 - GraphQL schema file is `books.gql`
 
-### Configure Authentication
+### 3. Configure Authentication
 
 #### Easy Auth
 
@@ -128,7 +128,7 @@ Configure **Bearer token authentication** with identity providers like Azure AD.
 
 HTTP requests must have the `Authorization` HTTP header set with the value `Bearer <JWT TOKEN>`. The token must be issued and signed for the DataGateway runtime.
 
-### Build and Run
+### 4. Build and Run
 
 #### Visual Studio
 
@@ -145,7 +145,7 @@ HTTP requests must have the `Authorization` HTTP header set with the value `Bear
 2. Run the command `dotnet watch run --project DataGateway`
    1. watch flag used to detect configuration change and restart.
 
-### Query Execution Tools
+### 5. Query Execution Tools
 
 #### Banana Cake Pop for GraphQL
 

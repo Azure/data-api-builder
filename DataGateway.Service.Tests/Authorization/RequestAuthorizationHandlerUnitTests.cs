@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
-using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -16,16 +15,10 @@ namespace Azure.DataGateway.Service.Tests.Authorization
     /// Tests that the RequestAuthorizationHandler issues correct AuthZ decisions for REST endpoints.
     /// </summary>
     [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class RequestAuthorizationHandlerUnitTests : SqlTestBase
+    public class RequestAuthorizationHandlerUnitTests
     {
         private Mock<SqlGraphQLFileMetadataProvider> _metadataStore;
         private const string TEST_ENTITY = "TEST_ENTITY";
-
-        [ClassInitialize]
-        public static async Task InitializeTestFixture(TestContext context)
-        {
-            await InitializeTestFixture(context, TestCategory.MSSQL);
-        }
 
         #region Positive Tests
         /// <summary>
@@ -177,7 +170,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 table.HttpVerbs.Add(httpOperation, new AuthorizationRule());
             }
 
-            _metadataStore = new Mock<SqlGraphQLFileMetadataProvider>(_metadataStoreProvider);
+            _metadataStore = new Mock<SqlGraphQLFileMetadataProvider>();
             _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(table);
         }
 

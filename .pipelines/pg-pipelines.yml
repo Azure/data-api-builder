@@ -39,7 +39,11 @@ jobs:
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 'DataGateway.Service/appsettings.PostgreSqlIntegrationTest.json'
+      # The ConfigurationTests use appsettings.PostgreSql.json
+      # whereas IntegrationTests use PostSqlIntegrationTest.json.
+      # In order to fix the connection string variables on all such files,
+      # use file transform on all of them that match the pattern.
+      targetFiles: 'DataGateway.Service/appsettings.PostgreSql*.json'
 
   - task: DotNetCoreCLI@2
     displayName: Build

@@ -321,9 +321,8 @@ namespace Azure.DataGateway.Service.Controllers
         /// <summary>
         /// Helper function determines the correct operation based on the client
         /// provided headers. Client can indicate if operation should follow
-        /// insert, update, or upsert semantics.
+        /// update or upsert semantics.
         /// </summary>
-        /// <param name="headers">Headers indicating operation to use.</param>
         /// <param name="operation">opertion to be used.</param>
         /// <returns>correct opertion based on headers.</returns>
         private Operation DeterminePatchPutSemantics(Operation operation)

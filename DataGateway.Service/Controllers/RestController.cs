@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 
@@ -195,7 +196,7 @@ namespace Azure.DataGateway.Service.Controllers
         {
             return await HandleOperation(
                 entityName,
-                Operation.Upsert,
+                DeterminePatchPutSemantics(Operation.Upsert),
                 primaryKeyRoute);
         }
 
@@ -220,7 +221,7 @@ namespace Azure.DataGateway.Service.Controllers
         {
             return await HandleOperation(
                 entityName,
-                Operation.UpsertIncremental,
+                DeterminePatchPutSemantics(Operation.UpsertIncremental),
                 primaryKeyRoute);
         }
 
@@ -277,6 +278,8 @@ namespace Azure.DataGateway.Service.Controllers
                 {
                     switch (operationType)
                     {
+                        case Operation.Update:
+                        case Operation.UpdateIncremental:
                         case Operation.Upsert:
                         case Operation.UpsertIncremental:
                             // Empty result set indicates an Update successfully occurred.
@@ -313,6 +316,39 @@ namespace Azure.DataGateway.Service.Controllers
                     SERVER_ERROR,
                     HttpStatusCode.InternalServerError);
             }
+        }
+
+        /// <summary>
+        /// Helper function determines the correct operation based on the client
+        /// provided headers. Client can indicate if operation should follow
+        /// update or upsert semantics.
+        /// </summary>
+        /// <param name="operation">opertion to be used.</param>
+        /// <returns>correct opertion based on headers.</returns>
+        private Operation DeterminePatchPutSemantics(Operation operation)
+        {
+
+            if (HttpContext.Request.Headers.ContainsKey("If-Match"))
+            {
+                if (!string.Equals(HttpContext.Request.Headers["If-Match"], "*"))
+                {
+                    throw new DataGatewayException(message: "Etags not supported, use '*'",
+                                                   statusCode: HttpStatusCode.BadRequest,
+                                                   subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                }
+
+                switch (operation)
+                {
+                    case Operation.Upsert:
+                        operation = Operation.Update;
+                        break;
+                    case Operation.UpsertIncremental:
+                        operation = Operation.UpdateIncremental;
+                        break;
+                }
+            }
+
+            return operation;
         }
     }
 }

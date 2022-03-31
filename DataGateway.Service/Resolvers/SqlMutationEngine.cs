@@ -138,12 +138,21 @@ namespace Azure.DataGateway.Service.Resolvers
                     }
 
                     break;
-
                 case Operation.Insert:
-                case Operation.Update:
                     jsonResultString = JsonSerializer.Serialize(resultRecord);
                     break;
-
+                case Operation.Update:
+                case Operation.UpdateIncremental:
+                    // Nothing to update means we throw Exception
+                    if (resultRecord is null || resultRecord.Count == 0)
+                    {
+                        throw new DataGatewayException(message: "No Update could be performed, record not found",
+                                                       statusCode: HttpStatusCode.PreconditionFailed,
+                                                       subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
+                    }
+                    // Valid REST updates return empty result set
+                    jsonResultString = null;
+                    break;
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
                     /// Processes a second result set from DbDataReader if it exists.
@@ -166,9 +175,9 @@ namespace Azure.DataGateway.Service.Resolvers
                         // If there is no resultset, raise dbexception
                         // this is needed for MySQL.
                         throw new DataGatewayException(
-                            message: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
-                            statusCode: HttpStatusCode.InternalServerError,
-                            subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
+                                message: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
+                                statusCode: HttpStatusCode.InternalServerError,
+                                subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
                     }
 
                     break;
@@ -202,9 +211,14 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryParameters = insertQueryStruct.Parameters;
                     break;
                 case Operation.Update:
-                    SqlUpdateStructure updateStructure = new(tableName, _metadataStoreProvider, parameters);
+                    SqlUpdateStructure updateStructure = new(tableName, _metadataStoreProvider, parameters, isIncrementalUpdate: false);
                     queryString = _queryBuilder.Build(updateStructure);
                     queryParameters = updateStructure.Parameters;
+                    break;
+                case Operation.UpdateIncremental:
+                    SqlUpdateStructure updateIncrementalStructure = new(tableName, _metadataStoreProvider, parameters, isIncrementalUpdate: true);
+                    queryString = _queryBuilder.Build(updateIncrementalStructure);
+                    queryParameters = updateIncrementalStructure.Parameters;
                     break;
                 case Operation.Delete:
                     SqlDeleteStructure deleteStructure = new(tableName, _metadataStoreProvider, parameters);
@@ -234,24 +248,28 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             Dictionary<string, object> parameters;
 
-            if (context.OperationType == Operation.Delete)
+            switch (context.OperationType)
             {
-                // DeleteOne based off primary key in request.
-                parameters = new(context.PrimaryKeyValuePairs);
-            }
-            else if (context.OperationType == Operation.Upsert || context.OperationType == Operation.UpsertIncremental)
-            {
-                // Combine both PrimaryKey/Field ValuePairs
-                // because we create both an insert and an update statement.
-                parameters = new(context.PrimaryKeyValuePairs);
-                foreach (KeyValuePair<string, object> pair in context.FieldValuePairsInBody)
-                {
-                    parameters.Add(pair.Key, pair.Value);
-                }
-            }
-            else
-            {
-                parameters = new(context.FieldValuePairsInBody);
+                case Operation.Delete:
+                    // DeleteOne based off primary key in request.
+                    parameters = new(context.PrimaryKeyValuePairs);
+                    break;
+                case Operation.Upsert:
+                case Operation.UpsertIncremental:
+                case Operation.Update:
+                case Operation.UpdateIncremental:
+                    // Combine both PrimaryKey/Field ValuePairs
+                    // because we create an update statement.
+                    parameters = new(context.PrimaryKeyValuePairs);
+                    foreach (KeyValuePair<string, object> pair in context.FieldValuePairsInBody)
+                    {
+                        parameters.Add(pair.Key, pair.Value);
+                    }
+
+                    break;
+                default:
+                    parameters = new(context.FieldValuePairsInBody);
+                    break;
             }
 
             return parameters;

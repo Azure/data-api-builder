@@ -1,20 +1,32 @@
+using System.Data;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
 
-/// <summary>
-/// Interface to retrieve information for the runtime from the database.
-/// </summary>
-public interface ISqlMetadataProvider
+namespace Azure.DataGateway.Service.Services
 {
     /// <summary>
-    /// Refreshes the database schema with table information for the given schema.
-    /// This is best effort - some table information may not be accessible so
-    /// will not be retrieved.
+    /// Interface to retrieve information for the runtime from the database.
     /// </summary>
-    Task<DatabaseSchema> RefreshDatabaseSchemaWithTablesAsync(string schemaName);
+    public interface ISqlMetadataProvider
+    {
+        /// <summary>
+        /// Gets the DataTable from the EntitiesDataSet if already present.
+        /// If not present, fills it first and returns the same.
+        /// </summary>
+        public Task<DataTable> GetTableWithSchemaFromDataSetAsync(
+            string schemaName,
+            string tableName);
 
-    /// <summary>
-    /// Gets the database schema information for the given table.
-    /// </summary>
-    public TableDefinition GetTableDefinition(string name);
+        /// <summary>
+        /// Fills the table definition with information of all columns and
+        /// primary keys.
+        /// </summary>
+        /// <param name="schemaName">Name of the schema.</param>
+        /// <param name="tableName">Name of the table.</param>
+        /// <param name="tableDefinition">Table definition to fill.</param>
+        public Task PopulateTableDefinitionAsync(
+            string schemaName,
+            string tableName,
+            TableDefinition tableDefinition);
+    }
 }

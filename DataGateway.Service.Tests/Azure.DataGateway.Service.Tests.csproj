@@ -26,4 +26,10 @@
     <ProjectReference Include="..\DataGateway.Service\Azure.DataGateway.Service.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="sql-config-test.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

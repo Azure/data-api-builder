@@ -201,18 +201,10 @@ namespace Azure.DataGateway.Service.Tests.REST
             string filterString,
             string expected)
         {
-            Mock<SqlGraphQLFileMetadataProvider> metaDataStore = new(_metadataStoreProvider);
-            TableDefinition tableDef = new()
-            {
-                Columns = new()
-            };
-            metaDataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            FindRequestContext context = new(entityName, false);
-            Mock<SqlQueryStructure> structure = new(context, metaDataStore.Object);
-            FilterClause ast = _metadataStoreProvider.FilterParser.
+            FilterClause ast = _metadataStoreProvider.ODataFilterParser.
                 GetFilterClause(filterString, entityName);
-            ODataASTVisitor visitor = new(structure.Object);
-            string actual = ast.Expression.Accept<string>(visitor);
+            ODataASTVisitor visitor = CreateVisitor(entityName);
+            string actual = ast.Expression.Accept(visitor);
             Assert.AreEqual(expected, actual);
         }
 
@@ -226,15 +218,8 @@ namespace Azure.DataGateway.Service.Tests.REST
             string entityName,
             bool isList = false)
         {
-            Mock<SqlGraphQLFileMetadataProvider> metaDataStore
-                = new(_metadataStoreProvider);
-            TableDefinition tableDef = new()
-            {
-                Columns = new()
-            };
-            metaDataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext context = new(entityName, isList);
-            Mock<SqlQueryStructure> structure = new(context, metaDataStore.Object);
+            Mock<SqlQueryStructure> structure = new(context, _metadataStoreProvider);
             return new ODataASTVisitor(structure.Object);
         }
 

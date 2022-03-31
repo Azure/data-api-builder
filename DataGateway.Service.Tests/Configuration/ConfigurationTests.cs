@@ -7,6 +7,7 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
+using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Primitives;
@@ -14,7 +15,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MySqlConnector;
 using Npgsql;
 
-namespace Azure.DataGateway.Service.Tests
+namespace Azure.DataGateway.Service.Tests.Configuration
 {
     [TestClass]
     public class ConfigurationTests
@@ -98,6 +99,12 @@ namespace Azure.DataGateway.Service.Tests
 
             object queryExecutor = server.Services.GetService(typeof(IQueryExecutor));
             Assert.IsInstanceOfType(queryExecutor, typeof(QueryExecutor<SqlConnection>));
+
+            object graphQLMetadataProvider = server.Services.GetService(typeof(IGraphQLMetadataProvider));
+            Assert.IsInstanceOfType(graphQLMetadataProvider, typeof(SqlGraphQLFileMetadataProvider));
+
+            object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
+            Assert.IsInstanceOfType(sqlMetadataProvider, typeof(MsSqlMetadataProvider));
         }
 
         [TestMethod("Validates that local PostgreSql settings can be loaded and the correct classes are in the service provider.")]
@@ -120,6 +127,12 @@ namespace Azure.DataGateway.Service.Tests
 
             object queryExecutor = server.Services.GetService(typeof(IQueryExecutor));
             Assert.IsInstanceOfType(queryExecutor, typeof(QueryExecutor<NpgsqlConnection>));
+
+            object graphQLMetadataProvider = server.Services.GetService(typeof(IGraphQLMetadataProvider));
+            Assert.IsInstanceOfType(graphQLMetadataProvider, typeof(SqlGraphQLFileMetadataProvider));
+
+            object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
+            Assert.IsInstanceOfType(sqlMetadataProvider, typeof(PostgreSqlMetadataProvider));
         }
 
         [TestMethod("Validates that local MySql settings can be loaded and the correct classes are in the service provider.")]
@@ -142,6 +155,12 @@ namespace Azure.DataGateway.Service.Tests
 
             object queryExecutor = server.Services.GetService(typeof(IQueryExecutor));
             Assert.IsInstanceOfType(queryExecutor, typeof(QueryExecutor<MySqlConnection>));
+
+            object graphQLMetadataProvider = server.Services.GetService(typeof(IGraphQLMetadataProvider));
+            Assert.IsInstanceOfType(graphQLMetadataProvider, typeof(SqlGraphQLFileMetadataProvider));
+
+            object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
+            Assert.IsInstanceOfType(sqlMetadataProvider, typeof(MySqlMetadataProvider));
         }
 
         [TestMethod("Validates that trying to override configs that are already set fail.")]
@@ -288,6 +307,9 @@ namespace Azure.DataGateway.Service.Tests
 
         private static void ValidateCosmosDbSetup(TestServer server)
         {
+            object metadataProvider = server.Services.GetService(typeof(IGraphQLMetadataProvider));
+            Assert.IsInstanceOfType(metadataProvider, typeof(GraphQLFileMetadataProvider));
+
             object queryEngine = server.Services.GetService(typeof(IQueryEngine));
             Assert.IsInstanceOfType(queryEngine, typeof(CosmosQueryEngine));
 

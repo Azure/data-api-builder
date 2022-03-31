@@ -117,7 +117,7 @@ namespace Azure.DataGateway.Service.Services
             if (!string.IsNullOrWhiteSpace(queryString))
             {
                 context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
-                RequestParser.ParseQueryString(context, GraphQLMetadataProvider.FilterParser);
+                RequestParser.ParseQueryString(context, GraphQLMetadataProvider.ODataFilterParser);
             }
 
             // At this point for DELETE, the primary key should be populated in the Request Context.
@@ -151,8 +151,8 @@ namespace Azure.DataGateway.Service.Services
             else
             {
                 throw new DataGatewayException(
-                    message: "Unauthorized",
-                    statusCode: HttpStatusCode.Unauthorized,
+                    message: "Forbidden",
+                    statusCode: HttpStatusCode.Forbidden,
                     subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
                 );
             }

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
@@ -240,13 +239,6 @@ namespace Azure.DataGateway.Service.Controllers
         {
             try
             {
-                // Parse App Service's EasyAuth injected headers into MiddleWare usable Security Principal
-                ClaimsIdentity? identity = AppServiceAuthentication.Parse(this.HttpContext);
-                if (identity != null)
-                {
-                    this.HttpContext.User = new ClaimsPrincipal(identity);
-                }
-
                 // Utilizes C#8 using syntax which does not require brackets.
                 using JsonDocument? result
                     = await _restService.ExecuteAsync(
@@ -304,8 +296,15 @@ namespace Azure.DataGateway.Service.Controllers
             {
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine(ex.StackTrace);
-                Response.StatusCode = (int)ex.StatusCode;
-                return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
+                if (ex.SubStatusCode == DataGatewayException.SubStatusCodes.AuthorizationCheckFailed)
+                {
+                    return new ForbidResult();
+                }
+                else
+                {
+                    Response.StatusCode = (int)ex.StatusCode;
+                    return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
+                }
             }
             catch (Exception ex)
             {

@@ -45,13 +45,13 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Get column type from table underlying the query strucutre
+        /// Get column type from table underlying the query structure.
         /// </summary>
-        public ColumnType GetColumnType(string columnName)
+        public Type GetColumnSystemType(string columnName)
         {
             if (GetTableDefinition().Columns.TryGetValue(columnName, out ColumnDefinition? column))
             {
-                return column.Type;
+                return column.SystemType;
             }
             else
             {
@@ -84,15 +84,14 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         ///<summary>
-        /// Gets the value of the parameter cast as the type of the column this parameter is associated with
+        /// Gets the value of the parameter cast as the system type
+        /// of the column this parameter is associated with
         ///</summary>
         /// <exception cref="ArgumentException">columnName is not a valid column of table or param
         /// does not have a valid value type</exception>
         protected object GetParamAsColumnSystemType(string param, string columnName)
         {
-            ColumnType type = GetColumnType(columnName);
-            Type systemType = ColumnDefinition.ResolveColumnTypeToSystemType(type);
-
+            Type systemType = GetColumnSystemType(columnName);
             try
             {
                 switch (systemType.Name)
@@ -103,7 +102,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         return long.Parse(param);
                     default:
                         // should never happen due to the config being validated for correct types
-                        throw new NotSupportedException($"{type} is not supported");
+                        throw new NotSupportedException($"{systemType.Name} is not supported");
                 }
             }
             catch (Exception e)
@@ -112,7 +111,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     e is ArgumentNullException ||
                     e is OverflowException)
                 {
-                    throw new ArgumentException($"Parameter \"{param}\" cannot be resolved as column \"{columnName}\" with type \"{type}\".");
+                    throw new ArgumentException($"Parameter \"{param}\" cannot be resolved as column \"{columnName}\" " +
+                        $"with type \"{systemType.Name}\".");
                 }
 
                 throw;

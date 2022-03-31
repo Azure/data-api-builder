@@ -55,30 +55,31 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _testCategory = testCategory;
 
             IOptions<DataGatewayConfig> config = SqlTestHelper.LoadConfig($"{_testCategory}IntegrationTest");
-            string connectionString = config.Value.DatabaseConnection.ConnectionString;
-
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:
                     _queryBuilder = new PostgresQueryBuilder();
-                    _sqlMetadataProvider =
-                       new SqlMetadataProvider<NpgsqlConnection, NpgsqlDataAdapter, NpgsqlCommand>(connectionString);
+                    _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
+                        config,
+                        new PostgreSqlMetadataProvider(config));
                     _defaultSchemaName = "public";
                     _dbExceptionParser = new PostgresDbExceptionParser();
                     _queryExecutor = new QueryExecutor<NpgsqlConnection>(config, _dbExceptionParser);
                     break;
                 case TestCategory.MSSQL:
                     _queryBuilder = new MsSqlQueryBuilder();
-                    _sqlMetadataProvider =
-                      new SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand>(connectionString);
+                    _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
+                        config,
+                        new MsSqlMetadataProvider(config));
                     _defaultSchemaName = "dbo";
                     _dbExceptionParser = new DbExceptionParserBase();
                     _queryExecutor = new QueryExecutor<SqlConnection>(config, _dbExceptionParser);
                     break;
                 case TestCategory.MYSQL:
                     _queryBuilder = new MySqlQueryBuilder();
-                    _sqlMetadataProvider =
-                        new MySqlMetadataProvider(connectionString);
+                    _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
+                        config,
+                        new MySqlMetadataProvider(config));
                     _defaultSchemaName = "mysql";
                     _dbExceptionParser = new MySqlDbExceptionParser();
                     _queryExecutor = new QueryExecutor<MySqlConnection>(config, _dbExceptionParser);
@@ -97,26 +98,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _httpContextAccessor = new Mock<IHttpContextAccessor>();
             _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
 
-            DataGatewayConfig dataGatewayConfig = new()
-            {
-                ResolverConfigFile = "sql-config.json",
-                DatabaseType = config.Value.DatabaseType.Value,
-                DatabaseConnection = new()
-                {
-                    ConnectionString = config.Value.DatabaseConnection.ConnectionString
-                }
-            };
-
-            _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(Options.Create(dataGatewayConfig));
             _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
             _mutationEngine = new SqlMutationEngine(_queryEngine, _metadataStoreProvider, _queryExecutor, _queryBuilder);
-
             await ResetDbStateAsync();
         }
 
         protected static async Task ResetDbStateAsync()
         {
             using DbDataReader _ = await _queryExecutor.ExecuteQueryAsync(File.ReadAllText($"{_testCategory}Books.sql"), parameters: null);
+            await _metadataStoreProvider.InitializeAsync();
         }
 
         /// <summary>

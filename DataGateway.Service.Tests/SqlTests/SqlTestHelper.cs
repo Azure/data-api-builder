@@ -175,7 +175,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }
             else
             {
-                Assert.AreEqual(expected, actual);
+                Assert.AreEqual(expected, actual, ignoreCase: true);
             }
         }
     }

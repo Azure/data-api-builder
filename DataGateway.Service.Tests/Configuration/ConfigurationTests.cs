@@ -14,7 +14,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MySqlConnector;
 using Npgsql;
 
-namespace Azure.DataGateway.Service.Tests
+namespace Azure.DataGateway.Service.Tests.Configuration
 {
     [TestClass]
     public class ConfigurationTests
@@ -278,6 +278,24 @@ namespace Azure.DataGateway.Service.Tests
             provider.SetManyAndReload(toUpdate);
             Assert.AreEqual("PostgreSql", finalDatabaseType);
             Assert.AreEqual("some-file.json", finalResolverConfigFile);
+        }
+
+        [TestMethod("Validates exception thrown if Authentication config not set")]
+        public async Task TestNoAuthenticationConfigFails()
+        {
+            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            HttpClient client = server.CreateClient();
+            Dictionary<string, string> config = new()
+            {
+                { "DataGatewayConfig:DatabaseType", "Cosmos" },
+                { "DataGatewayConfig:ResolverConfig", _cosmosResolverConfig },
+                { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
+            };
+
+            await VerifyThrowsException<NotSupportedException>(async () =>
+            {
+                HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(config));
+            });
         }
 
         [TestCleanup]

@@ -181,13 +181,13 @@ namespace Azure.DataGateway.Service
             // Parameterless AddAuthentication() , i.e. No defaultScheme, allows the custom JWT middleware
             // to manually call JwtBearerHandler.HandleAuthenticateAsync() and populate the User if successful.
             // This also enables the custom middleware to send the AuthN failure reason in the challenge header.
-            if (dataGatewayConfig.JwtAuth != null)
+            if (dataGatewayConfig.Authentication != null)
             {
                 services.AddAuthentication()
                     .AddJwtBearer(options =>
                     {
-                        options.Audience = dataGatewayConfig.JwtAuth.Audience;
-                        options.Authority = dataGatewayConfig.JwtAuth.Issuer;
+                        options.Audience = dataGatewayConfig.Authentication.Audience;
+                        options.Authority = dataGatewayConfig.Authentication.Issuer;
                     });
             }
 
@@ -242,8 +242,7 @@ namespace Azure.DataGateway.Service
             app.UseAuthentication();
 
             // Conditionally add EasyAuth middleware if no JwtAuth configuration supplied.
-            // If EasyAuth not present, this will result in all requests being anonymous.
-            if (dataGatewayConfig != null && dataGatewayConfig.CurrentValue.JwtAuth == null)
+            if (dataGatewayConfig != null && dataGatewayConfig.CurrentValue.Authentication.Provider == "EasyAuth")
             {
                 app.UseEasyAuthMiddleware();
             }

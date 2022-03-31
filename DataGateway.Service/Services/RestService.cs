@@ -147,8 +147,8 @@ namespace Azure.DataGateway.Service.Services
             else
             {
                 throw new DataGatewayException(
-                    message: "Unauthorized",
-                    statusCode: HttpStatusCode.Unauthorized,
+                    message: "Forbidden",
+                    statusCode: HttpStatusCode.Forbidden,
                     subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
                 );
             }

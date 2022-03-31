@@ -166,7 +166,7 @@
         },
         "HttpVerbs": {
           "GET": {
-            "AuthorizationType": "Anonymous"
+            "AuthorizationType": "Authenticated"
           },
           "POST": {
             "AuthorizationType": "Authenticated"

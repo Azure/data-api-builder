@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.AuthenticationHelpers;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
@@ -215,8 +216,21 @@ namespace Azure.DataGateway.Service
 
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
-            services.AddAuthorization();
 
+            // Parameterless AddAuthentication() , i.e. No defaultScheme, allows the custom JWT middleware
+            // to manually call JwtBearerHandler.HandleAuthenticateAsync() and populate the User if successful.
+            // This also enables the custom middleware to send the AuthN failure reason in the challenge header.
+            if (dataGatewayConfig.Authentication.Provider != "EasyAuth")
+            {
+                services.AddAuthentication()
+                    .AddJwtBearer(options =>
+                    {
+                        options.Audience = dataGatewayConfig.Authentication.Audience;
+                        options.Authority = dataGatewayConfig.Authentication.Issuer;
+                    });
+            }
+
+            services.AddAuthorization();
             services.AddSingleton<IAuthorizationHandler, RequestAuthorizationHandler>();
             services.AddControllers();
         }
@@ -263,6 +277,17 @@ namespace Azure.DataGateway.Service
                 }
             });
             app.UseAuthentication();
+
+            // Conditionally add EasyAuth middleware if no JwtAuth configuration supplied.
+            if (dataGatewayConfig.CurrentValue.Authentication.Provider == "EasyAuth")
+            {
+                app.UseEasyAuthMiddleware();
+            }
+            else
+            {
+                app.UseJwtAuthenticationMiddleware();
+            }
+
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>

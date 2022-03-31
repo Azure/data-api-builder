@@ -173,12 +173,14 @@ namespace Azure.DataGateway.Service.Resolvers
                         }
                         else
                         {
-                            // If there is no resultset, raise dbexception
-                            // this is needed for MySQL.
+                            string prettyPrintPk = "<" + string.Join(", ", context.PrimaryKeyValuePairs.Select(
+                                kv_pair => $"{kv_pair.Key}: {kv_pair.Value}"
+                            )) + ">";
                             throw new DataGatewayException(
-                                message: $"Could not perform the given mutation on entity {context.EntityName}.",
-                                statusCode: HttpStatusCode.InternalServerError,
-                                subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
+                                message: $"Cannot perform INSERT and could not find {context.EntityName} " +
+                                            $"with primary key {prettyPrintPk} to perform UPDATE on.",
+                                statusCode: HttpStatusCode.NotFound,
+                                subStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound);
                         }
 
                         break;

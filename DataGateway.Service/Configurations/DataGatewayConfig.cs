@@ -151,6 +151,11 @@ namespace Azure.DataGateway.Service.Configurations
                 {
                     throw new NotSupportedException("Audience and Issuer must be set when not using EasyAuth.");
                 }
+
+                if (options.Authentication.Provider == "EasyAuth" && (isAudienceSet || isIssuerSet))
+                {
+                    throw new NotSupportedException("Audience and Issuer should not be set and are not used with EasyAuth.");
+                }
             }
         }
     }

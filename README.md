@@ -18,16 +18,10 @@ git clone https://github.com/Azure/hawaii-gql.git <directory name>
 
 You will need to provide a database to run behind DataGateway. DataGateway supports SQL Server, CosmosDB, PostgreSQL, and MySQL.
 
-#### Configure SQL Server Account
+#### Configure Database Account
 
-With a local instance of SQL Server or LocalDB running, ensure that you have an account with the necessary access permissions.
-
-Add permissions by running the following SQL. Replace `DOMAIN\username` with your credentials.
-
-```sql
-    CREATE LOGIN [DOMAIN\username] FROM WINDOWS WITH DEFAULT_DATABASE=[master]
-    ALTER SERVER ROLE [sysadmin] ADD MEMBER [DOMAIN\username]
-```
+With a local or cloud hosted instance a supported database deployed, ensure that you have an account with the necessary access permissions.
+The account should have access to all entities that are defined in the runtime configuration.
 
 #### Supply a Connection String
 
@@ -166,7 +160,9 @@ When manually testing the API with postman, this is the beginning of the uri tha
 
 - For example, to invoke a FindMany on the Table "Books" and retrieve the "id" and "title" we would have do a GET request on uri `https://localhost:5001/books/?_f=id,title`
 
-  - To see code execution flow, set a breakpoint in the controller which is associated with the particular DatabaseType that you are using, ie: after line 75 in `RestController.cs`. This is a good entry point for debugging if you are not sure where in the service your problem is located.
+#### Debugging
+
+To see code execution flow, the first place to start would be to set breakpoints in either `GraphQLcontroller.cs` or `RestController.cs`. Those controllers represent the entry point of a GraphQL and REST request, respectively.
 
 ## Using Docker Containers
 

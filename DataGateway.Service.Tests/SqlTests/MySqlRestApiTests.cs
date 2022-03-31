@@ -647,6 +647,5 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             throw new NotImplementedException();
         }
-
     }
 }

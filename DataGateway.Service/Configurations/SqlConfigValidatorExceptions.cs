@@ -30,7 +30,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Sets the config and schema for the validator
         /// </summary>
-        public SqlConfigValidator(IMetadataStoreProvider metadataStoreProvider, GraphQLService graphQLService)
+        public SqlConfigValidator(IGraphQLMetadataProvider metadataStoreProvider, GraphQLService graphQLService)
         {
             _configValidationStack = MakeConfigPosition(Enumerable.Empty<string>());
             _schemaValidationStack = MakeSchemaPosition(Enumerable.Empty<string>());
@@ -149,22 +149,6 @@ namespace Azure.DataGateway.Service.Configurations
                 throw new ConfigValidationException(
                     "Table must have a non \"Columns\" element.",
                     _configValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Validate that all columns have a type specified
-        /// </summary>
-        private void ValidateTableColumnsHaveType(TableDefinition table)
-        {
-            IEnumerable<string> colsWithoutType = table.Columns.Keys.Where(colName => table.Columns[colName].Type == ColumnType.None);
-            if (colsWithoutType.Any())
-            {
-                throw new ConfigValidationException(
-                    $"All columns must have a type. Columns [{string.Join(", ", colsWithoutType)}] " +
-                    $"don't have a \"Type\" whose value is not {ColumnType.None}.",
-                    _configValidationStack
-                );
             }
         }
 
@@ -355,16 +339,16 @@ namespace Azure.DataGateway.Service.Configurations
             for (int columnIndex = 0; columnIndex < columns.Count; columnIndex++)
             {
                 string columnName = columns[columnIndex];
-                ColumnType columnType = table.Columns[columnName].Type;
+                Type columnType = table.Columns[columnName].SystemType;
                 string refColumnName = refColumns[columnIndex];
                 ColumnDefinition refColumn = refTable.Columns[refColumnName];
 
-                if (!ColumnDefinition.TypesAreEqual(columnType, refColumn.Type))
+                if (!ReferenceEquals(columnType, refColumn.SystemType))
                 {
                     throw new ConfigValidationException(
                         $"Type mismatch between foreign key column \"{columnName}\" with type \"{columnType}\" and " +
                         $"referenced column \"{refTableName}\".\"{refColumnName}\" " +
-                        $"with type \"{refColumn.Type}\". Look into Models.ColumnDefinition.TypesAreEqual " +
+                        $"with type \"{refColumn.SystemType}\". Look into Models.ColumnDefinition.TypesAreEqual " +
                         "to learn about how type equality is determined.",
                         _configValidationStack);
                 }
@@ -627,7 +611,7 @@ namespace Azure.DataGateway.Service.Configurations
             if (tableToType.ContainsKey(type.Table))
             {
                 throw new ConfigValidationException(
-                    $"Type shares underlying table \"{type.Table}\" with other type " +
+                    $"SystemType shares underlying table \"{type.Table}\" with other type " +
                     $"\"{tableToType[type.Table]}\". All underlying type tables must be unique.",
                     _configValidationStack
                 );
@@ -701,9 +685,9 @@ namespace Azure.DataGateway.Service.Configurations
 
             List<string> mismatchedFieldColumnTypeMessages = new();
 
-            foreach (String matchedName in matchedColumnAndFieldNames)
+            foreach (string matchedName in matchedColumnAndFieldNames)
             {
-                ColumnType columnType = tableColumns[matchedName].Type;
+                Type columnType = tableColumns[matchedName].SystemType;
                 ITypeNode fieldType = typeFields[matchedName].Type;
 
                 if (!GraphQLTypeEqualsColumnType(fieldType, columnType))
@@ -788,7 +772,7 @@ namespace Azure.DataGateway.Service.Configurations
             if (fieldsWithCustomTypes.Any())
             {
                 throw new ConfigValidationException(
-                    $"Type \"{typeName}\" has no fields to resolve schema fields which return custom types [" +
+                    $"SystemType \"{typeName}\" has no fields to resolve schema fields which return custom types [" +
                     string.Join(", ", fieldsWithCustomTypes) + "].",
                     _configValidationStack
                 );
@@ -1298,18 +1282,18 @@ namespace Azure.DataGateway.Service.Configurations
 
                 ColumnDefinition matchedCol = table.Columns[argName];
 
-                if (!GraphQLTypeEqualsColumnType(argument.Type, matchedCol.Type))
+                if (!GraphQLTypeEqualsColumnType(argument.Type, matchedCol.SystemType))
                 {
                     typeMismatchMessages.Add(
                         $"Argument \"{argName}\" with type \"{InnerTypeStr(argument.Type)}\" does not match " +
-                        $"the type of \"{argName}\" in table \"{tableName}\" with type \"{matchedCol.Type}\"");
+                        $"the type of \"{argName}\" in table \"{tableName}\" with type \"{matchedCol.SystemType}\"");
                 }
             }
 
             if (typeMismatchMessages.Any())
             {
                 throw new ConfigValidationException(
-                    $"Type mismatch between mutation arguments and columns of mutation table. " +
+                    $"SystemType mismatch between mutation arguments and columns of mutation table. " +
                     string.Join(" ", typeMismatchMessages),
                     _schemaValidationStack
                 );

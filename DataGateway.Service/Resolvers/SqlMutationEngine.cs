@@ -20,17 +20,25 @@ namespace Azure.DataGateway.Service.Resolvers
     public class SqlMutationEngine : IMutationEngine
     {
         private readonly IQueryEngine _queryEngine;
-        private readonly IMetadataStoreProvider _metadataStoreProvider;
+        private readonly SqlGraphQLFileMetadataProvider _metadataStoreProvider;
         private readonly IQueryExecutor _queryExecutor;
         private readonly IQueryBuilder _queryBuilder;
 
         /// <summary>
         /// Constructor
         /// </summary>
-        public SqlMutationEngine(IQueryEngine queryEngine, IMetadataStoreProvider metadataStoreProvider, IQueryExecutor queryExecutor, IQueryBuilder queryBuilder)
+        public SqlMutationEngine(IQueryEngine queryEngine, IGraphQLMetadataProvider metadataStoreProvider, IQueryExecutor queryExecutor, IQueryBuilder queryBuilder)
         {
+            if (metadataStoreProvider.GetType() != typeof(SqlGraphQLFileMetadataProvider))
+            {
+                throw new DataGatewayException(
+                    message: "Unable to instantiate the SQL mutation engine.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
+            }
+
             _queryEngine = queryEngine;
-            _metadataStoreProvider = metadataStoreProvider;
+            _metadataStoreProvider = (SqlGraphQLFileMetadataProvider)metadataStoreProvider;
             _queryExecutor = queryExecutor;
             _queryBuilder = queryBuilder;
         }
@@ -75,7 +83,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (!context.Selection.Type.IsScalarType() && mutationResolver.OperationType != Operation.Delete)
             {
-                Dictionary<string, object?>? searchParams = await ExtractRowFromDbDataReader(dbDataReader);
+                Dictionary<string, object?>? searchParams = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
 
                 if (searchParams == null)
                 {
@@ -107,84 +115,71 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             Dictionary<string, object> parameters = PrepareParameters(context);
 
-            try
+            using DbDataReader dbDataReader =
+            await PerformMutationOperation(
+                context.EntityName,
+                context.OperationType,
+                parameters);
+
+            Dictionary<string, object?>? resultRecord = new();
+            resultRecord = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
+
+            string? jsonResultString = null;
+
+            switch (context.OperationType)
             {
-                using DbDataReader dbDataReader =
-                await PerformMutationOperation(
-                    context.EntityName,
-                    context.OperationType,
-                    parameters);
+                case Operation.Delete:
+                    // Records affected tells us that item was successfully deleted.
+                    // No records affected happens for a DELETE request on nonexistent object
+                    // Returning empty JSON result triggers a NoContent result in calling REST service.
+                    if (dbDataReader.RecordsAffected > 0)
+                    {
+                        jsonResultString = "{}";
+                    }
 
-                Dictionary<string, object?>? resultRecord = new();
-                resultRecord = await ExtractRowFromDbDataReader(dbDataReader);
+                    break;
 
-                string? jsonResultString = null;
+                case Operation.Insert:
+                case Operation.Update:
+                    jsonResultString = JsonSerializer.Serialize(resultRecord);
+                    break;
 
-                switch (context.OperationType)
-                {
-                    case Operation.Delete:
-                        // Records affected tells us that item was successfully deleted.
-                        // No records affected happens for a DELETE request on nonexistent object
-                        // Returning empty JSON result triggers a NoContent result in calling REST service.
-                        if (dbDataReader.RecordsAffected > 0)
-                        {
-                            jsonResultString = "{}";
-                        }
-
-                        break;
-
-                    case Operation.Insert:
-                    case Operation.Update:
+                case Operation.Upsert:
+                case Operation.UpsertIncremental:
+                    /// Processes a second result set from DbDataReader if it exists.
+                    /// In MsSQL upsert:
+                    /// result set #1: result of the UPDATE operation.
+                    /// result set #2: result of the INSERT operation.
+                    if (resultRecord != null)
+                    {
+                        // We give empty result set for updates
+                        jsonResultString = null;
+                    }
+                    else if (await dbDataReader.NextResultAsync())
+                    {
+                        // Since no first result set exists, we overwrite Dictionary here.
+                        resultRecord = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
                         jsonResultString = JsonSerializer.Serialize(resultRecord);
-                        break;
+                    }
+                    else
+                    {
+                        // If there is no resultset, raise dbexception
+                        // this is needed for MySQL.
+                        throw new DataGatewayException(
+                            message: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
+                            statusCode: HttpStatusCode.InternalServerError,
+                            subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
+                    }
 
-                    case Operation.Upsert:
-                    case Operation.UpsertIncremental:
-                        /// Processes a second result set from DbDataReader if it exists.
-                        /// In MsSQL upsert:
-                        /// result set #1: result of the UPDATE operation.
-                        /// result set #2: result of the INSERT operation.
-                        if (resultRecord != null)
-                        {
-                            // We give empty result set for updates
-                            jsonResultString = null;
-                        }
-                        else if (await dbDataReader.NextResultAsync())
-                        {
-                            // Since no first result set exists, we overwrite Dictionary here.
-                            resultRecord = await ExtractRowFromDbDataReader(dbDataReader);
-                            jsonResultString = JsonSerializer.Serialize(resultRecord);
-                        }
-                        else
-                        {
-                            // If there is no resultset, raise dbexception
-                            // this is needed for MySQL.
-                            throw new DataGatewayException(
-                                message: $"Could not perform the given mutation on entity {context.EntityName}.",
-                                statusCode: HttpStatusCode.InternalServerError,
-                                subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
-                        }
-
-                        break;
-                }
-
-                if (jsonResultString == null)
-                {
-                    return null;
-                }
-
-                return JsonDocument.Parse(jsonResultString);
+                    break;
             }
-            catch (DbException ex)
+
+            if (jsonResultString == null)
             {
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine(ex.StackTrace);
-
-                throw new DataGatewayException(
-                    message: $"Could not perform the given mutation on entity {context.EntityName}.",
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
+                return null;
             }
+
+            return JsonDocument.Parse(jsonResultString);
         }
 
         /// <summary>
@@ -233,48 +228,6 @@ namespace Azure.DataGateway.Service.Resolvers
             Console.WriteLine(queryString);
 
             return await _queryExecutor.ExecuteQueryAsync(queryString, queryParameters);
-        }
-
-        ///<summary>
-        /// Extracts a single row from DbDataReader and format it so it can be used as a parameter to a query execution
-        ///</summary>
-        ///<returns>A dictionary representating the row in <c>ColumnName: Value</c> format, null if no row was found</returns>
-        private static async Task<Dictionary<string, object?>?> ExtractRowFromDbDataReader(DbDataReader dbDataReader)
-        {
-            Dictionary<string, object?> row = new();
-
-            if (await dbDataReader.ReadAsync())
-            {
-                if (dbDataReader.HasRows)
-                {
-                    DataTable? schemaTable = dbDataReader.GetSchemaTable();
-
-                    if (schemaTable != null)
-                    {
-                        foreach (DataRow schemaRow in schemaTable.Rows)
-                        {
-                            string columnName = (string)schemaRow["ColumnName"];
-                            int colIndex = dbDataReader.GetOrdinal(columnName);
-                            if (!dbDataReader.IsDBNull(colIndex))
-                            {
-                                row.Add(columnName, dbDataReader[columnName]);
-                            }
-                            else
-                            {
-                                row.Add(columnName, value: null);
-                            }
-                        }
-                    }
-                }
-            }
-
-            // no row was read
-            if (row.Count == 0)
-            {
-                return null;
-            }
-
-            return row;
         }
 
         private static Dictionary<string, object> PrepareParameters(RestRequestContext context)

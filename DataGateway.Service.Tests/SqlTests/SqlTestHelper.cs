@@ -72,6 +72,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             if (message != null)
             {
+                Console.WriteLine(response);
                 Assert.IsTrue(response.Contains(message), $"Message \"{message}\" not found in error");
             }
 
@@ -174,7 +175,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }
             else
             {
-                Assert.AreEqual(expected, actual);
+                Assert.AreEqual(expected, actual, ignoreCase: true);
             }
         }
     }

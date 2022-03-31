@@ -215,11 +215,27 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        ///  Checks if table has foreign key
+        /// Checks if table has foreign key
         /// </summary>
         private static bool TableHasForeignKey(TableDefinition table)
         {
             return table.ForeignKeys != null;
+        }
+
+        /// <summary>
+        /// Checks if foreign key has explicitly defined columns
+        /// </summary>
+        private static bool HasExplicitColumns(ForeignKeyDefinition fk)
+        {
+            return fk.Columns.Count > 0;
+        }
+
+        /// <summary>
+        /// Checks if foreign key has explicitly defined referenced columns
+        /// </summary>
+        private static bool HasExplicitReferencedColumns(ForeignKeyDefinition fk)
+        {
+            return fk.ReferencedColumns.Count > 0;
         }
 
         /// <summary>
@@ -444,7 +460,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Checks if a GraphQL type is equal to a ColumnType
         /// </summary>
-        private static bool GraphQLTypeEqualsColumnType(ITypeNode gqlType, ColumnType columnType)
+        private static bool GraphQLTypeEqualsColumnType(ITypeNode gqlType, Type columnType)
         {
             return GetGraphQLTypeForColumnType(columnType) == gqlType.NullableType().ToString();
         }
@@ -452,14 +468,13 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Get the GraphQL type equivalent from ColumnType
         /// </summary>
-        private static string GetGraphQLTypeForColumnType(ColumnType type)
+        private static string GetGraphQLTypeForColumnType(Type type)
         {
-            Type systemType = ColumnDefinition.ResolveColumnTypeToSystemType(type);
-            switch (systemType.Name)
+            switch (Type.GetTypeCode(type))
             {
-                case "String":
+                case TypeCode.String:
                     return "String";
-                case "Int64":
+                case TypeCode.Int64:
                     return "Int";
                 default:
                     throw new ArgumentException($"ColumnType {type} not handled by case. Please add a case resolving " +

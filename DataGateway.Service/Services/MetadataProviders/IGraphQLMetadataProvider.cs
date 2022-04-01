@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
 
 namespace Azure.DataGateway.Service.Services
@@ -8,6 +9,11 @@ namespace Azure.DataGateway.Service.Services
     /// </summary>
     public interface IGraphQLMetadataProvider
     {
+        /// <summary>
+        /// Initializes this metadata provider for the runtime.
+        /// </summary>
+        Task InitializeAsync();
+
         /// <summary>
         /// Gets the string version of the GraphQL schema.
         /// </summary>

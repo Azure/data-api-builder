@@ -405,6 +405,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         [TestMethod]
         [Ignore]
+        public override Task PutOne_Update_IfMatchHeaders_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
         public override Task PutOne_Insert_Test()
         {
             throw new NotImplementedException();
@@ -455,6 +462,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         [Ignore]
         public override Task PatchOne_Update_Test()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOne_Update_IfMatchHeaders_Test()
         {
             throw new NotImplementedException();
         }

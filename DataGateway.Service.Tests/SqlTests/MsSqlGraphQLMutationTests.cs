@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -304,8 +305,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
 
-            // TODO improve the error message returned by the graphql service to something more useful then smth generic
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
+            SqlTestHelper.TestForErrorInGraphQLResponse(
+                result.ToString(),
+                message: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
+                statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
+            );
 
             string msSqlQuery = @"
                 SELECT COUNT(*) AS count
@@ -340,8 +344,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
 
-            // TODO improve the error message returned by the graphql service to something more useful then smth generic
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
+            SqlTestHelper.TestForErrorInGraphQLResponse(
+                result.ToString(),
+                message: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
+                statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
+            );
 
             string msSqlQuery = @"
                 SELECT COUNT(*) AS count
@@ -398,6 +405,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.EntityNotFound}");
+        }
+
+        /// <summary>
+        /// Test adding a website placement to a book which already has a website
+        /// placement
+        /// </summary>
+        [TestMethod]
+        public async Task TestViolatingOneToOneRelashionShip()
+        {
+            string graphQLMutationName = "insertWebsitePlacement";
+            string graphQLMutation = @"
+                mutation {
+                    insertWebsitePlacement(book_id: 1, price: 25) {
+                        id
+                    }
+                }
+            ";
+
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            SqlTestHelper.TestForErrorInGraphQLResponse(
+                result.ToString(),
+                message: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
+                statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
+            );
         }
         #endregion
     }

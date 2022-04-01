@@ -224,6 +224,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "PutOne_Update_IfMatchHeaders_Test_Confirm_Update",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE id = 1 AND title = 'The Return of the King' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "PutOne_Update_Default_Test",
                 $"SELECT [id], [book_id], [content] FROM { _tableWithCompositePrimaryKey } " +
                 $"WHERE [id] = 568 AND [book_id] = 1 AND [content]='Good book to read' " +
@@ -308,6 +314,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
                 $"WHERE id = 8 AND [title] = 'Heart of Darkness' " +
                 $"AND [publisher_id] = 2324 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PatchOne_Update_IfMatchHeaders_Test_Confirm_Update",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE id = 1 AND title = 'The Hobbit Returns to The Shire' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {

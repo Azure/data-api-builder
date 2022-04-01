@@ -8,6 +8,18 @@ type Book @model {
     title: String!
     publisher_id: Int!
     publisher: Publisher!
+    website_placement: BookWebsitePlacement
+    reviews(first: Int = 100, _filter: ReviewFilterInput, _filterOData: String): [Review!]!
+    paginatedReviews(first: Int, after: String, _filter: ReviewFilterInput, _filterOData: String): ReviewConnection!
+    authors(first: Int = 100, _filter: AuthorFilterInput, _filterOData: String): [Author!]!
+    paginatedAuthors(first: Int, after: String, _filter: AuthorFilterInput, _filterOData: String): AuthorConnection!
+}
+
+type BookWebsitePlacement @model {
+    id: Int!,
+    book_id: Int!,
+    price: Int!,
+    book: Book!
 }
 
 type Author @model {

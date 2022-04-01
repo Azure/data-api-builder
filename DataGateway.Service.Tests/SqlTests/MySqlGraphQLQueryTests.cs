@@ -164,6 +164,60 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Test One-To-One relationship both directions
+        /// (book -> website placement, website placememnt -> book)
+        /// <summary>
+        [TestMethod]
+        public async Task OneToOneJoinQuery()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"query {
+                getBooks {
+                    id
+                    website_placement {
+                        id
+                        price
+                        book {
+                            id
+                        }
+                    }
+                }
+            }";
+
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', `subq11`.`id`, 'website_placement', `subq11`.`website_placement`)
+                        ), JSON_ARRAY()) AS `data`
+                FROM (
+                    SELECT `table0`.`id` AS `id`,
+                        `table1_subq`.`data` AS `website_placement`
+                    FROM `books` AS `table0`
+                    LEFT OUTER JOIN LATERAL(SELECT JSON_OBJECT('id', `subq10`.`id`, 'price', `subq10`.`price`, 'book',
+                                `subq10`.`book`) AS `data` FROM (
+                            SELECT `table1`.`id` AS `id`,
+                                `table1`.`price` AS `price`,
+                                `table2_subq`.`data` AS `book`
+                            FROM `book_website_placements` AS `table1`
+                            LEFT OUTER JOIN LATERAL(SELECT JSON_OBJECT('id', `subq9`.`id`) AS `data` FROM (
+                                    SELECT `table2`.`id` AS `id`
+                                    FROM `books` AS `table2`
+                                    WHERE `table1`.`book_id` = `table2`.`id`
+                                    ORDER BY `table2`.`id` LIMIT 1
+                                    ) AS `subq9`) AS `table2_subq` ON TRUE
+                            WHERE `table0`.`id` = `table1`.`book_id`
+                            ORDER BY `table1`.`id` LIMIT 1
+                            ) AS `subq10`) AS `table1_subq` ON TRUE
+                    WHERE 1 = 1
+                    ORDER BY `table0`.`id` LIMIT 100
+                    ) AS `subq11`
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
         /// This deeply nests a many-to-one/one-to-many join multiple times to
         /// show that it still results in a valid query.
         /// </summary>

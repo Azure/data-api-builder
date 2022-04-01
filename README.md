@@ -2,7 +2,7 @@
 
 ## Introduction
 
-DataGateway provides a consistent, productive abstraction for building GraphQL and REST API applications with data. Powered by Azure Databases, DataGateway provides modern access patterns to the database, allowing developers to use REST or GraphQL and providing developer experiences that meet developers where they are. 
+DataGateway provides a consistent, productive abstraction for building GraphQL and REST API applications with data. Powered by Azure Databases, DataGateway provides modern access patterns to the database, allowing developers to use REST or GraphQL and providing developer experiences that meet developers where they are.
 
 ## Setup
 
@@ -18,12 +18,12 @@ git clone https://github.com/Azure/hawaii-gql.git <directory name>
 
 You will need to provide a database to run behind DataGateway. DataGateway supports SQL Server, CosmosDB, PostgreSQL, and MySQL.
 
-#### Configure Database Account
+#### 2.1 Configure Database Account
 
 With a local or cloud hosted instance a supported database deployed, ensure that you have an account with the necessary access permissions.
 The account should have access to all entities that are defined in the runtime configuration.
 
-#### Supply a Connection String
+#### 2.2 Supply a Connection String
 
 Project startup requires a connection string to be defined (**Note:** Dynamic config is out of scope of this initial startup guide).
 
@@ -63,7 +63,7 @@ LocalDB Instance
 "ConnectionString": "AccountEndpoint=https://<REPLACEME>.documents.azure.com:443/;AccountKey=<REPLACEME>"
 ```
 
-#### Setup Sample Database
+#### 2.3 Setup Sample Database
 
 Schema and data population files are included that are necessary for running sample queries and unit/integration tests.
 
@@ -162,7 +162,7 @@ When manually testing the API with postman, this is the beginning of the uri tha
 
 #### Debugging
 
-To see code execution flow, the first place to start would be to set breakpoints in either `GraphQLcontroller.cs` or `RestController.cs`. Those controllers represent the entry point of a GraphQL and REST request, respectively.
+To see code execution flow, the first place to start would be to set breakpoints in either `GraphQLController.cs` or `RestController.cs`. Those controllers represent the entry point of a GraphQL and REST request, respectively.
 
 ## Using Docker Containers
 

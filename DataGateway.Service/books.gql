@@ -3,6 +3,9 @@ type Query {
     getBook(id: Int!): Book
     getReview(id: Int!, book_id: Int!): Review
     getReviews(_filter: ReviewFilterInput, _filterOData: String): [Review!]!
+    getMagazine(id: Int!): Magazine
+    getMagazines(first: Int = 100, _filter: MagazineFilterInput, _filterOData: String): [Magazine!]!
+    getWebsiteUsers(first: Int = 100, _filter: WebsiteUserFilterInput, _filterOData: String): [WebsiteUser!]!
     books(first: Int, after: String, _filter: BookFilterInput, _filterOData: String): BookConnection!
     reviews(first: Int, after: String, _filter: ReviewFilterInput, _filterOData: String): ReviewConnection!
 }
@@ -41,6 +44,11 @@ type BookWebsitePlacement {
     book: Book!
 }
 
+type WebsiteUser {
+    id: Int!,
+    username: String
+}
+
 type Author {
     id: Int!
     name: String!
@@ -53,6 +61,12 @@ type Review {
     id: Int!
     content: String!
     book: Book!
+}
+
+type Magazine {
+    id: Int!
+    title: String!
+    issueNumber: Int
 }
 
 type BookConnection {
@@ -119,4 +133,19 @@ input ReviewFilterInput {
     or: [ReviewFilterInput]
     id: IntFilterInput,
     content: StringFilterInput
+}
+
+input MagazineFilterInput {
+    and: [MagazineFilterInput]
+    or: [MagazineFilterInput]
+    id: IntFilterInput
+    title: StringFilterInput
+    issueNumber: IntFilterInput
+}
+
+input WebsiteUserFilterInput {
+    and: [WebsiteUserFilterInput]
+    or: [WebsiteUserFilterInput]
+    id: IntFilterInput
+    username: StringFilterInput
 }

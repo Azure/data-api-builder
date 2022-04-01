@@ -736,10 +736,6 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate the nullability of scalar type fields which match table columns
         /// </summary>
-        /// <remarks>
-        /// Currently it validates that all scalar type fields are non nullable.
-        /// This will have to change when nullable database types are supported
-        /// </remarks>
         private void ValidateScalarFieldsMatchingTableColumnsNullability(
             string typeName,
             string typeTable,
@@ -747,14 +743,30 @@ namespace Azure.DataGateway.Service.Configurations
         {
             Dictionary<string, FieldDefinitionNode> scalarFields = GetScalarFields(GetTypeFields(typeName));
             IEnumerable<string> nullableScalarFields =
-                scalarFields.Keys.Where(fieldName => !scalarFields[fieldName].Type.IsNonNullType())
-                                    .Intersect(GetTableWithName(typeTable).Columns.Keys);
+                scalarFields.Keys.Where(fieldName => !scalarFields[fieldName].Type.IsNonNullType());
+            IEnumerable<string> notNullableScalarFields = scalarFields.Keys.Except(nullableScalarFields);
 
-            if (nullableScalarFields.Any())
+            TableDefinition table = GetTableWithName(typeTable);
+            IEnumerable<string> nullableTableColumns =
+                table.Columns.Keys.Where(colName => table.Columns[colName].IsNullable);
+            IEnumerable<string> notNullableTableColumns = table.Columns.Keys.Except(nullableTableColumns);
+
+            IEnumerable<string> shouldBeNullable = notNullableScalarFields.Intersect(nullableTableColumns);
+            IEnumerable<string> shouldBeNotNullable = nullableScalarFields.Intersect(notNullableTableColumns);
+
+            if (shouldBeNullable.Any() || shouldBeNotNullable.Any())
             {
+                string shouldBeNullableMessage = shouldBeNullable.Any() ?
+                    $"The fields [{string.Join(", ", shouldBeNullable)}] should be nullable. " :
+                    string.Empty;
+                string shouldBeNotNullableMessage = shouldBeNotNullable.Any() ?
+                    $"The fields [{string.Join(", ", shouldBeNotNullable)}] should be not nullable." :
+                    string.Empty;
+
                 throw new ConfigValidationException(
-                    $"Fields [{string.Join(", ", nullableScalarFields)}] which match with table columns " +
-                    $"in {PrettyPrintValidationStack(tableColumnsPosition)} should return a non nullable type.",
+                    $"Mismatch of field nullability with table columns in {PrettyPrintValidationStack(tableColumnsPosition)}." +
+                    shouldBeNullableMessage +
+                    shouldBeNotNullableMessage,
                     _schemaValidationStack);
             }
         }

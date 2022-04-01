@@ -54,6 +54,7 @@ namespace Azure.DataGateway.Service.Resolvers
             }
             catch (DbException e)
             {
+                Console.Error.WriteLine(e);
                 throw _dbExceptionParser.Parse(e);
             }
         }
@@ -67,6 +68,7 @@ namespace Azure.DataGateway.Service.Resolvers
             }
             catch (DbException e)
             {
+                Console.Error.WriteLine(e);
                 throw _dbExceptionParser.Parse(e);
             }
         }

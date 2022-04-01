@@ -407,6 +407,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "PutOne_Update_IfMatchHeaders_Test_Confirm_Update",
+                @"
+                  SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE id = 1 and title = 'The Return of the King'
+                      ORDER BY id
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
                 "PutOne_Update_Default_Test",
                 @"
                     SELECT JSON_OBJECT('id', id, 'content', content, 'book_id', book_id) AS data
@@ -540,6 +552,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "PatchOne_Update_IfMatchHeaders_Test_Confirm_Update",
+                @"
+                  SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE id = 1 and title = 'The Hobbit Returns to The Shire' and publisher_id = 1234
+                      ORDER BY id
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
                 "PatchOne_Update_Default_Test",
                 @"
                     SELECT JSON_OBJECT('id', id, 'content', content, 'book_id', book_id) AS data
@@ -647,6 +671,5 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             throw new NotImplementedException();
         }
-
     }
 }

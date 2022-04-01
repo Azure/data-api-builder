@@ -31,16 +31,26 @@ namespace Azure.DataGateway.Service.Services
         public RestService(
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
-            SqlGraphQLFileMetadataProvider graphQLMetadataProvider,
+            IGraphQLMetadataProvider graphQLMetadataProvider,
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationService authorizationService
             )
         {
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
-            GraphQLMetadataProvider = graphQLMetadataProvider;
             _httpContextAccessor = httpContextAccessor;
             _authorizationService = authorizationService;
+
+            if (graphQLMetadataProvider is SqlGraphQLFileMetadataProvider sqlGraphQLFileMetadataProvider)
+            {
+                GraphQLMetadataProvider = sqlGraphQLFileMetadataProvider;
+            }
+            else
+            {
+                throw new ArgumentException(
+                    $"${nameof(SqlGraphQLFileMetadataProvider)} expected to be injected for ${nameof(IGraphQLMetadataProvider)}.");
+            }
+
         }
 
         /// <summary>
@@ -84,9 +94,11 @@ namespace Azure.DataGateway.Service.Services
                     context = new DeleteRequestContext(entityName, isList: false);
                     RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                     break;
+                case Operation.Update:
+                case Operation.UpdateIncremental:
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
-                    JsonElement upsertPayloadRoot = RequestValidator.ValidateUpsertRequest(primaryKeyRoute, requestBody);
+                    JsonElement upsertPayloadRoot = RequestValidator.ValidateUpdateOrUpsertRequest(primaryKeyRoute, requestBody);
                     context = new UpsertRequestContext(entityName, upsertPayloadRoot, GetHttpVerb(operationType), operationType);
                     RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, GraphQLMetadataProvider);
                     break;
@@ -105,10 +117,10 @@ namespace Azure.DataGateway.Service.Services
             if (!string.IsNullOrWhiteSpace(queryString))
             {
                 context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
-                RequestParser.ParseQueryString(context, GraphQLMetadataProvider.FilterParser);
+                RequestParser.ParseQueryString(context, GraphQLMetadataProvider.ODataFilterParser);
             }
 
-            // At this point for DELETE, the primary key should be populated in the Request Context. 
+            // At this point for DELETE, the primary key should be populated in the Request Context.
             RequestValidator.ValidateRequestContext(context, GraphQLMetadataProvider);
 
             // RestRequestContext is finalized for QueryBuilding and QueryExecution.
@@ -127,6 +139,8 @@ namespace Azure.DataGateway.Service.Services
                         return FormatFindResult(await _queryEngine.ExecuteAsync(context), (FindRequestContext)context);
                     case Operation.Insert:
                     case Operation.Delete:
+                    case Operation.Update:
+                    case Operation.UpdateIncremental:
                     case Operation.Upsert:
                     case Operation.UpsertIncremental:
                         return await _mutationEngine.ExecuteAsync(context);
@@ -137,8 +151,8 @@ namespace Azure.DataGateway.Service.Services
             else
             {
                 throw new DataGatewayException(
-                    message: "Unauthorized",
-                    statusCode: HttpStatusCode.Unauthorized,
+                    message: "Forbidden",
+                    statusCode: HttpStatusCode.Forbidden,
                     subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
                 );
             }
@@ -225,8 +239,10 @@ namespace Azure.DataGateway.Service.Services
         {
             switch (operation)
             {
+                case Operation.Update:
                 case Operation.Upsert:
                     return HttpRestVerbs.PUT;
+                case Operation.UpdateIncremental:
                 case Operation.UpsertIncremental:
                     return HttpRestVerbs.PATCH;
                 case Operation.Delete:

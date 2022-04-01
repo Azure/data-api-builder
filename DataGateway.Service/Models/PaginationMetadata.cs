@@ -22,9 +22,9 @@ namespace Azure.DataGateway.Service.Models
         public bool RequestedItems { get; set; } = DEFAULT_PAGINATION_FLAGS_VALUE;
 
         /// <summary>
-        /// Shows if <c>continuation</c> is requested from the pagination result
+        /// Shows if <c>endCursor</c> is requested from the pagination result
         /// </summary>
-        public bool RequestedContinuationToken { get; set; } = DEFAULT_PAGINATION_FLAGS_VALUE;
+        public bool RequestedEndCursorToken { get; set; } = DEFAULT_PAGINATION_FLAGS_VALUE;
 
         /// <summary>
         /// Shows if <c>hasNextPage</c> is requested from the pagination result

@@ -16,7 +16,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private readonly string _containerAlias = "c";
         public string Container { get; internal set; }
         public string Database { get; internal set; }
-        public string? Continuation { get; internal set; }
+        public string? EndCursor { get; internal set; }
         public int MaxItemCount { get; internal set; }
 
         protected IGraphQLMetadataProvider MetadataStoreProvider { get; }
@@ -67,9 +67,9 @@ namespace Azure.DataGateway.Service.Resolvers
                     continue;
                 }
 
-                if (parameter.Key == "continuation")
+                if (parameter.Key == "endCursor")
                 {
-                    Continuation = (string)parameter.Value;
+                    EndCursor = (string)parameter.Value;
                     continue;
                 }
 

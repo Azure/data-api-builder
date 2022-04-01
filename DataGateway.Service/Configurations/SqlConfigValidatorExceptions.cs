@@ -544,17 +544,17 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate the type of <see cref="QueryBuilder.CONTINUATION_TOKEN_FIELD_NAME"/> field in a Pagination type
+        /// Validate the type of <see cref="QueryBuilder.END_CURSOR_TOKEN_FIELD_NAME"/> field in a Pagination type
         /// </summary>
-        private void ValidateContinuationFieldType(FieldDefinitionNode continuationField)
+        private void ValidateEndCursorFieldType(FieldDefinitionNode endCursorField)
         {
-            ITypeNode continuationFieldType = continuationField.Type;
-            if (IsListType(continuationFieldType) ||
-                InnerTypeStr(continuationFieldType) != "String" ||
-                continuationFieldType.IsNonNullType())
+            ITypeNode endCursorFieldType = endCursorField.Type;
+            if (IsListType(endCursorFieldType) ||
+                InnerTypeStr(endCursorFieldType) != "String" ||
+                endCursorFieldType.IsNonNullType())
             {
                 throw new ConfigValidationException(
-                    $"\"{QueryBuilder.CONTINUATION_TOKEN_FIELD_NAME}\" must return a nullable \"String\" type.",
+                    $"\"{QueryBuilder.END_CURSOR_TOKEN_FIELD_NAME}\" must return a nullable \"String\" type.",
                     _schemaValidationStack);
             }
         }

@@ -148,7 +148,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (!string.IsNullOrWhiteSpace(context.After))
             {
-                AddPaginationPredicate(SqlPaginationUtil.ParseContinuationFromJsonString(context.After, PaginationMetadata));
+                AddPaginationPredicate(SqlPaginationUtil.ParseEndCursorFromJsonString(context.After, PaginationMetadata));
             }
 
             _limit = context.First is not null ? context.First + 1 : DEFAULT_LIST_LIMIT + 1;
@@ -275,10 +275,10 @@ namespace Azure.DataGateway.Service.Resolvers
             // TableName, TableAlias, Columns, and _limit
             if (PaginationMetadata.IsPaginated)
             {
-                IDictionary<string, object>? afterJsonValues = SqlPaginationUtil.ParseContinuationFromQueryParams(queryParams, PaginationMetadata);
+                IDictionary<string, object>? afterJsonValues = SqlPaginationUtil.ParseEndCursorFromQueryParams(queryParams, PaginationMetadata);
                 AddPaginationPredicate(afterJsonValues);
 
-                if (PaginationMetadata.RequestedContinuationToken)
+                if (PaginationMetadata.RequestedEndCursorToken)
                 {
                     // add the primary keys in the selected columns if they are missing
                     IEnumerable<string> extraNeededColumns = PrimaryKey().Except(Columns.Select(c => c.Label));
@@ -446,8 +446,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     case QueryBuilder.PAGINATION_FIELD_NAME:
                         PaginationMetadata.RequestedItems = true;
                         break;
-                    case QueryBuilder.CONTINUATION_TOKEN_FIELD_NAME:
-                        PaginationMetadata.RequestedContinuationToken = true;
+                    case QueryBuilder.END_CURSOR_TOKEN_FIELD_NAME:
+                        PaginationMetadata.RequestedEndCursorToken = true;
                         break;
                     case QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME:
                         PaginationMetadata.RequestedHasNextPage = true;

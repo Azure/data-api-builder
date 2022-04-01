@@ -50,7 +50,7 @@ namespace Azure.DataGateway.Service.Resolvers
             Container container = _clientProvider.Client.GetDatabase(structure.Database).GetContainer(structure.Container);
 
             QueryRequestOptions queryRequestOptions = new();
-            string requestContinuation = null;
+            string requestEndCursor = null;
 
             string queryString = _queryBuilder.Build(structure);
 
@@ -64,10 +64,10 @@ namespace Azure.DataGateway.Service.Resolvers
             if (structure.IsPaginated)
             {
                 queryRequestOptions.MaxItemCount = (int?)structure.MaxItemCount;
-                requestContinuation = Base64Decode(structure.Continuation);
+                requestEndCursor = Base64Decode(structure.EndCursor);
             }
 
-            FeedResponse<JObject> firstPage = await container.GetItemQueryIterator<JObject>(querySpec, requestContinuation, queryRequestOptions).ReadNextAsync();
+            FeedResponse<JObject> firstPage = await container.GetItemQueryIterator<JObject>(querySpec, requestEndCursor, queryRequestOptions).ReadNextAsync();
 
             if (structure.IsPaginated)
             {
@@ -79,15 +79,15 @@ namespace Azure.DataGateway.Service.Resolvers
                     jarray.Add(item);
                 }
 
-                string responseContinuation = firstPage.ContinuationToken;
-                if (string.IsNullOrEmpty(responseContinuation))
+                string responseEndCursor = firstPage.ContinuationToken;
+                if (string.IsNullOrEmpty(responseEndCursor))
                 {
-                    responseContinuation = null;
+                    responseEndCursor = null;
                 }
 
                 JObject res = new(
-                   new JProperty("continuation", Base64Encode(responseContinuation)),
-                   new JProperty("hasNextPage", responseContinuation != null),
+                   new JProperty("endCursor", Base64Encode(responseEndCursor)),
+                   new JProperty("hasNextPage", responseEndCursor != null),
                    new JProperty("items", jarray));
 
                 // This extra deserialize/serialization will be removed after moving to Newtonsoft from System.Text.Json

@@ -64,14 +64,14 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            if (paginationMetadata.RequestedContinuationToken)
+            if (paginationMetadata.RequestedEndCursorToken)
             {
                 // parse *Connection.endCursor if there are no elements
                 // if no endCursor is added, but it has been requested HotChocolate will report it as null
                 if (returnedElemNo > 0)
                 {
                     JsonElement lastElemInRoot = rootEnumerated.ElementAtOrDefault(returnedElemNo - 1);
-                    connectionJson.Add(QueryBuilder.CONTINUATION_TOKEN_FIELD_NAME, MakeCursorFromJsonElement(lastElemInRoot, paginationMetadata.Structure!.PrimaryKey()));
+                    connectionJson.Add(QueryBuilder.END_CURSOR_TOKEN_FIELD_NAME, MakeCursorFromJsonElement(lastElemInRoot, paginationMetadata.Structure!.PrimaryKey()));
                 }
             }
 
@@ -121,26 +121,26 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Parse the value of "after" parameter from query parameters, validate it, and return the json object it stores
         /// </summary>
-        public static IDictionary<string, object> ParseContinuationFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
+        public static IDictionary<string, object> ParseEndCursorFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
         {
-            Dictionary<string, object> continuation = new();
-            object conitainuationObject = queryParams["continuation"];
+            Dictionary<string, object> endCursor = new();
+            object conitainuationObject = queryParams["endCursor"];
 
             if (conitainuationObject != null)
             {
                 string afterPlainText = (string)conitainuationObject;
-                continuation = ParseContinuationFromJsonString(afterPlainText, paginationMetadata);
+                endCursor = ParseEndCursorFromJsonString(afterPlainText, paginationMetadata);
             }
 
-            return continuation;
+            return endCursor;
         }
 
         /// <summary>
         /// Validate the value associated with $after, and return the json object it stores
         /// </summary>
-        public static Dictionary<string, object> ParseContinuationFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
+        public static Dictionary<string, object> ParseEndCursorFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
         {
-            Dictionary<string, object> continuation = new();
+            Dictionary<string, object> endCursor = new();
             List<string> primaryKey = paginationMetadata.Structure!.PrimaryKey();
 
             try
@@ -150,7 +150,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 if (!ListsAreEqual(afterDeserialized.Keys.ToList(), primaryKey))
                 {
-                    string incorrectValues = $"Parameter \"continuation\" with values {afterJsonString} does not contain all the required" +
+                    string incorrectValues = $"Parameter \"endCursor\" with values {afterJsonString} does not contain all the required" +
                                                 $"values <{string.Join(", ", primaryKey.Select(c => $"\"{c}\""))}>";
 
                     throw new ArgumentException(incorrectValues);
@@ -167,7 +167,7 @@ namespace Azure.DataGateway.Service.Resolvers
                             $"incorrect type {value.GetType()} for primary key column {keyValuePair.Key} with type {columnType}.");
                     }
 
-                    continuation.Add(keyValuePair.Key, value);
+                    endCursor.Add(keyValuePair.Key, value);
                 }
             }
             catch (Exception e)
@@ -198,7 +198,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            return continuation;
+            return endCursor;
         }
 
         /// <summary>

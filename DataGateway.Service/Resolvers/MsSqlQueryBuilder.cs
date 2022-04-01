@@ -86,7 +86,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns></returns>
         public string Build(SqlUpsertQueryStructure structure)
         {
-            if (structure.FallbackToUpdate)
+            if (structure.IsFallbackToUpdate)
             {
                 return $"UPDATE {QuoteIdentifier(structure.TableName)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +

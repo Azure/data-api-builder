@@ -93,7 +93,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             (string sets, string updates, string select) = MakeStoreUpdatePK(structure.PrimaryKey());
 
-            if (structure.FallbackToUpdate)
+            if (structure.IsFallbackToUpdate)
             {
                 return sets + ";\n" +
                     $"UPDATE {QuoteIdentifier(structure.TableName)} " +

@@ -167,6 +167,11 @@ namespace Azure.DataGateway.Service.Services
                 if (tableDefinition.Columns.TryGetValue(columnName, out columnDefinition))
                 {
                     columnDefinition.HasDefault = hasDefault;
+
+                    if (hasDefault)
+                    {
+                        columnDefinition.DefaultValue = columnInfo["COLUMN_DEFAULT"];
+                    }
                 }
             }
         }

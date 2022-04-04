@@ -26,6 +26,16 @@
       "Id": "insertWebsitePlacement",
       "Table": "book_website_placements",
       "OperationType": "Insert"
+    },
+    {
+      "Id": "insertMagazine",
+      "Table": "magazines",
+      "OperationType": "Insert"
+    },
+    {
+      "Id": "insertWebsiteUser",
+      "Table": "website_users",
+      "OperationType": "Insert"
     }
   ],
   "GraphQLTypes": {

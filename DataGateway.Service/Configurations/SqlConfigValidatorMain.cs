@@ -643,6 +643,8 @@ namespace Azure.DataGateway.Service.Configurations
 
             ValidateMutArgsMatchTableColumns(resolver.Table, table, mutArgs);
             ValidateMutArgTypesMatchTableColTypes(resolver.Table, table, mutArgs);
+
+            ValidateUpdateMutHasCorrectArgs(table, mutArgs);
             ValidateArgNullabilityInUpdateMut(table, mutArgs);
             ValidateReturnTypeNullability(mutation, returnsNullable: true);
         }

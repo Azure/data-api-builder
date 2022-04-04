@@ -148,11 +148,7 @@ namespace Azure.DataGateway.Service.Services
             IFieldCollection<IInputField> availableArguments = schema.Arguments;
             foreach (IInputField argument in availableArguments)
             {
-                if (argument.DefaultValue == null)
-                {
-                    parameters.Add(argument.Name.Value, null);
-                }
-                else
+                if (argument.DefaultValue != null)
                 {
                     parameters.Add(argument.Name.Value, ArgumentValue(argument.DefaultValue, variables));
                 }
@@ -162,7 +158,14 @@ namespace Azure.DataGateway.Service.Services
             IReadOnlyList<ArgumentNode> passedArguments = query.Arguments;
             foreach (ArgumentNode argument in passedArguments)
             {
-                parameters[argument.Name.Value] = ArgumentValue(argument.Value, variables);
+                if (parameters.ContainsKey(argument.Name.Value))
+                {
+                    parameters[argument.Name.Value] = ArgumentValue(argument.Value, variables);
+                }
+                else
+                {
+                    parameters.Add(argument.Name.Value, ArgumentValue(argument.Value, variables));
+                }
             }
 
             return parameters;

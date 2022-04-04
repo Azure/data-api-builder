@@ -13,6 +13,8 @@ type Query {
 type Mutation {
     editBook(id: Int!, title: String, publisher_id: Int): Book
     insertBook(title: String!, publisher_id: Int!): Book
+    insertMagazine(id: Int!, title: String!, issueNumber: Int): Magazine
+    insertWebsiteUser(id: Int!, username: String): WebsiteUser
     insertWebsitePlacement(book_id: Int!, price: Int!): BookWebsitePlacement
     addAuthorToBook(author_id: Int!, book_id: Int!): Boolean
     deleteBook(id: Int!): Book

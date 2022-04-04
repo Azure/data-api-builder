@@ -260,44 +260,49 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate foreign key has columns
-        /// </summary>
-        private void ValidateForeignKeyHasColumns(ForeignKeyDefinition foreignKey)
-        {
-            if (foreignKey.Columns == null || foreignKey.Columns.Count == 0)
-            {
-                throw new ConfigValidationException("Foreign key must have a non empty \"Columns\" element.", _configValidationStack);
-            }
-        }
-
-        /// <summary>
         /// Validate that the foreign key columns have unique names amongst themselves
         /// </summary>
-        private void ValidateNoDuplicateFkColumns(ForeignKeyDefinition foreignKey)
+        private void ValidateNoDuplicateFkColumns(List<string> columns, bool refColumns)
         {
-            IEnumerable<string> duplicateCols = GetDuplicates(foreignKey.Columns);
+            IEnumerable<string> duplicateCols = GetDuplicates(columns);
 
             if (duplicateCols.Any())
             {
                 throw new ConfigValidationException(
-                    $"Foreign key columns must be unique amongst themselves. Duplicate columns " +
-                    $"[{string.Join(", ", duplicateCols)}] found.",
+                    $"Foreign key {(refColumns ? "referenced" : string.Empty)} columns must be unique amongst " +
+                    $"themselves. Duplicate columns [{string.Join(", ", duplicateCols)}] found.",
                     _configValidationStack);
             }
         }
 
         /// <summary>
-        /// Validates that the count of foreign key columns matches the number of columns of the primary
-        /// key referecenced by that foreign key
+        /// Validates that the count of foreign key columns matches the number of  referenced columns of the
+        /// referenced table
         /// </summary>
-        private void ValidateFKColCountMatchesRefTablePKColCount(ForeignKeyDefinition foreignKey)
+        private void ValidateColCountMatchesRefColCount(List<string> columns, List<string> refColumns, string refTableName)
         {
-            TableDefinition referencedTable = GetTableWithName(foreignKey.ReferencedTable);
-            if (foreignKey.Columns.Count != referencedTable.PrimaryKey.Count)
+            if (columns.Count != refColumns.Count)
             {
                 throw new ConfigValidationException(
-                    $"Mismatch between foreign key column count and referenced table \"{foreignKey.ReferencedTable}\"" +
-                    "'s primary key column count.",
+                    $"Mismatch between foreign key column count and referenced table \"{refTableName}\"" +
+                    "'s referenced columns count.",
+                    _configValidationStack);
+            }
+        }
+
+        /// <summary>
+        /// Validates that the referenced columns of the foreign key exist in the referenced table
+        /// </summary>
+        private void ValidateRefColumnsExistInRefTable(List<string> referencedColumns, string referencedTable)
+        {
+            _ = GetTableWithName(referencedTable).Columns.Keys.ToList();
+            IEnumerable<string> unmatchedColumns = referencedColumns.Except(referencedColumns);
+
+            if (unmatchedColumns.Any())
+            {
+                throw new ConfigValidationException(
+                    $"Referenced columns [{string.Join(", ", unmatchedColumns)}] do not exist in " +
+                    $"referenced table \"{referencedTable}\".",
                     _configValidationStack);
             }
         }
@@ -320,25 +325,33 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate that the type of the foreign key column matches its equivalent column primary
-        /// key column in the referenced table
+        /// Validate that the type of the foreign key columns match their equivalent referenced
+        /// columns in the referenced table
         /// </summary>
-        private void ValidateFKColTypeMatchesRefTabPKColType(ForeignKeyDefinition foreignKey, int columnIndex, TableDefinition foreignKeyTable)
+        private void ValidateFKColTypesMatchRefTabPKColTypes(
+            List<string> columns,
+            TableDefinition table,
+            List<string> refColumns,
+            string refTableName,
+            TableDefinition refTable
+        )
         {
-            string columnName = foreignKey.Columns[columnIndex];
-            TableDefinition referencedTable = GetTableWithName(foreignKey.ReferencedTable);
-            Type columnType = foreignKeyTable.Columns[columnName].SystemType;
-            string referencedPrimaryKeyColumnName = referencedTable.PrimaryKey[columnIndex];
-            ColumnDefinition referencedPrimaryKeyColumn = referencedTable.Columns[referencedPrimaryKeyColumnName];
-
-            if (!ReferenceEquals(columnType, referencedPrimaryKeyColumn.SystemType))
+            for (int columnIndex = 0; columnIndex < columns.Count; columnIndex++)
             {
-                throw new ConfigValidationException(
-                    $"SystemType mismatch between foreign key column \"{columnName}\" with type \"{columnType}\" and " +
-                    $"primary key column \"{foreignKey.ReferencedTable}\".\"{referencedPrimaryKeyColumnName}\" " +
-                    $"with type \"{referencedPrimaryKeyColumn.SystemType}\". Look into Models.ColumnDefinition.TypesAreEqual " +
-                    "to learn about how type equality is determined.",
-                    _configValidationStack);
+                string columnName = columns[columnIndex];
+                Type columnType = table.Columns[columnName].SystemType;
+                string refColumnName = refColumns[columnIndex];
+                ColumnDefinition refColumn = refTable.Columns[refColumnName];
+
+                if (!ReferenceEquals(columnType, refColumn.SystemType))
+                {
+                    throw new ConfigValidationException(
+                        $"Type mismatch between foreign key column \"{columnName}\" with type \"{columnType}\" and " +
+                        $"referenced column \"{refTableName}\".\"{refColumnName}\" " +
+                        $"with type \"{refColumn.SystemType}\". Look into Models.ColumnDefinition.TypesAreEqual " +
+                        "to learn about how type equality is determined.",
+                        _configValidationStack);
+                }
             }
         }
 
@@ -959,6 +972,19 @@ namespace Azure.DataGateway.Service.Configurations
             {
                 throw new ConfigValidationException(
                     $"{field.RelationshipType} field must have only right foreign key.",
+                    _configValidationStack);
+            }
+        }
+
+        /// <summary>
+        /// Validates that field has left foreign key or right foreign key
+        /// </summary>
+        private void ValidateHasLeftOrRightForeignKey(GraphQLField field)
+        {
+            if (!(HasLeftForeignKey(field) || HasRightForeignKey(field)))
+            {
+                throw new ConfigValidationException(
+                    $"{field.RelationshipType} field must have a left foreign key or right foreign key.",
                     _configValidationStack);
             }
         }

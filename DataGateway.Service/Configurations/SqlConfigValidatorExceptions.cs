@@ -1429,8 +1429,6 @@ namespace Azure.DataGateway.Service.Configurations
             {
                 string argName = nameArgPair.Key;
 
-                _ = nameArgPair.Value;
-
                 if (table.PrimaryKey.Contains(argName))
                 {
                     shouldNotBeNullable.Add(argName);

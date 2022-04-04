@@ -36,6 +36,11 @@
       "Id": "insertWebsiteUser",
       "Table": "website_users",
       "OperationType": "Insert"
+    },
+    {
+      "Id": "updateMagazine",
+      "Table": "magazines",
+      "OperationType": "UpdateIncremental"
     }
   ],
   "GraphQLTypes": {

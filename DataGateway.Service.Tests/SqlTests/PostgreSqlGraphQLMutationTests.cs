@@ -244,6 +244,115 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
+
+        /// <summary>
+        /// Test explicitly inserting a null column
+        /// </summary>
+        [TestMethod]
+        public async Task TestExplicitNullInsert()
+        {
+            string graphQLMutationName = "insertMagazine";
+            string graphQLMutation = @"
+                mutation {
+                    insertMagazine(id: 800, title: ""New Magazine"", issue_number: null) {
+                        id
+                        title
+                        issue_number
+                    }
+                }
+            ";
+
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.id AS id,
+                          table0.title AS title,
+                          table0.issue_number AS issue_number
+                   FROM magazines AS table0
+                   WHERE id = 800
+                     AND title = 'New Magazine'
+                     AND issue_number IS NULL
+                   ORDER BY id
+                   LIMIT 1) AS subq
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test implicitly inserting a null column
+        /// </summary>
+        [TestMethod]
+        public async Task TestImplicitNullInsert()
+        {
+            string graphQLMutationName = "insertMagazine";
+            string graphQLMutation = @"
+                mutation {
+                    insertMagazine(id: 801, title: ""New Magazine 2"") {
+                        id
+                        title
+                        issue_number
+                    }
+                }
+            ";
+
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.id AS id,
+                          table0.title AS title,
+                          table0.issue_number AS issue_number
+                   FROM magazines AS table0
+                   WHERE id = 801
+                     AND title = 'New Magazine 2'
+                     AND issue_number IS NULL
+                   ORDER BY id
+                   LIMIT 1) AS subq
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test updating a column to null
+        /// </summary>
+        [TestMethod]
+        public async Task TestUpdateColumnToNull()
+        {
+            string graphQLMutationName = "updateMagazine";
+            string graphQLMutation = @"
+                mutation {
+                    updateMagazine(id: 1, issue_number: null) {
+                        id
+                        issue_number
+                    }
+                }
+            ";
+
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.id AS id,
+                          table0.issue_number AS issue_number
+                   FROM magazines AS table0
+                   WHERE id = 1
+                     AND issue_number IS NULL
+                   ORDER BY id
+                   LIMIT 1) AS subq
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Negative Tests

@@ -91,6 +91,21 @@ namespace Azure.DataGateway.Service.Resolvers
                     string searchedPK = '<' + string.Join(", ", tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
                     throw new DataGatewayException($"Could not find entity with {searchedPK}", HttpStatusCode.NotFound, DataGatewayException.SubStatusCodes.EntityNotFound);
                 }
+                else
+                {
+                    TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(tableName);
+                    foreach (KeyValuePair<string, object?> param in searchParams)
+                    {
+                        // remove non pk params since they can be null
+                        // and the subsequent query would search with:
+                        // nullParamName = NULL
+                        // which would fail to get the mutated entry from the db
+                        if (!tableDefinition.PrimaryKey.Contains(param.Key))
+                        {
+                            searchParams.Remove(param.Key);
+                        }
+                    }
+                }
 
                 result = await _queryEngine.ExecuteAsync(
                     context,

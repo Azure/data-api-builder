@@ -57,7 +57,7 @@ CREATE TABLE book_author_link(
 CREATE TABLE magazines(
     id bigint PRIMARY KEY,
     title varchar(max) NOT NULL,
-    issueNumber bigint NULL
+    issue_number bigint NULL
 );
 
 CREATE TABLE comics(
@@ -129,4 +129,4 @@ SET IDENTITY_INSERT reviews OFF
 
 INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95');
 INSERT INTO stocks(categoryid, pieceid,categoryName) VALUES (1, 1, 'books'), (2, 1, 'magazines');
-INSERT INTO magazines(id, title, issueNumber) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);
+INSERT INTO magazines(id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);

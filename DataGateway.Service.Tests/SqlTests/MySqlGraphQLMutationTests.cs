@@ -242,6 +242,115 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
+
+        /// <summary>
+        /// Test explicitly inserting a null column
+        /// </summary>
+        [TestMethod]
+        public async Task TestExplicitNullInsert()
+        {
+            string graphQLMutationName = "insertMagazine";
+            string graphQLMutation = @"
+                mutation {
+                    insertMagazine(id: 800, title: ""New Magazine"", issue_number: null) {
+                        id
+                        title
+                        issue_number
+                    }
+                }
+            ";
+
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('id', `subq2`.`id`, 'title', `subq2`.`title`, 'issue_number', `subq2`.`issue_number`) AS `data`
+                FROM (
+                    SELECT `table0`.`id` AS `id`,
+                        `table0`.`title` AS `title`,
+                        `table0`.`issue_number` AS `issue_number`
+                    FROM `magazines` AS `table0`
+                    WHERE `table0`.`id` = 800
+                        AND `table0`.`title` = 'New Magazine'
+                        AND `table0`.`issue_number` IS NULL
+                    ORDER BY `table0`.`id` LIMIT 1
+                    ) AS `subq2`
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test implicitly inserting a null column
+        /// </summary>
+        [TestMethod]
+        public async Task TestImplicitNullInsert()
+        {
+            string graphQLMutationName = "insertMagazine";
+            string graphQLMutation = @"
+                mutation {
+                    insertMagazine(id: 801, title: ""New Magazine 2"") {
+                        id
+                        title
+                        issue_number
+                    }
+                }
+            ";
+
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('id', `subq2`.`id`, 'title', `subq2`.`title`, 'issue_number', `subq2`.`issue_number`) AS `data`
+                FROM (
+                    SELECT `table0`.`id` AS `id`,
+                        `table0`.`title` AS `title`,
+                        `table0`.`issue_number` AS `issue_number`
+                    FROM `magazines` AS `table0`
+                    WHERE `table0`.`id` = 801
+                        AND `table0`.`title` = 'New Magazine 2'
+                        AND `table0`.`issue_number` IS NULL
+                    ORDER BY `table0`.`id` LIMIT 1
+                    ) AS `subq2`
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test updating a column to null
+        /// </summary>
+        [TestMethod]
+        public async Task TestUpdateColumnToNull()
+        {
+            string graphQLMutationName = "updateMagazine";
+            string graphQLMutation = @"
+                mutation {
+                    updateMagazine(id: 1, issue_number: null) {
+                        id
+                        issue_number
+                    }
+                }
+            ";
+
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('id', `subq2`.`id`, 'issue_number', `subq2`.`issue_number`) AS `data`
+                FROM (
+                    SELECT `table0`.`id` AS `id`,
+                        `table0`.`issue_number` AS `issue_number`
+                    FROM `magazines` AS `table0`
+                    WHERE `table0`.`id` = 1
+                        AND `table0`.`issue_number` IS NULL
+                    ORDER BY `table0`.`id` LIMIT 1
+                    ) AS `subq2`
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Negative Tests

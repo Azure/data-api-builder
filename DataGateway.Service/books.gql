@@ -12,8 +12,9 @@ type Query {
 
 type Mutation {
     editBook(id: Int!, title: String, publisher_id: Int): Book
+    updateMagazine(id: Int!, title: String, issue_number: Int): Magazine
     insertBook(title: String!, publisher_id: Int!): Book
-    insertMagazine(id: Int!, title: String!, issueNumber: Int): Magazine
+    insertMagazine(id: Int!, title: String!, issue_number: Int): Magazine
     insertWebsiteUser(id: Int!, username: String): WebsiteUser
     insertWebsitePlacement(book_id: Int!, price: Int!): BookWebsitePlacement
     addAuthorToBook(author_id: Int!, book_id: Int!): Boolean
@@ -68,7 +69,7 @@ type Review {
 type Magazine {
     id: Int!
     title: String!
-    issueNumber: Int
+    issue_number: Int
 }
 
 type BookConnection {
@@ -144,7 +145,7 @@ input MagazineFilterInput {
     or: [MagazineFilterInput]
     id: IntFilterInput
     title: StringFilterInput
-    issueNumber: IntFilterInput
+    issue_number: IntFilterInput
 }
 
 input WebsiteUserFilterInput {

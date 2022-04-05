@@ -72,6 +72,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             if (message != null)
             {
+                Console.WriteLine(response);
                 Assert.IsTrue(response.Contains(message), $"Message \"{message}\" not found in error");
             }
 
@@ -108,9 +109,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case Operation.Delete:
                     actionResult = await controller.Delete(entityName, primaryKeyRoute);
                     break;
+                case Operation.Update:
                 case Operation.Upsert:
                     actionResult = await controller.Upsert(entityName, primaryKeyRoute);
                     break;
+                case Operation.UpdateIncremental:
                 case Operation.UpsertIncremental:
                     actionResult = await controller.UpsertIncremental(entityName, primaryKeyRoute);
                     break;

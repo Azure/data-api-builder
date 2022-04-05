@@ -552,34 +552,75 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     string subtableAlias = subquery.TableAlias;
 
+                    ForeignKeyDefinition fk;
+                    List<string> columns;
+                    List<string> subTableColumns;
+
                     switch (fieldInfo.RelationshipType)
                     {
-                        case GraphQLRelationshipType.ManyToOne:
+                        case GraphQLRelationshipType.OneToOne:
+                            if (!string.IsNullOrEmpty(fieldInfo.LeftForeignKey))
+                            {
+                                fk = GetTableDefinition().ForeignKeys[fieldInfo.LeftForeignKey];
+                                columns = GetFkColumns(fk, GetTableDefinition());
+                                subTableColumns = GetFkRefColumns(fk, subTableDefinition);
+                            }
+                            else
+                            {
+                                fk = subTableDefinition.ForeignKeys[fieldInfo.RightForeignKey];
+                                columns = GetFkRefColumns(fk, GetTableDefinition());
+                                subTableColumns = GetFkColumns(fk, subTableDefinition);
+                            }
+
                             subquery.Predicates.AddRange(CreateJoinPredicates(
                                 TableAlias,
-                                GetTableDefinition().ForeignKeys[fieldInfo.LeftForeignKey].Columns,
+                                columns,
                                 subtableAlias,
-                                subTableDefinition.PrimaryKey
+                                subTableColumns
+                            ));
+                            break;
+                        case GraphQLRelationshipType.ManyToOne:
+                            fk = GetTableDefinition().ForeignKeys[fieldInfo.LeftForeignKey];
+                            columns = GetFkColumns(fk, GetTableDefinition());
+                            subTableColumns = GetFkRefColumns(fk, subTableDefinition);
+
+                            subquery.Predicates.AddRange(CreateJoinPredicates(
+                                TableAlias,
+                                columns,
+                                subtableAlias,
+                                subTableColumns
                             ));
                             break;
                         case GraphQLRelationshipType.OneToMany:
+                            fk = subTableDefinition.ForeignKeys[fieldInfo.RightForeignKey];
+                            columns = GetFkRefColumns(fk, GetTableDefinition());
+                            subTableColumns = GetFkColumns(fk, subTableDefinition);
+
                             subquery.Predicates.AddRange(CreateJoinPredicates(
                                 TableAlias,
-                                PrimaryKey(),
+                                columns,
                                 subtableAlias,
-                                subTableDefinition.ForeignKeys[fieldInfo.RightForeignKey].Columns
+                                subTableColumns
                             ));
                             break;
                         case GraphQLRelationshipType.ManyToMany:
                             string associativeTableName = fieldInfo.AssociativeTable;
                             string associativeTableAlias = CreateTableAlias();
-
                             TableDefinition associativeTableDefinition = MetadataStoreProvider.GetTableDefinition(associativeTableName);
+
+                            ForeignKeyDefinition fkLeft = associativeTableDefinition.ForeignKeys[fieldInfo.LeftForeignKey];
+                            List<string> columnsLeft = GetFkRefColumns(fkLeft, GetTableDefinition());
+                            List<string> subTableColumnsLeft = GetFkColumns(fkLeft, associativeTableDefinition);
+
+                            ForeignKeyDefinition fkRight = associativeTableDefinition.ForeignKeys[fieldInfo.RightForeignKey];
+                            List<string> columnsRight = GetFkColumns(fkRight, associativeTableDefinition);
+                            List<string> subTableColumnsRight = GetFkRefColumns(fkRight, subTableDefinition);
+
                             subquery.Predicates.AddRange(CreateJoinPredicates(
                                 TableAlias,
-                                PrimaryKey(),
+                                columnsLeft,
                                 associativeTableAlias,
-                                associativeTableDefinition.ForeignKeys[fieldInfo.LeftForeignKey].Columns
+                                subTableColumnsLeft
                             ));
 
                             subquery.Joins.Add(new SqlJoinStructure
@@ -588,18 +629,17 @@ namespace Azure.DataGateway.Service.Resolvers
                                 associativeTableAlias,
                                 CreateJoinPredicates(
                                         associativeTableAlias,
-                                        associativeTableDefinition.ForeignKeys[fieldInfo.RightForeignKey].Columns,
+                                        columnsRight,
                                         subtableAlias,
-                                        subTableDefinition.PrimaryKey
+                                        subTableColumnsRight
                                     ).ToList()
                             ));
-
                             break;
 
                         case GraphQLRelationshipType.None:
                             throw new NotSupportedException("Cannot do a join when there is no relationship");
                         default:
-                            throw new NotImplementedException("OneToOne and ManyToMany relationships are not yet implemented");
+                            throw new NotSupportedException("Relationships type ${fieldInfo.RelationshipType} is not supported.");
                     }
 
                     string subqueryAlias = $"{subtableAlias}_subq";
@@ -607,6 +647,22 @@ namespace Azure.DataGateway.Service.Resolvers
                     Columns.Add(new LabelledColumn(subqueryAlias, DATA_IDENT, fieldName));
                 }
             }
+        }
+
+        /// <summary>
+        /// Get foreign key columns (if no columns select table pk)
+        /// </summary>
+        private static List<string> GetFkColumns(ForeignKeyDefinition fk, TableDefinition table)
+        {
+            return fk.Columns.Count > 0 ? fk.Columns : table.PrimaryKey;
+        }
+
+        /// <summary>
+        /// Get foreign key referenced columns (if no referenced columns select referenced table pk)
+        /// </summary>
+        private static List<string> GetFkRefColumns(ForeignKeyDefinition fk, TableDefinition refTable)
+        {
+            return fk.ReferencedColumns.Count > 0 ? fk.ReferencedColumns : refTable.PrimaryKey;
         }
 
         /// <summary>

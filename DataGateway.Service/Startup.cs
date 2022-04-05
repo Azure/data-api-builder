@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.AuthenticationHelpers;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
@@ -186,6 +187,25 @@ namespace Azure.DataGateway.Service
                 }
             });
 
+            services.AddSingleton<DbExceptionParserBase>(implementationFactory: (serviceProvider) =>
+            {
+                IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
+                switch (dataGatewayConfig.CurrentValue.DatabaseType)
+                {
+                    case DatabaseType.Cosmos:
+                        return null!;
+                    case DatabaseType.MsSql:
+                        return new DbExceptionParserBase();
+                    case DatabaseType.PostgreSql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<PostgresDbExceptionParser>(serviceProvider);
+                    case DatabaseType.MySql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<MySqlDbExceptionParser>(serviceProvider);
+                    default:
+                        throw new NotSupportedException(String.Format("The provided DatabaseType value: {0} is currently not supported." +
+                            "Please check the configuration file.", dataGatewayConfig.CurrentValue.DatabaseType));
+                }
+            });
+
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<DataGatewayConfig>, DataGatewayConfigPostConfiguration>());
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<DataGatewayConfig>, DataGatewayConfigValidation>());
 
@@ -196,8 +216,21 @@ namespace Azure.DataGateway.Service
 
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
-            services.AddAuthorization();
 
+            // Parameterless AddAuthentication() , i.e. No defaultScheme, allows the custom JWT middleware
+            // to manually call JwtBearerHandler.HandleAuthenticateAsync() and populate the User if successful.
+            // This also enables the custom middleware to send the AuthN failure reason in the challenge header.
+            if (dataGatewayConfig.Authentication.Provider != "EasyAuth")
+            {
+                services.AddAuthentication()
+                    .AddJwtBearer(options =>
+                    {
+                        options.Audience = dataGatewayConfig.Authentication.Audience;
+                        options.Authority = dataGatewayConfig.Authentication.Issuer;
+                    });
+            }
+
+            services.AddAuthorization();
             services.AddSingleton<IAuthorizationHandler, RequestAuthorizationHandler>();
             services.AddControllers();
         }
@@ -244,6 +277,17 @@ namespace Azure.DataGateway.Service
                 }
             });
             app.UseAuthentication();
+
+            // Conditionally add EasyAuth middleware if no JwtAuth configuration supplied.
+            if (dataGatewayConfig.CurrentValue.Authentication.Provider == "EasyAuth")
+            {
+                app.UseEasyAuthMiddleware();
+            }
+            else
+            {
+                app.UseJwtAuthenticationMiddleware();
+            }
+
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>

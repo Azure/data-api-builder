@@ -153,6 +153,63 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Test One-To-One relationship both directions
+        /// (book -> website placement, website placememnt -> book)
+        /// <summary>
+        [TestMethod]
+        public async Task OneToOneJoinQuery()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"query {
+                getBooks {
+                    id
+                    website_placement {
+                        id
+                        price
+                        book {
+                            id
+                        }
+                    }
+                }
+            }";
+
+            string msSqlQuery = @"
+                SELECT TOP 100 [table0].[id] AS [id],
+                    JSON_QUERY([table1_subq].[data]) AS [website_placement]
+                FROM [books] AS [table0]
+                OUTER APPLY (
+                    SELECT TOP 1 [table1].[id] AS [id],
+                        [table1].[price] AS [price],
+                        JSON_QUERY([table2_subq].[data]) AS [book]
+                    FROM [book_website_placements] AS [table1]
+                    OUTER APPLY (
+                        SELECT TOP 1 [table2].[id] AS [id]
+                        FROM [books] AS [table2]
+                        WHERE [table1].[book_id] = [table2].[id]
+                        ORDER BY [table2].[id]
+                        FOR JSON PATH,
+                            INCLUDE_NULL_VALUES,
+                            WITHOUT_ARRAY_WRAPPER
+                        ) AS [table2_subq]([data])
+                    WHERE [table0].[id] = [table1].[book_id]
+                    ORDER BY [table1].[id]
+                    FOR JSON PATH,
+                        INCLUDE_NULL_VALUES,
+                        WITHOUT_ARRAY_WRAPPER
+                    ) AS [table1_subq]([data])
+                WHERE 1 = 1
+                ORDER BY [table0].[id]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
         /// This deeply nests a many-to-one/one-to-many join multiple times to
         /// show that it still results in a valid query.
         /// </summary>

@@ -52,7 +52,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         /// <param name="columnName">The name of the column.</param>
         /// <param name="value">The value of the column.</param>
-        private void PopulateColumnsAndParams(string columnName, object value)
+        private void PopulateColumnsAndParams(string columnName, object? value)
         {
             InsertColumns.Add(columnName);
             string paramName;

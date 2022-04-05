@@ -696,8 +696,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public virtual async Task PutOne_Nulled_Test()
         {
-            //Performs a successful PUT insert when a nullable column
-            //is specified as null in the request body.
+            // Performs a successful PUT insert when a nullable column
+            // is specified as null in the request body.
             string requestBody = @"
             {
                 ""categoryName"": ""Fantasy"",
@@ -718,8 +718,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     expectedLocationHeader: expectedLocationHeader
                 );
 
-            //Performs a successful PUT update when a nullable column
-            //is specified as null in the request body.
+            // Performs a successful PUT update when a nullable column
+            // is specified as null in the request body.
             requestBody = @"
             {
                ""categoryName"":""Romcom"",
@@ -741,15 +741,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Tests the PatchOne functionality with a REST PUT request
+        /// Tests the PatchOne functionality with a REST PATCH request
         /// with a nullable column specified as NULL.
         /// The test should pass successfully for update as well as insert.
         /// </summary>
         [TestMethod]
         public virtual async Task PatchOne_Nulled_Test()
         {
-            //Performs a successful PATCH insert when a nullable column
-            //is specified as null in the request body.
+            // Performs a successful PATCH insert when a nullable column
+            // is specified as null in the request body.
             string requestBody = @"
             {
                 ""categoryName"": ""Fantasy"",
@@ -770,8 +770,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     expectedLocationHeader: expectedLocationHeader
                 );
 
-            //Performs a successful PATCH update when a nullable column
-            //is specified as null in the request body.
+            // Performs a successful PATCH update when a nullable column
+            // is specified as null in the request body.
             requestBody = @"
             {
                 ""piecesAvailable"": null

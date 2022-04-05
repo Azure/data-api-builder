@@ -14,6 +14,7 @@ namespace Azure.DataGateway.Service.Services
     //Define special/specific behavior related to the chosen backend database
     public class DeveloperConfig
     {
+        // Add keys from JSON to make parsing easier as classes
         DatabaseType DbType { get; }
         string ConnectionString { get; }
         Dictionary<string, object> DbSettings { get; }

@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.AspNetCore.Http;
@@ -57,9 +58,14 @@ namespace Azure.DataGateway.Service.Tests.REST
             ConfigureRestController(_restController, string.Empty);
             _restController.ControllerContext.HttpContext = httpContext;
 
+            // Setup params to invoke function with
+            string entityName = string.Empty;
+            Operation operationType = Operation.None;
+            string primaryKeyRoute = string.Empty;
+
             // Reflection to invoke a private method to unit test all code paths
             PrivateObject testObject = new(_restController);
-            IActionResult actionResult = await testObject.Invoke("HandleOperation", new object[] { string.Empty, Azure.DataGateway.Service.Models.Operation.None, string.Empty });
+            IActionResult actionResult = await testObject.Invoke("HandleOperation", new object[] { entityName, operationType, primaryKeyRoute });
             SqlTestHelper.VerifyResult(actionResult, expected, System.Net.HttpStatusCode.BadRequest, string.Empty);
         }
 

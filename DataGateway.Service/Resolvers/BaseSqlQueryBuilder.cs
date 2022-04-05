@@ -119,8 +119,10 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         protected virtual string Build(Column column, bool printDirection = true)
         {
+            // make string builder with common logic
             if (printDirection && column is OrderByColumn)
             {
+                // string builder add direction here
                 return Build((column as OrderByColumn)!);
             }
 

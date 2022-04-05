@@ -118,8 +118,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     object value = ResolveJsonElementToScalarVariable(element.GetProperty(column.ColumnName));
                     object nextValue = ResolveJsonElementToScalarVariable(nextElement.GetProperty(column.ColumnName));
 
-                    if ((value is string && !string.Equals(value, nextValue) ||
-                        value is long && !value.Equals(nextValue)))
+                    if (!value.Equals(nextValue))
                     {
                         cursorJson.Add(column.ColumnName, new object[] { ResolveJsonElementToScalarVariable(element.GetProperty(column.ColumnName)), (column as OrderByColumn)!.Direction });
                         return Base64Encode(JsonSerializer.Serialize(cursorJson));

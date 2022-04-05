@@ -5,7 +5,6 @@ using System.Net;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Microsoft.OData.UriParser;
-using static Azure.DataGateway.Service.Exceptions.DataGatewayException;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -148,7 +147,7 @@ namespace Azure.DataGateway.Service.Services
                 string columnName;
                 if (expression is null)
                 {
-                    throw new DataGatewayException(message: "OrderBy property is null.", HttpStatusCode.BadRequest, SubStatusCodes.BadRequest);
+                    throw new DataGatewayException(message: "OrderBy property is null.", HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
                 }
                 else
                 {
@@ -187,9 +186,9 @@ namespace Azure.DataGateway.Service.Services
                 case OrderByDirection.Ascending:
                     return Models.OrderByDir.Asc;
                 default:
-                    throw new DataGatewayException(message: "Invalid OrderBy",
+                    throw new DataGatewayException(message: "Invalid order specified in the OrderBy clause.",
                                                    statusCode: HttpStatusCode.BadRequest,
-                                                   subStatusCode: SubStatusCodes.BadRequest);
+                                                   subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
         }
 

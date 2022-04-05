@@ -183,19 +183,11 @@ namespace Azure.DataGateway.Service.Services
             IEnumerable<JsonElement> rootEnumerated = jsonElement.EnumerateArray();
             JsonElement lastElement = rootEnumerated.Last();
             rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
-            string after = string.Empty;
-
-            // If there are more records after we remove the extra that means limit was > 0,
-            // so nextLink will need after value
-            if (rootEnumerated.Count() > 0)
-            {
-                after = SqlPaginationUtil.MakeCursorFromJsonElement(
+            string after = SqlPaginationUtil.MakeCursorFromJsonElement(
                                element: rootEnumerated.Last(),
                                nextElement: lastElement,
                                orderByColumns: context.OrderByClauseInUrl,
                                primaryKey: GraphQLMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey);
-            }
-
             // nextLink is the URL needed to get the next page of records using the same query options
             // with $after base64 encoded for opaqueness
             string path = UriHelper.GetEncodedUrl(GetHttpContext().Request).Split('?')[0];

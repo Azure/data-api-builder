@@ -626,9 +626,9 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// Exposes the primary key of the underlying table of the structure
-        /// as a list of Column
+        /// as a list of OrderByColumn
         /// </summary>
-        public List<Column> PrimaryKeyAsColumns()
+        public List<Column> PrimaryKeyAsOrderByColumns()
         {
             if (_primaryKey == null)
             {
@@ -640,17 +640,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            return _primaryKey;
-        }
-
-        /// <summary>
-        /// Exposes the primary key of the underlying table of the structure
-        /// as a list of OrderByColumn
-        /// </summary>
-        public List<Column> PrimaryKeyAsOrderByColumns()
-        {
             List<Column> orderByList = new();
-            foreach (Column column in PrimaryKeyAsColumns())
+            foreach (Column column in _primaryKey)
             {
                 orderByList.Add(new OrderByColumn(column.TableAlias, column.ColumnName));
             }

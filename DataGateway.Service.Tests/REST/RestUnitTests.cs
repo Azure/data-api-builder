@@ -43,7 +43,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         [TestMethod]
         public async Task HandleAndExecuteNoneOperationUnitTestAsync()
         {
-            string expected = "{\"error\":{\"code\":\"UnexpectedError\",\"message\":\"While processing your request the server ran into an unexpected error.\",\"status\":500}}";
+            string expected = "{\"error\":{\"code\":\"BadRequest\",\"message\":\"This operation is not supported.\",\"status\":400}}";
             // need header to instantiate identity in controller
             HeaderDictionary headers = new();
             headers.Add("x-ms-client-principal", Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"hello\":\"world\"}")));
@@ -74,7 +74,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         /// <summary>
         /// Helper function uses reflection to invoke
         /// private methods from outside class.
-        /// Expects async method returning Task<IActionResult>.
+        /// Expects async method returning Task.
         /// </summary>
         class PrivateObject
         {

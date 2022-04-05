@@ -101,7 +101,9 @@ namespace Azure.DataGateway.Service.Services
                     RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, GraphQLMetadataProvider);
                     break;
                 default:
-                    throw new NotSupportedException("This operation is not yet supported.");
+                    throw new DataGatewayException(message: "This operation is not supported.",
+                                                   statusCode: HttpStatusCode.BadRequest,
+                                                   subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
 
             if (!string.IsNullOrEmpty(primaryKeyRoute))

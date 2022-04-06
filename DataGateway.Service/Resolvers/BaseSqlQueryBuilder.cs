@@ -70,7 +70,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (columns[i] is OrderByColumn)
                 {
                     op = i == untilIndex ? GetComparisonFromDirection((columns[i] as OrderByColumn)!.Direction) : "=";
-                    result.Append($"{Build(columns[i], printDirection: false)} {op} {values[i]}");
+                    result.Append($"{Build((columns[i] as OrderByColumn)!, printDirection: false)} {op} {values[i]}");
                 }
                 else
                 {
@@ -117,10 +117,10 @@ namespace Azure.DataGateway.Service.Resolvers
         /// and Direction is intended to be used,
         /// call Build with type OrderByColumn
         /// </summary>
-        protected virtual string Build(Column column, bool printDirection = true)
+        protected virtual string Build(Column column)
         {
             // make string builder with common logic
-            if (printDirection && column is OrderByColumn)
+            if (column is OrderByColumn)
             {
                 // string builder add direction here
                 return Build((column as OrderByColumn)!);
@@ -142,15 +142,18 @@ namespace Azure.DataGateway.Service.Resolvers
         /// If TableAlias is null
         /// {ColumnName} {direction}
         /// </summary>
-        protected virtual string Build(OrderByColumn column)
+        protected virtual string Build(OrderByColumn column, bool printDirection = true)
         {
+            StringBuilder builder = new();
             if (column.TableAlias != null)
             {
-                return QuoteIdentifier(column.TableAlias) + "." + QuoteIdentifier(column.ColumnName) + " " + column.Direction;
+                builder.Append(QuoteIdentifier(column.TableAlias) + "." + QuoteIdentifier(column.ColumnName));
+                return printDirection ? builder.Append(" " + column.Direction).ToString() : builder.ToString();
             }
             else
             {
-                return QuoteIdentifier(column.ColumnName) + " " + column.Direction;
+                builder.Append(QuoteIdentifier(column.ColumnName));
+                return printDirection ? builder.Append(" " + column.Direction).ToString() : builder.ToString();
             }
         }
 

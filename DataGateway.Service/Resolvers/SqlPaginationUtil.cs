@@ -101,11 +101,20 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
+        /// Wrapper function ensures that we call into the 4 parameter function
+        /// with both nextElement and orderByColumns default/null.
+        /// </summary>
+        public static string MakeCursorFromJsonElement(JsonElement element, List<string> primaryKey)
+        {
+            return MakeCursorFromJsonElement(element, primaryKey, nextElement: default, orderByColumns: null);
+        }
+
+        /// <summary>
         /// Extracts the columns from the json element needed for pagination, represents them as a string in json format and base64 encodes.
         /// The JSON is encoded in base64 for opaqueness. The cursor should function as a token that the user copies and pastes
         /// without needing to understand how it works.
         /// </summary>
-        public static string MakeCursorFromJsonElement(JsonElement element, List<string> primaryKey, JsonElement nextElement = default, List<Column>? orderByColumns = null)
+        public static string MakeCursorFromJsonElement(JsonElement element, List<string> primaryKey, JsonElement nextElement, List<Column>? orderByColumns)
         {
             Dictionary<string, object[]> cursorJson = new();
             // If we have orderByColumns need to check if any of these

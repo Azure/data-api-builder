@@ -27,10 +27,10 @@ namespace Azure.DataGateway.Service.Models
     /// <summary>
     /// Extends Column with direction for orderby.
     /// </summary>
-    public class OrderByColumn : Column // is a labeled column
+    public class OrderByColumn : Column
     {
         public string Direction { get; }
-        public OrderByColumn(string? tableAlias, string columnName, OrderByDir direction = OrderByDir.Asc)
+        public OrderByColumn(string tableAlias, string columnName, OrderByDir direction = OrderByDir.Asc)
             : base(tableAlias, columnName)
         {
             Direction = direction.ToString();

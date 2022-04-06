@@ -416,6 +416,47 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Tests the REST Api for Find operation using $first to
         /// limit the number of records returned and then sorting by
+        /// publisher_id in descending order, which will tie between
+        /// 2 records, then sorting by title in descending order to
+        /// break the tie.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstAndMultiColumnOrderBy()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=1&$orderby=publisher_id desc, title desc",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFirstAndMultiColumnOrderBy)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"title\":[\"US history in a nutshell\",\"Desc\"]}"))}",
+                paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned and then sorting by
+        /// publisher_id in descending order, which will tie between
+        /// 2 records, then the primary key should be used to break the tie.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstAndTiedColumnOrderBy()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=1&$orderby=publisher_id desc",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFirstAndTiedColumnOrderBy)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"id\":[3,\"Asc\"]}"))}",
+                paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned and then sorting by
         /// content, with multiple column primary key in the table.
         /// </summary>
         [TestMethod]

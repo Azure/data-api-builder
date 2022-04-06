@@ -368,6 +368,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ) AS subq"
             },
             {
+                "FindTestWithFirstAndMultiColumnOrderBy",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      ORDER BY publisher_i desc, title desc
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFirstAndTiedColumnOrderBy",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      ORDER BY publisher_i desc, id asc
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
                 "FindTestWithFirstMultiKeyPaginationAndOrderBy",
                 @"
                   SELECT JSON_OBJECT('id', id, 'content', content, 'book_id', book_id) AS data

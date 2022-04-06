@@ -192,6 +192,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTestWithFirstAndMultiColumnOrderBy",
+                $"SELECT TOP 1 * FROM { _integrationTableName } " +
+                $"ORDER BY publisher_id desc, title desc " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFirstAndTiedColumnOrderBy",
+                $"SELECT TOP 1 * FROM { _integrationTableName } " +
+                $"ORDER BY publisher_id desc, id asc " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindTestWithFirstMultiKeyPaginationAndOrderBy",
                 $"SELECT TOP 1 * FROM REVIEWS " +
                 $"WHERE 1=1 " +

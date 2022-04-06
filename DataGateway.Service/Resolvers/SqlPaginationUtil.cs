@@ -125,7 +125,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 foreach (Column column in orderByColumns)
                 {
                     object value = ResolveJsonElementToScalarVariable(element.GetProperty(column.ColumnName));
-                    object nextValue = ResolveJsonElementToScalarVariable(nextElement.GetProperty(column.ColumnName));
+                    object nextValue = ResolveJsonElementToScalarVariable(((JsonElement)nextElement!).GetProperty(column.ColumnName));
 
                     if (!value.Equals(nextValue))
                     {

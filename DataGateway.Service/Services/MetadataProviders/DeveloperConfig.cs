@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using Azure.DataGateway.Service.Configurations;
-using Azure.DataGateway.Service.Models;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -15,13 +14,11 @@ namespace Azure.DataGateway.Service.Services
     public class DeveloperConfig
     {
         // Add keys from JSON to make parsing easier as classes
-        DatabaseType DbType { get; }
-        string ConnectionString { get; }
-        Dictionary<string, object> DbSettings { get; }
+        DataSource DataSource { get; }
         IEnumerable<DataGatewayEntity> Entities { get; }
-        IEnumerable<Dictionary<string, object>> RuntimeSettings { get; }
-        Dictionary<string, JsonDocument> Relationships { get; }
-        IEnumerable<Dictionary<string, JsonDocument>> Permissions { get; }
+        RuntimeSettings RuntimeSettings { get; }
+        DataGatewayRelationships Relationships { get; }
+        DataGatewayPermissions Permissions { get; }
 
         public DeveloperConfig(string jsonString)
         {
@@ -33,5 +30,32 @@ namespace Azure.DataGateway.Service.Services
             JsonDocument devConfig = JsonSerializer.Deserialize<JsonDocument>(jsonString);
             devConfig.Equals(string.Empty);
         }
+    }
+    public class DataSource
+    {
+        DatabaseType DbType { get; }
+        string ConnectionString { get; }
+        Dictionary<string, object> DbSettings { get; }
+    }
+
+    public class DataGatewayEntity
+    {
+        string _name;
+        JsonDocument _entity;
+    }
+
+    public class RuntimeSettings
+    {
+        IEnumerable<Dictionary<string, object>> Settings { get; }
+    }
+
+    public class DataGatewayRelationships
+    {
+        Dictionary<string, JsonDocument>? Relationships { get; }
+    }
+
+    public class DataGatewayPermissions
+    {
+        IEnumerable<Dictionary<string, JsonDocument>> Permissions { get; }
     }
 }

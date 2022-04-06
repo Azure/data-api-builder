@@ -67,10 +67,10 @@ namespace Azure.DataGateway.Service.Resolvers
             for (int i = 0; i <= untilIndex; i++)
             {
                 string op;
-                if (columns[i] is OrderByColumn)
+                if (columns[i] is OrderByColumn column)
                 {
-                    op = i == untilIndex ? GetComparisonFromDirection((columns[i] as OrderByColumn)!.Direction) : "=";
-                    result.Append($"{Build((columns[i] as OrderByColumn)!, printDirection: false)} {op} {values[i]}");
+                    op = i == untilIndex ? GetComparisonFromDirection(column.Direction) : "=";
+                    result.Append($"{Build(column, printDirection: false)} {op} {values[i]}");
                 }
                 else
                 {
@@ -119,10 +119,8 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         protected virtual string Build(Column column)
         {
-            // make string builder with common logic
             if (column is OrderByColumn)
             {
-                // string builder add direction here
                 return Build((column as OrderByColumn)!);
             }
 
@@ -148,13 +146,14 @@ namespace Azure.DataGateway.Service.Resolvers
             if (column.TableAlias != null)
             {
                 builder.Append(QuoteIdentifier(column.TableAlias) + "." + QuoteIdentifier(column.ColumnName));
-                return printDirection ? builder.Append(" " + column.Direction).ToString() : builder.ToString();
+
             }
             else
             {
                 builder.Append(QuoteIdentifier(column.ColumnName));
-                return printDirection ? builder.Append(" " + column.Direction).ToString() : builder.ToString();
             }
+
+            return printDirection ? builder.Append(" " + column.Direction).ToString() : builder.ToString();
         }
 
         /// <summary>

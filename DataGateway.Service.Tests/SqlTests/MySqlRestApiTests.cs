@@ -374,7 +374,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   FROM (
                       SELECT *
                       FROM " + _integrationTableName + @"
-                      ORDER BY publisher_i desc, title desc
+                      ORDER BY publisher_id desc, title desc
                       LIMIT 1
                   ) AS subq"
             },
@@ -385,7 +385,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   FROM (
                       SELECT *
                       FROM " + _integrationTableName + @"
-                      ORDER BY publisher_i desc, id asc
+                      ORDER BY publisher_id desc, id asc
                       LIMIT 1
                   ) AS subq"
             },

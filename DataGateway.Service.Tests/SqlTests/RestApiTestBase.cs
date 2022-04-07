@@ -27,6 +27,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static readonly string _integration_NonAutoGenPK_TableName = "magazines";
         protected static readonly string _integration_AutoGenNonPK_TableName = "comics";
         protected static readonly string _Composite_NonAutoGenPK = "stocks";
+        protected static readonly string _integrationTableHasColumnWithSpace = "brokers";
 
         public abstract string GetQuery(string key);
 
@@ -1705,7 +1706,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: "OrderBy property is null.",
+                expectedErrorMessage: "OrderBy property is not supported.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned and then sorting by
+        /// ID Number, which will throw a DataGatewayException with
+        /// a message indicating this property is not supported.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstAndSpacedColumnOrderBy()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=1&$orderby='ID Number'",
+                entity: _integrationTableHasColumnWithSpace,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "OrderBy property is not supported.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

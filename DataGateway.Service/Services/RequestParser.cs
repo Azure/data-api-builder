@@ -147,7 +147,7 @@ namespace Azure.DataGateway.Service.Services
                 string columnName;
                 if (expression is null)
                 {
-                    throw new DataGatewayException(message: "OrderBy property is null.", HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
+                    throw new DataGatewayException(message: "OrderBy property is not supported.", HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
                 }
                 else
                 {

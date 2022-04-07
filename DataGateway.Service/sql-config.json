@@ -142,7 +142,7 @@
         }
       },
       "stocks": {
-         "HttpVerbs": {
+        "HttpVerbs": {
           "GET": {
             "AuthorizationType": "Anonymous"
           },
@@ -276,7 +276,13 @@
             "Authorization": "Authenticated"
           }
         }
+      },
+      "brokers": {
+        "HttpVerbs": {
+          "GET": {
+            "AuthorizationType": "Anonymous"
+          }
+        }
       }
     }
-  }
 }

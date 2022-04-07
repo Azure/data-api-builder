@@ -30,7 +30,7 @@ namespace Azure.DataGateway.Service.Models
     public class OrderByColumn : Column
     {
         public string Direction { get; }
-        public OrderByColumn(string tableAlias, string columnName, OrderByDir direction = OrderByDir.Asc)
+        public OrderByColumn(string? tableAlias, string columnName, OrderByDir direction = OrderByDir.Asc)
             : base(tableAlias, columnName)
         {
             Direction = direction.ToString();
@@ -221,14 +221,14 @@ namespace Azure.DataGateway.Service.Models
         /// List of columns used to generate the
         /// keyset pagination predicate
         /// </summary>
-        public List<Column> Columns { get; }
+        public List<OrderByColumn> Columns { get; }
         /// <summary>
         /// List of values to compare the primary key with
         /// to create the pagination predicate
         /// </summary>
         public List<string> Values { get; }
 
-        public KeysetPaginationPredicate(List<Column> columns, List<string> values)
+        public KeysetPaginationPredicate(List<OrderByColumn> columns, List<string> values)
         {
             Columns = columns;
             Values = values;

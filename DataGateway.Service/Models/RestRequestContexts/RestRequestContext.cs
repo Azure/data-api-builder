@@ -41,10 +41,10 @@ namespace Azure.DataGateway.Service.Models
         public virtual FilterClause? FilterClauseInUrl { get; set; }
 
         /// <summary>
-        /// List of columns which represent the OrderByClause from the URL.
+        /// List of OrderBy Columns which represent the OrderByClause from the URL.
         /// Based on the operation type, this property may or may not be populated.
         /// </summary>
-        public virtual List<Column>? OrderByClauseInUrl { get; set; }
+        public virtual List<OrderByColumn>? OrderByClauseInUrl { get; set; }
 
         /// <summary>
         /// Dictionary of field names and their values given in the request body.

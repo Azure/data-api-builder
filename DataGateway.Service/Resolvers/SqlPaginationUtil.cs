@@ -114,7 +114,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// The JSON is encoded in base64 for opaqueness. The cursor should function as a token that the user copies and pastes
         /// without needing to understand how it works.
         /// </summary>
-        public static string MakeCursorFromJsonElement(JsonElement element, List<string> primaryKey, JsonElement? nextElement, List<Column>? orderByColumns)
+        public static string MakeCursorFromJsonElement(JsonElement element, List<string> primaryKey, JsonElement? nextElement, List<OrderByColumn>? orderByColumns)
         {
             Dictionary<string, object[]> cursorJson = new();
             // If we have orderByColumns need to check if any of these
@@ -122,14 +122,14 @@ namespace Azure.DataGateway.Service.Resolvers
             // in which case the first non-tie will determine pagination order
             if (orderByColumns is not null)
             {
-                foreach (Column column in orderByColumns)
+                foreach (OrderByColumn column in orderByColumns)
                 {
                     object value = ResolveJsonElementToScalarVariable(element.GetProperty(column.ColumnName));
                     object nextValue = ResolveJsonElementToScalarVariable(((JsonElement)nextElement!).GetProperty(column.ColumnName));
 
                     if (!value.Equals(nextValue))
                     {
-                        cursorJson.Add(column.ColumnName, new object[] { ResolveJsonElementToScalarVariable(element.GetProperty(column.ColumnName)), (column as OrderByColumn)!.Direction });
+                        cursorJson.Add(column.ColumnName, new object[] { ResolveJsonElementToScalarVariable(element.GetProperty(column.ColumnName)), column.Direction });
                         return Base64Encode(JsonSerializer.Serialize(cursorJson));
                     }
                 }

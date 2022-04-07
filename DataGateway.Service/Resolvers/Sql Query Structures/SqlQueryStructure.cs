@@ -45,7 +45,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Columns to use for sorting.
         /// </summary>
-        public List<Column>? OrderByColumns { get; set; }
+        public List<OrderByColumn>? OrderByColumns { get; set; }
 
         /// <summary>
         /// Hold the pagination metadata for the query
@@ -355,7 +355,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 return;
             }
 
-            List<Column> columns = new();
+            List<OrderByColumn> columns = new();
             List<string> values = new();
             foreach (KeyValuePair<string, object[]> keyValuePair in afterJsonValues)
             {
@@ -684,7 +684,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Exposes the primary key of the underlying table of the structure
         /// as a list of OrderByColumn
         /// </summary>
-        public List<Column> PrimaryKeyAsOrderByColumns()
+        public List<OrderByColumn> PrimaryKeyAsOrderByColumns()
         {
             if (_primaryKey == null)
             {
@@ -696,7 +696,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            List<Column> orderByList = new();
+            List<OrderByColumn> orderByList = new();
             foreach (Column column in _primaryKey)
             {
                 orderByList.Add(new OrderByColumn(column.TableAlias, column.ColumnName));

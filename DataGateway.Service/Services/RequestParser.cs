@@ -124,7 +124,7 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="node">The OrderByClause.</param>
         /// <param name="tableAlias">The name of the Table the columns are from.</param>
         /// <returns>A List<Column> where the elements are OrderByColumns.</Column></returns>
-        private static List<Column>? GenerateOrderByList(OrderByClause node, string tableAlias, List<string> primaryKeys)
+        private static List<OrderByColumn>? GenerateOrderByList(OrderByClause node, string tableAlias, List<string> primaryKeys)
         {
             // Create set of primary key columns
             // we always have the primary keys in
@@ -136,7 +136,7 @@ namespace Azure.DataGateway.Service.Services
                 remainingKeys.Add(key);
             }
 
-            List<Column> orderByList = new();
+            List<OrderByColumn> orderByList = new();
             // OrderBy AST is in the form of a linked list
             // so we traverse by calling node.ThenBy until
             // node is null

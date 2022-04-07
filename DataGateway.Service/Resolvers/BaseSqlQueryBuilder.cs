@@ -61,22 +61,13 @@ namespace Azure.DataGateway.Service.Resolvers
         /// untilIndex: 2
         /// generate <c>a = A AND b = B AND c > C</c>
         /// </summary>
-        private string MakePaginationInequality(List<Column> columns, List<string> values, int untilIndex)
+        private string MakePaginationInequality(List<OrderByColumn> columns, List<string> values, int untilIndex)
         {
             StringBuilder result = new();
             for (int i = 0; i <= untilIndex; i++)
             {
-                string op;
-                if (columns[i] is OrderByColumn column)
-                {
-                    op = i == untilIndex ? GetComparisonFromDirection(column.Direction) : "=";
-                    result.Append($"{Build(column, printDirection: false)} {op} {values[i]}");
-                }
-                else
-                {
-                    op = i == untilIndex ? ">" : "=";
-                    result.Append($"{Build(columns[i])} {op} {values[i]}");
-                }
+                string op = i == untilIndex ? GetComparisonFromDirection(columns[i].Direction) : "=";
+                result.Append($"{Build(columns[i], printDirection: false)} {op} {values[i]}");
 
                 if (i < untilIndex)
                 {
@@ -119,11 +110,6 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         protected virtual string Build(Column column)
         {
-            if (column is OrderByColumn)
-            {
-                return Build((column as OrderByColumn)!);
-            }
-
             if (column.TableAlias != null)
             {
                 return QuoteIdentifier(column.TableAlias) + "." + QuoteIdentifier(column.ColumnName);
@@ -135,7 +121,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Build column as
+        /// Build orderby column as
         /// {TableAlias}.{ColumnName} {direction}
         /// If TableAlias is null
         /// {ColumnName} {direction}
@@ -143,16 +129,7 @@ namespace Azure.DataGateway.Service.Resolvers
         protected virtual string Build(OrderByColumn column, bool printDirection = true)
         {
             StringBuilder builder = new();
-            if (column.TableAlias != null)
-            {
-                builder.Append(QuoteIdentifier(column.TableAlias) + "." + QuoteIdentifier(column.ColumnName));
-
-            }
-            else
-            {
-                builder.Append(QuoteIdentifier(column.ColumnName));
-            }
-
+            builder.Append(Build(column as Column));
             return printDirection ? builder.Append(" " + column.Direction).ToString() : builder.ToString();
         }
 
@@ -177,6 +154,14 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Build each labelled column and join by ", " separator
         /// </summary>
         protected string Build(List<LabelledColumn> columns)
+        {
+            return string.Join(", ", columns.Select(c => Build(c)));
+        }
+
+        /// <summary>
+        /// Build each OrderByColumn and join by ", " separator
+        /// </summary>
+        protected string Build(List<OrderByColumn> columns)
         {
             return string.Join(", ", columns.Select(c => Build(c)));
         }

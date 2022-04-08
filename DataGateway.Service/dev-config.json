@@ -1,8 +1,20 @@
 {
   "$schema": "hawaii.schema.json",
   "data-source": {
-    "database-type": "mssql",
-    "connection-string": ""
+    "databaseType": "mssql",
+    "connectionString": ""
+  },
+  "cosmos": {
+    "set-session-context": false
+  },
+  "mssql": {
+    "set-session-context": true
+  },
+  "postgressql": {
+    "set-session-context": false
+  },
+  "mysql": {
+    "set-session-context": false
   },
   "entities": {
     "todo": {
@@ -13,6 +25,59 @@
           "actions": [ "create", "read", "update", "delete" ]
         }
       ]
+    },
+    "todo2": {
+      "source": "s002.todo",
+      "permissions": [
+        {
+          "role": "public",
+          "actions": [ "read" ]
+        }
+      ]
     }
-  }
+  },
+  "runtime": {
+    "rest": {
+      "enabled": true,
+      "path": "/api"
+    },
+    "graphql": {
+      "enabled": true,
+      "path": "/graphql",
+      "allow-introspection": true
+    },
+    "host": {
+      "cors": {
+        "origins": [ "1", "2" ],
+        "of": "string",
+        "credentials": true
+      },
+      "authentication": {
+        "jwt": {
+          "audience": "",
+          "authority": "",
+          "issuer": "",
+          "issuer-key": ""
+        }
+      }
+    }
+  },
+  "relationships": {
+    "relationship-name": {
+      "cardinality": "one | many",
+      "target.entity": "entity-name",
+      "source.fields": [ "source-field1", "source-field2" ],
+      "target.fields": [ "target-field1", "target-field2" ],
+      "linking.[entity]": "db-object-name",
+      "linking.source.fields": [ "source-field1", "source-field2" ],
+      "linking.target.fields": [ "target-field1", "target-field2" ]
+    }
+  },
+  "permissions": [
+    {
+      "role": "role...",
+      "actions": [ "actions..." ],
+      "policies": [ "policies..." ]
+    }
+  ]
 }

@@ -493,5 +493,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             throw new NotImplementedException();
         }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

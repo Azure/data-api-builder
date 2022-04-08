@@ -538,6 +538,27 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expectedStatusCode: HttpStatusCode.NoContent,
                 expectedLocationHeader: expectedLocationHeader
                 );
+
+            // Perform a PUT UPDATE which nulls out a missing field from the request body
+            // which is nullable.
+            requestBody = @"
+            {
+                ""categoryName"":""History"",
+                ""piecesRequired"":""5""
+            }";
+
+            expectedLocationHeader = $"categoryid/1/pieceid/1";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: expectedLocationHeader,
+                queryString: null,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: GetQuery("PutOne_Update_NullOutMissingField_Test"),
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedLocationHeader: expectedLocationHeader
+            );
         }
 
         /// <summary>
@@ -1083,6 +1104,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public virtual async Task PutOneWithNonNullableFieldMissingInJsonBodyTest()
         {
+            // Behaviour expected when a non-nullable and non-default field
+            // is missing from request body.
             string requestBody = @"
             {
                 ""piecesRequired"":""6""
@@ -1099,6 +1122,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expectedErrorMessage: "Invalid request body. Missing field in body: categoryName.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
+            );
+        }
+
+        [TestMethod]
+        public virtual async Task PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest()
+        {
+            // Behaviour expected when a non-nullable but default field
+            // is missing from request body.
+            string requestBody = @"
+            {
+                ""categoryName"":""comics""
+            }";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1",
+                queryString: string.Empty,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
+                expectedStatusCode: HttpStatusCode.InternalServerError,
+                expectedSubStatusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
             );
         }
 

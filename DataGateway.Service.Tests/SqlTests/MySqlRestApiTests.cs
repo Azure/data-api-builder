@@ -1,7 +1,11 @@
+using System.Net;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Services;
+using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Resolvers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
@@ -442,6 +446,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "PutOne_Update_NullOutMissingField_Test",
+                @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
+                                        'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK + @"
+                        WHERE categoryid = 1 AND pieceid = 1 AND categoryName ='History' AND piecesAvailable is NULL
+                        AND piecesRequired = 5
+                    ) AS subq
+                "
+            },
+            {
                 "PutOne_Insert_Test",
                 @"
                     SELECT JSON_OBJECT('id', id, 'title', title, 'issueNumber', issueNumber ) AS data
@@ -634,6 +651,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public override string GetQuery(string key)
         {
             return _queryMap[key];
+        }
+
+        [TestMethod]
+        public override async Task PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest()
+        {
+            string requestBody = @"
+            {
+                ""categoryName"":""comics""
+            }";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1",
+                queryString: string.Empty,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: MySqlDbExceptionParser.INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE,
+                expectedStatusCode: HttpStatusCode.Conflict,
+                expectedSubStatusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
+            );
         }
     }
 }

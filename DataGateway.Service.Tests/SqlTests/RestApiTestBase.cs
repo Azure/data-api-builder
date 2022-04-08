@@ -877,6 +877,90 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Tests the REST Api for Find operation using a keyword
+        /// of 'startswith' which is not currently supported, verify
+        /// we throw an internal server error.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithUnsupportedStartsWithFilterKeyword()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=startswith(title, 'Awesome') eq true",
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "While processing your request the server ran into an unexpected error.",
+                expectedStatusCode: HttpStatusCode.InternalServerError,
+                expectedSubStatusCode: "UnexpectedError"
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using a keyword
+        /// of 'endswith' which is not currently supported, verify
+        /// we throw an internal server error.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithUnsupportedEndsWithFilterKeyword()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=endswith(title, 'book') eq true",
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "While processing your request the server ran into an unexpected error.",
+                expectedStatusCode: HttpStatusCode.InternalServerError,
+                expectedSubStatusCode: "UnexpectedError"
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using a keyword
+        /// of 'indexof' which is not currently supported, verify
+        /// we throw an internal server error.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithUnsupportedIndexOfFilterKeyword()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=indexof(title, 'Awe') eq 0",
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "While processing your request the server ran into an unexpected error.",
+                expectedStatusCode: HttpStatusCode.InternalServerError,
+                expectedSubStatusCode: "UnexpectedError"
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using a keyword
+        /// of 'length' which is not currently supported, verify
+        /// we throw an internal server error.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithUnsupportedLengthFilterKeyword()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=length(title) gt 5",
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "While processing your request the server ran into an unexpected error.",
+                expectedStatusCode: HttpStatusCode.InternalServerError,
+                expectedSubStatusCode: "UnexpectedError"
+            );
+        }
+
+        /// <summary>
         /// Tests the InsertOne functionality with disallowed URL composition: contains Query String.
         /// </summary>
         [TestMethod]

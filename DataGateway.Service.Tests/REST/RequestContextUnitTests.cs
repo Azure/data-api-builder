@@ -12,7 +12,7 @@ namespace Azure.DataGateway.Service.Tests.REST
     /// Context classes that are not easily tested through
     /// integration testing.
     /// </summary>
-    [TestClass]
+    [TestClass, TestCategory(TestCategory.MSSQL)]
     public class RequestContextUnitTests
     {
         /// <summary>

@@ -39,5 +39,19 @@ namespace Azure.DataGateway.Service.Tests.REST
             }
         }
 
+        /// <summary>
+        /// Verify that if a payload does not Deserialize
+        /// when constructing an InsertRequestContext
+        /// </summary>
+        [TestMethod]
+        public void EmptyInsertPayloadTest()
+        {
+            // null will be instantiated as the empty string which will
+            // mean an empty FieldValuePairsInBody
+            JsonElement payload = JsonSerializer.Deserialize<JsonElement>("null");
+            OperationAuthorizationRequirement verb = new();
+            InsertRequestContext context = new(entityName: string.Empty, insertPayloadRoot: payload, httpVerb: verb, operationType: Operation.Insert);
+            Assert.AreEqual(context.FieldValuePairsInBody.Count, 0);
+        }
     }
 }

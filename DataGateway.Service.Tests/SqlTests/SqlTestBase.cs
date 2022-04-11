@@ -277,16 +277,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Helper function encodes the query string into the correct
+        /// Helper function encodes the url with query string into the correct
         /// format. We utilize the toString() of the HttpValueCollection
         /// which is used by the NameValueCollection returned from
         /// ParseQueryString to avoid writing this ourselves.
         /// </summary>
-        /// <param name="baseUrl">Url to be encoded as query string.</param>
+        /// <param name="fullUrl">Url to be encoded as query string.</param>
         /// <returns>query string encoded url.</returns>
-        private static string EncodeQueryString(string baseUrl)
+        private static string EncodeQueryString(string fullUrl)
         {
-            return HttpUtility.ParseQueryString(baseUrl).ToString();
+            return HttpUtility.ParseQueryString(fullUrl).ToString();
         }
 
         /// <summary>

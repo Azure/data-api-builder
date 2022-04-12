@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Text.Json;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -10,7 +9,6 @@ using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using Microsoft.OData.UriParser;
-using static Azure.DataGateway.Service.Exceptions.DataGatewayException;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -359,34 +357,14 @@ namespace Azure.DataGateway.Service.Resolvers
             List<string> values = new();
             foreach (KeyValuePair<string, object[]> keyValuePair in afterJsonValues)
             {
-                // direction is always a string
-                string direction = ((JsonElement)keyValuePair.Value[1]).GetString()!;
-                columns.Add(new OrderByColumn(TableAlias, keyValuePair.Key, GetDirection(direction)));
+                // direction is always an OrderByDir
+                OrderByDir direction = (OrderByDir)keyValuePair.Value[1];
+                columns.Add(new OrderByColumn(TableAlias, keyValuePair.Key, direction));
                 // safe to save ToString(), we get correct typing for column later
                 values.Add(keyValuePair.Value[0].ToString()!);
             }
 
             PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(columns, values);
-        }
-
-        /// <summary>
-        /// Helper function converts a string direction to OrderByDir
-        /// </summary>
-        /// <param name="direction">The string direction to convert.</param>
-        /// <returns>OrderByDir representing the direction.</returns>
-        private static Models.OrderByDir GetDirection(string direction)
-        {
-            switch (direction)
-            {
-                case "Asc":
-                    return Models.OrderByDir.Asc;
-                case "Desc":
-                    return Models.OrderByDir.Desc;
-                default:
-                    throw new DataGatewayException(message: $"Unsupported sorting direction for pagination: {direction}",
-                                                   statusCode: HttpStatusCode.BadRequest,
-                                                   subStatusCode: SubStatusCodes.BadRequest);
-            }
         }
 
         /// <summary>

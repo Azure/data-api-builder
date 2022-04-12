@@ -137,7 +137,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             foreach (string column in primaryKey)
             {
-                cursorJson.Add(column, new object[] { ResolveJsonElementToScalarVariable(element.GetProperty(column)), "Asc" });
+                cursorJson.Add(column, new object[] { ResolveJsonElementToScalarVariable(element.GetProperty(column)), OrderByDir.Asc });
             }
 
             return Base64Encode(JsonSerializer.Serialize(cursorJson));
@@ -167,8 +167,6 @@ namespace Azure.DataGateway.Service.Resolvers
         public static Dictionary<string, object[]> ParseAfterFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
         {
             Dictionary<string, object[]> after = new();
-            //List<string> primaryKey = paginationMetadata.Structure!.PrimaryKey();
-
             try
             {
                 afterJsonString = Base64Decode(afterJsonString);

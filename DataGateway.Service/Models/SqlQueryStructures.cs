@@ -29,11 +29,11 @@ namespace Azure.DataGateway.Service.Models
     /// </summary>
     public class OrderByColumn : Column
     {
-        public string Direction { get; }
+        public OrderByDir Direction { get; }
         public OrderByColumn(string? tableAlias, string columnName, OrderByDir direction = OrderByDir.Asc)
             : base(tableAlias, columnName)
         {
-            Direction = direction.ToString();
+            Direction = direction;
         }
     }
 

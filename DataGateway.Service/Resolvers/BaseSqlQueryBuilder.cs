@@ -84,13 +84,13 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         /// <param name="direction">String represents direction.</param>
         /// <returns>Correct comparison operator.</returns>
-        private static string GetComparisonFromDirection(string direction)
+        private static string GetComparisonFromDirection(OrderByDir direction)
         {
             switch (direction)
             {
-                case "Asc":
+                case OrderByDir.Asc:
                     return ">";
-                case "Desc":
+                case OrderByDir.Desc:
                     return "<";
                 default:
                     throw new DataGatewayException(message: $"Invalid sorting direction for pagination: {direction}",

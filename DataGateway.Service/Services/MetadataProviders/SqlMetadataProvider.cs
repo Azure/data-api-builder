@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Resolvers;
 using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Services
@@ -20,18 +21,29 @@ namespace Azure.DataGateway.Service.Services
         where DataAdapterT : DbDataAdapter, new()
         where CommandT : DbCommand, new()
     {
+        // nullable since Mock tests do not need it.
+        private readonly IQueryExecutor? _queryExecutor;
+
         private const int NUMBER_OF_RESTRICTIONS = 4;
 
         protected const string TABLE_TYPE = "BASE TABLE";
 
         protected string ConnectionString { get; init; }
 
+        // nullable since Mock tests don't need this.
+        protected IQueryBuilder? SqlQueryBuilder { get; init; }
+
         protected DataSet EntitiesDataSet { get; init; }
 
-        public SqlMetadataProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
+        public SqlMetadataProvider(
+            IOptions<DataGatewayConfig> dataGatewayConfig,
+            IQueryExecutor queryExecutor,
+            IQueryBuilder queryBuilder)
         {
             ConnectionString = dataGatewayConfig.Value.DatabaseConnection.ConnectionString;
             EntitiesDataSet = new();
+            SqlQueryBuilder = queryBuilder;
+            _queryExecutor = queryExecutor;
         }
 
         /// <summary>
@@ -76,6 +88,11 @@ namespace Azure.DataGateway.Service.Services
             PopulateColumnDefinitionWithHasDefault(
                 tableDefinition,
                 columnsInTable);
+
+            await PopulateForeignKeyDefinitionAsync(
+                schemaName,
+                tableName,
+                tableDefinition);
         }
 
         /// </inheritdoc>
@@ -174,6 +191,68 @@ namespace Azure.DataGateway.Service.Services
                     }
                 }
             }
+        }
+
+        protected async Task PopulateForeignKeyDefinitionAsync(
+            string schemaName,
+            string tableName,
+            TableDefinition tableDefinition)
+        {
+            string queryForForeignKeyInfo = GetForeignKeyQuery(schemaName, tableName);
+            Dictionary<string, object?> parameters =
+                GetForeignKeyQueryParams(schemaName, tableName);
+            using DbDataReader reader =
+                await _queryExecutor!.ExecuteQueryAsync(queryForForeignKeyInfo, parameters);
+
+            Dictionary<string, object?>? foreignKeyInfo =
+                await _queryExecutor!.ExtractRowFromDbDataReader(reader);
+
+            while (foreignKeyInfo != null)
+            {
+                string foreignKeyName = (string)foreignKeyInfo[nameof(ForeignKeyDefinition)]!;
+                ForeignKeyDefinition? foreignKeyDefinition;
+                if (!tableDefinition.ForeignKeys.TryGetValue(foreignKeyName, out foreignKeyDefinition))
+                {
+                    foreignKeyDefinition = new();
+                    foreignKeyDefinition.ReferencedTable =
+                        (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencedTable)]!;
+                }
+
+                foreignKeyDefinition.ReferencedColumns.Add(
+                    (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencedColumns)]!);
+                foreignKeyDefinition.ReferencingColumns.Add(
+                    (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencingColumns)]!);
+
+                foreignKeyInfo = await _queryExecutor.ExtractRowFromDbDataReader(reader);
+            }
+        }
+
+        /// <summary>
+        /// Invokes the underlying query builder to
+        /// build the query useful for retrieving the foreign key information.
+        /// </summary>
+        /// <param name="schemaName"></param>
+        /// <param name="tableName"></param>
+        /// <returns>The Sql query to use.</returns>
+        protected virtual string GetForeignKeyQuery(string schemaName, string tableName)
+        {
+            return SqlQueryBuilder!.BuildForeignKeyQuery(schemaName, tableName);
+        }
+
+        /// <summary>
+        /// Builds the dictionary of parameters and their values required for the
+        /// foreign key query.
+        /// </summary>
+        /// <param name="schemaName"></param>
+        /// <param name="tableName"></param>
+        /// <returns>The dictionary populated with parameters.</returns>
+        protected virtual Dictionary<string, object?>
+            GetForeignKeyQueryParams(string schemaName, string tableName)
+        {
+            Dictionary<string, object?> parameters = new();
+            parameters.Add(nameof(schemaName), schemaName);
+            parameters.Add(nameof(tableName), tableName);
+            return parameters;
         }
     }
 }

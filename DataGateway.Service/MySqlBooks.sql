@@ -5,8 +5,9 @@ DROP TABLE IF EXISTS book_website_placements;
 DROP TABLE IF EXISTS books;
 DROP TABLE IF EXISTS publishers;
 DROP TABLE IF EXISTS magazines;
-DROP TABLE IF EXISTS comics;
+DROP TABLE IF EXISTS stocks_price;
 DROP TABLE IF EXISTS stocks;
+DROP TABLE IF EXISTS comics;
 
 CREATE TABLE publishers(
     id bigint AUTO_INCREMENT PRIMARY KEY,
@@ -54,16 +55,25 @@ CREATE TABLE magazines(
 CREATE TABLE comics(
     id bigint PRIMARY KEY,
     title text NOT NULL,
-    volume bigint AUTO_INCREMENT UNIQUE KEY
+    volume bigint AUTO_INCREMENT UNIQUE KEY,
+    categoryName varchar(100) NOT NULL UNIQUE
 );
 
 CREATE TABLE stocks(
     categoryid bigint NOT NULL,
     pieceid bigint NOT NULL,
-    categoryName text NOT NULL,
+    categoryName varchar(100) NOT NULL,
     piecesAvailable bigint DEFAULT (0),
     piecesRequired bigint DEFAULT (0) NOT NULL,
     PRIMARY KEY(categoryid,pieceid)
+);
+
+CREATE TABLE stocks_price(
+    categoryid bigint NOT NULL,
+    pieceid bigint NOT NULL,
+    instant timestamp,
+    price float,
+    PRIMARY KEY(categoryid, pieceid, instant)
 );
 
 ALTER TABLE books
@@ -96,6 +106,18 @@ FOREIGN KEY (author_id)
 REFERENCES authors (id)
 ON DELETE CASCADE;
 
+ALTER TABLE stocks
+ADD CONSTRAINT stocks_comics_fk
+FOREIGN KEY (categoryName)
+REFERENCES comics (categoryName)
+ON DELETE CASCADE;
+
+ALTER TABLE stocks_price
+ADD CONSTRAINT stocks_price_stocks_fk
+FOREIGN KEY (categoryid, pieceid)
+REFERENCES stocks (categoryid, pieceid)
+ON DELETE CASCADE;
+
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd');
 INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02');
 INSERT INTO books(id, title, publisher_id) VALUES (1, 'Awesome book', 1234), (2, 'Also Awesome book', 1234), (3, 'Great wall of china explained', 2345), (4, 'US history in a nutshell', 2345), (5, 'Chernobyl Diaries', 2323), (6, 'The Palace Door', 2324), (7, 'The Groovy Bar', 2324), (8, 'Time to Eat', 2324);
@@ -112,4 +134,3 @@ ALTER TABLE publishers AUTO_INCREMENT = 5001;
 ALTER TABLE authors AUTO_INCREMENT = 5001;
 ALTER TABLE reviews AUTO_INCREMENT = 5001;
 ALTER TABLE comics AUTO_INCREMENT = 5001
-

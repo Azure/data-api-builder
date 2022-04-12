@@ -145,6 +145,29 @@ namespace Azure.DataGateway.Service.Resolvers
             }
         }
 
+        /// <inheritdoc />
+        /// <remarks>For MySql, the table name is only a 2 part name.
+        /// The schema name passed here is actually the database
+        /// from the connection string and that is compared against the SCHEMA_NAME
+        /// in the view KEY_COLUMN_USAGE.
+        /// </remarks>
+        public override string BuildForeignKeyQuery(string databaseName, string tableName)
+        {
+            return $"" +
+                $"SELECT " +
+                    $"CONSTRAINT_NAME {QuoteIdentifier("Foreign Key Name")}" +
+                    $"COLUMN_NAME {QuoteIdentifier("Referencing Column")}, " +
+                    $"REFERENCED_TABLE_NAME {QuoteIdentifier("Referenced Table")}, " +
+                    $"REFERENCED_COLUMN_NAME {QuoteIdentifier("Referenced Column")} " +
+                $"FROM " +
+                    $"INFORMATION_SCHEMA.KEY_COLUMN_USAGE " +
+                $"WHERE " +
+                    $"SCHEMA_NAME = {QuoteIdentifier($"@{nameof(databaseName)}")} " +
+                    $"AND TABLE_NAME = {QuoteIdentifier($"@{nameof(tableName)}")} " +
+                    $"AND REFERENCED_TABLE_NAME IS NOT NULL " +
+                    $"AND REFERENCED_COLUMN_NAME IS NOT NULL;";
+        }
+
         /// <summary>
         /// Makes the query segments to store PK during an update
         /// </summary>

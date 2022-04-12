@@ -35,5 +35,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// query.
         /// </summary>
         public string Build(SqlUpsertQueryStructure structure);
+
+        /// <summary>
+        /// Builds the query to obtain foreign key information for the given
+        /// schema, table name.
+        /// </summary>
+        public string BuildForeignKeyQuery(string schemaName, string tableName);
     }
 }

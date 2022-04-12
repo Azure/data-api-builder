@@ -259,5 +259,32 @@ namespace Azure.DataGateway.Service.Resolvers
 
             return string.Join(" AND ", validPredicates);
         }
+
+        /// <inheritdoc />
+        public virtual string BuildForeignKeyQuery(string schemaName, string tableName)
+        {
+            return $"" +
+                $"SELECT " +
+                    $"ReferentialConstraints.CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))} " +
+                    $"ReferencingColumnUsage.COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencingColumns))}, " +
+                    $"ReferencedColumnUsage.TABLE_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedTable))}, " +
+                    $"ReferencedColumnUsage.COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))} " +
+                $"FROM " +
+                    $"INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS ReferentialConstraints " +
+                    $"INNER JOIN " +
+                    $"INFORMATION_SCHEMA.KEY_COLUMN_USAGE ReferencingColumnUsage " +
+                        $"ON ReferentialConstraints.CONSTRAINT_CATALOG = ReferencingColumnUsage.CONSTRAINT_CATALOG " +
+                        $"AND ReferentialConstraints.CONSTRAINT_SCHEMA = ReferencingColumnUsage.CONSTRAINT_SCHEMA " +
+                        $"AND ReferentialConstraints.CONSTRAINT_NAME = ReferencingColumnUsage.CONSTRAINT_NAME " +
+                    $"INNER JOIN " +
+                        $"INFORMATION_SCHEMA.KEY_COLUMN_USAGE ReferencedColumnUsage " +
+                        $"ON ReferentialConstraints.UNIQUE_CONSTRAINT_CATALOG = ReferencedColumnUsage.CONSTRAINT_CATALOG " +
+                        $"AND ReferentialConstraints.UNIQUE_CONSTRAINT_SCHEMA = ReferencedColumnUsage.CONSTRAINT_SCHEMA " +
+                        $"AND ReferentialConstraints.UNIQUE_CONSTRAINT_NAME = ReferencedColumnUsage.CONSTRAINT_NAME " +
+                $"WHERE " +
+                        $"ReferencingColumnUsage.SCHEMA_NAME = {QuoteIdentifier($"@{nameof(schemaName)}")} " +
+                        $"AND ReferencingColumnUsage.TABLE_NAME = {QuoteIdentifier($"@{nameof(tableName)}")} " +
+                        $"AND ReferencingColumnUsage.ORDINAL_POSITION = ReferencedColumnUsage.ORDINAL_POSITION;";
+        }
     }
 }

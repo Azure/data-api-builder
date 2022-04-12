@@ -34,7 +34,11 @@ namespace Azure.DataGateway.Service.Configurations
                 "Database": "",
                 "Container": "",
                 "ConnectionString": ""
-              }
+              },
+            "Authentication": {
+                "Provider":"",
+                "Audience":"",
+                "Issuer":""
             }
          */
         public DatabaseType? DatabaseType { get; set; }
@@ -44,6 +48,7 @@ namespace Azure.DataGateway.Service.Configurations
         public string? ResolverConfigFile { get; set; }
         public string? ResolverConfig { get; set; }
         public string? GraphQLSchema { get; set; }
+        public AuthenticationProviderConfig Authentication { get; set; } = null!;
     }
 
     /// <summary>
@@ -57,6 +62,17 @@ namespace Azure.DataGateway.Service.Configurations
         public string Database { get; set; } = null!;
         public string Container { get; set; } = null!;
         public string ConnectionString { get; set; } = null!;
+    }
+
+    /// <summary>
+    /// Jwt Auth Provider Config
+    /// </summary>
+    public class AuthenticationProviderConfig
+    {
+        //Type is Identity Provider such as AzureAD. If set to EasyAuth, no Audience, or issuer expected.
+        public string Provider { get; set; } = null!;
+        public string? Audience { get; set; }
+        public string? Issuer { get; set; }
     }
 
     /// <summary>
@@ -115,6 +131,31 @@ namespace Azure.DataGateway.Service.Configurations
 
                 builder.IntegratedSecurity = true;
                 options.DatabaseConnection.ConnectionString = builder.ToString();
+            }
+
+            ValidateAuthenticationConfig(options);
+        }
+
+        private static void ValidateAuthenticationConfig(DataGatewayConfig options)
+        {
+            bool isAuthenticationTypeSet = !string.IsNullOrEmpty(options.Authentication.Provider);
+            bool isAudienceSet = !string.IsNullOrEmpty(options.Authentication.Audience);
+            bool isIssuerSet = !string.IsNullOrEmpty(options.Authentication.Issuer);
+            if (!isAuthenticationTypeSet)
+            {
+                throw new NotSupportedException("Authentication.Provider must be defined.");
+            }
+            else
+            {
+                if (options.Authentication.Provider != "EasyAuth" && (!isAudienceSet || !isIssuerSet))
+                {
+                    throw new NotSupportedException("Audience and Issuer must be set when not using EasyAuth.");
+                }
+
+                if (options.Authentication.Provider == "EasyAuth" && (isAudienceSet || isIssuerSet))
+                {
+                    throw new NotSupportedException("Audience and Issuer should not be set and are not used with EasyAuth.");
+                }
             }
         }
     }

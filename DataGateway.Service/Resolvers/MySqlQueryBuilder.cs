@@ -182,6 +182,22 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
+            foreach (string column in structure.AllColumns())
+            {
+                if (!fields.Contains(column))
+                {
+                    // check if this field has default
+                    ColumnDefinition columnDef = structure.GetColumnDefinition(column);
+
+                    if (columnDef.HasDefault)
+                    {
+                        string quotedColName = QuoteIdentifier(column);
+
+                        selections.Add($"{GetMySQLDefaultValue(columnDef)} as {quotedColName}");
+                    }
+                }
+            }
+
             return string.Join(", ", selections);
         }
 
@@ -205,6 +221,10 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     selections.Add($"LAST_INSERT_ID() AS {quotedColName}");
                 }
+                else if (structure.GetColumnDefinition(colName).HasDefault)
+                {
+                    selections.Add($"{GetMySQLDefaultValue(structure.GetColumnDefinition(colName))} AS {quotedColName}");
+                }
                 else
                 {
                     selections.Add($"NULL AS {quotedColName}");
@@ -212,6 +232,19 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return string.Join(", ", selections);
+        }
+
+        private static string GetMySQLDefaultValue(ColumnDefinition column)
+        {
+            string defaultValue = column.DefaultValue.ToString()!;
+
+            // HACK: Need to figure out how to proper parse the string with encoding
+            if (defaultValue.StartsWith("_utf8mb4"))
+            {
+                defaultValue = defaultValue.Substring(8).Replace("\\'", "'");
+            }
+
+            return defaultValue;
         }
     }
 }

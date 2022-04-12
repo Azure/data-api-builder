@@ -50,10 +50,10 @@ namespace Azure.DataGateway.Service.Models
 
         /// <summary>
         /// The list of columns of the table that make up the foreign key.
-        /// If this list is empty, the primary key columns of the
+        /// If this list is empty, the primary key columns of the referencing
         /// table are implicitly assumed to be the foreign key columns.
         /// </summary>
-        public List<string> Columns { get; set; } = new();
+        public List<string> ReferencingColumns { get; set; } = new();
     }
 
     public class AuthorizationRule

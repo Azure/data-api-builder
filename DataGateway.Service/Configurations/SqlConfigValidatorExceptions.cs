@@ -313,7 +313,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateFKColumnsHaveMatchingTableColumns(ForeignKeyDefinition foreignKey, TableDefinition table)
         {
-            IEnumerable<string> unmatchedFkCols = foreignKey.Columns.Except(table.Columns.Keys);
+            IEnumerable<string> unmatchedFkCols = foreignKey.ReferencingColumns.Except(table.Columns.Keys);
 
             if (unmatchedFkCols.Any())
             {

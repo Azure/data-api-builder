@@ -158,12 +158,6 @@
         }
       },
       "books": {
-        "ForeignKeys": {
-          "book_publisher_fk": {
-            "ReferencedTable": "publishers",
-            "Columns": [ "publisher_id" ]
-          }
-        },
         "HttpVerbs": {
           "GET": {
             "AuthorizationType": "Authenticated"
@@ -183,13 +177,6 @@
         }
       },
       "book_website_placements": {
-        "PrimaryKey": [ "id" ],
-        "ForeignKeys": {
-          "book_website_placement_book_fk": {
-            "ReferencedTable": "books",
-            "Columns": [ "book_id" ]
-          }
-        },
         "HttpVerbs": {
           "GET": {
             "AuthorizationType": "Anonymous"
@@ -216,12 +203,6 @@
         }
       },
       "reviews": {
-        "ForeignKeys": {
-          "review_book_fk": {
-            "ReferencedTable": "books",
-            "Columns": [ "book_id" ]
-          }
-        },
         "HttpVerbs": {
           "GET": {
             "AuthorizationType": "Anonymous"
@@ -229,20 +210,8 @@
         }
       },
       "book_author_link": {
-        "ForeignKeys": {
-          "book_author_link_book_fk": {
-            "ReferencedTable": "books",
-            "Columns": [ "book_id" ]
-          },
-          "book_author_link_author_fk": {
-            "ReferencedTable": "authors",
-            "Columns": [ "author_id" ]
-          }
-        }
       },
       "magazines": {
-        "ForeignKeys": {
-        },
         "HttpVerbs": {
           "GET": {
             "AuthorizationType": "Anonymous"

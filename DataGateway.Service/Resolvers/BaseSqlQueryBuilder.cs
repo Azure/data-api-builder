@@ -54,7 +54,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// Create an inequality where all columns up to untilIndex are equilized to the
-        /// respective values, and the colum at untilIndex has to be compared to its Value
+        /// respective values, and the column at untilIndex has to be compared to its Value
         /// E.g. for
         /// primaryKey: [a, b, c, d, e, f]
         /// pkValues: [A, B, C, D, E, F]

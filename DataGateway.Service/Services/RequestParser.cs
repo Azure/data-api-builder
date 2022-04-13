@@ -159,7 +159,7 @@ namespace Azure.DataGateway.Service.Services
                 Models.OrderByDir direction = GetDirection(node.Direction);
                 // Add OrderByColumn and remove any matching columns from our primary key set
                 orderByList.Add(new OrderByColumn(tableAlias, columnName, direction));
-                primaryKeys.Remove(columnName);
+                remainingKeys.Remove(columnName);
                 node = node.ThenBy;
             }
 

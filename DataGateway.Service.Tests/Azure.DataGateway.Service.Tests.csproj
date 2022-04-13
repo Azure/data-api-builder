@@ -28,7 +28,7 @@
 
   <ItemGroup>
     <None Update="sql-config-test.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 

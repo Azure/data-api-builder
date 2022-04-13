@@ -391,7 +391,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 ""categoryid"": ""5"",
                 ""pieceid"": ""2"",
-                ""categoryName"":""FairyTab""
+                ""categoryName"":""FairyTales""
             }";
 
             expectedLocationHeader = $"categoryid/5/pieceid/2";

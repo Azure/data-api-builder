@@ -423,6 +423,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "PutOne_Update_Nulled_Test",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
+                        FROM " + _Composite_NonAutoGenPK + @"
+                        WHERE categoryid = 2 AND pieceid = 1 AND ""categoryName"" = 'Romcom'
+                            AND ""piecesAvailable"" is NULL AND ""piecesRequired"" = 5
+                    ) AS subq
+                "
+            },
+            {
                 "PutOne_Insert_Test",
                 @"
                     SELECT to_jsonb(subq) AS data
@@ -489,6 +501,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "PutOne_Insert_Nulled_Test",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
+                        FROM " + _Composite_NonAutoGenPK + @"
+                        WHERE categoryid = 4 AND pieceid = 1 AND ""categoryName"" = 'Fantasy'
+                            AND ""piecesAvailable"" is NULL AND ""piecesRequired"" = 4
+                    ) AS subq
+                "
+            },
+            {
                 "PatchOne_Insert_NonAutoGenPK_Test",
                 @"
                     SELECT to_jsonb(subq) AS data
@@ -520,6 +544,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         FROM " + _Composite_NonAutoGenPK + @"
                         WHERE categoryid = 7 AND pieceid = 1 AND ""categoryName"" = 'Drama'
                             AND ""piecesAvailable"" = 0 AND ""piecesRequired"" = 0
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOne_Insert_Nulled_Test",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
+                        FROM " + _Composite_NonAutoGenPK + @"
+                        WHERE categoryid = 3 AND pieceid = 1 AND ""categoryName"" = 'Fantasy'
+                            AND ""piecesAvailable"" is NULL AND ""piecesRequired"" = 4
                     ) AS subq
                 "
             },
@@ -565,6 +601,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         FROM " + _Composite_NonAutoGenPK + @"
                         WHERE categoryid = 1 AND pieceid = 1 AND ""categoryName"" = 'books'
                             AND ""piecesAvailable"" = 10 AND ""piecesRequired"" = 0
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOne_Update_Nulled_Test",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
+                        FROM " + _Composite_NonAutoGenPK + @"
+                        WHERE categoryid = 1 AND pieceid = 1 AND ""categoryName"" = 'books'
+                            AND ""piecesAvailable"" is NULL AND ""piecesRequired"" = 0
+                    ) AS subq
+                "
+            },
+            {
+                "InsertOneWithNullFieldValue",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
+                        FROM " + _Composite_NonAutoGenPK + @"
+                        WHERE categoryid = 3 AND pieceid = 1 AND ""categoryName"" = 'Fantasy'
+                            AND ""piecesAvailable"" is NULL AND ""piecesRequired"" = 1
                     ) AS subq
                 "
             },

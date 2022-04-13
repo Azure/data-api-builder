@@ -658,6 +658,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         #endregion
 
+        [TestCleanup]
+        public async Task TestCleanup()
+        {
+            await ResetDbStateAsync();
+        }
         public override string GetQuery(string key)
         {
             return _queryMap[key];

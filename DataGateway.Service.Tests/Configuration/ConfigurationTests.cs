@@ -300,7 +300,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Assert.AreEqual("some-file.json", finalResolverConfigFile);
         }
 
-        [TestMethod]
+        [TestMethod("Validates that the develeoper config is correctly read and its fields are populated appropriately.")]
         public void VerifyExceptionOnNullModelinFilterParser()
         {
             FilterParser parser = new();
@@ -312,9 +312,9 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             }
             catch (DataGatewayException exception)
             {
-                Assert.AreEqual(exception.Message, "The runtime has not been initialized with an Edm model.");
-                Assert.AreEqual(exception.StatusCode, HttpStatusCode.InternalServerError);
-                Assert.AreEqual(exception.SubStatusCode, DataGatewayException.SubStatusCodes.UnexpectedError);
+                Assert.AreEqual("The runtime has not been initialized with an Edm model.", exception.Message);
+                Assert.AreEqual(HttpStatusCode.InternalServerError, exception.StatusCode);
+                Assert.AreEqual(DataGatewayException.SubStatusCodes.UnexpectedError, exception.SubStatusCode);
             }
         }
 

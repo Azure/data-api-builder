@@ -237,9 +237,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             },
             {
                 "PutOne_Update_CompositeNonAutoGenPK_Test",
-                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
+                $"SELECT [categoryid], [pieceid], [categoryName], [piecesAvailable]," +
                 $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
-                $"WHERE [categoryid] = 2 AND [pieceid] = 1 AND [categoryName] = 'History' " +
+                $"WHERE [categoryid] = 2 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
                 $"AND [piecesAvailable] = 10  AND [piecesRequired] = 5 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
@@ -265,9 +265,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             },
             {
                 "PutOne_Insert_AutoGenNonPK_Test",
-                $"SELECT [id], [title], [volume] FROM { _integration_AutoGenNonPK_TableName } " +
+                $"SELECT [id], [title], [volume], [categoryName] FROM { _integration_AutoGenNonPK_TableName } " +
                 $"WHERE id = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'Star Trek' " +
-                $"AND [categoryName] = 'SciFi' " +
+                $"AND [categoryName] = 'Suspense' " +
                 $"AND [volume] IS NOT NULL " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },

@@ -521,7 +521,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             requestBody = @"
             {
-               ""categoryName"":""History"",
+               ""categoryName"":""SciFi"",
                ""piecesAvailable"":""10"",
                ""piecesRequired"":""5""
             }";
@@ -634,7 +634,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             requestBody = @"
             {
                 ""title"": ""Star Trek"",
-                ""categoryName"" : ""SciFi""
+                ""categoryName"" : ""Suspense""
             }";
 
             expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";

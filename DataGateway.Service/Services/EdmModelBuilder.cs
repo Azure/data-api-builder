@@ -56,7 +56,7 @@ namespace Azure.DataGateway.Service.Services
                         columnSystemType = columnSystemType.GetElementType()!;
                     }
 
-                    switch(Type.GetTypeCode(columnSystemType))
+                    switch (Type.GetTypeCode(columnSystemType))
                     {
                         case TypeCode.String:
                             type = EdmPrimitiveTypeKind.String;

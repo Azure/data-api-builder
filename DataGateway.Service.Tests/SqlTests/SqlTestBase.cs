@@ -64,7 +64,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _dbExceptionParser = new PostgresDbExceptionParser();
                     _queryExecutor = new QueryExecutor<NpgsqlConnection>(config, _dbExceptionParser);
                     _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
-    config,             new PostgreSqlMetadataProvider(config, _queryExecutor, _queryBuilder));
+                        config,
+                        new PostgreSqlMetadataProvider(config, _queryExecutor, _queryBuilder));
                     break;
                 case TestCategory.MSSQL:
                     _queryBuilder = new MsSqlQueryBuilder();
@@ -81,7 +82,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _dbExceptionParser = new MySqlDbExceptionParser();
                     _queryExecutor = new QueryExecutor<MySqlConnection>(config, _dbExceptionParser);
                     _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
-    config,             new MySqlMetadataProvider(config, _queryExecutor, _queryBuilder));
+                         config,
+                         new MySqlMetadataProvider(config, _queryExecutor, _queryBuilder));
                     break;
             }
 

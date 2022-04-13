@@ -153,6 +153,7 @@
         "ForeignKeys": {
           "book_publisher_fk": {
             "ReferencedTable": "publishers",
+            "ReferencedColumns": [ "id" ],
             "ReferencingColumns": [ "publisher_id" ]
           }
         },
@@ -179,6 +180,7 @@
         "ForeignKeys": {
           "book_website_placement_book_fk": {
             "ReferencedTable": "books",
+            "ReferencedColumns": [ "id" ],
             "ReferencingColumns": [ "book_id" ]
           }
         },
@@ -238,6 +240,7 @@
         "ForeignKeys": {
           "review_book_fk": {
             "ReferencedTable": "books",
+            "ReferencedColumns": [ "id" ],
             "ReferencingColumns": [ "book_id" ]
           }
         },
@@ -260,10 +263,12 @@
         "ForeignKeys": {
           "book_author_link_book_fk": {
             "ReferencedTable": "books",
+            "ReferencedColumns": [ "id" ],
             "ReferencingColumns": [ "book_id" ]
           },
           "book_author_link_author_fk": {
             "ReferencedTable": "authors",
+            "ReferencedColumns": [ "id" ],
             "ReferencingColumns": [ "author_id" ]
           }
         }
@@ -284,8 +289,6 @@
             "Type": "bigint",
             "IsNullable": true
           }
-        },
-        "ForeignKeys": {
         },
         "HttpVerbs": {
           "GET": {
@@ -343,7 +346,7 @@
         }
       },
       "stocks": {
-        "PrimaryKey": [ "categoryid, pieceid" ],
+        "PrimaryKey": [ "categoryid", "pieceid" ],
         "Columns": {
           "categoryid": {
             "Type": "bigint",
@@ -381,7 +384,7 @@
         }
       },
       "stocks_price": {
-        "PrimaryKey": [ "categoryid, pieceid", "instant" ],
+        "PrimaryKey": [ "categoryid", "pieceid", "instant" ],
         "Columns": {
           "categoryid": {
             "Type": "bigint",
@@ -397,7 +400,8 @@
             "Type": "timestamp"
           },
           "price": {
-            "Type": "float"
+            "Type": "float",
+            "IsNullable": true
           }
         },
         "ForeignKeys": {

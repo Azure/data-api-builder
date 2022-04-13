@@ -14,8 +14,11 @@ namespace Azure.DataGateway.Service.Resolvers
     public class MySqlQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
     {
         private static DbCommandBuilder _builder = new MySqlCommandBuilder();
+        public const string DATABASE_NAME_PARAM = "databaseName";
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Adds database specific quotes to string identifier
+        /// </summary>
         protected override string QuoteIdentifier(string ident)
         {
             return _builder.QuoteIdentifier(ident);
@@ -146,24 +149,24 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <inheritdoc />
-        /// <remarks>For MySql, the table name is only a 2 part name.
-        /// The schema name passed here is actually the database
-        /// from the connection string and that is compared against the SCHEMA_NAME
-        /// in the view KEY_COLUMN_USAGE.
-        /// </remarks>
-        public override string BuildForeignKeyQuery(string databaseName, string tableName)
+        public override string BuildForeignKeyInfoQuery(int numberOfParameters)
         {
+            string[] databaseNameParams = CreateParams(DATABASE_NAME_PARAM, numberOfParameters);
+            string[] tableNameParams = CreateParams(TABLE_NAME_PARAM, numberOfParameters);
+            string tableSchemaParamsForInClause = string.Join(", ", databaseNameParams);
+            string tableNameParamsForInClause = string.Join(", ", tableNameParams);
             return $"" +
                 $"SELECT " +
-                    $"CONSTRAINT_NAME {QuoteIdentifier("Foreign Key Name")}" +
-                    $"COLUMN_NAME {QuoteIdentifier("Referencing Column")}, " +
-                    $"REFERENCED_TABLE_NAME {QuoteIdentifier("Referenced Table")}, " +
-                    $"REFERENCED_COLUMN_NAME {QuoteIdentifier("Referenced Column")} " +
+                    $"CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))}, " +
+                    $"TABLE_NAME {QuoteIdentifier(nameof(TableDefinition))}, " +
+                    $"COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencingColumns))}, " +
+                    $"REFERENCED_TABLE_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedTable))}, " +
+                    $"REFERENCED_COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))} " +
                 $"FROM " +
                     $"INFORMATION_SCHEMA.KEY_COLUMN_USAGE " +
                 $"WHERE " +
-                    $"SCHEMA_NAME = {QuoteIdentifier($"@{nameof(databaseName)}")} " +
-                    $"AND TABLE_NAME = {QuoteIdentifier($"@{nameof(tableName)}")} " +
+                    $"TABLE_SCHEMA = @{tableSchemaParamsForInClause} " +
+                    $"AND TABLE_NAME = @{tableNameParamsForInClause} " +
                     $"AND REFERENCED_TABLE_NAME IS NOT NULL " +
                     $"AND REFERENCED_COLUMN_NAME IS NOT NULL;";
         }

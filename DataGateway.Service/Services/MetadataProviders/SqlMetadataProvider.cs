@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.Extensions.Options;
@@ -88,11 +89,71 @@ namespace Azure.DataGateway.Service.Services
             PopulateColumnDefinitionWithHasDefault(
                 tableDefinition,
                 columnsInTable);
+        }
 
-            await PopulateForeignKeyDefinitionAsync(
-                schemaName,
-                tableName,
-                tableDefinition);
+        /// <inheritdoc />
+        public async Task PopulateForeignKeyDefinitionAsync(
+           string defaultSchemaName,
+           Dictionary<string, TableDefinition> tables)
+        {
+            // Build the query required to get the foreign key information.
+            string queryForForeignKeyInfo =
+                ((BaseSqlQueryBuilder)SqlQueryBuilder!).BuildForeignKeyInfoQuery(tables.Count);
+
+            // Build the array storing all the schemaNames, for now the defaultSchemaName.
+            string[] schemaNames = Enumerable.Range(1, tables.Count).Select(x => defaultSchemaName).ToArray();
+
+            // Build the parameters for dictionary for the foreign key info query
+            // consisting of all schema names and table names.
+            Dictionary<string, object?> parameters =
+                GetForeignKeyQueryParams(schemaNames, tables.Keys.ToArray());
+
+            // Execute the foreign key info query.
+            using DbDataReader reader =
+                await _queryExecutor!.ExecuteQueryAsync(queryForForeignKeyInfo, parameters);
+
+            // Extract the first row from the result.
+            Dictionary<string, object?>? foreignKeyInfo =
+                await _queryExecutor!.ExtractRowFromDbDataReader(reader);
+
+            // While the result is not null
+            // keep populating the table definition for all tables with all foreign keys.
+            while (foreignKeyInfo != null)
+            {
+                string twoPartTableName = (string)foreignKeyInfo[nameof(TableDefinition)]!;
+                TableDefinition? tableDefinition;
+                string foreignKeyName = (string)foreignKeyInfo[nameof(ForeignKeyDefinition)]!;
+                ForeignKeyDefinition? foreignKeyDefinition;
+
+                if (tables.TryGetValue(twoPartTableName, out tableDefinition))
+                {
+                    if (!tableDefinition.ForeignKeys.TryGetValue(foreignKeyName, out foreignKeyDefinition))
+                    {
+                        // If this is the first column in this foreign key for this table,
+                        // add the referenced table to the tableDefinition.
+                        foreignKeyDefinition = new();
+                        foreignKeyDefinition.ReferencedTable =
+                            (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencedTable)]!;
+                        tableDefinition.ForeignKeys.Add(foreignKeyName, foreignKeyDefinition);
+                    }
+
+                    // add the referenced and referencing columns to the foreign key definition.
+                    foreignKeyDefinition.ReferencedColumns.Add(
+                        (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencedColumns)]!);
+                    foreignKeyDefinition.ReferencingColumns.Add(
+                        (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencingColumns)]!);
+                }
+                else
+                {
+                    // This should not happen.
+                    throw new DataGatewayException(
+                        message: "Foreign key information is retrieved for a table that is not to be exposed.",
+                        statusCode: System.Net.HttpStatusCode.InternalServerError,
+                        subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
+                }
+
+                foreignKeyInfo = await _queryExecutor.ExtractRowFromDbDataReader(reader);
+            }
         }
 
         /// </inheritdoc>
@@ -193,65 +254,38 @@ namespace Azure.DataGateway.Service.Services
             }
         }
 
-        protected async Task PopulateForeignKeyDefinitionAsync(
-            string schemaName,
-            string tableName,
-            TableDefinition tableDefinition)
-        {
-            string queryForForeignKeyInfo = GetForeignKeyQuery(schemaName, tableName);
-            Dictionary<string, object?> parameters =
-                GetForeignKeyQueryParams(schemaName, tableName);
-            using DbDataReader reader =
-                await _queryExecutor!.ExecuteQueryAsync(queryForForeignKeyInfo, parameters);
-
-            Dictionary<string, object?>? foreignKeyInfo =
-                await _queryExecutor!.ExtractRowFromDbDataReader(reader);
-
-            while (foreignKeyInfo != null)
-            {
-                string foreignKeyName = (string)foreignKeyInfo[nameof(ForeignKeyDefinition)]!;
-                ForeignKeyDefinition? foreignKeyDefinition;
-                if (!tableDefinition.ForeignKeys.TryGetValue(foreignKeyName, out foreignKeyDefinition))
-                {
-                    foreignKeyDefinition = new();
-                    foreignKeyDefinition.ReferencedTable =
-                        (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencedTable)]!;
-                }
-
-                foreignKeyDefinition.ReferencedColumns.Add(
-                    (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencedColumns)]!);
-                foreignKeyDefinition.ReferencingColumns.Add(
-                    (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencingColumns)]!);
-
-                foreignKeyInfo = await _queryExecutor.ExtractRowFromDbDataReader(reader);
-            }
-        }
-
-        /// <summary>
-        /// Invokes the underlying query builder to
-        /// build the query useful for retrieving the foreign key information.
-        /// </summary>
-        /// <param name="schemaName"></param>
-        /// <param name="tableName"></param>
-        /// <returns>The Sql query to use.</returns>
-        protected virtual string GetForeignKeyQuery(string schemaName, string tableName)
-        {
-            return SqlQueryBuilder!.BuildForeignKeyQuery(schemaName, tableName);
-        }
-
         /// <summary>
         /// Builds the dictionary of parameters and their values required for the
         /// foreign key query.
         /// </summary>
-        /// <param name="schemaName"></param>
-        /// <param name="tableName"></param>
+        /// <param name="schemaNames"></param>
+        /// <param name="tableNames"></param>
         /// <returns>The dictionary populated with parameters.</returns>
         protected virtual Dictionary<string, object?>
-            GetForeignKeyQueryParams(string schemaName, string tableName)
+            GetForeignKeyQueryParams(
+                string[] schemaNames,
+                string[] tableNames)
         {
             Dictionary<string, object?> parameters = new();
-            parameters.Add(nameof(schemaName), schemaName);
-            parameters.Add(nameof(tableName), tableName);
+            string[] schemaNameParams =
+                SqlQueryBuilder!.CreateParams(
+                    kindOfParam: BaseSqlQueryBuilder.SCHEMA_NAME_PARAM,
+                    schemaNames.Count());
+            string[] tableNameParams =
+                SqlQueryBuilder!.CreateParams(
+                    kindOfParam: BaseSqlQueryBuilder.TABLE_NAME_PARAM,
+                    tableNames.Count());
+
+            for (int i = 0; i < schemaNames.Count(); ++i)
+            {
+                parameters.Add(schemaNameParams[i], schemaNames[i]);
+            }
+
+            for (int i = 0; i < tableNames.Count(); ++i)
+            {
+                parameters.Add(tableNameParams[i], tableNames[i]);
+            }
+
             return parameters;
         }
     }

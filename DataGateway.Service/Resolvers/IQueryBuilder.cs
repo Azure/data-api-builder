@@ -37,9 +37,20 @@ namespace Azure.DataGateway.Service.Resolvers
         public string Build(SqlUpsertQueryStructure structure);
 
         /// <summary>
-        /// Builds the query to obtain foreign key information for the given
-        /// schema, table name.
+        /// Builds the query to obtain foreign key information with the given
+        /// number of parameters.
         /// </summary>
-        public string BuildForeignKeyQuery(string schemaName, string tableName);
+        public string BuildForeignKeyInfoQuery(int numberOfParameters);
+
+        /// <summary>
+        /// Creates a list of named parameters with incremental suffixes
+        /// starting from 0 to numberOfParameters - 1.
+        /// e.g. tableName0, tableName1
+        /// </summary>
+        /// <param name="kindOfParam">The kind of parameter being created acting
+        /// as the prefix common to all parameters.</param>
+        /// <param name="numberOfParameters">The number of parameters to create.</param>
+        /// <returns>The created list</returns>
+        public string[] CreateParams(string kindOfParam, int numberOfParameters);
     }
 }

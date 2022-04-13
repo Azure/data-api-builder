@@ -61,24 +61,29 @@ namespace Azure.DataGateway.Service.Services
         /// <remarks>For MySql, the table name is only a 2 part name.
         /// The database name from the connection string needs to be used instead of schemaName.
         /// </remarks>
-        protected override string GetForeignKeyQuery(string schemaName, string tableName)
-        {
-            using MySqlConnection conn = new(ConnectionString);
-            return SqlQueryBuilder!.BuildForeignKeyQuery(conn.Database, tableName);
-        }
-
-        /// <inheritdoc />
-        /// <remarks>For MySql, the table name is only a 2 part name.
-        /// The database name from the connection string needs to be used instead of schemaName.
-        /// </remarks>
         protected override Dictionary<string, object?>
-            GetForeignKeyQueryParams(string schemaName, string tableName)
+            GetForeignKeyQueryParams(
+                string[] schemaNames,
+                string[] tableNames)
         {
             using MySqlConnection conn = new(ConnectionString);
-            string databaseName = conn.Database;
             Dictionary<string, object?> parameters = new();
-            parameters.Add(nameof(databaseName), databaseName);
-            parameters.Add(nameof(tableName), tableName);
+
+            string[] databaseNameParams =
+                SqlQueryBuilder!.CreateParams(
+                    kindOfParam: MySqlQueryBuilder.DATABASE_NAME_PARAM,
+                    schemaNames.Count());
+            string[] tableNameParams =
+                SqlQueryBuilder!.CreateParams(
+                    kindOfParam: BaseSqlQueryBuilder.TABLE_NAME_PARAM,
+                    tableNames.Count());
+
+            Enumerable.Range(0, schemaNames.Count())
+                .Select(i => parameters.TryAdd(databaseNameParams[i], conn.Database));
+
+            Enumerable.Range(0, tableNames.Count())
+                .Select(i => parameters.TryAdd(tableNameParams[i], tableNames[i]));
+
             return parameters;
         }
     }

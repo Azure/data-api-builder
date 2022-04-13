@@ -51,18 +51,24 @@ namespace Azure.DataGateway.Service.Services
                     // need to convert our column system type to an Edm type
                     Type columnSystemType = schema.Tables[entityName].Columns[column].SystemType;
                     EdmPrimitiveTypeKind type = EdmPrimitiveTypeKind.None;
-                    if (ReferenceEquals(typeof(string), columnSystemType))
+
+                    switch(columnSystemType)
                     {
-                        type = EdmPrimitiveTypeKind.String;
-                    }
-                    else if (ReferenceEquals(typeof(long), columnSystemType))
-                    {
-                        type = EdmPrimitiveTypeKind.Int64;
-                    }
-                    else
-                    {
-                        throw new ArgumentException($"No resolver for column type" +
-                            $" {columnSystemType.Name}");
+                        case string:
+                            type = EdmPrimitiveTypeKind.String;
+                            break;
+                        case TypeCode.Int64:
+                            type = EdmPrimitiveTypeKind.Int64;
+                            break;
+                        case TypeCode.Byte:
+                            type = EdmPrimitiveTypeKind.Byte;
+                            break;
+                        case Type.GetTypeCode(byte[]):
+                            type = EdmPrimitiveTypeKind.TimeOfDay;
+                            break;
+                        default:
+                            throw new ArgumentException($"No resolver for column type" +
+                                $" {columnSystemType.Name}");
                     }
 
                     // if column is in our list of keys we add as a key to entity

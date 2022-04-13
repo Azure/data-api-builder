@@ -31,6 +31,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     actualTableDefinition.PrimaryKey,
                     $"Did not find the expected primary keys for table {tableName}");
 
+                CollectionAssert.AreEqual(
+                    expectedTableDefinition.ForeignKeys,
+                    actualTableDefinition.ForeignKeys,
+                    $"Did not find the expected foreign keys for table {tableName}");
+
                 foreach ((string columnName, ColumnDefinition expectedColumnDefinition) in expectedTableDefinition.Columns)
                 {
                     ColumnDefinition actualColumnDefinition;

@@ -877,32 +877,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Tests the REST Api for Find operation using a keyword
-        /// of 'startswith' which is not currently supported, verify
-        /// we throw an internal server error.
-        /// </summary>
-        [TestMethod]
-        public async Task FindTestWithUnsupportedStartsWithFilterKeyword()
-        {
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: string.Empty,
-                queryString: "?$filter=startswith(title, 'Awesome') eq true",
-                entity: _integrationTableName,
-                sqlQuery: string.Empty,
-                controller: _restController,
-                exception: true,
-                expectedErrorMessage: "While processing your request the server ran into an unexpected error.",
-                expectedStatusCode: HttpStatusCode.InternalServerError,
-                expectedSubStatusCode: "UnexpectedError"
-            );
-        }
-
-        /// <summary>
         /// Tests the REST Api for Find operations using keywords
         /// of which is not currently supported, verify
         /// we throw an internal server error.
         /// </summary>
         [DataTestMethod]
+        [DataRow("startswith", "(title, 'Awesome')", "eq true")]
         [DataRow("endswith", "(title, 'book')", "eq true")]
         [DataRow("indexof", "(title, 'Awe')", "eq 0")]
         [DataRow("length", "(title)", "gt 5")]

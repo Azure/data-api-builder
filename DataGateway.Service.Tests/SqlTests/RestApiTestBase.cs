@@ -307,7 +307,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyPagination)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"id\":[1,\"Asc\"]}"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"id\":[1,0]}"))}",
                 paginated: true
             );
         }
@@ -326,7 +326,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _tableWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyPagination)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"book_id\":[1,\"Asc\"],\"id\":[567,\"Asc\"]}"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"book_id\":[1,0],\"id\":[567,0]}"))}",
                 paginated: true
             );
         }
@@ -340,7 +340,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"id\":[7,\"Asc\"]}"))}",
+                queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"id\":[7,0]}"))}",
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithAfterSingleKeyPagination)),
                 controller: _restController
@@ -356,7 +356,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"book_id\":[1,\"Asc\"],\"id\":[567, \"Asc\"]}"))}",
+                queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"book_id\":[1,0],\"id\":[567,0]}"))}",
                 entity: _tableWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithAfterMultiKeyPagination)),
                 controller: _restController

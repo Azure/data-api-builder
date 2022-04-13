@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Text.Json;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -355,13 +356,24 @@ namespace Azure.DataGateway.Service.Resolvers
 
             List<OrderByColumn> columns = new();
             List<string> values = new();
-            foreach (KeyValuePair<string, object[]> keyValuePair in afterJsonValues)
+            try
             {
-                // direction is always an OrderByDir
-                OrderByDir direction = (OrderByDir)keyValuePair.Value[1];
-                columns.Add(new OrderByColumn(TableAlias, keyValuePair.Key, direction));
-                // safe to save ToString(), we get correct typing for column later
-                values.Add(keyValuePair.Value[0].ToString()!);
+                foreach (KeyValuePair<string, object[]> keyValuePair in afterJsonValues)
+                {
+                    // direction is always an OrderByDir
+                    OrderByDir direction = (OrderByDir)((JsonElement)keyValuePair.Value[1]).GetInt32();
+                    columns.Add(new OrderByColumn(TableAlias, keyValuePair.Key, direction));
+                    // safe to save ToString(), we get correct typing for column later
+                    values.Add("@" + MakeParamWithValue(
+                            GetParamAsColumnSystemType(keyValuePair.Value[0].ToString()!, keyValuePair.Key)));
+                }
+            }
+            catch (ArgumentException ex)
+            {
+                throw new DataGatewayException(
+                  message: ex.Message,
+                  statusCode: HttpStatusCode.BadRequest,
+                  subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
 
             PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(columns, values);

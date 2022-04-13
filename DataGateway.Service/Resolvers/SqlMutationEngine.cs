@@ -161,8 +161,16 @@ namespace Azure.DataGateway.Service.Resolvers
                     /// result set #2: result of the INSERT operation.
                     if (resultRecord != null)
                     {
-                        // We give empty result set for updates
-                        jsonResultString = null;
+                        if (_metadataStoreProvider.CloudDbType == Configurations.DatabaseType.PostgreSql &&
+                            PostgresQueryBuilder.IsInsert(resultRecord))
+                        {
+                            jsonResultString = JsonSerializer.Serialize(resultRecord);
+                        }
+                        else
+                        {
+                            // We give empty result set for updates
+                            jsonResultString = null;
+                        }
                     }
                     else if (await dbDataReader.NextResultAsync())
                     {
@@ -172,12 +180,14 @@ namespace Azure.DataGateway.Service.Resolvers
                     }
                     else
                     {
-                        // If there is no resultset, raise dbexception
-                        // this is needed for MySQL.
+                        string prettyPrintPk = "<" + string.Join(", ", context.PrimaryKeyValuePairs.Select(
+                            kv_pair => $"{kv_pair.Key}: {kv_pair.Value}"
+                        )) + ">";
                         throw new DataGatewayException(
-                                message: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
-                                statusCode: HttpStatusCode.InternalServerError,
-                                subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
+                            message: $"Cannot perform INSERT and could not find {context.EntityName} " +
+                                        $"with primary key {prettyPrintPk} to perform UPDATE on.",
+                            statusCode: HttpStatusCode.NotFound,
+                            subStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound);
                     }
 
                     break;

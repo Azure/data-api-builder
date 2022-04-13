@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Azure.DataGateway.Service.Authorization;
 
 namespace Azure.DataGateway.Service.Models
@@ -54,6 +55,25 @@ namespace Azure.DataGateway.Service.Models
         /// table are implicitly assumed to be the foreign key columns.
         /// </summary>
         public List<string> ReferencingColumns { get; set; } = new();
+
+        public override bool Equals(object? other)
+        {
+            return Equals(other as ForeignKeyDefinition);
+        }
+
+        public bool Equals(ForeignKeyDefinition? other)
+        {
+            return other != null &&
+                   ReferencedTable.Equals(other.ReferencedTable) &&
+                   Enumerable.SequenceEqual(ReferencedColumns, other.ReferencedColumns) &&
+                   Enumerable.SequenceEqual(ReferencingColumns, other.ReferencingColumns);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(
+                    ReferencedTable, ReferencedColumns, ReferencingColumns);
+        }
     }
 
     public class AuthorizationRule

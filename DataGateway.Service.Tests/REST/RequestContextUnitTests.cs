@@ -33,9 +33,9 @@ namespace Azure.DataGateway.Service.Tests.REST
             }
             catch (DataGatewayException e)
             {
-                Assert.AreEqual(e.Message, "The request body is not in a valid JSON format.");
-                Assert.AreEqual(e.StatusCode, HttpStatusCode.BadRequest);
-                Assert.AreEqual(e.SubStatusCode, DataGatewayException.SubStatusCodes.BadRequest);
+                Assert.AreEqual("The request body is not in a valid JSON format.", e.Message);
+                Assert.AreEqual(HttpStatusCode.BadRequest, e.StatusCode);
+                Assert.AreEqual(DataGatewayException.SubStatusCodes.BadRequest, e.SubStatusCode);
             }
         }
 
@@ -51,7 +51,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             JsonElement payload = JsonSerializer.Deserialize<JsonElement>("null");
             OperationAuthorizationRequirement verb = new();
             InsertRequestContext context = new(entityName: string.Empty, insertPayloadRoot: payload, httpVerb: verb, operationType: Operation.Insert);
-            Assert.AreEqual(context.FieldValuePairsInBody.Count, 0);
+            Assert.AreEqual(0, context.FieldValuePairsInBody.Count);
         }
     }
 }

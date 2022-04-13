@@ -78,11 +78,15 @@ namespace Azure.DataGateway.Service.Services
                     kindOfParam: BaseSqlQueryBuilder.TABLE_NAME_PARAM,
                     tableNames.Count());
 
-            Enumerable.Range(0, schemaNames.Count())
-                .Select(i => parameters.TryAdd(databaseNameParams[i], conn.Database));
+            for (int i = 0; i < schemaNames.Count(); ++i)
+            {
+                parameters.Add(databaseNameParams[i], conn.Database);
+            }
 
-            Enumerable.Range(0, tableNames.Count())
-                .Select(i => parameters.TryAdd(tableNameParams[i], tableNames[i]));
+            for (int i = 0; i < tableNames.Count(); ++i)
+            {
+                parameters.Add(tableNameParams[i], tableNames[i]);
+            }
 
             return parameters;
         }

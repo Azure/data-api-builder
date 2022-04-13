@@ -126,8 +126,8 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             string[] databaseNameParams = CreateParams(DATABASE_NAME_PARAM, numberOfParameters);
             string[] tableNameParams = CreateParams(TABLE_NAME_PARAM, numberOfParameters);
-            string tableSchemaParamsForInClause = string.Join(", ", databaseNameParams);
-            string tableNameParamsForInClause = string.Join(", ", tableNameParams);
+            string tableSchemaParamsForInClause = string.Join(", @", databaseNameParams);
+            string tableNameParamsForInClause = string.Join(", @", tableNameParams);
             return $"" +
                 $"SELECT " +
                     $"CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))}, " +
@@ -138,8 +138,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 $"FROM " +
                     $"INFORMATION_SCHEMA.KEY_COLUMN_USAGE " +
                 $"WHERE " +
-                    $"TABLE_SCHEMA = @{tableSchemaParamsForInClause} " +
-                    $"AND TABLE_NAME = @{tableNameParamsForInClause} " +
+                    $"TABLE_SCHEMA IN (@{tableSchemaParamsForInClause}) " +
+                    $"AND TABLE_NAME IN (@{tableNameParamsForInClause}) " +
                     $"AND REFERENCED_TABLE_NAME IS NOT NULL " +
                     $"AND REFERENCED_COLUMN_NAME IS NOT NULL;";
         }

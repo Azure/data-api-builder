@@ -121,11 +121,13 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
-        /// Validates the primarykeyroute is populated with respect to an Upsert operation.
+        /// Validates the primarykeyroute is populated with respect to an Update or Upsert operation.
         /// </summary>
         /// <param name="primaryKeyRoute">Primary key route from the url.</param>
+        /// <param name="requestBody">The body of the request.</param>
         /// <exception cref="DataGatewayException"></exception>
-        public static JsonElement ValidateUpsertRequest(string? primaryKeyRoute, string requestBody)
+        /// <returns>JsonElement representing the body of the request.</returns>
+        public static JsonElement ValidateUpdateOrUpsertRequest(string? primaryKeyRoute, string requestBody)
         {
             if (string.IsNullOrEmpty(primaryKeyRoute))
             {

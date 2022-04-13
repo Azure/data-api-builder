@@ -15,6 +15,7 @@ using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
@@ -40,6 +41,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static SqlGraphQLFileMetadataProvider _metadataStoreProvider;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
+        protected static DbExceptionParserBase _dbExceptionParser;
         protected static ISqlMetadataProvider _sqlMetadataProvider;
         protected static string _defaultSchemaName;
 
@@ -57,28 +59,31 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:
-                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(config);
                     _queryBuilder = new PostgresQueryBuilder();
                     _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
                         config,
                         new PostgreSqlMetadataProvider(config));
                     _defaultSchemaName = "public";
+                    _dbExceptionParser = new PostgresDbExceptionParser();
+                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(config, _dbExceptionParser);
                     break;
                 case TestCategory.MSSQL:
-                    _queryExecutor = new QueryExecutor<SqlConnection>(config);
                     _queryBuilder = new MsSqlQueryBuilder();
                     _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
                         config,
                         new MsSqlMetadataProvider(config));
                     _defaultSchemaName = "dbo";
+                    _dbExceptionParser = new DbExceptionParserBase();
+                    _queryExecutor = new QueryExecutor<SqlConnection>(config, _dbExceptionParser);
                     break;
                 case TestCategory.MYSQL:
-                    _queryExecutor = new QueryExecutor<MySqlConnection>(config);
                     _queryBuilder = new MySqlQueryBuilder();
                     _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
                         config,
                         new MySqlMetadataProvider(config));
                     _defaultSchemaName = "mysql";
+                    _dbExceptionParser = new MySqlDbExceptionParser();
+                    _queryExecutor = new QueryExecutor<MySqlConnection>(config, _dbExceptionParser);
                     break;
             }
 
@@ -114,9 +119,24 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// and request body (if any) as a stream of utf-8 bytes.</returns>
         protected static DefaultHttpContext GetRequestHttpContext(
             string queryStringUrl = null,
+            IHeaderDictionary headers = null,
             string bodyData = null)
         {
-            DefaultHttpContext httpContext = new();
+
+            DefaultHttpContext httpContext;
+            if (headers is not null)
+            {
+                IFeatureCollection features = new FeatureCollection();
+                features.Set<IHttpRequestFeature>(new HttpRequestFeature { Headers = headers });
+                features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(new MemoryStream()));
+                // set Response StatusCode here to avoid null reference when returning exception in test with supplied headers
+                features.Set<IHttpResponseFeature>(new HttpResponseFeature { StatusCode = 200 });
+                httpContext = new(features);
+            }
+            else
+            {
+                httpContext = new();
+            }
 
             if (!string.IsNullOrEmpty(queryStringUrl))
             {
@@ -155,7 +175,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }
             else
             {
-                using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader));
+                using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader, _queryExecutor));
                 result = sqlResult.RootElement.ToString();
             }
 
@@ -187,6 +207,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string sqlQuery,
             RestController controller,
             Operation operationType = Operation.Find,
+            IHeaderDictionary headers = null,
             string requestBody = null,
             bool exception = false,
             string expectedErrorMessage = "",
@@ -199,6 +220,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             ConfigureRestController(
                 controller,
                 queryString,
+                headers,
                 requestBody);
             string baseUrl = UriHelper.GetEncodedUrl(controller.HttpContext.Request);
             if (expectedLocationHeader != null)
@@ -220,7 +242,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             // Initial DELETE request results in 204 no content, no exception thrown.
             // Subsequent DELETE requests result in 404, which result in an exception.
             string expected;
-            if ((operationType == Operation.Delete || operationType == Operation.Upsert || operationType == Operation.UpsertIncremental)
+            if ((operationType == Operation.Delete ||
+                 operationType == Operation.Upsert ||
+                 operationType == Operation.UpsertIncremental ||
+                 operationType == Operation.Update ||
+                 operationType == Operation.UpdateIncremental)
                 && actionResult is NoContentResult)
             {
                 expected = null;
@@ -249,12 +275,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <returns>Formatted expected response.</returns>
         private static string FormatExpectedValue(string expected)
         {
-            if (!string.Equals(expected[0], '['))
-            {
-                expected = $"[{expected}]";
-            }
-
-            return expected;
+            return string.IsNullOrWhiteSpace(expected) ? string.Empty : (!Equals(expected[0], '[')) ? $"[{expected}]" : expected;
         }
 
         /// <summary>
@@ -279,11 +300,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static void ConfigureRestController(
             RestController restController,
             string queryString,
+            IHeaderDictionary headers = null,
             string requestBody = null)
         {
             restController.ControllerContext.HttpContext =
                 GetRequestHttpContext(
                     queryString,
+                    headers,
                     bodyData: requestBody);
 
             // Set the mock context accessor's request same as the controller's request.

@@ -215,11 +215,27 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        ///  Checks if table has foreign key
+        /// Checks if table has foreign key
         /// </summary>
         private static bool TableHasForeignKey(TableDefinition table)
         {
             return table.ForeignKeys != null;
+        }
+
+        /// <summary>
+        /// Checks if foreign key has explicitly defined columns
+        /// </summary>
+        private static bool HasExplicitColumns(ForeignKeyDefinition fk)
+        {
+            return fk.Columns.Count > 0;
+        }
+
+        /// <summary>
+        /// Checks if foreign key has explicitly defined referenced columns
+        /// </summary>
+        private static bool HasExplicitReferencedColumns(ForeignKeyDefinition fk)
+        {
+            return fk.ReferencedColumns.Count > 0;
         }
 
         /// <summary>

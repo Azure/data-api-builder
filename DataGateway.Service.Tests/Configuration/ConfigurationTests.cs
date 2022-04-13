@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.TestHost;
@@ -15,7 +16,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MySqlConnector;
 using Npgsql;
 
-namespace Azure.DataGateway.Service.Tests
+namespace Azure.DataGateway.Service.Tests.Configuration
 {
     [TestClass]
     public class ConfigurationTests
@@ -297,6 +298,24 @@ namespace Azure.DataGateway.Service.Tests
             provider.SetManyAndReload(toUpdate);
             Assert.AreEqual("PostgreSql", finalDatabaseType);
             Assert.AreEqual("some-file.json", finalResolverConfigFile);
+        }
+
+        [TestMethod("Validates that the develeoper config is correctly read and its fields are populated appropriately.")]
+        public void VerifyExceptionOnNullModelinFilterParser()
+        {
+            FilterParser parser = new();
+            try
+            {
+                // FilterParser has no model so we expect exception
+                parser.GetFilterClause(filterQueryString: string.Empty, resourcePath: string.Empty);
+                Assert.Fail();
+            }
+            catch (DataGatewayException exception)
+            {
+                Assert.AreEqual("The runtime has not been initialized with an Edm model.", exception.Message);
+                Assert.AreEqual(HttpStatusCode.InternalServerError, exception.StatusCode);
+                Assert.AreEqual(DataGatewayException.SubStatusCodes.UnexpectedError, exception.SubStatusCode);
+            }
         }
 
         [TestCleanup]

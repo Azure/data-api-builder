@@ -94,9 +94,11 @@ namespace Azure.DataGateway.Service.Services
                     context = new DeleteRequestContext(entityName, isList: false);
                     RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                     break;
+                case Operation.Update:
+                case Operation.UpdateIncremental:
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
-                    JsonElement upsertPayloadRoot = RequestValidator.ValidateUpsertRequest(primaryKeyRoute, requestBody);
+                    JsonElement upsertPayloadRoot = RequestValidator.ValidateUpdateOrUpsertRequest(primaryKeyRoute, requestBody);
                     context = new UpsertRequestContext(entityName, upsertPayloadRoot, GetHttpVerb(operationType), operationType);
                     RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, GraphQLMetadataProvider);
                     break;
@@ -139,6 +141,8 @@ namespace Azure.DataGateway.Service.Services
                         return FormatFindResult(await _queryEngine.ExecuteAsync(context), (FindRequestContext)context);
                     case Operation.Insert:
                     case Operation.Delete:
+                    case Operation.Update:
+                    case Operation.UpdateIncremental:
                     case Operation.Upsert:
                     case Operation.UpsertIncremental:
                         return await _mutationEngine.ExecuteAsync(context);
@@ -149,8 +153,8 @@ namespace Azure.DataGateway.Service.Services
             else
             {
                 throw new DataGatewayException(
-                    message: "Unauthorized",
-                    statusCode: HttpStatusCode.Unauthorized,
+                    message: "Forbidden",
+                    statusCode: HttpStatusCode.Forbidden,
                     subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
                 );
             }
@@ -237,8 +241,10 @@ namespace Azure.DataGateway.Service.Services
         {
             switch (operation)
             {
+                case Operation.Update:
                 case Operation.Upsert:
                     return HttpRestVerbs.PUT;
+                case Operation.UpdateIncremental:
                 case Operation.UpsertIncremental:
                     return HttpRestVerbs.PATCH;
                 case Operation.Delete:

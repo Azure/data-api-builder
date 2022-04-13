@@ -74,7 +74,7 @@ CREATE TABLE stocks(
 CREATE TABLE stocks_price(
     categoryid bigint NOT NULL,
     pieceid bigint NOT NULL,
-    instant timestamp,
+    instant char(10) NOT NULL,
     price float,
     PRIMARY KEY(categoryid, pieceid, instant)
 );

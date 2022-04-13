@@ -65,13 +65,13 @@ CREATE TABLE stocks(
     categoryName varchar(100) NOT NULL,
     piecesAvailable bigint DEFAULT (0),
     piecesRequired bigint DEFAULT (0) NOT NULL,
-    PRIMARY KEY(categoryid,pieceid)
+    PRIMARY KEY(categoryid, pieceid)
 );
 
 CREATE TABLE stocks_price(
     categoryid bigint NOT NULL,
     pieceid bigint NOT NULL,
-    instant timestamp,
+    instant char(10) NOT NULL,
     price float,
     PRIMARY KEY(categoryid, pieceid, instant)
 );

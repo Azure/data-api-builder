@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Text;
+using Azure.DataGateway.Service.Models;
 using Npgsql;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -112,10 +113,10 @@ namespace Azure.DataGateway.Service.Resolvers
                 return string.Empty;
             }
 
-            string left = Build(predicate.PrimaryKey);
+            string left = Build(predicate.Columns);
             string right = string.Join(", ", predicate.Values);
 
-            if (predicate.PrimaryKey.Count > 1)
+            if (predicate.Columns.Count > 1)
             {
                 return $"({left}) > ({right})";
             }

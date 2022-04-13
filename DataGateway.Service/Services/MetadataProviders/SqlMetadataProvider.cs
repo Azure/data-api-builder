@@ -103,7 +103,7 @@ namespace Azure.DataGateway.Service.Services
             // Build the array storing all the schemaNames, for now the defaultSchemaName.
             string[] schemaNames = Enumerable.Range(1, tables.Count).Select(x => defaultSchemaName).ToArray();
 
-            // Build the parameters for dictionary for the foreign key info query
+            // Build the parameters dictionary for the foreign key info query
             // consisting of all schema names and table names.
             Dictionary<string, object?> parameters =
                 GetForeignKeyQueryParams(schemaNames, tables.Keys.ToArray());

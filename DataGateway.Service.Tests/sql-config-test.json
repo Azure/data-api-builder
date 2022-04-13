@@ -183,23 +183,6 @@
             "ReferencedColumns": [ "id" ],
             "ReferencingColumns": [ "book_id" ]
           }
-        },
-        "HttpVerbs": {
-          "GET": {
-            "AuthorizationType": "Anonymous"
-          },
-          "POST": {
-            "AuthorizationType": "Authenticated"
-          },
-          "DELETE": {
-            "Authorization": "Authenticated"
-          },
-          "PUT": {
-            "Authorization": "Authenticated"
-          },
-          "PATCH": {
-            "Authorization": "Authenticated"
-          }
         }
       },
       "authors": {

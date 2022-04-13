@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Net;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -40,8 +41,14 @@ namespace Azure.DataGateway.Service.Tests.REST
             _restController = new(_restService);
         }
 
+        /// <summary>
+        /// This test verifies that when we have an unsupported opration,
+        /// in this case a non operation, that we return the correct error
+        /// response.
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
-        public async Task HandleAndExecuteNoneOperationUnitTestAsync()
+        public async Task HandleAndExecuteUnsupportedOperationUnitTestAsync()
         {
             string expected = "{\"error\":{\"code\":\"BadRequest\",\"message\":\"This operation is not supported.\",\"status\":400}}";
             // need header to instantiate identity in controller
@@ -52,7 +59,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             IFeatureCollection features = new FeatureCollection();
             features.Set<IHttpRequestFeature>(new HttpRequestFeature { Headers = headers });
             features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(new MemoryStream()));
-            features.Set<IHttpResponseFeature>(new HttpResponseFeature { StatusCode = 200 });
+            features.Set<IHttpResponseFeature>(new HttpResponseFeature { StatusCode = (int)HttpStatusCode.OK });
             DefaultHttpContext httpContext = new(features);
 
             ConfigureRestController(_restController, string.Empty);

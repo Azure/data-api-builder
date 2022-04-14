@@ -353,17 +353,13 @@ namespace Azure.DataGateway.Service.Resolvers
                 return;
             }
 
-            List<OrderByColumn> columns = new();
-            List<string> values = new();
             try
             {
                 foreach (OrderByColumn column in afterJsonValues)
                 {
-                    // direction is always an OrderByDir
-                    OrderByDir direction = column.Direction;
-                    columns.Add(new OrderByColumn(TableAlias, column.ColumnName, column.Value, direction));
-                    values.Add("@" + MakeParamWithValue(
-                            GetParamAsColumnSystemType(column.Value.ToString()!, column.ColumnName)));
+                    column.TableAlias = TableAlias;
+                    column.Value = "@" + MakeParamWithValue(
+                            GetParamAsColumnSystemType(column.Value!.ToString()!, column.ColumnName));
                 }
             }
             catch (ArgumentException ex)
@@ -374,7 +370,7 @@ namespace Azure.DataGateway.Service.Resolvers
                   subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
 
-            PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(columns, values);
+            PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(afterJsonValues);
         }
 
         /// <summary>

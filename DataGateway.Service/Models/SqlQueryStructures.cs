@@ -11,7 +11,7 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Table alias of the table which owns the column
         /// </summary>
-        public string? TableAlias { get; }
+        public string? TableAlias { get; set; }
         /// <summary>
         /// Name of the column
         /// </summary>
@@ -29,7 +29,7 @@ namespace Azure.DataGateway.Service.Models
     /// </summary>
     public class OrderByColumn : Column
     {
-        public object? Value { get; }
+        public object? Value { get; set; }
         public OrderByDir Direction { get; }
         public OrderByColumn(string? tableAlias, string columnName, object? value = null, OrderByDir direction = OrderByDir.Asc)
             : base(tableAlias, columnName)
@@ -224,16 +224,10 @@ namespace Azure.DataGateway.Service.Models
         /// keyset pagination predicate
         /// </summary>
         public List<OrderByColumn> Columns { get; }
-        /// <summary>
-        /// List of values to compare the primary key with
-        /// to create the pagination predicate
-        /// </summary>
-        public List<string> Values { get; }
 
-        public KeysetPaginationPredicate(List<OrderByColumn> columns, List<string> values)
+        public KeysetPaginationPredicate(List<OrderByColumn> columns)
         {
             Columns = columns;
-            Values = values;
         }
     }
 

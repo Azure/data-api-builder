@@ -40,7 +40,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         result.Append(" OR ");
                     }
 
-                    result.Append($"({MakePaginationInequality(predicate.Columns, predicate.Values, i)})");
+                    result.Append($"({MakePaginationInequality(predicate.Columns, i)})");
                 }
 
                 result.Append(")");
@@ -48,7 +48,7 @@ namespace Azure.DataGateway.Service.Resolvers
             }
             else
             {
-                return MakePaginationInequality(predicate.Columns, predicate.Values, 0);
+                return MakePaginationInequality(predicate.Columns, 0);
             }
         }
 
@@ -61,13 +61,13 @@ namespace Azure.DataGateway.Service.Resolvers
         /// untilIndex: 2
         /// generate <c>a = A AND b = B AND c > C</c>
         /// </summary>
-        private string MakePaginationInequality(List<OrderByColumn> columns, List<string> values, int untilIndex)
+        private string MakePaginationInequality(List<OrderByColumn> columns, int untilIndex)
         {
             StringBuilder result = new();
             for (int i = 0; i <= untilIndex; i++)
             {
                 string op = i == untilIndex ? GetComparisonFromDirection(columns[i].Direction) : "=";
-                result.Append($"{Build(columns[i], printDirection: false)} {op} {values[i]}");
+                result.Append($"{Build(columns[i], printDirection: false)} {op} {columns[i].Value}");
 
                 if (i < untilIndex)
                 {

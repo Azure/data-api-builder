@@ -185,7 +185,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             JsonElement root = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
             root = root.GetProperty("data").GetProperty(graphQLQueryName);
             string actual = SqlPaginationUtil.Base64Decode(root.GetProperty("endCursor").GetString());
-            string expected = "{\"id\":[3,\"Asc\"]}";
+            string expected = "{\"id\":[3,0]}";
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }

@@ -642,7 +642,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task RequestInvalidAfterWithIncorrectKeys()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode("{ \"title\": [\"\"Great Book\"\",\"Asc\"] }");
+            string after = SqlPaginationUtil.Base64Encode("{ \"title\": [\"\"Great Book\"\",0] }");
             string graphQLQuery = @"{
                  books(" + $"after: \"{after}\")" + @"{
                     items {
@@ -662,7 +662,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task RequestInvalidAfterWithIncorrectType()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode("{ \"id\": [\"1\",\"Asc\"] }");
+            string after = SqlPaginationUtil.Base64Encode("{ \"id\": [\"1\",0] }");
             string graphQLQuery = @"{
                  books(" + $"after: \"{after}\")" + @"{
                     items {

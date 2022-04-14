@@ -22,7 +22,6 @@ namespace Azure.DataGateway.Service.Tests.REST
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class RestUnitTests : SqlTestBase
     {
-        private static RestService _restService;
         private static RestController _restController;
 
         #region Positive Tests
@@ -33,7 +32,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             await InitializeTestFixture(context, TestCategory.MSSQL);
 
             // Setup REST Components
-            _restService = new RestService(_queryEngine,
+            RestService _restService = new(_queryEngine,
                 _mutationEngine,
                 _metadataStoreProvider,
                 _httpContextAccessor.Object,
@@ -43,7 +42,7 @@ namespace Azure.DataGateway.Service.Tests.REST
 
         /// <summary>
         /// This test verifies that when we have an unsupported opration,
-        /// in this case a non operation, that we return the correct error
+        /// in this case a none operation, that we return the correct error
         /// response.
         /// </summary>
         /// <returns></returns>

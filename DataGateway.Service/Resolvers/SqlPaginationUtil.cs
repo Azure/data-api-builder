@@ -6,6 +6,7 @@ using System.Net;
 using System.Text.Json;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using HotChocolate.Execution;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -146,9 +147,9 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Parse the value of "after" parameter from query parameters, validate it, and return the json object it stores
         /// </summary>
-        public static IDictionary<string, object[]> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
+        public static OrderedDictionary<string, object[]> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
         {
-            Dictionary<string, object[]> after = new();
+            OrderedDictionary<string, object[]> after = new();
             object afterObject = queryParams["after"];
 
             if (afterObject != null)
@@ -164,13 +165,13 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Validate the value associated with $after, and return the json object it stores
         /// </summary>
-        public static Dictionary<string, object[]> ParseAfterFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
+        public static OrderedDictionary<string, object[]> ParseAfterFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
         {
-            Dictionary<string, object[]> after = new();
+            OrderedDictionary<string, object[]> after = new();
             try
             {
                 afterJsonString = Base64Decode(afterJsonString);
-                Dictionary<string, JsonElement> afterDeserialized = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(afterJsonString)!;
+                OrderedDictionary<string, JsonElement> afterDeserialized = JsonSerializer.Deserialize<OrderedDictionary<string, JsonElement>>(afterJsonString)!;
 
                 foreach (KeyValuePair<string, JsonElement> keyValuePair in afterDeserialized)
                 {

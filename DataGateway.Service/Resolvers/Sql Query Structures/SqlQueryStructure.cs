@@ -6,6 +6,7 @@ using System.Text.Json;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
+using HotChocolate.Execution;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
@@ -284,7 +285,7 @@ namespace Azure.DataGateway.Service.Resolvers
             // TableName, TableAlias, Columns, and _limit
             if (PaginationMetadata.IsPaginated)
             {
-                IDictionary<string, object[]>? afterJsonValues = SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata);
+                OrderedDictionary<string, object[]>? afterJsonValues = SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata);
                 AddPaginationPredicate(afterJsonValues);
 
                 if (PaginationMetadata.RequestedEndCursor)
@@ -346,7 +347,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Add the predicates associated with the "after" parameter of paginated queries
         /// </summary>
-        void AddPaginationPredicate(IDictionary<string, object[]> afterJsonValues)
+        void AddPaginationPredicate(OrderedDictionary<string, object[]> afterJsonValues)
         {
             if (!afterJsonValues.Any())
             {

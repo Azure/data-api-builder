@@ -38,7 +38,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 else if (param.Value == null)
                 {
                     predicate = new(
-                        new PredicateOperand(new Column(null, param.Key)),
+                        new PredicateOperand(new Column(tableAlias: null, param.Key)),
                         PredicateOperation.Equal,
                         new PredicateOperand($"@{MakeParamWithValue(null)}")
                     );

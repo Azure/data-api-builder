@@ -204,7 +204,6 @@
         }
       },
       "book_website_placements": {
-        "PrimaryKey": [ "id" ],
         "ForeignKeys": {
           "book_website_placement_book_fk": {
             "ReferencedTable": "books",
@@ -230,7 +229,6 @@
         }
       },
       "website_users": {
-        "PrimaryKey": [ "id" ],
         "HttpVerbs": {
           "GET": {
             "AuthorizationType": "Anonymous"

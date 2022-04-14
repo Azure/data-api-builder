@@ -6,7 +6,6 @@ using System.Net;
 using System.Text.Json;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
-using HotChocolate.Execution;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -147,9 +146,9 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Parse the value of "after" parameter from query parameters, validate it, and return the json object it stores
         /// </summary>
-        public static OrderedDictionary<string, object[]> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
+        public static List<OrderByColumn> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
         {
-            OrderedDictionary<string, object[]> after = new();
+            List<OrderByColumn> after = new();
             object afterObject = queryParams["after"];
 
             if (afterObject != null)
@@ -163,22 +162,22 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Validate the value associated with $after, and return the json object it stores
+        /// Validate the value associated with $after, and return list of orderby columns
+        /// it represents.
         /// </summary>
-        public static OrderedDictionary<string, object[]> ParseAfterFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
+        public static List<OrderByColumn> ParseAfterFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
         {
-            OrderedDictionary<string, object[]> after = new();
+            List<OrderByColumn> after = new();
             try
             {
                 afterJsonString = Base64Decode(afterJsonString);
-                OrderedDictionary<string, JsonElement> afterDeserialized = JsonSerializer.Deserialize<OrderedDictionary<string, JsonElement>>(afterJsonString)!;
+                SortedDictionary<string, JsonElement> afterDeserialized = JsonSerializer.Deserialize<SortedDictionary<string, JsonElement>>(afterJsonString)!;
 
                 foreach (KeyValuePair<string, JsonElement> keyValuePair in afterDeserialized)
                 {
                     IEnumerable<JsonElement> enumeratedValue = keyValuePair.Value.EnumerateArray();
                     object value = ResolveJsonElementToScalarVariable(enumeratedValue.First());
-                    object direction = enumeratedValue.Last();
-                    object[] valueAndDirection = { value, direction };
+                    OrderByDir direction = (OrderByDir)enumeratedValue.Last().GetInt32();
 
                     Type columnType = paginationMetadata.Structure!.GetColumnSystemType(keyValuePair.Key);
                     if (!ReferenceEquals(value.GetType(), columnType))
@@ -187,7 +186,7 @@ namespace Azure.DataGateway.Service.Resolvers
                             $"incorrect type {value.GetType()} for primary key column {keyValuePair.Key} with type {columnType}.");
                     }
 
-                    after.Add(keyValuePair.Key, valueAndDirection);
+                    after.Add(new OrderByColumn(tableAlias: null, keyValuePair.Key, value, direction));
                 }
             }
             catch (Exception e)
@@ -226,6 +225,27 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         /// <exception cref="ArgumentException" />
         public static object ResolveJsonElementToScalarVariable(JsonElement element)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.String:
+                    return element.GetString()!;
+                case JsonValueKind.Number:
+                    return element.GetInt64();
+                case JsonValueKind.True:
+                    return true;
+                case JsonValueKind.False:
+                    return false;
+                default:
+                    throw new ArgumentException("Unexpected JsonElement value");
+            }
+        }
+
+        /// <summary>
+        /// Resolves a JsonElement representing a direction to the appropriate type
+        /// </summary>
+        /// <exception cref="ArgumentException" />
+        public static object ResolveJsonElementToOrderByDir(JsonElement element)
         {
             switch (element.ValueKind)
             {

@@ -123,7 +123,8 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="node">The OrderByClause.</param>
         /// <param name="tableAlias">The name of the Table the columns are from.</param>
-        /// <returns>A List<Column> where the elements are OrderByColumns.</Column></returns>
+        /// <paramref name="primaryKeys">A list of the primaryKeys of the given table.</paramref>/>
+        /// <returns>A List<OrderByColumns></returns>
         private static List<OrderByColumn>? GenerateOrderByList(OrderByClause node, string tableAlias, List<string> primaryKeys)
         {
             // Create set of primary key columns
@@ -158,7 +159,7 @@ namespace Azure.DataGateway.Service.Services
                 // We convert to an Enum of our own that matches the SQL text we want
                 Models.OrderByDir direction = GetDirection(node.Direction);
                 // Add OrderByColumn and remove any matching columns from our primary key set
-                orderByList.Add(new OrderByColumn(tableAlias, columnName, direction));
+                orderByList.Add(new OrderByColumn(tableAlias, columnName, value: null, direction));
                 remainingKeys.Remove(columnName);
                 node = node.ThenBy;
             }

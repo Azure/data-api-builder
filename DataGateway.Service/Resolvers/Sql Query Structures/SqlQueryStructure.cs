@@ -2,11 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Text.Json;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
-using HotChocolate.Execution;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
@@ -285,7 +283,7 @@ namespace Azure.DataGateway.Service.Resolvers
             // TableName, TableAlias, Columns, and _limit
             if (PaginationMetadata.IsPaginated)
             {
-                OrderedDictionary<string, object[]>? afterJsonValues = SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata);
+                List<OrderByColumn>? afterJsonValues = SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata);
                 AddPaginationPredicate(afterJsonValues);
 
                 if (PaginationMetadata.RequestedEndCursor)
@@ -347,7 +345,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Add the predicates associated with the "after" parameter of paginated queries
         /// </summary>
-        void AddPaginationPredicate(OrderedDictionary<string, object[]> afterJsonValues)
+        void AddPaginationPredicate(List<OrderByColumn> afterJsonValues)
         {
             if (!afterJsonValues.Any())
             {
@@ -359,14 +357,13 @@ namespace Azure.DataGateway.Service.Resolvers
             List<string> values = new();
             try
             {
-                foreach (KeyValuePair<string, object[]> keyValuePair in afterJsonValues)
+                foreach (OrderByColumn column in afterJsonValues)
                 {
                     // direction is always an OrderByDir
-                    OrderByDir direction = (OrderByDir)((JsonElement)keyValuePair.Value[1]).GetInt32();
-                    columns.Add(new OrderByColumn(TableAlias, keyValuePair.Key, direction));
-                    // safe to save ToString(), we get correct typing for column later
+                    OrderByDir direction = column.Direction;
+                    columns.Add(new OrderByColumn(TableAlias, column.ColumnName, column.Value, direction));
                     values.Add("@" + MakeParamWithValue(
-                            GetParamAsColumnSystemType(keyValuePair.Value[0].ToString()!, keyValuePair.Key)));
+                            GetParamAsColumnSystemType(column.Value.ToString()!, column.ColumnName)));
                 }
             }
             catch (ArgumentException ex)

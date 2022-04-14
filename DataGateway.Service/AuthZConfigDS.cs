@@ -10,7 +10,7 @@ namespace Azure.DataGateway.Service
         private bool ReadConfig()
         {
             string json;
-            using (StreamReader sr = new("C:\\Users\\agarwalayush\\source\\repos\\JSONParser1\\JSONParser1\\Aarondev-config.json"))
+            using (StreamReader sr = new("C:\\Users\\agarwalayush\\source\\repos\\JSONParser1\\JSONParser1\\RuntimeConfig.json"))
             {
                 json = sr.ReadToEnd();
             }

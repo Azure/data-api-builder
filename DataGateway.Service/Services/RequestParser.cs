@@ -159,7 +159,7 @@ namespace Azure.DataGateway.Service.Services
                 // We convert to an Enum of our own that matches the SQL text we want
                 Models.OrderByDir direction = GetDirection(node.Direction);
                 // Add OrderByColumn and remove any matching columns from our primary key set
-                orderByList.Add(new OrderByColumn(tableAlias, columnName, value: null, direction));
+                orderByList.Add(new OrderByColumn(tableAlias, columnName, direction));
                 remainingKeys.Remove(columnName);
                 node = node.ThenBy;
             }

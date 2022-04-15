@@ -116,7 +116,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public static string MakeCursorFromJsonElement(JsonElement element, List<string> primaryKey, JsonElement? nextElement, List<OrderByColumn>? orderByColumns)
         {
-            Dictionary<string, object[]> cursorJson = new();
+            List<PaginationColumn> cursorJson = new();
             // If we have orderByColumns need to check if any of these
             // columns are not tied between element and nextElement
             // in which case the first non-tie will determine pagination order
@@ -129,7 +129,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     if (!value.Equals(nextValue))
                     {
-                        cursorJson.Add(column.ColumnName, new object[] { ResolveJsonElementToScalarVariable(element.GetProperty(column.ColumnName)), column.Direction });
+                        cursorJson.Add(new PaginationColumn(tableAlias: null, column.ColumnName, value, column.Direction));
                         return Base64Encode(JsonSerializer.Serialize(cursorJson));
                     }
                 }
@@ -137,7 +137,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             foreach (string column in primaryKey)
             {
-                cursorJson.Add(column, new object[] { ResolveJsonElementToScalarVariable(element.GetProperty(column)), OrderByDir.Asc });
+                cursorJson.Add(new PaginationColumn(tableAlias: null, column, ResolveJsonElementToScalarVariable(element.GetProperty(column)), OrderByDir.Asc));
             }
 
             return Base64Encode(JsonSerializer.Serialize(cursorJson));
@@ -146,15 +146,15 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Parse the value of "after" parameter from query parameters, validate it, and return the json object it stores
         /// </summary>
-        public static List<OrderByColumn> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
+        public static List<PaginationColumn> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
         {
-            List<OrderByColumn> after = new();
+            List<PaginationColumn> after = new();
             object afterObject = queryParams["after"];
 
             if (afterObject != null)
             {
                 string afterPlainText = (string)afterObject;
-                after = ParseAfterFromJsonString(afterPlainText, paginationMetadata);
+                after = ParseAfterAndMakeParamsFromJsonString(afterPlainText, paginationMetadata);
 
             }
 
@@ -165,29 +165,30 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Validate the value associated with $after, and return list of orderby columns
         /// it represents.
         /// </summary>
-        public static List<OrderByColumn> ParseAfterFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
+        public static List<PaginationColumn> ParseAfterAndMakeParamsFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
         {
-            List<OrderByColumn> after = new();
+            List<PaginationColumn> after;
             try
             {
                 afterJsonString = Base64Decode(afterJsonString);
-                SortedDictionary<string, JsonElement> afterDeserialized = JsonSerializer.Deserialize<SortedDictionary<string, JsonElement>>(afterJsonString)!;
+                after = JsonSerializer.Deserialize<List<PaginationColumn>>(afterJsonString)!;
+                paginationMetadata.Structure!.AddPaginationPredicate(after);
+                //foreach (PaginationColumn column in after)
+                //{
 
-                foreach (KeyValuePair<string, JsonElement> keyValuePair in afterDeserialized)
-                {
-                    IEnumerable<JsonElement> enumeratedValue = keyValuePair.Value.EnumerateArray();
-                    object value = ResolveJsonElementToScalarVariable(enumeratedValue.First());
-                    OrderByDir direction = (OrderByDir)enumeratedValue.Last().GetInt32();
+                //IEnumerable<JsonElement> enumeratedValue = keyValuePair.Value.EnumerateArray();
+                //object value = ResolveJsonElementToScalarVariable(enumeratedValue.First());
+                //OrderByDir direction = (OrderByDir)enumeratedValue.Last().GetInt32();
 
-                    Type columnType = paginationMetadata.Structure!.GetColumnSystemType(keyValuePair.Key);
-                    if (!ReferenceEquals(value.GetType(), columnType))
-                    {
-                        throw new ArgumentException($"After param has " +
-                            $"incorrect type {value.GetType()} for primary key column {keyValuePair.Key} with type {columnType}.");
-                    }
+                //Type columnType = paginationMetadata.Structure!.GetColumnSystemType(keyValuePair.Key);
+                //if (!ReferenceEquals(value.GetType(), columnType))
+                //{
+                //    throw new ArgumentException($"After param has " +
+                //        $"incorrect type {value.GetType()} for primary key column {keyValuePair.Key} with type {columnType}.");
+                //}
 
-                    after.Add(new OrderByColumn(tableAlias: null, keyValuePair.Key, value, direction));
-                }
+                //after.Add(new PaginationColumn(tableAlias: paginationMetadata.Structure.TableAlias, columnName: keyValuePair.Key, value, direction));
+                //}
             }
             catch (Exception e)
             {

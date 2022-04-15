@@ -663,6 +663,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             await ResetDbStateAsync();
         }
+
         public override string GetQuery(string key)
         {
             return _queryMap[key];

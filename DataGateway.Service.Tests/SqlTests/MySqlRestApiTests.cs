@@ -368,6 +368,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ) AS subq"
             },
             {
+                "FindTestVerifyMaintainColumnOrderForOrderBy",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      ORDER BY id desc, publisher_id
+                  ) AS subq"
+            },
+            {
                 "FindTestWithFirstSingleKeyIncludedInOrderByAndPagination",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data

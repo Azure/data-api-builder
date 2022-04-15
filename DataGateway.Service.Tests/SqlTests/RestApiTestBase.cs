@@ -519,6 +519,23 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Tests the REST Api for Find operation using with $orderby
+        /// where if order of the columns in the orderby must be maintained
+        /// to generate the correct result.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestVerifyMaintainColumnOrderForOrderBy()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby=id desc, publisher_id",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestVerifyMaintainColumnOrderForOrderBy)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
         /// Tests the REST Api for Find operation using $first to
         /// limit the number of records returned and then sorting by
         /// content, with multiple column primary key in the table.

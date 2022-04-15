@@ -192,6 +192,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTestVerifyMaintainColumnOrderForOrderBy",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"ORDER BY id desc, publisher_id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindTestWithFirstSingleKeyIncludedInOrderByAndPagination",
                 $"SELECT TOP 1 * FROM { _integrationTableName } " +
                 $"ORDER BY id " +

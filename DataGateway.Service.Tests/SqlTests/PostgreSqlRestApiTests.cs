@@ -351,6 +351,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "FindTestVerifyMaintainColumnOrderForOrderBy",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        ORDER BY id desc, publisher_id
+                    ) AS subq
+                "
+            },
+            {
                 "FindTestWithFirstSingleKeyIncludedInOrderByAndPagination",
                 @"
                     SELECT to_jsonb(subq) AS data

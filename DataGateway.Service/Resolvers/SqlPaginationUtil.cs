@@ -161,7 +161,7 @@ namespace Azure.DataGateway.Service.Resolvers
             if (afterObject != null)
             {
                 string afterPlainText = (string)afterObject;
-                after = ParseAfterAndMakeParamsFromJsonString(afterPlainText, paginationMetadata);
+                after = ParseAfterFromJsonString(afterPlainText, paginationMetadata);
 
             }
 
@@ -172,7 +172,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Validate the value associated with $after, and return list of orderby columns
         /// it represents.
         /// </summary>
-        public static List<PaginationColumn> ParseAfterAndMakeParamsFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
+        public static List<PaginationColumn> ParseAfterFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
         {
             List<PaginationColumn> after;
             try

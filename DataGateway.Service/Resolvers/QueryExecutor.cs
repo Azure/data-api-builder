@@ -74,7 +74,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public async Task<Dictionary<string, object?>?> ExtractRowFromDbDataReader(DbDataReader dbDataReader)
+        public async Task<Dictionary<string, object?>?> ExtractRowFromDbDataReader(DbDataReader dbDataReader, List<string>? onlyExtract = null)
         {
             Dictionary<string, object?> row = new();
 
@@ -89,6 +89,12 @@ namespace Azure.DataGateway.Service.Resolvers
                         foreach (DataRow schemaRow in schemaTable.Rows)
                         {
                             string columnName = (string)schemaRow["ColumnName"];
+
+                            if (onlyExtract != null && !onlyExtract.Contains(columnName))
+                            {
+                                continue;
+                            }
+
                             int colIndex = dbDataReader.GetOrdinal(columnName);
                             if (!dbDataReader.IsDBNull(colIndex))
                             {

@@ -70,7 +70,7 @@ namespace Azure.DataGateway.Service.Services
                 // anything for it.
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
-                    context.Result = IsNull(jsonElement) ? null : jsonElement.ToString();
+                    context.Result = RepresentsNullValue(jsonElement) ? null : jsonElement.ToString();
                 }
             }
             else if (IsInnerObject(context))
@@ -103,7 +103,7 @@ namespace Azure.DataGateway.Service.Services
             await _next(context);
         }
 
-        public static bool IsNull(JsonElement element)
+        public static bool RepresentsNullValue(JsonElement element)
         {
             return string.IsNullOrEmpty(element.ToString()) && element.GetRawText() == "null";
         }

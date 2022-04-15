@@ -353,6 +353,43 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        /// <summary>
+        /// Test updating a missing column in the update mutation will not be updated to null
+        /// </summary>
+        [TestMethod]
+        public async Task TestMissingColumnNotUpdatedToNull()
+        {
+            string graphQLMutationName = "updateMagazine";
+            string graphQLMutation = @"
+                mutation {
+                    updateMagazine(id: 1, title: ""Newest Magazine"") {
+                        id
+                        title
+                        issue_number
+                    }
+                }
+            ";
+
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.id AS id,
+                          table0.title AS title,
+                          table0.issue_number AS issue_number
+                   FROM magazines AS table0
+                   WHERE id = 1
+                     AND title = 'Newest Magazine'
+                     AND issue_number = 1234
+                   ORDER BY id
+                   LIMIT 1) AS subq
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Negative Tests

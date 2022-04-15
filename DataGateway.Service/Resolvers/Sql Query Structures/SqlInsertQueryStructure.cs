@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<string> ReturnColumns { get; }
 
-        public SqlInsertStructure(string tableName, SqlGraphQLFileMetadataProvider metadataStore, IDictionary<string, object> mutationParams)
+        public SqlInsertStructure(string tableName, SqlGraphQLFileMetadataProvider metadataStore, IDictionary<string, object?> mutationParams)
         : base(metadataStore, tableName: tableName)
         {
             InsertColumns = new();
@@ -38,7 +38,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             ReturnColumns = tableDefinition.Columns.Keys.ToList<string>();
 
-            foreach (KeyValuePair<string, object> param in mutationParams)
+            foreach (KeyValuePair<string, object?> param in mutationParams)
             {
                 PopulateColumnsAndParams(param.Key, param.Value);
             }
@@ -50,7 +50,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         /// <param name="columnName">The name of the column.</param>
         /// <param name="value">The value of the column.</param>
-        private void PopulateColumnsAndParams(string columnName, object value)
+        private void PopulateColumnsAndParams(string columnName, object? value)
         {
             InsertColumns.Add(columnName);
             string paramName;

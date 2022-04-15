@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 
@@ -117,6 +118,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public static string MakeCursorFromJsonElement(JsonElement element, List<string> primaryKey, JsonElement? nextElement, List<OrderByColumn>? orderByColumns)
         {
             List<PaginationColumn> cursorJson = new();
+            JsonSerializerOptions options = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
             // If we have orderByColumns need to check if any of these
             // columns are not tied between element and nextElement
             // in which case the first non-tie will determine pagination order
@@ -130,7 +132,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     if (!value.Equals(nextValue))
                     {
                         cursorJson.Add(new PaginationColumn(tableAlias: null, column.ColumnName, value, column.Direction));
-                        return Base64Encode(JsonSerializer.Serialize(cursorJson));
+                        return Base64Encode(JsonSerializer.Serialize(cursorJson, options));
                     }
                 }
             }
@@ -140,7 +142,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 cursorJson.Add(new PaginationColumn(tableAlias: null, column, ResolveJsonElementToScalarVariable(element.GetProperty(column)), OrderByDir.Asc));
             }
 
-            return Base64Encode(JsonSerializer.Serialize(cursorJson));
+            return Base64Encode(JsonSerializer.Serialize(cursorJson, options));
         }
 
         /// <summary>
@@ -172,7 +174,6 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 afterJsonString = Base64Decode(afterJsonString);
                 after = JsonSerializer.Deserialize<List<PaginationColumn>>(afterJsonString)!;
-                paginationMetadata.Structure!.AddPaginationPredicate(after);
             }
             catch (Exception e)
             {

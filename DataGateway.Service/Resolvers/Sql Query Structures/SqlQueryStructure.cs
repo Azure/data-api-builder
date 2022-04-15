@@ -154,7 +154,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (!string.IsNullOrWhiteSpace(context.After))
             {
-                SqlPaginationUtil.ParseAfterAndMakeParamsFromJsonString(context.After, PaginationMetadata);
+                AddPaginationPredicate(SqlPaginationUtil.ParseAfterAndMakeParamsFromJsonString(context.After, PaginationMetadata));
             }
 
             _limit = context.First is not null ? context.First + 1 : DEFAULT_LIST_LIMIT + 1;
@@ -283,7 +283,7 @@ namespace Azure.DataGateway.Service.Resolvers
             // TableName, TableAlias, Columns, and _limit
             if (PaginationMetadata.IsPaginated)
             {
-                SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata);
+                AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata));
 
                 if (PaginationMetadata.RequestedEndCursor)
                 {

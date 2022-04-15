@@ -307,7 +307,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyPagination)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"ParamName\":null,\"Direction\":0,\"TableAlias\":null,\"ColumnName\":\"id\"}]"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"id\"}]"))}",
                 paginated: true
             );
         }
@@ -320,8 +320,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstMultiKeyPagination()
         {
-            string after = "[{\"Value\":1,\"ParamName\":null,\"Direction\":0,\"TableAlias\":null,\"ColumnName\":\"book_id\"}," +
-                            "{\"Value\":567,\"ParamName\":null,\"Direction\":0,\"TableAlias\":null,\"ColumnName\":\"id\"}]";
+            string after = "[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"book_id\"}," +
+                            "{\"Value\":567,\"Direction\":0,\"ColumnName\":\"id\"}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1",
@@ -342,7 +342,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":7,\"ParamName\":null,\"Direction\":0,\"TableAlias\":null,\"ColumnName\":\"id\"}]"))}",
+                queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":7,\"Direction\":0,\"ColumnName\":\"id\"}]"))}",
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithAfterSingleKeyPagination)),
                 controller: _restController
@@ -356,8 +356,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithAfterMultiKeyPagination()
         {
-            string after = "[{\"Value\":1,\"ParamName\":null,\"Direction\":0,\"TableAlias\":null,\"ColumnName\":\"book_id\"}," +
-                            "{\"Value\":567,\"ParamName\":null,\"Direction\":0,\"TableAlias\":null,\"ColumnName\":\"id\"}]";
+            string after = "[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"book_id\"}," +
+                            "{\"Value\":567,\"Direction\":0,\"ColumnName\":\"id\"}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
@@ -413,7 +413,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyPaginationAndOrderBy)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":\"Also Awesome book\",\"ParamName\":null,\"Direction\":0,\"TableAlias\":null,\"ColumnName\":\"title\"}]"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":\"Also Awesome book\",\"Direction\":0,\"ColumnName\":\"title\"}]"))}",
                 paginated: true
             );
         }
@@ -432,7 +432,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyIncludedInOrderByAndPagination)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"ParamName\":null,\"Direction\":0,\"TableAlias\":null,\"ColumnName\":\"id\"}]"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"id\"}]"))}",
                 paginated: true
             );
         }
@@ -452,7 +452,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _tableWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyIncludeAllInOrderByAndPagination)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":569,\"ParamName\":null,\"Direction\":1,\"TableAlias\":null,\"ColumnName\":\"id\"}]"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":569,\"Direction\":1,\"ColumnName\":\"id\"}]"))}",
                 paginated: true
             );
         }
@@ -472,7 +472,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _tableWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyIncludeOneInOrderByAndPagination)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":567,\"ParamName\":null,\"Direction\":0,\"TableAlias\":null,\"ColumnName\":\"id\"}]"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":567,\"Direction\":0,\"ColumnName\":\"id\"}]"))}",
                 paginated: true
             );
         }
@@ -493,7 +493,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstAndMultiColumnOrderBy)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":\"US history in a nutshell\",\"ParamName\":null,\"Direction\":1,\"TableAlias\":null,\"ColumnName\":\"title\"}]"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":\"US history in a nutshell\",\"Direction\":1,\"ColumnName\":\"title\"}]"))}",
                 paginated: true
             );
         }
@@ -513,7 +513,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstAndTiedColumnOrderBy)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":3,\"ParamName\":null,\"Direction\":0,\"TableAlias\":null,\"ColumnName\":\"id\"}]"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":3,\"Direction\":0,\"ColumnName\":\"id\"}]"))}",
                 paginated: true
             );
         }
@@ -532,7 +532,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _tableWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyPaginationAndOrderBy)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":\"Indeed a great book\",\"ParamName\":null,\"Direction\":1,\"TableAlias\":null,\"ColumnName\":\"content\"}]"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":\"Indeed a great book\",\"Direction\":1,\"ColumnName\":\"content\"}]"))}",
                 paginated: true
             );
         }

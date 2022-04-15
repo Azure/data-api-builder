@@ -32,12 +32,12 @@ namespace Azure.DataGateway.Service.Tests.REST
             await InitializeTestFixture(context, TestCategory.MSSQL);
 
             // Setup REST Components
-            RestService _restService = new(_queryEngine,
+            RestService restService = new(_queryEngine,
                 _mutationEngine,
                 _metadataStoreProvider,
                 _httpContextAccessor.Object,
                 _authorizationService.Object);
-            _restController = new(_restService);
+            _restController = new(restService);
         }
 
         /// <summary>

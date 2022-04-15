@@ -374,6 +374,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "FindTestWithFirstTwoOrderByAndPagination",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        ORDER BY id
+                        LIMIT 2
+                    ) AS subq
+                "
+            },
+            {
                 "FindTestWithFirstMultiKeyIncludeAllInOrderByAndPagination",
                 @"
                     SELECT to_jsonb(subq) AS data

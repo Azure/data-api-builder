@@ -441,6 +441,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         /// <summary>
         /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned to two and then
+        /// sorting by id.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstTwoOrderByAndPagination()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=2&$orderby=id",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFirstTwoOrderByAndPagination)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":2,\"Direction\":0,\"ColumnName\":\"id\"}]"))}",
+                paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first to
         /// limit the number of records returned and then sorting by
         /// id descending, book_id ascending which make up the entire
         /// composite primary key in the table.

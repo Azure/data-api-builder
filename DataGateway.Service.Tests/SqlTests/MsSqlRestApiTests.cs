@@ -203,6 +203,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"ORDER BY id " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
+
+            {
+                "FindTestWithFirstTwoOrderByAndPagination",
+                $"SELECT TOP 2 * FROM { _integrationTableName } " +
+                $"ORDER BY id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
             {
                 "FindTestWithFirstMultiKeyIncludeAllInOrderByAndPagination",
                 $"SELECT TOP 1 * FROM { _tableWithCompositePrimaryKey } " +

@@ -376,7 +376,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFirstTwoOrderByAndPagination",
                 @"
-                    SELECT to_jsonb(subq) AS data
+                    SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (
                         SELECT *
                         FROM " + _integrationTableName + @"

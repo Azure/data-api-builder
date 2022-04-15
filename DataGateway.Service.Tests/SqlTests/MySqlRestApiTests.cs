@@ -370,11 +370,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestVerifyMaintainColumnOrderForOrderBy",
                 @"
-                  SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id))) AS data
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                   FROM (
                       SELECT id, title, publisher_id
                       FROM " + _integrationTableName + @"
                       ORDER BY id desc, publisher_id
+                      LIMIT 100
                   ) AS subq"
             },
             {

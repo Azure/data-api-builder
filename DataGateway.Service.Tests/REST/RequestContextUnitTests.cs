@@ -43,7 +43,7 @@ namespace Azure.DataGateway.Service.Tests.REST
 
         /// <summary>
         /// Verify that if a payload deserializes to
-        /// the empty string that we instantiate an
+        /// the empty string, we instantiate an
         /// empty FieldsValuePairsInBody
         /// </summary>
         [TestMethod]

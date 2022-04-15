@@ -1105,7 +1105,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public virtual async Task PutOneWithNonNullableFieldMissingInJsonBodyTest()
         {
             // Behaviour expected when a non-nullable and non-default field
-            // is missing from request body.
+            // is missing from request body. This would fail in the RequestValidator.ValidateColumn
+            // as our requestBody is missing a non-nullable and non-default field.
             string requestBody = @"
             {
                 ""piecesRequired"":""6""
@@ -1129,7 +1130,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public virtual async Task PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest()
         {
             // Behaviour expected when a non-nullable but default field
-            // is missing from request body.
+            // is missing from request body. In this case, when we try to null out
+            // this field, the db would throw an exception.
             string requestBody = @"
             {
                 ""categoryName"":""comics""

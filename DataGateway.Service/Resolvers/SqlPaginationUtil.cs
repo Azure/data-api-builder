@@ -119,27 +119,32 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             List<PaginationColumn> cursorJson = new();
             JsonSerializerOptions options = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
+            HashSet<string> remainingKeys = new();
+            foreach (string key in primaryKey)
+            {
+                remainingKeys.Add(key);
+            }
+
             // If we have orderByColumns need to check if any of these
             // columns are not tied between element and nextElement
             // in which case the first non-tie will determine pagination order
             if (orderByColumns is not null)
             {
+
                 foreach (OrderByColumn column in orderByColumns)
                 {
                     object value = ResolveJsonElementToScalarVariable(element.GetProperty(column.ColumnName));
-                    object nextValue = ResolveJsonElementToScalarVariable(((JsonElement)nextElement!).GetProperty(column.ColumnName));
-
-                    if (!value.Equals(nextValue))
-                    {
-                        cursorJson.Add(new PaginationColumn(tableAlias: null, column.ColumnName, value, column.Direction));
-                        return Base64Encode(JsonSerializer.Serialize(cursorJson, options));
-                    }
+                    cursorJson.Add(new PaginationColumn(tableAlias: null, column.ColumnName, value, column.Direction));
+                    remainingKeys.Remove(column.ColumnName);
                 }
             }
 
             foreach (string column in primaryKey)
             {
-                cursorJson.Add(new PaginationColumn(tableAlias: null, column, ResolveJsonElementToScalarVariable(element.GetProperty(column)), OrderByDir.Asc));
+                if (remainingKeys.Contains(column))
+                {
+                    cursorJson.Add(new PaginationColumn(tableAlias: null, column, ResolveJsonElementToScalarVariable(element.GetProperty(column)), OrderByDir.Asc));
+                }
             }
 
             return Base64Encode(JsonSerializer.Serialize(cursorJson, options));

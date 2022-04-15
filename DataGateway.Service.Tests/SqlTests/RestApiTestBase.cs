@@ -879,7 +879,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Tests the REST Api for Find operations using keywords
         /// of which is not currently supported, verify
-        /// we throw an internal server error.
+        /// we throw a DataGateway exception with the correct
+        /// error response.
         /// </summary>
         [DataTestMethod]
         [DataRow("startswith", "(title, 'Awesome')", "eq true")]
@@ -895,9 +896,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: "While processing your request the server ran into an unexpected error.",
-                expectedStatusCode: HttpStatusCode.InternalServerError,
-                expectedSubStatusCode: "UnexpectedError"
+                expectedErrorMessage: "$filter query parameter is not well formed.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: "BadRequest"
             );
         }
 

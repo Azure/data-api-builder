@@ -40,7 +40,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         result.Append(" OR ");
                     }
 
-                    result.Append($"({MakePaginationInequality(predicate.Columns, i)})");
+                    result.Append($"({MakePaginationInequality(predicate.Columns, untilIndex: i)})");
                 }
 
                 result.Append(")");
@@ -48,7 +48,7 @@ namespace Azure.DataGateway.Service.Resolvers
             }
             else
             {
-                return MakePaginationInequality(predicate.Columns, 0);
+                return MakePaginationInequality(predicate.Columns, untilIndex: 0);
             }
         }
 

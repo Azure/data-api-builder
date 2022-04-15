@@ -173,22 +173,6 @@ namespace Azure.DataGateway.Service.Resolvers
                 afterJsonString = Base64Decode(afterJsonString);
                 after = JsonSerializer.Deserialize<List<PaginationColumn>>(afterJsonString)!;
                 paginationMetadata.Structure!.AddPaginationPredicate(after);
-                //foreach (PaginationColumn column in after)
-                //{
-
-                //IEnumerable<JsonElement> enumeratedValue = keyValuePair.Value.EnumerateArray();
-                //object value = ResolveJsonElementToScalarVariable(enumeratedValue.First());
-                //OrderByDir direction = (OrderByDir)enumeratedValue.Last().GetInt32();
-
-                //Type columnType = paginationMetadata.Structure!.GetColumnSystemType(keyValuePair.Key);
-                //if (!ReferenceEquals(value.GetType(), columnType))
-                //{
-                //    throw new ArgumentException($"After param has " +
-                //        $"incorrect type {value.GetType()} for primary key column {keyValuePair.Key} with type {columnType}.");
-                //}
-
-                //after.Add(new PaginationColumn(tableAlias: paginationMetadata.Structure.TableAlias, columnName: keyValuePair.Key, value, direction));
-                //}
             }
             catch (Exception e)
             {
@@ -226,27 +210,6 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         /// <exception cref="ArgumentException" />
         public static object ResolveJsonElementToScalarVariable(JsonElement element)
-        {
-            switch (element.ValueKind)
-            {
-                case JsonValueKind.String:
-                    return element.GetString()!;
-                case JsonValueKind.Number:
-                    return element.GetInt64();
-                case JsonValueKind.True:
-                    return true;
-                case JsonValueKind.False:
-                    return false;
-                default:
-                    throw new ArgumentException("Unexpected JsonElement value");
-            }
-        }
-
-        /// <summary>
-        /// Resolves a JsonElement representing a direction to the appropriate type
-        /// </summary>
-        /// <exception cref="ArgumentException" />
-        public static object ResolveJsonElementToOrderByDir(JsonElement element)
         {
             switch (element.ValueKind)
             {

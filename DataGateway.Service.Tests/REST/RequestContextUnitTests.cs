@@ -17,7 +17,9 @@ namespace Azure.DataGateway.Service.Tests.REST
     {
         /// <summary>
         /// Verify that if a payload does not Deserialize
-        /// when constructing an InsertRequestContext
+        /// when constructing an InsertRequestContext that the
+        /// correct exception is thrown and validate the message
+        /// and status codes.
         /// </summary>
         [TestMethod]
         public void ExceptionOnInsertPayloadFailDeserialization()
@@ -40,8 +42,9 @@ namespace Azure.DataGateway.Service.Tests.REST
         }
 
         /// <summary>
-        /// Verify that if a payload does not Deserialize
-        /// when constructing an InsertRequestContext
+        /// Verify that if a payload deserializes to
+        /// the empty string that we instantiate an
+        /// empty FieldsValuePairsInBody
         /// </summary>
         [TestMethod]
         public void EmptyInsertPayloadTest()

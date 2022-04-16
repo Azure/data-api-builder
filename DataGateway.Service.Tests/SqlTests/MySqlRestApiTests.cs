@@ -403,7 +403,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFirstTwoVerifyAfterFormedCorrectlyWithOrderBy",
                 @"
-                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'name', name, 'birthdate', birthdate)) AS data
                   FROM (
                       SELECT *
                       FROM " + _integrationTieBreakTable + @" 
@@ -414,7 +414,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFirstTwoVerifyAfterBreaksTieCorrectlyWithOrderBy",
                 @"
-                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'name', name, 'birthdate', birthdate)) AS data
                   FROM (
                       SELECT *
                       FROM " + _integrationTieBreakTable + @"

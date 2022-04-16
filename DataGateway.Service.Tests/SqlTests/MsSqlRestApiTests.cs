@@ -211,6 +211,20 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTestWithFirstTwoVerifyAfterFormedCorrectlyWithOrderBy",
+                $"SELECT TOP 2 * FROM { _integrationTieBreakTable } " +
+                $"ORDER BY birthdate, name, id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFirstTwoVerifyAfterBreaksTieCorrectlyWithOrderBy",
+                $"SELECT TOP 2 * FROM { _integrationTieBreakTable } " +
+                $"WHERE ((birthdate > '2001-01-01') OR (birthdate = '2001-01-01' AND name > 'Aniruddh') " +
+                $"OR (birthdate = '2001-01-01' AND name = 'Aniruddh' AND id > 125)) " +
+                $"ORDER BY birthdate, name, id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindTestWithFirstMultiKeyIncludeAllInOrderByAndPagination",
                 $"SELECT TOP 1 * FROM { _tableWithCompositePrimaryKey } " +
                 $"ORDER BY id desc, book_id " +

@@ -386,6 +386,32 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "FindTestWithFirstTwoVerifyAfterFormedCorrectlyWithOrderBy",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTieBreakTable + @"
+                        ORDER BY birthdate, name, id 
+                        LIMIT 2
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFirstTwoVerifyAfterBreaksTieCorrectlyWithOrderBy",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTieBreakTable + @"
+                        WHERE ((birthdate > '2001-01-01') OR(birthdate = '2001-01-01' AND name > 'Aniruddh') OR 
+                        (birthdate = '2001-01-01' AND name = 'Aniruddh' AND id > 125)) 
+                        ORDER BY birthdate, name, id 
+                        LIMIT 2
+                    ) AS subq
+                "
+            },
+            {
                 "FindTestWithFirstMultiKeyIncludeAllInOrderByAndPagination",
                 @"
                     SELECT to_jsonb(subq) AS data

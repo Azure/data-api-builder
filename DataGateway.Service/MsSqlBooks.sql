@@ -111,7 +111,7 @@ INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Tow
 SET IDENTITY_INSERT publishers OFF
 
 SET IDENTITY_INSERT authors ON
-INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02');
+INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02'), (125, 'Aniruddh', '2001-01-01'), (126, 'Aaron', '2001-01-01');
 SET IDENTITY_INSERT authors OFF
 
 SET IDENTITY_INSERT books ON

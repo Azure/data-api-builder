@@ -401,6 +401,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ) AS subq"
             },
             {
+                "FindTestWithFirstTwoVerifyAfterFormedCorrectlyWithOrderBy",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTieBreakTable + @" 
+                      ORDER BY birthdate, name, id 
+                      LIMIT 2
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFirstTwoVerifyAfterBreaksTieCorrectlyWithOrderBy",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTieBreakTable + @"
+                      WHERE ((birthdate > '2001-01-01') OR(birthdate = '2001-01-01' AND name > 'Aniruddh') OR 
+                      (birthdate = '2001-01-01' AND name = 'Aniruddh' AND id > 125)) 
+                      ORDER BY birthdate, name, id 
+                      LIMIT 2
+                  ) AS subq"
+            },
+            {
                 "FindTestWithFirstMultiKeyIncludeAllInOrderByAndPagination",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'content', content, 'book_id', book_id)) AS data

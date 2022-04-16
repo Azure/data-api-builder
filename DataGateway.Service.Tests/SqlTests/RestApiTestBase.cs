@@ -28,6 +28,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static readonly string _integration_AutoGenNonPK_TableName = "comics";
         protected static readonly string _Composite_NonAutoGenPK = "stocks";
         protected static readonly string _integrationTableHasColumnWithSpace = "brokers";
+        protected static readonly string _integrationTieBreakTable = "authors";
 
         public abstract string GetQuery(string key);
 
@@ -455,6 +456,51 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController,
                 expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":2,\"Direction\":0,\"ColumnName\":\"id\"}]"))}",
                 paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned to two and verify
+        /// that with tie breaking we form the correct $after,
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstTwoVerifyAfterFormedCorrectlyWithOrderBy()
+        {
+            string after = "[{\"Value\":\"2001-01-01\",\"Direction\":0,\"ColumnName\":\"birthdate\"}," +
+                            "{\"Value\":\"Aniruddh\",\"Direction\":0,\"ColumnName\":\"name\"}," +
+                            "{\"Value\":125,\"Direction\":0,\"ColumnName\":\"id\"}]";
+            after = $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: $"?$first=2&$orderby=birthdate, name, id",
+                entity: _integrationTieBreakTable,
+                sqlQuery: GetQuery(nameof(FindTestWithFirstTwoVerifyAfterFormedCorrectlyWithOrderBy)),
+                controller: _restController,
+                expectedAfterQueryString: after,
+                paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned to two and verifying
+        /// that with a $after that tie brakes we return the correct
+        /// result.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstTwoVerifyAfterBreaksTieCorrectlyWithOrderBy()
+        {
+            string after = "[{\"Value\":\"2001-01-01\",\"Direction\":0,\"ColumnName\":\"birthdate\"}," +
+                            "{\"Value\":\"Aniruddh\",\"Direction\":0,\"ColumnName\":\"name\"}," +
+                            "{\"Value\":125,\"Direction\":0,\"ColumnName\":\"id\"}]";
+            after = $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: $"?$first=2&$orderby=birthdate, name, id{after}",
+                entity: _integrationTieBreakTable,
+                sqlQuery: GetQuery(nameof(FindTestWithFirstTwoVerifyAfterBreaksTieCorrectlyWithOrderBy)),
+                controller: _restController
             );
         }
 

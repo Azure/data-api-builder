@@ -144,7 +144,14 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (remainingKeys.Contains(column))
                 {
                     cursorJson.Add(new PaginationColumn(tableAlias: null, column, ResolveJsonElementToScalarVariable(element.GetProperty(column)), OrderByDir.Asc));
+                    remainingKeys.Remove(column);
                 }
+            }
+
+            // verifies all primary key columns were added
+            if (remainingKeys.Count > 0)
+            {
+                throw new ArgumentException();
             }
 
             return Base64Encode(JsonSerializer.Serialize(cursorJson, options));

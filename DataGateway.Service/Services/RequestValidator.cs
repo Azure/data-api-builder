@@ -173,8 +173,7 @@ namespace Azure.DataGateway.Service.Services
                 // Request body must have value defined for included non-nullable columns
                 if (!column.Value.IsNullable && fieldsInRequestBody.Contains(column.Key))
                 {
-                    if (insertRequestCtx.FieldValuePairsInBody[column.Key] == null ||
-                        string.IsNullOrWhiteSpace(insertRequestCtx.FieldValuePairsInBody[column.Key].ToString()))
+                    if (insertRequestCtx.FieldValuePairsInBody[column.Key] == null)
                     {
                         throw new DataGatewayException(
                         message: $"Invalid value for field {column.Key} in request body.",
@@ -238,8 +237,7 @@ namespace Azure.DataGateway.Service.Services
                 // Request body must have value defined for included non-nullable columns
                 if (!column.Value.IsNullable && fieldsInRequestBody.Contains(column.Key))
                 {
-                    if (upsertRequestCtx.FieldValuePairsInBody[column.Key] == null ||
-                        string.IsNullOrWhiteSpace(upsertRequestCtx.FieldValuePairsInBody[column.Key].ToString()))
+                    if (upsertRequestCtx.FieldValuePairsInBody[column.Key] == null)
                     {
                         throw new DataGatewayException(
                         message: $"Invalid value for field {column.Key} in request body.",

@@ -143,7 +143,16 @@ namespace Azure.DataGateway.Service.Resolvers
                 // call the visit function for that node types, and we process the AST
                 // based on what type of node we are currently traversing.
                 ODataASTVisitor visitor = new(this);
-                FilterPredicates = context.FilterClauseInUrl.Expression.Accept<string>(visitor);
+                try
+                {
+                    FilterPredicates = context.FilterClauseInUrl.Expression.Accept<string>(visitor);
+                }
+                catch
+                {
+                    throw new DataGatewayException(message: "$filter query parameter is not well formed.",
+                                                   statusCode: HttpStatusCode.BadRequest,
+                                                   subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(context.After))

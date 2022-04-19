@@ -14,7 +14,7 @@ namespace Azure.DataGateway.Service
 
     class ActionToColumn
     {
-        public Dictionary<string, bool>? included = new() { { "*", true } };
+        public Dictionary<string, bool>? included = new();
         public Dictionary<string, bool>? excluded = new();
     }
 }

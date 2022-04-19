@@ -38,11 +38,6 @@ namespace Azure.DataGateway.Service
             return true;
         }
 
-        //Code to check if action requested is a defined CRUD action goes inside this function
-        private static bool IsValidAction(string action)
-        {
-            return true;
-        }
 
         private bool IsRoleDefinedForEntity(string roleName, string entityName)
         {
@@ -59,10 +54,11 @@ namespace Azure.DataGateway.Service
             // At this point we don't know if action is a valid action in sense that it exists for the given entity/role 
             // combination, and it is a valid action like CRUD and not an absurd action
             Dictionary<string, ActionToColumn> actionToColumnMap = _entityConfigMap[entityName].roleToActionMap[roleName].actionToColumnMap;
-            if ((actionToColumnMap.ContainsKey("*") && IsValidAction(action)) || actionToColumnMap.ContainsKey(action))
+            if (actionToColumnMap.ContainsKey("*") || actionToColumnMap.ContainsKey(action))
             {
                 return true;
             }
+
             return false;
         }
 
@@ -81,17 +77,35 @@ namespace Azure.DataGateway.Service
             {
                 actionToColumnMap = _entityConfigMap[entityName].roleToActionMap[roleName].actionToColumnMap[action];
             }
+
             foreach (string column in columns)
             {
+
+                if(!actionToColumnMap.excluded.ContainsKey(column) && !actionToColumnMap.included.ContainsKey(column))
+                {
+                    // If a column is absent from both excluded,included
+                    // it can be valid/invalid.
+                    // If the column turns out to be an invalid one
+                    // an error would be thrown later.
+                    continue;
+                }
+
                 if (actionToColumnMap.excluded.ContainsKey(column) ||
                     !(actionToColumnMap.included != null && (actionToColumnMap.included.ContainsKey("*") || actionToColumnMap.included.ContainsKey(column))))
                 {
+                    // If column is present in excluded OR
+                    // If column is absent from included and included!=*
+                    // return false
                     return false;
                 }
+
             }
+
             return true;
         }
 
+        // Method to read in data from the config class into a Dictionary for quick lookup
+        // during runtime.
         private static Dictionary<string, EntityToRole> GetEntityConfigMap(DraftDevConfig? devConfig)
         {
 
@@ -114,6 +128,7 @@ namespace Azure.DataGateway.Service
                     if (jsonActions.ValueKind == JsonValueKind.String)
                     {
                         actionToColumnMap = new ActionToColumn();
+                        actionToColumnMap.included.Add("*", true);
                         action = jsonActions.ToString();
                         roleToActionMap.actionToColumnMap[action] = actionToColumnMap;
                     }
@@ -125,6 +140,7 @@ namespace Azure.DataGateway.Service
                             if (Operation.ValueKind == JsonValueKind.String)
                             {
                                 action = Operation.ToString();
+                                actionToColumnMap.included.Add("*", true);
                             }
                             else if (Operation.ValueKind == JsonValueKind.Object)
                             {
@@ -135,19 +151,24 @@ namespace Azure.DataGateway.Service
                                 {
                                     actionToColumnMap.included = AddFields(actionType.Fields.Include);
                                 }
+
                                 if (actionType.Fields.Exclude != null)
                                 {
                                     actionToColumnMap.excluded = AddFields(actionType.Fields.Exclude);
                                 }
 
                             }
+
                             roleToActionMap.actionToColumnMap[action] = actionToColumnMap;
                         }
                     }
+
                     entityToRoleMap.roleToActionMap[role] = roleToActionMap;
                 }
+
                 entityConfigMap[entityName] = entityToRoleMap;
             }
+
             return entityConfigMap;
         }
         private static Dictionary<string, bool> AddFields(List<string> columns)

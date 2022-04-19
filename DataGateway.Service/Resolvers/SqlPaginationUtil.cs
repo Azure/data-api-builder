@@ -167,7 +167,12 @@ namespace Azure.DataGateway.Service.Resolvers
         public static List<PaginationColumn> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
         {
             List<PaginationColumn> after = new();
-            object afterObject = queryParams["after"];
+            object? afterObject = null;
+
+            if (queryParams.ContainsKey("after"))
+            {
+                afterObject = queryParams["after"];
+            }
 
             if (afterObject != null)
             {

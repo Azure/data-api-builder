@@ -877,6 +877,32 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Tests the REST Api for Find operations using keywords
+        /// of which is not currently supported, verify
+        /// we throw a DataGateway exception with the correct
+        /// error response.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("startswith", "(title, 'Awesome')", "eq true")]
+        [DataRow("endswith", "(title, 'book')", "eq true")]
+        [DataRow("indexof", "(title, 'Awe')", "eq 0")]
+        [DataRow("length", "(title)", "gt 5")]
+        public async Task FindTestWithUnsupportedFilterKeywords(string keyword, string value, string compareTo)
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: $"?$filter={keyword}{value} {compareTo}",
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "$filter query parameter is not well formed.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: "BadRequest"
+            );
+        }
+
+        /// <summary>
         /// Tests the InsertOne functionality with disallowed URL composition: contains Query String.
         /// </summary>
         [TestMethod]
@@ -1126,9 +1152,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
-                    expectedStatusCode: HttpStatusCode.InternalServerError,
-                    expectedSubStatusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
+                    expectedErrorMessage: $"Cannot perform INSERT and could not find books with primary key <id: 1000> to perform UPDATE on.",
+                    expectedStatusCode: HttpStatusCode.NotFound,
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound.ToString()
                 );
         }
 
@@ -1156,9 +1182,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
-                    expectedStatusCode: HttpStatusCode.InternalServerError,
-                    expectedSubStatusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
+                    expectedErrorMessage: "Cannot perform INSERT and could not find magazines with primary key <id: 1000> to perform UPDATE on.",
+                    expectedStatusCode: HttpStatusCode.NotFound,
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound.ToString()
                 );
         }
 
@@ -1249,9 +1275,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
-                    expectedStatusCode: HttpStatusCode.InternalServerError,
-                    expectedSubStatusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
+                    expectedErrorMessage: $"Cannot perform INSERT and could not find books with primary key <id: 1000> to perform UPDATE on.",
+                    expectedStatusCode: HttpStatusCode.NotFound,
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound.ToString()
                 );
         }
 
@@ -1272,9 +1298,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
-                    expectedStatusCode: HttpStatusCode.InternalServerError,
-                    expectedSubStatusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
+                    expectedErrorMessage: $"Cannot perform INSERT and could not find reviews with primary key <id: 5002, book_id: 1> to perform UPDATE on.",
+                    expectedStatusCode: HttpStatusCode.NotFound,
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound.ToString()
                 );
         }
         /// <summary>

@@ -20,7 +20,7 @@ namespace Azure.DataGateway.Service.Authorization
             _next = next;
         }
 
-        public Task Invoke(HttpContext httpContext, IAuthorizationResolver authZResolver, IAuthorizationService authorizationService)
+        public Task Invoke(HttpContext httpContext, IAuthorizationService authorizationService)
         {
             authorizationService.AuthorizeAsync(
                 user: httpContext.User,

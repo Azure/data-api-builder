@@ -9,13 +9,13 @@ namespace Azure.DataGateway.Service.Resolvers
     ///</summary>
     public class SqlDeleteStructure : BaseSqlQueryStructure
     {
-        public SqlDeleteStructure(string tableName, SqlGraphQLFileMetadataProvider metadataStore, IDictionary<string, object> mutationParams)
+        public SqlDeleteStructure(string tableName, SqlGraphQLFileMetadataProvider metadataStore, IDictionary<string, object?> mutationParams)
         : base(metadataStore, tableName: tableName)
         {
             TableDefinition tableDefinition = GetTableDefinition();
 
             List<string> primaryKeys = tableDefinition.PrimaryKey;
-            foreach (KeyValuePair<string, object> param in mutationParams)
+            foreach (KeyValuePair<string, object?> param in mutationParams)
             {
                 if (param.Value == null)
                 {

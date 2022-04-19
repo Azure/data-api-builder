@@ -129,7 +129,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
             }
 
-            foreach (KeyValuePair<string, object> predicate in context.FieldValuePairsInBody)
+            foreach (KeyValuePair<string, object?> predicate in context.FieldValuePairsInBody)
             {
                 PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
             }
@@ -370,7 +370,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="field">The string representing a field.</param>
         /// <param name="value">The value associated with a given field.</param>
         /// <param name="op">The predicate operation representing the comparison between field and value.</param>
-        private void PopulateParamsAndPredicates(string field, object value, PredicateOperation op = PredicateOperation.Equal)
+        private void PopulateParamsAndPredicates(string field, object? value, PredicateOperation op = PredicateOperation.Equal)
         {
             try
             {

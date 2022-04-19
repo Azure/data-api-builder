@@ -17,7 +17,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<Predicate> UpdateOperations { get; }
 
-        public SqlUpdateStructure(string tableName, SqlGraphQLFileMetadataProvider metadataStore, IDictionary<string, object> mutationParams, bool isIncrementalUpdate)
+        public SqlUpdateStructure(string tableName, SqlGraphQLFileMetadataProvider metadataStore, IDictionary<string, object?> mutationParams, bool isIncrementalUpdate)
         : base(metadataStore, tableName: tableName)
         {
             UpdateOperations = new();
@@ -25,7 +25,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             List<string> primaryKeys = tableDefinition.PrimaryKey;
             List<string> columns = tableDefinition.Columns.Keys.ToList();
-            foreach (KeyValuePair<string, object> param in mutationParams)
+            foreach (KeyValuePair<string, object?> param in mutationParams)
             {
                 if (param.Value == null)
                 {

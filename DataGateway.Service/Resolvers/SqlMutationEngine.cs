@@ -49,7 +49,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="context">context of graphql mutation</param>
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result and its related pagination metadata</returns>
-        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
+        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters)
         {
             if (context.Selection.Type.IsListType())
             {
@@ -113,7 +113,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>JSON object result</returns>
         public async Task<JsonDocument?> ExecuteAsync(RestRequestContext context)
         {
-            Dictionary<string, object> parameters = PrepareParameters(context);
+            Dictionary<string, object?> parameters = PrepareParameters(context);
 
             using DbDataReader dbDataReader =
             await PerformMutationOperation(
@@ -208,7 +208,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private async Task<DbDataReader> PerformMutationOperation(
             string tableName,
             Operation operationType,
-            IDictionary<string, object> parameters)
+            IDictionary<string, object?> parameters)
         {
             string queryString;
             Dictionary<string, object?> queryParameters;
@@ -254,15 +254,15 @@ namespace Azure.DataGateway.Service.Resolvers
             return await _queryExecutor.ExecuteQueryAsync(queryString, queryParameters);
         }
 
-        private static Dictionary<string, object> PrepareParameters(RestRequestContext context)
+        private static Dictionary<string, object?> PrepareParameters(RestRequestContext context)
         {
-            Dictionary<string, object> parameters;
+            Dictionary<string, object?> parameters;
 
             switch (context.OperationType)
             {
                 case Operation.Delete:
                     // DeleteOne based off primary key in request.
-                    parameters = new(context.PrimaryKeyValuePairs);
+                    parameters = new(context.PrimaryKeyValuePairs!);
                     break;
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
@@ -270,8 +270,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 case Operation.UpdateIncremental:
                     // Combine both PrimaryKey/Field ValuePairs
                     // because we create an update statement.
-                    parameters = new(context.PrimaryKeyValuePairs);
-                    foreach (KeyValuePair<string, object> pair in context.FieldValuePairsInBody)
+                    parameters = new(context.PrimaryKeyValuePairs!);
+                    foreach (KeyValuePair<string, object?> pair in context.FieldValuePairsInBody)
                     {
                         parameters.Add(pair.Key, pair.Value);
                     }

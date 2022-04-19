@@ -191,7 +191,9 @@ namespace Azure.DataGateway.Service.Services
                                element: rootEnumerated.Last(),
                                nextElement: lastElement,
                                orderByColumns: context.OrderByClauseInUrl,
-                               primaryKey: GraphQLMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey);
+                               primaryKey: GraphQLMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey,
+                               tableAlias: context.EntityName);
+
             // nextLink is the URL needed to get the next page of records using the same query options
             // with $after base64 encoded for opaqueness
             string path = UriHelper.GetEncodedUrl(GetHttpContext().Request).Split('?')[0];

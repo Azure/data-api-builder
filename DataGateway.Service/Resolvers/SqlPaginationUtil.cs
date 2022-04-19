@@ -115,32 +115,47 @@ namespace Azure.DataGateway.Service.Resolvers
         /// The JSON is encoded in base64 for opaqueness. The cursor should function as a token that the user copies and pastes
         /// without needing to understand how it works.
         /// </summary>
-        public static string MakeCursorFromJsonElement(JsonElement element, List<string> primaryKey, JsonElement? nextElement, List<OrderByColumn>? orderByColumns)
+        public static string MakeCursorFromJsonElement(JsonElement element, List<string> primaryKey, JsonElement? nextElement, List<OrderByColumn>? orderByColumns, string? tableAlias = null)
         {
             List<PaginationColumn> cursorJson = new();
             JsonSerializerOptions options = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
-            SortedSet<string> remainingKeys = new();
+            HashSet<string> remainingKeys = new();
             foreach (string key in primaryKey)
             {
                 remainingKeys.Add(key);
             }
 
-            // If we have orderByColumns need to check if any of these
-            // columns are not tied between element and nextElement
-            // in which case the first non-tie will determine pagination order
+            // must include all orderByColumns to maintain
+            // correct pagination with sorting
             if (orderByColumns is not null)
             {
                 foreach (OrderByColumn column in orderByColumns)
                 {
                     object value = ResolveJsonElementToScalarVariable(element.GetProperty(column.ColumnName));
-                    cursorJson.Add(new PaginationColumn(tableAlias: null, column.ColumnName, value, column.Direction));
+                    cursorJson.Add(new PaginationColumn(tableAlias: tableAlias, column.ColumnName, value, column.Direction));
                     remainingKeys.Remove(column.ColumnName);
                 }
             }
 
-            foreach (string column in remainingKeys)
+            // primary key columns are used in ordering
+            // for tie-breaking and must be included.
+            // iterate through list and check for column
+            // in remaining key set so that we iterate in
+            // same order as primary key column, but still
+            // verify all primary key columns added.
+            foreach (string column in primaryKey)
             {
-                cursorJson.Add(new PaginationColumn(tableAlias: null, column, ResolveJsonElementToScalarVariable(element.GetProperty(column)), OrderByDir.Asc));
+                if (remainingKeys.Contains(column))
+                {
+                    cursorJson.Add(new PaginationColumn(tableAlias: null, column, ResolveJsonElementToScalarVariable(element.GetProperty(column)), OrderByDir.Asc));
+                    remainingKeys.Remove(column);
+                }
+
+            }
+
+            if (remainingKeys.Count > 0)
+            {
+                throw new ArgumentException();
             }
 
             return Base64Encode(JsonSerializer.Serialize(cursorJson, options));

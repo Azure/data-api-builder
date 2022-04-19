@@ -125,7 +125,7 @@ namespace Azure.DataGateway.Service.Resolvers
             string right = string.Empty;
             foreach (PaginationColumn column in predicate.Columns)
             {
-                right += column.Value!.ToString();
+                right += $"'{column.Value!.ToString()}'";
                 if (!predicate.Columns.Last().Equals(column))
                 {
                     right += ", ";

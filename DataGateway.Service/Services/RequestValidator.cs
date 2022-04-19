@@ -232,8 +232,6 @@ namespace Azure.DataGateway.Service.Services
                     continue;
                 }
 
-                bool isReplacementUpdate = (upsertRequestCtx.OperationType == Operation.Upsert) ? true : false;
-
                 // Request body must have value defined for included non-nullable columns
                 if (!column.Value.IsNullable && fieldsInRequestBody.Contains(column.Key))
                 {
@@ -245,6 +243,8 @@ namespace Azure.DataGateway.Service.Services
                         subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }
                 }
+
+                bool isReplacementUpdate = (upsertRequestCtx.OperationType == Operation.Upsert) ? true : false;
 
                 if (ValidateColumn(column, fieldsInRequestBody, isReplacementUpdate))
                 {

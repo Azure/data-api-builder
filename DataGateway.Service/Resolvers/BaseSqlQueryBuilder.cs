@@ -104,9 +104,6 @@ namespace Azure.DataGateway.Service.Resolvers
         /// {TableAlias}.{ColumnName}
         /// If TableAlias is null
         /// {ColumnName}
-        /// If column is OrderByColumn
-        /// and Direction is intended to be used,
-        /// call Build with type OrderByColumn
         /// </summary>
         protected virtual string Build(Column column)
         {

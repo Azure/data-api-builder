@@ -270,6 +270,14 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
+        /// A more readable version of !type.IsNonNullType
+        /// </summary>
+        private static bool IsNullableType(ITypeNode type)
+        {
+            return !type.IsNonNullType();
+        }
+
+        /// <summary>
         /// Checks if the type is a nested list type
         /// e.g. [[Book]], [[[Book!]!]!]!
         /// </summary>
@@ -385,7 +393,7 @@ namespace Azure.DataGateway.Service.Configurations
         {
             if (IsListType(type))
             {
-                return !type.NullableType().InnerType().IsNonNullType();
+                return IsNullableType(type.NullableType().InnerType());
             }
 
             return false;

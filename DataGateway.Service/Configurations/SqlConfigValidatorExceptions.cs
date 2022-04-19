@@ -531,7 +531,7 @@ namespace Azure.DataGateway.Service.Configurations
             ITypeNode itemsType = itemsField.Type;
             if (!IsListType(itemsType) ||
                 !IsInnerTypeCustom(itemsType) ||
-                !itemsType.IsNonNullType() ||
+                IsNullableType(itemsType) ||
                 AreListElementsNullable(itemsType) ||
                 IsPaginationType(InnerType(itemsType)))
             {
@@ -566,7 +566,7 @@ namespace Azure.DataGateway.Service.Configurations
             ITypeNode hasNextPageFieldType = hasNextPageField.Type;
             if (IsListType(hasNextPageFieldType) ||
                 InnerTypeStr(hasNextPageFieldType) != "Boolean" ||
-                !hasNextPageFieldType.IsNonNullType())
+                IsNullableType(hasNextPageFieldType))
             {
                 throw new ConfigValidationException(
                     "\"hasNextPage\" must return a non nullable \"Boolean!\" type.",
@@ -743,7 +743,7 @@ namespace Azure.DataGateway.Service.Configurations
         {
             Dictionary<string, FieldDefinitionNode> scalarFields = GetScalarFields(GetTypeFields(typeName));
             IEnumerable<string> nullableScalarFields =
-                scalarFields.Keys.Where(fieldName => !scalarFields[fieldName].Type.IsNonNullType());
+                scalarFields.Keys.Where(fieldName => IsNullableType(scalarFields[fieldName].Type));
             IEnumerable<string> notNullableScalarFields = scalarFields.Keys.Except(nullableScalarFields);
 
             TableDefinition table = GetTableWithName(typeTable);
@@ -1336,7 +1336,7 @@ namespace Azure.DataGateway.Service.Configurations
                 {
                     shouldBeNullable.Add(argName);
                 }
-                else if (!isNullable && !argument.Type.IsNonNullType())
+                else if (!isNullable && IsNullableType(argument.Type))
                 {
                     shouldBeNonNullable.Add(argName);
                 }
@@ -1450,7 +1450,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateFieldArgumentsAreNonNullable(Dictionary<string, InputValueDefinitionNode> arguments)
         {
-            IEnumerable<string> nullableArgs = arguments.Keys.Where(argName => !arguments[argName].Type.IsNonNullType());
+            IEnumerable<string> nullableArgs = arguments.Keys.Where(argName => IsNullableType(arguments[argName].Type));
 
             if (nullableArgs.Any())
             {

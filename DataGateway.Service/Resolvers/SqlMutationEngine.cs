@@ -49,7 +49,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="context">context of graphql mutation</param>
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result and its related pagination metadata</returns>
-        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
+        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters)
         {
             if (context.Selection.Type.IsListType())
             {
@@ -66,13 +66,7 @@ namespace Azure.DataGateway.Service.Resolvers
             if (mutationResolver.OperationType == Operation.Delete)
             {
                 // compute the mutation result before removing the element
-                result = await _queryEngine.ExecuteAsync(
-                    context,
-                // Disabling the warning since trying to fix this opens up support for nullability
-                // tracked in #235 on REST and #201 on GraphQL.
-#pragma warning disable CS8620
-                    parameters);
-#pragma warning restore CS8620
+                result = await _queryEngine.ExecuteAsync(context, parameters);
             }
 
             using DbDataReader dbDataReader =
@@ -83,11 +77,19 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (!context.Selection.Type.IsScalarType() && mutationResolver.OperationType != Operation.Delete)
             {
-                Dictionary<string, object?>? searchParams = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
+                TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(tableName);
+
+                // only extract pk columns
+                // since non pk columns can be null
+                // and the subsequent query would search with:
+                // nullParamName = NULL
+                // which would fail to get the mutated entry from the db
+                Dictionary<string, object?>? searchParams = await _queryExecutor.ExtractRowFromDbDataReader(
+                    dbDataReader,
+                    onlyExtract: tableDefinition.PrimaryKey);
 
                 if (searchParams == null)
                 {
-                    TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(tableName);
                     string searchedPK = '<' + string.Join(", ", tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
                     throw new DataGatewayException($"Could not find entity with {searchedPK}", HttpStatusCode.NotFound, DataGatewayException.SubStatusCodes.EntityNotFound);
                 }
@@ -208,7 +210,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private async Task<DbDataReader> PerformMutationOperation(
             string tableName,
             Operation operationType,
-            IDictionary<string, object> parameters)
+            IDictionary<string, object?> parameters)
         {
             string queryString;
             Dictionary<string, object?> queryParameters;

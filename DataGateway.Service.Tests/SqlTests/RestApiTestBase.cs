@@ -485,7 +485,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Tests the REST Api for Find operation using $first to
         /// limit the number of records returned to two and verifying
-        /// that with a $after that tie brakes we return the correct
+        /// that with a $after that tie breaks we return the correct
         /// result.
         /// </summary>
         [TestMethod]
@@ -609,6 +609,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: GetQuery(nameof(FindTestVerifyMaintainColumnOrderForOrderBy)),
                 controller: _restController
             );
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby=publisher_id, id desc",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery("FindTestVerifyMaintainColumnOrderForOrderByInReverse"),
+                controller: _restController
+            );
+
         }
 
         /// <summary>

@@ -119,7 +119,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             List<PaginationColumn> cursorJson = new();
             JsonSerializerOptions options = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
-            HashSet<string> remainingKeys = new();
+            SortedSet<string> remainingKeys = new();
             foreach (string key in primaryKey)
             {
                 remainingKeys.Add(key);
@@ -130,7 +130,6 @@ namespace Azure.DataGateway.Service.Resolvers
             // in which case the first non-tie will determine pagination order
             if (orderByColumns is not null)
             {
-
                 foreach (OrderByColumn column in orderByColumns)
                 {
                     object value = ResolveJsonElementToScalarVariable(element.GetProperty(column.ColumnName));
@@ -139,19 +138,10 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            foreach (string column in primaryKey)
+            foreach (string column in remainingKeys)
             {
-                if (remainingKeys.Contains(column))
-                {
-                    cursorJson.Add(new PaginationColumn(tableAlias: null, column, ResolveJsonElementToScalarVariable(element.GetProperty(column)), OrderByDir.Asc));
-                    remainingKeys.Remove(column);
-                }
-            }
-
-            // verifies all primary key columns were added
-            if (remainingKeys.Count > 0)
-            {
-                throw new ArgumentException();
+                cursorJson.Add(new PaginationColumn(tableAlias: null, column, ResolveJsonElementToScalarVariable(element.GetProperty(column)), OrderByDir.Asc));
+                remainingKeys.Remove(column);
             }
 
             return Base64Encode(JsonSerializer.Serialize(cursorJson, options));

@@ -27,7 +27,6 @@ namespace Azure.DataGateway.Service.Resolvers
             return queryStringBuilder.ToString();
         }
 
-        // bool to match signature for override
         protected override string Build(Column column)
         {
             return _containerAlias + "." + column.ColumnName;

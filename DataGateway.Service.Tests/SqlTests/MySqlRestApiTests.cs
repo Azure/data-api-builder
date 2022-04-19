@@ -6,7 +6,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
 {
-
     [TestClass, TestCategory(TestCategory.MYSQL)]
     public class MySqlRestApiTests : RestApiTestBase
     {
@@ -375,6 +374,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                       SELECT id, title, publisher_id
                       FROM " + _integrationTableName + @"
                       ORDER BY id desc, publisher_id
+                      LIMIT 100
+                  ) AS subq"
+            },
+            {
+                "FindTestVerifyMaintainColumnOrderForOrderByInReverse",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT id, title, publisher_id
+                      FROM " + _integrationTableName + @"
+                      ORDER BY publisher_id, id desc
                       LIMIT 100
                   ) AS subq"
             },

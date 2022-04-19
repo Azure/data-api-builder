@@ -538,6 +538,26 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expectedStatusCode: HttpStatusCode.NoContent,
                 expectedLocationHeader: expectedLocationHeader
                 );
+
+            requestBody = @"
+            {
+               ""categoryName"":"""",
+               ""piecesAvailable"":""2"",
+               ""piecesRequired"":""3""
+            }";
+
+            expectedLocationHeader = $"categoryid/2/pieceid/1";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: expectedLocationHeader,
+                queryString: null,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: GetQuery("PutOne_Update_Empty_Test"),
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedLocationHeader: expectedLocationHeader
+                );
         }
 
         /// <summary>
@@ -680,6 +700,26 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 queryString: null,
                 entity: _Composite_NonAutoGenPK,
                 sqlQuery: GetQuery("PutOne_Insert_Default_Test"),
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+                );
+
+            requestBody = @"
+            {
+               ""categoryName"":"""",
+               ""piecesAvailable"":""2"",
+               ""piecesRequired"":""3""
+            }";
+
+            expectedLocationHeader = $"categoryid/4/pieceid/1";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: expectedLocationHeader,
+                queryString: null,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: GetQuery("PutOne_Insert_Empty_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
@@ -839,6 +879,26 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             requestBody = @"
             {
+                ""categoryName"": """",
+                ""piecesAvailable"":""5"",
+                ""piecesRequired"":""4""
+            }";
+            expectedLocationHeader = $"categoryid/5/pieceid/1";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entity: _Composite_NonAutoGenPK,
+                    sqlQuery: GetQuery("PatchOne_Insert_Empty_Test"),
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: expectedLocationHeader
+                );
+
+            requestBody = @"
+            {
                 ""categoryName"": ""Drama""
             }";
             expectedLocationHeader = $"categoryid/7/pieceid/1";
@@ -907,6 +967,23 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     queryString: null,
                     entity: _Composite_NonAutoGenPK,
                     sqlQuery: GetQuery("PatchOne_Update_CompositeNonAutoGenPK_Test"),
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.NoContent
+                );
+
+            requestBody = @"
+            {
+                ""categoryName"": """"
+                
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entity: _Composite_NonAutoGenPK,
+                    sqlQuery: GetQuery("PatchOne_Update_Empty_Test"),
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,

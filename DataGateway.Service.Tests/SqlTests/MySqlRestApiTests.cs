@@ -442,6 +442,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "PutOne_Update_Empty_Test",
+                @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
+                                        'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK + @"
+                        WHERE categoryid = 2 AND pieceid = 1 AND categoryName ='' AND piecesAvailable = 2
+                        AND piecesRequired = 3
+                    ) AS subq
+                "
+            },
+            {
                 "PutOne_Update_Nulled_Test",
                 @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
@@ -515,6 +528,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "PutOne_Insert_Empty_Test",
+                @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
+                                        'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK + @"
+                        WHERE categoryid = 4 AND pieceid = 1 AND categoryName ='' AND piecesAvailable = 2
+                        AND piecesRequired = 3
+                    ) AS subq
+                "
+            },
+            {
                 "PutOne_Insert_Nulled_Test",
                 @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
@@ -547,6 +573,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
                         FROM " + _Composite_NonAutoGenPK + @"
                         WHERE categoryid = 4 AND pieceid = 1 AND categoryName ='Suspense' AND piecesAvailable = 5
+                        AND piecesRequired = 4
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOne_Insert_Empty_Test",
+                @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
+                                        'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK + @"
+                        WHERE categoryid = 5 AND pieceid = 1 AND categoryName ='' AND piecesAvailable = 5
                         AND piecesRequired = 4
                     ) AS subq
                 "
@@ -621,6 +660,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
                         FROM " + _Composite_NonAutoGenPK + @"
                         WHERE categoryid = 1 AND pieceid = 1 AND categoryName ='books' AND piecesAvailable = 10
+                        AND piecesRequired = 0
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOne_Update_Empty_Test",
+                @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
+                                        'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK + @"
+                        WHERE categoryid = 1 AND pieceid = 1 AND categoryName ='' AND piecesAvailable = 10
                         AND piecesRequired = 0
                     ) AS subq
                 "

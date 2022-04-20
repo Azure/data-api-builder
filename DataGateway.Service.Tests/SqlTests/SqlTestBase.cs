@@ -217,7 +217,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string expectedSubStatusCode = "BadRequest",
             string expectedLocationHeader = null,
             string expectedAfterQueryString = "",
-            bool paginated = false)
+            bool paginated = false,
+            int verifyNumRecords = -1)
         {
             ConfigureRestController(
                 controller,
@@ -273,7 +274,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expected,
                 expectedStatusCode,
                 expectedLocationHeader,
-                !exception);
+                !exception,
+                verifyNumRecords);
         }
 
         /// <summary>

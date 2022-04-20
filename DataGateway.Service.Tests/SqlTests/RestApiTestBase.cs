@@ -29,6 +29,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static readonly string _Composite_NonAutoGenPK = "stocks";
         protected static readonly string _integrationTableHasColumnWithSpace = "brokers";
         protected static readonly string _integrationTieBreakTable = "authors";
+        public static readonly int _numRecordsReturnedFromTieBreakTable = 2;
 
         public abstract string GetQuery(string key);
 
@@ -500,7 +501,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 queryString: $"?$first=2&$orderby=birthdate, name, id{after}",
                 entity: _integrationTieBreakTable,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstTwoVerifyAfterBreaksTieCorrectlyWithOrderBy)),
-                controller: _restController
+                controller: _restController,
+                verifyNumRecords: _numRecordsReturnedFromTieBreakTable
             );
         }
 

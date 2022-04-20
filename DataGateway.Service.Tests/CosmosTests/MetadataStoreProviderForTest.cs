@@ -1,13 +1,13 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 
 namespace Azure.DataGateway.Service.Tests.CosmosTests
 {
-    public class MetadataStoreProviderForTest : IMetadataStoreProvider
+    public class MetadataStoreProviderForTest : IGraphQLMetadataProvider
     {
         public string GraphQLSchema { get; set; }
-        private readonly FilterParser _filterParser;
         public Dictionary<string, MutationResolver> MutationResolvers { get; set; } = new();
         public Dictionary<string, TableDefinition> Tables { get; set; } = new();
         public Dictionary<string, GraphQLType> GraphQLTypes { get; set; } = new();
@@ -51,9 +51,10 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             throw new System.NotImplementedException();
         }
 
-        public FilterParser GetFilterParser()
+        public Task InitializeAsync()
         {
-            return _filterParser;
+            // no-op
+            return Task.CompletedTask;
         }
     }
 }

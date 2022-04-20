@@ -102,19 +102,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFilterQueryOneLeftNullRightNullGtFilter",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE NULL > NULL" +
+                $"WHERE NULL > NULL " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithFilterQueryStringSingleAndFilter",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE id < 3 AND id > 1" +
+                $"WHERE id < 3 AND id > 1 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithFilterQueryStringSingleOrFilter",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE id < 3 OR id > 4" +
+                $"WHERE id < 3 OR id > 4 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
@@ -126,25 +126,52 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFilterQueryStringMultipleOrFilters",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE id = 1 OR id = 2 OR id = 3" +
+                $"WHERE id = 1 OR id = 2 OR id = 3 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithFilterQueryStringMultipleAndOrFilters",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE (id > 2 AND id < 4) OR title = 'Awesome book'" +
+                $"WHERE (id > 2 AND id < 4) OR title = 'Awesome book' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithFilterQueryStringMultipleNotAndOrFilters",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE (NOT (id < 3) OR id < 4) OR NOT (title = 'Awesome book')" +
+                $"WHERE (NOT (id < 3) OR id < 4) OR NOT (title = 'Awesome book') " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithPrimaryKeyContainingForeignKey",
                 $"SELECT [id], [content] FROM reviews " +
                 $"WHERE id = 567 AND book_id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindTestWithFirstSingleKeyPagination",
+                $"SELECT TOP 1 * FROM { _integrationTableName } " +
+                $"ORDER BY id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFirstMultiKeyPagination",
+                $"SELECT TOP 1 * FROM REVIEWS " +
+                $"WHERE 1=1 " +
+                $"ORDER BY book_id, id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithAfterSingleKeyPagination",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE id > 7 " +
+                $"ORDER BY id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithAfterMultiKeyPagination",
+                $"SELECT * FROM REVIEWS " +
+                "WHERE book_id > 1 OR (book_id = 1 AND id > 567) " +
+                $"ORDER BY book_id, id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "InsertOneTest",
@@ -157,12 +184,29 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "InsertOneInCompositeNonAutoGenPKTest",
+                // This query is the query for the result we get back from the database
+                // after the insert operation. Not the query that we generate to perform
+                // the insertion.
+                $"SELECT [categoryid],[pieceid],[categoryName],[piecesAvailable]," +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"WHERE [categoryid] = 5 AND [pieceid] = 2 AND [categoryName] = 'Thriller' " +
+                $"AND [piecesAvailable] = 0 AND [piecesRequired] = 0 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "InsertOneInCompositeKeyTableTest",
                 // This query is the query for the result we get back from the database
                 // after the insert operation. Not the query that we generate to perform
                 // the insertion.
                 $"SELECT [id], [content], [book_id] FROM { _tableWithCompositePrimaryKey } " +
                 $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS } AND [book_id] = 1 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "InsertOneInDefaultTestTable",
+                $"SELECT [id], [book_id], [content] FROM { _tableWithCompositePrimaryKey } " +
+                $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS + 1} AND [book_id] = 2 AND [content] = 'Its a classic' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
@@ -180,17 +224,37 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "PutOne_Update_IfMatchHeaders_Test_Confirm_Update",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE id = 1 AND title = 'The Return of the King' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PutOne_Update_Default_Test",
+                $"SELECT [id], [book_id], [content] FROM { _tableWithCompositePrimaryKey } " +
+                $"WHERE [id] = 568 AND [book_id] = 1 AND [content]='Good book to read' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PutOne_Update_CompositeNonAutoGenPK_Test",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"WHERE [categoryid] = 2 AND [pieceid] = 1 AND [categoryName] = 'History' " +
+                $"AND [piecesAvailable] = 10  AND [piecesRequired] = 5 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "PutOne_Insert_Test",
-                $"SELECT [id], [title], [issueNumber] FROM { _integration_NonAutoGenPK_TableName } " +
+                $"SELECT [id], [title], [issue_number] FROM { _integration_NonAutoGenPK_TableName } " +
                 $"WHERE id = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'Batman Returns' " +
-                $"AND [issueNumber] = 1234" +
+                $"AND [issue_number] = 1234" +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "PutOne_Insert_Nullable_Test",
-                $"SELECT [id], [title], [issueNumber] FROM { _integration_NonAutoGenPK_TableName } " +
+                $"SELECT [id], [title], [issue_number] FROM { _integration_NonAutoGenPK_TableName } " +
                 $"WHERE id = { STARTING_ID_FOR_TEST_INSERTS + 1 } AND [title] = 'Times' " +
-                $"AND [issueNumber] IS NULL " +
+                $"AND [issue_number] IS NULL " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
@@ -207,10 +271,42 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "PutOne_Insert_CompositeNonAutoGenPK_Test",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"WHERE [categoryid] = 3 AND [pieceid] = 1 AND [categoryName] = 'comics' " +
+                $"AND [piecesAvailable] = 2 AND [piecesRequired] = 1 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PutOne_Insert_Default_Test",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"WHERE [categoryid] = 8 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
+                $"AND [piecesAvailable] = 0 AND [piecesRequired] = 0 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "PatchOne_Insert_NonAutoGenPK_Test",
-                $"SELECT [id], [title], [issueNumber] FROM { _integration_NonAutoGenPK_TableName } " +
+                $"SELECT [id], [title], [issue_number] FROM { _integration_NonAutoGenPK_TableName } " +
                 $"WHERE id = 2 AND [title] = 'Batman Begins' " +
-                $"AND [issueNumber] = 1234 " +
+                $"AND [issue_number] = 1234 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PatchOne_Insert_CompositeNonAutoGenPK_Test",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"WHERE [categoryid] = 4 AND [pieceid] = 1 AND [categoryName] = 'Suspense' " +
+                $"AND [piecesAvailable] = 5 AND [piecesRequired] = 4 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PatchOne_Insert_Default_Test",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"WHERE [categoryid] = 7 AND [pieceid] = 1 AND [categoryName] = 'Drama' " +
+                $"AND [piecesAvailable] = 0 AND [piecesRequired] = 0 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
@@ -218,6 +314,26 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
                 $"WHERE id = 8 AND [title] = 'Heart of Darkness' " +
                 $"AND [publisher_id] = 2324 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PatchOne_Update_IfMatchHeaders_Test_Confirm_Update",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE id = 1 AND title = 'The Hobbit Returns to The Shire' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PatchOne_Update_Default_Test",
+                $"SELECT [id], [book_id], [content] FROM { _tableWithCompositePrimaryKey } " +
+                $"WHERE id = 567 AND [book_id] = 1 AND [content] = 'That's a great book' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PatchOne_Update_CompositeNonAutoGenPK_Test",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"WHERE [categoryid] = 1 AND [pieceid] = 1 AND [categoryName] = 'books' " +
+                $"AND [piecesAvailable]= 10 AND [piecesRequired] = 0 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {

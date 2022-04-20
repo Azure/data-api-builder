@@ -178,7 +178,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private Dictionary<string, TableDefinition> GetDatabaseTables()
         {
-            return _config.DatabaseSchema.Tables;
+            return _config.DatabaseSchema!.Tables;
         }
 
         /// <summary>
@@ -194,7 +194,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private bool ExistsTableWithName(string tableName)
         {
-            return _config.DatabaseSchema.Tables.ContainsKey(tableName);
+            return _config.DatabaseSchema!.Tables.ContainsKey(tableName);
         }
 
         /// <summary>
@@ -211,15 +211,31 @@ namespace Azure.DataGateway.Service.Configurations
                 throw new ArgumentException("Invalid table name was provided.");
             }
 
-            return _config.DatabaseSchema.Tables[tableName];
+            return _config.DatabaseSchema!.Tables[tableName];
         }
 
         /// <summary>
-        ///  Checks if table has foreign key
+        /// Checks if table has foreign key
         /// </summary>
         private static bool TableHasForeignKey(TableDefinition table)
         {
             return table.ForeignKeys != null;
+        }
+
+        /// <summary>
+        /// Checks if foreign key has explicitly defined columns
+        /// </summary>
+        private static bool HasExplicitColumns(ForeignKeyDefinition fk)
+        {
+            return fk.Columns.Count > 0;
+        }
+
+        /// <summary>
+        /// Checks if foreign key has explicitly defined referenced columns
+        /// </summary>
+        private static bool HasExplicitReferencedColumns(ForeignKeyDefinition fk)
+        {
+            return fk.ReferencedColumns.Count > 0;
         }
 
         /// <summary>
@@ -251,6 +267,14 @@ namespace Azure.DataGateway.Service.Configurations
         private static bool TypeHasFields(GraphQLType type)
         {
             return type.Fields != null;
+        }
+
+        /// <summary>
+        /// A more readable version of !type.IsNonNullType
+        /// </summary>
+        private static bool IsNullableType(ITypeNode type)
+        {
+            return !type.IsNonNullType();
         }
 
         /// <summary>
@@ -369,7 +393,7 @@ namespace Azure.DataGateway.Service.Configurations
         {
             if (IsListType(type))
             {
-                return !type.NullableType().InnerType().IsNonNullType();
+                return IsNullableType(type.NullableType().InnerType());
             }
 
             return false;
@@ -444,7 +468,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Checks if a GraphQL type is equal to a ColumnType
         /// </summary>
-        private static bool GraphQLTypeEqualsColumnType(ITypeNode gqlType, ColumnType columnType)
+        private static bool GraphQLTypeEqualsColumnType(ITypeNode gqlType, Type columnType)
         {
             return GetGraphQLTypeForColumnType(columnType) == gqlType.NullableType().ToString();
         }
@@ -452,14 +476,13 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Get the GraphQL type equivalent from ColumnType
         /// </summary>
-        private static string GetGraphQLTypeForColumnType(ColumnType type)
+        private static string GetGraphQLTypeForColumnType(Type type)
         {
-            Type systemType = ColumnDefinition.ResolveColumnTypeToSystemType(type);
-            switch (systemType.Name)
+            switch (Type.GetTypeCode(type))
             {
-                case "String":
+                case TypeCode.String:
                     return "String";
-                case "Int64":
+                case TypeCode.Int64:
                     return "Int";
                 default:
                     throw new ArgumentException($"ColumnType {type} not handled by case. Please add a case resolving " +
@@ -540,7 +563,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <exception cref="KeyNotFoundException" />
         private ForeignKeyDefinition GetFkFromTable(string tableName, string fkName)
         {
-            return _config.DatabaseSchema.Tables[tableName].ForeignKeys[fkName];
+            return _config.DatabaseSchema!.Tables[tableName].ForeignKeys[fkName];
         }
 
         /// <summary>

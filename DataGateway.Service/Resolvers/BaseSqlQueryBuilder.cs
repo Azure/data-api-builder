@@ -131,6 +131,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             Column? c;
             string? s;
+            Predicate? p;
             if ((c = operand.AsColumn()) != null)
             {
                 return Build(c);
@@ -138,6 +139,10 @@ namespace Azure.DataGateway.Service.Resolvers
             else if ((s = operand.AsString()) != null)
             {
                 return s;
+            }
+            else if ((p = operand.AsPredicate()) != null)
+            {
+                return Build(p);
             }
             else
             {
@@ -164,6 +169,18 @@ namespace Azure.DataGateway.Service.Resolvers
                     return "<=";
                 case PredicateOperation.NotEqual:
                     return "!=";
+                case PredicateOperation.AND:
+                    return "AND";
+                case PredicateOperation.OR:
+                    return "OR";
+                case PredicateOperation.LIKE:
+                    return "LIKE";
+                case PredicateOperation.NOT_LIKE:
+                    return "NOT LIKE";
+                case PredicateOperation.IS:
+                    return "IS";
+                case PredicateOperation.IS_NOT:
+                    return "IS NOT";
                 default:
                     throw new ArgumentException($"Cannot build unknown predicate operation {op}.");
             }
@@ -173,14 +190,22 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Build left and right predicate operand and resolve the predicate operator into
         /// {OperandLeft} {Operator} {OperandRight}
         /// </summary>
-        protected string Build(Predicate predicate)
+        protected string Build(Predicate? predicate)
         {
             if (predicate is null)
             {
                 throw new ArgumentNullException(nameof(predicate));
             }
 
-            return $"{Build(predicate.Left)} {Build(predicate.Op)} {Build(predicate.Right)}";
+            string predicateString = $"{Build(predicate.Left)} {Build(predicate.Op)} {Build(predicate.Right)}";
+            if (predicate.AddParenthesis)
+            {
+                return "(" + predicateString + ")";
+            }
+            else
+            {
+                return predicateString;
+            }
         }
 
         /// <summary>

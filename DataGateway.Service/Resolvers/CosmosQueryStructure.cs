@@ -8,7 +8,7 @@ using HotChocolate.Resolvers;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
-    public class CosmosQueryStructure : BaseSqlQueryStructure
+    public class CosmosQueryStructure : BaseQueryStructure
     {
         private IMiddlewareContext _context;
         public bool IsPaginated { get; internal set; }
@@ -17,12 +17,16 @@ namespace Azure.DataGateway.Service.Resolvers
         public string Container { get; internal set; }
         public string Database { get; internal set; }
         public string? Continuation { get; internal set; }
-        public long MaxItemCount { get; internal set; }
+        public int MaxItemCount { get; internal set; }
+
+        protected IGraphQLMetadataProvider MetadataStoreProvider { get; }
 
         public CosmosQueryStructure(IMiddlewareContext context,
             IDictionary<string, object> parameters,
-            IMetadataStoreProvider metadataStoreProvider) : base(metadataStoreProvider)
+            IGraphQLMetadataProvider metadataStoreProvider)
+            : base()
         {
+            MetadataStoreProvider = metadataStoreProvider;
             _context = context;
             Init(parameters);
         }
@@ -59,7 +63,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 // TODO: Revisit 'first' while adding support for TOP queries
                 if (parameter.Key == "first")
                 {
-                    MaxItemCount = (long)parameter.Value;
+                    MaxItemCount = (int)parameter.Value;
                     continue;
                 }
 

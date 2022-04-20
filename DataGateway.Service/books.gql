@@ -1,15 +1,22 @@
 type Query {
-    getBooks(first: Int = 100, _filter: String): [Book!]!
+    getBooks(first: Int = 100, _filter: BookFilterInput, _filterOData: String): [Book!]!
     getBook(id: Int!): Book
     getReview(id: Int!, book_id: Int!): Review
-    getReviews(_filter: String): [Review!]!
-    books(first: Int, after: String, _filter: String): BookConnection!
-    reviews(first: Int, after: String, _filter: String): ReviewConnection!
+    getReviews(_filter: ReviewFilterInput, _filterOData: String): [Review!]!
+    getMagazine(id: Int!): Magazine
+    getMagazines(first: Int = 100, _filter: MagazineFilterInput, _filterOData: String): [Magazine!]!
+    getWebsiteUsers(first: Int = 100, _filter: WebsiteUserFilterInput, _filterOData: String): [WebsiteUser!]!
+    books(first: Int, after: String, _filter: BookFilterInput, _filterOData: String): BookConnection!
+    reviews(first: Int, after: String, _filter: ReviewFilterInput, _filterOData: String): ReviewConnection!
 }
 
 type Mutation {
     editBook(id: Int!, title: String, publisher_id: Int): Book
+    updateMagazine(id: Int!, title: String, issue_number: Int): Magazine
     insertBook(title: String!, publisher_id: Int!): Book
+    insertMagazine(id: Int!, title: String!, issue_number: Int): Magazine
+    insertWebsiteUser(id: Int!, username: String): WebsiteUser
+    insertWebsitePlacement(book_id: Int!, price: Int!): BookWebsitePlacement
     addAuthorToBook(author_id: Int!, book_id: Int!): Boolean
     deleteBook(id: Int!): Book
 }
@@ -17,8 +24,8 @@ type Mutation {
 type Publisher {
     id: Int!
     name: String!
-    books(first: Int = 100, _filter: String): [Book!]!
-    paginatedBooks(first: Int, after: String, _filter: String): BookConnection!
+    books(first: Int = 100, _filter: BookFilterInput, _filterOData: String): [Book!]!
+    paginatedBooks(first: Int, after: String, _filter: BookFilterInput, _filterOData: String): BookConnection!
 }
 
 type Book {
@@ -26,24 +33,43 @@ type Book {
     title: String!
     publisher_id: Int!
     publisher: Publisher!
-    reviews(first: Int = 100, _filter: String): [Review!]!
-    paginatedReviews(first: Int, after: String, _filter: String): ReviewConnection!
-    authors(first: Int = 100, _filter: String): [Author!]!
-    paginatedAuthors(first: Int, after: String, _filter: String): AuthorConnection!
+    website_placement: BookWebsitePlacement
+    reviews(first: Int = 100, _filter: ReviewFilterInput, _filterOData: String): [Review!]!
+    paginatedReviews(first: Int, after: String, _filter: ReviewFilterInput, _filterOData: String): ReviewConnection!
+    authors(first: Int = 100, _filter: AuthorFilterInput, _filterOData: String): [Author!]!
+    paginatedAuthors(first: Int, after: String, _filter: AuthorFilterInput, _filterOData: String): AuthorConnection!
+}
+
+type BookWebsitePlacement {
+    id: Int!,
+    book_id: Int!,
+    price: Int!,
+    book: Book!
+}
+
+type WebsiteUser {
+    id: Int!,
+    username: String
 }
 
 type Author {
     id: Int!
     name: String!
     birthdate: String!
-    books(first: Int = 100, _filter: String): [Book!]!
-    paginatedBooks(first: Int, after: String, _filter: String): BookConnection!
+    books(first: Int = 100, _filter: BookFilterInput, _filterOData: String): [Book!]!
+    paginatedBooks(first: Int, after: String, _filter: BookFilterInput, _filterOData: String): BookConnection!
 }
 
 type Review {
     id: Int!
     content: String!
     book: Book!
+}
+
+type Magazine {
+    id: Int!
+    title: String!
+    issue_number: Int
 }
 
 type BookConnection {
@@ -62,4 +88,69 @@ type AuthorConnection {
     items: [Author!]!
     endCursor: String
     hasNextPage: Boolean!
+}
+
+input StringFilterInput {
+  eq: String
+  neq: String
+  contains: String
+  notContains: String
+  startsWith: String
+  endsWith: String
+  isNull: Boolean
+}
+
+input IntFilterInput {
+  eq: Int
+  neq: Int
+  lt: Int
+  gt: Int
+  lte: Int
+  gte: Int
+  isNull: Boolean
+}
+
+input BookFilterInput {
+  and: [BookFilterInput]
+  or: [BookFilterInput]
+  id: IntFilterInput
+  title: StringFilterInput
+  publisher_id: IntFilterInput
+}
+
+input PublisherFilterInput {
+    and: [PublisherFilterInput]
+    or: [PublisherFilterInput]
+    id: IntFilterInput,
+    name: StringFilterInput
+}
+
+input AuthorFilterInput {
+    and: [AuthorFilterInput]
+    or: [AuthorFilterInput]
+    id: IntFilterInput,
+    name: StringFilterInput
+    birthdate: StringFilterInput
+}
+
+input ReviewFilterInput {
+    and: [ReviewFilterInput]
+    or: [ReviewFilterInput]
+    id: IntFilterInput,
+    content: StringFilterInput
+}
+
+input MagazineFilterInput {
+    and: [MagazineFilterInput]
+    or: [MagazineFilterInput]
+    id: IntFilterInput
+    title: StringFilterInput
+    issue_number: IntFilterInput
+}
+
+input WebsiteUserFilterInput {
+    and: [WebsiteUserFilterInput]
+    or: [WebsiteUserFilterInput]
+    id: IntFilterInput
+    username: StringFilterInput
 }

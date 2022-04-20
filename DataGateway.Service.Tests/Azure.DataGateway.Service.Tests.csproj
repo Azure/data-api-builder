@@ -9,6 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="5.0.15" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="5.0.15" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0" />
     <PackageReference Include="Moq" Version="4.16.1" />
     <PackageReference Include="MSTest.TestAdapter" Version="2.2.6" />
@@ -16,11 +18,18 @@
     <PackageReference Include="coverlet.collector" Version="3.1.2">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
-    </PackageReference>  
+    </PackageReference>
+    <PackageReference Include="HotChocolate" Version="$(HotChocolateVersion)" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\DataGateway.Service\Azure.DataGateway.Service.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="sql-config-test.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

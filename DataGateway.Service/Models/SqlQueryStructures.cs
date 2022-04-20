@@ -46,7 +46,10 @@ namespace Azure.DataGateway.Service.Models
     /// </summary>
     public enum PredicateOperation
     {
-        Equal, GreaterThan, LessThan, GreaterThanOrEqual, LessThanOrEqual, NotEqual
+        None,
+        Equal, GreaterThan, LessThan, GreaterThanOrEqual, LessThanOrEqual, NotEqual,
+        AND, OR, LIKE, NOT_LIKE,
+        IS, IS_NOT
     }
 
     /// <summary>
@@ -63,11 +66,15 @@ namespace Azure.DataGateway.Service.Models
         /// Holds the string value when the operand is a string
         /// </summary>
         private readonly string? _stringOperand;
+        /// <summary>
+        /// Holds the predicate value when the operand is a Predicate
+        /// </summary>
+        private readonly Predicate? _predicateOperand;
 
         /// <summary>
         /// Initialize operand as Column
         /// </summary>
-        public PredicateOperand(Column column)
+        public PredicateOperand(Column? column)
         {
             if (column == null)
             {
@@ -76,12 +83,13 @@ namespace Azure.DataGateway.Service.Models
 
             _columnOperand = column;
             _stringOperand = null;
+            _predicateOperand = null;
         }
 
         /// <summary>
         /// Initialize operand as string
         /// </summary>
-        public PredicateOperand(string text)
+        public PredicateOperand(string? text)
         {
             if (text == null)
             {
@@ -90,12 +98,28 @@ namespace Azure.DataGateway.Service.Models
 
             _columnOperand = null;
             _stringOperand = text;
+            _predicateOperand = null;
+        }
+
+        /// <summary>
+        /// Initialize operand as Predicate
+        /// </summary>
+        public PredicateOperand(Predicate? predicate)
+        {
+            if (predicate == null)
+            {
+                throw new ArgumentNullException("A predicate operand cannot be created with a null inner predicate.");
+            }
+
+            _columnOperand = null;
+            _stringOperand = null;
+            _predicateOperand = predicate;
         }
 
         /// <summary>
         /// Resolve operand as string
         /// </summary>
-        /// <returns> null if operand is intialized as Column </returns>
+        /// <returns> null if operand is not intialized as String  </returns>
         public string? AsString()
         {
             return _stringOperand;
@@ -104,10 +128,27 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Resolve operand as Column
         /// </summary>
-        /// <returns> null if operand is intialized as string </returns>
+        /// <returns> null if operand is not intialized as Column </returns>
         public Column? AsColumn()
         {
             return _columnOperand;
+        }
+
+        /// <summary>
+        /// Resolve operand as Predicate
+        /// </summary>
+        /// <returns> null if operand is not intialized as Predicate </returns>
+        public Predicate? AsPredicate()
+        {
+            return _predicateOperand;
+        }
+
+        /// <summary>
+        /// Used to check if the predicate operand is a predicate itself
+        /// </summary>
+        public bool IsPredicate()
+        {
+            return _predicateOperand != null;
         }
     }
 
@@ -131,11 +172,22 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
         public PredicateOperation Op { get; }
 
-        public Predicate(PredicateOperand left, PredicateOperation op, PredicateOperand right)
+        public bool AddParenthesis { get; }
+
+        public Predicate(PredicateOperand left, PredicateOperation op, PredicateOperand right, bool addParenthesis = false)
         {
             Left = left;
             Right = right;
             Op = op;
+            AddParenthesis = addParenthesis;
+        }
+
+        /// <summary>
+        /// Used to check if this predicate constains nested predicates
+        /// </summary>
+        public bool IsNested()
+        {
+            return Left.IsPredicate() || Right.IsPredicate();
         }
     }
 

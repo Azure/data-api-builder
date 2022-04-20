@@ -16,15 +16,15 @@ namespace Azure.DataGateway.Service.Resolvers
     {
         private readonly CosmosClientProvider _clientProvider;
 
-        private readonly IMetadataStoreProvider _metadataStoreProvider;
+        private readonly IGraphQLMetadataProvider _metadataStoreProvider;
 
-        public CosmosMutationEngine(CosmosClientProvider clientProvider, IMetadataStoreProvider metadataStoreProvider)
+        public CosmosMutationEngine(CosmosClientProvider clientProvider, IGraphQLMetadataProvider metadataStoreProvider)
         {
             _clientProvider = clientProvider;
             _metadataStoreProvider = metadataStoreProvider;
         }
 
-        private async Task<JObject> ExecuteAsync(IDictionary<string, object> inputDict, MutationResolver resolver)
+        private async Task<JObject> ExecuteAsync(IDictionary<string, object?> inputDict, MutationResolver resolver)
         {
             // TODO: add support for all mutation types
             // we only support CreateOrUpdate (Upsert) for now
@@ -87,7 +87,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result</returns>
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context,
-            IDictionary<string, object> parameters)
+            IDictionary<string, object?> parameters)
         {
             string graphQLMutationName = context.Selection.Field.Name.Value;
             MutationResolver resolver = _metadataStoreProvider.GetMutationResolver(graphQLMutationName);

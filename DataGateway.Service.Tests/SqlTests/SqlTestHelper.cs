@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Net;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
@@ -71,6 +72,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             if (message != null)
             {
+                Console.WriteLine(response);
                 Assert.IsTrue(response.Contains(message), $"Message \"{message}\" not found in error");
             }
 
@@ -107,9 +109,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case Operation.Delete:
                     actionResult = await controller.Delete(entityName, primaryKeyRoute);
                     break;
+                case Operation.Update:
                 case Operation.Upsert:
                     actionResult = await controller.Upsert(entityName, primaryKeyRoute);
                     break;
+                case Operation.UpdateIncremental:
                 case Operation.UpsertIncremental:
                     actionResult = await controller.UpsertIncremental(entityName, primaryKeyRoute);
                     break;
@@ -135,18 +139,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string expectedLocationHeader,
             bool isJson = false)
         {
+            JsonSerializerOptions options = new()
+            {
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            };
             string actual;
             switch (actionResult)
             {
                 case OkObjectResult okResult:
                     Assert.AreEqual((int)expectedStatusCode, okResult.StatusCode);
-                    actual = JsonSerializer.Serialize(okResult.Value);
+                    actual = JsonSerializer.Serialize(okResult.Value, options);
                     break;
                 case CreatedResult createdResult:
                     Assert.AreEqual((int)expectedStatusCode, createdResult.StatusCode);
                     Assert.AreEqual(expectedLocationHeader, createdResult.Location);
-                    OkObjectResult innerResult = (OkObjectResult)createdResult.Value;
-                    actual = JsonSerializer.Serialize(innerResult.Value);
+                    actual = JsonSerializer.Serialize(createdResult.Value);
                     break;
                 // NoContentResult does not have value property for messages
                 case NoContentResult noContentResult:
@@ -170,7 +177,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }
             else
             {
-                Assert.AreEqual(expected, actual);
+                Assert.AreEqual(expected, actual, ignoreCase: true);
             }
         }
     }

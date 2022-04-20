@@ -19,11 +19,13 @@ namespace Azure.DataGateway.Service.Services
         /// - extra fields specified in the body, will be discarded.
         /// </summary>
         /// <param name="context">Request context containing the REST operation fields and their values.</param>
-        /// <param name="configurationProvider">Configuration provider that enables referencing DB schema in config.</param>
+        /// <param name="graphQLMetadataProvider">Metadata provider that enables referencing DB schema in config.</param>
         /// <exception cref="DataGatewayException"></exception>
-        public static void ValidateRequestContext(RestRequestContext context, IMetadataStoreProvider configurationProvider)
+        public static void ValidateRequestContext(
+            RestRequestContext context,
+            SqlGraphQLFileMetadataProvider graphQLMetadataProvider)
         {
-            TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, configurationProvider);
+            TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, graphQLMetadataProvider);
 
             foreach (string field in context.FieldsToBeReturned)
             {
@@ -42,11 +44,13 @@ namespace Azure.DataGateway.Service.Services
         /// definition in the configuration file.
         /// </summary>
         /// <param name="context">Request context containing the primary keys and their values.</param>
-        /// <param name="configurationProvider">Configuration provider that enables referencing DB schema in config.</param>
+        /// <param name="graphQLMetadataProvider">Metadata provider that enables referencing DB schema in config.</param>
         /// <exception cref="DataGatewayException"></exception>
-        public static void ValidatePrimaryKey(RestRequestContext context, IMetadataStoreProvider configurationProvider)
+        public static void ValidatePrimaryKey(
+            RestRequestContext context,
+            SqlGraphQLFileMetadataProvider graphQLMetadataProvider)
         {
-            TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, configurationProvider);
+            TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, graphQLMetadataProvider);
 
             int countOfPrimaryKeysInSchema = tableDefinition.PrimaryKey.Count;
             int countOfPrimaryKeysInRequest = context.PrimaryKeyValuePairs.Count;
@@ -117,11 +121,13 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
-        /// Validates the primarykeyroute is populated with respect to an Upsert operation.
+        /// Validates the primarykeyroute is populated with respect to an Update or Upsert operation.
         /// </summary>
         /// <param name="primaryKeyRoute">Primary key route from the url.</param>
+        /// <param name="requestBody">The body of the request.</param>
         /// <exception cref="DataGatewayException"></exception>
-        public static JsonElement ValidateUpsertRequest(string? primaryKeyRoute, string requestBody)
+        /// <returns>JsonElement representing the body of the request.</returns>
+        public static JsonElement ValidateUpdateOrUpsertRequest(string? primaryKeyRoute, string requestBody)
         {
             if (string.IsNullOrEmpty(primaryKeyRoute))
             {
@@ -147,15 +153,15 @@ namespace Azure.DataGateway.Service.Services
         /// and vice versa.
         /// </summary>
         /// <param name="insertRequestCtx">Insert Request context containing the request body.</param>
-        /// <param name="configurationProvider">Configuration provider that enables referencing DB schema in config.</param>
+        /// <param name="graphQLMetadataProvider">Metadata provider that enables referencing DB schema in config.</param>
         /// <exception cref="DataGatewayException"></exception>
         public static void ValidateInsertRequestContext(
-        InsertRequestContext insertRequestCtx,
-        IMetadataStoreProvider configurationProvider)
+            InsertRequestContext insertRequestCtx,
+            SqlGraphQLFileMetadataProvider graphQLMetadataProvider)
         {
             IEnumerable<string> fieldsInRequestBody = insertRequestCtx.FieldValuePairsInBody.Keys;
             TableDefinition tableDefinition =
-                TryGetTableDefinition(insertRequestCtx.EntityName, configurationProvider);
+                TryGetTableDefinition(insertRequestCtx.EntityName, graphQLMetadataProvider);
 
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
@@ -188,15 +194,15 @@ namespace Azure.DataGateway.Service.Services
         /// and vice versa.
         /// </summary>
         /// <param name="upsertRequestCtx">Upsert Request context containing the request body.</param>
-        /// <param name="configurationProvider">Configuration provider that enables referencing DB schema in config.</param>
+        /// <param name="graphQLMetadataProvider">Metadata provider that enables referencing DB schema in config.</param>
         /// <exception cref="DataGatewayException"></exception>
         public static void ValidateUpsertRequestContext(
-        UpsertRequestContext upsertRequestCtx,
-        IMetadataStoreProvider configurationProvider)
+            UpsertRequestContext upsertRequestCtx,
+            SqlGraphQLFileMetadataProvider graphQLMetadataProvider)
         {
             IEnumerable<string> fieldsInRequestBody = upsertRequestCtx.FieldValuePairsInBody.Keys;
             TableDefinition tableDefinition =
-                TryGetTableDefinition(upsertRequestCtx.EntityName, configurationProvider);
+                TryGetTableDefinition(upsertRequestCtx.EntityName, graphQLMetadataProvider);
 
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
@@ -264,7 +270,7 @@ namespace Azure.DataGateway.Service.Services
                 message = $"Invalid request body. Field not allowed in body: {column.Key}.";
             }
             // Non-nullable fields must be in the body unless the request is not a replacement update.
-            else if (!column.Value.IsAutoGenerated && !column.Value.IsNullable && !fieldsInRequestBody.Contains(column.Key) && isReplacementUpdate)
+            else if (!column.Value.IsAutoGenerated && !column.Value.IsNullable && !column.Value.HasDefault && !fieldsInRequestBody.Contains(column.Key) && isReplacementUpdate)
             {
                 message = $"Invalid request body. Missing field in body: {column.Key}.";
             }
@@ -280,18 +286,18 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
-        /// Tries to get the table definition for the given entity from the configuration provider.
+        /// Tries to get the table definition for the given entity from the Metadata provider.
         /// </summary>
         /// <param name="entityName">Target entity name.</param>
-        /// <param name="configurationProvider">Configuration provider that
+        /// <param name="graphQLMetadataProvider">Metadata provider that
         /// enables referencing DB schema in config.</param>
         /// <exception cref="DataGatewayException"></exception>
 
-        private static TableDefinition TryGetTableDefinition(string entityName, IMetadataStoreProvider configurationProvider)
+        private static TableDefinition TryGetTableDefinition(string entityName, SqlGraphQLFileMetadataProvider graphQLMetadataProvider)
         {
             try
             {
-                TableDefinition tableDefinition = configurationProvider.GetTableDefinition(entityName);
+                TableDefinition tableDefinition = graphQLMetadataProvider.GetTableDefinition(entityName);
                 return tableDefinition;
             }
             catch (KeyNotFoundException)
@@ -324,6 +330,25 @@ namespace Azure.DataGateway.Service.Services
             {
                 return insertPayload.RootElement.Clone();
             }
+        }
+
+        /// <summary>
+        /// Helper function checks the $first query param
+        /// to be sure that it can parse to a uint > 0
+        /// </summary>
+        /// <param name="first">String representing value associated with $first</param>
+        /// <returns>uint > 0 representing $first</returns>
+        public static uint CheckFirstValidity(string first)
+        {
+            if (!uint.TryParse(first, out uint firstAsUint) || firstAsUint == 0)
+            {
+                throw new DataGatewayException(
+                        message: $"Invalid number of items requested, $first must be an integer greater than 0. Actual value: {first}",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+            }
+
+            return firstAsUint;
         }
     }
 }

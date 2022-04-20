@@ -2,7 +2,9 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
@@ -27,7 +29,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await InitializeTestFixture(context, TestCategory.MYSQL);
 
             // Setup GraphQL Components
-            _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider);
+            _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider, new DocumentCache(), new Sha256DocumentHashProvider());
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
@@ -240,6 +242,152 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
+
+        /// <summary>
+        /// Test explicitly inserting a null column
+        /// </summary>
+        [TestMethod]
+        public async Task TestExplicitNullInsert()
+        {
+            string graphQLMutationName = "insertMagazine";
+            string graphQLMutation = @"
+                mutation {
+                    insertMagazine(id: 800, title: ""New Magazine"", issue_number: null) {
+                        id
+                        title
+                        issue_number
+                    }
+                }
+            ";
+
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('id', `subq2`.`id`, 'title', `subq2`.`title`, 'issue_number', `subq2`.`issue_number`) AS `data`
+                FROM (
+                    SELECT `table0`.`id` AS `id`,
+                        `table0`.`title` AS `title`,
+                        `table0`.`issue_number` AS `issue_number`
+                    FROM `magazines` AS `table0`
+                    WHERE `table0`.`id` = 800
+                        AND `table0`.`title` = 'New Magazine'
+                        AND `table0`.`issue_number` IS NULL
+                    ORDER BY `table0`.`id` LIMIT 1
+                    ) AS `subq2`
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test implicitly inserting a null column
+        /// </summary>
+        [TestMethod]
+        public async Task TestImplicitNullInsert()
+        {
+            string graphQLMutationName = "insertMagazine";
+            string graphQLMutation = @"
+                mutation {
+                    insertMagazine(id: 801, title: ""New Magazine 2"") {
+                        id
+                        title
+                        issue_number
+                    }
+                }
+            ";
+
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('id', `subq2`.`id`, 'title', `subq2`.`title`, 'issue_number', `subq2`.`issue_number`) AS `data`
+                FROM (
+                    SELECT `table0`.`id` AS `id`,
+                        `table0`.`title` AS `title`,
+                        `table0`.`issue_number` AS `issue_number`
+                    FROM `magazines` AS `table0`
+                    WHERE `table0`.`id` = 801
+                        AND `table0`.`title` = 'New Magazine 2'
+                        AND `table0`.`issue_number` IS NULL
+                    ORDER BY `table0`.`id` LIMIT 1
+                    ) AS `subq2`
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test updating a column to null
+        /// </summary>
+        [TestMethod]
+        public async Task TestUpdateColumnToNull()
+        {
+            string graphQLMutationName = "updateMagazine";
+            string graphQLMutation = @"
+                mutation {
+                    updateMagazine(id: 1, issue_number: null) {
+                        id
+                        issue_number
+                    }
+                }
+            ";
+
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('id', `subq2`.`id`, 'issue_number', `subq2`.`issue_number`) AS `data`
+                FROM (
+                    SELECT `table0`.`id` AS `id`,
+                        `table0`.`issue_number` AS `issue_number`
+                    FROM `magazines` AS `table0`
+                    WHERE `table0`.`id` = 1
+                        AND `table0`.`issue_number` IS NULL
+                    ORDER BY `table0`.`id` LIMIT 1
+                    ) AS `subq2`
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test updating a missing column in the update mutation will not be updated to null
+        /// </summary>
+        [TestMethod]
+        public async Task TestMissingColumnNotUpdatedToNull()
+        {
+            string graphQLMutationName = "updateMagazine";
+            string graphQLMutation = @"
+                mutation {
+                    updateMagazine(id: 1, title: ""Newest Magazine"") {
+                        id
+                        title
+                        issue_number
+                    }
+                }
+            ";
+
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('id', `subq2`.`id`, 'title', `subq2`.`title`, 'issue_number', `subq2`.`issue_number`) AS `data`
+                FROM (
+                    SELECT `table0`.`id` AS `id`,
+                        `table0`.`title` AS `title`,
+                        `table0`.`issue_number` AS `issue_number`
+                    FROM `magazines` AS `table0`
+                    WHERE `table0`.`id` = 1
+                        AND `table0`.`title` = 'Newest Magazine'
+                        AND `table0`.`issue_number` = 1234
+                    ORDER BY `table0`.`id` LIMIT 1
+                    ) AS `subq2`
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Negative Tests
@@ -263,8 +411,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
 
-            // TODO improve the error message returned by the graphql service to something more useful then smth generic
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
+            SqlTestHelper.TestForErrorInGraphQLResponse(
+                result.ToString(),
+                message: MySqlDbExceptionParser.INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE,
+                statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
+            );
 
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('count', `subq`.`count`) AS `data`
@@ -299,8 +450,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
 
-            // TODO improve the error message returned by the graphql service to something more useful then smth generic
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
+            SqlTestHelper.TestForErrorInGraphQLResponse(
+                result.ToString(),
+                message: MySqlDbExceptionParser.INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE,
+                statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
+            );
 
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('count', `subq`.`count`) AS `data`
@@ -357,6 +511,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.EntityNotFound}");
+        }
+
+        /// <summary>
+        /// Test adding a website placement to a book which already has a website
+        /// placement
+        /// </summary>
+        [TestMethod]
+        public async Task TestViolatingOneToOneRelashionShip()
+        {
+            string graphQLMutationName = "insertWebsitePlacement";
+            string graphQLMutation = @"
+                mutation {
+                    insertWebsitePlacement(book_id: 1, price: 25) {
+                        id
+                    }
+                }
+            ";
+
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            SqlTestHelper.TestForErrorInGraphQLResponse(
+                result.ToString(),
+                message: MySqlDbExceptionParser.INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE,
+                statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
+            );
         }
         #endregion
     }

@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Services;
+using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
@@ -27,7 +28,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await InitializeTestFixture(context, TestCategory.POSTGRESQL);
 
             // Setup GraphQL Components
-            _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _metadataStoreProvider);
+            _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _metadataStoreProvider, new DocumentCache(), new Sha256DocumentHashProvider());
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
@@ -47,6 +48,24 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id) as table0 LIMIT 100";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        [TestMethod]
+        public async Task MultipleResultQueryWithVariables()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"query ($first: Int!) {
+                getBooks(first: $first) {
+                    id
+                    title
+                }
+            }";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id) as table0 LIMIT 100";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController, new() { { "first", 100 } });
             string expected = await GetDatabaseResultAsync(postgresQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
@@ -116,6 +135,62 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    WHERE 1 = 1
                    ORDER BY id
                    LIMIT 100) AS subq8
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test One-To-One relationship both directions
+        /// (book -> website placement, website placememnt -> book)
+        /// <summary>
+        [TestMethod]
+        public async Task OneToOneJoinQuery()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"query {
+                getBooks {
+                    id
+                    website_placement {
+                        id
+                        price
+                        book {
+                            id
+                        }
+                    }
+                }
+            }";
+
+            string postgresQuery = @"
+                SELECT COALESCE(jsonb_agg(to_jsonb(subq11)), '[]') AS data
+                FROM
+                  (SELECT table0.id AS id,
+                          table1_subq.data AS website_placement
+                   FROM books AS table0
+                   LEFT OUTER JOIN LATERAL
+                     (SELECT to_jsonb(subq10) AS data
+                      FROM
+                        (SELECT table1.id AS id,
+                                table1.price AS price,
+                                table2_subq.data AS book
+                         FROM book_website_placements AS table1
+                         LEFT OUTER JOIN LATERAL
+                           (SELECT to_jsonb(subq9) AS data
+                            FROM
+                              (SELECT table2.id AS id
+                               FROM books AS table2
+                               WHERE table1.book_id = table2.id
+                               ORDER BY table2.id
+                               LIMIT 1) AS subq9) AS table2_subq ON TRUE
+                         WHERE table0.id = table1.book_id
+                         ORDER BY table1.id
+                         LIMIT 1) AS subq10) AS table1_subq ON TRUE
+                   WHERE 1 = 1
+                   ORDER BY table0.id
+                   LIMIT 100) AS subq11
             ";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
@@ -406,17 +481,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <sumary>
-        /// Test if filter param successfully filters the query results
+        /// Test if filter and filterOData param successfully filters the query results
         /// </summary>
         [TestMethod]
-        public async Task TestFilterParamForListQueries()
+        public async Task TestFilterAndFilterODataParamForListQueries()
         {
             string graphQLQueryName = "getBooks";
             string graphQLQuery = @"{
-                getBooks(_filter: ""id ge 1 and id le 4"") {
+                getBooks(_filter: {id: {gte: 1} and: [{id: {lte: 4}}]}) {
                     id
                     publisher {
-                        books(first: 3, _filter: ""id ne 2"") {
+                        books(first: 3, _filterOData: ""id ne 2"") {
                             id
                         }
                     }
@@ -458,6 +533,49 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        /// <summary>
+        /// Get all instances of a type with nullable interger fields
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryingTypeWithNullableIntFields()
+        {
+            string graphQLQueryName = "getMagazines";
+            string graphQLQuery = @"{
+                getMagazines{
+                    id
+                    title
+                    issue_number
+                }
+            }";
+
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title, \"issue_number\" FROM magazines ORDER BY id) as table0 LIMIT 100";
+
+            _ = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+
+            _ = await GetDatabaseResultAsync(postgresQuery);
+        }
+
+        /// <summary>
+        /// Get all instances of a type with nullable string fields
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryingTypeWithNullableStringFields()
+        {
+            string graphQLQueryName = "getWebsiteUsers";
+            string graphQLQuery = @"{
+                getWebsiteUsers{
+                    id
+                    username
+                }
+            }";
+
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, username FROM website_users ORDER BY id) as table0 LIMIT 100";
+
+            _ = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+
+            _ = await GetDatabaseResultAsync(postgresQuery);
+        }
+
         #endregion
 
         #region Negative Tests
@@ -482,7 +600,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string graphQLQueryName = "getBooks";
             string graphQLQuery = @"{
-                getBooks(_filter: ""INVALID"") {
+                getBooks(_filterOData: ""INVALID"") {
                     id
                     title
                 }
@@ -491,6 +609,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
+
         #endregion
     }
 }

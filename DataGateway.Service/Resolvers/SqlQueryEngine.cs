@@ -2,9 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
@@ -17,21 +19,29 @@ namespace Azure.DataGateway.Service.Resolvers
     //</summary>
     public class SqlQueryEngine : IQueryEngine
     {
-        private readonly IMetadataStoreProvider _metadataStoreProvider;
+        private readonly SqlGraphQLFileMetadataProvider _metadataStoreProvider;
         private readonly IQueryExecutor _queryExecutor;
         private readonly IQueryBuilder _queryBuilder;
 
         // <summary>
         // Constructor.
         // </summary>
-        public SqlQueryEngine(IMetadataStoreProvider metadataStoreProvider, IQueryExecutor queryExecutor, IQueryBuilder queryBuilder)
+        public SqlQueryEngine(IGraphQLMetadataProvider metadataStoreProvider, IQueryExecutor queryExecutor, IQueryBuilder queryBuilder)
         {
-            _metadataStoreProvider = metadataStoreProvider;
+            if (metadataStoreProvider.GetType() != typeof(SqlGraphQLFileMetadataProvider))
+            {
+                throw new DataGatewayException(
+                    message: "Unable to instantiate the SQL query engine.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
+            }
+
+            _metadataStoreProvider = (SqlGraphQLFileMetadataProvider)metadataStoreProvider;
             _queryExecutor = queryExecutor;
             _queryBuilder = queryBuilder;
         }
 
-        public static async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader)
+        public static async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader, IQueryExecutor executor)
         {
             StringBuilder jsonString = new();
             // Even though we only return a single cell, we need this loop for
@@ -41,7 +51,7 @@ namespace Azure.DataGateway.Service.Resolvers
             // 1. https://docs.microsoft.com/en-us/sql/relational-databases/json/format-query-results-as-json-with-for-json-sql-server?view=sql-server-2017#output-of-the-for-json-clause
             // 2. https://stackoverflow.com/questions/54973536/for-json-path-results-in-ssms-truncated-to-2033-characters/54973676
             // 3. https://docs.microsoft.com/en-us/sql/relational-databases/json/use-for-json-output-in-sql-server-and-in-client-apps-sql-server?view=sql-server-2017#use-for-json-output-in-a-c-client-app
-            while (await dbDataReader.ReadAsync())
+            while (await executor.ReadAsync(dbDataReader))
             {
                 jsonString.Append(dbDataReader.GetString(0));
             }
@@ -53,7 +63,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Executes the given IMiddlewareContext of the GraphQL query and
         /// expecting a single Json and its related pagination metadata back.
         /// </summary>
-        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters)
+        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider);
 
@@ -90,7 +100,7 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return new Tuple<IEnumerable<JsonDocument>, IMetadata>(
-                JsonSerializer.Deserialize<List<JsonDocument>>(await GetJsonStringFromDbReader(dbDataReader)),
+                JsonSerializer.Deserialize<List<JsonDocument>>(await GetJsonStringFromDbReader(dbDataReader, _queryExecutor)),
                 structure.PaginationMetadata
             );
         }
@@ -118,7 +128,7 @@ namespace Azure.DataGateway.Service.Resolvers
             else
             {
                 //TODO: Try to avoid additional deserialization/serialization here.
-                return JsonDocument.Parse(element.ToString());
+                return ResolverMiddleware.RepresentsNullValue(element) ? null : JsonDocument.Parse(element.ToString());
             }
         }
 
@@ -147,7 +157,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             // Parse Results into Json and return
             //
-            if (await dbDataReader.ReadAsync())
+            if (await _queryExecutor.ReadAsync(dbDataReader))
             {
                 jsonDocument = JsonDocument.Parse(dbDataReader.GetString(0));
             }

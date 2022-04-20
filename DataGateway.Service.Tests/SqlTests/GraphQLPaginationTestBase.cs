@@ -545,7 +545,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "books";
             string after = SqlPaginationUtil.Base64Encode("{\"id\":1}");
             string graphQLQuery = @"{
-                books(first: 2, after: """ + after + @""", _filter: ""publisher_id eq 2345"") {
+                books(first: 2, after: """ + after + @""", _filter: {publisher_id: {eq: 2345}}) {
                     items {
                         id
                         publisher_id
@@ -587,6 +587,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
                 books(first: -1) {
+                    items {
+                        id
+                    }
+                }
+            }";
+
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
+        }
+
+        /// <summary>
+        /// Request zero entries for a pagination page
+        /// </summary>
+        [TestMethod]
+        public async Task RequestInvalidZeroFirst()
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"{
+                books(first: 0) {
                     items {
                         id
                     }

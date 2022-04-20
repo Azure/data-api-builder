@@ -370,6 +370,46 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Tests the REST Api for Find operation using pagination
+        /// to verify that we return an $after cursor that has the
+        /// single primary key column.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithPaginationVerifSinglePrimaryKeyInAfter()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: $"?$first=1",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithPaginationVerifSinglePrimaryKeyInAfter)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]"))}",
+                paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using pagination
+        /// to verify that we return an $after cursor that has all the
+        /// multiple primary key columns.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithPaginationVerifMultiplePrimaryKeysInAfter()
+        {
+            string after = "[{\"Value\":1,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"book_id\"}," +
+                            "{\"Value\":567,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"id\"}]";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: $"?$first=1",
+                entity: _tableWithCompositePrimaryKey,
+                sqlQuery: GetQuery(nameof(FindTestWithPaginationVerifMultiplePrimaryKeysInAfter)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                paginated: true
+            );
+        }
+
+        /// <summary>
         /// Tests the REST Api for Find operation for all records
         /// order by title in ascending order.
         /// </summary>

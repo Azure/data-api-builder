@@ -174,6 +174,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTestWithPaginationVerifSinglePrimaryKeyInAfter",
+                $"SELECT TOP 1 * FROM { _integrationTableName } " +
+                $"ORDER BY id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithPaginationVerifMultiplePrimaryKeysInAfter",
+                $"SELECT TOP 1 * FROM REVIEWS " +
+                $"ORDER BY book_id, id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindTestWithQueryStringAllFieldsOrderByAsc",
                 $"SELECT * FROM { _integrationTableName } " +
                 $"ORDER BY title, id " +

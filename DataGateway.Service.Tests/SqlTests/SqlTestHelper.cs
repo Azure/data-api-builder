@@ -158,7 +158,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     if (verifyNumRecords >= 0)
                     {
                         Dictionary<string, JsonElement[]> actualAsDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(actual);
-                        Assert.AreEqual(actualAsDict["value"].Length, RestApiTestBase._numRecordsReturnedFromTieBreakTable);
+                        Assert.AreEqual(actualAsDict["value"].Length, verifyNumRecords);
                     }
 
                     break;

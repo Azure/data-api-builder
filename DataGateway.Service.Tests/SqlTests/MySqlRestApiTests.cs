@@ -334,6 +334,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ) AS subq"
             },
             {
+                "FindTestWithPaginationVerifSinglePrimaryKeyInAfter",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      ORDER BY id
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
+                "FindTestWithPaginationVerifMultiplePrimaryKeysInAfter",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'content', content, 'book_id', book_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _tableWithCompositePrimaryKey + @"
+                      ORDER BY book_id, id
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
                 "FindTestWithQueryStringAllFieldsOrderByAsc",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data

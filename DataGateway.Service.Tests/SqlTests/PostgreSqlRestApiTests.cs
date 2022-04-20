@@ -319,6 +319,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "FindTestWithPaginationVerifSinglePrimaryKeyInAfter",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        ORDER BY id
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithPaginationVerifMultiplePrimaryKeysInAfter",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _tableWithCompositePrimaryKey + @"
+                        ORDER BY book_id, id
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
                 "FindTestWithQueryStringAllFieldsOrderByAsc",
                 @"
                   SELECT json_agg(to_jsonb(subq)) AS data

@@ -227,7 +227,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private static bool HasExplicitColumns(ForeignKeyDefinition fk)
         {
-            return fk.Columns.Count > 0;
+            return fk.ReferencingColumns.Count > 0;
         }
 
         /// <summary>
@@ -267,6 +267,14 @@ namespace Azure.DataGateway.Service.Configurations
         private static bool TypeHasFields(GraphQLType type)
         {
             return type.Fields != null;
+        }
+
+        /// <summary>
+        /// A more readable version of !type.IsNonNullType
+        /// </summary>
+        private static bool IsNullableType(ITypeNode type)
+        {
+            return !type.IsNonNullType();
         }
 
         /// <summary>
@@ -385,7 +393,7 @@ namespace Azure.DataGateway.Service.Configurations
         {
             if (IsListType(type))
             {
-                return !type.NullableType().InnerType().IsNonNullType();
+                return IsNullableType(type.NullableType().InnerType());
             }
 
             return false;
@@ -494,7 +502,7 @@ namespace Azure.DataGateway.Service.Configurations
             foreach (KeyValuePair<string, ForeignKeyDefinition> nameFKPair in table.ForeignKeys)
             {
                 ForeignKeyDefinition foreignKey = nameFKPair.Value;
-                columns.AddRange(foreignKey.Columns);
+                columns.AddRange(foreignKey.ReferencingColumns);
             }
 
             return columns;

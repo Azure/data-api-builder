@@ -44,7 +44,7 @@ namespace Azure.DataGateway.Service.Models
         /// Dictionary of field names and their values given in the request body.
         /// Based on the operation type, this property may or may not be populated.
         /// </summary>
-        public virtual Dictionary<string, object> FieldValuePairsInBody { get; set; } = new();
+        public virtual Dictionary<string, object?> FieldValuePairsInBody { get; set; } = new();
 
         /// <summary>
         /// NVC stores the query string parsed into a NameValueCollection.

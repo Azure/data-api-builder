@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -30,6 +31,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     expectedTableDefinition.PrimaryKey,
                     actualTableDefinition.PrimaryKey,
                     $"Did not find the expected primary keys for table {tableName}");
+
+                CollectionAssert.AreEqual(
+                    new SortedDictionary<string, ForeignKeyDefinition>
+                        (expectedTableDefinition.ForeignKeys),
+                    new SortedDictionary<string, ForeignKeyDefinition>
+                        (actualTableDefinition.ForeignKeys),
+                    $"Did not find the expected foreign keys for table {tableName}");
 
                 foreach ((string columnName, ColumnDefinition expectedColumnDefinition) in expectedTableDefinition.Columns)
                 {

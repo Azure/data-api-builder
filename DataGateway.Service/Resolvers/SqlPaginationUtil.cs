@@ -142,10 +142,14 @@ namespace Azure.DataGateway.Service.Resolvers
 
             // primary key columns are used in ordering
             // for tie-breaking and must be included.
-            // iterate through list and check for column
-            // in remaining key set so that we iterate in
-            // same order as primary key column, but still
-            // verify all primary key columns added.
+            // iterate through primary key list and check if
+            // each column is in the set of remaining primary
+            // keys, add to cursor any columns that are in the
+            // set of remaining primary keys and then remove that
+            // column from this remaining key set. This way we
+            // iterate in the same order as the ordering of the
+            // primary key columns, and verify all primary key
+            // columns have been added to the cursor.
             foreach (string column in primaryKey)
             {
                 if (remainingKeys.Contains(column))

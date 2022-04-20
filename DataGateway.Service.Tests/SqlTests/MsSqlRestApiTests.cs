@@ -255,7 +255,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "PutOne_Update_Nulled_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
                 $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
-                $"WHERE [categoryid] = 2 AND [pieceid] = 1 AND [categoryName] = 'Romcom' " +
+                $"WHERE [categoryid] = 2 AND [pieceid] = 1 AND [categoryName] = 'FairyTales' " +
                 $"AND [piecesAvailable] is NULL  AND [piecesRequired] = 5 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
@@ -315,7 +315,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "PutOne_Insert_Nulled_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
                 $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
-                $"WHERE [categoryid] = 4 AND [pieceid] = 1 AND [categoryName] = 'Fantasy' " +
+                $"WHERE [categoryid] = 4 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
                 $"AND [piecesAvailable] is NULL AND [piecesRequired] = 4 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
@@ -354,7 +354,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "PatchOne_Insert_Nulled_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
                 $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
-                $"WHERE [categoryid] = 3 AND [pieceid] = 1 AND [categoryName] = 'Fantasy' " +
+                $"WHERE [categoryid] = 3 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
                 $"AND [piecesAvailable] is NULL AND [piecesRequired] = 4 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
@@ -405,7 +405,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "InsertOneWithNullFieldValue",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
                 $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
-                $"WHERE [categoryid] = 3 AND [pieceid] = 1 AND [categoryName] = 'Fantasy' " +
+                $"WHERE [categoryid] = 3 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
                 $"AND [piecesAvailable] is NULL AND [piecesRequired] = 1 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },

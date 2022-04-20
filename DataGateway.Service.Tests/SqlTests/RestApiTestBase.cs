@@ -741,9 +741,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             // is specified as null in the request body.
             string requestBody = @"
             {
-                ""categoryName"": ""Fantasy"",
+                ""categoryName"": ""SciFi"",
                 ""piecesAvailable"": null,
-                ""piecesRequired"": 4
+                ""piecesRequired"": ""4""
             }";
             string expectedLocationHeader = $"categoryid/4/pieceid/1";
 
@@ -763,7 +763,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             // is specified as null in the request body.
             requestBody = @"
             {
-               ""categoryName"":""Romcom"",
+               ""categoryName"":""FairyTales"",
                ""piecesAvailable"":null
             }";
 
@@ -793,7 +793,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             // is specified as null in the request body.
             string requestBody = @"
             {
-                ""categoryName"": ""Fantasy"",
+                ""categoryName"": ""SciFi"",
                 ""piecesAvailable"": null,
                 ""piecesRequired"": 4
             }";
@@ -828,6 +828,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.NoContent
                 );
+
         }
         /// <summary>
         /// Tests REST PatchOne which results in an insert.
@@ -900,7 +901,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             requestBody = @"
             {
-                ""categoryName"": ""Drama""
+                ""categoryName"": ""SciFi""
             }";
             expectedLocationHeader = $"categoryid/7/pieceid/1";
 
@@ -1038,7 +1039,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 ""pieceid"": ""1"",
                 ""piecesAvailable"": null,
                 ""piecesRequired"": 1,
-                ""categoryName"":""Fantasy""
+                ""categoryName"":""SciFi""
             }";
 
             string expectedLocationHeader = $"categoryid/3/pieceid/1";

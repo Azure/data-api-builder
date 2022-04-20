@@ -3,6 +3,7 @@ using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Service.Resolvers;
 using Microsoft.Extensions.Options;
 using MySqlConnector;
 
@@ -13,8 +14,11 @@ namespace Azure.DataGateway.Service.Services
     /// </summary>
     public class MySqlMetadataProvider : SqlMetadataProvider<MySqlConnection, MySqlDataAdapter, MySqlCommand>, ISqlMetadataProvider
     {
-        public MySqlMetadataProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
-            : base(dataGatewayConfig)
+        public MySqlMetadataProvider(
+            IOptions<DataGatewayConfig> dataGatewayConfig,
+            IQueryExecutor queryExecutor,
+            IQueryBuilder sqlQueryBuilder)
+            : base(dataGatewayConfig, queryExecutor, sqlQueryBuilder)
         {
         }
 
@@ -51,6 +55,40 @@ namespace Azure.DataGateway.Service.Services
             }
 
             return allColumns;
+        }
+
+        /// <inheritdoc />
+        /// <remarks>For MySql, the table name is only a 2 part name.
+        /// The database name from the connection string needs to be used instead of schemaName.
+        /// </remarks>
+        protected override Dictionary<string, object?>
+            GetForeignKeyQueryParams(
+                string[] schemaNames,
+                string[] tableNames)
+        {
+            using MySqlConnection conn = new(ConnectionString);
+            Dictionary<string, object?> parameters = new();
+
+            string[] databaseNameParams =
+                BaseSqlQueryBuilder.CreateParams(
+                    kindOfParam: MySqlQueryBuilder.DATABASE_NAME_PARAM,
+                    schemaNames.Count());
+            string[] tableNameParams =
+                BaseSqlQueryBuilder.CreateParams(
+                    kindOfParam: BaseSqlQueryBuilder.TABLE_NAME_PARAM,
+                    tableNames.Count());
+
+            for (int i = 0; i < schemaNames.Count(); ++i)
+            {
+                parameters.Add(databaseNameParams[i], conn.Database);
+            }
+
+            for (int i = 0; i < tableNames.Count(); ++i)
+            {
+                parameters.Add(tableNameParams[i], tableNames[i]);
+            }
+
+            return parameters;
         }
     }
 }

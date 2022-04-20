@@ -628,7 +628,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         private static List<string> GetFkColumns(ForeignKeyDefinition fk, TableDefinition table)
         {
-            return fk.Columns.Count > 0 ? fk.Columns : table.PrimaryKey;
+            return fk.ReferencingColumns.Count > 0 ? fk.ReferencingColumns : table.PrimaryKey;
         }
 
         /// <summary>

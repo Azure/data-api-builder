@@ -182,8 +182,8 @@ namespace Azure.DataGateway.Service.Configurations
 
             if (HasExplicitColumns(foreignKey))
             {
-                ValidateNoDuplicateFkColumns(foreignKey.Columns, refColumns: false);
-                columns = foreignKey.Columns;
+                ValidateNoDuplicateFkColumns(foreignKey.ReferencingColumns, refColumns: false);
+                columns = foreignKey.ReferencingColumns;
                 ValidateFKColumnsHaveMatchingTableColumns(foreignKey, table);
             }
             else

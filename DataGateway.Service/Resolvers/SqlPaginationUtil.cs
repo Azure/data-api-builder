@@ -153,11 +153,6 @@ namespace Azure.DataGateway.Service.Resolvers
 
             }
 
-            if (remainingKeys.Count > 0)
-            {
-                throw new ArgumentException();
-            }
-
             return Base64Encode(JsonSerializer.Serialize(cursorJson, options));
         }
 
@@ -195,6 +190,29 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 afterJsonString = Base64Decode(afterJsonString);
                 after = JsonSerializer.Deserialize<List<PaginationColumn>>(afterJsonString)!;
+                List<string> primaryKeys = paginationMetadata.Structure!.PrimaryKey();
+
+                // verify that primary keys is a sub set of after's column names
+                // if any primary keys are not contained in after's column names we throw exception
+                // hashset provides worst case linear runtime for this verification, if we use a list
+                // runtime will be quadratic in worst case since for each primary key we do a contains
+                // lookup on the data structure holding the after column names, set makes this lookup
+                // constant time.
+                HashSet<string> afterSet = new();
+                foreach (PaginationColumn column in after)
+                {
+                    afterSet.Add(column.ColumnName);
+                }
+
+                foreach (string pk in primaryKeys)
+                {
+                    if (!afterSet.Contains(pk))
+                    {
+                        throw new DataGatewayException(message: $"Cursor for Pagination Predicates is not well formed, missing primary key column: {pk}",
+                                                       statusCode: HttpStatusCode.BadRequest,
+                                                       subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                    }
+                }
             }
             catch (Exception e)
             {

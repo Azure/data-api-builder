@@ -123,6 +123,12 @@ namespace Azure.DataGateway.Service.Resolvers
         public static IDictionary<string, object> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
         {
             Dictionary<string, object> after = new();
+
+            if (!queryParams.ContainsKey("after"))
+            {
+                return after;
+            }
+
             object afterObject = queryParams["after"];
 
             if (afterObject != null)

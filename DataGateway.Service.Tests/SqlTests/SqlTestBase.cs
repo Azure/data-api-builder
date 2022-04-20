@@ -60,30 +60,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 case TestCategory.POSTGRESQL:
                     _queryBuilder = new PostgresQueryBuilder();
-                    _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
-                        config,
-                        new PostgreSqlMetadataProvider(config));
                     _defaultSchemaName = "public";
                     _dbExceptionParser = new PostgresDbExceptionParser();
                     _queryExecutor = new QueryExecutor<NpgsqlConnection>(config, _dbExceptionParser);
+                    _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
+                        config,
+                        new PostgreSqlMetadataProvider(config, _queryExecutor, _queryBuilder));
                     break;
                 case TestCategory.MSSQL:
                     _queryBuilder = new MsSqlQueryBuilder();
-                    _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
-                        config,
-                        new MsSqlMetadataProvider(config));
                     _defaultSchemaName = "dbo";
                     _dbExceptionParser = new DbExceptionParserBase();
                     _queryExecutor = new QueryExecutor<SqlConnection>(config, _dbExceptionParser);
+                    _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
+                        config,
+                        new MsSqlMetadataProvider(config, _queryExecutor, _queryBuilder));
                     break;
                 case TestCategory.MYSQL:
                     _queryBuilder = new MySqlQueryBuilder();
-                    _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
-                        config,
-                        new MySqlMetadataProvider(config));
                     _defaultSchemaName = "mysql";
                     _dbExceptionParser = new MySqlDbExceptionParser();
                     _queryExecutor = new QueryExecutor<MySqlConnection>(config, _dbExceptionParser);
+                    _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
+                         config,
+                         new MySqlMetadataProvider(config, _queryExecutor, _queryBuilder));
                     break;
             }
 

@@ -150,28 +150,41 @@ namespace Azure.DataGateway.Service.Models
             foreach (ObjectFieldNode field in fields)
             {
                 string name = field.Name.ToString();
-                int value = ((IntValueNode)field.Value).ToInt32();
+                object value;
+                bool processLiteral = true;
 
                 PredicateOperation op;
                 switch (name)
                 {
                     case "eq":
                         op = PredicateOperation.Equal;
+                        value = ((IntValueNode)field.Value).ToInt32();
                         break;
                     case "neq":
                         op = PredicateOperation.NotEqual;
+                        value = ((IntValueNode)field.Value).ToInt32();
                         break;
                     case "lt":
                         op = PredicateOperation.LessThan;
+                        value = ((IntValueNode)field.Value).ToInt32();
                         break;
                     case "gt":
                         op = PredicateOperation.GreaterThan;
+                        value = ((IntValueNode)field.Value).ToInt32();
                         break;
                     case "lte":
                         op = PredicateOperation.LessThanOrEqual;
+                        value = ((IntValueNode)field.Value).ToInt32();
                         break;
                     case "gte":
                         op = PredicateOperation.GreaterThanOrEqual;
+                        value = ((IntValueNode)field.Value).ToInt32();
+                        break;
+                    case "isNull":
+                        processLiteral = false;
+                        bool isNull = ((BooleanValueNode)field.Value).Value;
+                        op = isNull ? PredicateOperation.IS : PredicateOperation.IS_NOT;
+                        value = "NULL";
                         break;
                     default:
                         throw new NotSupportedException($"Operation {name} on int type not supported.");
@@ -180,8 +193,8 @@ namespace Azure.DataGateway.Service.Models
                 predicates.Push(new PredicateOperand(new Predicate(
                     new PredicateOperand(column),
                     op,
-                    new PredicateOperand($"@{processLiterals(value)}")
-                )));
+                    new PredicateOperand(processLiteral ? $"@{processLiterals(value)}" : value.ToString()))
+                ));
             }
 
             return GQLFilterParser.MakeChainPredicate(predicates, PredicateOperation.AND);
@@ -210,7 +223,8 @@ namespace Azure.DataGateway.Service.Models
             foreach (ObjectFieldNode field in fields)
             {
                 string ruleName = field.Name.ToString();
-                string ruleValue = ((StringValueNode)field.Value).Value;
+                string ruleValue;
+                bool processLiteral = true;
 
                 PredicateOperation op;
 
@@ -218,25 +232,37 @@ namespace Azure.DataGateway.Service.Models
                 {
                     case "eq":
                         op = PredicateOperation.Equal;
+                        ruleValue = ((StringValueNode)field.Value).Value;
                         break;
                     case "neq":
                         op = PredicateOperation.NotEqual;
+                        ruleValue = ((StringValueNode)field.Value).Value;
                         break;
                     case "contains":
                         op = PredicateOperation.LIKE;
+                        ruleValue = ((StringValueNode)field.Value).Value;
                         ruleValue = $"%{EscapeLikeString(ruleValue)}%";
                         break;
                     case "notContains":
                         op = PredicateOperation.NOT_LIKE;
+                        ruleValue = ((StringValueNode)field.Value).Value;
                         ruleValue = $"%{EscapeLikeString(ruleValue)}%";
                         break;
                     case "startsWith":
                         op = PredicateOperation.LIKE;
+                        ruleValue = ((StringValueNode)field.Value).Value;
                         ruleValue = $"{EscapeLikeString(ruleValue)}%";
                         break;
                     case "endsWith":
                         op = PredicateOperation.LIKE;
+                        ruleValue = ((StringValueNode)field.Value).Value;
                         ruleValue = $"%{EscapeLikeString(ruleValue)}";
+                        break;
+                    case "isNull":
+                        processLiteral = false;
+                        bool isNull = ((BooleanValueNode)field.Value).Value;
+                        op = isNull ? PredicateOperation.IS : PredicateOperation.IS_NOT;
+                        ruleValue = "NULL";
                         break;
                     default:
                         throw new NotSupportedException($"Operation {ruleName} on string type not supported.");
@@ -245,7 +271,7 @@ namespace Azure.DataGateway.Service.Models
                 predicates.Push(new PredicateOperand(new Predicate(
                     new PredicateOperand(column),
                     op,
-                    new PredicateOperand($"@{processLiterals(ruleValue)}")
+                    new PredicateOperand(processLiteral ? $"@{processLiterals(ruleValue)}" : ruleValue)
                 )));
             }
 

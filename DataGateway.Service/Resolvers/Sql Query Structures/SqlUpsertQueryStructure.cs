@@ -99,6 +99,16 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 foreach (KeyValuePair<string, object?> param in mutationParams)
                 {
+                    if (param.Value == null)
+                    {
+                        // Should never happen since due to REST request validation.
+                        // TODO change when null column support is added for REST
+                        throw new DataGatewayException(
+                            $"Unexpected {param.Key} null column.",
+                            HttpStatusCode.BadRequest,
+                            DataGatewayException.SubStatusCodes.BadRequest);
+                    }
+
                     // Create Parameter and map it to column for downstream logic to utilize.
                     string paramIdentifier;
                     if (param.Value != null)

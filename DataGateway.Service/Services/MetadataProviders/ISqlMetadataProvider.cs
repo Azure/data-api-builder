@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
@@ -28,5 +29,15 @@ namespace Azure.DataGateway.Service.Services
             string schemaName,
             string tableName,
             TableDefinition tableDefinition);
+
+        /// <summary>
+        /// Fills the table definition with information of the foreign keys
+        /// for all the tables.
+        /// </summary>
+        /// <param name="schemaName">Name of the default schema.</param>
+        /// <param name="tables">Dictionary of all tables.</param>
+        public Task PopulateForeignKeyDefinitionAsync(
+            string schemaName,
+            Dictionary<string, TableDefinition> tables);
     }
 }

@@ -1,4 +1,5 @@
 using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Service.Resolvers;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 
@@ -13,8 +14,11 @@ namespace Azure.DataGateway.Service.Services
     public class MsSqlMetadataProvider :
         SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand>
     {
-        public MsSqlMetadataProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
-            : base(dataGatewayConfig)
+        public MsSqlMetadataProvider(
+            IOptions<DataGatewayConfig> dataGatewayConfig,
+            IQueryExecutor queryExecutor,
+            IQueryBuilder sqlQueryBuilder)
+            : base(dataGatewayConfig, queryExecutor, sqlQueryBuilder)
         {
         }
 

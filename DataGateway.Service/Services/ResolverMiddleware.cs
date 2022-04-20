@@ -70,7 +70,7 @@ namespace Azure.DataGateway.Service.Services
                 // anything for it.
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
-                    context.Result = jsonElement.ToString();
+                    context.Result = RepresentsNullValue(jsonElement) ? null : jsonElement.ToString();
                 }
             }
             else if (IsInnerObject(context))
@@ -101,6 +101,11 @@ namespace Azure.DataGateway.Service.Services
             }
 
             await _next(context);
+        }
+
+        public static bool RepresentsNullValue(JsonElement element)
+        {
+            return string.IsNullOrEmpty(element.ToString()) && element.GetRawText() == "null";
         }
 
         protected static bool TryGetPropertyFromParent(IMiddlewareContext context, out JsonElement jsonElement)
@@ -143,11 +148,7 @@ namespace Azure.DataGateway.Service.Services
             IFieldCollection<IInputField> availableArguments = schema.Arguments;
             foreach (IInputField argument in availableArguments)
             {
-                if (argument.DefaultValue == null)
-                {
-                    parameters.Add(argument.Name.Value, null);
-                }
-                else
+                if (argument.DefaultValue != null)
                 {
                     parameters.Add(argument.Name.Value, ArgumentValue(argument.DefaultValue, variables));
                 }
@@ -157,7 +158,14 @@ namespace Azure.DataGateway.Service.Services
             IReadOnlyList<ArgumentNode> passedArguments = query.Arguments;
             foreach (ArgumentNode argument in passedArguments)
             {
-                parameters[argument.Name.Value] = ArgumentValue(argument.Value, variables);
+                if (parameters.ContainsKey(argument.Name.Value))
+                {
+                    parameters[argument.Name.Value] = ArgumentValue(argument.Value, variables);
+                }
+                else
+                {
+                    parameters.Add(argument.Name.Value, ArgumentValue(argument.Value, variables));
+                }
             }
 
             return parameters;

@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
+using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
@@ -128,6 +129,10 @@ namespace Azure.DataGateway.Service.Services
             // RestRequestContext is finalized for QueryBuilding and QueryExecution.
             // Perform Authorization check prior to moving forward in request pipeline.
             // RESTAuthorizationService
+            //string policyData = GetHttpContext().Items[PolicyHelper.CONTEXT_POLICY_KEY].ToString();
+            string policyData = "?$filter='John Doe' eq name";
+            RequestParser.ApplyPolicy(context, GraphQLMetadataProvider.ODataFilterParser, policyData);
+
             AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
                 user: GetHttpContext().User,
                 resource: context,

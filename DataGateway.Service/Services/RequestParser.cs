@@ -108,6 +108,10 @@ namespace Azure.DataGateway.Service.Services
             }
         }
 
+        public static void ApplyPolicy(RestRequestContext context, FilterParser filterParser, string policyData)
+        {
+            context.AuthorizationPolicyClause = filterParser.GetFilterClause(policyData, context.EntityName);
+        }
         /// <summary>
         /// CheckListForNullElement is a helper function which checks if any element
         /// in the list meets our definition for null as a column name, and throws an

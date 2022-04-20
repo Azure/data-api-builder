@@ -154,6 +154,26 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
+            if (context.AuthorizationPolicyClause is not null)
+            {
+                // We use the visitor pattern here to traverse the AuthorizationPolicyClause AST
+                // AST has Accept method which takes our Visitor class, and then calls
+                // our visit functions. Each node in the AST will then automatically
+                // call the visit function for that node types, and we process the AST
+                // based on what type of node we are currently traversing.
+                ODataASTVisitor visitor = new(this);
+                try
+                {
+                    FilterPredicates = context.AuthorizationPolicyClause.Expression.Accept<string>(visitor);
+                }
+                catch
+                {
+                    throw new DataGatewayException(message: "$filter query parameter is not well formed.",
+                                                   statusCode: HttpStatusCode.BadRequest,
+                                                   subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                }
+            }
+
             if (!string.IsNullOrWhiteSpace(context.After))
             {
                 AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromJsonString(context.After, PaginationMetadata));

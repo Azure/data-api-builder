@@ -3,13 +3,19 @@ type Query {
     getBook(id: Int!): Book
     getReview(id: Int!, book_id: Int!): Review
     getReviews(_filter: ReviewFilterInput, _filterOData: String): [Review!]!
+    getMagazine(id: Int!): Magazine
+    getMagazines(first: Int = 100, _filter: MagazineFilterInput, _filterOData: String): [Magazine!]!
+    getWebsiteUsers(first: Int = 100, _filter: WebsiteUserFilterInput, _filterOData: String): [WebsiteUser!]!
     books(first: Int, after: String, _filter: BookFilterInput, _filterOData: String): BookConnection!
     reviews(first: Int, after: String, _filter: ReviewFilterInput, _filterOData: String): ReviewConnection!
 }
 
 type Mutation {
     editBook(id: Int!, title: String, publisher_id: Int): Book
+    updateMagazine(id: Int!, title: String, issue_number: Int): Magazine
     insertBook(title: String!, publisher_id: Int!): Book
+    insertMagazine(id: Int!, title: String!, issue_number: Int): Magazine
+    insertWebsiteUser(id: Int!, username: String): WebsiteUser
     insertWebsitePlacement(book_id: Int!, price: Int!): BookWebsitePlacement
     addAuthorToBook(author_id: Int!, book_id: Int!): Boolean
     deleteBook(id: Int!): Book
@@ -41,6 +47,11 @@ type BookWebsitePlacement {
     book: Book!
 }
 
+type WebsiteUser {
+    id: Int!,
+    username: String
+}
+
 type Author {
     id: Int!
     name: String!
@@ -53,6 +64,12 @@ type Review {
     id: Int!
     content: String!
     book: Book!
+}
+
+type Magazine {
+    id: Int!
+    title: String!
+    issue_number: Int
 }
 
 type BookConnection {
@@ -80,6 +97,7 @@ input StringFilterInput {
   notContains: String
   startsWith: String
   endsWith: String
+  isNull: Boolean
 }
 
 input IntFilterInput {
@@ -89,6 +107,7 @@ input IntFilterInput {
   gt: Int
   lte: Int
   gte: Int
+  isNull: Boolean
 }
 
 input BookFilterInput {
@@ -119,4 +138,19 @@ input ReviewFilterInput {
     or: [ReviewFilterInput]
     id: IntFilterInput,
     content: StringFilterInput
+}
+
+input MagazineFilterInput {
+    and: [MagazineFilterInput]
+    or: [MagazineFilterInput]
+    id: IntFilterInput
+    title: StringFilterInput
+    issue_number: IntFilterInput
+}
+
+input WebsiteUserFilterInput {
+    and: [WebsiteUserFilterInput]
+    or: [WebsiteUserFilterInput]
+    id: IntFilterInput
+    username: StringFilterInput
 }

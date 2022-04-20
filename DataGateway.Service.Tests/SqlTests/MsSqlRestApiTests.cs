@@ -245,16 +245,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             },
             {
                 "PutOne_Insert_Test",
-                $"SELECT [id], [title], [issueNumber] FROM { _integration_NonAutoGenPK_TableName } " +
+                $"SELECT [id], [title], [issue_number] FROM { _integration_NonAutoGenPK_TableName } " +
                 $"WHERE id = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'Batman Returns' " +
-                $"AND [issueNumber] = 1234" +
+                $"AND [issue_number] = 1234" +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "PutOne_Insert_Nullable_Test",
-                $"SELECT [id], [title], [issueNumber] FROM { _integration_NonAutoGenPK_TableName } " +
+                $"SELECT [id], [title], [issue_number] FROM { _integration_NonAutoGenPK_TableName } " +
                 $"WHERE id = { STARTING_ID_FOR_TEST_INSERTS + 1 } AND [title] = 'Times' " +
-                $"AND [issueNumber] IS NULL " +
+                $"AND [issue_number] IS NULL " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
@@ -289,9 +289,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             },
             {
                 "PatchOne_Insert_NonAutoGenPK_Test",
-                $"SELECT [id], [title], [issueNumber] FROM { _integration_NonAutoGenPK_TableName } " +
+                $"SELECT [id], [title], [issue_number] FROM { _integration_NonAutoGenPK_TableName } " +
                 $"WHERE id = 2 AND [title] = 'Batman Begins' " +
-                $"AND [issueNumber] = 1234 " +
+                $"AND [issue_number] = 1234 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {

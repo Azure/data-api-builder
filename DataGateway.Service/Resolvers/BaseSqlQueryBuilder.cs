@@ -180,6 +180,10 @@ namespace Azure.DataGateway.Service.Resolvers
                     return "LIKE";
                 case PredicateOperation.NOT_LIKE:
                     return "NOT LIKE";
+                case PredicateOperation.IS:
+                    return "IS";
+                case PredicateOperation.IS_NOT:
+                    return "IS NOT";
                 default:
                     throw new ArgumentException($"Cannot build unknown predicate operation {op}.");
             }

@@ -268,7 +268,7 @@
             "Type": "text",
             "IsNullable": false
           },
-          "issueNumber": {
+          "issue_number": {
             "Type": "bigint",
             "IsNullable": true
           }

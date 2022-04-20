@@ -444,23 +444,23 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "PutOne_Insert_Test",
                 @"
-                    SELECT JSON_OBJECT('id', id, 'title', title, 'issueNumber', issueNumber ) AS data
+                    SELECT JSON_OBJECT('id', id, 'title', title, 'issue_number', issue_number ) AS data
                     FROM (
-                        SELECT id, title, issueNumber
+                        SELECT id, title, issue_number
                         FROM " + _integration_NonAutoGenPK_TableName + @"
                         WHERE id > 5000 AND title = 'Batman Returns'
-                            AND issueNumber = 1234
+                            AND issue_number = 1234
                     ) AS subq
                 "
             },
             {
                 "PutOne_Insert_Nullable_Test",
-                @"SELECT JSON_OBJECT('id', id, 'title', title, 'issueNumber', issueNumber ) AS data
+                @"SELECT JSON_OBJECT('id', id, 'title', title, 'issue_number', issue_number ) AS data
                     FROM (
-                        SELECT id, title, issueNumber
+                        SELECT id, title, issue_number
                         FROM " + _integration_NonAutoGenPK_TableName + @"
                         WHERE id = " + $"{STARTING_ID_FOR_TEST_INSERTS + 1}" + @" AND title = 'Times'
-                        AND issueNumber is NULL
+                        AND issue_number is NULL
                     ) as subq
                 "
             },
@@ -503,12 +503,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             },
             {
                 "PatchOne_Insert_NonAutoGenPK_Test",
-                @"SELECT JSON_OBJECT('id', id, 'title', title, 'issueNumber', issueNumber ) AS data
+                @"SELECT JSON_OBJECT('id', id, 'title', title, 'issue_number', issue_number ) AS data
                     FROM (
-                        SELECT id, title, issueNumber
+                        SELECT id, title, issue_number
                         FROM " + _integration_NonAutoGenPK_TableName + @"
                         WHERE id = 2 AND title = 'Batman Begins'
-                        AND issueNumber = 1234
+                        AND issue_number = 1234
                     ) as subq
                 "
             },

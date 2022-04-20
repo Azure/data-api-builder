@@ -14,8 +14,11 @@ namespace Azure.DataGateway.Service.Resolvers
     public class MySqlQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
     {
         private static DbCommandBuilder _builder = new MySqlCommandBuilder();
+        public const string DATABASE_NAME_PARAM = "databaseName";
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Adds database specific quotes to string identifier
+        /// </summary>
         protected override string QuoteIdentifier(string ident)
         {
             return _builder.QuoteIdentifier(ident);
@@ -116,6 +119,35 @@ namespace Azure.DataGateway.Service.Resolvers
                         $"SELECT " + select + $" WHERE @ROWCOUNT != 1;" +
                         $"SELECT {MakeUpsertSelections(structure)} WHERE @ROWCOUNT = 1;";
             }
+        }
+
+        /// <inheritdoc />
+        public override string BuildForeignKeyInfoQuery(int numberOfParameters)
+        {
+            string[] databaseNameParams = CreateParams(DATABASE_NAME_PARAM, numberOfParameters);
+            string[] tableNameParams = CreateParams(TABLE_NAME_PARAM, numberOfParameters);
+            string tableSchemaParamsForInClause = string.Join(", @", databaseNameParams);
+            string tableNameParamsForInClause = string.Join(", @", tableNameParams);
+
+            // For MySQL, the view KEY_COLUMN_USAGE provides all the information we need
+            // so there is no need to join with any other view.
+            string foreignKeyQuery = $@"
+                SELECT 
+                    CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))}, 
+                    TABLE_NAME {QuoteIdentifier(nameof(TableDefinition))}, 
+                    COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencingColumns))}, 
+                    REFERENCED_TABLE_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedTable))}, 
+                    REFERENCED_COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))} 
+                FROM 
+                    INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
+                WHERE 
+                    TABLE_SCHEMA IN (@{tableSchemaParamsForInClause}) 
+                    AND TABLE_NAME IN (@{tableNameParamsForInClause}) 
+                    AND REFERENCED_TABLE_NAME IS NOT NULL 
+                    AND REFERENCED_COLUMN_NAME IS NOT NULL;";
+
+            Console.WriteLine($"Foreign Key Query is : {foreignKeyQuery}");
+            return foreignKeyQuery;
         }
 
         /// <summary>

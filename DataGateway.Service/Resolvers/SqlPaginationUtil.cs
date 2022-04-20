@@ -123,16 +123,9 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public static IDictionary<string, object> ParseEndCursorFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
         {
-            Dictionary<string, object> after = new();
+            Dictionary<string, object> endCursor = new();
 
-            if (!queryParams.ContainsKey("after"))
-            {
-                return after;
-            }
-
-            object afterObject = queryParams["after"];
-
-            if (conitainuationObject != null)
+            if (queryParams.TryGetValue(QueryBuilder.END_CURSOR_TOKEN_FIELD_NAME, out object? conitainuationObject))
             {
                 string afterPlainText = (string)conitainuationObject;
                 endCursor = ParseEndCursorFromJsonString(afterPlainText, paginationMetadata);
@@ -156,8 +149,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 if (!ListsAreEqual(afterDeserialized.Keys.ToList(), primaryKey))
                 {
-                    string incorrectValues = $"Parameter \"endCursor\" with values {afterJsonString} does not contain all the required" +
-                                                $"values <{string.Join(", ", primaryKey.Select(c => $"\"{c}\""))}>";
+                    string incorrectValues = $"Parameter \"{QueryBuilder.END_CURSOR_TOKEN_FIELD_NAME}\" with values {afterJsonString} does not contain all the required values <{string.Join(", ", primaryKey.Select(c => $"\"{c}\""))}>";
 
                     throw new ArgumentException(incorrectValues);
                 }

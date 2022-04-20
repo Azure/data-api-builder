@@ -128,14 +128,7 @@ namespace Azure.DataGateway.Service.Resolvers
             else
             {
                 //TODO: Try to avoid additional deserialization/serialization here.
-                string? stringElement = element.ToString();
-
-                if (string.IsNullOrEmpty(stringElement))
-                {
-                    return null;
-                }
-
-                return JsonDocument.Parse(stringElement);
+                return ResolverMiddleware.RepresentsNullValue(element) ? null : JsonDocument.Parse(element.ToString());
             }
         }
 

@@ -29,7 +29,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<string> ReturnColumns { get; }
 
-        public SqlInsertStructure(string tableName, SqlGraphQLFileMetadataProvider metadataStore, IDictionary<string, object> mutationParams)
+        public SqlInsertStructure(string tableName, SqlGraphQLFileMetadataProvider metadataStore, IDictionary<string, object?> mutationParams)
         : base(metadataStore, tableName: tableName)
         {
             InsertColumns = new();
@@ -69,11 +69,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
                 else
                 {
-                    // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
-                    throw new DataGatewayException(
-                        message: $"Unexpected value for column \"{columnName}\" provided.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                    paramName = MakeParamWithValue(null);
                 }
 
                 Values.Add($"@{paramName}");

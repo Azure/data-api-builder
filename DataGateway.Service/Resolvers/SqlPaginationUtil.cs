@@ -123,8 +123,14 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public static IDictionary<string, object> ParseEndCursorFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
         {
-            Dictionary<string, object> endCursor = new();
-            object conitainuationObject = queryParams["endCursor"];
+            Dictionary<string, object> after = new();
+
+            if (!queryParams.ContainsKey("after"))
+            {
+                return after;
+            }
+
+            object afterObject = queryParams["after"];
 
             if (conitainuationObject != null)
             {

@@ -83,8 +83,9 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     // Non Nullable columns must have a value defined in request unless
                     // the table schema configures the column with a default value.
+                    // Should never happen due to request validation
                     throw new DataGatewayException(
-                        message: "Request must define values for all nullable and non-default valued columns.",
+                        message: "Request must define values for all non-nullable and non-default valued columns.",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }

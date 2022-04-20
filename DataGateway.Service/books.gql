@@ -22,6 +22,11 @@ type BookWebsitePlacement @model {
     book: Book!
 }
 
+type WebsiteUser {
+    id: Int!,
+    username: String
+}
+
 type Author @model {
     id: Int!
     name: String!
@@ -32,4 +37,10 @@ type Review @model {
     id: Int!
     content: String!
     book: Book!
+}
+
+type Magazine {
+    id: Int!
+    title: String!
+    issue_number: Int
 }

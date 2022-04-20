@@ -2,6 +2,7 @@ DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
 DROP TABLE IF EXISTS book_website_placements;
+DROP TABLE IF EXISTS website_users;
 DROP TABLE IF EXISTS books;
 DROP TABLE IF EXISTS publishers;
 DROP TABLE IF EXISTS magazines;
@@ -29,6 +30,11 @@ CREATE TABLE book_website_placements(
     price bigint NOT NULL
 );
 
+CREATE TABLE website_users(
+    id bigint PRIMARY KEY,
+    username text NULL
+);
+
 CREATE TABLE authors(
     id bigint IDENTITY(5001, 1) PRIMARY KEY,
     name varchar(max) NOT NULL,
@@ -51,7 +57,7 @@ CREATE TABLE book_author_link(
 CREATE TABLE magazines(
     id bigint PRIMARY KEY,
     title varchar(max) NOT NULL,
-    issueNumber bigint NULL
+    issue_number bigint NULL
 );
 
 CREATE TABLE comics(
@@ -121,4 +127,6 @@ SET IDENTITY_INSERT reviews ON
 INSERT INTO reviews(id, book_id, content) VALUES (567, 1, 'Indeed a great book'), (568, 1, 'I loved it'), (569, 1, 'best book I read in years');
 SET IDENTITY_INSERT reviews OFF
 
+INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95'), (5, 'null');
 INSERT INTO stocks(categoryid, pieceid,categoryName) VALUES (1, 1, 'books'), (2, 1, 'magazines');
+INSERT INTO magazines(id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);

@@ -397,7 +397,9 @@ namespace Azure.DataGateway.Service.Configurations
             Dictionary<string, IEnumerable<string>> optionalArguments = new()
             {
                 ["_filter"] = new[] { "BookFilterInput", "PublisherFilterInput", "AuthorFilterInput", "ReviewFilterInput",
-                                        "BookFilterInput!", "PublisherFilterInput!", "AuthorFilterInput!", "ReviewFilterInput!" },
+                                        "MagazineFilterInput",
+                                        "BookFilterInput!", "PublisherFilterInput!", "AuthorFilterInput!", "ReviewFilterInput!",
+                                        "MagazineFilterInput!" },
                 ["_filterOData"] = new[] { "String", "String!" }
             };
 
@@ -421,7 +423,9 @@ namespace Azure.DataGateway.Service.Configurations
             {
                 ["first"] = new[] { "Int", "Int!" },
                 ["_filter"] = new[] { "BookFilterInput", "PublisherFilterInput", "AuthorFilterInput", "ReviewFilterInput",
-                                        "BookFilterInput!", "PublisherFilterInput!", "AuthorFilterInput!", "ReviewFilterInput!" },
+                                        "MagazineFilterInput", "WebsiteUserFilterInput",
+                                        "BookFilterInput!", "PublisherFilterInput!", "AuthorFilterInput!", "ReviewFilterInput!",
+                                        "MagazineFilterInput!", "WebsiteUserFilterInput!" },
                 ["_filterOData"] = new[] { "String", "String!" }
             };
 
@@ -644,6 +648,8 @@ namespace Azure.DataGateway.Service.Configurations
 
             ValidateMutArgsMatchTableColumns(resolver.Table, table, mutArgs);
             ValidateMutArgTypesMatchTableColTypes(resolver.Table, table, mutArgs);
+
+            ValidateUpdateMutHasCorrectArgs(table, mutArgs);
             ValidateArgNullabilityInUpdateMut(table, mutArgs);
             ValidateReturnTypeNullability(mutation, returnsNullable: true);
         }

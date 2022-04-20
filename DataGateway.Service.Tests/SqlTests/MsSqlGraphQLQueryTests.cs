@@ -620,6 +620,49 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        /// <summary>
+        /// Get all instances of a type with nullable interger fields
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryingTypeWithNullableIntFields()
+        {
+            string graphQLQueryName = "getMagazines";
+            string graphQLQuery = @"{
+                getMagazines{
+                    id
+                    title
+                    issue_number
+                }
+            }";
+
+            string msSqlQuery = $"SELECT TOP 100 id, title, issue_number FROM magazines ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            _ = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+
+            _ = await GetDatabaseResultAsync(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Get all instances of a type with nullable string fields
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryingTypeWithNullableStringFields()
+        {
+            string graphQLQueryName = "getWebsiteUsers";
+            string graphQLQuery = @"{
+                getWebsiteUsers{
+                    id
+                    username
+                }
+            }";
+
+            string msSqlQuery = $"SELECT TOP 100 id, username FROM website_users ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            _ = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+
+            _ = await GetDatabaseResultAsync(msSqlQuery);
+        }
+
         #endregion
 
         #region Negative Tests

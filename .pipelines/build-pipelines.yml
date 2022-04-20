@@ -7,7 +7,7 @@ trigger:
 - main
 
 pool:
-  vmImage: 'ubuntu-18.04' # examples of other options: 'macOS-10.15', 'windows-2019'
+  vmImage: 'ubuntu-latest' # examples of other options: 'macOS-10.15', 'windows-2019'
 
 variables:
   solution: '**/*.sln'
@@ -21,12 +21,12 @@ steps:
   inputs:
     restoreSolution: '$(solution)'
 
-- task: DotNetCoreCLI@2
-  displayName: Install dotnet format
+- task: UseDotNet@2
+  displayName: Setup .NET SDK v6.0.x
   inputs:
-    command: custom
-    custom: tool
-    arguments: 'restore'
+    packageType: sdk
+    version: 6.0.x
+    installationPath: $(Agent.ToolsDirectory)/dotnet
 
 - task: DotNetCoreCLI@2
   displayName: Check formatting

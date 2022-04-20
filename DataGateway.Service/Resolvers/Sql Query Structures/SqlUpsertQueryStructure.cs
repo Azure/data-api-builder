@@ -53,7 +53,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="metadataStore"></param>
         /// <param name="mutationParams"></param>
         /// <exception cref="DataGatewayException"></exception>
-        public SqlUpsertQueryStructure(string tableName, SqlGraphQLFileMetadataProvider metadataStore, IDictionary<string, object> mutationParams, bool incrementalUpdate)
+        public SqlUpsertQueryStructure(string tableName, SqlGraphQLFileMetadataProvider metadataStore, IDictionary<string, object?> mutationParams, bool incrementalUpdate)
         : base(metadataStore, tableName: tableName)
         {
             UpdateOperations = new();
@@ -88,7 +88,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         private void PopulateColumns(
-            IDictionary<string, object> mutationParams,
+            IDictionary<string, object?> mutationParams,
             TableDefinition tableDefinition,
             bool isIncrementalUpdate)
         {
@@ -97,8 +97,18 @@ namespace Azure.DataGateway.Service.Resolvers
 
             try
             {
-                foreach (KeyValuePair<string, object> param in mutationParams)
+                foreach (KeyValuePair<string, object?> param in mutationParams)
                 {
+                    if (param.Value == null)
+                    {
+                        // Should never happen since due to REST request validation.
+                        // TODO change when null column support is added for REST
+                        throw new DataGatewayException(
+                            $"Unexpected {param.Key} null column.",
+                            HttpStatusCode.BadRequest,
+                            DataGatewayException.SubStatusCodes.BadRequest);
+                    }
+
                     // Create Parameter and map it to column for downstream logic to utilize.
                     string paramIdentifier = MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, param.Key));
 

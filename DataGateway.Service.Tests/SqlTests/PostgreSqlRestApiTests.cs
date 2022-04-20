@@ -336,7 +336,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     FROM (
                         SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
                         FROM " + _Composite_NonAutoGenPK + @"
-                        WHERE categoryid = 5 AND pieceid = 2 AND ""categoryName"" = 'Thriller'
+                        WHERE categoryid = 5 AND pieceid = 2 AND ""categoryName"" = 'FairyTales'
                             AND ""piecesAvailable"" = 0 AND ""piecesRequired"" = 0
                     ) AS subq
                 "
@@ -417,7 +417,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     FROM (
                         SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
                         FROM " + _Composite_NonAutoGenPK + @"
-                        WHERE categoryid = 2 AND pieceid = 1 AND ""categoryName"" = 'History'
+                        WHERE categoryid = 2 AND pieceid = 1 AND ""categoryName"" = 'SciFi'
                             AND ""piecesAvailable"" = 10 AND ""piecesRequired"" = 5
                     ) AS subq
                 "
@@ -439,10 +439,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
-                        SELECT id, title, ""issueNumber""
+                        SELECT id, title, issue_number
                         FROM " + _integration_NonAutoGenPK_TableName + @"
                         WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @" AND title = 'Batman Returns'
-                            AND ""issueNumber"" = 1234
+                            AND issue_number = 1234
                     ) AS subq
                 "
             },
@@ -451,10 +451,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
-                        SELECT id, title, ""issueNumber""
+                        SELECT id, title, issue_number
                         FROM " + _integration_NonAutoGenPK_TableName + @"
                         WHERE id = " + (STARTING_ID_FOR_TEST_INSERTS + 1) + @"
-                            AND title = 'Times' AND ""issueNumber"" is NULL
+                            AND title = 'Times' AND issue_number is NULL
                     ) AS subq
                 "
             },
@@ -469,7 +469,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
-                        SELECT id, title, volume
+                        SELECT id, title, volume, ""categoryName""
                         FROM " + _integration_AutoGenNonPK_TableName + @"
                         WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
                             AND title = 'Star Trek' AND volume IS NOT NULL
@@ -483,7 +483,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     FROM (
                         SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
                         FROM " + _Composite_NonAutoGenPK + @"
-                        WHERE categoryid = 3 AND pieceid = 1 AND ""categoryName"" = 'comics'
+                        WHERE categoryid = 3 AND pieceid = 1 AND ""categoryName"" = 'SciFi'
                             AND ""piecesAvailable"" = 2 AND ""piecesRequired"" = 1
                     ) AS subq
                 "
@@ -505,9 +505,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
-                        SELECT id, title, ""issueNumber""
+                        SELECT id, title, issue_number
                         FROM " + _integration_NonAutoGenPK_TableName + @"
-                        WHERE id = 2 AND title = 'Batman Begins' AND ""issueNumber"" = 1234
+                        WHERE id = 2 AND title = 'Batman Begins' AND issue_number = 1234
                     ) AS subq
                 "
             },
@@ -518,7 +518,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     FROM (
                         SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
                         FROM " + _Composite_NonAutoGenPK + @"
-                        WHERE categoryid = 4 AND pieceid = 1 AND ""categoryName"" = 'Suspense'
+                        WHERE categoryid = 4 AND pieceid = 1 AND ""categoryName"" = 'FairyTales'
                             AND ""piecesAvailable"" = 5 AND ""piecesRequired"" = 4
                     ) AS subq
                 "
@@ -530,7 +530,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     FROM (
                         SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
                         FROM " + _Composite_NonAutoGenPK + @"
-                        WHERE categoryid = 7 AND pieceid = 1 AND ""categoryName"" = 'Drama'
+                        WHERE categoryid = 7 AND pieceid = 1 AND ""categoryName"" = 'SciFi'
                             AND ""piecesAvailable"" = 0 AND ""piecesRequired"" = 0
                     ) AS subq
                 "
@@ -575,7 +575,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     FROM (
                         SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
                         FROM " + _Composite_NonAutoGenPK + @"
-                        WHERE categoryid = 1 AND pieceid = 1 AND ""categoryName"" = 'books'
+                        WHERE categoryid = 1 AND pieceid = 1 AND ""categoryName"" = 'SciFi'
                             AND ""piecesAvailable"" = 10 AND ""piecesRequired"" = 0
                     ) AS subq
                 "

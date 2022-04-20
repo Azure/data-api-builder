@@ -539,6 +539,27 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expectedLocationHeader: expectedLocationHeader
                 );
 
+            // Perform a PUT UPDATE which nulls out a missing field from the request body
+            // which is nullable.
+            requestBody = @"
+            {
+                ""categoryName"":""SciFi"",
+                ""piecesRequired"":""5""
+            }";
+
+            expectedLocationHeader = $"categoryid/1/pieceid/1";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: expectedLocationHeader,
+                queryString: null,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: GetQuery("PutOne_Update_NullOutMissingField_Test"),
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedLocationHeader: expectedLocationHeader
+            );
+
             requestBody = @"
             {
                ""categoryName"":"""",
@@ -764,7 +785,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             requestBody = @"
             {
                ""categoryName"":""FairyTales"",
-               ""piecesAvailable"":null
+               ""piecesAvailable"":null,
+               ""piecesRequired"":""4""
             }";
 
             expectedLocationHeader = $"categoryid/2/pieceid/1";
@@ -1312,6 +1334,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public virtual async Task PutOneWithNonNullableFieldMissingInJsonBodyTest()
         {
+            // Behaviour expected when a non-nullable and non-default field
+            // is missing from request body. This would fail in the RequestValidator.ValidateColumn
+            // as our requestBody is missing a non-nullable and non-default field.
             string requestBody = @"
             {
                 ""piecesRequired"":""6""
@@ -1328,6 +1353,31 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expectedErrorMessage: "Invalid request body. Missing field in body: categoryName.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
+            );
+        }
+
+        [TestMethod]
+        public virtual async Task PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest()
+        {
+            // Behaviour expected when a non-nullable but default field
+            // is missing from request body. In this case, when we try to null out
+            // this field, the db would throw an exception.
+            string requestBody = @"
+            {
+                ""categoryName"":""comics""
+            }";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1",
+                queryString: string.Empty,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
+                expectedStatusCode: HttpStatusCode.InternalServerError,
+                expectedSubStatusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
             );
         }
 

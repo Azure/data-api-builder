@@ -423,6 +423,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "PutOne_Update_NullOutMissingField_Test",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
+                        FROM " + _Composite_NonAutoGenPK + @"
+                        WHERE categoryid = 1 AND pieceid = 1 AND ""categoryName"" = 'SciFi'
+                            AND ""piecesAvailable"" is NULL AND ""piecesRequired"" = 5
+                    ) AS subq
+                "
+            },
+            {
                 "PutOne_Update_Empty_Test",
                 @"
                     SELECT to_jsonb(subq) AS data
@@ -442,7 +454,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
                         FROM " + _Composite_NonAutoGenPK + @"
                         WHERE categoryid = 2 AND pieceid = 1 AND ""categoryName"" = 'FairyTales'
-                            AND ""piecesAvailable"" is NULL AND ""piecesRequired"" = 5
+                            AND ""piecesAvailable"" is NULL AND ""piecesRequired"" = 4
                     ) AS subq
                 "
             },

@@ -32,7 +32,7 @@ namespace Azure.DataGateway.Service.Services
         protected string ConnectionString { get; init; }
 
         // nullable since Mock tests don't need this.
-        protected IQueryBuilder? SqlQueryBuilder { get; init; }
+        protected IQueryBuilder SqlQueryBuilder { get; init; }
 
         protected DataSet EntitiesDataSet { get; init; }
 
@@ -54,6 +54,7 @@ namespace Azure.DataGateway.Service.Services
         {
             ConnectionString = new(string.Empty);
             EntitiesDataSet = new();
+            SqlQueryBuilder = new MsSqlQueryBuilder();
         }
 
         /// </inheritdoc>
@@ -98,7 +99,7 @@ namespace Azure.DataGateway.Service.Services
         {
             // Build the query required to get the foreign key information.
             string queryForForeignKeyInfo =
-                ((BaseSqlQueryBuilder)SqlQueryBuilder!).BuildForeignKeyInfoQuery(tables.Count);
+                ((BaseSqlQueryBuilder)SqlQueryBuilder).BuildForeignKeyInfoQuery(tables.Count);
 
             // Build the array storing all the schemaNames, for now the defaultSchemaName.
             string[] schemaNames = Enumerable.Range(1, tables.Count).Select(x => defaultSchemaName).ToArray();
@@ -268,11 +269,11 @@ namespace Azure.DataGateway.Service.Services
         {
             Dictionary<string, object?> parameters = new();
             string[] schemaNameParams =
-                SqlQueryBuilder!.CreateParams(
+                BaseSqlQueryBuilder.CreateParams(
                     kindOfParam: BaseSqlQueryBuilder.SCHEMA_NAME_PARAM,
                     schemaNames.Count());
             string[] tableNameParams =
-                SqlQueryBuilder!.CreateParams(
+                BaseSqlQueryBuilder.CreateParams(
                     kindOfParam: BaseSqlQueryBuilder.TABLE_NAME_PARAM,
                     tableNames.Count());
 

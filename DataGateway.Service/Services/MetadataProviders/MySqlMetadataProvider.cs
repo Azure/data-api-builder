@@ -70,11 +70,11 @@ namespace Azure.DataGateway.Service.Services
             Dictionary<string, object?> parameters = new();
 
             string[] databaseNameParams =
-                SqlQueryBuilder!.CreateParams(
+                BaseSqlQueryBuilder.CreateParams(
                     kindOfParam: MySqlQueryBuilder.DATABASE_NAME_PARAM,
                     schemaNames.Count());
             string[] tableNameParams =
-                SqlQueryBuilder!.CreateParams(
+                BaseSqlQueryBuilder.CreateParams(
                     kindOfParam: BaseSqlQueryBuilder.TABLE_NAME_PARAM,
                     tableNames.Count());
 

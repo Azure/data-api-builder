@@ -119,6 +119,9 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             List<PaginationColumn> cursorJson = new();
             JsonSerializerOptions options = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
+            // Hash set is used here to maintain linear runtime
+            // in the worst case for this function. If list is used
+            // we will have in the worst case quadratic runtime.
             HashSet<string> remainingKeys = new();
             foreach (string key in primaryKey)
             {

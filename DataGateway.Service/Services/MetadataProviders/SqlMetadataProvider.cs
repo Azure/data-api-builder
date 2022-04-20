@@ -23,6 +23,8 @@ namespace Azure.DataGateway.Service.Services
         where CommandT : DbCommand, new()
     {
         // nullable since Mock tests do not need it.
+        // TODO: Refactor the Mock tests to remove the nullability here
+        // once the runtime config is implemented tracked by #353.
         private readonly IQueryExecutor? _queryExecutor;
 
         private const int NUMBER_OF_RESTRICTIONS = 4;

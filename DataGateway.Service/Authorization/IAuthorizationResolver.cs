@@ -15,7 +15,9 @@ namespace Azure.DataGateway.Service.Authorization
         // Whether Entity.Role has action defined
         public bool IsActionAllowedForRole(string action, string roleName);
 
-        //No-Op for now -> compare columns in request body to columns in entity.Role.Action.AllowedColumns
+        // No-Op for now -> compare columns in request body to columns in entity.Role.Action.AllowedColumns
         public bool IsColumnSetAllowedForAction();
+
+        public bool DidProcessDBPolicy(string action, string roleName, HttpContext httpContext);
     }
 }

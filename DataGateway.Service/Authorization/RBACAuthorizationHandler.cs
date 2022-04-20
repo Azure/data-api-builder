@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
@@ -69,6 +70,11 @@ namespace Azure.DataGateway.Service.Authorization
             }
 
             if (!_authorizationResolver.IsColumnSetAllowedForAction())
+            {
+                context.Fail();
+            }
+
+            if (!_authorizationResolver.DidProcessDBPolicy(action: requestActionType, roleName: desiredRoleContext, httpContext: httpContext))
             {
                 context.Fail();
             }

@@ -24,9 +24,8 @@ steps:
 - task: UseDotNet@2
   displayName: Setup .NET SDK v6.0.x
   inputs:
-    # Pin .NET SDK 6.0.102 for now to avoid dotnet format regression https://github.com/dotnet/format/issues/1519
     packageType: sdk
-    version: 6.0.102
+    version: 6.0.x
     installationPath: $(Agent.ToolsDirectory)/dotnet
 
 - task: DotNetCoreCLI@2

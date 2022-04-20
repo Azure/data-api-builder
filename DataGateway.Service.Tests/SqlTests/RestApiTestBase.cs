@@ -543,7 +543,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             // which is nullable.
             requestBody = @"
             {
-                ""categoryName"":""History"",
+                ""categoryName"":""SciFi"",
                 ""piecesRequired"":""5""
             }";
 
@@ -785,7 +785,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             requestBody = @"
             {
                ""categoryName"":""FairyTales"",
-               ""piecesAvailable"":null
+               ""piecesAvailable"":null,
+               ""piecesRequired"":""4""
             }";
 
             expectedLocationHeader = $"categoryid/2/pieceid/1";

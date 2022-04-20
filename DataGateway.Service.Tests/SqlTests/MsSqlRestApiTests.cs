@@ -247,7 +247,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "PutOne_Update_NullOutMissingField_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
                 $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
-                $"WHERE [categoryid] = 1 AND [pieceid] = 1 AND [categoryName] = 'History' " +
+                $"WHERE [categoryid] = 1 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
                 $"AND [piecesAvailable] is NULL  AND [piecesRequired] = 5 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
@@ -264,7 +264,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
                 $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
                 $"WHERE [categoryid] = 2 AND [pieceid] = 1 AND [categoryName] = 'FairyTales' " +
-                $"AND [piecesAvailable] is NULL  AND [piecesRequired] = 5 " +
+                $"AND [piecesAvailable] is NULL  AND [piecesRequired] = 4 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {

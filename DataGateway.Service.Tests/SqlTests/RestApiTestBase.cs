@@ -308,7 +308,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyPagination)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"id\"}]"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]"))}",
                 paginated: true
             );
         }
@@ -321,8 +321,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstMultiKeyPagination()
         {
-            string after = "[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"book_id\"}," +
-                            "{\"Value\":567,\"Direction\":0,\"ColumnName\":\"id\"}]";
+            string after = "[{\"Value\":1,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"book_id\"}," +
+                            "{\"Value\":567,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"id\"}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1",

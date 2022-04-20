@@ -427,7 +427,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     FROM (
                         SELECT *
                         FROM " + _integrationTieBreakTable + @"
-                        ORDER BY birthdate, name, id 
+                        ORDER BY birthdate, name, id desc
                         LIMIT 2
                     ) AS subq
                 "

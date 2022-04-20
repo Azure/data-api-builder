@@ -231,7 +231,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFirstTwoVerifyAfterFormedCorrectlyWithOrderBy",
                 $"SELECT TOP 2 * FROM { _integrationTieBreakTable } " +
-                $"ORDER BY birthdate, name, id " +
+                $"ORDER BY birthdate, name, id desc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {

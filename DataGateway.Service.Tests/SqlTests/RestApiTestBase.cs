@@ -510,11 +510,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string after = "[{\"Value\":\"2001-01-01\",\"Direction\":0,\"TableAlias\":\"authors\",\"ColumnName\":\"birthdate\"}," +
                             "{\"Value\":\"Aniruddh\",\"Direction\":0,\"TableAlias\":\"authors\",\"ColumnName\":\"name\"}," +
-                            "{\"Value\":125,\"Direction\":0,\"TableAlias\":\"authors\",\"ColumnName\":\"id\"}]";
+                            "{\"Value\":125,\"Direction\":1,\"TableAlias\":\"authors\",\"ColumnName\":\"id\"}]";
             after = $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: $"?$first=2&$orderby=birthdate, name, id",
+                queryString: $"?$first=2&$orderby=birthdate, name, id desc",
                 entity: _integrationTieBreakTable,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstTwoVerifyAfterFormedCorrectlyWithOrderBy)),
                 controller: _restController,

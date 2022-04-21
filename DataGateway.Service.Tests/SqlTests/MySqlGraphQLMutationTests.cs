@@ -405,7 +405,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             ";
 
             string mySqlQuery = @"
-                SELECT JSON_OBJECT('id', `subq`.`id`, 'title', `subq`.`title`) AS `data`
+                SELECT JSON_OBJECT('book_id', `subq`.`book_id`, 'book_title', `subq`.`book_title`) AS `data`
                 FROM (
                     SELECT `table0`.`id` AS `book_id`,
                         `table0`.`title` AS `book_title`

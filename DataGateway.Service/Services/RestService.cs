@@ -129,9 +129,11 @@ namespace Azure.DataGateway.Service.Services
             // RestRequestContext is finalized for QueryBuilding and QueryExecution.
             // Perform Authorization check prior to moving forward in request pipeline.
             // RESTAuthorizationService
+
             //string policyData = GetHttpContext().Items[PolicyHelper.CONTEXT_POLICY_KEY].ToString();
+
             string policyData = "?$filter='John Doe' eq name";
-            RequestParser.ApplyPolicy(context, GraphQLMetadataProvider.ODataFilterParser, policyData);
+            RequestParser.ApplyAuthZPolicy(context, GraphQLMetadataProvider.ODataFilterParser, policyData);
 
             AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
                 user: GetHttpContext().User,

@@ -108,7 +108,7 @@ namespace Azure.DataGateway.Service.Services
             }
         }
 
-        public static void ApplyPolicy(RestRequestContext context, FilterParser filterParser, string policyData)
+        public static void ApplyAuthZPolicy(RestRequestContext context, FilterParser filterParser, string policyData)
         {
             context.AuthorizationPolicyClause = filterParser.GetFilterClause(policyData, context.EntityName);
         }

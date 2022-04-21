@@ -1,4 +1,4 @@
-﻿using HotChocolate.Language;
+using HotChocolate.Language;
 using HotChocolate.Types;
 using DirectiveLocation = HotChocolate.Language.DirectiveLocation;
 

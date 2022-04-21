@@ -3,17 +3,31 @@ using HotChocolate.Language;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder
 {
-    internal static class Utils
+    internal static class GraphQLNaming
     {
+        // Name must start with an upper or lowercase letter
+        private static readonly Regex _graphQLNameStart = new("^[a-zA-Z].*");
+
+        // Letters, numbers and _ are only valid in names, so strip all that aren't.
+        // Although we'll leave whitespace in so that downstream consumers can still
+        // enforce their casing requirements
+        private static readonly Regex _graphQLValidSymbols = new("[^a-zA-Z0-9_\\s]");
+
+        /// <summary>
+        /// Enforces the GraphQL naming restrictions on <paramref name="name"/>.
+        /// </summary>
+        /// <param name="name">String the enforce naming rules on</param>
+        /// <seealso cref="https://spec.graphql.org/October2021/#Name"/>
+        /// <returns>A name that complies with the GraphQL name rules</returns>
         private static string[] SanitizeGraphQLName(string name)
         {
-            if (!new Regex("^[a-zA-Z].*").Match(name).Success)
+            if (!_graphQLNameStart.Match(name).Success)
             {
                 // strip an illegal first character
                 name = name[1..];
             }
 
-            name = new Regex("[^a-zA-Z0-9_\\s]").Replace(name, "");
+            name = _graphQLValidSymbols.Replace(name, "");
 
             string[] nameSegments = name.Split(' ');
             return nameSegments;

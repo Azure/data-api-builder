@@ -83,7 +83,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
 
             for (int i = 0; i < 5; i++)
             {
-                string columnName = "col" + i;
+                string columnName = $"col{i}";
                 table.Columns.Add(columnName, new ColumnDefinition { SystemType = typeof(string) });
                 table.PrimaryKey.Add(columnName);
             }
@@ -104,7 +104,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
 
             for (int i = 0; i < 5; i++)
             {
-                table.Columns.Add("col" + i, new ColumnDefinition { SystemType = typeof(string) });
+                table.Columns.Add($"col{i}", new ColumnDefinition { SystemType = typeof(string) });
             }
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table);

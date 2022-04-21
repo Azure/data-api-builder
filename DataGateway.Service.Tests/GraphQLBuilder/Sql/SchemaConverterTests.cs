@@ -1,4 +1,7 @@
+using System;
+using System.Linq;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using Azure.DataGateway.Service.GraphQLBuilder.Sql;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -51,6 +54,116 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table);
 
             Assert.AreEqual(expected, od.Fields[0].Name.Value);
+        }
+
+        [TestMethod]
+        public void PrimaryKeyColumnHasAppropriateDirective()
+        {
+            TableDefinition table = new();
+
+            string columnName = "columnName";
+            table.Columns.Add(columnName, new ColumnDefinition
+            {
+                SystemType = typeof(string)
+            });
+            table.PrimaryKey.Add(columnName);
+
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table);
+
+            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == columnName);
+            Assert.AreEqual(1, field.Directives.Count);
+            Assert.AreEqual(PrimaryKeyDirective.DirectiveName, field.Directives[0].Name.Value);
+        }
+
+        [TestMethod]
+        public void MultiplePrimaryKeysAllMappedWithDirectives()
+        {
+            TableDefinition table = new();
+
+            for (int i = 0; i < 5; i++)
+            {
+                string columnName = "col" + i;
+                table.Columns.Add(columnName, new ColumnDefinition { SystemType = typeof(string) });
+                table.PrimaryKey.Add(columnName);
+            }
+
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table);
+
+            foreach (FieldDefinitionNode field in od.Fields)
+            {
+                Assert.AreEqual(1, field.Directives.Count);
+                Assert.AreEqual(PrimaryKeyDirective.DirectiveName, field.Directives[0].Name.Value);
+            }
+        }
+
+        [TestMethod]
+        public void MultipleColumnsAllMapped()
+        {
+            TableDefinition table = new();
+
+            for (int i = 0; i < 5; i++)
+            {
+                table.Columns.Add("col" + i, new ColumnDefinition { SystemType = typeof(string) });
+            }
+
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table);
+
+            Assert.AreEqual(table.Columns.Count, od.Fields.Count);
+        }
+
+        [DataTestMethod]
+        [DataRow(typeof(string), "String")]
+        [DataRow(typeof(long), "Int")]
+        public void SystemTypeMapsToCorrectGraphQLType(Type systemType, string graphQLType)
+        {
+            TableDefinition table = new();
+
+            string columnName = "columnName";
+            table.Columns.Add(columnName, new ColumnDefinition
+            {
+                SystemType = systemType
+            });
+
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table);
+
+            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == columnName);
+            Assert.AreEqual(graphQLType, field.Type.NamedType().Name.Value);
+        }
+
+        [TestMethod]
+        public void NullColumnBecomesNullField()
+        {
+            TableDefinition table = new();
+
+            string columnName = "columnName";
+            table.Columns.Add(columnName, new ColumnDefinition
+            {
+                SystemType = typeof(string),
+                IsNullable = true,
+            });
+
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table);
+
+            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == columnName);
+            Assert.IsFalse(field.Type.IsNonNullType());
+        }
+
+        [TestMethod]
+        public void NonNullColumnBecomesNonNullField()
+        {
+            TableDefinition table = new();
+
+            string columnName = "columnName";
+            table.Columns.Add(columnName, new ColumnDefinition
+            {
+                SystemType = typeof(string),
+                IsNullable = false,
+            });
+
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table);
+
+            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == columnName);
+            Assert.IsTrue(field.Type.IsNonNullType());
         }
     }
 }

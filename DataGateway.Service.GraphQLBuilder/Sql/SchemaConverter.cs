@@ -35,12 +35,13 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                         directives.Add(new DirectiveNode(PrimaryKeyDirective.DirectiveName, new ArgumentNode("databaseType", column.SystemType.Name)));
                     }
 
+                    NamedTypeNode fieldType = new(GetGraphQLTypeForColumnType(column.SystemType));
                     FieldDefinitionNode field = new(
                         location: null,
                         new(FormatNameForField(columnName)),
                         description: null,
                         new List<InputValueDefinitionNode>(),
-                        new NamedTypeNode(GetGraphQLTypeForColumnType(column.SystemType)),
+                        column.IsNullable ? fieldType : new NonNullTypeNode(fieldType),
                         directives);
 
                     fields.Add(field);

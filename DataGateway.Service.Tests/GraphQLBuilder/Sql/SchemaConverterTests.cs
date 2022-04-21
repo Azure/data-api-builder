@@ -9,6 +9,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
 {
     [TestClass]
+    [TestCategory("GraphQL Schema Builder")]
     public class SchemaConverterTests
     {
         [DataTestMethod]
@@ -114,6 +115,12 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
         [DataTestMethod]
         [DataRow(typeof(string), "String")]
         [DataRow(typeof(long), "Int")]
+        //[DataRow(typeof(int), "Int")]
+        //[DataRow(typeof(short), "Int")]
+        //[DataRow(typeof(float), "Float")]
+        //[DataRow(typeof(decimal), "Float")]
+        //[DataRow(typeof(double), "Float")]
+        //[DataRow(typeof(bool), "Boolean")]
         public void SystemTypeMapsToCorrectGraphQLType(Type systemType, string graphQLType)
         {
             TableDefinition table = new();
@@ -164,6 +171,46 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
 
             FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == columnName);
             Assert.IsTrue(field.Type.IsNonNullType());
+        }
+
+        [TestMethod]
+        public void ForeignKeyGeneratesObjectAndColumnField()
+        {
+            TableDefinition table = new();
+
+            string columnName = "columnName";
+            table.Columns.Add(columnName, new ColumnDefinition
+            {
+                SystemType = typeof(string),
+                IsNullable = false,
+            });
+            table.ForeignKeys.Add(columnName, new ForeignKeyDefinition { ReferencedTable = "fkTable" });
+
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table);
+
+            Assert.AreEqual(2, od.Fields.Count);
+        }
+
+        [TestMethod]
+        public void ForeignKeyObjectFieldNameAndTypeMatchesReferenceTable()
+        {
+            TableDefinition table = new();
+
+            string columnName = "columnName";
+            table.Columns.Add(columnName, new ColumnDefinition
+            {
+                SystemType = typeof(string),
+                IsNullable = false,
+            });
+            const string foreignKeyTable = "FkTable";
+            table.ForeignKeys.Add(columnName, new ForeignKeyDefinition { ReferencedTable = foreignKeyTable });
+
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table);
+
+            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value != columnName);
+
+            Assert.AreEqual("fkTables", field.Name.Value);
+            Assert.AreEqual(foreignKeyTable, field.Type.NamedType().Name.Value);
         }
     }
 }

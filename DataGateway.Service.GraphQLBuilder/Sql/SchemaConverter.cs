@@ -13,39 +13,54 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 
             foreach ((string columnName, ColumnDefinition column) in tableDefinition.Columns)
             {
+                List<DirectiveNode> directives = new();
                 if (tableDefinition.ForeignKeys.ContainsKey(columnName))
                 {
+                    // Generate the field that represents the relationship to ObjectType, so you can navigate through it
+                    // and walk the graph
+
+                    // TODO: This will need to be expanded to take care of the query fields that are available
+                    //       on the relationship, but until we have the work done to generate the right Input
+                    //       types for the queries, it's not worth trying to do it completely.
+
+                    // TODO: Also need to look at the cardinality of the relationship. If it's a 1-M then this
+                    //       side should be a singular not plural field.
                     ForeignKeyDefinition foreignKeyDefinition = tableDefinition.ForeignKeys[columnName];
 
-                    FieldDefinitionNode field = new(
+                    FieldDefinitionNode relationshipField = new(
                         location: null,
                         Pluralize(foreignKeyDefinition.ReferencedTable),
                         description: null,
                         new List<InputValueDefinitionNode>(),
                         new NonNullTypeNode(new NamedTypeNode(FormatNameForObject(foreignKeyDefinition.ReferencedTable))),
                         new List<DirectiveNode>());
-                    fields.Add(field);
+
+                    fields.Add(relationshipField);
+
+                    directives.Add(
+                        new DirectiveNode(
+                            RelationshipDirective.DirectiveName,
+                            new ArgumentNode("databaseType", column.SystemType.Name),
+                            // TODO: Set cardinality when it's available in config
+                            new ArgumentNode("cardinality", ""))
+                        );
                 }
 
-                else
+                if (tableDefinition.PrimaryKey.Contains(columnName))
                 {
-                    List<DirectiveNode> directives = new();
-                    if (tableDefinition.PrimaryKey.Contains(columnName))
-                    {
-                        directives.Add(new DirectiveNode(PrimaryKeyDirective.DirectiveName, new ArgumentNode("databaseType", column.SystemType.Name)));
-                    }
-
-                    NamedTypeNode fieldType = new(GetGraphQLTypeForColumnType(column.SystemType));
-                    FieldDefinitionNode field = new(
-                        location: null,
-                        new(FormatNameForField(columnName)),
-                        description: null,
-                        new List<InputValueDefinitionNode>(),
-                        column.IsNullable ? fieldType : new NonNullTypeNode(fieldType),
-                        directives);
-
-                    fields.Add(field);
+                    directives.Add(new DirectiveNode(PrimaryKeyDirective.DirectiveName, new ArgumentNode("databaseType", column.SystemType.Name)));
                 }
+
+                NamedTypeNode fieldType = new(GetGraphQLTypeForColumnType(column.SystemType));
+                FieldDefinitionNode field = new(
+                    location: null,
+                    new(FormatNameForField(columnName)),
+                    description: null,
+                    new List<InputValueDefinitionNode>(),
+                    column.IsNullable ? fieldType : new NonNullTypeNode(fieldType),
+                    directives);
+
+                fields.Add(field);
             }
 
             return new ObjectTypeDefinitionNode(

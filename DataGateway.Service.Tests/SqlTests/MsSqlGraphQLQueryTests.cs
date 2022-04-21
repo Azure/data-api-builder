@@ -646,6 +646,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _ = await GetDatabaseResultAsync(msSqlQuery);
         }
 
+        /// <summary>
+        /// Gets array of results for querying more than one item.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task TestAliasSupportForGraphQlQueryFields()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(first: 2) {
+                    book_id: id
+                    book_title: title
+                }
+            }";
+            string msSqlQuery = $"SELECT TOP 2 id AS book_id, title AS book_title FROM books ORDER by id FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Negative Tests

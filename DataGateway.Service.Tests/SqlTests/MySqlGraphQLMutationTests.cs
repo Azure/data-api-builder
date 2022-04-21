@@ -388,6 +388,41 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        /// <summary>
+        /// Test support for aliases in graphQL mutation queries
+        /// </summary>
+        [TestMethod]
+        public async Task TestAliasSupportForGraphQlMutationQueryFields()
+        {
+            string graphQLMutationName = "insertBook";
+            string graphQLMutation = @"
+                mutation {
+                    insertBook(title: ""My New Book"", publisher_id: 1234) {
+                        book_id: id
+                        book_title: title
+                    }
+                }
+            ";
+
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('id', `subq`.`id`, 'title', `subq`.`title`) AS `data`
+                FROM (
+                    SELECT `table0`.`id` AS `book_id`,
+                        `table0`.`title` AS `book_title`
+                    FROM `books` AS `table0`
+                    WHERE `id` = 5001
+                        AND `title` = 'My New Book'
+                        AND `publisher_id` = 1234
+                    ORDER BY `id` LIMIT 1
+                    ) AS `subq`
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Negative Tests

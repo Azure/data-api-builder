@@ -576,6 +576,24 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _ = await GetDatabaseResultAsync(postgresQuery);
         }
 
+        [TestMethod]
+        public async Task TestAliasSupportForGraphQlQueryFields()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(first: 100) {
+                    book_id: id
+                    book_title: title
+                }
+            }";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id as book_id, title as book_title FROM books ORDER BY id) as table0 LIMIT 100";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Negative Tests

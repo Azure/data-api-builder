@@ -129,7 +129,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
             }
 
-            foreach (KeyValuePair<string, object> predicate in context.FieldValuePairsInBody)
+            foreach (KeyValuePair<string, object?> predicate in context.FieldValuePairsInBody)
             {
                 PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
             }
@@ -142,7 +142,16 @@ namespace Azure.DataGateway.Service.Resolvers
                 // call the visit function for that node types, and we process the AST
                 // based on what type of node we are currently traversing.
                 ODataASTVisitor visitor = new(this);
-                FilterPredicates = context.FilterClauseInUrl.Expression.Accept<string>(visitor);
+                try
+                {
+                    FilterPredicates = context.FilterClauseInUrl.Expression.Accept<string>(visitor);
+                }
+                catch
+                {
+                    throw new DataGatewayException(message: "$filter query parameter is not well formed.",
+                                                   statusCode: HttpStatusCode.BadRequest,
+                                                   subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(context.After))
@@ -361,7 +370,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="field">The string representing a field.</param>
         /// <param name="value">The value associated with a given field.</param>
         /// <param name="op">The predicate operation representing the comparison between field and value.</param>
-        private void PopulateParamsAndPredicates(string field, object value, PredicateOperation op = PredicateOperation.Equal)
+        private void PopulateParamsAndPredicates(string field, object? value, PredicateOperation op = PredicateOperation.Equal)
         {
             try
             {
@@ -619,7 +628,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         private static List<string> GetFkColumns(ForeignKeyDefinition fk, TableDefinition table)
         {
-            return fk.Columns.Count > 0 ? fk.Columns : table.PrimaryKey;
+            return fk.ReferencingColumns.Count > 0 ? fk.ReferencingColumns : table.PrimaryKey;
         }
 
         /// <summary>

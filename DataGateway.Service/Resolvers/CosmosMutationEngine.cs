@@ -24,7 +24,7 @@ namespace Azure.DataGateway.Service.Resolvers
             _metadataStoreProvider = metadataStoreProvider;
         }
 
-        private async Task<JObject> ExecuteAsync(IDictionary<string, object> inputDict, MutationResolver resolver)
+        private async Task<JObject> ExecuteAsync(IDictionary<string, object?> inputDict, MutationResolver resolver)
         {
             // TODO: add support for all mutation types
             // we only support CreateOrUpdate (Upsert) for now
@@ -87,7 +87,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result</returns>
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context,
-            IDictionary<string, object> parameters)
+            IDictionary<string, object?> parameters)
         {
             string graphQLMutationName = context.Selection.Field.Name.Value;
             MutationResolver resolver = _metadataStoreProvider.GetMutationResolver(graphQLMutationName);

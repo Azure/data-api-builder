@@ -13,7 +13,7 @@ strategy:
       imageName: "macOS-latest"
       ADDITIONAL_TEST_ARGS: ''
     windows:
-      imageName: "windows-latest"
+      imageName: "windows-2022"
       ADDITIONAL_TEST_ARGS: '--collect "XPlat Code coverage"'
   maxParallel: 3
 pool:
@@ -23,6 +23,11 @@ variables:
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
 steps:
+- task: UseDotNet@2
+  displayName: Setup .NET SDK v6.0.x
+  inputs:
+    packageType: sdk
+    version: 6.0.x
 - task: NuGetToolInstaller@1
 - task: NuGetCommand@2
   displayName: Restore NuGet packages

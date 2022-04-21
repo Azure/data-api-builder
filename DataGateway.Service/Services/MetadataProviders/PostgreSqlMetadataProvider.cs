@@ -1,4 +1,5 @@
 using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Service.Resolvers;
 using Microsoft.Extensions.Options;
 using Npgsql;
 
@@ -13,8 +14,11 @@ namespace Azure.DataGateway.Service.Services
     public class PostgreSqlMetadataProvider :
         SqlMetadataProvider<NpgsqlConnection, NpgsqlDataAdapter, NpgsqlCommand>
     {
-        public PostgreSqlMetadataProvider(IOptions<DataGatewayConfig> dataGatewayConfig)
-            : base(dataGatewayConfig)
+        public PostgreSqlMetadataProvider(
+            IOptions<DataGatewayConfig> dataGatewayConfig,
+            IQueryExecutor queryExecutor,
+            IQueryBuilder sqlQueryBuilder)
+            : base(dataGatewayConfig, queryExecutor, sqlQueryBuilder)
         {
         }
     }

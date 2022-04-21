@@ -106,6 +106,9 @@ namespace Azure.DataGateway.Service.Services
                             $"is not supported.");
                 }
             }
+
+            await _sqlMetadataProvider!.PopulateForeignKeyDefinitionAsync(schemaName, GraphQLResolverConfig.DatabaseSchema.Tables);
+
         }
 
         private void InitFilterParser()

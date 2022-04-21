@@ -99,18 +99,16 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 foreach (KeyValuePair<string, object?> param in mutationParams)
                 {
-                    if (param.Value == null)
-                    {
-                        // Should never happen since due to REST request validation.
-                        // TODO change when null column support is added for REST
-                        throw new DataGatewayException(
-                            $"Unexpected {param.Key} null column.",
-                            HttpStatusCode.BadRequest,
-                            DataGatewayException.SubStatusCodes.BadRequest);
-                    }
-
                     // Create Parameter and map it to column for downstream logic to utilize.
-                    string paramIdentifier = MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, param.Key));
+                    string paramIdentifier;
+                    if (param.Value != null)
+                    {
+                        paramIdentifier = MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, param.Key));
+                    }
+                    else
+                    {
+                        paramIdentifier = MakeParamWithValue(null);
+                    }
 
                     ColumnToParam.Add(param.Key, paramIdentifier);
 
@@ -126,7 +124,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     // as Update request uses Where clause to target item by PK.
                     if (primaryKeys.Contains(param.Key))
                     {
-                        PopulateColumnsAndParams(param.Key, param.Value);
+                        PopulateColumnsAndParams(param.Key);
 
                         // PK added as predicate for Update Operation
                         Predicates.Add(predicate);
@@ -143,7 +141,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         schemaColumns.Remove(param.Key);
 
                         // Insert Operation, create record with request specified value.
-                        PopulateColumnsAndParams(param.Key, param.Value);
+                        PopulateColumnsAndParams(param.Key);
                     }
                 }
 
@@ -174,25 +172,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         /// <param name="columnName">The name of the column.</param>
         /// <param name="value">The value of the column.</param>
-        private void PopulateColumnsAndParams(string columnName, object value)
+        private void PopulateColumnsAndParams(string columnName)
         {
             InsertColumns.Add(columnName);
             string paramName;
-
-            if (value != null)
-            {
-                //Check parameter Dictionary/List
-                paramName = ColumnToParam[columnName];
-            }
-            else
-            {
-                // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
-                throw new DataGatewayException(
-                    message: $"Unexpected value for column \"{columnName}\" provided.",
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
-            }
-
+            paramName = ColumnToParam[columnName];
             Values.Add($"@{paramName}");
         }
 

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Collections.Generic;
 using System.IO;
 
@@ -14,10 +15,16 @@ namespace Azure.DataGateway.Service
             {
                 json = sr.ReadToEnd();
             }
-            DraftDevConfig? devConfig = JsonSerializer.Deserialize<DraftDevConfig>(json);
+
+            JsonSerializerOptions? options = new ()
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters = { new JsonStringEnumConverter() }
+            };
+
+            DraftDevConfig? devConfig = JsonSerializer.Deserialize<DraftDevConfig>(json,options);
             _entityConfigMap = GetEntityConfigMap(devConfig);
 
-            bool ok = false;
 
             string entityName = "todo";
             string roleName = "public";

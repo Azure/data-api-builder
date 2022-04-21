@@ -1,5 +1,6 @@
 using System.Net;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -8,16 +9,6 @@ using Microsoft.AspNetCore.Authorization.Infrastructure;
 
 namespace Azure.DataGateway.Service.Authorization
 {
-    /// <summary>
-    /// Enumeration of Supported Authorization Types
-    /// </summary>
-    public enum AuthorizationType
-    {
-        NoAccess,
-        Anonymous,
-        Authenticated
-    }
-
     /// <summary>
     /// Checks the provided AuthorizationContext and the RestRequestContext to ensure user is allowed to
     /// operate (GET, POST, etc.) on the entity (table).

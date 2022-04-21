@@ -25,7 +25,6 @@ namespace Azure.DataGateway.Service
             DraftDevConfig? devConfig = JsonSerializer.Deserialize<DraftDevConfig>(json,options);
             _entityConfigMap = GetEntityConfigMap(devConfig);
 
-
             string entityName = "todo";
             string roleName = "public";
             string action = "update";

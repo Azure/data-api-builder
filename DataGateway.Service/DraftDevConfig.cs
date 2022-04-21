@@ -36,7 +36,7 @@ namespace Azure.DataGateway.Service
     /// </summary>
     public class DataSource
     {
-        public DatabaseType DatabaseType { get; set; }
+        public Database DatabaseType { get; set; }
         public string? ConnectionString { get; set; }
     }
 
@@ -97,7 +97,7 @@ namespace Azure.DataGateway.Service
 
     }
 
-    public enum DatabaseType
+    public enum Database
     {
         Cosmos,
         MsSql,

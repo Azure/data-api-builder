@@ -81,8 +81,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
             {
                 TypeCode.String => "String",
                 TypeCode.Int64 => "Int",
-                _ => throw new ArgumentException($"ColumnType {type} not handled by case. Please add a case resolving " +
-                                                                $"{type} to the appropriate GraphQL type"),
+                _ => throw new ArgumentException($"ColumnType {type} not handled by case. Please add a case resolving {type} to the appropriate GraphQL type"),
             };
         }
     }

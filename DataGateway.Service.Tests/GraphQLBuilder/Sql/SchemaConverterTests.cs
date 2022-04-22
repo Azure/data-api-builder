@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
@@ -184,11 +185,16 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
                 SystemType = typeof(string),
                 IsNullable = false,
             });
-            table.ForeignKeys.Add(columnName, new ForeignKeyDefinition { ReferencedTable = "fkTable" });
+            const string refColName = "ref_col";
+            table.ForeignKeys.Add("forign_key", new ForeignKeyDefinition { ReferencedTable = "fkTable", ReferencingColumns = new List<string> { refColName } });
+            table.Columns.Add(refColName, new ColumnDefinition
+            {
+                SystemType = typeof(long)
+            });
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table);
 
-            Assert.AreEqual(2, od.Fields.Count);
+            Assert.AreEqual(3, od.Fields.Count);
         }
 
         [TestMethod]
@@ -203,14 +209,79 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
                 IsNullable = false,
             });
             const string foreignKeyTable = "FkTable";
-            table.ForeignKeys.Add(columnName, new ForeignKeyDefinition { ReferencedTable = foreignKeyTable });
+            const string refColName = "ref_col";
+            table.ForeignKeys.Add("foreign_key", new ForeignKeyDefinition { ReferencedTable = foreignKeyTable, ReferencingColumns = new List<string> { refColName } });
+            table.Columns.Add(refColName, new ColumnDefinition
+            {
+                SystemType = typeof(long)
+            });
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table);
 
-            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value != columnName);
+            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value != refColName && f.Name.Value != columnName);
 
             Assert.AreEqual("fkTables", field.Name.Value);
             Assert.AreEqual(foreignKeyTable, field.Type.NamedType().Name.Value);
+        }
+
+        [TestMethod]
+        public void ForeignKeyFieldWillHaveRelationshipDirective()
+        {
+            TableDefinition table = new();
+
+            string columnName = "columnName";
+            table.Columns.Add(columnName, new ColumnDefinition
+            {
+                SystemType = typeof(string),
+                IsNullable = false,
+            });
+            const string foreignKeyTable = "FkTable";
+            const string refColName = "ref_col";
+            table.ForeignKeys.Add("foreign_key", new ForeignKeyDefinition { ReferencedTable = foreignKeyTable, ReferencingColumns = new List<string> { refColName } });
+            table.Columns.Add(refColName, new ColumnDefinition
+            {
+                SystemType = typeof(long)
+            });
+
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table);
+
+            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == refColName);
+
+            Assert.AreEqual(refColName, field.Name.Value);
+            Assert.AreEqual(1, field.Directives.Count);
+            Assert.AreEqual(RelationshipDirective.DirectiveName, field.Directives[0].Name.Value);
+        }
+
+        [TestMethod]
+        public void MultipleForeignKeyColumnsStillSingleObjectFieldReference()
+        {
+            TableDefinition table = new();
+
+            string columnName = "columnName";
+            table.Columns.Add(columnName, new ColumnDefinition
+            {
+                SystemType = typeof(string),
+                IsNullable = false,
+            });
+            const string foreignKeyTable = "FkTable";
+
+            table.ForeignKeys.Add("foreign_key", new ForeignKeyDefinition { ReferencedTable = foreignKeyTable, ReferencingColumns = new List<string>() });
+
+            const int refColCount = 5;
+            for (int i = 0; i < refColCount; i++)
+            {
+                string refColName = $"ref_col{i}";
+                table.Columns.Add(refColName, new ColumnDefinition
+                            {
+                                SystemType = typeof(long)
+                            });
+                table.ForeignKeys["foreign_key"].ReferencingColumns.Add(refColName);
+            }
+
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table);
+
+            Assert.AreEqual(refColCount, od.Fields.Count(f => f.Directives.Any(d => d.Name.Value == RelationshipDirective.DirectiveName)));
+            Assert.AreEqual(1, od.Fields.Count(f => f.Type.NamedType().Name.Value == foreignKeyTable));
         }
     }
 }

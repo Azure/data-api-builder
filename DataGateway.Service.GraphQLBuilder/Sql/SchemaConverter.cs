@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
@@ -9,42 +10,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
     {
         public static ObjectTypeDefinitionNode FromTableDefinition(string tableName, TableDefinition tableDefinition)
         {
-            List<FieldDefinitionNode> fields = new();
+            Dictionary<string, FieldDefinitionNode> fields = new();
 
             foreach ((string columnName, ColumnDefinition column) in tableDefinition.Columns)
             {
                 List<DirectiveNode> directives = new();
-                if (tableDefinition.ForeignKeys.ContainsKey(columnName))
-                {
-                    // Generate the field that represents the relationship to ObjectType, so you can navigate through it
-                    // and walk the graph
-
-                    // TODO: This will need to be expanded to take care of the query fields that are available
-                    //       on the relationship, but until we have the work done to generate the right Input
-                    //       types for the queries, it's not worth trying to do it completely.
-
-                    // TODO: Also need to look at the cardinality of the relationship. If it's a 1-M then this
-                    //       side should be a singular not plural field.
-                    ForeignKeyDefinition foreignKeyDefinition = tableDefinition.ForeignKeys[columnName];
-
-                    FieldDefinitionNode relationshipField = new(
-                        location: null,
-                        Pluralize(foreignKeyDefinition.ReferencedTable),
-                        description: null,
-                        new List<InputValueDefinitionNode>(),
-                        new NonNullTypeNode(new NamedTypeNode(FormatNameForObject(foreignKeyDefinition.ReferencedTable))),
-                        new List<DirectiveNode>());
-
-                    fields.Add(relationshipField);
-
-                    directives.Add(
-                        new DirectiveNode(
-                            RelationshipDirective.DirectiveName,
-                            new ArgumentNode("databaseType", column.SystemType.Name),
-                            // TODO: Set cardinality when it's available in config
-                            new ArgumentNode("cardinality", ""))
-                        );
-                }
 
                 if (tableDefinition.PrimaryKey.Contains(columnName))
                 {
@@ -60,7 +30,44 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                     column.IsNullable ? fieldType : new NonNullTypeNode(fieldType),
                     directives);
 
-                fields.Add(field);
+                fields.Add(columnName, field);
+            }
+
+            foreach ((string _, ForeignKeyDefinition fk) in tableDefinition.ForeignKeys)
+            {
+                // Generate the field that represents the relationship to ObjectType, so you can navigate through it
+                // and walk the graph
+
+                // TODO: This will need to be expanded to take care of the query fields that are available
+                //       on the relationship, but until we have the work done to generate the right Input
+                //       types for the queries, it's not worth trying to do it completely.
+
+                // TODO: Also need to look at the cardinality of the relationship. If it's a 1-M then this
+                //       side should be a singular not plural field.
+                FieldDefinitionNode relationshipField = new(
+                    location: null,
+                    Pluralize(fk.ReferencedTable),
+                    description: null,
+                    new List<InputValueDefinitionNode>(),
+                    new NonNullTypeNode(new NamedTypeNode(FormatNameForObject(fk.ReferencedTable))),
+                    new List<DirectiveNode>());
+
+                fields.Add(relationshipField.Name.Value, relationshipField);
+
+                foreach (string columnName in fk.ReferencingColumns)
+                {
+                    ColumnDefinition column = tableDefinition.Columns[columnName];
+                    FieldDefinitionNode field = fields[columnName];
+
+                    fields[columnName] = field.WithDirectives(
+                        new List<DirectiveNode>(field.Directives) {
+                            new(
+                                RelationshipDirective.DirectiveName,
+                                new ArgumentNode("databaseType", column.SystemType.Name),
+                                // TODO: Set cardinality when it's available in config
+                                new ArgumentNode("cardinality", ""))
+                        });
+                }
             }
 
             return new ObjectTypeDefinitionNode(
@@ -69,7 +76,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                 description: null,
                 new List<DirectiveNode>(),
                 new List<NamedTypeNode>(),
-                fields);
+                fields.Values.ToImmutableList());
         }
 
         /// <summary>

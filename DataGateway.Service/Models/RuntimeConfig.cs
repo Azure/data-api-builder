@@ -240,7 +240,7 @@ namespace Azure.DataGateway.Service.Models
     }
 
     /// <summary>
-    /// Enum for possibly database types, name
+    /// Enum for possible database types, name
     /// will change to DatabaseType but for now
     /// is Database to avoid collisions until
     /// this config is used.

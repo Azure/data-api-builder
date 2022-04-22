@@ -657,7 +657,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('book_id', `subq1`.`book_id`, 'title', `subq1`.`title`)), '[]') AS `data`
                 FROM
                   (SELECT `table0`.`id` AS `book_id`,
-                          `table0`.`title` AS `book_title`
+                          `table0`.`title` AS `title`
                    FROM `books` AS `table0`
                    WHERE 1 = 1
                    ORDER BY `table0`.`id`

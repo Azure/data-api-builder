@@ -537,9 +537,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Inserts new book and return its id and title with their aliases
+        /// <code>Do: </code> Inserts new book and return its id and title with their aliases(arbitrarily set by user while making request)
         /// <code>Check: </code> If book with the expected values of the new book is present in the database and
-        /// if the mutation query has returned the correct information
+        /// if the mutation query has returned the correct information with Aliases where provided.
         /// </summary>
         [TestMethod]
         public async Task TestAliasSupportForGraphQlMutationQueryFields()

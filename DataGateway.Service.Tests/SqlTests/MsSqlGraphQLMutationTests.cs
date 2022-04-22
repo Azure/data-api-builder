@@ -395,6 +395,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        /// <summary>
+        /// Test to check graphQL support for aliases(arbitrarily set by user while making request).
+        /// book_id and book_title are aliases used for corresponding query fields.
+        /// The response for the query will use the alias instead of raw db column.
+        /// </summary>
         [TestMethod]
         public async Task TestAliasSupportForGraphQlMutationQueryFields()
         {

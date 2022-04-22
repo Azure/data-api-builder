@@ -647,9 +647,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Gets array of results for querying more than one item.
+        /// Test to check graphQL support for aliases(arbitrarily set by user while making request).
+        /// book_id and book_title are aliases used for corresponding query fields.
+        /// The response for the query will contain the alias instead of raw db column.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public async Task TestAliasSupportForGraphQlQueryFields()
         {
@@ -661,6 +662,29 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
             string msSqlQuery = $"SELECT TOP 2 id AS book_id, title AS book_title FROM books ORDER by id FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test to check graphQL support for aliases(arbitrarily set by user while making request).
+        /// book_id is an alias, while title is the raw db field.
+        /// The response for the query will use the alias where it is provided in the query.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForMixOfRawDbFieldFieldAndAlias()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(first: 2) {
+                    book_id: id
+                    title
+                }
+            }";
+            string msSqlQuery = $"SELECT TOP 2 id AS book_id, title AS title FROM books ORDER by id FOR JSON PATH, INCLUDE_NULL_VALUES";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(msSqlQuery);

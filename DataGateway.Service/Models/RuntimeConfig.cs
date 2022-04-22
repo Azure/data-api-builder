@@ -31,7 +31,7 @@ namespace Azure.DataGateway.Service.Models
         // ease of deserialization.
         public Dictionary<string, CosmosOptions>? Cosmos { get; set; }
         public Dictionary<string, MsSqlOptions>? MsSql { get; set; }
-        public Dictionary<string, PostgresSqlOptions>? PostgresSql { get; set; }
+        public Dictionary<string, PostgreSqlOptions>? PostgreSql { get; set; }
         public Dictionary<string, MySqlOptions>? MySql { get; set; }
 
         // These settings are used to set runtime behavior and
@@ -62,7 +62,7 @@ namespace Azure.DataGateway.Service.Models
     /// </summary>
     public class CosmosOptions
     {
-        public string Databaase { get; set; }
+        public string Database { get; set; }
     }
 
     /// <summary>
@@ -76,7 +76,7 @@ namespace Azure.DataGateway.Service.Models
     /// <summary>
     /// Options for PostgresSql database.
     /// </summary>
-    public class PostgresSqlOptions
+    public class PostgreSqlOptions
     {
     }
 
@@ -93,7 +93,7 @@ namespace Azure.DataGateway.Service.Models
     public class GlobalSettings
     {
         // For GraphQL and REST
-        public bool? Enabled { get; set; }
+        public bool Enabled { get; set; } = true;
         //For GraphQL and REST
         public string? Path { get; set; }
         // For GraphQL
@@ -110,10 +110,10 @@ namespace Azure.DataGateway.Service.Models
         public string Source { get; set; }
 
         // REST can be bool or RestSetting type so we use object
-        public object Rest { get; set; }
+        public GlobalSettings Rest { get; set; }
 
         // GraphQL can be bool or GraphQLSettings type so we use object
-        public object GraphQL { get; set; }
+        public GlobalSettings GraphQL { get; set; }
 
         // The permissions assigned to this object
         public DataGatewayPermission[] Permissions { get; set; }
@@ -175,11 +175,10 @@ namespace Azure.DataGateway.Service.Models
     {
         // Role contains the name of the role to which the defined permission will apply.
         public string Role { get; set; }
-        // Mixed-type array that details what actions are allowed to related roles.
-        // In a simple case, value is one of the following: create, read, update, delete
-        public object[] Actions { get; set; }
-        // Policy contains details about item-level security rules.
-        public Policy[]? Policies { get; set; }
+        // Either a string or a mixed-type array that details what actions are allowed to related roles.
+        // In a simple case, value is one of the following: create, read, update, delete.
+        // Use object since can be string or array.
+        public object Actions { get; set; }
     }
 
     /// <summary>
@@ -211,6 +210,24 @@ namespace Azure.DataGateway.Service.Models
         public string Singular { get; set; }
         public string? Plural { get; set; }
 
+    }
+
+    public class Actions
+    {
+        // Details what actions are allowed
+        public string Action { get; set; }
+
+        // Details what fields to include or exclude
+        public Fields? Fields { get; set; }
+
+        // Policy contains details about item-level security rules.
+        public Policy Policy { get; set; }
+    }
+
+    public class Fields
+    {
+        public string[] Include { get; set; }
+        public string[] Exclude { get; set; }
     }
 
     /// <summary>

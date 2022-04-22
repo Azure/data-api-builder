@@ -272,9 +272,9 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             {
                 string refColName = $"ref_col{i}";
                 table.Columns.Add(refColName, new ColumnDefinition
-                            {
-                                SystemType = typeof(long)
-                            });
+                {
+                    SystemType = typeof(long)
+                });
                 table.ForeignKeys["foreign_key"].ReferencingColumns.Add(refColName);
             }
 

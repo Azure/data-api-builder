@@ -1,9 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Azure.DataGateway.Service.Authorization;
-
-namespace Azure.DataGateway.Service.Models
+namespace Azure.DataGateway.Config
 {
     /// <summary>
     /// The schema of the database described in a JSON format.
@@ -65,8 +60,8 @@ namespace Azure.DataGateway.Service.Models
         {
             return other != null &&
                    ReferencedTable.Equals(other.ReferencedTable) &&
-                   Enumerable.SequenceEqual(ReferencedColumns, other.ReferencedColumns) &&
-                   Enumerable.SequenceEqual(ReferencingColumns, other.ReferencingColumns);
+                   ReferencedColumns.SequenceEqual(other.ReferencedColumns) &&
+                   ReferencingColumns.SequenceEqual(other.ReferencingColumns);
         }
 
         public override int GetHashCode()

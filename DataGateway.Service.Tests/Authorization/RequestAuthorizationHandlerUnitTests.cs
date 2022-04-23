@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -182,8 +183,10 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// <returns></returns>
         private static AuthorizationRule CreateAuthZRule(AuthorizationType authZType)
         {
-            AuthorizationRule rule = new();
-            rule.AuthorizationType = authZType;
+            AuthorizationRule rule = new()
+            {
+                AuthorizationType = authZType
+            };
             return rule;
         }
         #endregion

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Text;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Models;
 using MySqlConnector;
 

@@ -264,13 +264,13 @@ namespace Azure.DataGateway.Config
         public Fields? Fields { get; set; }
 
         // Policy contains details about item-level security rules.
-        public Policy Policy { get; set; }
+        public Policy? Policy { get; set; }
     }
 
     public class Fields
     {
-        public string[] Include { get; set; }
-        public string[] Exclude { get; set; }
+        public string[]? Include { get; set; }
+        public string[]? Exclude { get; set; }
     }
 
     /// <summary>
@@ -278,8 +278,8 @@ namespace Azure.DataGateway.Config
     /// </summary>
     public class Policy
     {
-        public string Request { get; set; }
-        public string Database { get; set; }
+        public string? Request { get; set; }
+        public string? Database { get; set; }
     }
 
     /// <summary>

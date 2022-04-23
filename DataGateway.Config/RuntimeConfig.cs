@@ -1,3 +1,4 @@
+using System.Net.Security;
 using System.Text.Json.Serialization;
 
 namespace Azure.DataGateway.Service.Models
@@ -36,7 +37,7 @@ namespace Azure.DataGateway.Service.Models
         // These settings are used to set runtime behavior and
         // any exposed entity.
         [JsonPropertyName("runtime")]
-        public Dictionary<GlobalSettingsType, GlobalSettings>? RuntimeSettings { get; set; }
+        public Dictionary<GlobalSettingsType, object>? RuntimeSettings { get; set; }
 
         // Entities represents the mapping between database
         // objects and an exposed endpoint, along with property
@@ -86,20 +87,35 @@ namespace Azure.DataGateway.Service.Models
     {
     }
 
+    public abstract class GlobalSettings
+    {
+    }
+
+    public abstract class ApiSettings
+    {
+        public bool Enabled { get; set; } = true;
+        public abstract string Path { get; set; }
+    }
+
     /// <summary>
     /// Holds the settings used at runtime.
     /// </summary>
-    public class GlobalSettings
-    {
-        // For GraphQL and REST
-        public bool Enabled { get; set; } = true;
-        //For GraphQL and REST
-        public string? Path { get; set; }
-        // For GraphQL
-        public bool? AllowIntrospection { get; set; }
-        // For Host
-        public object? HostObject { get; set; }
+    public class RestGlobalSettings : ApiSettings
+    {        
+        public override string Path { get; set; } = "/api";
     }
+
+    public class HostGlobalSettings : GlobalSettings
+    {
+        public Host? HostObject { get; set; }
+    }
+
+    public class GraphQLGlobalSettings : ApiSettings
+    {
+        public bool? AllowIntrospection { get; set; }
+        public override string Path { get; set; } = "/graphql";
+    }
+
     /// <summary>
     /// Defines the Entities that are exposed
     /// </summary>
@@ -108,11 +124,17 @@ namespace Azure.DataGateway.Service.Models
         // Describes the object in the backend mapped to this entity
         public string Source { get; set; }
 
-        // REST can be bool or RestSetting type so we use object
-        public GlobalSettings Rest { get; set; }
+        // REST can be bool or RestSetting type so we use object for now
+        // can be 3 things, need class(es) to support that
+        // these are entity specific settings so need to differentiate from the global settings, call
+        // something like RestEntitySettings and then inhereit in a way that it can be
+        // bool, string, or singularplural
 
+        public object? Rest { get; set; }
+        
         // GraphQL can be bool or GraphQLSettings type so we use object
-        public GlobalSettings GraphQL { get; set; }
+        // same as above
+        public object? GraphQL { get; set; } 
 
         // The permissions assigned to this object
         public DataGatewayPermission[] Permissions { get; set; }
@@ -120,7 +142,10 @@ namespace Azure.DataGateway.Service.Models
         // Relationships defines how an entity is related to other exposed
         // entities and optionally provide details on what underlying database
         // objects can be used to support such relationships.
-        public DataGatewayRelationship Relationships { get; set; }
+        public DataGatewayRelationship? Relationships { get; set; }
+
+        // Define mappings between database fields and GraphQL and REST fields
+        public Dictionary<string, string>? Mappings { get; set; }
     }
 
     /// <summary>
@@ -146,15 +171,10 @@ namespace Azure.DataGateway.Service.Models
         [JsonPropertyName("target.fields")]
         public string[]? TargetFields { get; set; }
 
-        // Database object (if not exposed via Hawaii) that is used
-        // in the backend database to support the M:N relationship.
+        // Database object that is used in the backend
+        // database to support the M:N relationship.
         [JsonPropertyName("linking.[object]")]
         public string? LinkingObject { get; set; }
-
-        // Database entity (if exposed via Hawaii) that is used
-        // to support the M:N relationship.
-        [JsonPropertyName("linking.[entity]")]
-        public string? LinkingEntity { get; set; } // missing from schema?
 
         // Database fields in the linking object or entity that
         // will be used to connect to the related item in the source entity.
@@ -211,6 +231,30 @@ namespace Azure.DataGateway.Service.Models
 
     }
 
+    public class Host
+    {
+        public Cors? Cors { get; set; }
+        public Auth? Auth { get; set; }
+    }
+
+    public class Cors
+    {
+        public string[]? Origins { get; set; }
+        public bool? Credential { get; set; }
+    }
+
+    public class Auth
+    {
+        // might be optional if easy auth (ping sean)
+        public Jwt Jwt { get; set; }
+    }
+
+    public class Jwt
+    {
+        public string Audience { get; set; }
+        public string Issuer { get; set; }
+        public string IssuerKey { get; set; }
+    }
     public class Actions
     {
         // Details what actions are allowed

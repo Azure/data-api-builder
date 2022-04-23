@@ -5,17 +5,13 @@
     "connectionString": ""
   },
   "cosmos": {
-    "set-session-context": false
+    "database": ""
   },
   "mssql": {
     "set-session-context": true
   },
-  "postgressql": {
-    "set-session-context": false
-  },
-  "mysql": {
-    "set-session-context": false
-  },
+  "postgresql": {},
+  "mysql": {},
   "runtime": {
     "rest": {
       "enabled": true,

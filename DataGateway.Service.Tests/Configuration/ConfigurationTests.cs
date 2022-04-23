@@ -4,14 +4,12 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.TestHost;
@@ -30,7 +28,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         private string _cosmosResolverConfig = File.ReadAllText("cosmos-config.json");
         private string _graphqlSchema = File.ReadAllText("schema.gql");
         private const string COMSMOS_DEFAULT_CONNECTION_STRING = "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
-        private string _devConfig = File.ReadAllText("dev-config.json");
 
         [TestMethod("Validates that querying for a config that's not set returns a 503.")]
         public async Task TestNoConfigReturnsServiceUnavailable()

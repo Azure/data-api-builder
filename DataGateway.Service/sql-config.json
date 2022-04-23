@@ -163,7 +163,7 @@
         }
       },
       "stocks": {
-         "HttpVerbs": {
+        "HttpVerbs": {
           "GET": {
             "AuthorizationType": "Anonymous"
           },
@@ -283,6 +283,13 @@
           },
           "PUT": {
             "Authorization": "Authenticated"
+          }
+        }
+      },
+      "brokers": {
+        "HttpVerbs": {
+          "GET": {
+            "AuthorizationType": "Anonymous"
           }
         }
       },

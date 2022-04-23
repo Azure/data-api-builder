@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Microsoft.OData.UriParser;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -16,6 +17,10 @@ namespace Azure.DataGateway.Service.Services
         /// Prefix used for specifying the fields in the query string of the URL.
         /// </summary>
         private const string FIELDS_URL = "$f";
+        /// <summary>
+        /// Prefix used for specifying the fields to be used to sort the result in the query string of the URL.
+        /// </summary>
+        private const string SORT_URL = "$orderby";
         /// <summary>
         /// Prefix used for specifying filter in the query string of the URL.
         /// </summary>
@@ -80,7 +85,7 @@ namespace Azure.DataGateway.Service.Services
         /// later generate queries in the given RestRequestContext.
         /// </summary>
         /// <param name="context">The RestRequestContext holding the major components of the query.</param>
-        public static void ParseQueryString(RestRequestContext context, FilterParser filterParser)
+        public static void ParseQueryString(RestRequestContext context, FilterParser filterParser, List<string> primaryKeys)
         {
             foreach (string key in context.ParsedQueryString!.Keys)
             {
@@ -93,8 +98,12 @@ namespace Azure.DataGateway.Service.Services
                     case FILTER_URL:
                         // save the AST that represents the filter for the query
                         // ?$filter=<filter clause using microsoft api guidelines>
-                        string filterQueryString = "?" + FILTER_URL + "=" + context.ParsedQueryString[key];
+                        string filterQueryString = $"?{FILTER_URL}={context.ParsedQueryString[key]}";
                         context.FilterClauseInUrl = filterParser.GetFilterClause(filterQueryString, context.EntityName);
+                        break;
+                    case SORT_URL:
+                        string sortQueryString = $"?{SORT_URL}={context.ParsedQueryString[key]}";
+                        context.OrderByClauseInUrl = GenerateOrderByList(filterParser.GetOrderByClause(sortQueryString, context.EntityName), context.EntityName, primaryKeys);
                         break;
                     case AFTER_URL:
                         context.After = context.ParsedQueryString[key];
@@ -103,8 +112,84 @@ namespace Azure.DataGateway.Service.Services
                         context.First = RequestValidator.CheckFirstValidity(context.ParsedQueryString[key]!);
                         break;
                     default:
-                        throw new ArgumentException("Invalid Query Parameter: " + key.ToString());
+                        throw new ArgumentException($"Invalid Query Parameter: {key.ToString()}");
                 }
+            }
+        }
+
+        /// <summary>
+        /// Create List of OrderByColumn from an OrderByClause Abstract Syntax Tree
+        /// and return that list as List<Column> since OrderByColumn is a Column.
+        /// </summary>
+        /// <param name="node">The OrderByClause.</param>
+        /// <param name="tableAlias">The name of the Table the columns are from.</param>
+        /// <paramref name="primaryKeys">A list of the primaryKeys of the given table.</paramref>/>
+        /// <returns>A List<OrderByColumns></returns>
+        private static List<OrderByColumn>? GenerateOrderByList(OrderByClause node, string tableAlias, List<string> primaryKeys)
+        {
+            // Create set of primary key columns
+            // we always have the primary keys in
+            // the order by statement for the case
+            // of tie breaking and pagination
+            HashSet<string> remainingKeys = new();
+            foreach (string key in primaryKeys)
+            {
+                remainingKeys.Add(key);
+            }
+
+            List<OrderByColumn> orderByList = new();
+            // OrderBy AST is in the form of a linked list
+            // so we traverse by calling node.ThenBy until
+            // node is null
+            while (node is not null)
+            {
+                // Column name is stored in node.Expression as a SingleValuePropertyAccessNode
+                SingleValuePropertyAccessNode? expression = node.Expression as SingleValuePropertyAccessNode;
+                string columnName;
+                if (expression is null)
+                {
+                    throw new DataGatewayException(message: "OrderBy property is not supported.", HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
+                }
+                else
+                {
+                    columnName = expression.Property.Name;
+                }
+
+                // Sorting order is stored in node.Direction as OrderByDirection Enum
+                // We convert to an Enum of our own that matches the SQL text we want
+                Models.OrderByDir direction = GetDirection(node.Direction);
+                // Add OrderByColumn and remove any matching columns from our primary key set
+                orderByList.Add(new OrderByColumn(tableAlias, columnName, direction));
+                remainingKeys.Remove(columnName);
+                node = node.ThenBy;
+            }
+
+            // Remaining primary key columns are added here
+            foreach (string column in remainingKeys)
+            {
+                orderByList.Add(new OrderByColumn(tableAlias, column));
+            }
+
+            return orderByList;
+        }
+
+        /// <summary>
+        /// Helper function returns the OrderByDirection associated with a given string
+        /// </summary>
+        /// <param name="direction">String reprenting the orderby direction.</param>
+        /// <returns>Enum representing the direction.</returns>
+        private static Models.OrderByDir GetDirection(OrderByDirection direction)
+        {
+            switch (direction)
+            {
+                case OrderByDirection.Descending:
+                    return Models.OrderByDir.Desc;
+                case OrderByDirection.Ascending:
+                    return Models.OrderByDir.Asc;
+                default:
+                    throw new DataGatewayException(message: "Invalid order specified in the OrderBy clause.",
+                                                   statusCode: HttpStatusCode.BadRequest,
+                                                   subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
         }
 

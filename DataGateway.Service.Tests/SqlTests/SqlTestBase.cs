@@ -5,8 +5,10 @@ using System.IO;
 using System.Net;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Web;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Models;
@@ -60,30 +62,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 case TestCategory.POSTGRESQL:
                     _queryBuilder = new PostgresQueryBuilder();
-                    _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
-                        config,
-                        new PostgreSqlMetadataProvider(config));
                     _defaultSchemaName = "public";
                     _dbExceptionParser = new PostgresDbExceptionParser();
                     _queryExecutor = new QueryExecutor<NpgsqlConnection>(config, _dbExceptionParser);
+                    _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
+                        config,
+                        new PostgreSqlMetadataProvider(config, _queryExecutor, _queryBuilder));
                     break;
                 case TestCategory.MSSQL:
                     _queryBuilder = new MsSqlQueryBuilder();
-                    _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
-                        config,
-                        new MsSqlMetadataProvider(config));
                     _defaultSchemaName = "dbo";
                     _dbExceptionParser = new DbExceptionParserBase();
                     _queryExecutor = new QueryExecutor<SqlConnection>(config, _dbExceptionParser);
+                    _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
+                        config,
+                        new MsSqlMetadataProvider(config, _queryExecutor, _queryBuilder));
                     break;
                 case TestCategory.MYSQL:
                     _queryBuilder = new MySqlQueryBuilder();
-                    _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
-                        config,
-                        new MySqlMetadataProvider(config));
                     _defaultSchemaName = "mysql";
                     _dbExceptionParser = new MySqlDbExceptionParser();
                     _queryExecutor = new QueryExecutor<MySqlConnection>(config, _dbExceptionParser);
+                    _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
+                         config,
+                         new MySqlMetadataProvider(config, _queryExecutor, _queryBuilder));
                     break;
             }
 
@@ -215,7 +217,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string expectedSubStatusCode = "BadRequest",
             string expectedLocationHeader = null,
             string expectedAfterQueryString = "",
-            bool paginated = false)
+            bool paginated = false,
+            int verifyNumRecords = -1)
         {
             ConfigureRestController(
                 controller,
@@ -253,11 +256,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }
             else
             {
+                JsonSerializerOptions options = new()
+                {
+                    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                };
                 expected = exception ?
                     JsonSerializer.Serialize(RestController.ErrorResponse(
                         expectedSubStatusCode.ToString(),
-                        expectedErrorMessage, expectedStatusCode).Value) :
-                    $"{{\"value\":{FormatExpectedValue(await GetDatabaseResultAsync(sqlQuery))}{ExpectedNextLinkIfAny(paginated, baseUrl, $"{expectedAfterQueryString}")}}}";
+                        expectedErrorMessage,
+                        expectedStatusCode).Value,
+                        options) :
+                    $"{{\"value\":{FormatExpectedValue(await GetDatabaseResultAsync(sqlQuery))}{ExpectedNextLinkIfAny(paginated, EncodeQueryString(baseUrl), $"{expectedAfterQueryString}")}}}";
             }
 
             SqlTestHelper.VerifyResult(
@@ -265,7 +274,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expected,
                 expectedStatusCode,
                 expectedLocationHeader,
-                !exception);
+                !exception,
+                verifyNumRecords);
+        }
+
+        /// <summary>
+        /// Helper function encodes the url with query string into the correct
+        /// format. We utilize the toString() of the HttpValueCollection
+        /// which is used by the NameValueCollection returned from
+        /// ParseQueryString to avoid writing this ourselves.
+        /// </summary>
+        /// <param name="fullUrl">Url to be encoded as query string.</param>
+        /// <returns>query string encoded url.</returns>
+        private static string EncodeQueryString(string fullUrl)
+        {
+            return HttpUtility.ParseQueryString(fullUrl).ToString();
         }
 
         /// <summary>

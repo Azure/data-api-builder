@@ -249,6 +249,152 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
+
+        /// <summary>
+        /// Test explicitly inserting a null column
+        /// </summary>
+        [TestMethod]
+        public async Task TestExplicitNullInsert()
+        {
+            string graphQLMutationName = "insertMagazine";
+            string graphQLMutation = @"
+                mutation {
+                    insertMagazine(id: 800, title: ""New Magazine"", issue_number: null) {
+                        id
+                        title
+                        issue_number
+                    }
+                }
+            ";
+
+            string msSqlQuery = @"
+                SELECT TOP 1 [id],
+                    [title],
+                    [issue_number]
+                FROM [magazines]
+                WHERE [magazines].[id] = 800
+                    AND [magazines].[title] = 'New Magazine'
+                    AND [magazines].[issue_number] IS NULL
+                ORDER BY [magazines].[id]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test implicitly inserting a null column
+        /// </summary>
+        [TestMethod]
+        public async Task TestImplicitNullInsert()
+        {
+            string graphQLMutationName = "insertMagazine";
+            string graphQLMutation = @"
+                mutation {
+                    insertMagazine(id: 801, title: ""New Magazine 2"") {
+                        id
+                        title
+                        issue_number
+                    }
+                }
+            ";
+
+            string msSqlQuery = @"
+                SELECT TOP 1 [id],
+                    [title],
+                    [issue_number]
+                FROM [magazines]
+                WHERE [magazines].[id] = 801
+                    AND [magazines].[title] = 'New Magazine 2'
+                    AND [magazines].[issue_number] IS NULL
+                ORDER BY [magazines].[id]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test updating a column to null
+        /// </summary>
+        [TestMethod]
+        public async Task TestUpdateColumnToNull()
+        {
+            string graphQLMutationName = "updateMagazine";
+            string graphQLMutation = @"
+                mutation {
+                    updateMagazine(id: 1, issue_number: null) {
+                        id
+                        issue_number
+                    }
+                }
+            ";
+
+            string msSqlQuery = @"
+                SELECT TOP 1 [id],
+                    [issue_number]
+                FROM [magazines]
+                WHERE [magazines].[id] = 1
+                    AND [magazines].[issue_number] IS NULL
+                ORDER BY [magazines].[id]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test updating a missing column in the update mutation will not be updated to null
+        /// </summary>
+        [TestMethod]
+        public async Task TestMissingColumnNotUpdatedToNull()
+        {
+            string graphQLMutationName = "updateMagazine";
+            string graphQLMutation = @"
+                mutation {
+                    updateMagazine(id: 1, title: ""Newest Magazine"") {
+                        id
+                        title
+                        issue_number
+                    }
+                }
+            ";
+
+            string msSqlQuery = @"
+                SELECT TOP 1 [id],
+                    [title],
+                    [issue_number]
+                FROM [magazines]
+                WHERE [magazines].[id] = 1
+                    AND [magazines].[title] = 'Newest Magazine'
+                    AND [magazines].[issue_number] = 1234
+                ORDER BY [magazines].[id]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Negative Tests

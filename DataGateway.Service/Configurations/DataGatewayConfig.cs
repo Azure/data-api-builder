@@ -127,9 +127,9 @@ namespace Azure.DataGateway.Service.Configurations
                 {
                     InitialCatalog = options.DatabaseConnection.Database,
                     DataSource = options.DatabaseConnection.Server,
-                };
 
-                builder.IntegratedSecurity = true;
+                    IntegratedSecurity = true
+                };
                 options.DatabaseConnection.ConnectionString = builder.ToString();
             }
 

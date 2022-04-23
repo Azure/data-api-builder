@@ -100,7 +100,7 @@ namespace Azure.DataGateway.Config
     /// Holds the settings used at runtime.
     /// </summary>
     public class RestGlobalSettings : ApiSettings
-    {        
+    {
         public override string Path { get; set; } = "/api";
     }
 
@@ -133,7 +133,7 @@ namespace Azure.DataGateway.Config
 
         // GraphQL can be bool or GraphQLSettings type so we use object
         // same as above
-        public object? GraphQL { get; set; } 
+        public object? GraphQL { get; set; }
 
         // The permissions assigned to this object
         public DataGatewayPermission[] Permissions { get; set; }

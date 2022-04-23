@@ -1,7 +1,7 @@
 using System.Net.Security;
 using System.Text.Json.Serialization;
 
-namespace Azure.DataGateway.Service.Models
+namespace Azure.DataGateway.Config
 {
     /// <summary>
     /// Define the backend database and the related connection info
@@ -29,10 +29,10 @@ namespace Azure.DataGateway.Service.Models
         // The different back end database types.
         // We have each type as its own dictionary for
         // ease of deserialization.
-        public Dictionary<string, CosmosOptions>? Cosmos { get; set; }
-        public Dictionary<string, MsSqlOptions>? MsSql { get; set; }
-        public Dictionary<string, PostgreSqlOptions>? PostgreSql { get; set; }
-        public Dictionary<string, MySqlOptions>? MySql { get; set; }
+        public CosmosOptions? Cosmos { get; set; }
+        public MsSqlOptions? MsSql { get; set; }
+        public PostgreSqlOptions? PostgreSql { get; set; }
+        public MySqlOptions? MySql { get; set; }
 
         // These settings are used to set runtime behavior and
         // any exposed entity.

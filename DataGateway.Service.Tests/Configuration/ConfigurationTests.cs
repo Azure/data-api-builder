@@ -8,8 +8,10 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.TestHost;
@@ -343,12 +345,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 }
             };
             RuntimeConfig? config = JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
-            // use reflection to get and check properties of devConfig
-            PropertyInfo[] properties = typeof(RuntimeConfig).GetProperties();
-            foreach (PropertyInfo property in properties)
-            {
-                Assert.IsNotNull(property.GetValue(config));
-            }
+            Assert.IsNotNull(config);
         }
 
         [TestCleanup]

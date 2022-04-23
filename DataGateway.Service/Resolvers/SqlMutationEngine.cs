@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -49,7 +50,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="context">context of graphql mutation</param>
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result and its related pagination metadata</returns>
-        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
+        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters)
         {
             if (context.Selection.Type.IsListType())
             {
@@ -66,13 +67,7 @@ namespace Azure.DataGateway.Service.Resolvers
             if (mutationResolver.OperationType == Operation.Delete)
             {
                 // compute the mutation result before removing the element
-                result = await _queryEngine.ExecuteAsync(
-                    context,
-                // Disabling the warning since trying to fix this opens up support for nullability
-                // tracked in #235 on REST and #201 on GraphQL.
-#pragma warning disable CS8620
-                    parameters);
-#pragma warning restore CS8620
+                result = await _queryEngine.ExecuteAsync(context, parameters);
             }
 
             using DbDataReader dbDataReader =
@@ -83,11 +78,19 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (!context.Selection.Type.IsScalarType() && mutationResolver.OperationType != Operation.Delete)
             {
-                Dictionary<string, object?>? searchParams = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
+                TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(tableName);
+
+                // only extract pk columns
+                // since non pk columns can be null
+                // and the subsequent query would search with:
+                // nullParamName = NULL
+                // which would fail to get the mutated entry from the db
+                Dictionary<string, object?>? searchParams = await _queryExecutor.ExtractRowFromDbDataReader(
+                    dbDataReader,
+                    onlyExtract: tableDefinition.PrimaryKey);
 
                 if (searchParams == null)
                 {
-                    TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(tableName);
                     string searchedPK = '<' + string.Join(", ", tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
                     throw new DataGatewayException($"Could not find entity with {searchedPK}", HttpStatusCode.NotFound, DataGatewayException.SubStatusCodes.EntityNotFound);
                 }
@@ -113,7 +116,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>JSON object result</returns>
         public async Task<JsonDocument?> ExecuteAsync(RestRequestContext context)
         {
-            Dictionary<string, object> parameters = PrepareParameters(context);
+            Dictionary<string, object?> parameters = PrepareParameters(context);
 
             using DbDataReader dbDataReader =
             await PerformMutationOperation(
@@ -161,8 +164,16 @@ namespace Azure.DataGateway.Service.Resolvers
                     /// result set #2: result of the INSERT operation.
                     if (resultRecord != null)
                     {
-                        // We give empty result set for updates
-                        jsonResultString = null;
+                        if (_metadataStoreProvider.CloudDbType == Configurations.DatabaseType.PostgreSql &&
+                            PostgresQueryBuilder.IsInsert(resultRecord))
+                        {
+                            jsonResultString = JsonSerializer.Serialize(resultRecord);
+                        }
+                        else
+                        {
+                            // We give empty result set for updates
+                            jsonResultString = null;
+                        }
                     }
                     else if (await dbDataReader.NextResultAsync())
                     {
@@ -172,12 +183,14 @@ namespace Azure.DataGateway.Service.Resolvers
                     }
                     else
                     {
-                        // If there is no resultset, raise dbexception
-                        // this is needed for MySQL.
+                        string prettyPrintPk = "<" + string.Join(", ", context.PrimaryKeyValuePairs.Select(
+                            kv_pair => $"{kv_pair.Key}: {kv_pair.Value}"
+                        )) + ">";
                         throw new DataGatewayException(
-                                message: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
-                                statusCode: HttpStatusCode.InternalServerError,
-                                subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
+                            message: $"Cannot perform INSERT and could not find {context.EntityName} " +
+                                        $"with primary key {prettyPrintPk} to perform UPDATE on.",
+                            statusCode: HttpStatusCode.NotFound,
+                            subStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound);
                     }
 
                     break;
@@ -198,7 +211,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private async Task<DbDataReader> PerformMutationOperation(
             string tableName,
             Operation operationType,
-            IDictionary<string, object> parameters)
+            IDictionary<string, object?> parameters)
         {
             string queryString;
             Dictionary<string, object?> queryParameters;
@@ -244,15 +257,15 @@ namespace Azure.DataGateway.Service.Resolvers
             return await _queryExecutor.ExecuteQueryAsync(queryString, queryParameters);
         }
 
-        private static Dictionary<string, object> PrepareParameters(RestRequestContext context)
+        private static Dictionary<string, object?> PrepareParameters(RestRequestContext context)
         {
-            Dictionary<string, object> parameters;
+            Dictionary<string, object?> parameters;
 
             switch (context.OperationType)
             {
                 case Operation.Delete:
                     // DeleteOne based off primary key in request.
-                    parameters = new(context.PrimaryKeyValuePairs);
+                    parameters = new(context.PrimaryKeyValuePairs!);
                     break;
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
@@ -260,8 +273,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 case Operation.UpdateIncremental:
                     // Combine both PrimaryKey/Field ValuePairs
                     // because we create an update statement.
-                    parameters = new(context.PrimaryKeyValuePairs);
-                    foreach (KeyValuePair<string, object> pair in context.FieldValuePairsInBody)
+                    parameters = new(context.PrimaryKeyValuePairs!);
+                    foreach (KeyValuePair<string, object?> pair in context.FieldValuePairsInBody)
                     {
                         parameters.Add(pair.Key, pair.Value);
                     }

@@ -25,6 +25,35 @@ namespace Azure.DataGateway.Service.Models
     }
 
     /// <summary>
+    /// Extends Column with direction for orderby.
+    /// </summary>
+    public class OrderByColumn : Column
+    {
+        public OrderByDir Direction { get; }
+        public OrderByColumn(string? tableAlias, string columnName, OrderByDir direction = OrderByDir.Asc)
+            : base(tableAlias, columnName)
+        {
+            Direction = direction;
+        }
+    }
+
+    /// <summary>
+    /// Extends OrderByColumn with Value and ParamName
+    /// for the purpose of Pagination
+    /// </summary>
+    public class PaginationColumn : OrderByColumn
+    {
+        public object? Value { get; }
+        public string? ParamName { get; set; }
+        public PaginationColumn(string? tableAlias, string columnName, object? value, OrderByDir direction = OrderByDir.Asc, string? paramName = null)
+            : base(tableAlias, columnName, direction)
+        {
+            Value = value;
+            ParamName = paramName;
+        }
+    }
+
+    /// <summary>
     /// Extends Column with a label
     /// </summary>
     public class LabelledColumn : Column
@@ -42,13 +71,22 @@ namespace Azure.DataGateway.Service.Models
     }
 
     /// <summary>
+    /// Represents the directions an OrderByColumn can have.
+    /// </summary>
+    public enum OrderByDir
+    {
+        Asc, Desc
+    }
+
+    /// <summary>
     /// Represents the comparison operations a predicate can have
     /// </summary>
     public enum PredicateOperation
     {
         None,
         Equal, GreaterThan, LessThan, GreaterThanOrEqual, LessThanOrEqual, NotEqual,
-        AND, OR, LIKE, NOT_LIKE
+        AND, OR, LIKE, NOT_LIKE,
+        IS, IS_NOT
     }
 
     /// <summary>
@@ -197,20 +235,14 @@ namespace Azure.DataGateway.Service.Models
     public class KeysetPaginationPredicate
     {
         /// <summary>
-        /// List of primary key columns used to generate the
+        /// List of columns used to generate the
         /// keyset pagination predicate
         /// </summary>
-        public List<Column> PrimaryKey { get; }
-        /// <summary>
-        /// List of values to compare the primary key with
-        /// to create the pagination predicate
-        /// </summary>
-        public List<string> Values { get; }
+        public List<PaginationColumn> Columns { get; }
 
-        public KeysetPaginationPredicate(List<Column> primaryKey, List<string> values)
+        public KeysetPaginationPredicate(List<PaginationColumn> columns)
         {
-            PrimaryKey = primaryKey;
-            Values = values;
+            Columns = columns;
         }
     }
 

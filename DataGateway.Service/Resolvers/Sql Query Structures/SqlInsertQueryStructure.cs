@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<string> ReturnColumns { get; }
 
-        public SqlInsertStructure(string tableName, SqlGraphQLFileMetadataProvider metadataStore, IDictionary<string, object> mutationParams)
+        public SqlInsertStructure(string tableName, SqlGraphQLFileMetadataProvider metadataStore, IDictionary<string, object?> mutationParams)
         : base(metadataStore, tableName: tableName)
         {
             InsertColumns = new();
@@ -36,11 +36,9 @@ namespace Azure.DataGateway.Service.Resolvers
 
             TableDefinition tableDefinition = GetTableDefinition();
 
-            // return primary key so the inserted row can be identified
-            //ReturnColumns = tableDefinition.PrimaryKey;
             ReturnColumns = tableDefinition.Columns.Keys.ToList<string>();
 
-            foreach (KeyValuePair<string, object> param in mutationParams)
+            foreach (KeyValuePair<string, object?> param in mutationParams)
             {
                 PopulateColumnsAndParams(param.Key, param.Value);
             }
@@ -52,7 +50,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         /// <param name="columnName">The name of the column.</param>
         /// <param name="value">The value of the column.</param>
-        private void PopulateColumnsAndParams(string columnName, object value)
+        private void PopulateColumnsAndParams(string columnName, object? value)
         {
             InsertColumns.Add(columnName);
             string paramName;
@@ -66,11 +64,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
                 else
                 {
-                    // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
-                    throw new DataGatewayException(
-                        message: $"Unexpected value for column \"{columnName}\" provided.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                    paramName = MakeParamWithValue(null);
                 }
 
                 Values.Add($"@{paramName}");

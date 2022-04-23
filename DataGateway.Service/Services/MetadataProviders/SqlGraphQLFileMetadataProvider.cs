@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.Models;
 using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Services
@@ -91,14 +91,14 @@ namespace Azure.DataGateway.Service.Services
                 {
                     case DatabaseType.MsSql:
                         schemaName = "dbo";
-                        await _sqlMetadataProvider!.PopulateTableDefinitionAsync(schemaName, tableName, tableDefinition);
+                        await _sqlMetadataProvider.PopulateTableDefinitionAsync(schemaName, tableName, tableDefinition);
                         break;
                     case DatabaseType.PostgreSql:
                         schemaName = "public";
-                        await _sqlMetadataProvider!.PopulateTableDefinitionAsync(schemaName, tableName, tableDefinition);
+                        await _sqlMetadataProvider.PopulateTableDefinitionAsync(schemaName, tableName, tableDefinition);
                         break;
                     case DatabaseType.MySql:
-                        await _sqlMetadataProvider!.PopulateTableDefinitionAsync(schemaName, tableName, tableDefinition);
+                        await _sqlMetadataProvider.PopulateTableDefinitionAsync(schemaName, tableName, tableDefinition);
                         break;
                     default:
                         throw new ArgumentException($"Enriching database schema " +
@@ -106,6 +106,9 @@ namespace Azure.DataGateway.Service.Services
                             $"is not supported.");
                 }
             }
+
+            await _sqlMetadataProvider.PopulateForeignKeyDefinitionAsync(schemaName, GraphQLResolverConfig.DatabaseSchema.Tables);
+
         }
 
         private void InitFilterParser()

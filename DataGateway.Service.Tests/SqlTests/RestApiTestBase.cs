@@ -27,6 +27,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static readonly string _integration_NonAutoGenPK_TableName = "magazines";
         protected static readonly string _integration_AutoGenNonPK_TableName = "comics";
         protected static readonly string _Composite_NonAutoGenPK = "stocks";
+        protected static readonly string _integrationTableHasColumnWithSpace = "brokers";
+        protected static readonly string _integrationTieBreakTable = "authors";
+        public static readonly int _numRecordsReturnedFromTieBreakTable = 2;
 
         public abstract string GetQuery(string key);
 
@@ -306,7 +309,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyPagination)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"id\":1}"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]"))}",
                 paginated: true
             );
         }
@@ -319,13 +322,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstMultiKeyPagination()
         {
+            string after = "[{\"Value\":1,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"book_id\"}," +
+                            "{\"Value\":567,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"id\"}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1",
                 entity: _tableWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyPagination)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"book_id\":1,\"id\":567}"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
                 paginated: true
             );
         }
@@ -339,7 +344,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"id\":7}"))}",
+                queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":7,\"Direction\":0,\"ColumnName\":\"id\"}]"))}",
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithAfterSingleKeyPagination)),
                 controller: _restController
@@ -353,12 +358,328 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithAfterMultiKeyPagination()
         {
+            string after = "[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"book_id\"}," +
+                            "{\"Value\":567,\"Direction\":0,\"ColumnName\":\"id\"}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("{\"book_id\":1,\"id\":567}"))}",
+                queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
                 entity: _tableWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithAfterMultiKeyPagination)),
                 controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using pagination
+        /// to verify that we return an $after cursor that has the
+        /// single primary key column.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithPaginationVerifSinglePrimaryKeyInAfter()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: $"?$first=1",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithPaginationVerifSinglePrimaryKeyInAfter)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]"))}",
+                paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using pagination
+        /// to verify that we return an $after cursor that has all the
+        /// multiple primary key columns.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithPaginationVerifMultiplePrimaryKeysInAfter()
+        {
+            string after = "[{\"Value\":1,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"book_id\"}," +
+                            "{\"Value\":567,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"id\"}]";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: $"?$first=1",
+                entity: _tableWithCompositePrimaryKey,
+                sqlQuery: GetQuery(nameof(FindTestWithPaginationVerifMultiplePrimaryKeysInAfter)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation for all records
+        /// order by title in ascending order.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithQueryStringAllFieldsOrderByAsc()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby=title",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithQueryStringAllFieldsOrderByAsc)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation for all records
+        /// order by publisher_id in descending order.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithQueryStringAllFieldsOrderByDesc()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby=publisher_id desc",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithQueryStringAllFieldsOrderByDesc)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned and then sorting by title,
+        /// with a single primary key in the table.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstSingleKeyPaginationAndOrderBy()
+        {
+            string after = "[{\"Value\":\"Also Awesome book\",\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"title\"}," +
+                            "{\"Value\":2,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=1&$orderby=title",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyPaginationAndOrderBy)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned and then sorting by id,
+        /// the single primary key column in the table.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstSingleKeyIncludedInOrderByAndPagination()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=1&$orderby=id",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyIncludedInOrderByAndPagination)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]"))}",
+                paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned to two and then
+        /// sorting by id.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstTwoOrderByAndPagination()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=2&$orderby=id",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFirstTwoOrderByAndPagination)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":2,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]"))}",
+                paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned to two and verify
+        /// that with tie breaking we form the correct $after,
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstTwoVerifyAfterFormedCorrectlyWithOrderBy()
+        {
+            string after = "[{\"Value\":\"2001-01-01\",\"Direction\":0,\"TableAlias\":\"authors\",\"ColumnName\":\"birthdate\"}," +
+                            "{\"Value\":\"Aniruddh\",\"Direction\":0,\"TableAlias\":\"authors\",\"ColumnName\":\"name\"}," +
+                            "{\"Value\":125,\"Direction\":1,\"TableAlias\":\"authors\",\"ColumnName\":\"id\"}]";
+            after = $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: $"?$first=2&$orderby=birthdate, name, id desc",
+                entity: _integrationTieBreakTable,
+                sqlQuery: GetQuery(nameof(FindTestWithFirstTwoVerifyAfterFormedCorrectlyWithOrderBy)),
+                controller: _restController,
+                expectedAfterQueryString: after,
+                paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned to two and verifying
+        /// that with a $after that tie breaks we return the correct
+        /// result.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstTwoVerifyAfterBreaksTieCorrectlyWithOrderBy()
+        {
+            string after = "[{\"Value\":\"2001-01-01\",\"Direction\":0,\"ColumnName\":\"birthdate\"}," +
+                            "{\"Value\":\"Aniruddh\",\"Direction\":0,\"ColumnName\":\"name\"}," +
+                            "{\"Value\":125,\"Direction\":0,\"ColumnName\":\"id\"}]";
+            after = $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: $"?$first=2&$orderby=birthdate, name, id{after}",
+                entity: _integrationTieBreakTable,
+                sqlQuery: GetQuery(nameof(FindTestWithFirstTwoVerifyAfterBreaksTieCorrectlyWithOrderBy)),
+                controller: _restController,
+                verifyNumRecords: _numRecordsReturnedFromTieBreakTable
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned and then sorting by
+        /// id descending, book_id ascending which make up the entire
+        /// composite primary key in the table.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstMultiKeyIncludeAllInOrderByAndPagination()
+        {
+            string after = "[{\"Value\":569,\"Direction\":1,\"TableAlias\":\"reviews\",\"ColumnName\":\"id\"}," +
+                            "{\"Value\":1,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"book_id\"}]";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=1&$orderby=id desc, book_id",
+                entity: _tableWithCompositePrimaryKey,
+                sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyIncludeAllInOrderByAndPagination)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned and then sorting by
+        /// book_id, one of the column that make up the composite
+        /// primary key in the table.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstMultiKeyIncludeOneInOrderByAndPagination()
+        {
+            string after = "[{\"Value\":1,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"book_id\"}," +
+                            "{\"Value\":567,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"id\"}]";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=1&$orderby=book_id",
+                entity: _tableWithCompositePrimaryKey,
+                sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyIncludeOneInOrderByAndPagination)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned and then sorting by
+        /// publisher_id in descending order, which will tie between
+        /// 2 records, then sorting by title in descending order to
+        /// break the tie.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstAndMultiColumnOrderBy()
+        {
+            string after = "[{\"Value\":2345,\"Direction\":1,\"TableAlias\":\"books\",\"ColumnName\":\"publisher_id\"}," +
+                            "{\"Value\":\"US history in a nutshell\",\"Direction\":1,\"TableAlias\":\"books\",\"ColumnName\":\"title\"}," +
+                            "{\"Value\":4,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=1&$orderby=publisher_id desc, title desc",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFirstAndMultiColumnOrderBy)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned and then sorting by
+        /// publisher_id in descending order, which will tie between
+        /// 2 records, then the primary key should be used to break the tie.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstAndTiedColumnOrderBy()
+        {
+            string after = "[{\"Value\":2345,\"Direction\":1,\"TableAlias\":\"books\",\"ColumnName\":\"publisher_id\"}," +
+                            "{\"Value\":3,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=1&$orderby=publisher_id desc",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestWithFirstAndTiedColumnOrderBy)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using with $orderby
+        /// where if order of the columns in the orderby must be maintained
+        /// to generate the correct result.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestVerifyMaintainColumnOrderForOrderBy()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby=id desc, publisher_id",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery(nameof(FindTestVerifyMaintainColumnOrderForOrderBy)),
+                controller: _restController
+            );
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby=publisher_id, id desc",
+                entity: _integrationTableName,
+                sqlQuery: GetQuery("FindTestVerifyMaintainColumnOrderForOrderByInReverse"),
+                controller: _restController
+            );
+
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned and then sorting by
+        /// content, with multiple column primary key in the table.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstMultiKeyPaginationAndOrderBy()
+        {
+            string after = "[{\"Value\":\"Indeed a great book\",\"Direction\":1,\"TableAlias\":\"reviews\",\"ColumnName\":\"content\"}," +
+                            "{\"Value\":1,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"book_id\"}," +
+                            "{\"Value\":567,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"id\"}]";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=1&$orderby=content desc",
+                entity: _tableWithCompositePrimaryKey,
+                sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyPaginationAndOrderBy)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                paginated: true
             );
         }
 
@@ -391,7 +712,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 ""categoryid"": ""5"",
                 ""pieceid"": ""2"",
-                ""categoryName"":""Thriller""
+                ""categoryName"":""FairyTales""
             }";
 
             expectedLocationHeader = $"categoryid/5/pieceid/2";
@@ -521,7 +842,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             requestBody = @"
             {
-               ""categoryName"":""History"",
+               ""categoryName"":""SciFi"",
                ""piecesAvailable"":""10"",
                ""piecesRequired"":""5""
             }";
@@ -532,6 +853,47 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 queryString: null,
                 entity: _Composite_NonAutoGenPK,
                 sqlQuery: GetQuery("PutOne_Update_CompositeNonAutoGenPK_Test"),
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedLocationHeader: expectedLocationHeader
+                );
+
+            // Perform a PUT UPDATE which nulls out a missing field from the request body
+            // which is nullable.
+            requestBody = @"
+            {
+                ""categoryName"":""SciFi"",
+                ""piecesRequired"":""5""
+            }";
+
+            expectedLocationHeader = $"categoryid/1/pieceid/1";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: expectedLocationHeader,
+                queryString: null,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: GetQuery("PutOne_Update_NullOutMissingField_Test"),
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedLocationHeader: expectedLocationHeader
+            );
+
+            requestBody = @"
+            {
+               ""categoryName"":"""",
+               ""piecesAvailable"":""2"",
+               ""piecesRequired"":""3""
+            }";
+
+            expectedLocationHeader = $"categoryid/2/pieceid/1";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: expectedLocationHeader,
+                queryString: null,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: GetQuery("PutOne_Update_Empty_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
@@ -588,7 +950,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string requestBody = @"
             {
                 ""title"": ""Batman Returns"",
-                ""issueNumber"": 1234
+                ""issue_number"": 1234
             }";
 
             string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
@@ -606,7 +968,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 );
 
             // It should result in a successful insert,
-            // where the nullable field 'issueNumber' is properly left alone by the query validation methods.
+            // where the nullable field 'issue_number' is properly left alone by the query validation methods.
             // The request body doesn't contain this field that neither has a default
             // nor is autogenerated.
             requestBody = @"
@@ -633,7 +995,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             // that is autogenerated.
             requestBody = @"
             {
-                ""title"": ""Star Trek""
+                ""title"": ""Star Trek"",
+                ""categoryName"" : ""Suspense""
             }";
 
             expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
@@ -651,7 +1014,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             requestBody = @"
             {
-               ""categoryName"":""comics"",
+               ""categoryName"":""SciFi"",
                ""piecesAvailable"":""2"",
                ""piecesRequired"":""1""
             }";
@@ -686,8 +1049,130 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
                 );
+
+            requestBody = @"
+            {
+               ""categoryName"":"""",
+               ""piecesAvailable"":""2"",
+               ""piecesRequired"":""3""
+            }";
+
+            expectedLocationHeader = $"categoryid/4/pieceid/1";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: expectedLocationHeader,
+                queryString: null,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: GetQuery("PutOne_Insert_Empty_Test"),
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+                );
         }
 
+        /// <summary>
+        /// Tests the PutOne functionality with a REST PUT request
+        /// with a nullable column specified as NULL.
+        /// The test should pass successfully for update as well as insert.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutOne_Nulled_Test()
+        {
+            // Performs a successful PUT insert when a nullable column
+            // is specified as null in the request body.
+            string requestBody = @"
+            {
+                ""categoryName"": ""SciFi"",
+                ""piecesAvailable"": null,
+                ""piecesRequired"": ""4""
+            }";
+            string expectedLocationHeader = $"categoryid/4/pieceid/1";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entity: _Composite_NonAutoGenPK,
+                    sqlQuery: GetQuery("PutOne_Insert_Nulled_Test"),
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: expectedLocationHeader
+                );
+
+            // Performs a successful PUT update when a nullable column
+            // is specified as null in the request body.
+            requestBody = @"
+            {
+               ""categoryName"":""FairyTales"",
+               ""piecesAvailable"":null,
+               ""piecesRequired"":""4""
+            }";
+
+            expectedLocationHeader = $"categoryid/2/pieceid/1";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: expectedLocationHeader,
+                queryString: null,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: GetQuery("PutOne_Update_Nulled_Test"),
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedLocationHeader: expectedLocationHeader
+                );
+        }
+
+        /// <summary>
+        /// Tests the PatchOne functionality with a REST PATCH request
+        /// with a nullable column specified as NULL.
+        /// The test should pass successfully for update as well as insert.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Nulled_Test()
+        {
+            // Performs a successful PATCH insert when a nullable column
+            // is specified as null in the request body.
+            string requestBody = @"
+            {
+                ""categoryName"": ""SciFi"",
+                ""piecesAvailable"": null,
+                ""piecesRequired"": 4
+            }";
+            string expectedLocationHeader = $"categoryid/3/pieceid/1";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entity: _Composite_NonAutoGenPK,
+                    sqlQuery: GetQuery("PatchOne_Insert_Nulled_Test"),
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: expectedLocationHeader
+                );
+
+            // Performs a successful PATCH update when a nullable column
+            // is specified as null in the request body.
+            requestBody = @"
+            {
+                ""piecesAvailable"": null
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entity: _Composite_NonAutoGenPK,
+                    sqlQuery: GetQuery("PatchOne_Update_Nulled_Test"),
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.NoContent
+                );
+
+        }
         /// <summary>
         /// Tests REST PatchOne which results in an insert.
         /// URI Path: PK of record that does not exist.
@@ -700,7 +1185,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string requestBody = @"
             {
                 ""title"": ""Batman Begins"",
-                ""issueNumber"": 1234
+                ""issue_number"": 1234
             }";
 
             string expectedLocationHeader = $"id/2";
@@ -719,7 +1204,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             requestBody = @"
             {
-                ""categoryName"": ""Suspense"",
+                ""categoryName"": ""FairyTales"",
                 ""piecesAvailable"":""5"",
                 ""piecesRequired"":""4""
             }";
@@ -739,7 +1224,27 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             requestBody = @"
             {
-                ""categoryName"": ""Drama""
+                ""categoryName"": """",
+                ""piecesAvailable"":""5"",
+                ""piecesRequired"":""4""
+            }";
+            expectedLocationHeader = $"categoryid/5/pieceid/1";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entity: _Composite_NonAutoGenPK,
+                    sqlQuery: GetQuery("PatchOne_Insert_Empty_Test"),
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: expectedLocationHeader
+                );
+
+            requestBody = @"
+            {
+                ""categoryName"": ""SciFi""
             }";
             expectedLocationHeader = $"categoryid/7/pieceid/1";
 
@@ -812,8 +1317,24 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.NoContent
                 );
-        }
 
+            requestBody = @"
+            {
+                ""categoryName"": """"
+                
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entity: _Composite_NonAutoGenPK,
+                    sqlQuery: GetQuery("PatchOne_Update_Empty_Test"),
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.NoContent
+                );
+        }
         /// <summary>
         /// Tests the PatchOne functionality with a REST PUT request using
         /// headers that include as a key "If-Match" with an item that does exist,
@@ -852,6 +1373,31 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 );
         }
 
+        [TestMethod]
+        public virtual async Task InsertOneWithNullFieldValue()
+        {
+            string requestBody = @"
+            {
+                ""categoryid"": ""3"",
+                ""pieceid"": ""1"",
+                ""piecesAvailable"": null,
+                ""piecesRequired"": 1,
+                ""categoryName"":""SciFi""
+            }";
+
+            string expectedLocationHeader = $"categoryid/3/pieceid/1";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: GetQuery("InsertOneWithNullFieldValue"),
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
         #endregion
 
         #region Negative Tests
@@ -873,6 +1419,32 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 exception: true,
                 expectedErrorMessage: "Invalid number of items requested, $first must be an integer greater than 0. Actual value: 0",
                 expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operations using keywords
+        /// of which is not currently supported, verify
+        /// we throw a DataGateway exception with the correct
+        /// error response.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("startswith", "(title, 'Awesome')", "eq true")]
+        [DataRow("endswith", "(title, 'book')", "eq true")]
+        [DataRow("indexof", "(title, 'Awe')", "eq 0")]
+        [DataRow("length", "(title)", "gt 5")]
+        public async Task FindTestWithUnsupportedFilterKeywords(string keyword, string value, string compareTo)
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: $"?$filter={keyword}{value} {compareTo}",
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "$filter query parameter is not well formed.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: "BadRequest"
             );
         }
 
@@ -1042,7 +1614,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string requestBody = @"
             {
                 ""id"": " + STARTING_ID_FOR_TEST_INSERTS + ",\n" +
-                "\"issueNumber\": 1234\n" +
+                "\"issue_number\": 1234\n" +
             "}";
 
             await SetupAndRunRestApiTest(
@@ -1083,6 +1655,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public virtual async Task PutOneWithNonNullableFieldMissingInJsonBodyTest()
         {
+            // Behaviour expected when a non-nullable and non-default field
+            // is missing from request body. This would fail in the RequestValidator.ValidateColumn
+            // as our requestBody is missing a non-nullable and non-default field.
             string requestBody = @"
             {
                 ""piecesRequired"":""6""
@@ -1099,6 +1674,31 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expectedErrorMessage: "Invalid request body. Missing field in body: categoryName.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
+            );
+        }
+
+        [TestMethod]
+        public virtual async Task PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest()
+        {
+            // Behaviour expected when a non-nullable but default field
+            // is missing from request body. In this case, when we try to null out
+            // this field, the db would throw an exception.
+            string requestBody = @"
+            {
+                ""categoryName"":""comics""
+            }";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1",
+                queryString: string.Empty,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
+                expectedStatusCode: HttpStatusCode.InternalServerError,
+                expectedSubStatusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
             );
         }
 
@@ -1126,9 +1726,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
-                    expectedStatusCode: HttpStatusCode.InternalServerError,
-                    expectedSubStatusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
+                    expectedErrorMessage: $"Cannot perform INSERT and could not find books with primary key <id: 1000> to perform UPDATE on.",
+                    expectedStatusCode: HttpStatusCode.NotFound,
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound.ToString()
                 );
         }
 
@@ -1144,7 +1744,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string requestBody = @"
             {
-                ""issueNumber"": ""1234""
+                ""issue_number"": ""1234""
             }";
 
             await SetupAndRunRestApiTest(
@@ -1156,9 +1756,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
-                    expectedStatusCode: HttpStatusCode.InternalServerError,
-                    expectedSubStatusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
+                    expectedErrorMessage: "Cannot perform INSERT and could not find magazines with primary key <id: 1000> to perform UPDATE on.",
+                    expectedStatusCode: HttpStatusCode.NotFound,
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound.ToString()
                 );
         }
 
@@ -1249,9 +1849,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
-                    expectedStatusCode: HttpStatusCode.InternalServerError,
-                    expectedSubStatusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
+                    expectedErrorMessage: $"Cannot perform INSERT and could not find books with primary key <id: 1000> to perform UPDATE on.",
+                    expectedStatusCode: HttpStatusCode.NotFound,
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound.ToString()
                 );
         }
 
@@ -1272,9 +1872,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
-                    expectedStatusCode: HttpStatusCode.InternalServerError,
-                    expectedSubStatusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
+                    expectedErrorMessage: $"Cannot perform INSERT and could not find reviews with primary key <id: 5002, book_id: 1> to perform UPDATE on.",
+                    expectedStatusCode: HttpStatusCode.NotFound,
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound.ToString()
                 );
         }
         /// <summary>
@@ -1396,7 +1996,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string requestBody = @"
             {
                 ""title"": ""Batman Returns"",
-                ""issueNumber"": 1234
+                ""issue_number"": 1234
             }";
 
             string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
@@ -1546,6 +2146,81 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Tests the REST Api for Find operation with an invalid OrderByDirection.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestInvalidOrderByDirection()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby=id random",
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: HttpUtility.UrlDecode("Syntax error at position 9 in \u0027id random\u0027."),
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with an invalid column name for sorting.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestInvalidOrderByColumn()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby=Pinecone",
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "Could not find a property named 'Pinecone' on type 'default_namespace.books'.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with a null for sorting.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestInvalidOrderByNullQueryParam()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby=null",
+                entity: _integrationTableName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "OrderBy property is not supported.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned and then sorting by
+        /// ID Number, which will throw a DataGatewayException with
+        /// a message indicating this property is not supported.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstAndSpacedColumnOrderBy()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=1&$orderby='ID Number'",
+                entity: _integrationTableHasColumnWithSpace,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "OrderBy property is not supported.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
         /// Tests the REST Api for the correct error condition format when
         /// a DataGatewayException is thrown
         /// </summary>
@@ -1560,6 +2235,156 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController,
                 exception: true,
                 expectedErrorMessage: "Invalid Column name requested: content",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        [TestMethod]
+        public virtual async Task InsertOneWithNonNullableFieldAsNull()
+        {
+            string requestBody = @"
+            {
+                ""categoryid"": ""3"",
+                ""pieceid"": ""1"",
+                ""piecesAvailable"": 1,
+                ""piecesRequired"": null,
+                ""categoryName"":""Fantasy""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Invalid value for field piecesRequired in request body.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+
+            requestBody = @"
+            {
+                ""categoryid"": ""3"",
+                ""pieceid"": ""1"",
+                ""piecesAvailable"": 1,
+                ""piecesRequired"": 1,
+                ""categoryName"":null
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Invalid value for field categoryName in request body.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
+        /// Tests the Put functionality with a REST PUT request
+        /// with the request body having null value for non-nullable column
+        /// We expect a failure and so no sql query is provided.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutOneWithNonNullableFieldAsNull()
+        {
+            //Negative test case for Put resulting in a failed update
+            string requestBody = @"
+            {
+                ""piecesAvailable"": ""3"",
+                ""piecesRequired"": ""1"",
+                ""categoryName"":null
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/2/pieceid/1",
+                queryString: string.Empty,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Invalid value for field categoryName in request body.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+
+            //Negative test case for Put resulting in a failed insert
+            requestBody = @"
+            {
+                ""piecesAvailable"": ""3"",
+                ""piecesRequired"": ""1"",
+                ""categoryName"":null
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/3/pieceid/1",
+                queryString: string.Empty,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Invalid value for field categoryName in request body.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
+        /// Tests the Patch functionality with a REST PATCH request
+        /// with the request body having null value for non-nullable column
+        /// We expect a failure and so no sql query is provided.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOneWithNonNullableFieldAsNull()
+        {
+            //Negative test case for Patch resulting in a failed update
+            string requestBody = @"
+            {
+                ""piecesAvailable"": ""3"",
+                ""piecesRequired"": ""1"",
+                ""categoryName"":null
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/2/pieceid/1",
+                queryString: string.Empty,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.UpsertIncremental,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Invalid value for field categoryName in request body.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+
+            //Negative test case for Patch resulting in a failed insert
+            requestBody = @"
+            {
+                ""piecesAvailable"": ""3"",
+                ""piecesRequired"": ""1"",
+                ""categoryName"":null
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/3/pieceid/1",
+                queryString: string.Empty,
+                entity: _Composite_NonAutoGenPK,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.UpsertIncremental,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Invalid value for field categoryName in request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

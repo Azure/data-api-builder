@@ -41,10 +41,16 @@ namespace Azure.DataGateway.Service.Models
         public virtual FilterClause? FilterClauseInUrl { get; set; }
 
         /// <summary>
+        /// List of OrderBy Columns which represent the OrderByClause from the URL.
+        /// Based on the operation type, this property may or may not be populated.
+        /// </summary>
+        public virtual List<OrderByColumn>? OrderByClauseInUrl { get; set; }
+
+        /// <summary>
         /// Dictionary of field names and their values given in the request body.
         /// Based on the operation type, this property may or may not be populated.
         /// </summary>
-        public virtual Dictionary<string, object> FieldValuePairsInBody { get; set; } = new();
+        public virtual Dictionary<string, object?> FieldValuePairsInBody { get; set; } = new();
 
         /// <summary>
         /// NVC stores the query string parsed into a NameValueCollection.

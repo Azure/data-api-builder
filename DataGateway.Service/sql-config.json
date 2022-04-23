@@ -26,6 +26,21 @@
       "Id": "insertWebsitePlacement",
       "Table": "book_website_placements",
       "OperationType": "Insert"
+    },
+    {
+      "Id": "insertMagazine",
+      "Table": "magazines",
+      "OperationType": "Insert"
+    },
+    {
+      "Id": "insertWebsiteUser",
+      "Table": "website_users",
+      "OperationType": "Insert"
+    },
+    {
+      "Id": "updateMagazine",
+      "Table": "magazines",
+      "OperationType": "UpdateIncremental"
     }
   ],
   "GraphQLTypes": {
@@ -84,6 +99,9 @@
         }
       }
     },
+    "WebsiteUser": {
+      "Table": "website_users"
+    },
     "Author": {
       "Table": "authors",
       "Fields": {
@@ -109,6 +127,9 @@
           "LeftForeignKey": "review_book_fk"
         }
       }
+    },
+    "Magazine": {
+      "Table": "magazines"
     },
     "BookConnection": {
      "IsPaginationType": true
@@ -142,7 +163,7 @@
         }
       },
       "stocks": {
-         "HttpVerbs": {
+        "HttpVerbs": {
           "GET": {
             "AuthorizationType": "Anonymous"
           },
@@ -158,12 +179,6 @@
         }
       },
       "books": {
-        "ForeignKeys": {
-          "book_publisher_fk": {
-            "ReferencedTable": "publishers",
-            "Columns": [ "publisher_id" ]
-          }
-        },
         "HttpVerbs": {
           "GET": {
             "AuthorizationType": "Authenticated"
@@ -183,13 +198,25 @@
         }
       },
       "book_website_placements": {
-        "PrimaryKey": [ "id" ],
-        "ForeignKeys": {
-          "book_website_placement_book_fk": {
-            "ReferencedTable": "books",
-            "Columns": [ "book_id" ]
+        "HttpVerbs": {
+          "GET": {
+            "AuthorizationType": "Anonymous"
+          },
+          "POST": {
+            "AuthorizationType": "Authenticated"
+          },
+          "DELETE": {
+            "Authorization": "Authenticated"
+          },
+          "PUT": {
+            "Authorization": "Authenticated"
+          },
+          "PATCH": {
+            "Authorization": "Authenticated"
           }
-        },
+        }
+      },
+      "website_users": {
         "HttpVerbs": {
           "GET": {
             "AuthorizationType": "Anonymous"
@@ -216,12 +243,6 @@
         }
       },
       "reviews": {
-        "ForeignKeys": {
-          "review_book_fk": {
-            "ReferencedTable": "books",
-            "Columns": [ "book_id" ]
-          }
-        },
         "HttpVerbs": {
           "GET": {
             "AuthorizationType": "Anonymous"
@@ -229,20 +250,8 @@
         }
       },
       "book_author_link": {
-        "ForeignKeys": {
-          "book_author_link_book_fk": {
-            "ReferencedTable": "books",
-            "Columns": [ "book_id" ]
-          },
-          "book_author_link_author_fk": {
-            "ReferencedTable": "authors",
-            "Columns": [ "author_id" ]
-          }
-        }
       },
       "magazines": {
-        "ForeignKeys": {
-        },
         "HttpVerbs": {
           "GET": {
             "AuthorizationType": "Anonymous"
@@ -276,6 +285,15 @@
             "Authorization": "Authenticated"
           }
         }
+      },
+      "brokers": {
+        "HttpVerbs": {
+          "GET": {
+            "AuthorizationType": "Anonymous"
+          }
+        }
+      },
+      "stocks_price": {
       }
     }
   }

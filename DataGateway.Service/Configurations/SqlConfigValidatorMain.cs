@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Models;
 using HotChocolate.Language;
 
@@ -182,8 +183,8 @@ namespace Azure.DataGateway.Service.Configurations
 
             if (HasExplicitColumns(foreignKey))
             {
-                ValidateNoDuplicateFkColumns(foreignKey.Columns, refColumns: false);
-                columns = foreignKey.Columns;
+                ValidateNoDuplicateFkColumns(foreignKey.ReferencingColumns, refColumns: false);
+                columns = foreignKey.ReferencingColumns;
                 ValidateFKColumnsHaveMatchingTableColumns(foreignKey, table);
             }
             else
@@ -392,7 +393,9 @@ namespace Azure.DataGateway.Service.Configurations
             Dictionary<string, IEnumerable<string>> optionalArguments = new()
             {
                 ["_filter"] = new[] { "BookFilterInput", "PublisherFilterInput", "AuthorFilterInput", "ReviewFilterInput",
-                                        "BookFilterInput!", "PublisherFilterInput!", "AuthorFilterInput!", "ReviewFilterInput!" },
+                                        "MagazineFilterInput",
+                                        "BookFilterInput!", "PublisherFilterInput!", "AuthorFilterInput!", "ReviewFilterInput!",
+                                        "MagazineFilterInput!" },
                 ["_filterOData"] = new[] { "String", "String!" }
             };
 
@@ -416,7 +419,9 @@ namespace Azure.DataGateway.Service.Configurations
             {
                 ["first"] = new[] { "Int", "Int!" },
                 ["_filter"] = new[] { "BookFilterInput", "PublisherFilterInput", "AuthorFilterInput", "ReviewFilterInput",
-                                        "BookFilterInput!", "PublisherFilterInput!", "AuthorFilterInput!", "ReviewFilterInput!" },
+                                        "MagazineFilterInput", "WebsiteUserFilterInput",
+                                        "BookFilterInput!", "PublisherFilterInput!", "AuthorFilterInput!", "ReviewFilterInput!",
+                                        "MagazineFilterInput!", "WebsiteUserFilterInput!" },
                 ["_filterOData"] = new[] { "String", "String!" }
             };
 
@@ -639,6 +644,8 @@ namespace Azure.DataGateway.Service.Configurations
 
             ValidateMutArgsMatchTableColumns(resolver.Table, table, mutArgs);
             ValidateMutArgTypesMatchTableColTypes(resolver.Table, table, mutArgs);
+
+            ValidateUpdateMutHasCorrectArgs(table, mutArgs);
             ValidateArgNullabilityInUpdateMut(table, mutArgs);
             ValidateReturnTypeNullability(mutation, returnsNullable: true);
         }

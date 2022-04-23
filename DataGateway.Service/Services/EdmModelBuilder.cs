@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Config;
 using Microsoft.OData.Edm;
 
 namespace Azure.DataGateway.Service.Services
@@ -51,18 +51,28 @@ namespace Azure.DataGateway.Service.Services
                     // need to convert our column system type to an Edm type
                     Type columnSystemType = schema.Tables[entityName].Columns[column].SystemType;
                     EdmPrimitiveTypeKind type = EdmPrimitiveTypeKind.None;
-                    if (ReferenceEquals(typeof(string), columnSystemType))
+                    if (columnSystemType.IsArray)
                     {
-                        type = EdmPrimitiveTypeKind.String;
+                        columnSystemType = columnSystemType.GetElementType()!;
                     }
-                    else if (ReferenceEquals(typeof(long), columnSystemType))
+
+                    switch (Type.GetTypeCode(columnSystemType))
                     {
-                        type = EdmPrimitiveTypeKind.Int64;
-                    }
-                    else
-                    {
-                        throw new ArgumentException($"No resolver for column type" +
-                            $" {columnSystemType.Name}");
+                        case TypeCode.String:
+                            type = EdmPrimitiveTypeKind.String;
+                            break;
+                        case TypeCode.Int64:
+                            type = EdmPrimitiveTypeKind.Int64;
+                            break;
+                        case TypeCode.Single:
+                            type = EdmPrimitiveTypeKind.Single;
+                            break;
+                        case TypeCode.Double:
+                            type = EdmPrimitiveTypeKind.Double;
+                            break;
+                        default:
+                            throw new ArgumentException($"No resolver for column type" +
+                                $" {columnSystemType.Name}");
                     }
 
                     // if column is in our list of keys we add as a key to entity

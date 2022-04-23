@@ -174,6 +174,106 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTestWithPaginationVerifSinglePrimaryKeyInAfter",
+                $"SELECT TOP 1 * FROM { _integrationTableName } " +
+                $"ORDER BY id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithPaginationVerifMultiplePrimaryKeysInAfter",
+                $"SELECT TOP 1 * FROM REVIEWS " +
+                $"ORDER BY book_id, id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithQueryStringAllFieldsOrderByAsc",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"ORDER BY title, id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithQueryStringAllFieldsOrderByDesc",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"ORDER BY publisher_id desc, id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFirstSingleKeyPaginationAndOrderBy",
+                $"SELECT TOP 1 * FROM { _integrationTableName } " +
+                $"ORDER BY title, id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestVerifyMaintainColumnOrderForOrderBy",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"ORDER BY id desc, publisher_id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestVerifyMaintainColumnOrderForOrderByInReverse",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"ORDER BY publisher_id, id desc " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFirstSingleKeyIncludedInOrderByAndPagination",
+                $"SELECT TOP 1 * FROM { _integrationTableName } " +
+                $"ORDER BY id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+
+            {
+                "FindTestWithFirstTwoOrderByAndPagination",
+                $"SELECT TOP 2 * FROM { _integrationTableName } " +
+                $"ORDER BY id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFirstTwoVerifyAfterFormedCorrectlyWithOrderBy",
+                $"SELECT TOP 2 * FROM { _integrationTieBreakTable } " +
+                $"ORDER BY birthdate, name, id desc " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFirstTwoVerifyAfterBreaksTieCorrectlyWithOrderBy",
+                $"SELECT TOP 2 * FROM { _integrationTieBreakTable } " +
+                $"WHERE ((birthdate > '2001-01-01') OR (birthdate = '2001-01-01' AND name > 'Aniruddh') " +
+                $"OR (birthdate = '2001-01-01' AND name = 'Aniruddh' AND id > 125)) " +
+                $"ORDER BY birthdate, name, id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFirstMultiKeyIncludeAllInOrderByAndPagination",
+                $"SELECT TOP 1 * FROM { _tableWithCompositePrimaryKey } " +
+                $"ORDER BY id desc, book_id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFirstMultiKeyIncludeOneInOrderByAndPagination",
+                $"SELECT TOP 1 * FROM { _tableWithCompositePrimaryKey } " +
+                $"ORDER BY book_id, id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFirstAndMultiColumnOrderBy",
+                $"SELECT TOP 1 * FROM { _integrationTableName } " +
+                $"ORDER BY publisher_id desc, title desc " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFirstAndTiedColumnOrderBy",
+                $"SELECT TOP 1 * FROM { _integrationTableName } " +
+                $"ORDER BY publisher_id desc, id asc " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFirstMultiKeyPaginationAndOrderBy",
+                $"SELECT TOP 1 * FROM { _tableWithCompositePrimaryKey } " +
+                $"WHERE 1=1 " +
+                $"ORDER BY content desc, book_id, id " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "InsertOneTest",
                 // This query is the query for the result we get back from the database
                 // after the insert operation. Not the query that we generate to perform

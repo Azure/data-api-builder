@@ -41,6 +41,11 @@ namespace Azure.DataGateway.Service.Resolvers
         public bool IsListQuery { get; set; }
 
         /// <summary>
+        /// Columns to use for sorting.
+        /// </summary>
+        public List<OrderByColumn>? OrderByColumns { get; set; }
+
+        /// <summary>
         /// Hold the pagination metadata for the query
         /// </summary>
         public PaginationMetadata PaginationMetadata { get; set; }
@@ -133,6 +138,8 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
             }
+
+            OrderByColumns = context.OrderByClauseInUrl is not null ? context.OrderByClauseInUrl : PrimaryKeyAsOrderByColumns();
 
             if (context.FilterClauseInUrl is not null)
             {
@@ -279,12 +286,13 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
+            OrderByColumns = PrimaryKeyAsOrderByColumns();
+
             // need to run after the rest of the query has been processed since it relies on
             // TableName, TableAlias, Columns, and _limit
             if (PaginationMetadata.IsPaginated)
             {
-                IDictionary<string, object>? afterJsonValues = SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata);
-                AddPaginationPredicate(afterJsonValues);
+                AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata));
 
                 if (PaginationMetadata.RequestedEndCursor)
                 {
@@ -345,7 +353,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Add the predicates associated with the "after" parameter of paginated queries
         /// </summary>
-        void AddPaginationPredicate(IDictionary<string, object> afterJsonValues)
+        public void AddPaginationPredicate(List<PaginationColumn> afterJsonValues)
         {
             if (!afterJsonValues.Any())
             {
@@ -353,14 +361,23 @@ namespace Azure.DataGateway.Service.Resolvers
                 return;
             }
 
-            List<Column> primaryKey = PrimaryKeyAsColumns();
-            List<string> pkValues = new();
-            foreach (Column column in primaryKey)
+            try
             {
-                pkValues.Add($"@{MakeParamWithValue(afterJsonValues[column.ColumnName])}");
+                foreach (PaginationColumn column in afterJsonValues)
+                {
+                    column.ParamName = "@" + MakeParamWithValue(
+                            GetParamAsColumnSystemType(column.Value!.ToString()!, column.ColumnName));
+                }
+            }
+            catch (ArgumentException ex)
+            {
+                throw new DataGatewayException(
+                  message: ex.Message,
+                  statusCode: HttpStatusCode.BadRequest,
+                  subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
 
-            PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(primaryKey, pkValues);
+            PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(afterJsonValues);
         }
 
         /// <summary>
@@ -656,9 +673,9 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// Exposes the primary key of the underlying table of the structure
-        /// as a list of Column
+        /// as a list of OrderByColumn
         /// </summary>
-        public List<Column> PrimaryKeyAsColumns()
+        public List<OrderByColumn> PrimaryKeyAsOrderByColumns()
         {
             if (_primaryKey == null)
             {
@@ -670,7 +687,13 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            return _primaryKey;
+            List<OrderByColumn> orderByList = new();
+            foreach (Column column in _primaryKey)
+            {
+                orderByList.Add(new OrderByColumn(column.TableAlias, column.ColumnName));
+            }
+
+            return orderByList;
         }
 
         /// <summary>

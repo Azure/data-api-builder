@@ -319,6 +319,194 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "FindTestWithPaginationVerifSinglePrimaryKeyInAfter",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        ORDER BY id
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithPaginationVerifMultiplePrimaryKeysInAfter",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _tableWithCompositePrimaryKey + @"
+                        ORDER BY book_id, id
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithQueryStringAllFieldsOrderByAsc",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      ORDER BY title, id
+                  ) AS subq"
+            },
+            {
+                "FindTestWithQueryStringAllFieldsOrderByDesc",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      ORDER BY publisher_id desc, id
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFirstSingleKeyPaginationAndOrderBy",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        ORDER BY title, id
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestVerifyMaintainColumnOrderForOrderBy",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        ORDER BY id desc, publisher_id
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestVerifyMaintainColumnOrderForOrderByInReverse",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        ORDER BY publisher_id, id desc
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFirstSingleKeyIncludedInOrderByAndPagination",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        ORDER BY id
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFirstTwoOrderByAndPagination",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        ORDER BY id
+                        LIMIT 2
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFirstTwoVerifyAfterFormedCorrectlyWithOrderBy",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTieBreakTable + @"
+                        ORDER BY birthdate, name, id desc
+                        LIMIT 2
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFirstTwoVerifyAfterBreaksTieCorrectlyWithOrderBy",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTieBreakTable + @"
+                        WHERE ((birthdate > '2001-01-01') OR(birthdate = '2001-01-01' AND name > 'Aniruddh') OR 
+                        (birthdate = '2001-01-01' AND name = 'Aniruddh' AND id > 125)) 
+                        ORDER BY birthdate, name, id 
+                        LIMIT 2
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFirstMultiKeyIncludeAllInOrderByAndPagination",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _tableWithCompositePrimaryKey + @"
+                        ORDER BY id desc, book_id
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFirstMultiKeyIncludeOneInOrderByAndPagination",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _tableWithCompositePrimaryKey + @"
+                        ORDER BY book_id, id
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFirstAndMultiColumnOrderBy",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        ORDER BY publisher_id desc, title desc
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFirstAndTiedColumnOrderBy",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        ORDER BY publisher_id desc, id asc
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFirstMultiKeyPaginationAndOrderBy",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _tableWithCompositePrimaryKey + @"
+                        ORDER BY content desc, book_id, id
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
                 "InsertOneTest",
                 @"
                     SELECT to_jsonb(subq) AS data

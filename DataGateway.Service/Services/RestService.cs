@@ -119,7 +119,7 @@ namespace Azure.DataGateway.Service.Services
             if (!string.IsNullOrWhiteSpace(queryString))
             {
                 context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
-                RequestParser.ParseQueryString(context, GraphQLMetadataProvider.ODataFilterParser);
+                RequestParser.ParseQueryString(context, GraphQLMetadataProvider.ODataFilterParser, GraphQLMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey);
             }
 
             // At this point for DELETE, the primary key should be populated in the Request Context.
@@ -187,14 +187,18 @@ namespace Azure.DataGateway.Service.Services
             // More records exist than requested, we know this by requesting 1 extra record,
             // that extra record is removed here.
             IEnumerable<JsonElement> rootEnumerated = jsonElement.EnumerateArray();
+            JsonElement lastElement = rootEnumerated.Last();
             rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
+            string after = SqlPaginationUtil.MakeCursorFromJsonElement(
+                               element: rootEnumerated.Last(),
+                               nextElement: lastElement,
+                               orderByColumns: context.OrderByClauseInUrl,
+                               primaryKey: GraphQLMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey,
+                               tableAlias: context.EntityName);
 
             // nextLink is the URL needed to get the next page of records using the same query options
             // with $after base64 encoded for opaqueness
             string path = UriHelper.GetEncodedUrl(GetHttpContext().Request).Split('?')[0];
-            string after = SqlPaginationUtil.MakeCursorFromJsonElement(
-                               element: rootEnumerated.Last(),
-                               primaryKey: GraphQLMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey);
             JsonElement nextLink = SqlPaginationUtil.CreateNextLink(
                                   path,
                                   nvc: context!.ParsedQueryString,

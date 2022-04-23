@@ -38,7 +38,7 @@ namespace Azure.DataGateway.Service.Resolvers
             string query = $"SELECT {Build(structure.Columns)}"
                 + $" FROM {fromSql}"
                 + $" WHERE {predicates}"
-                + $" ORDER BY {Build(structure.PrimaryKeyAsColumns())}"
+                + $" ORDER BY {Build(structure.OrderByColumns)}"
                 + $" LIMIT {structure.Limit()}";
 
             string subqueryName = QuoteIdentifier($"subq{structure.Counter.Next()}");

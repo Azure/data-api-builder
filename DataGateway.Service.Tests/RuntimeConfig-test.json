@@ -1,0 +1,223 @@
+{
+  "$schema": "hawaii.schema.json",
+  "data-source": {
+    "databaseType": "mssql",
+    "connectionString": ""
+  },
+  "cosmos": {
+    "database": ""
+  },
+  "mssql": {
+    "set-session-context": true
+  },
+  "postgresql": {},
+  "mysql": {},
+  "runtime": {
+    "rest": {
+      "enabled": true,
+      "path": "/api"
+    },
+    "graphql": {
+      "enabled": true,
+      "path": "/graphql",
+      "allow-introspection": true
+    },
+    "host": {
+      "cors": {
+        "origins": [ "1", "2" ],
+        "credentials": true
+      },
+      "authentication": {
+        "jwt": {
+          "audience": "",
+          "authority": "",
+          "issuer": "",
+          "issuer-key": ""
+        }
+      }
+    }
+  },
+  "entities": {
+    "publishers": {
+      "source": "dbo.publishers",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "public",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "update", "delete" ]
+        }
+      ],
+      "relationships": {
+        "books": {
+          "cardinality": "many",
+          "target.entity": "books"
+        }
+      }
+    },
+    "stocks": {
+      "source": "dbo.stocks",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "public",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "update", "delete" ]
+        }
+      ],
+      "relationships": {
+        "publisher": {
+          "cardinality": "many",
+          "target.entity": "books"
+        }
+      }
+    },
+    "books": {
+      "source": "dbo.books",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "relationships": {
+        "publisher": {
+          "cardinality": "one",
+          "target.entity": "publisher"
+        },
+        "websiteplacement": {
+          "cardinality": "one",
+          "target.entity": "book_website_placements"
+        },
+        "reviews": {
+          "cardinality": "many",
+          "target.entity": "reviews"
+        },
+        "authors": {
+          "cardinality": "many",
+          "target.entity": "authors",
+          "linking.object": "book_author_link"
+        }
+      }
+    },
+    "book_website_placements": {
+      "source": "dbo.book_website_placements",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "public",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "update", "delete" ]
+        }
+      ],
+      "relationships": {
+        "book_website_placements": {
+          "cardinality": "one",
+          "target.entity": "books"
+        }
+      }
+    },
+    "authors": {
+      "source": "dbo.authors",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "public",
+          "actions": [ "read" ]
+        }
+      ],
+      "relationships": {
+        "books": {
+          "cardinality": "many",
+          "target.entity": "books",
+          "linking.object": "book_author_link"
+        }
+      }
+    },
+    "reviews": {
+      "source": "dbo.reviews",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "public",
+          "actions": [ "read" ]
+        }
+      ],
+      "relationships": {
+        "books": {
+          "cardinality": "one",
+          "target.entity": "books"
+        }
+      }
+    },
+    "book_author_link": {
+      "source": "dbo.book_author_link",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "public",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "relationships": {
+        "books": {
+          "cardinality": "many",
+          "target.entity": "books"
+        },
+        "authors": {
+          "cardinality": "many",
+          "target.entity": "authors"
+        }
+      }
+    },
+    "magazines": {
+      "source": "dbo.magazines",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "public",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "update", "delete" ]
+        }
+      ]
+    },
+    "comics": {
+      "source": "dbo.comics",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "public",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "update", "delete" ]
+        }
+      ]
+    }
+  }
+}
+      
+    

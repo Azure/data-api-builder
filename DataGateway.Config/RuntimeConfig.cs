@@ -1,7 +1,6 @@
-using System.Net.Security;
 using System.Text.Json.Serialization;
 
-namespace Azure.DataGateway.Service.Models
+namespace Azure.DataGateway.Config
 {
     /// <summary>
     /// Define the backend database and the related connection info
@@ -29,10 +28,10 @@ namespace Azure.DataGateway.Service.Models
         // The different back end database types.
         // We have each type as its own dictionary for
         // ease of deserialization.
-        public Dictionary<string, CosmosOptions>? Cosmos { get; set; }
-        public Dictionary<string, MsSqlOptions>? MsSql { get; set; }
-        public Dictionary<string, PostgreSqlOptions>? PostgreSql { get; set; }
-        public Dictionary<string, MySqlOptions>? MySql { get; set; }
+        public CosmosOptions? Cosmos { get; set; }
+        public MsSqlOptions? MsSql { get; set; }
+        public PostgreSqlOptions? PostgreSql { get; set; }
+        public MySqlOptions? MySql { get; set; }
 
         // These settings are used to set runtime behavior and
         // any exposed entity.
@@ -101,7 +100,7 @@ namespace Azure.DataGateway.Service.Models
     /// Holds the settings used at runtime.
     /// </summary>
     public class RestGlobalSettings : ApiSettings
-    {        
+    {
         public override string Path { get; set; } = "/api";
     }
 
@@ -131,10 +130,10 @@ namespace Azure.DataGateway.Service.Models
         // bool, string, or singularplural
 
         public object? Rest { get; set; }
-        
+
         // GraphQL can be bool or GraphQLSettings type so we use object
         // same as above
-        public object? GraphQL { get; set; } 
+        public object? GraphQL { get; set; }
 
         // The permissions assigned to this object
         public DataGatewayPermission[] Permissions { get; set; }
@@ -255,6 +254,7 @@ namespace Azure.DataGateway.Service.Models
         public string Issuer { get; set; }
         public string IssuerKey { get; set; }
     }
+
     public class Actions
     {
         // Details what actions are allowed
@@ -264,13 +264,13 @@ namespace Azure.DataGateway.Service.Models
         public Fields? Fields { get; set; }
 
         // Policy contains details about item-level security rules.
-        public Policy Policy { get; set; }
+        public Policy? Policy { get; set; }
     }
 
     public class Fields
     {
-        public string[] Include { get; set; }
-        public string[] Exclude { get; set; }
+        public string[]? Include { get; set; }
+        public string[]? Exclude { get; set; }
     }
 
     /// <summary>
@@ -278,8 +278,8 @@ namespace Azure.DataGateway.Service.Models
     /// </summary>
     public class Policy
     {
-        public string Request { get; set; }
-        public string Database { get; set; }
+        public string? Request { get; set; }
+        public string? Database { get; set; }
     }
 
     /// <summary>

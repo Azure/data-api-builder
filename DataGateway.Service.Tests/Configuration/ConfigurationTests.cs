@@ -4,10 +4,10 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
@@ -28,7 +28,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         private string _cosmosResolverConfig = File.ReadAllText("cosmos-config.json");
         private string _graphqlSchema = File.ReadAllText("schema.gql");
         private const string COMSMOS_DEFAULT_CONNECTION_STRING = "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
-        private string _devConfig = File.ReadAllText("dev-config.json");
 
         [TestMethod("Validates that querying for a config that's not set returns a 503.")]
         public async Task TestNoConfigReturnsServiceUnavailable()
@@ -330,7 +329,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod]
         public void TestReadingDeveloperConfig()
         {
-            string jsonString = File.ReadAllText("dev-config.json");
+            string jsonString = File.ReadAllText("RuntimeConfig-test.json");
             // use camel case
             // convert Enum to strings
             // case insensitive
@@ -342,13 +341,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                     new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
                 }
             };
-            DeveloperConfig? devConfig = JsonSerializer.Deserialize<DeveloperConfig>(jsonString, options);
-            // use reflection to get and check properties of devConfig
-            PropertyInfo[] properties = typeof(DeveloperConfig).GetProperties();
-            foreach (PropertyInfo property in properties)
-            {
-                Assert.IsNotNull(property.GetValue(devConfig));
-            }
+            RuntimeConfig? config = JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
+            Assert.IsNotNull(config);
         }
 
         [TestCleanup]

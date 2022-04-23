@@ -311,7 +311,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod]
         public void TestReadingDeveloperConfig()
         {
-            string jsonString = File.ReadAllText("dev-config.json");
+            string jsonString = File.ReadAllText("RuntimeConfig-test.json");
             // use camel case
             // convert Enum to strings
             // case insensitive
@@ -323,12 +323,12 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                     new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
                 }
             };
-            DeveloperConfig? devConfig = JsonSerializer.Deserialize<DeveloperConfig>(jsonString, options);
+            RuntimeConfig? config = JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
             // use reflection to get and check properties of devConfig
-            PropertyInfo[] properties = typeof(DeveloperConfig).GetProperties();
+            PropertyInfo[] properties = typeof(RuntimeConfig).GetProperties();
             foreach (PropertyInfo property in properties)
             {
-                Assert.IsNotNull(property.GetValue(devConfig));
+                Assert.IsNotNull(property.GetValue(config));
             }
         }
 

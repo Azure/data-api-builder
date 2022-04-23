@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\DataGateway.Config\Azure.DataGateway.Config.csproj" />
     <ProjectReference Include="..\DataGateway.Service\Azure.DataGateway.Service.csproj" />
   </ItemGroup>
 
@@ -31,5 +32,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+
+  <ProjectExtensions><VisualStudio><UserProperties runtimeconfig_1json__JsonSchema="https://github.com/Azure/project-hawaii/blob/main/playground/hawaii.draft-01.schema.json" /></VisualStudio></ProjectExtensions>
 
 </Project>

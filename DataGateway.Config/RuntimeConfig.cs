@@ -1,4 +1,3 @@
-using System.Net.Security;
 using System.Text.Json.Serialization;
 
 namespace Azure.DataGateway.Config
@@ -131,7 +130,7 @@ namespace Azure.DataGateway.Config
         // bool, string, or singularplural
 
         public object? Rest { get; set; }
-        
+
         // GraphQL can be bool or GraphQLSettings type so we use object
         // same as above
         public object? GraphQL { get; set; } 
@@ -255,6 +254,7 @@ namespace Azure.DataGateway.Config
         public string Issuer { get; set; }
         public string IssuerKey { get; set; }
     }
+
     public class Actions
     {
         // Details what actions are allowed

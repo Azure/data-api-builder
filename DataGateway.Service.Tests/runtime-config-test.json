@@ -18,6 +18,7 @@
       "allow-introspection": true
     },
     "host": {
+      "mode": "Development",
       "cors": {
         "origins": [ "1", "2" ],
         "allow-credentials": true
@@ -26,7 +27,6 @@
         "provider": "",
         "jwt": {
           "audience": "",
-          "authority": "",
           "issuer": "",
           "issuer-key": ""
         }
@@ -72,7 +72,9 @@
       "relationships": {
         "comics": {
           "cardinality": "many",
-          "target.entity": "comics"
+          "target.entity": "comics",
+          "source.fields": [ "categoryName" ],
+          "target.fields": [ "categoryName" ]
         }
       }
     },
@@ -104,7 +106,9 @@
         "authors": {
           "cardinality": "many",
           "target.entity": "authors",
-          "linking.object": "book_author_link"
+          "linking.object": "book_author_link",
+          "linking.source.fields": ["book_id"],
+          "linking.target.fields": ["author_id"]
         }
       }
     },
@@ -119,7 +123,20 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "create", "update", "delete" ]
+          "actions": [ 
+            "create", 
+            "update",
+            {
+              "action" : "delete",
+              "policy": {
+                "database": "@claims.id eq @item.id"
+              },
+             "fields": {
+               "include": ["*"],
+               "exclude": ["id"]
+              }
+            }
+            ]
         }
       ],
       "relationships": {
@@ -173,7 +190,15 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "create", "read", "update", "delete" ]
+          "actions": [
+            {
+              "action" : "*",
+              "fields": {
+                "include": ["*"],
+                "exclude": ["issue_number"]
+              }
+            }
+          ]
         }
       ]
     },

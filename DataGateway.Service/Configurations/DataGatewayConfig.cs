@@ -1,7 +1,7 @@
 using System;
+using Azure.DataGateway.Config;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
-using Azure.DataGateway.Config;
 
 namespace Azure.DataGateway.Service.Configurations
 {

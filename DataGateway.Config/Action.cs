@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.Authorization.Infrastructure;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
 
 namespace Azure.DataGateway.Config
 {

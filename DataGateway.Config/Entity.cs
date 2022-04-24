@@ -38,7 +38,7 @@ namespace Azure.DataGateway.Config
     /// in case its a stored procedure.</param>
     public record DatabaseObjectSource(
         string Type,
-        [property: JsonPropertyName("object")]string Name,
+        [property: JsonPropertyName("object")] string Name,
         string[]? Parameters);
 
     /// <summary>

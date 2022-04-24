@@ -342,8 +342,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             };
             try
             {
-               RuntimeConfig runtimeConfig =
-                    JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
+                RuntimeConfig runtimeConfig =
+                     JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
             }
             catch (Exception exception)
             {

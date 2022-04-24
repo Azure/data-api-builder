@@ -1,8 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
+using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using static Azure.DataGateway.Service.Exceptions.DataGatewayException;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -30,45 +34,44 @@ namespace Azure.DataGateway.Service.Resolvers
                 return string.Empty;
             }
 
-            if (predicate.PrimaryKey.Count > 1)
+            if (predicate.Columns.Count > 1)
             {
                 StringBuilder result = new("(");
-                for (int i = 0; i < predicate.PrimaryKey.Count; i++)
+                for (int i = 0; i < predicate.Columns.Count; i++)
                 {
                     if (i > 0)
                     {
                         result.Append(" OR ");
                     }
 
-                    result.Append($"({MakePaginationInequality(predicate.PrimaryKey, predicate.Values, i)})");
+                    result.Append($"({MakePaginationInequality(predicate.Columns, untilIndex: i)})");
                 }
 
                 result.Append(")");
-
                 return result.ToString();
             }
             else
             {
-                return MakePaginationInequality(predicate.PrimaryKey, predicate.Values, 0);
+                return MakePaginationInequality(predicate.Columns, untilIndex: 0);
             }
         }
 
         /// <summary>
-        /// Create an inequality where all primary key columns up to untilIndex are equilized to the
-        /// respective pkValue, and the primary key colum at untilIndex has to be greater than its pkValue
+        /// Create an inequality where all columns up to untilIndex are equilized to the
+        /// respective values, and the column at untilIndex has to be compared to its Value
         /// E.g. for
         /// primaryKey: [a, b, c, d, e, f]
         /// pkValues: [A, B, C, D, E, F]
         /// untilIndex: 2
         /// generate <c>a = A AND b = B AND c > C</c>
         /// </summary>
-        private string MakePaginationInequality(List<Column> primaryKey, List<string> pkValues, int untilIndex)
+        private string MakePaginationInequality(List<PaginationColumn> columns, int untilIndex)
         {
             StringBuilder result = new();
             for (int i = 0; i <= untilIndex; i++)
             {
-                string op = i == untilIndex ? ">" : "=";
-                result.Append($"{Build(primaryKey[i])} {op} {pkValues[i]}");
+                string op = i == untilIndex ? GetComparisonFromDirection(columns[i].Direction) : "=";
+                result.Append($"{Build(columns[i], printDirection: false)} {op} {columns[i].ParamName}");
 
                 if (i < untilIndex)
                 {
@@ -77,6 +80,27 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return result.ToString();
+        }
+
+        /// <summary>
+        /// Helper function returns the comparison operator appropriate
+        /// for the given direction.
+        /// </summary>
+        /// <param name="direction">String represents direction.</param>
+        /// <returns>Correct comparison operator.</returns>
+        private static string GetComparisonFromDirection(OrderByDir direction)
+        {
+            switch (direction)
+            {
+                case OrderByDir.Asc:
+                    return ">";
+                case OrderByDir.Desc:
+                    return "<";
+                default:
+                    throw new DataGatewayException(message: $"Invalid sorting direction for pagination: {direction}",
+                                                   statusCode: HttpStatusCode.BadRequest,
+                                                   subStatusCode: SubStatusCodes.BadRequest);
+            }
         }
 
         /// <summary>
@@ -95,6 +119,19 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 return QuoteIdentifier(column.ColumnName);
             }
+        }
+
+        /// <summary>
+        /// Build orderby column as
+        /// {TableAlias}.{ColumnName} {direction}
+        /// If TableAlias is null
+        /// {ColumnName} {direction}
+        /// </summary>
+        protected virtual string Build(OrderByColumn column, bool printDirection = true)
+        {
+            StringBuilder builder = new();
+            builder.Append(Build(column as Column));
+            return printDirection ? builder.Append(" " + column.Direction).ToString() : builder.ToString();
         }
 
         /// <summary>
@@ -118,6 +155,14 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Build each labelled column and join by ", " separator
         /// </summary>
         protected string Build(List<LabelledColumn> columns)
+        {
+            return string.Join(", ", columns.Select(c => Build(c)));
+        }
+
+        /// <summary>
+        /// Build each OrderByColumn and join by ", " separator
+        /// </summary>
+        protected string Build(List<OrderByColumn> columns)
         {
             return string.Join(", ", columns.Select(c => Build(c)));
         }

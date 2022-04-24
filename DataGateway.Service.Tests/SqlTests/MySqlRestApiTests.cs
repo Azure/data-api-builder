@@ -10,7 +10,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
 {
-
     [TestClass, TestCategory(TestCategory.MYSQL)]
     public class MySqlRestApiTests : RestApiTestBase
     {
@@ -336,6 +335,184 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                       WHERE book_id > 1 OR (book_id = 1 AND id > 567)
                       ORDER BY book_id, id
                       LIMIT 100
+                  ) AS subq"
+            },
+            {
+                "FindTestWithPaginationVerifSinglePrimaryKeyInAfter",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      ORDER BY id
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
+                "FindTestWithPaginationVerifMultiplePrimaryKeysInAfter",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'content', content, 'book_id', book_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _tableWithCompositePrimaryKey + @"
+                      ORDER BY book_id, id
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
+                "FindTestWithQueryStringAllFieldsOrderByAsc",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      ORDER BY title, id
+                      LIMIT 100
+                  ) AS subq"
+            },
+            {
+                "FindTestWithQueryStringAllFieldsOrderByDesc",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      ORDER BY publisher_id desc, id
+                      LIMIT 100
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFirstSingleKeyPaginationAndOrderBy",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      ORDER BY title, id
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
+                "FindTestVerifyMaintainColumnOrderForOrderBy",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT id, title, publisher_id
+                      FROM " + _integrationTableName + @"
+                      ORDER BY id desc, publisher_id
+                      LIMIT 100
+                  ) AS subq"
+            },
+            {
+                "FindTestVerifyMaintainColumnOrderForOrderByInReverse",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT id, title, publisher_id
+                      FROM " + _integrationTableName + @"
+                      ORDER BY publisher_id, id desc
+                      LIMIT 100
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFirstSingleKeyIncludedInOrderByAndPagination",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      ORDER BY id
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFirstTwoOrderByAndPagination",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      ORDER BY id
+                      LIMIT 2
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFirstTwoVerifyAfterFormedCorrectlyWithOrderBy",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'name', name, 'birthdate', birthdate)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTieBreakTable + @" 
+                      ORDER BY birthdate, name, id desc
+                      LIMIT 2
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFirstTwoVerifyAfterBreaksTieCorrectlyWithOrderBy",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'name', name, 'birthdate', birthdate)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTieBreakTable + @"
+                      WHERE ((birthdate > '2001-01-01') OR(birthdate = '2001-01-01' AND name > 'Aniruddh') OR 
+                      (birthdate = '2001-01-01' AND name = 'Aniruddh' AND id > 125)) 
+                      ORDER BY birthdate, name, id 
+                      LIMIT 2
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFirstMultiKeyIncludeAllInOrderByAndPagination",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'content', content, 'book_id', book_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _tableWithCompositePrimaryKey + @"
+                      ORDER BY id desc, book_id
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFirstMultiKeyIncludeOneInOrderByAndPagination",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'content', content, 'book_id', book_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _tableWithCompositePrimaryKey + @"
+                      ORDER BY book_id, id
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFirstAndMultiColumnOrderBy",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      ORDER BY publisher_id desc, title desc
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFirstAndTiedColumnOrderBy",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      ORDER BY publisher_id desc, id asc
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFirstMultiKeyPaginationAndOrderBy",
+                @"
+                  SELECT JSON_OBJECT('id', id, 'content', content, 'book_id', book_id) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _tableWithCompositePrimaryKey + @"
+                      ORDER BY content desc, book_id, id
+                      LIMIT 1
                   ) AS subq"
             },
             {

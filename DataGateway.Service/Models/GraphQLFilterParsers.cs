@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Azure.DataGateway.Config;
 using HotChocolate.Language;
 
 namespace Azure.DataGateway.Service.Models

@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Config;
 using Microsoft.OData.Edm;
 
 namespace Azure.DataGateway.Service.Services

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Text;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Models;
 using MySqlConnector;
 
@@ -38,7 +39,7 @@ namespace Azure.DataGateway.Service.Resolvers
             string query = $"SELECT {Build(structure.Columns)}"
                 + $" FROM {fromSql}"
                 + $" WHERE {predicates}"
-                + $" ORDER BY {Build(structure.PrimaryKeyAsColumns())}"
+                + $" ORDER BY {Build(structure.OrderByColumns)}"
                 + $" LIMIT {structure.Limit()}";
 
             string subqueryName = QuoteIdentifier($"subq{structure.Counter.Next()}");

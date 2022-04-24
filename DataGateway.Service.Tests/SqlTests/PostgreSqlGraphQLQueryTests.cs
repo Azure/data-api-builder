@@ -582,7 +582,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// The response for the query will contain the alias instead of raw db field.
         /// </summary>
         [TestMethod]
-        public async Task TestAliasSupportForGraphQlQueryFields()
+        public async Task TestAliasSupportForGraphQLQueryFields()
         {
             string graphQLQueryName = "getBooks";
             string graphQLQuery = @"{

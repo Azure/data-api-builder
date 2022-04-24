@@ -401,7 +401,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// The response for the query will use the alias instead of raw db column.
         /// </summary>
         [TestMethod]
-        public async Task TestAliasSupportForGraphQlMutationQueryFields()
+        public async Task TestAliasSupportForGraphQLMutationQueryFields()
         {
             string graphQLMutationName = "insertBook";
             string graphQLMutation = @"

@@ -542,7 +542,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// if the mutation query has returned the correct information with Aliases where provided.
         /// </summary>
         [TestMethod]
-        public async Task TestAliasSupportForGraphQlMutationQueryFields()
+        public async Task TestAliasSupportForGraphQLMutationQueryFields()
         {
             string graphQLMutationName = "insertBook";
             string graphQLMutation = @"

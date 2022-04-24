@@ -395,6 +395,43 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        /// <summary>
+        /// Test to check graphQL support for aliases(arbitrarily set by user while making request).
+        /// book_id and book_title are aliases used for corresponding query fields.
+        /// The response for the query will use the alias instead of raw db column.
+        /// </summary>
+        [TestMethod]
+        public async Task TestAliasSupportForGraphQLMutationQueryFields()
+        {
+            string graphQLMutationName = "insertBook";
+            string graphQLMutation = @"
+                mutation {
+                    insertBook(title: ""My New Book"", publisher_id: 1234) {
+                        book_id: id
+                        book_title: title
+                    }
+                }
+            ";
+
+            string msSqlQuery = @"
+                SELECT TOP 1 [table0].[id] AS [book_id],
+                    [table0].[title] AS [book_title]
+                FROM [books] AS [table0]
+                WHERE [table0].[id] = 5001
+                    AND [table0].[title] = 'My New Book'
+                    AND [table0].[publisher_id] = 1234
+                ORDER BY [id]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Negative Tests

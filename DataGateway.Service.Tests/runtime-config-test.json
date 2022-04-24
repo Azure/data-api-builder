@@ -1,17 +1,12 @@
 {
-  "$schema": "hawaii.schema.json",
+  "$schema": "urn:hawaii:config:schema:draft-01",
   "data-source": {
-    "databaseType": "mssql",
-    "connectionString": ""
-  },
-  "cosmos": {
-    "database": ""
+    "database-type": "mssql",
+    "connection-string": ""
   },
   "mssql": {
     "set-session-context": true
   },
-  "postgresql": {},
-  "mysql": {},
   "runtime": {
     "rest": {
       "enabled": true,
@@ -25,9 +20,10 @@
     "host": {
       "cors": {
         "origins": [ "1", "2" ],
-        "credentials": true
+        "allow-credentials": true
       },
       "authentication": {
+        "provider": "",
         "jwt": {
           "audience": "",
           "authority": "",
@@ -44,12 +40,12 @@
       "graphql": true,
       "permissions": [
         {
-          "role": "public",
+          "role": "anonymous",
           "actions": [ "read" ]
         },
         {
           "role": "authenticated",
-          "actions": [ "create", "update", "delete" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {
@@ -65,29 +61,31 @@
       "graphql": true,
       "permissions": [
         {
-          "role": "public",
+          "role": "anonymous",
           "actions": [ "read" ]
         },
         {
           "role": "authenticated",
-          "actions": [ "create", "update", "delete" ]
+          "actions": [ "create", "read", "update" ]
         }
       ],
       "relationships": {
-        "publisher": {
+        "comics": {
           "cardinality": "many",
-          "target.entity": "books"
+          "target.entity": "comics"
         }
       }
     },
     "books": {
       "source": "dbo.books",
-      "rest": true,
-      "graphql": true,
       "permissions": [
         {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
           "role": "authenticated",
-          "actions": [ "create", "read", "update", "delete" ]
+          "actions": [ "create", "update", "delete" ]
         }
       ],
       "relationships": {
@@ -116,7 +114,7 @@
       "graphql": true,
       "permissions": [
         {
-          "role": "public",
+          "role": "anonymous",
           "actions": [ "read" ]
         },
         {
@@ -137,7 +135,7 @@
       "graphql": true,
       "permissions": [
         {
-          "role": "public",
+          "role": "anonymous",
           "actions": [ "read" ]
         }
       ],
@@ -152,10 +150,9 @@
     "reviews": {
       "source": "dbo.reviews",
       "rest": true,
-      "graphql": true,
       "permissions": [
         {
-          "role": "public",
+          "role": "anonymous",
           "actions": [ "read" ]
         }
       ],
@@ -166,58 +163,44 @@
         }
       }
     },
-    "book_author_link": {
-      "source": "dbo.book_author_link",
-      "rest": true,
-      "graphql": true,
-      "permissions": [
-        {
-          "role": "public",
-          "actions": [ "create", "read", "update", "delete" ]
-        }
-      ],
-      "relationships": {
-        "books": {
-          "cardinality": "many",
-          "target.entity": "books"
-        },
-        "authors": {
-          "cardinality": "many",
-          "target.entity": "authors"
-        }
-      }
-    },
     "magazines": {
       "source": "dbo.magazines",
-      "rest": true,
       "graphql": true,
       "permissions": [
         {
-          "role": "public",
+          "role": "anonymous",
           "actions": [ "read" ]
         },
         {
           "role": "authenticated",
-          "actions": [ "create", "update", "delete" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ]
     },
     "comics": {
       "source": "dbo.comics",
       "rest": true,
-      "graphql": true,
+      "graphql": false,
       "permissions": [
         {
-          "role": "public",
+          "role": "anonymous",
           "actions": [ "read" ]
         },
         {
           "role": "authenticated",
-          "actions": [ "create", "update", "delete" ]
+          "actions": [ "create", "read", "delete" ]
+        }
+      ]
+    },
+    "brokers": {
+      "source": "dbo.brokers",
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
         }
       ]
     }
   }
 }
-      
-    

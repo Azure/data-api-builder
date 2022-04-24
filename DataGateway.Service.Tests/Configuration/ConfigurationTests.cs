@@ -299,7 +299,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 { "DataGatewayConfig:ResolverConfigFile", "some-file.json" }
             };
             provider.SetManyAndReload(toUpdate);
-            Assert.AreEqual("PostgreSql", finalDatabaseType);
+            Assert.AreEqual("postgresql", finalDatabaseType);
             Assert.AreEqual("some-file.json", finalResolverConfigFile);
         }
 

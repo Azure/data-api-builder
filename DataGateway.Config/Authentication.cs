@@ -4,6 +4,7 @@ namespace Azure.DataGateway.Config
     /// Authentication configuration.
     /// </summary>
     /// <param name="Provider">Identity Provider. Default is EasyAuth.</param>
+
     /// <param name="Jwt">Settings enabling validation of the received JWT token.
     /// Required only when Provider is other than EasyAuth.</param>
     public record AuthenticationConfig(
@@ -12,7 +13,7 @@ namespace Azure.DataGateway.Config
 
     /// <summary>
     /// Settings useful for validating the received Json Web Token (JWT).
-    /// </summary>
+    /// </summary> 
     /// <param name="Audience"></param>
     /// <param name="Issuer"></param>
     /// <param name="IssuerKey"></param>

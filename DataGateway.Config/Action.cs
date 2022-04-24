@@ -50,9 +50,10 @@ namespace Azure.DataGateway.Config
 
     /// <summary>
     /// Details the item-level security rules.
-    /// </summary>
+    /// </summary> 
     /// <param name="Request">A rule to be checked before
     /// sending any request to the database.</param>
+
     /// <param name="Database">An OData style filter rule
     /// (predicate) that will be injected in the query sent to the database.</param>
     public record Policy(

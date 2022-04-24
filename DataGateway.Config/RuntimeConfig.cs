@@ -13,26 +13,30 @@ namespace Azure.DataGateway.Config
     ///  special/specific behavior related to the chosen backend database
     /// </summary>
     /// <param name="Schema">Schema used for validation will also contain version information.</param>
+
     /// <param name="DataSource">Contains information about which
     /// backend database type to connect to using its connection string.</param>
+
+    /// <param name="CosmosDb/MsSql/MySql/PostgreSql">Different backend database specific options.
+    /// Each type is its own dictionary for ease of deserialization.</param>
+
+    /// <param name="RuntimeSettings">These settings are used to set runtime behavior on
+    /// all the exposed entities. If not provided in the config, default settings will be set.</param>
+
     /// <param name="Entities">Represents the mapping between database
     /// objects and an exposed endpoint, along with relationships,
     /// field mapping and permission definition.
     /// By default, the entity names instruct the runtime
     /// to expose GraphQL types with that name and a REST endpoint reachable
     /// via an /entity-name url path.</param>
-    /// <param name="CosmosDb/MsSql/MySql/PostgreSql">Different backend database specific options.
-    /// Each type is its own dictionary for ease of deserialization.</param>
-    /// <param name="RuntimeSettings">These settings are used to set runtime behavior on
-    /// all the exposed entities. If not provided in the config, default settings will be set.</param>
     public record RuntimeConfig(
         [property: JsonPropertyName("$schema")] string Schema,
         [property: JsonPropertyName("data-source")] DataSource DataSource,
-        Dictionary<string, Entity> Entities,
         CosmosDbOptions? CosmosDb,
         MsSqlOptions? MsSql,
         PostgreSqlOptions? PostgreSql,
         MySqlOptions? MySql,
         [property: JsonPropertyName("runtime")]
-        Dictionary<GlobalSettingsType, GlobalSettings> RuntimeSettings);
+        Dictionary<GlobalSettingsType, GlobalSettings> RuntimeSettings,
+        Dictionary<string, Entity> Entities);
 }

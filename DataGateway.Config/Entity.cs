@@ -4,20 +4,25 @@ namespace Azure.DataGateway.Config
 {
     /// <summary>
     /// Defines the Entities that are exposed.
-    /// </summary>
+    /// </summary>   
     /// <param name="Source">The underlying database object to which
     /// the exposed entity is connected to.</param>
+
     /// <param name="Rest">Can be a bool or RestEntitySettings type.
     /// When boolean, it describes if the entity is to be exposed.
     /// When RestEntitySettings, describes the REST endpoint settings
     /// specific to this entity.</param>
+
     /// <param name="GraphQL">Can be a bool or GraphQLEntitySettings type.
     /// When GraphQLEntitySettings, describes the GraphQL settings
     /// specific to this entity.</param>
+
     /// <param name="Permissions">Permissions assigned to this entity.</param>
+
     /// <param name="Relationships">Defines how an entity is related to other exposed
     /// entities and optionally provides details on what underlying database
     /// objects can be used to support such relationships.</param>
+
     /// <param name="Mappings"> Defines mappings between database fields
     /// and GraphQL and REST fields.</param>
     public record Entity(

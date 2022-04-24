@@ -322,14 +322,13 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// This function will attempt to read the dev-config.json
-        /// file into the DeveloperConfig class. It will then verify
-        /// that none of the properties set in this class are null.
+        /// This function will attempt to read the runtime-config-test.json
+        /// file into the RuntimeConfig class. It verifies the deserialization succeeds.
         /// </summary>
-        [TestMethod]
-        public void TestReadingDeveloperConfig()
+        [TestMethod("Validates if deserialization of new runtime config format succeeds.")]
+        public void TestReadingRuntimeConfig()
         {
-            string jsonString = File.ReadAllText("RuntimeConfig-test.json");
+            string jsonString = File.ReadAllText("runtime-config-test.json");
             // use camel case
             // convert Enum to strings
             // case insensitive
@@ -341,8 +340,15 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                     new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
                 }
             };
-            RuntimeConfig? config = JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
-            Assert.IsNotNull(config);
+            try
+            {
+               RuntimeConfig runtimeConfig =
+                    JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
+            }
+            catch (Exception exception)
+            {
+                Assert.Fail($"Failed to deserialize: {exception.Message}");
+            }
         }
 
         [TestCleanup]

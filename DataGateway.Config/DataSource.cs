@@ -15,9 +15,9 @@ namespace Azure.DataGateway.Config
         string ConnectionString);
 
     /// <summary>
-    /// Options for Cosmos database.
+    /// Options for CosmosDb database.
     /// </summary>
-    public record CosmosOptions(string Database);
+    public record CosmosDbOptions(string Database);
 
     /// <summary>
     /// Options for MsSql database.

@@ -29,7 +29,7 @@ namespace Azure.DataGateway.Config
         [property: JsonPropertyName("$schema")] string Schema,
         [property: JsonPropertyName("data-source")] DataSource DataSource,
         Dictionary<string, Entity> Entities,
-        CosmosOptions? Cosmos,
+        CosmosDbOptions? Cosmos,
         MsSqlOptions? MsSql,
         PostgreSqlOptions? PostgreSql,
         MySqlOptions? MySql,

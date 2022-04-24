@@ -277,7 +277,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             }
             else
             {
-                Assert.AreEqual("Cosmos", finalDatabaseType);
+                Assert.AreEqual("cosmosdb", finalDatabaseType);
             }
 
             token.RegisterChangeCallback((state) =>

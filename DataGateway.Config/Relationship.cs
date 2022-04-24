@@ -3,8 +3,7 @@ using System.Text.Json.Serialization;
 namespace Azure.DataGateway.Config
 {
     /// <summary>
-    /// Defines the relationships between entities
-    /// that can not be inferred.
+    /// Defines the relationships between entities.
     /// </summary>
     /// <param name="Cardinality">The cardinality of the target entity.</param>
     /// <param name="TargetEntity">Another exposed entity to which the source
@@ -14,11 +13,11 @@ namespace Azure.DataGateway.Config
     /// <param name="TargetFields">Can be used to designate which columns
     /// to be used in the target entity we connect to.</param>
     /// <param name="LinkingObject">Database object that is used in the backend
-    /// database to support the M:N relationship.</param>
-    /// <param name="LinkingSourceFields">Database fields in the linking object or entity that
+    /// database to support an M:N relationship.</param>
+    /// <param name="LinkingSourceFields">Database fields in the linking object that
     /// will be used to connect to the related item in the source entity.</param>
-    /// <param name="LinkingTargetFields">Database fields in the linking object or entity that
-    /// will be used to connect to the related item in the target entity</param>
+    /// <param name="LinkingTargetFields">Database fields in the linking object that
+    /// will be used to connect to the related item in the target entity.</param>
     public record Relationship(
         Cardinality Cardinality,
         [property: JsonPropertyName("target.entity")]
@@ -30,9 +29,9 @@ namespace Azure.DataGateway.Config
         [property: JsonPropertyName("linking.object")]
         string? LinkingObject,
         [property: JsonPropertyName("linking.source.fields")]
-        string[] LinkingSourceFields,
+        string[]? LinkingSourceFields,
         [property: JsonPropertyName("linking.target.fields")]
-        string[] LinkingTargetFields);
+        string[]? LinkingTargetFields);
 
     /// <summary>
     /// Kinds of relationship cardinality.

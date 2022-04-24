@@ -12,7 +12,7 @@ namespace Azure.DataGateway.Config
     /// When RestEntitySettings, describes the REST endpoint settings
     /// specific to this entity.</param>
     /// <param name="GraphQL">Can be a bool or GraphQLEntitySettings type.
-    /// When RestEntitySettings, describes the GraphQL settings
+    /// When GraphQLEntitySettings, describes the GraphQL settings
     /// specific to this entity.</param>
     /// <param name="Permissions">Permissions assigned to this entity.</param>
     /// <param name="Relationships">Defines how an entity is related to other exposed

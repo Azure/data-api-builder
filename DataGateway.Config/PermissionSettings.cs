@@ -7,7 +7,8 @@ namespace Azure.DataGateway.Config
     /// <param name="Actions">Either a mixed-type array of a string or an object
     /// that details what actions are allowed to related roles.
     /// In a simple case, the array members are one of the following:
-    /// *, create, read, update, delete </param>
+    /// create, read, update, delete.
+    /// The wildcard * can be used to mean all the actions.</param>
     public record PermissionSettings(
         string Role,
         object[] Actions);

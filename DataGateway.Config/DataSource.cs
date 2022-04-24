@@ -41,7 +41,7 @@ namespace Azure.DataGateway.Config
     /// </summary>
     public enum DatabaseType
     {
-        cosmosdb,
+        cosmos,
         mssql,
         mysql,
         postgresql

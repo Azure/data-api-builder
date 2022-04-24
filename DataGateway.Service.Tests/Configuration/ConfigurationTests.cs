@@ -57,7 +57,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
             Dictionary<string, string> config = new()
             {
-                { "DataGatewayConfig:DatabaseType", "Cosmos" },
+                { "DataGatewayConfig:DatabaseType", "cosmosdb" },
                 { "DataGatewayConfig:ResolverConfigFile", "cosmos-config.json" },
                 { "DataGatewayConfig:DatabaseConnection:ConnectionString", "Cosmos" }
             };
@@ -176,14 +176,14 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Dictionary<string, string> config = new()
             {
                 { "Test", "Value" },
-                { "DataGatewayConfig:DatabaseType", "MsSql" }
+                { "DataGatewayConfig:DatabaseType", "mssql" }
             };
 
             HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(config));
             Assert.AreEqual(HttpStatusCode.Conflict, postResult.StatusCode);
             // Since the body of the response when there's a conflict is the conflicting key:value pair, here we
-            // expect DatabaseType:MsSql.
-            Assert.AreEqual("DataGatewayConfig:DatabaseType:MsSql", await postResult.Content.ReadAsStringAsync());
+            // expect DatabaseType:mssql.
+            Assert.AreEqual("DataGatewayConfig:DatabaseType:mssql", await postResult.Content.ReadAsStringAsync());
         }
 
         [TestMethod("Validates that setting the configuration at runtime will instantiate the proper classes.")]
@@ -193,7 +193,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             HttpClient client = server.CreateClient();
             Dictionary<string, string> config = new()
             {
-                { "DataGatewayConfig:DatabaseType", "Cosmos" },
+                { "DataGatewayConfig:DatabaseType", "cosmosdb" },
                 { "DataGatewayConfig:ResolverConfigFile", "cosmos-config.json" },
                 { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
             };
@@ -211,7 +211,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             HttpClient client = server.CreateClient();
             Dictionary<string, string> config = new()
             {
-                { "DataGatewayConfig:DatabaseType", "Cosmos" },
+                { "DataGatewayConfig:DatabaseType", "cosmosdb" },
                 { "DataGatewayConfig:ResolverConfig", _cosmosResolverConfig },
                 { "DataGatewayConfig:GraphQLSchema", _graphqlSchema },
                 { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
@@ -228,7 +228,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             HttpClient client = server.CreateClient();
             Dictionary<string, string> config = new()
             {
-                { "DataGatewayConfig:DatabaseType", "Cosmos" },
+                { "DataGatewayConfig:DatabaseType", "cosmosdb" },
                 { "DataGatewayConfig:ResolverConfig", _cosmosResolverConfig },
                 { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
             };
@@ -246,7 +246,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             HttpClient client = server.CreateClient();
             Dictionary<string, string> config = new()
             {
-                { "DataGatewayConfig:DatabaseType", "Cosmos" },
+                { "DataGatewayConfig:DatabaseType", "cosmosdb" },
                 { "DataGatewayConfig:ResolverConfig", _cosmosResolverConfig },
                 { "DataGatewayConfig:ResolverConfigFile", "cosmos-config.json" },
                 { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
@@ -264,7 +264,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             InMemoryUpdateableConfigurationProvider provider = new();
             Dictionary<string, string> config = new()
             {
-                { "DataGatewayConfig:DatabaseType", "Cosmos" },
+                { "DataGatewayConfig:DatabaseType", "cosmosdb" },
             };
             provider.SetManyAndReload(config);
 
@@ -295,7 +295,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
             Dictionary<string, string> toUpdate = new()
             {
-                { "DataGatewayConfig:DatabaseType", "PostgreSql" },
+                { "DataGatewayConfig:DatabaseType", "postgresql" },
                 { "DataGatewayConfig:ResolverConfigFile", "some-file.json" }
             };
             provider.SetManyAndReload(toUpdate);

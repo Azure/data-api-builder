@@ -65,7 +65,7 @@ namespace Azure.DataGateway.Service
                     ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
                 switch (dataGatewayConfig.CurrentValue.DatabaseType)
                 {
-                    case DatabaseType.cosmosdb:
+                    case DatabaseType.cosmos:
                         return null!;
                     case DatabaseType.mssql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlMetadataProvider>(serviceProvider);
@@ -84,7 +84,7 @@ namespace Azure.DataGateway.Service
                 IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
                 switch (dataGatewayConfig.CurrentValue.DatabaseType)
                 {
-                    case DatabaseType.cosmosdb:
+                    case DatabaseType.cosmos:
                         return ActivatorUtilities.
                             GetServiceOrCreateInstance<GraphQLFileMetadataProvider>(serviceProvider);
                     case DatabaseType.mssql:
@@ -104,7 +104,7 @@ namespace Azure.DataGateway.Service
                 IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
                 switch (dataGatewayConfig.CurrentValue.DatabaseType)
                 {
-                    case DatabaseType.cosmosdb:
+                    case DatabaseType.cosmos:
                         return ActivatorUtilities.GetServiceOrCreateInstance<CosmosQueryEngine>(serviceProvider);
                     case DatabaseType.mssql:
                     case DatabaseType.postgresql:
@@ -121,7 +121,7 @@ namespace Azure.DataGateway.Service
                 IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
                 switch (dataGatewayConfig.CurrentValue.DatabaseType)
                 {
-                    case DatabaseType.cosmosdb:
+                    case DatabaseType.cosmos:
                         return ActivatorUtilities.GetServiceOrCreateInstance<CosmosMutationEngine>(serviceProvider);
                     case DatabaseType.mssql:
                     case DatabaseType.postgresql:
@@ -138,7 +138,7 @@ namespace Azure.DataGateway.Service
                 IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
                 switch (dataGatewayConfig.CurrentValue.DatabaseType)
                 {
-                    case DatabaseType.cosmosdb:
+                    case DatabaseType.cosmos:
                         return ActivatorUtilities.GetServiceOrCreateInstance<CosmosConfigValidator>(serviceProvider);
                     case DatabaseType.mssql:
                     case DatabaseType.postgresql:
@@ -155,7 +155,7 @@ namespace Azure.DataGateway.Service
                 IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
                 switch (dataGatewayConfig.CurrentValue.DatabaseType)
                 {
-                    case DatabaseType.cosmosdb:
+                    case DatabaseType.cosmos:
                         return null!;
                     case DatabaseType.mssql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<SqlConnection>>(serviceProvider);
@@ -174,7 +174,7 @@ namespace Azure.DataGateway.Service
                 IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
                 switch (dataGatewayConfig.CurrentValue.DatabaseType)
                 {
-                    case DatabaseType.cosmosdb:
+                    case DatabaseType.cosmos:
                         return null!;
                     case DatabaseType.mssql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlQueryBuilder>(serviceProvider);
@@ -193,7 +193,7 @@ namespace Azure.DataGateway.Service
                 IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
                 switch (dataGatewayConfig.CurrentValue.DatabaseType)
                 {
-                    case DatabaseType.cosmosdb:
+                    case DatabaseType.cosmos:
                         return null!;
                     case DatabaseType.mssql:
                         return new DbExceptionParserBase();

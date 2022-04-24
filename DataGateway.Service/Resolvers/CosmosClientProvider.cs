@@ -26,7 +26,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
         private void InitializeClient(DataGatewayConfig configuration)
         {
-            if (configuration.DatabaseType != DatabaseType.cosmosdb)
+            if (configuration.DatabaseType != DatabaseType.cosmos)
             {
                 throw new InvalidOperationException("We shouldn't need a CosmosClientProvider if we're not accessing a CosmosDb");
             }

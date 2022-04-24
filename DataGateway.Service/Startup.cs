@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.AuthenticationHelpers;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
@@ -64,13 +65,13 @@ namespace Azure.DataGateway.Service
                     ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
                 switch (dataGatewayConfig.CurrentValue.DatabaseType)
                 {
-                    case DatabaseType.Cosmos:
+                    case DatabaseType.cosmosdb:
                         return null!;
-                    case DatabaseType.MsSql:
+                    case DatabaseType.mssql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlMetadataProvider>(serviceProvider);
-                    case DatabaseType.PostgreSql:
+                    case DatabaseType.postgresql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlMetadataProvider>(serviceProvider);
-                    case DatabaseType.MySql:
+                    case DatabaseType.mysql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<MySqlMetadataProvider>(serviceProvider);
                     default:
                         throw new NotSupportedException(string.Format("The provided DatabaseType value: {0} is currently not supported." +
@@ -83,12 +84,12 @@ namespace Azure.DataGateway.Service
                 IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
                 switch (dataGatewayConfig.CurrentValue.DatabaseType)
                 {
-                    case DatabaseType.Cosmos:
+                    case DatabaseType.cosmosdb:
                         return ActivatorUtilities.
                             GetServiceOrCreateInstance<GraphQLFileMetadataProvider>(serviceProvider);
-                    case DatabaseType.MsSql:
-                    case DatabaseType.PostgreSql:
-                    case DatabaseType.MySql:
+                    case DatabaseType.mssql:
+                    case DatabaseType.postgresql:
+                    case DatabaseType.mysql:
                         return ActivatorUtilities.
                             GetServiceOrCreateInstance<SqlGraphQLFileMetadataProvider>(serviceProvider);
                     default:
@@ -103,11 +104,11 @@ namespace Azure.DataGateway.Service
                 IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
                 switch (dataGatewayConfig.CurrentValue.DatabaseType)
                 {
-                    case DatabaseType.Cosmos:
+                    case DatabaseType.cosmosdb:
                         return ActivatorUtilities.GetServiceOrCreateInstance<CosmosQueryEngine>(serviceProvider);
-                    case DatabaseType.MsSql:
-                    case DatabaseType.PostgreSql:
-                    case DatabaseType.MySql:
+                    case DatabaseType.mssql:
+                    case DatabaseType.postgresql:
+                    case DatabaseType.mysql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<SqlQueryEngine>(serviceProvider);
                     default:
                         throw new NotSupportedException(string.Format("The provided DatabaseType value: {0} is currently not supported." +
@@ -120,11 +121,11 @@ namespace Azure.DataGateway.Service
                 IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
                 switch (dataGatewayConfig.CurrentValue.DatabaseType)
                 {
-                    case DatabaseType.Cosmos:
+                    case DatabaseType.cosmosdb:
                         return ActivatorUtilities.GetServiceOrCreateInstance<CosmosMutationEngine>(serviceProvider);
-                    case DatabaseType.MsSql:
-                    case DatabaseType.PostgreSql:
-                    case DatabaseType.MySql:
+                    case DatabaseType.mssql:
+                    case DatabaseType.postgresql:
+                    case DatabaseType.mysql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<SqlMutationEngine>(serviceProvider);
                     default:
                         throw new NotSupportedException(string.Format("The provided DatabaseType value: {0} is currently not supported." +
@@ -137,11 +138,11 @@ namespace Azure.DataGateway.Service
                 IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
                 switch (dataGatewayConfig.CurrentValue.DatabaseType)
                 {
-                    case DatabaseType.Cosmos:
+                    case DatabaseType.cosmosdb:
                         return ActivatorUtilities.GetServiceOrCreateInstance<CosmosConfigValidator>(serviceProvider);
-                    case DatabaseType.MsSql:
-                    case DatabaseType.PostgreSql:
-                    case DatabaseType.MySql:
+                    case DatabaseType.mssql:
+                    case DatabaseType.postgresql:
+                    case DatabaseType.mysql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<SqlConfigValidator>(serviceProvider);
                     default:
                         throw new NotSupportedException(string.Format("The provided DatabaseType value: {0} is currently not supported." +
@@ -154,13 +155,13 @@ namespace Azure.DataGateway.Service
                 IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
                 switch (dataGatewayConfig.CurrentValue.DatabaseType)
                 {
-                    case DatabaseType.Cosmos:
+                    case DatabaseType.cosmosdb:
                         return null!;
-                    case DatabaseType.MsSql:
+                    case DatabaseType.mssql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<SqlConnection>>(serviceProvider);
-                    case DatabaseType.PostgreSql:
+                    case DatabaseType.postgresql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<NpgsqlConnection>>(serviceProvider);
-                    case DatabaseType.MySql:
+                    case DatabaseType.mysql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<MySqlConnection>>(serviceProvider);
                     default:
                         throw new NotSupportedException(string.Format("The provided DatabaseType value: {0} is currently not supported." +
@@ -173,13 +174,13 @@ namespace Azure.DataGateway.Service
                 IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
                 switch (dataGatewayConfig.CurrentValue.DatabaseType)
                 {
-                    case DatabaseType.Cosmos:
+                    case DatabaseType.cosmosdb:
                         return null!;
-                    case DatabaseType.MsSql:
+                    case DatabaseType.mssql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlQueryBuilder>(serviceProvider);
-                    case DatabaseType.PostgreSql:
+                    case DatabaseType.postgresql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<PostgresQueryBuilder>(serviceProvider);
-                    case DatabaseType.MySql:
+                    case DatabaseType.mysql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<MySqlQueryBuilder>(serviceProvider);
                     default:
                         throw new NotSupportedException(string.Format("The provided DatabaseType value: {0} is currently not supported." +
@@ -192,13 +193,13 @@ namespace Azure.DataGateway.Service
                 IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
                 switch (dataGatewayConfig.CurrentValue.DatabaseType)
                 {
-                    case DatabaseType.Cosmos:
+                    case DatabaseType.cosmosdb:
                         return null!;
-                    case DatabaseType.MsSql:
+                    case DatabaseType.mssql:
                         return new DbExceptionParserBase();
-                    case DatabaseType.PostgreSql:
+                    case DatabaseType.postgresql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<PostgresDbExceptionParser>(serviceProvider);
-                    case DatabaseType.MySql:
+                    case DatabaseType.mysql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<MySqlDbExceptionParser>(serviceProvider);
                     default:
                         throw new NotSupportedException(String.Format("The provided DatabaseType value: {0} is currently not supported." +

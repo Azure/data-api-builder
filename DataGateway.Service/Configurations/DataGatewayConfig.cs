@@ -1,19 +1,10 @@
 using System;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
+using Azure.DataGateway.Config;
 
 namespace Azure.DataGateway.Service.Configurations
 {
-    /// <summary>
-    /// The different type of databases this app supports.
-    /// </summary>
-    public enum DatabaseType
-    {
-        Cosmos,
-        MsSql,
-        PostgreSql,
-        MySql
-    }
     /// <summary>
     /// Data gateway configuration.
     /// </summary>

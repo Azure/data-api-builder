@@ -1,5 +1,5 @@
 {
-  "$schema": "urn:hawaii:config:schema:draft-01",
+  "$schema": "../../project-hawaii/playground/hawaii.draft-01.schema.json",
   "data-source": {
     "database-type": "mssql",
     "connection-string": ""

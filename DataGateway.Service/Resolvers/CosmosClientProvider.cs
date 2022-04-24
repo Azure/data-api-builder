@@ -1,4 +1,5 @@
 using System;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Fluent;
@@ -25,7 +26,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
         private void InitializeClient(DataGatewayConfig configuration)
         {
-            if (configuration.DatabaseType != DatabaseType.Cosmos)
+            if (configuration.DatabaseType != DatabaseType.cosmosdb)
             {
                 throw new InvalidOperationException("We shouldn't need a CosmosClientProvider if we're not accessing a CosmosDb");
             }

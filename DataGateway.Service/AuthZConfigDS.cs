@@ -2,6 +2,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Collections.Generic;
 using System.IO;
+using Azure.DataGateway.Config;
+using System;
+using Action = Azure.DataGateway.Config.Action;
 
 namespace Azure.DataGateway.Service
 {
@@ -16,14 +19,14 @@ namespace Azure.DataGateway.Service
                 json = sr.ReadToEnd();
             }
 
-            JsonSerializerOptions? options = new ()
+            JsonSerializerOptions? options = new()
             {
                 PropertyNameCaseInsensitive = true,
                 Converters = { new JsonStringEnumConverter() }
             };
 
-            DraftDevConfig? devConfig = JsonSerializer.Deserialize<DraftDevConfig>(json,options);
-            _entityConfigMap = GetEntityConfigMap(devConfig);
+            RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(json, options);
+            _entityConfigMap = GetEntityConfigMap(runtimeConfig);
 
             string entityName = "todo";
             string roleName = "public";
@@ -34,16 +37,19 @@ namespace Azure.DataGateway.Service
             {
                 return false; //invalid entity/role
             }
+
             if (!IsActionAllowedForRole(roleName, entityName, action))
             {
                 return false; //invalid action
             }
-            if (!AreColumnsAllowedForAction(roleName, entityName, action, columns)) {
+
+            if (!AreColumnsAllowedForAction(roleName, entityName, action, columns))
+            {
                 return false; //columns not allowed
             }
+
             return true;
         }
-
 
         private bool IsRoleDefinedForEntity(string roleName, string entityName)
         {
@@ -52,13 +58,15 @@ namespace Azure.DataGateway.Service
             {
                 return false;
             }
+
             return true;
         }
 
         private bool IsActionAllowedForRole(string roleName, string entityName, string action)
         {
-            // At this point we don't know if action is a valid action in sense that it exists for the given entity/role 
-            // combination, and it is a valid action like CRUD and not an absurd action
+            // At this point we don't know if action is a valid action,
+            // in sense that it exists for the given entity/role combination.
+
             Dictionary<string, ActionToColumn> actionToColumnMap = _entityConfigMap[entityName].roleToActionMap[roleName].actionToColumnMap;
             if (actionToColumnMap.ContainsKey("*") || actionToColumnMap.ContainsKey(action))
             {
@@ -70,10 +78,6 @@ namespace Azure.DataGateway.Service
 
         private bool AreColumnsAllowedForAction(string roleName, string entityName, string action, List<string> columns)
         {
-            // Asking point 3 for this , because if that is allowed, we can have custom included and excluded.
-            // At this point, we are sure that action is a valid action. However if we had an action='*', this 
-            // action would not be present in the entityConfigMap[entityName].roleToActionMap[roleName].actionToColumnMap
-            // and hence the below ActionToColumn would be null. And hence we first need to make a check if '*' action is present
             ActionToColumn actionToColumnMap;
             if (_entityConfigMap[entityName].roleToActionMap[roleName].actionToColumnMap.ContainsKey("*"))
             {
@@ -87,12 +91,12 @@ namespace Azure.DataGateway.Service
             foreach (string column in columns)
             {
 
-                if(!actionToColumnMap.excluded.ContainsKey(column) && !actionToColumnMap.included.ContainsKey(column))
+                if(!actionToColumnMap!.excluded!.ContainsKey(column) && !actionToColumnMap!.included!.ContainsKey(column))
                 {
                     // If a column is absent from both excluded,included
                     // it can be valid/invalid.
                     // If the column turns out to be an invalid one
-                    // an error would be thrown later.
+                    // an error would be thrown during request validation.
                     continue;
                 }
 
@@ -112,61 +116,57 @@ namespace Azure.DataGateway.Service
 
         // Method to read in data from the config class into a Dictionary for quick lookup
         // during runtime.
-        private static Dictionary<string, EntityToRole> GetEntityConfigMap(DraftDevConfig? devConfig)
+        private static Dictionary<string, EntityToRole> GetEntityConfigMap(RuntimeConfig? runtimeConfig)
         {
 
             Dictionary<string, EntityToRole> entityConfigMap = new ();
 
-            foreach (KeyValuePair<string, DataGatewayEntity> Entity in devConfig.Entities)
+            foreach (KeyValuePair<string, Entity> entityPair in runtimeConfig!.Entities)
             {
-                string entityName = Entity.Key;
-                DataGatewayEntity entity = Entity.Value;
+                string entityName = entityPair.Key;
+                Entity entity = entityPair.Value;
                 EntityToRole entityToRoleMap = new ();
 
-                foreach (DataGatewayPermission permission in entity.Permissions)
+                foreach (PermissionSetting permission in entity.Permissions)
                 {
                     string role = permission.Role;
                     RoleToAction roleToActionMap = new ();
-                    JsonElement jsonActions = (JsonElement)permission.Actions;
-                    string action = string.Empty;
-                    //jsonActionsKind can be a string,array of string and object
+                    Object[] Actions = permission.Actions;
                     ActionToColumn actionToColumnMap;
-                    if (jsonActions.ValueKind == JsonValueKind.String)
+                    foreach (Object Action in Actions)
                     {
+                        JsonElement action = (JsonElement)Action;
+                        string actionName = "";
                         actionToColumnMap = new ActionToColumn();
-                        actionToColumnMap.included.Add("*", true);
-                        action = jsonActions.ToString();
-                        roleToActionMap.actionToColumnMap[action] = actionToColumnMap;
-                    }
-                    else if (jsonActions.ValueKind == JsonValueKind.Array)
-                    {
-                        foreach (JsonElement Operation in jsonActions.EnumerateArray())
+                        if (action.ValueKind == JsonValueKind.String)
                         {
-                            actionToColumnMap = new ActionToColumn();
-                            if (Operation.ValueKind == JsonValueKind.String)
-                            {
-                                action = Operation.ToString();
-                                actionToColumnMap.included.Add("*", true);
-                            }
-                            else if (Operation.ValueKind == JsonValueKind.Object)
-                            {
-                                string ops = Operation.ToString();
-                                ActionType? actionType = JsonSerializer.Deserialize<ActionType>(Operation.ToString());
-                                action = actionType.Action;
-                                if (actionType.Fields.Include != null)
-                                {
-                                    actionToColumnMap.included = AddFields(actionType.Fields.Include);
-                                }
-
-                                if (actionType.Fields.Exclude != null)
-                                {
-                                    actionToColumnMap.excluded = AddFields(actionType.Fields.Exclude);
-                                }
-
-                            }
-
-                            roleToActionMap.actionToColumnMap[action] = actionToColumnMap;
+                            actionName = action.ToString();
+                            actionToColumnMap!.included!.Add("*", true);
                         }
+                        else if (action.ValueKind == JsonValueKind.Object)
+                        {
+                            JsonSerializerOptions options = new ()
+                            {
+                                PropertyNameCaseInsensitive = true,
+                                Converters = { new JsonStringEnumConverter() }
+                            };
+
+                            Action? actionObj = JsonSerializer.Deserialize<Action>(action.ToString(), options);
+                            actionName = actionObj!.Name;
+
+                            if (actionObj!.Fields!.Include != null)
+                            {
+                                actionToColumnMap.included = AddFieldsToMap(actionObj.Fields.Include);
+                            }
+
+                            if (actionObj!.Fields!.Exclude != null)
+                            {
+                                actionToColumnMap.excluded = AddFieldsToMap(actionObj.Fields.Exclude);
+                            }
+
+                        }
+
+                        roleToActionMap.actionToColumnMap[actionName] = actionToColumnMap;
                     }
 
                     entityToRoleMap.roleToActionMap[role] = roleToActionMap;
@@ -177,13 +177,14 @@ namespace Azure.DataGateway.Service
 
             return entityConfigMap;
         }
-        private static Dictionary<string, bool> AddFields(List<string> columns)
+        private static Dictionary<string, bool> AddFieldsToMap(string[] columns)
         {
             Dictionary<string, bool> result = new ();
             foreach (string column in columns)
             {
                 result[column] = true;
             }
+
             return result;
         }
     }

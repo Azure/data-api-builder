@@ -1,9 +1,9 @@
+using System;
+using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Collections.Generic;
-using System.IO;
 using Azure.DataGateway.Config;
-using System;
 using Action = Azure.DataGateway.Config.Action;
 
 namespace Azure.DataGateway.Service
@@ -11,7 +11,7 @@ namespace Azure.DataGateway.Service
     public class AuthZConfigDS
     {
         Dictionary<string, EntityToRole>? _entityConfigMap;
-        private bool ReadConfig()
+        public bool ReadConfig()
         {
             string json;
             using (StreamReader sr = new("D:\\directory\\DataGateway.Service.Tests\\runtime-config-test.json"))

@@ -12,7 +12,7 @@ namespace Azure.DataGateway.Config
     /// <param name="Fields">Details what fields to include or exclude</param>
     public record Action(
         [property: JsonPropertyName("action")]
-        Operation Name,
+        string Name,
         Policy? Policy,
         Field? Fields);
 

@@ -37,8 +37,8 @@ namespace Azure.DataGateway.Config
         object Source,
         object? Rest,
         object? GraphQL,
-        PermissionSettings[] Permissions,
-        Relationship? Relationships,
+        PermissionSetting[] Permissions,
+        Dictionary<string, Relationship>? Relationships,
         Dictionary<string, string>? Mappings) :
             Entity(Source,
                    Rest,

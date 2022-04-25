@@ -6,7 +6,6 @@ namespace Azure.DataGateway.Config
     /// Defines the relationships between entities.
     /// </summary>
     /// <param name="Cardinality">The cardinality of the target entity.</param>
-
     /// <param name="TargetEntity">Another exposed entity to which the source
     /// entity relates to.</param>
 

@@ -12,5 +12,6 @@
     <PostgresVersion>5.0.10</PostgresVersion>
     <ODataVersion>7.9.0</ODataVersion>
     <MySQLVersion>2.1.5</MySQLVersion>
+    <NetCoreAutorizationVersion>3.1.4</NetCoreAutorizationVersion>
  </PropertyGroup>
 </Project>

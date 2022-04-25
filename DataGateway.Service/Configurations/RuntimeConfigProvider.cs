@@ -35,6 +35,8 @@ namespace Azure.DataGateway.Service.Configurations
             RuntimeConfig =
                 DataGatewayConfig.GetDeserializedConfig<RuntimeConfig>(runtimeConfigJson);
 
+            RuntimeConfig.SetDefaults();
+
             CloudDbType = RuntimeConfig.DataSource.DatabaseType;
         }
 

@@ -33,6 +33,32 @@ namespace Azure.DataGateway.Config
         Relationship? Relationships,
         Dictionary<string, string>? Mappings);
 
+    public record SqlEntity(
+        object Source,
+        object? Rest,
+        object? GraphQL,
+        PermissionSettings[] Permissions,
+        Relationship? Relationships,
+        Dictionary<string, string>? Mappings) :
+            Entity(Source,
+                   Rest,
+                   GraphQL,
+                   Permissions,
+                   Relationships,
+                   Mappings)
+    {
+        public TableDefinition TableDefinition { get; set; } = new();
+
+        /// <summary>
+        /// Gets the name of the underlying source database object.
+        /// </summary>
+        public string SourceName => Type.GetTypeCode(Source.GetType()) switch
+        {
+            TypeCode.String => (string)Source,
+            _ => ((DatabaseObjectSource)Source).Name
+        };
+    }
+
     /// <summary>
     /// Describes the type, name and parameters for a
     /// database object source. Useful for more complex sources like stored procedures.

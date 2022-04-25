@@ -23,7 +23,6 @@ namespace Azure.DataGateway.Config
     /// If set to false, no REST endpoint will be exposed.
     /// If set to true, REST endpoint will be exposed
     /// unless the rest property within an entity configuration is set to false.</param>
-
     /// <param name="Path">The URL prefix path at which endpoints
     /// for all entities will be exposed.</param>
     public record RestGlobalSettings

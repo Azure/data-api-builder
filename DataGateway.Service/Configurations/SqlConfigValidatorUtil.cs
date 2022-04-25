@@ -50,19 +50,19 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Sets the validation status of the database schema
+        /// Sets the validation status of all the sql entities.
         /// </summary>
-        private void SetDatabaseSchemaValidated(bool flag)
+        private void SetSqlEntitiesValidated(bool flag)
         {
-            _dbSchemaIsValidated = flag;
+            _sqlEntitiesAreValidated = flag;
         }
 
         /// <summary>
-        /// Gets the validation status of the database schema
+        /// Gets the validation status of all the sql entities.
         /// </summary>
-        private bool IsDatabaseSchemaValidated()
+        private bool AreSqlEntitiesValidated()
         {
-            return _dbSchemaIsValidated;
+            return _sqlEntitiesAreValidated;
         }
 
         /// <summary>
@@ -179,7 +179,8 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private Dictionary<string, TableDefinition> GetDatabaseTables()
         {
-            return _config.DatabaseSchema!.Tables;
+
+            return _runtimeConfig.Entities.;
         }
 
         /// <summary>
@@ -187,7 +188,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summmary>
         private Dictionary<string, GraphQLType> GetGraphQLTypes()
         {
-            return _config.GraphQLTypes;
+            return _resolverConfig.GraphQLTypes;
         }
 
         /// <summary>
@@ -195,7 +196,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private bool ExistsTableWithName(string tableName)
         {
-            return _config.DatabaseSchema!.Tables.ContainsKey(tableName);
+            return _resolverConfig.DatabaseSchema!.Tables.ContainsKey(tableName);
         }
 
         /// <summary>
@@ -212,7 +213,7 @@ namespace Azure.DataGateway.Service.Configurations
                 throw new ArgumentException("Invalid table name was provided.");
             }
 
-            return _config.DatabaseSchema!.Tables[tableName];
+            return _resolverConfig.DatabaseSchema!.Tables[tableName];
         }
 
         /// <summary>
@@ -303,7 +304,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private bool IsPaginationTypeName(string typeName)
         {
-            if (_config.GraphQLTypes.TryGetValue(typeName, out GraphQLType? type))
+            if (_resolverConfig.GraphQLTypes.TryGetValue(typeName, out GraphQLType? type))
             {
                 return type.IsPaginationType;
             }
@@ -514,7 +515,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private IEnumerable<string> GetConfigFieldsForGqlType(ObjectTypeDefinitionNode type)
         {
-            return _config.GraphQLTypes[type.Name.Value].Fields.Keys;
+            return _resolverConfig.GraphQLTypes[type.Name.Value].Fields.Keys;
         }
 
         /// <summary>
@@ -564,7 +565,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <exception cref="KeyNotFoundException" />
         private ForeignKeyDefinition GetFkFromTable(string tableName, string fkName)
         {
-            return _config.DatabaseSchema!.Tables[tableName].ForeignKeys[fkName];
+            return _resolverConfig.DatabaseSchema!.Tables[tableName].ForeignKeys[fkName];
         }
 
         /// <summary>
@@ -572,7 +573,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private List<MutationResolver> GetMutationResolvers()
         {
-            return _config.MutationResolvers;
+            return _resolverConfig.MutationResolvers;
         }
 
         /// <summary>

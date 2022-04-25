@@ -25,7 +25,6 @@ namespace Azure.DataGateway.Service.Configurations
 
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
 
-            ValidateConfigHasDatabaseSchema();
             ValidateDatabaseSchema();
 
             ValidateConfigHasGraphQLTypes();
@@ -48,18 +47,17 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate database schema
+        /// Validate sql entities.
         /// </summary>
-        private void ValidateDatabaseSchema()
+        private void ValidateSqlEntities()
         {
-            ConfigStepInto("DatabaseSchema");
+            ConfigStepInto("SqlEntities");
 
-            ValidateDatabaseHasTables();
             ValidateDatabaseTables(GetDatabaseTables());
 
-            ConfigStepOutOf("DatabaseSchema");
+            ConfigStepOutOf("SqlEntities");
 
-            SetDatabaseSchemaValidated(true);
+            SetSqlEntitiesValidated(true);
         }
 
         /// <summary>

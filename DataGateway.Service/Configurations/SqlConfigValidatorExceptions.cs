@@ -18,30 +18,35 @@ namespace Azure.DataGateway.Service.Configurations
     /// Each function checks for only one thing and throws only one exception.
     public partial class SqlConfigValidator : IConfigValidator
     {
-        private ResolverConfig _config;
+        private ResolverConfig _resolverConfig;
+        private RuntimeConfig _runtimeConfig;
         private ISchema? _schema;
         private Stack<string> _configValidationStack;
         private Stack<string> _schemaValidationStack;
         private Dictionary<string, FieldDefinitionNode> _queries;
         private Dictionary<string, FieldDefinitionNode> _mutations;
         private Dictionary<string, ObjectTypeDefinitionNode> _types;
-        private bool _dbSchemaIsValidated;
+        private bool _sqlEntitiesAreValidated;
         private bool _graphQLTypesAreValidated;
 
         /// <summary>
         /// Sets the config and schema for the validator
         /// </summary>
-        public SqlConfigValidator(IGraphQLMetadataProvider metadataStoreProvider, GraphQLService graphQLService)
+        public SqlConfigValidator(
+            IGraphQLMetadataProvider metadataStoreProvider,
+            GraphQLService graphQLService,
+            IRuntimeConfigProvider runtimeConfigProvider)
         {
             _configValidationStack = MakeConfigPosition(Enumerable.Empty<string>());
             _schemaValidationStack = MakeSchemaPosition(Enumerable.Empty<string>());
             _types = new();
             _mutations = new();
             _queries = new();
-            _dbSchemaIsValidated = false;
+            _sqlEntitiesAreValidated = false;
             _graphQLTypesAreValidated = false;
 
-            _config = metadataStoreProvider.GetResolvedConfig();
+            _resolverConfig = metadataStoreProvider.GetResolvedConfig();
+            _runtimeConfig = runtimeConfigProvider.GetRuntimeConfig();
             _schema = graphQLService.Schema;
 
             if (_schema != null)
@@ -68,25 +73,11 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate that config has a DatabaseSchema element
-        /// </summary>
-        private void ValidateConfigHasDatabaseSchema()
-        {
-            if (_config.DatabaseSchema == null)
-            {
-                throw new ConfigValidationException(
-                    $"Config must have a \"DatabaseSchema\" element.",
-                    _configValidationStack
-                );
-            }
-        }
-
-        /// <summary>
         /// Validate that config has a GraphQLTypes element
         /// </summary>
         private void ValidateConfigHasGraphQLTypes()
         {
-            if (_config.GraphQLTypes == null || _config.GraphQLTypes.Count == 0)
+            if (_resolverConfig.GraphQLTypes == null || _resolverConfig.GraphQLTypes.Count == 0)
             {
                 throw new ConfigValidationException(
                     $"Config must have a non empty \"GraphQLTypes\" element.",
@@ -101,7 +92,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateConfigHasMutationResolvers()
         {
-            if (_config.MutationResolvers == null || _config.MutationResolvers.Count == 0)
+            if (_resolverConfig.MutationResolvers == null || _resolverConfig.MutationResolvers.Count == 0)
             {
                 throw new ConfigValidationException(
                     $"Config must have a non empty \"MutationResolvers\" element to resolve " +
@@ -117,24 +108,10 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateNoMutationResolvers()
         {
-            if (_config.MutationResolvers != null)
+            if (_resolverConfig.MutationResolvers != null)
             {
                 throw new ConfigValidationException(
                     "Config doesn't need a \"MutationResolvers\" element. No mutations in the schema.",
-                    _configValidationStack
-                );
-            }
-        }
-
-        /// <summary>
-        /// Validate database has tables
-        /// </summary>
-        private void ValidateDatabaseHasTables()
-        {
-            if (_config.DatabaseSchema!.Tables == null || _config.DatabaseSchema!.Tables.Count == 0)
-            {
-                throw new ConfigValidationException(
-                    "Database schema must have a non empty \"Tables\" element.",
                     _configValidationStack
                 );
             }
@@ -361,7 +338,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateDatabaseSchemaIsValidated()
         {
-            if (!IsDatabaseSchemaValidated())
+            if (!AreSqlEntitiesValidated())
             {
                 throw new NotSupportedException(
                     "Current validation functions requires that the database schema is validated first.");

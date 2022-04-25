@@ -15,7 +15,6 @@ namespace Azure.DataGateway.Config
     /// When GraphQLEntitySettings, describes the GraphQL settings
     /// specific to this entity.</param>
     /// <param name="Permissions">Permissions assigned to this entity.</param>
-
     /// <param name="Relationships">Defines how an entity is related to other exposed
     /// entities and optionally provides details on what underlying database
     /// objects can be used to support such relationships.</param>

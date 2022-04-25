@@ -10,11 +10,11 @@ namespace Azure.DataGateway.Service
 {
     public class AuthZConfigDS
     {
-        Dictionary<string, EntityToRole> _entityConfigMap;
+        Dictionary<string, EntityToRole>? _entityConfigMap;
         private bool ReadConfig()
         {
             string json;
-            using (StreamReader sr = new("C:\\Users\\agarwalayush\\source\\repos\\JSONParser1\\JSONParser1\\RuntimeConfig.json"))
+            using (StreamReader sr = new("D:\\directory\\DataGateway.Service.Tests\\runtime-config-test.json"))
             {
                 json = sr.ReadToEnd();
             }
@@ -91,7 +91,7 @@ namespace Azure.DataGateway.Service
             foreach (string column in columns)
             {
 
-                if(!actionToColumnMap!.excluded!.ContainsKey(column) && !actionToColumnMap!.included!.ContainsKey(column))
+                if (!actionToColumnMap!.excluded!.ContainsKey(column) && !actionToColumnMap!.included!.ContainsKey(column))
                 {
                     // If a column is absent from both excluded,included
                     // it can be valid/invalid.
@@ -119,18 +119,18 @@ namespace Azure.DataGateway.Service
         private static Dictionary<string, EntityToRole> GetEntityConfigMap(RuntimeConfig? runtimeConfig)
         {
 
-            Dictionary<string, EntityToRole> entityConfigMap = new ();
+            Dictionary<string, EntityToRole> entityConfigMap = new();
 
             foreach (KeyValuePair<string, Entity> entityPair in runtimeConfig!.Entities)
             {
                 string entityName = entityPair.Key;
                 Entity entity = entityPair.Value;
-                EntityToRole entityToRoleMap = new ();
+                EntityToRole entityToRoleMap = new();
 
                 foreach (PermissionSetting permission in entity.Permissions)
                 {
                     string role = permission.Role;
-                    RoleToAction roleToActionMap = new ();
+                    RoleToAction roleToActionMap = new();
                     Object[] Actions = permission.Actions;
                     ActionToColumn actionToColumnMap;
                     foreach (Object Action in Actions)
@@ -145,7 +145,7 @@ namespace Azure.DataGateway.Service
                         }
                         else if (action.ValueKind == JsonValueKind.Object)
                         {
-                            JsonSerializerOptions options = new ()
+                            JsonSerializerOptions options = new()
                             {
                                 PropertyNameCaseInsensitive = true,
                                 Converters = { new JsonStringEnumConverter() }
@@ -179,7 +179,7 @@ namespace Azure.DataGateway.Service
         }
         private static Dictionary<string, bool> AddFieldsToMap(string[] columns)
         {
-            Dictionary<string, bool> result = new ();
+            Dictionary<string, bool> result = new();
             foreach (string column in columns)
             {
                 result[column] = true;

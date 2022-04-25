@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
@@ -15,7 +16,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
         /// <param name="tableDefinition">SQL table definition information.</param>
         /// <param name="configEntity">Runtime config information for the table.</param>
         /// <returns>A GraphQL object type to be provided to a Hot Chocolate GraphQL document.</returns>
-        public static ObjectTypeDefinitionNode FromTableDefinition(string tableName, TableDefinition tableDefinition, Entity configEntity)
+        public static ObjectTypeDefinitionNode FromTableDefinition(string tableName, TableDefinition tableDefinition, [NotNull] Entity configEntity)
         {
             Dictionary<string, FieldDefinitionNode> fields = new();
 
@@ -42,6 +43,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 
             foreach ((string _, ForeignKeyDefinition fk) in tableDefinition.ForeignKeys)
             {
+                if (configEntity.Relationships == null)
+                {
+                    throw new NullReferenceException($"Foreign keys have been deteched for the entity \"{tableName}\" but none were defined in the runtime config. Ensure you define the relationship in the runtime config.");
+                }
+
                 Relationship relationship = configEntity.Relationships[fk.ReferencedTable];
 
                 // Generate the field that represents the relationship to ObjectType, so you can navigate through it
@@ -79,7 +85,6 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                             new(
                                 RelationshipDirective.DirectiveName,
                                 new ArgumentNode("databaseType", column.SystemType.Name),
-                                // TODO: Set cardinality when it's available in config
                                 new ArgumentNode("cardinality", relationship.Cardinality.ToString()))
                         });
                 }

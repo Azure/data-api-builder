@@ -15,7 +15,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
     {
         private static Entity GenerateEmptyEntity()
         {
-            return new Entity("entity", null, null, Array.Empty<PermissionSettings>(), new(), new());
+            return new Entity("entity", null, null, Array.Empty<PermissionSetting>(), new(), new());
         }
 
         [DataTestMethod]

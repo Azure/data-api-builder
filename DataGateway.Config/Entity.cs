@@ -14,7 +14,6 @@ namespace Azure.DataGateway.Config
     /// <param name="GraphQL">Can be a bool or GraphQLEntitySettings type.
     /// When GraphQLEntitySettings, describes the GraphQL settings
     /// specific to this entity.</param>
-
     /// <param name="Permissions">Permissions assigned to this entity.</param>
 
     /// <param name="Relationships">Defines how an entity is related to other exposed

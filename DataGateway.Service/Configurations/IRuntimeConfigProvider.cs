@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 
 namespace Azure.DataGateway.Service.Configurations
 {
@@ -7,6 +8,11 @@ namespace Azure.DataGateway.Service.Configurations
     /// </summary>
     public interface IRuntimeConfigProvider
     {
+        /// <summary>
+        /// Retrieves the runtime config.
+        /// </summary>
+        RuntimeConfig GetRuntimeConfig();
+
         /// <summary>
         /// Initializes this metadata provider for the runtime.
         /// </summary>

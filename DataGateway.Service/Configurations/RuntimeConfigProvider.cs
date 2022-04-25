@@ -12,7 +12,7 @@ namespace Azure.DataGateway.Service.Configurations
     /// </summary>
     public class RuntimeConfigProvider : IRuntimeConfigProvider
     {
-        public RuntimeConfig RuntimeConfig { get; init; }
+        protected RuntimeConfig RuntimeConfig { get; init; }
 
         public DatabaseType CloudDbType { get; init; }
 
@@ -36,6 +36,11 @@ namespace Azure.DataGateway.Service.Configurations
                 DataGatewayConfig.GetDeserializedConfig<RuntimeConfig>(runtimeConfigJson);
 
             CloudDbType = RuntimeConfig.DataSource.DatabaseType;
+        }
+
+        public RuntimeConfig GetRuntimeConfig()
+        {
+            return RuntimeConfig;
         }
 
         /// <summary>

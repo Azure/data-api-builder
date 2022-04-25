@@ -99,7 +99,7 @@ namespace Azure.DataGateway.Service.Services
         /// <inheritdoc />
         public async Task PopulateForeignKeyDefinitionAsync(
            string defaultSchemaName,
-           IEnumerable<SqlEntity> sqlEntities)
+           IEnumerable<Entity> sqlEntities)
         {
             // Build the query required to get the foreign key information.
             string queryForForeignKeyInfo =

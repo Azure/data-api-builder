@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="databaseEntities">All the exposed sql database entities
         /// with their table definitions.</param>
         /// <returns>An EdmModelBuilder that can be used to get a model.</returns>
-        public EdmModelBuilder BuildModel(Dictionary <string, Entity> databaseEntities)
+        public EdmModelBuilder BuildModel(Dictionary<string, Entity> databaseEntities)
         {
             return BuildEntityTypes(databaseEntities)
                 .BuildEntitySets(databaseEntities.Values);

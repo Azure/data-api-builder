@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Azure.DataGateway.Config;
 
 namespace Azure.DataGateway.Service.Models
 {

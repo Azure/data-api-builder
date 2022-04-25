@@ -86,7 +86,7 @@ namespace Azure.DataGateway.Service
                 switch (dataGatewayConfig.CurrentValue.DatabaseType)
                 {
                     case DatabaseType.cosmos:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<RuntimeConfigProvider>(serviceProvider);                 
+                        return ActivatorUtilities.GetServiceOrCreateInstance<RuntimeConfigProvider>(serviceProvider);
                     case DatabaseType.mssql:
                     case DatabaseType.postgresql:
                     case DatabaseType.mysql:

@@ -38,6 +38,6 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="tables">Dictionary of all tables.</param>
         public Task PopulateForeignKeyDefinitionAsync(
             string schemaName,
-            IEnumerable<SqlEntity> sqlEntities);
+            IEnumerable<Entity> sqlEntities);
     }
 }

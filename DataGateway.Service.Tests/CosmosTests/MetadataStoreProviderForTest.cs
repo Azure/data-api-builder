@@ -52,7 +52,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             throw new System.NotImplementedException();
         }
 
-        public Task InitializeAsync()
+        public static Task InitializeAsync()
         {
             // no-op
             return Task.CompletedTask;

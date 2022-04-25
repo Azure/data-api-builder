@@ -18,7 +18,6 @@ namespace Azure.DataGateway.Config
     /// backend database type to connect to using its connection string.</param>
     /// <param name="CosmosDb/MsSql/MySql/PostgreSql">Different backend database specific options.
     /// Each type is its own dictionary for ease of deserialization.</param>
-
     /// <param name="RuntimeSettings">These settings are used to set runtime behavior on
     /// all the exposed entities. If not provided in the config, default settings will be set.</param>
 

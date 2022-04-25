@@ -9,7 +9,7 @@ namespace Azure.DataGateway.Config
     /// In a simple case, the array members are one of the following:
     /// create, read, update, delete, *.
     /// The wildcard * can be used to mean all the actions.</param>
-    public record PermissionSettings(
+    public record PermissionSetting(
         string Role,
         object[] Actions);
 }

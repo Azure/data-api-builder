@@ -16,7 +16,6 @@ namespace Azure.DataGateway.Config
 
     /// <param name="DataSource">Contains information about which
     /// backend database type to connect to using its connection string.</param>
-
     /// <param name="CosmosDb/MsSql/MySql/PostgreSql">Different backend database specific options.
     /// Each type is its own dictionary for ease of deserialization.</param>
 

@@ -17,6 +17,7 @@ namespace Azure.DataGateway.Service.Configurations
             "DatabaseType": "",
             "ResolverConfigFile" : ""
             "ResolverConfig" : ""
+            "RuntimeConfig" : ""
             "GraphQLSchema": ""
             "DatabaseConnection": {
                 "ServerEndpointUrl": "",
@@ -38,6 +39,7 @@ namespace Azure.DataGateway.Service.Configurations
         public DatabaseConnectionConfig DatabaseConnection { get; set; } = null!;
         public string? ResolverConfigFile { get; set; }
         public string? ResolverConfig { get; set; }
+        public string? RuntimeConfigFile { get; set; }
         public string? GraphQLSchema { get; set; }
         public AuthenticationProviderConfig Authentication { get; set; } = null!;
     }
@@ -77,7 +79,7 @@ namespace Azure.DataGateway.Service.Configurations
     {
         public void PostConfigure(string name, DataGatewayConfig options)
         {
-            if (!options.DatabaseType.HasValue)
+            if (options.RuntimeConfigFile == null)
             {
                 return;
             }

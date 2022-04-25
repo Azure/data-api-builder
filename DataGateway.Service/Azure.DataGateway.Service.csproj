@@ -57,6 +57,23 @@
 
 
   <ItemGroup>
+    <Content Remove="runtime-config.json" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <Watch Remove="runtime-config.json" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <None Include="runtime-config.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+
+  <ItemGroup>
     <PackageReference Include="HotChocolate" Version="$(HotChocolateVersion)" />
     <PackageReference Include="HotChocolate.AspNetCore" Version="$(HotChocolateVersion)" />
     <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="$(HotChocolateVersion)" />

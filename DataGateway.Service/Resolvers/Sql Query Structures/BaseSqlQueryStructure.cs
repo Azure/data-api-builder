@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -13,7 +14,7 @@ namespace Azure.DataGateway.Service.Resolvers
     /// </summary>
     public abstract class BaseSqlQueryStructure : BaseQueryStructure
     {
-        protected SqlGraphQLFileMetadataProvider MetadataStoreProvider { get; }
+        protected SqlRuntimeConfigProvider MetadataStoreProvider { get; }
 
         /// <summary>
         /// The name of the main table to be queried.
@@ -32,7 +33,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public string? FilterPredicates { get; set; }
 
         public BaseSqlQueryStructure(
-            SqlGraphQLFileMetadataProvider metadataStoreProvider,
+            SqlRuntimeConfigProvider metadataStoreProvider,
             IncrementingInteger? counter = null,
             string tableName = "")
             : base(counter)

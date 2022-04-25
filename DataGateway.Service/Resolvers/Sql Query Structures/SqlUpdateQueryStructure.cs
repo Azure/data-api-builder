@@ -4,6 +4,7 @@ using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -17,8 +18,8 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<Predicate> UpdateOperations { get; }
 
-        public SqlUpdateStructure(string tableName, SqlGraphQLFileMetadataProvider metadataStore, IDictionary<string, object?> mutationParams, bool isIncrementalUpdate)
-        : base(metadataStore, tableName: tableName)
+        public SqlUpdateStructure(string tableName, SqlRuntimeConfigProvider runtimeConfigProvider, IDictionary<string, object?> mutationParams, bool isIncrementalUpdate)
+        : base(runtimeConfigProvider, tableName: tableName)
         {
             UpdateOperations = new();
             TableDefinition tableDefinition = GetTableDefinition();

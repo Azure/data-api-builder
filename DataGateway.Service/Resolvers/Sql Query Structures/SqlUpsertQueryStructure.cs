@@ -5,6 +5,7 @@ using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -50,11 +51,11 @@ namespace Azure.DataGateway.Service.Resolvers
         ///
         /// </summary>
         /// <param name="tableName"></param>
-        /// <param name="metadataStore"></param>
+        /// <param name="runtimeConfigProvider"></param>
         /// <param name="mutationParams"></param>
         /// <exception cref="DataGatewayException"></exception>
-        public SqlUpsertQueryStructure(string tableName, SqlGraphQLFileMetadataProvider metadataStore, IDictionary<string, object?> mutationParams, bool incrementalUpdate)
-        : base(metadataStore, tableName: tableName)
+        public SqlUpsertQueryStructure(string tableName, SqlRuntimeConfigProvider runtimeConfigProvider, IDictionary<string, object?> mutationParams, bool incrementalUpdate)
+        : base(runtimeConfigProvider, tableName: tableName)
         {
             UpdateOperations = new();
             InsertColumns = new();

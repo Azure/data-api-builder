@@ -3,6 +3,7 @@ using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -11,8 +12,8 @@ namespace Azure.DataGateway.Service.Resolvers
     ///</summary>
     public class SqlDeleteStructure : BaseSqlQueryStructure
     {
-        public SqlDeleteStructure(string tableName, SqlGraphQLFileMetadataProvider metadataStore, IDictionary<string, object?> mutationParams)
-        : base(metadataStore, tableName: tableName)
+        public SqlDeleteStructure(string tableName, SqlRuntimeConfigProvider runtimeConfigProvider, IDictionary<string, object?> mutationParams)
+        : base(runtimeConfigProvider, tableName: tableName)
         {
             TableDefinition tableDefinition = GetTableDefinition();
 

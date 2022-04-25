@@ -47,7 +47,7 @@ namespace Azure.DataGateway.Service.Services
             {
                 SqlEntity sqlEntity = (SqlEntity)entity;
                 string entitySourceName = sqlEntity.SourceName;
-                TableDefinition tableDefinition = databaseEntities[entitySourceName].TableDefinition;
+                TableDefinition tableDefinition = sqlEntity.TableDefinition;
                 EdmEntityType newEntity = new(DEFAULT_NAMESPACE, entitySourceName);
                 string newEntityKey = DEFAULT_NAMESPACE + entitySourceName;
                 _entities.Add(newEntityKey, newEntity);
@@ -108,15 +108,16 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="sqlEntities">All the sql entities with their table definitions.</param>
         /// <returns>this model builder</returns>
-        private EdmModelBuilder BuildEntitySets(IEnumerable<SqlEntity> sqlEntities)
+        private EdmModelBuilder BuildEntitySets(IEnumerable<Entity> entities)
         {
             EdmEntityContainer container = new(DEFAULT_NAMESPACE, DEFAULT_CONTAINER_NAME);
             _model.AddElement(container);
 
             // Entity set is a collection of the same entity, if we think of an entity as a row of data
             // that has a key, then an entity set can be thought of as a table made up of those rows
-            foreach (SqlEntity sqlEntity in sqlEntities)
+            foreach (Entity entity in entities)
             {
+                SqlEntity sqlEntity = (SqlEntity)entity;
                 string entityName = sqlEntity.SourceName;
                 container.AddEntitySet(name: entityName, _entities[DEFAULT_NAMESPACE + entityName]);
             }

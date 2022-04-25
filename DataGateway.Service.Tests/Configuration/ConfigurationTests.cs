@@ -105,7 +105,10 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Assert.IsInstanceOfType(queryExecutor, typeof(QueryExecutor<SqlConnection>));
 
             object graphQLMetadataProvider = server.Services.GetService(typeof(IGraphQLMetadataProvider));
-            Assert.IsInstanceOfType(graphQLMetadataProvider, typeof(SqlGraphQLFileMetadataProvider));
+            Assert.IsInstanceOfType(graphQLMetadataProvider, typeof(GraphQLFileMetadataProvider));
+
+            object runtimeConfigProvider = server.Services.GetService(typeof(IRuntimeConfigProvider));
+            Assert.IsInstanceOfType(runtimeConfigProvider, typeof(SqlRuntimeConfigProvider));
 
             object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
             Assert.IsInstanceOfType(sqlMetadataProvider, typeof(MsSqlMetadataProvider));
@@ -133,7 +136,10 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Assert.IsInstanceOfType(queryExecutor, typeof(QueryExecutor<NpgsqlConnection>));
 
             object graphQLMetadataProvider = server.Services.GetService(typeof(IGraphQLMetadataProvider));
-            Assert.IsInstanceOfType(graphQLMetadataProvider, typeof(SqlGraphQLFileMetadataProvider));
+            Assert.IsInstanceOfType(graphQLMetadataProvider, typeof(GraphQLFileMetadataProvider));
+
+            object runtimeConfigProvider = server.Services.GetService(typeof(IRuntimeConfigProvider));
+            Assert.IsInstanceOfType(runtimeConfigProvider, typeof(SqlRuntimeConfigProvider));
 
             object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
             Assert.IsInstanceOfType(sqlMetadataProvider, typeof(PostgreSqlMetadataProvider));
@@ -161,7 +167,10 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Assert.IsInstanceOfType(queryExecutor, typeof(QueryExecutor<MySqlConnection>));
 
             object graphQLMetadataProvider = server.Services.GetService(typeof(IGraphQLMetadataProvider));
-            Assert.IsInstanceOfType(graphQLMetadataProvider, typeof(SqlGraphQLFileMetadataProvider));
+            Assert.IsInstanceOfType(graphQLMetadataProvider, typeof(GraphQLFileMetadataProvider));
+
+            object runtimeConfigProvider = server.Services.GetService(typeof(IRuntimeConfigProvider));
+            Assert.IsInstanceOfType(runtimeConfigProvider, typeof(SqlRuntimeConfigProvider));
 
             object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
             Assert.IsInstanceOfType(sqlMetadataProvider, typeof(MySqlMetadataProvider));
@@ -344,7 +353,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             RuntimeConfig runtimeConfig =
                     JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
             Assert.IsNotNull(runtimeConfig.Schema);
-            Assert.IsTrue(runtimeConfig.DataSource.GetType() == typeof(DataSource));
+            Assert.IsInstanceOfType(runtimeConfig.DataSource, typeof(DataSource));
             Assert.IsTrue(runtimeConfig.CosmosDb == null
                 || runtimeConfig.CosmosDb.GetType() == typeof(CosmosDbOptions));
             Assert.IsTrue(runtimeConfig.MsSql == null
@@ -442,6 +451,9 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         {
             object metadataProvider = server.Services.GetService(typeof(IGraphQLMetadataProvider));
             Assert.IsInstanceOfType(metadataProvider, typeof(GraphQLFileMetadataProvider));
+
+            object runtimeConfigProvider = server.Services.GetService(typeof(IRuntimeConfigProvider));
+            Assert.IsInstanceOfType(runtimeConfigProvider, typeof(RuntimeConfigProvider));
 
             object queryEngine = server.Services.GetService(typeof(IQueryEngine));
             Assert.IsInstanceOfType(queryEngine, typeof(CosmosQueryEngine));

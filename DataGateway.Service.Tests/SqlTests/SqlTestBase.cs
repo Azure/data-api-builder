@@ -40,7 +40,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static IQueryBuilder _queryBuilder;
         protected static IQueryEngine _queryEngine;
         protected static IMutationEngine _mutationEngine;
-        protected static SqlGraphQLFileMetadataProvider _metadataStoreProvider;
+        protected static GraphQLFileMetadataProvider _metadataStoreProvider;
+        protected static IRuntimeConfigProvider _runtimeConfigProvider;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
         protected static DbExceptionParserBase _dbExceptionParser;
@@ -65,7 +66,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _defaultSchemaName = "public";
                     _dbExceptionParser = new PostgresDbExceptionParser();
                     _queryExecutor = new QueryExecutor<NpgsqlConnection>(config, _dbExceptionParser);
-                    _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
+                    _runtimeConfigProvider = new SqlRuntimeConfigProvider(
                         config,
                         new PostgreSqlMetadataProvider(config, _queryExecutor, _queryBuilder));
                     break;
@@ -74,7 +75,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _defaultSchemaName = "dbo";
                     _dbExceptionParser = new DbExceptionParserBase();
                     _queryExecutor = new QueryExecutor<SqlConnection>(config, _dbExceptionParser);
-                    _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
+                    _runtimeConfigProvider = new SqlRuntimeConfigProvider(
                         config,
                         new MsSqlMetadataProvider(config, _queryExecutor, _queryBuilder));
                     break;
@@ -83,12 +84,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _defaultSchemaName = "mysql";
                     _dbExceptionParser = new MySqlDbExceptionParser();
                     _queryExecutor = new QueryExecutor<MySqlConnection>(config, _dbExceptionParser);
-                    _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
+                    _runtimeConfigProvider = new SqlRuntimeConfigProvider(
                          config,
                          new MySqlMetadataProvider(config, _queryExecutor, _queryBuilder));
                     break;
             }
 
+            _metadataStoreProvider = new GraphQLFileMetadataProvider(config);
             // Setup AuthorizationService to always return Authorized.
             _authorizationService = new Mock<IAuthorizationService>();
             _authorizationService.Setup(x => x.AuthorizeAsync(
@@ -101,8 +103,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _httpContextAccessor = new Mock<IHttpContextAccessor>();
             _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
 
-            _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
-            _mutationEngine = new SqlMutationEngine(_queryEngine, _metadataStoreProvider, _queryExecutor, _queryBuilder);
+            _queryEngine = new SqlQueryEngine(
+                _metadataStoreProvider,
+                _queryExecutor,
+                _queryBuilder);
+            _mutationEngine =
+                new SqlMutationEngine(
+                _queryEngine,
+                _metadataStoreProvider,
+                _queryExecutor,
+                _queryBuilder,
+                _runtimeConfigProvider);
             await ResetDbStateAsync();
         }
 

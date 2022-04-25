@@ -10,11 +10,6 @@ namespace Azure.DataGateway.Service.Services
     public interface IGraphQLMetadataProvider
     {
         /// <summary>
-        /// Initializes this metadata provider for the runtime.
-        /// </summary>
-        Task InitializeAsync();
-
-        /// <summary>
         /// Gets the string version of the GraphQL schema.
         /// </summary>
         string GetGraphQLSchema();

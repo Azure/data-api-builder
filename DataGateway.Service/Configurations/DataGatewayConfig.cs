@@ -1,4 +1,6 @@
 using System;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Azure.DataGateway.Config;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
@@ -42,6 +44,25 @@ namespace Azure.DataGateway.Service.Configurations
         public string? RuntimeConfigFile { get; set; }
         public string? GraphQLSchema { get; set; }
         public AuthenticationProviderConfig Authentication { get; set; } = null!;
+
+        public static T GetDeserializedConfig<T>(string configJson)
+        {
+            JsonSerializerOptions options = new()
+            {
+                PropertyNameCaseInsensitive = true,
+            };
+            options.Converters.Add(new JsonStringEnumConverter());
+
+            // This feels verbose but it avoids having to make _config nullable - which would result in more
+            // down the line issues and null check requirements
+            T? deserializedConfig;
+            if ((deserializedConfig = JsonSerializer.Deserialize<T>(configJson, options)) == null)
+            {
+                throw new JsonException("Failed to get a deserialized config from the provided config");
+            }
+
+            return deserializedConfig!;
+        }
     }
 
     /// <summary>
@@ -79,7 +100,7 @@ namespace Azure.DataGateway.Service.Configurations
     {
         public void PostConfigure(string name, DataGatewayConfig options)
         {
-            if (options.RuntimeConfigFile == null)
+            if (!options.DatabaseType.HasValue)
             {
                 return;
             }
@@ -99,6 +120,7 @@ namespace Azure.DataGateway.Service.Configurations
             bool isResolverConfigSet = !string.IsNullOrEmpty(options.ResolverConfig);
             bool isResolverConfigFileSet = !string.IsNullOrEmpty(options.ResolverConfigFile);
             bool isGraphQLSchemaSet = !string.IsNullOrEmpty(options.GraphQLSchema);
+            bool isRuntimeConfigFileSet = !string.IsNullOrEmpty(options.RuntimeConfigFile);
             if (!(isResolverConfigSet ^ isResolverConfigFileSet))
             {
                 throw new NotSupportedException("Either the Resolver Config or the Resolver Config File needs to be provided. Not both.");
@@ -107,6 +129,11 @@ namespace Azure.DataGateway.Service.Configurations
             if (isResolverConfigSet && !isGraphQLSchemaSet)
             {
                 throw new NotSupportedException("The GraphQLSchema should be provided with the config.");
+            }
+
+            if (!isRuntimeConfigFileSet)
+            {
+                throw new NotSupportedException("The Runtime Config File needs to be provided.");
             }
 
             if (string.IsNullOrWhiteSpace(options.DatabaseConnection.ConnectionString))

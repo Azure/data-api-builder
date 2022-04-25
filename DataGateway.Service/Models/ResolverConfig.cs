@@ -21,11 +21,5 @@ namespace Azure.DataGateway.Service.Models
         /// types in the GraphQL schema. See GraphQLType for details.
         /// </summary>
         public Dictionary<string, GraphQLType> GraphQLTypes { get; set; } = new();
-
-        /// <summary>
-        /// A JSON encoded version of the information that resolvers
-        /// need about schema of the database.
-        /// </summary>
-        public DatabaseSchema? DatabaseSchema { get; set; }
     }
 }

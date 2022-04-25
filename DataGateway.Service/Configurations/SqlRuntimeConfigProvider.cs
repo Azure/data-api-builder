@@ -16,13 +16,13 @@ namespace Azure.DataGateway.Service.Services
     /// This database schema is further enriched using the SqlMetadataProvider
     /// for the required tables.
     /// </summary>
-    public class SqlGraphQLFileMetadataProvider : GraphQLFileMetadataProvider
+    public class SqlRuntimeConfigProvider : RuntimeConfigProvider
     {
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
 
         public FilterParser ODataFilterParser { get; private set; } = new();
 
-        public SqlGraphQLFileMetadataProvider(
+        public SqlRuntimeConfigProvider(
             IOptions<DataGatewayConfig> dataGatewayConfig,
             ISqlMetadataProvider sqlMetadataProvider)
             : base(dataGatewayConfig)
@@ -30,53 +30,42 @@ namespace Azure.DataGateway.Service.Services
             _sqlMetadataProvider = sqlMetadataProvider;
         }
 
-        /// <summary>
-        ///  Copy Constructor required for tests.
-        /// </summary>
-        /// <param name="source">Source to copy from</param>
-        public SqlGraphQLFileMetadataProvider(
-                SqlGraphQLFileMetadataProvider source)
-            : base(source)
-        {
-            _sqlMetadataProvider = source._sqlMetadataProvider;
-        }
-
-        /// Default Constructor for Mock tests.
-        public SqlGraphQLFileMetadataProvider() : base()
-        {
-            _sqlMetadataProvider = new MsSqlMetadataProvider();
-        }
-
         /// </inheritdoc>
         public override async Task InitializeAsync()
         {
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
-            await EnrichDatabaseSchemaWithTableMetadata();
+            await EnrichEntitiesWithTableMetadata();
             InitFilterParser();
             timer.Stop();
             Console.WriteLine($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
         }
 
         /// <summary>
-        /// Obtains the underlying TableDefinition for the given table from the DatabaseSchema.
+        /// Obtains the underlying TableDefinition for the given entity name.
         /// </summary>
         public virtual TableDefinition GetTableDefinition(string name)
         {
-            if (!GraphQLResolverConfig.DatabaseSchema!.Tables.TryGetValue(name, out TableDefinition? metadata))
+            if (!RuntimeConfig.Entities.TryGetValue(name, out Entity? entity))
             {
                 throw new KeyNotFoundException($"Table Definition for {name} does not exist.");
             }
 
-            return metadata;
+            if (entity is not SqlEntity)
+            {
+                throw new InvalidCastException($"Table Definition for {name} cannot be obtained " +
+                    $"since it is not backed by a relational database.");
+            }
+
+            return ((SqlEntity)entity).TableDefinition;
         }
 
         /// <summary>
-        /// Enrich the database schema with the missing information
-        /// from config file but the runtime still needs.
+        /// Enrich the entities in the runtime config with the
+        /// table definition information needed by the runtime to serve requests.
         /// </summary>
-        private async Task EnrichDatabaseSchemaWithTableMetadata()
+        private async Task EnrichEntitiesWithTableMetadata()
         {
-            if (GraphQLResolverConfig == null || GraphQLResolverConfig.DatabaseSchema == null)
+            if (RuntimeConfig == null)
             {
                 throw new DataGatewayException(
                     message: "Developer configuration file has not been initialized.",
@@ -85,43 +74,55 @@ namespace Azure.DataGateway.Service.Services
             }
 
             string schemaName = string.Empty;
-            foreach ((string tableName, TableDefinition tableDefinition) in GraphQLResolverConfig.DatabaseSchema.Tables)
+            foreach (SqlEntity sqlEntity
+                in RuntimeConfig.Entities.Values)
             {
                 switch (CloudDbType)
                 {
                     case DatabaseType.mssql:
                         schemaName = "dbo";
-                        await _sqlMetadataProvider.PopulateTableDefinitionAsync(schemaName, tableName, tableDefinition);
+                        await _sqlMetadataProvider.PopulateTableDefinitionAsync(
+                            schemaName,
+                            sqlEntity.SourceName,
+                            sqlEntity.TableDefinition);
                         break;
                     case DatabaseType.postgresql:
                         schemaName = "public";
-                        await _sqlMetadataProvider.PopulateTableDefinitionAsync(schemaName, tableName, tableDefinition);
+                        await _sqlMetadataProvider.PopulateTableDefinitionAsync(
+                            schemaName,
+                            sqlEntity.SourceName,
+                            sqlEntity.TableDefinition);
                         break;
                     case DatabaseType.mysql:
-                        await _sqlMetadataProvider.PopulateTableDefinitionAsync(schemaName, tableName, tableDefinition);
+                        await _sqlMetadataProvider.PopulateTableDefinitionAsync(
+                            schemaName,
+                            sqlEntity.SourceName,
+                            sqlEntity.TableDefinition);
                         break;
                     default:
-                        throw new ArgumentException($"Enriching database schema " +
+                        throw new ArgumentException($"Enriching entities with table definition " +
                             $"for this database type: {CloudDbType} " +
                             $"is not supported.");
                 }
             }
 
-            await _sqlMetadataProvider.PopulateForeignKeyDefinitionAsync(schemaName, GraphQLResolverConfig.DatabaseSchema.Tables);
+            await _sqlMetadataProvider.PopulateForeignKeyDefinitionAsync(
+                schemaName,
+                RuntimeConfig.Entities.Values);
 
         }
 
         private void InitFilterParser()
         {
-            if (GraphQLResolverConfig == null || GraphQLResolverConfig.DatabaseSchema == null)
+            if (RuntimeConfig == null)
             {
                 throw new DataGatewayException(
-                    message: "Developer configuration file has not been initialized.",
+                    message: "Runtime configuration file has not been initialized.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
             }
 
-            ODataFilterParser.BuildModel(GraphQLResolverConfig.DatabaseSchema);
+            ODataFilterParser.BuildModel(RuntimeConfig.Entities);
         }
     }
 }

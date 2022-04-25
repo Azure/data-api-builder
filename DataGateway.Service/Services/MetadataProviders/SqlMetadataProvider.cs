@@ -99,19 +99,32 @@ namespace Azure.DataGateway.Service.Services
         /// <inheritdoc />
         public async Task PopulateForeignKeyDefinitionAsync(
            string defaultSchemaName,
-           Dictionary<string, TableDefinition> tables)
+           IEnumerable<SqlEntity> sqlEntities)
         {
             // Build the query required to get the foreign key information.
             string queryForForeignKeyInfo =
-                ((BaseSqlQueryBuilder)SqlQueryBuilder).BuildForeignKeyInfoQuery(tables.Count);
+                ((BaseSqlQueryBuilder)SqlQueryBuilder).BuildForeignKeyInfoQuery(sqlEntities.Count());
 
             // Build the array storing all the schemaNames, for now the defaultSchemaName.
-            string[] schemaNames = Enumerable.Range(1, tables.Count).Select(x => defaultSchemaName).ToArray();
+            string[] schemaNames =
+                Enumerable.Range(1, sqlEntities.Count())
+                .Select(x => defaultSchemaName).ToArray();
+
+            // Build a dictionary mapping source entity name to its table definition
+            // for efficient lookups later to populate the retrieved foreign keys.
+            Dictionary<string, TableDefinition> sourceTableDefinition = new();
+            foreach (SqlEntity sqlEntity in sqlEntities)
+            {
+                // Perhaps, save this dictionary in the RuntimeConfig if useful later on.
+                sourceTableDefinition.Add(sqlEntity.SourceName, sqlEntity.TableDefinition);
+            }
 
             // Build the parameters dictionary for the foreign key info query
             // consisting of all schema names and table names.
             Dictionary<string, object?> parameters =
-                GetForeignKeyQueryParams(schemaNames, tables.Keys.ToArray());
+                GetForeignKeyQueryParams(
+                    schemaNames,
+                    sourceTableDefinition.Keys.ToArray());
 
             // Execute the foreign key info query.
             using DbDataReader reader =
@@ -130,7 +143,7 @@ namespace Azure.DataGateway.Service.Services
                 string foreignKeyName = (string)foreignKeyInfo[nameof(ForeignKeyDefinition)]!;
                 ForeignKeyDefinition? foreignKeyDefinition;
 
-                if (tables.TryGetValue(twoPartTableName, out tableDefinition))
+                if (sourceTableDefinition.TryGetValue(twoPartTableName, out tableDefinition))
                 {
                     if (!tableDefinition.ForeignKeys.TryGetValue(foreignKeyName, out foreignKeyDefinition))
                     {

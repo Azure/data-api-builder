@@ -8,7 +8,14 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 {
     public static class SchemaConverter
     {
-        public static ObjectTypeDefinitionNode FromTableDefinition(string tableName, TableDefinition tableDefinition)
+        /// <summary>
+        /// Generate a GraphQL object type from a SQL table definition, combined with the runtime config entity information
+        /// </summary>
+        /// <param name="tableName">Name of the table to generate the GraphQL object type for.</param>
+        /// <param name="tableDefinition">SQL table definition information.</param>
+        /// <param name="configEntity">Runtime config information for the table.</param>
+        /// <returns>A GraphQL object type to be provided to a Hot Chocolate GraphQL document.</returns>
+        public static ObjectTypeDefinitionNode FromTableDefinition(string tableName, TableDefinition tableDefinition, Entity configEntity)
         {
             Dictionary<string, FieldDefinitionNode> fields = new();
 
@@ -35,6 +42,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 
             foreach ((string _, ForeignKeyDefinition fk) in tableDefinition.ForeignKeys)
             {
+                Relationship relationship = configEntity.Relationships[fk.ReferencedTable];
+
                 // Generate the field that represents the relationship to ObjectType, so you can navigate through it
                 // and walk the graph
 
@@ -42,14 +51,20 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                 //       on the relationship, but until we have the work done to generate the right Input
                 //       types for the queries, it's not worth trying to do it completely.
 
-                // TODO: Also need to look at the cardinality of the relationship. If it's a 1-M then this
-                //       side should be a singular not plural field.
+                INullableTypeNode targetField = relationship.Cardinality switch
+                {
+                    Cardinality.One => new NamedTypeNode(FormatNameForObject(fk.ReferencedTable)),
+                    Cardinality.Many => new ListTypeNode(new NamedTypeNode(FormatNameForObject(fk.ReferencedTable))),
+                    _ => throw new NotImplementedException("Specified cardinality isn't supported"),
+                };
+
                 FieldDefinitionNode relationshipField = new(
                     location: null,
                     Pluralize(fk.ReferencedTable),
                     description: null,
                     new List<InputValueDefinitionNode>(),
-                    new NonNullTypeNode(new NamedTypeNode(FormatNameForObject(fk.ReferencedTable))),
+                    // TODO: Check for whether it should be a nullable relationship based on the relationship fields
+                    new NonNullTypeNode(targetField),
                     new List<DirectiveNode>());
 
                 fields.Add(relationshipField.Name.Value, relationshipField);
@@ -65,7 +80,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                                 RelationshipDirective.DirectiveName,
                                 new ArgumentNode("databaseType", column.SystemType.Name),
                                 // TODO: Set cardinality when it's available in config
-                                new ArgumentNode("cardinality", ""))
+                                new ArgumentNode("cardinality", relationship.Cardinality.ToString()))
                         });
                 }
             }

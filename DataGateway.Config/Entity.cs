@@ -7,7 +7,6 @@ namespace Azure.DataGateway.Config
     /// </summary>   
     /// <param name="Source">The underlying database object to which
     /// the exposed entity is connected to.</param>
-
     /// <param name="Rest">Can be a bool or RestEntitySettings type.
     /// When boolean, it describes if the entity is to be exposed.
     /// When RestEntitySettings, describes the REST endpoint settings

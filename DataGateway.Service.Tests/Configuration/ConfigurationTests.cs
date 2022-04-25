@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -12,6 +13,7 @@ using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using HotChocolate.Types;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Primitives;
@@ -340,14 +342,95 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                     new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
                 }
             };
-            try
+
+            RuntimeConfig runtimeConfig =
+                    JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
+            Assert.IsNotNull(runtimeConfig.Schema);
+            Assert.IsTrue(runtimeConfig.DataSource.GetType() == typeof(DataSource));
+            Assert.IsTrue(runtimeConfig.CosmosDb == null
+                || runtimeConfig.CosmosDb.GetType() == typeof(CosmosDbOptions));
+            Assert.IsTrue(runtimeConfig.MsSql == null
+                || runtimeConfig.MsSql.GetType() == typeof(MsSqlOptions));
+            Assert.IsTrue(runtimeConfig.PostgreSql == null
+                || runtimeConfig.PostgreSql.GetType() == typeof(PostgreSqlOptions));
+            Assert.IsTrue(runtimeConfig.MySql == null
+                || runtimeConfig.MySql.GetType() == typeof(MySqlOptions));
+
+            Assert.IsTrue(runtimeConfig.Entities.GetType() == typeof(Dictionary<string, Entity>));
+            foreach (Entity entity in runtimeConfig.Entities.Values)
             {
-                RuntimeConfig runtimeConfig =
-                     JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
-            }
-            catch (Exception exception)
-            {
-                Assert.Fail($"Failed to deserialize: {exception.Message}");
+                Assert.IsTrue(((JsonElement)entity.Source).ValueKind == JsonValueKind.String ||
+                    ((JsonElement)entity.Source).ValueKind == JsonValueKind.Object);
+
+                Assert.IsTrue(entity.Rest == null
+                    || ((JsonElement)entity.Rest).ValueKind == JsonValueKind.True
+                    || ((JsonElement)entity.Rest).ValueKind == JsonValueKind.False
+                    || ((JsonElement)entity.Rest).ValueKind == JsonValueKind.Object);
+                if (entity.Rest != null
+                    && ((JsonElement)entity.Rest).ValueKind == JsonValueKind.Object)
+                {
+                    RestEntitySettings rest =
+                        ((JsonElement)entity.Rest).Deserialize<RestEntitySettings>();
+                    Assert.IsTrue(
+                        ((JsonElement)rest.Route).ValueKind == JsonValueKind.String
+                        || ((JsonElement)rest.Route).ValueKind == JsonValueKind.Object);
+                    if (((JsonElement)rest.Route).ValueKind == JsonValueKind.Object)
+                    {
+                        SingularPlural route = ((JsonElement)rest.Route).Deserialize<SingularPlural>();
+                    }
+                }
+
+                Assert.IsTrue(entity.GraphQL == null
+                    || ((JsonElement)entity.GraphQL).ValueKind == JsonValueKind.True
+                    || ((JsonElement)entity.GraphQL).ValueKind == JsonValueKind.False
+                    || ((JsonElement)entity.GraphQL).ValueKind == JsonValueKind.Object);
+                if (entity.GraphQL != null
+                    && ((JsonElement)entity.GraphQL).ValueKind == JsonValueKind.Object)
+                {
+                    GraphQLEntitySettings graphQL =
+                        ((JsonElement)entity.GraphQL).Deserialize<GraphQLEntitySettings>();
+                    Assert.IsTrue(
+                        ((JsonElement)graphQL.Type).ValueKind == JsonValueKind.String
+                        || ((JsonElement)graphQL.Type).ValueKind == JsonValueKind.Object);
+                    if (((JsonElement)graphQL.Type).ValueKind == JsonValueKind.Object)
+                    {
+                        SingularPlural route = ((JsonElement)graphQL.Type).Deserialize<SingularPlural>();
+                    }
+                }
+
+                Assert.IsTrue(entity.Permissions.GetType() == typeof(PermissionSetting[]));
+                foreach(PermissionSetting permission in entity.Permissions)
+                {
+                    foreach(object action in permission.Actions)
+                    {
+                        HashSet<string> allowedActions =
+                            new() { "*", "create", "read", "update", "delete" };
+                        Assert.IsTrue(((JsonElement)action).ValueKind == JsonValueKind.String ||
+                            ((JsonElement)action).ValueKind == JsonValueKind.Object);
+                        if (((JsonElement)action).ValueKind == JsonValueKind.Object)
+                        {
+                            Config.Action configAction =
+                                ((JsonElement)action).Deserialize<Config.Action>();
+                            Assert.IsTrue(allowedActions.Contains(configAction.Name));
+                            Assert.IsTrue(configAction.Policy == null
+                                || configAction.Policy.GetType() == typeof(Policy));
+                            Assert.IsTrue(configAction.Fields == null
+                                || configAction.Fields.GetType() == typeof(Field));
+                        }
+                        else
+                        {
+                            string name = ((JsonElement)action).Deserialize<string>();
+                            Assert.IsTrue(allowedActions.Contains(name));
+                        }
+                    }
+                }
+
+                Assert.IsTrue(entity.Relationships == null ||
+                    entity.Relationships.GetType()
+                        == typeof(Dictionary<string, Relationship>));
+                Assert.IsTrue(entity.Mappings == null ||
+                    entity.Mappings.GetType()
+                        == typeof(Dictionary<string, string>));
             }
         }
 

@@ -11,7 +11,6 @@ namespace Azure.DataGateway.Config
     /// When boolean, it describes if the entity is to be exposed.
     /// When RestEntitySettings, describes the REST endpoint settings
     /// specific to this entity.</param>
-
     /// <param name="GraphQL">Can be a bool or GraphQLEntitySettings type.
     /// When GraphQLEntitySettings, describes the GraphQL settings
     /// specific to this entity.</param>

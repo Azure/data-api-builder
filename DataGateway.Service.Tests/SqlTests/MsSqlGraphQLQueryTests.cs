@@ -646,6 +646,52 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _ = await GetDatabaseResultAsync(msSqlQuery);
         }
 
+        /// <summary>
+        /// Test to check graphQL support for aliases(arbitrarily set by user while making request).
+        /// book_id and book_title are aliases used for corresponding query fields.
+        /// The response for the query will contain the alias instead of raw db column.
+        /// </summary>
+        [TestMethod]
+        public async Task TestAliasSupportForGraphQLQueryFields()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(first: 2) {
+                    book_id: id
+                    book_title: title
+                }
+            }";
+            string msSqlQuery = $"SELECT TOP 2 id AS book_id, title AS book_title FROM books ORDER by id FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test to check graphQL support for aliases(arbitrarily set by user while making request).
+        /// book_id is an alias, while title is the raw db field.
+        /// The response for the query will use the alias where it is provided in the query.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForMixOfRawDbFieldFieldAndAlias()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(first: 2) {
+                    book_id: id
+                    title
+                }
+            }";
+            string msSqlQuery = $"SELECT TOP 2 id AS book_id, title AS title FROM books ORDER by id FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Negative Tests

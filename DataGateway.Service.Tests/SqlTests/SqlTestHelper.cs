@@ -1,12 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
@@ -137,7 +138,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string expected,
             HttpStatusCode expectedStatusCode,
             string expectedLocationHeader,
-            bool isJson = false)
+            bool isJson = false,
+            int verifyNumRecords = -1)
         {
             JsonSerializerOptions options = new()
             {
@@ -149,6 +151,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case OkObjectResult okResult:
                     Assert.AreEqual((int)expectedStatusCode, okResult.StatusCode);
                     actual = JsonSerializer.Serialize(okResult.Value, options);
+                    // if verifyNumRecords is positive we want to compare its value to
+                    // the number of elements associated with "value" in the actual result.
+                    // because the okResult.Value is an annonymous type we use the serialized
+                    // json string, actual, to easily get the inner array and get its length.
+                    if (verifyNumRecords >= 0)
+                    {
+                        Dictionary<string, JsonElement[]> actualAsDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(actual);
+                        Assert.AreEqual(actualAsDict["value"].Length, verifyNumRecords);
+                    }
+
                     break;
                 case CreatedResult createdResult:
                     Assert.AreEqual((int)expectedStatusCode, createdResult.StatusCode);
@@ -166,7 +178,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     break;
                 default:
                     JsonResult actualResult = (JsonResult)actionResult;
-                    actual = JsonSerializer.Serialize(actualResult.Value);
+                    actual = JsonSerializer.Serialize(actualResult.Value, options);
                     break;
             }
 

@@ -18,7 +18,6 @@ namespace Azure.DataGateway.Config
     /// <param name="Relationships">Defines how an entity is related to other exposed
     /// entities and optionally provides details on what underlying database
     /// objects can be used to support such relationships.</param>
-
     /// <param name="Mappings"> Defines mappings between database fields
     /// and GraphQL and REST fields.</param>
     public record Entity(

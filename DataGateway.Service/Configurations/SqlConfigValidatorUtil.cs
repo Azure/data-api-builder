@@ -175,12 +175,11 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Gets database tables from config
+        /// Gets the entities from the config.
         /// </summary>
-        private Dictionary<string, TableDefinition> GetDatabaseTables()
+        private Dictionary<string, Entity> GetEntities()
         {
-
-            return _runtimeConfig.Entities.;
+            return _runtimeConfig.Entities;
         }
 
         /// <summary>

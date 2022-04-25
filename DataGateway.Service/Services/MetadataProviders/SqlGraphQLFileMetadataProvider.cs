@@ -89,15 +89,15 @@ namespace Azure.DataGateway.Service.Services
             {
                 switch (CloudDbType)
                 {
-                    case DatabaseType.MsSql:
+                    case DatabaseType.mssql:
                         schemaName = "dbo";
                         await _sqlMetadataProvider.PopulateTableDefinitionAsync(schemaName, tableName, tableDefinition);
                         break;
-                    case DatabaseType.PostgreSql:
+                    case DatabaseType.postgresql:
                         schemaName = "public";
                         await _sqlMetadataProvider.PopulateTableDefinitionAsync(schemaName, tableName, tableDefinition);
                         break;
-                    case DatabaseType.MySql:
+                    case DatabaseType.mysql:
                         await _sqlMetadataProvider.PopulateTableDefinitionAsync(schemaName, tableName, tableDefinition);
                         break;
                     default:

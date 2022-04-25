@@ -1,7 +1,7 @@
 namespace Azure.DataGateway.Config
 {
     /// <summary>
-    /// Enumeration of Supported Authorization Types
+    /// Enumeration of Supported Authorization Types.
     /// </summary>
     public enum AuthorizationType
     {

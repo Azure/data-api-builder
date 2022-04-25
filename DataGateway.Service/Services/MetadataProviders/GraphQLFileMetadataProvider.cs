@@ -4,6 +4,7 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models;
 using Microsoft.Extensions.Options;
@@ -87,7 +88,7 @@ namespace Azure.DataGateway.Service.Services
         {
             GraphQLResolverConfig = new(string.Empty, string.Empty);
             _mutationResolvers = new();
-            CloudDbType = DatabaseType.MsSql;
+            CloudDbType = DatabaseType.mssql;
         }
 
         /// <summary>

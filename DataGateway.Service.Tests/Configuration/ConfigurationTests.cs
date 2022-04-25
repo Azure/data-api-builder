@@ -4,7 +4,10 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
@@ -54,7 +57,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
             Dictionary<string, string> config = new()
             {
-                { "DataGatewayConfig:DatabaseType", "Cosmos" },
+                { "DataGatewayConfig:DatabaseType", "cosmos" },
                 { "DataGatewayConfig:ResolverConfigFile", "cosmos-config.json" },
                 { "DataGatewayConfig:DatabaseConnection:ConnectionString", "Cosmos" }
             };
@@ -173,14 +176,14 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Dictionary<string, string> config = new()
             {
                 { "Test", "Value" },
-                { "DataGatewayConfig:DatabaseType", "MsSql" }
+                { "DataGatewayConfig:DatabaseType", "mssql" }
             };
 
             HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(config));
             Assert.AreEqual(HttpStatusCode.Conflict, postResult.StatusCode);
             // Since the body of the response when there's a conflict is the conflicting key:value pair, here we
-            // expect DatabaseType:MsSql.
-            Assert.AreEqual("DataGatewayConfig:DatabaseType:MsSql", await postResult.Content.ReadAsStringAsync());
+            // expect DatabaseType:mssql.
+            Assert.AreEqual("DataGatewayConfig:DatabaseType:mssql", await postResult.Content.ReadAsStringAsync());
         }
 
         [TestMethod("Validates that setting the configuration at runtime will instantiate the proper classes.")]
@@ -190,7 +193,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             HttpClient client = server.CreateClient();
             Dictionary<string, string> config = new()
             {
-                { "DataGatewayConfig:DatabaseType", "Cosmos" },
+                { "DataGatewayConfig:DatabaseType", "cosmos" },
                 { "DataGatewayConfig:ResolverConfigFile", "cosmos-config.json" },
                 { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
             };
@@ -208,7 +211,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             HttpClient client = server.CreateClient();
             Dictionary<string, string> config = new()
             {
-                { "DataGatewayConfig:DatabaseType", "Cosmos" },
+                { "DataGatewayConfig:DatabaseType", "cosmos" },
                 { "DataGatewayConfig:ResolverConfig", _cosmosResolverConfig },
                 { "DataGatewayConfig:GraphQLSchema", _graphqlSchema },
                 { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
@@ -225,7 +228,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             HttpClient client = server.CreateClient();
             Dictionary<string, string> config = new()
             {
-                { "DataGatewayConfig:DatabaseType", "Cosmos" },
+                { "DataGatewayConfig:DatabaseType", "cosmos" },
                 { "DataGatewayConfig:ResolverConfig", _cosmosResolverConfig },
                 { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
             };
@@ -243,7 +246,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             HttpClient client = server.CreateClient();
             Dictionary<string, string> config = new()
             {
-                { "DataGatewayConfig:DatabaseType", "Cosmos" },
+                { "DataGatewayConfig:DatabaseType", "cosmos" },
                 { "DataGatewayConfig:ResolverConfig", _cosmosResolverConfig },
                 { "DataGatewayConfig:ResolverConfigFile", "cosmos-config.json" },
                 { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
@@ -261,7 +264,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             InMemoryUpdateableConfigurationProvider provider = new();
             Dictionary<string, string> config = new()
             {
-                { "DataGatewayConfig:DatabaseType", "Cosmos" },
+                { "DataGatewayConfig:DatabaseType", "cosmos" },
             };
             provider.SetManyAndReload(config);
 
@@ -274,7 +277,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             }
             else
             {
-                Assert.AreEqual("Cosmos", finalDatabaseType);
+                Assert.AreEqual("cosmos", finalDatabaseType);
             }
 
             token.RegisterChangeCallback((state) =>
@@ -292,11 +295,11 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
             Dictionary<string, string> toUpdate = new()
             {
-                { "DataGatewayConfig:DatabaseType", "PostgreSql" },
+                { "DataGatewayConfig:DatabaseType", "postgresql" },
                 { "DataGatewayConfig:ResolverConfigFile", "some-file.json" }
             };
             provider.SetManyAndReload(toUpdate);
-            Assert.AreEqual("PostgreSql", finalDatabaseType);
+            Assert.AreEqual("postgresql", finalDatabaseType);
             Assert.AreEqual("some-file.json", finalResolverConfigFile);
         }
 
@@ -315,6 +318,117 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 Assert.AreEqual("The runtime has not been initialized with an Edm model.", exception.Message);
                 Assert.AreEqual(HttpStatusCode.InternalServerError, exception.StatusCode);
                 Assert.AreEqual(DataGatewayException.SubStatusCodes.UnexpectedError, exception.SubStatusCode);
+            }
+        }
+
+        /// <summary>
+        /// This function will attempt to read the runtime-config-test.json
+        /// file into the RuntimeConfig class. It verifies the deserialization succeeds.
+        /// </summary>
+        [TestMethod("Validates if deserialization of new runtime config format succeeds.")]
+        public void TestReadingRuntimeConfig()
+        {
+            string jsonString = File.ReadAllText("runtime-config-test.json");
+            // use camel case
+            // convert Enum to strings
+            // case insensitive
+            JsonSerializerOptions options = new()
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters =
+                {
+                    new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+                }
+            };
+
+            RuntimeConfig runtimeConfig =
+                    JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
+            Assert.IsNotNull(runtimeConfig.Schema);
+            Assert.IsTrue(runtimeConfig.DataSource.GetType() == typeof(DataSource));
+            Assert.IsTrue(runtimeConfig.CosmosDb == null
+                || runtimeConfig.CosmosDb.GetType() == typeof(CosmosDbOptions));
+            Assert.IsTrue(runtimeConfig.MsSql == null
+                || runtimeConfig.MsSql.GetType() == typeof(MsSqlOptions));
+            Assert.IsTrue(runtimeConfig.PostgreSql == null
+                || runtimeConfig.PostgreSql.GetType() == typeof(PostgreSqlOptions));
+            Assert.IsTrue(runtimeConfig.MySql == null
+                || runtimeConfig.MySql.GetType() == typeof(MySqlOptions));
+
+            Assert.IsTrue(runtimeConfig.Entities.GetType() == typeof(Dictionary<string, Entity>));
+            foreach (Entity entity in runtimeConfig.Entities.Values)
+            {
+                Assert.IsTrue(((JsonElement)entity.Source).ValueKind == JsonValueKind.String ||
+                    ((JsonElement)entity.Source).ValueKind == JsonValueKind.Object);
+
+                Assert.IsTrue(entity.Rest == null
+                    || ((JsonElement)entity.Rest).ValueKind == JsonValueKind.True
+                    || ((JsonElement)entity.Rest).ValueKind == JsonValueKind.False
+                    || ((JsonElement)entity.Rest).ValueKind == JsonValueKind.Object);
+                if (entity.Rest != null
+                    && ((JsonElement)entity.Rest).ValueKind == JsonValueKind.Object)
+                {
+                    RestEntitySettings rest =
+                        ((JsonElement)entity.Rest).Deserialize<RestEntitySettings>();
+                    Assert.IsTrue(
+                        ((JsonElement)rest.Route).ValueKind == JsonValueKind.String
+                        || ((JsonElement)rest.Route).ValueKind == JsonValueKind.Object);
+                    if (((JsonElement)rest.Route).ValueKind == JsonValueKind.Object)
+                    {
+                        SingularPlural route = ((JsonElement)rest.Route).Deserialize<SingularPlural>();
+                    }
+                }
+
+                Assert.IsTrue(entity.GraphQL == null
+                    || ((JsonElement)entity.GraphQL).ValueKind == JsonValueKind.True
+                    || ((JsonElement)entity.GraphQL).ValueKind == JsonValueKind.False
+                    || ((JsonElement)entity.GraphQL).ValueKind == JsonValueKind.Object);
+                if (entity.GraphQL != null
+                    && ((JsonElement)entity.GraphQL).ValueKind == JsonValueKind.Object)
+                {
+                    GraphQLEntitySettings graphQL =
+                        ((JsonElement)entity.GraphQL).Deserialize<GraphQLEntitySettings>();
+                    Assert.IsTrue(
+                        ((JsonElement)graphQL.Type).ValueKind == JsonValueKind.String
+                        || ((JsonElement)graphQL.Type).ValueKind == JsonValueKind.Object);
+                    if (((JsonElement)graphQL.Type).ValueKind == JsonValueKind.Object)
+                    {
+                        SingularPlural route = ((JsonElement)graphQL.Type).Deserialize<SingularPlural>();
+                    }
+                }
+
+                Assert.IsTrue(entity.Permissions.GetType() == typeof(PermissionSetting[]));
+                foreach (PermissionSetting permission in entity.Permissions)
+                {
+                    foreach (object action in permission.Actions)
+                    {
+                        HashSet<string> allowedActions =
+                            new() { "*", "create", "read", "update", "delete" };
+                        Assert.IsTrue(((JsonElement)action).ValueKind == JsonValueKind.String ||
+                            ((JsonElement)action).ValueKind == JsonValueKind.Object);
+                        if (((JsonElement)action).ValueKind == JsonValueKind.Object)
+                        {
+                            Config.Action configAction =
+                                ((JsonElement)action).Deserialize<Config.Action>();
+                            Assert.IsTrue(allowedActions.Contains(configAction.Name));
+                            Assert.IsTrue(configAction.Policy == null
+                                || configAction.Policy.GetType() == typeof(Policy));
+                            Assert.IsTrue(configAction.Fields == null
+                                || configAction.Fields.GetType() == typeof(Field));
+                        }
+                        else
+                        {
+                            string name = ((JsonElement)action).Deserialize<string>();
+                            Assert.IsTrue(allowedActions.Contains(name));
+                        }
+                    }
+                }
+
+                Assert.IsTrue(entity.Relationships == null ||
+                    entity.Relationships.GetType()
+                        == typeof(Dictionary<string, Relationship>));
+                Assert.IsTrue(entity.Mappings == null ||
+                    entity.Mappings.GetType()
+                        == typeof(Dictionary<string, string>));
             }
         }
 

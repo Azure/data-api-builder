@@ -28,10 +28,10 @@ namespace Azure.DataGateway.Service
             RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(json, options);
             _entityConfigMap = GetEntityConfigMap(runtimeConfig);
 
-            string entityName = "todo";
-            string roleName = "public";
-            string action = "update";
-            List<string> columns = new() { "id", "title", "completed" };
+            string entityName = "magazines";
+            string roleName = "authenticated";
+            string action = "read";
+            List<string> columns = new() { "issue_number"};
 
             if (!IsRoleDefinedForEntity(roleName, entityName))
             {

@@ -4,7 +4,6 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -13,7 +12,6 @@ using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
-using HotChocolate.Types;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Primitives;
@@ -399,9 +397,9 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 }
 
                 Assert.IsTrue(entity.Permissions.GetType() == typeof(PermissionSetting[]));
-                foreach(PermissionSetting permission in entity.Permissions)
+                foreach (PermissionSetting permission in entity.Permissions)
                 {
-                    foreach(object action in permission.Actions)
+                    foreach (object action in permission.Actions)
                     {
                         HashSet<string> allowedActions =
                             new() { "*", "create", "read", "update", "delete" };

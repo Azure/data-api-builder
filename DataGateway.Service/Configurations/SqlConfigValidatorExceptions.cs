@@ -19,6 +19,7 @@ namespace Azure.DataGateway.Service.Configurations
     public partial class SqlConfigValidator : IConfigValidator
     {
         private ResolverConfig _resolverConfig;
+        private RuntimeConfig _runtimeConfig;
         private ISchema? _schema;
         private Stack<string> _configValidationStack;
         private Stack<string> _schemaValidationStack;
@@ -32,7 +33,8 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         public SqlConfigValidator(
             IGraphQLMetadataProvider metadataStoreProvider,
-            GraphQLService graphQLService)
+            GraphQLService graphQLService,
+            IRuntimeConfigProvider runtimeConfigProvider)
         {
             _configValidationStack = MakeConfigPosition(Enumerable.Empty<string>());
             _schemaValidationStack = MakeSchemaPosition(Enumerable.Empty<string>());
@@ -42,6 +44,7 @@ namespace Azure.DataGateway.Service.Configurations
             _graphQLTypesAreValidated = false;
 
             _resolverConfig = metadataStoreProvider.GetResolvedConfig();
+            _runtimeConfig = runtimeConfigProvider.GetRuntimeConfig();
             _schema = graphQLService.Schema;
 
             if (_schema != null)
@@ -829,21 +832,6 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate that the field's associative table exists
-        /// </summary>
-        private void ValidateAssociativeTableExists(GraphQLField field)
-        {
-            if (!ExistsTableWithName(field.AssociativeTable))
-            {
-                throw new ConfigValidationException(
-                    $"Associative table \"{field.AssociativeTable}\" does not exits in the " +
-                    "config database schema.",
-                    _configValidationStack
-                );
-            }
-        }
-
-        /// <summary>
         /// Validate the left and right foreign keys for many to many field
         /// </summary>
         private void ValidateLeftAndRightFkForM2MField(GraphQLField field)
@@ -943,21 +931,6 @@ namespace Azure.DataGateway.Service.Configurations
                 throw new ConfigValidationException(
                     "Mutation resolver must have a non empty string \"Table\" element.",
                     _configValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Validate that the mutation resolver table exists in the database schema
-        /// </summary>
-        private void ValidateMutResolverTableExists(string tableName)
-        {
-            if (!ExistsTableWithName(tableName))
-            {
-                throw new ConfigValidationException(
-                    $"Mutation resolver table \"{tableName}\" does not exist in " +
-                    "the database schema.",
-                    _configValidationStack
-                );
             }
         }
 

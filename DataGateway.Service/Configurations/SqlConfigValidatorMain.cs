@@ -48,8 +48,6 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateGraphQLTypes()
         {
-            ValidateDatabaseSchemaIsValidated();
-
             ConfigStepInto("GraphQLTypes");
 
             Dictionary<string, GraphQLType> types = GetGraphQLTypes();
@@ -371,7 +369,6 @@ namespace Azure.DataGateway.Service.Configurations
             }
 
             ValidateHasAssociationTable(field);
-            ValidateAssociativeTableExists(field);
             ValidateHasBothLeftAndRightFK(field);
             ValidateLeftAndRightFkForM2MField(field);
 
@@ -386,7 +383,6 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateMutationResolvers()
         {
-            ValidateDatabaseSchemaIsValidated();
             ValidateGraphQLTypesIsValidated();
 
             ConfigStepInto("MutationResolvers");
@@ -404,7 +400,6 @@ namespace Azure.DataGateway.Service.Configurations
                 SchemaStepInto(resolver.Id);
 
                 ValidateMutResolverHasTable(resolver);
-                ValidateMutResolverTableExists(resolver.Table);
 
                 // the rest of the mutation operations are only valid for cosmos
                 List<Operation> supportedOperations = new()
@@ -509,7 +504,6 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateQuerySchema()
         {
-            ValidateDatabaseSchemaIsValidated();
             ValidateGraphQLTypesIsValidated();
 
             SchemaStepInto("Query");

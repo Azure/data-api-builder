@@ -50,22 +50,6 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Sets the validation status of all the sql entities.
-        /// </summary>
-        private void SetSqlEntitiesValidated(bool flag)
-        {
-            _sqlEntitiesAreValidated = flag;
-        }
-
-        /// <summary>
-        /// Gets the validation status of all the sql entities.
-        /// </summary>
-        private bool AreSqlEntitiesValidated()
-        {
-            return _sqlEntitiesAreValidated;
-        }
-
-        /// <summary>
         /// Sets the validation status of the GraphQLTypes
         /// </summary>
         private void SetGraphQLTypesValidated(bool flag)
@@ -175,14 +159,6 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Gets the entities from the config.
-        /// </summary>
-        private Dictionary<string, Entity> GetEntities()
-        {
-            return _runtimeConfig.Entities;
-        }
-
-        /// <summary>
         /// Gets graphql types from config
         /// </summmary>
         private Dictionary<string, GraphQLType> GetGraphQLTypes()
@@ -191,28 +167,16 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Checks if table exists in database schema with that name
-        /// </summary>
-        private bool ExistsTableWithName(string tableName)
-        {
-            return _resolverConfig.DatabaseSchema!.Tables.ContainsKey(tableName);
-        }
-
-        /// <summary>
-        /// Get table definition from name
-        /// Expects valid tableName
+        /// Get table definition from the entity name
+        /// Expects valid entity name and a sql entity.
         /// </summary>
         /// <exception cref="ArgumentException">
-        /// If the given table name does not exist in the schema
+        /// If the given entity name does not exist in the schema.
         /// </exception>
-        private TableDefinition GetTableWithName(string tableName)
+        private TableDefinition GetTableWithName(string entityName)
         {
-            if (!ExistsTableWithName(tableName))
-            {
-                throw new ArgumentException("Invalid table name was provided.");
-            }
-
-            return _resolverConfig.DatabaseSchema!.Tables[tableName];
+            SqlEntity sqlEntity = (SqlEntity)_runtimeConfig.Entities[entityName];
+            return sqlEntity.TableDefinition;
         }
 
         /// <summary>
@@ -559,12 +523,13 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Gets a foreign key by name from the table
+        /// Gets a foreign key by entity name from the underlying table.
         /// </summary>
         /// <exception cref="KeyNotFoundException" />
-        private ForeignKeyDefinition GetFkFromTable(string tableName, string fkName)
+        private ForeignKeyDefinition GetFkFromTable(string entityName, string fkName)
         {
-            return _resolverConfig.DatabaseSchema!.Tables[tableName].ForeignKeys[fkName];
+            SqlEntity sqlEntity = (SqlEntity)_runtimeConfig.Entities[entityName];
+            return sqlEntity.TableDefinition.ForeignKeys[fkName];
         }
 
         /// <summary>

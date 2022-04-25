@@ -25,7 +25,7 @@ namespace Azure.DataGateway.Config
         object? Rest,
         object? GraphQL,
         PermissionSettings[] Permissions,
-        Relationship? Relationships,
+        Dictionary<string, Relationship> Relationships,
         Dictionary<string, string>? Mappings);
 
     /// <summary>

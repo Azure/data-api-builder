@@ -198,11 +198,20 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
                 SystemType = typeof(long)
             });
 
-            Entity configEntity = GenerateEmptyEntity() with
-            {
-                Relationships = new() {
-                    { foreignKeyTable, new Relationship(Cardinality.One, foreignKeyTable, SourceFields: null, TargetFields: null, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null) } }
-            };
+            Dictionary<string, Relationship> relationships =
+                new() {
+                    { foreignKeyTable,
+                      new Relationship(
+                          Cardinality.One,
+                          foreignKeyTable,
+                          SourceFields: null,
+                          TargetFields: null,
+                          LinkingObject: null,
+                          LinkingSourceFields: null,
+                          LinkingTargetFields: null)
+                    }
+                };
+            Entity configEntity = GenerateEmptyEntity() with { Relationships = relationships };
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity);
 
@@ -228,12 +237,20 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
                 SystemType = typeof(long)
             });
 
-            Entity configEntity = GenerateEmptyEntity() with
-            {
-                Relationships = new() {
-                    { foreignKeyTable, new Relationship(Cardinality.One, foreignKeyTable, SourceFields: null, TargetFields: null, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null) } }
-            };
-
+            Dictionary<string, Relationship> relationships =
+                new() {
+                    { foreignKeyTable,
+                      new Relationship(
+                          Cardinality.One,
+                          foreignKeyTable,
+                          SourceFields: null,
+                          TargetFields: null,
+                          LinkingObject: null,
+                          LinkingSourceFields: null,
+                          LinkingTargetFields: null)
+                    }
+                };
+            Entity configEntity = GenerateEmptyEntity() with { Relationships = relationships };
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity);
 
             FieldDefinitionNode field = od.Fields.First(f => f.Name.Value != refColName && f.Name.Value != columnName);
@@ -261,11 +278,20 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
                 SystemType = typeof(long)
             });
 
-            Entity configEntity = GenerateEmptyEntity() with
-            {
-                Relationships = new() {
-                    { foreignKeyTable, new Relationship(Cardinality.One, foreignKeyTable, SourceFields: null, TargetFields: null, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null) } }
-            };
+            Dictionary<string, Relationship> relationships =
+                new() {
+                    { foreignKeyTable,
+                      new Relationship(
+                          Cardinality.One,
+                          foreignKeyTable,
+                          SourceFields: null,
+                          TargetFields: null,
+                          LinkingObject: null,
+                          LinkingSourceFields: null,
+                          LinkingTargetFields: null)
+                    }
+                };
+            Entity configEntity = GenerateEmptyEntity() with { Relationships = relationships };
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity);
 
             FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == refColName);
@@ -301,12 +327,20 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
                 table.ForeignKeys["foreign_key"].ReferencingColumns.Add(refColName);
             }
 
-            Entity configEntity = GenerateEmptyEntity() with
-            {
-                Relationships = new() {
-                    { foreignKeyTable, new Relationship(Cardinality.One, foreignKeyTable, SourceFields: null, TargetFields: null, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null) } }
-            };
-
+            Dictionary<string, Relationship> relationships =
+                new() {
+                    { foreignKeyTable,
+                      new Relationship(
+                          Cardinality.One,
+                          foreignKeyTable,
+                          SourceFields: null,
+                          TargetFields: null,
+                          LinkingObject: null,
+                          LinkingSourceFields: null,
+                          LinkingTargetFields: null)
+                    }
+                };
+            Entity configEntity = GenerateEmptyEntity() with { Relationships = relationships };
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity);
 
             Assert.AreEqual(refColCount, od.Fields.Count(f => f.Directives.Any(d => d.Name.Value == RelationshipDirective.DirectiveName)));
@@ -332,11 +366,20 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
                 SystemType = typeof(long)
             });
 
-            Entity configEntity = GenerateEmptyEntity() with
-            {
-                Relationships = new() {
-                    { foreignKeyTable, new Relationship(Cardinality.One, foreignKeyTable, SourceFields: null, TargetFields: null, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null) } }
-            };
+            Dictionary<string, Relationship> relationships =
+                new() {
+                    { foreignKeyTable,
+                      new Relationship(
+                          Cardinality.One,
+                          foreignKeyTable,
+                          SourceFields: null,
+                          TargetFields: null,
+                          LinkingObject: null,
+                          LinkingSourceFields: null,
+                          LinkingTargetFields: null)
+                    }
+                };
+            Entity configEntity = GenerateEmptyEntity() with { Relationships = relationships };
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity);
 
             FieldDefinitionNode field = od.Fields.First(f => f.Type.NamedType().Name.Value == foreignKeyTable);
@@ -362,11 +405,20 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
                 SystemType = typeof(long)
             });
 
-            Entity configEntity = GenerateEmptyEntity() with
-            {
-                Relationships = new() {
-                    { foreignKeyTable, new Relationship(Cardinality.Many, foreignKeyTable, SourceFields: null, TargetFields: null, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null) } }
-            };
+            Dictionary<string, Relationship> relationships =
+                new() {
+                    { foreignKeyTable,
+                      new Relationship(
+                          Cardinality.One,
+                          foreignKeyTable,
+                          SourceFields: null,
+                          TargetFields: null,
+                          LinkingObject: null,
+                          LinkingSourceFields: null,
+                          LinkingTargetFields: null)
+                    }
+                };
+            Entity configEntity = GenerateEmptyEntity() with { Relationships = relationships };
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity);
 
             FieldDefinitionNode field = od.Fields.First(f => f.Type.NamedType().Name.Value == foreignKeyTable);

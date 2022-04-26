@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using static Azure.DataGateway.Service.GraphQLBuilder.Utils;
+using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLNaming;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 {
@@ -12,7 +13,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             FieldDefinitionNode idField = FindIdField(objectTypeDefinitionNode);
             return new(
                 null,
-                new NameNode($"delete{name}"),
+                new NameNode($"delete{FormatNameForObject(name)}"),
                 new StringValueNode($"Delete a {name}"),
                 new List<InputValueDefinitionNode> {
                 new InputValueDefinitionNode(
@@ -23,7 +24,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                     null,
                     new List<DirectiveNode>())
                 },
-                new NamedTypeNode(name),
+                new NamedTypeNode(FormatNameForObject(name)),
                 new List<DirectiveNode>()
             );
         }

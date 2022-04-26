@@ -1,8 +1,7 @@
-using System.Collections.Generic;
-using System.Linq;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using static Azure.DataGateway.Service.GraphQLBuilder.Utils;
+using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLNaming;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 {
@@ -110,7 +109,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
         private static NameNode GenerateInputTypeName(string typeName)
         {
-            return new($"Update{typeName}Input");
+            return new($"Update{FormatNameForObject(typeName)}Input");
         }
 
         public static FieldDefinitionNode Build(NameNode name, Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs, ObjectTypeDefinitionNode objectTypeDefinitionNode, DocumentNode root)
@@ -121,7 +120,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
             return new(
                 location: null,
-                new NameNode($"update{name}"),
+                new NameNode($"update{FormatNameForObject(name)}"),
                 new StringValueNode($"Updates a {name}"),
                 new List<InputValueDefinitionNode> {
                 new InputValueDefinitionNode(
@@ -139,7 +138,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                     defaultValue: null,
                     new List<DirectiveNode>())
                 },
-                new NamedTypeNode(name),
+                new NamedTypeNode(FormatNameForObject(name)),
                 new List<DirectiveNode>()
             );
         }

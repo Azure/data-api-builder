@@ -26,7 +26,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 
                 if (tableDefinition.PrimaryKey.Contains(columnName))
                 {
-                    directives.Add(new DirectiveNode(PrimaryKeyDirective.DirectiveName, new ArgumentNode("databaseType", column.SystemType.Name)));
+                    directives.Add(new DirectiveNode(PrimaryKeyDirectiveType.DirectiveName, new ArgumentNode("databaseType", column.SystemType.Name)));
                 }
 
                 NamedTypeNode fieldType = new(GetGraphQLTypeForColumnType(column.SystemType));
@@ -83,7 +83,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                     fields[columnName] = field.WithDirectives(
                         new List<DirectiveNode>(field.Directives) {
                             new(
-                                RelationshipDirective.DirectiveName,
+                                RelationshipDirectiveType.DirectiveName,
                                 new ArgumentNode("databaseType", column.SystemType.Name),
                                 new ArgumentNode("cardinality", relationship.Cardinality.ToString()))
                         });
@@ -94,7 +94,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                 location: null,
                 new(FormatNameForObject(tableName)),
                 description: null,
-                new List<DirectiveNode>(),
+                new List<DirectiveNode>() { new(ModelDirectiveType.DirectiveName) },
                 new List<NamedTypeNode>(),
                 fields.Values.ToImmutableList());
         }

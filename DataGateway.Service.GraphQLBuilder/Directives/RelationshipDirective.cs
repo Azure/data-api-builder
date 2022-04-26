@@ -1,39 +1,25 @@
-using HotChocolate.Language;
+using HotChocolate;
 using HotChocolate.Types;
-using DirectiveLocation = HotChocolate.Language.DirectiveLocation;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Directives
 {
-    public static class RelationshipDirective
+    public class RelationshipDirectiveType : DirectiveType
     {
         public static string DirectiveName { get; } = "relationship";
 
-        public static DirectiveDefinitionNode Directive
+        protected override void Configure(IDirectiveTypeDescriptor descriptor)
         {
-            get
-            {
-                return new(
-                location: null,
-                new NameNode(DirectiveName),
-                new StringValueNode("A directive to indicate the relationship between two tables"),
-                false,
-                new List<InputValueDefinitionNode> {
-                    new(location: null,
-                    new NameNode("databaseType"),
-                    new StringValueNode("The underlying database type"),
-                    new StringType().ToTypeNode(),
-                    defaultValue: null,
-                    new List<DirectiveNode>()),
+            descriptor.Name(new NameString(DirectiveName))
+                               .Description("A directive to indicate the relationship between two tables")
+                                .Location(DirectiveLocation.FieldDefinition);
 
-                    new(location: null,
-                    new NameNode("cardinality"),
-                    new StringValueNode("The relationship cardinality"),
-                    new StringType().ToTypeNode(),
-                    defaultValue: null,
-                    new List<DirectiveNode>())
-                },
-                new List<NameNode> { new NameNode(DirectiveLocation.FieldDefinition.Value) });
-            }
+            descriptor.Argument(new NameString("databaseType"))
+                  .Type<StringType>()
+                  .Description("The underlying database type");
+
+            descriptor.Argument(new NameString("cardinality"))
+                  .Type<StringType>()
+                  .Description("The relationship cardinality");
         }
     }
 }

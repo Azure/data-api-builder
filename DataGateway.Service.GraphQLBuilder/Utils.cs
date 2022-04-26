@@ -1,4 +1,4 @@
-using System.Linq;
+using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder
@@ -7,19 +7,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
     {
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
-            string modelDirectiveName = CustomDirectives.ModelTypeDirectiveName;
+            string modelDirectiveName = ModelDirectiveType.DirectiveName;
             return objectTypeDefinitionNode.Directives.Any(d => d.Name.ToString() == modelDirectiveName);
-        }
-
-        public static string FormatNameForField(NameNode name)
-        {
-            string rawName = name.Value;
-            return $"{char.ToLowerInvariant(rawName[0])}{rawName[1..]}";
-        }
-
-        public static NameNode Pluralize(NameNode name)
-        {
-            return new NameNode($"{FormatNameForField(name)}s");
         }
 
         public static bool IsBuiltInType(ITypeNode typeNode)

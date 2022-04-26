@@ -79,7 +79,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
 
             FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == columnName);
             Assert.AreEqual(1, field.Directives.Count);
-            Assert.AreEqual(PrimaryKeyDirective.DirectiveName, field.Directives[0].Name.Value);
+            Assert.AreEqual(PrimaryKeyDirectiveType.DirectiveName, field.Directives[0].Name.Value);
         }
 
         [TestMethod]
@@ -99,7 +99,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             foreach (FieldDefinitionNode field in od.Fields)
             {
                 Assert.AreEqual(1, field.Directives.Count);
-                Assert.AreEqual(PrimaryKeyDirective.DirectiveName, field.Directives[0].Name.Value);
+                Assert.AreEqual(PrimaryKeyDirectiveType.DirectiveName, field.Directives[0].Name.Value);
             }
         }
 
@@ -305,7 +305,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
 
             Assert.AreEqual(refColName, field.Name.Value);
             Assert.AreEqual(1, field.Directives.Count);
-            Assert.AreEqual(RelationshipDirective.DirectiveName, field.Directives[0].Name.Value);
+            Assert.AreEqual(RelationshipDirectiveType.DirectiveName, field.Directives[0].Name.Value);
         }
 
         [TestMethod]
@@ -352,7 +352,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             Entity configEntity = GenerateEmptyEntity() with { Relationships = relationships };
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity);
 
-            Assert.AreEqual(refColCount, od.Fields.Count(f => f.Directives.Any(d => d.Name.Value == RelationshipDirective.DirectiveName)));
+            Assert.AreEqual(refColCount, od.Fields.Count(f => f.Directives.Any(d => d.Name.Value == RelationshipDirectiveType.DirectiveName)));
             Assert.AreEqual(1, od.Fields.Count(f => f.Type.NamedType().Name.Value == foreignKeyTable));
         }
 

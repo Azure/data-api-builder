@@ -194,7 +194,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         {
             return new(
                 location: null,
+<<<<<<< HEAD
                 new NameNode($"{name}{PAGINATION_OBJECT_TYPE_SUFFIX}"),
+=======
+                new NameNode($"{name}Connection"),
+>>>>>>> 56bb3c3 (rollback of the endCursor to after as field name)
                 new StringValueNode("The return object from a filter query that supports a pagination token for paging through results"),
                 new List<DirectiveNode>(),
                 new List<NamedTypeNode>(),

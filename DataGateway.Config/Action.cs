@@ -80,5 +80,14 @@ namespace Azure.DataGateway.Config
 
         public static OperationAuthorizationRequirement PATCH =
             new() { Name = nameof(PATCH) };
+
+        public static OperationAuthorizationRequirement
+            GetVerb(string action) => action switch
+            {
+                "create" => POST,
+                "read" => GET,
+                "update" => PATCH,
+                "delete" => DELETE,
+            };
     }
 }

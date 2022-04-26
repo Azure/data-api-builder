@@ -1,4 +1,6 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
 
 namespace Azure.DataGateway.Config
 {
@@ -31,7 +33,13 @@ namespace Azure.DataGateway.Config
         object? GraphQL,
         PermissionSetting[] Permissions,
         Dictionary<string, Relationship>? Relationships,
-        Dictionary<string, string>? Mappings);
+        Dictionary<string, string>? Mappings)
+    {
+        public virtual void DetermineHttpVerbPermissions()
+        {
+            // no-op as of now.
+        }
+    }
 
     public record SqlEntity(
         object Source,
@@ -57,6 +65,42 @@ namespace Azure.DataGateway.Config
             TypeCode.String => (string)Source,
             _ => ((DatabaseObjectSource)Source).Name
         };
+
+        /// <summary>
+        /// Determines the allowed HttpRest Verbs and
+        /// their authorization rules for this entity.
+        /// </summary>
+        public override void DetermineHttpVerbPermissions()
+        {
+            foreach (PermissionSetting permission in Permissions)
+            {
+                foreach (object action in permission.Actions)
+                {
+                    string actionName;
+                    if (((JsonElement)action).ValueKind == JsonValueKind.Object)
+                    {
+                        Action configAction =
+                            ((JsonElement)action).Deserialize<Action>()!;
+                        actionName = configAction.Name;
+                    }
+                    else
+                    {
+                        actionName = ((JsonElement)action).Deserialize<string>()!;
+                    }
+
+                    OperationAuthorizationRequirement restVerb
+                            = HttpRestVerbs.GetVerb(actionName);
+                    AuthorizationRule rule = new()
+                    {
+                        AuthorizationType =
+                            (AuthorizationType)Enum.Parse(
+                                typeof(AuthorizationType), permission.Role)
+                    };
+
+                    TableDefinition.HttpVerbs.Add(restVerb.ToString()!, rule);
+                }
+            }
+        }
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -15,7 +16,7 @@ namespace Azure.DataGateway.Service.Authorization
     /// </summary>
     public class RequestAuthorizationHandler : AuthorizationHandler<OperationAuthorizationRequirement, RestRequestContext>
     {
-        private readonly SqlGraphQLFileMetadataProvider _configurationProvider;
+        private readonly SqlRuntimeConfigProvider _runtimeConfigProvider;
 
         /// <summary>
         /// Constructor.
@@ -23,19 +24,18 @@ namespace Azure.DataGateway.Service.Authorization
         /// <param name="metadataStoreProvider">The metadata provider.</param>
         /// <param name="isMock">True, if the provided metadata provider is a mock.</param>
         public RequestAuthorizationHandler(
-            IGraphQLMetadataProvider metadataStoreProvider,
+            IRuntimeConfigProvider runtimeConfigProvider,
             bool isMock = false)
         {
-            if (metadataStoreProvider.GetType() != typeof(SqlGraphQLFileMetadataProvider)
-                && !isMock)
+            if (runtimeConfigProvider.GetType() != typeof(SqlRuntimeConfigProvider))
             {
                 throw new DataGatewayException(
-                    message: "Unable to instantiate the request authorization service.",
+                    message: "Unable to instantiate the RequestAuthorization Handler.",
                     statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
             }
 
-            _configurationProvider = (SqlGraphQLFileMetadataProvider)metadataStoreProvider;
+            _runtimeConfigProvider = (SqlRuntimeConfigProvider)runtimeConfigProvider;
         }
 
         protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,
@@ -43,7 +43,8 @@ namespace Azure.DataGateway.Service.Authorization
                                                   RestRequestContext resource)
         {
             //Request is validated before Authorization, so table will exist.
-            TableDefinition tableDefinition = _configurationProvider.GetTableDefinition(resource.EntityName);
+            TableDefinition tableDefinition =
+                _runtimeConfigProvider.GetTableDefinition(resource.EntityName);
 
             string requestedOperation = resource.HttpVerb.Name;
             if (tableDefinition.HttpVerbs == null || tableDefinition.HttpVerbs.Count == 0)

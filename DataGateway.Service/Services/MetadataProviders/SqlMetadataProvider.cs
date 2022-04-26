@@ -22,6 +22,10 @@ namespace Azure.DataGateway.Service.Services
         where DataAdapterT : DbDataAdapter, new()
         where CommandT : DbCommand, new()
     {
+        readonly IRuntimeConfigProvider _runtimeConfigProvider;
+
+        public FilterParser ODataFilterParser { get; private set; } = new();
+
         // nullable since Mock tests do not need it.
         // TODO: Refactor the Mock tests to remove the nullability here
         // once the runtime config is implemented tracked by #353.
@@ -33,13 +37,19 @@ namespace Azure.DataGateway.Service.Services
 
         protected string ConnectionString { get; init; }
 
-        // nullable since Mock tests don't need this.
         protected IQueryBuilder SqlQueryBuilder { get; init; }
 
         protected DataSet EntitiesDataSet { get; init; }
 
+        /// <summary>
+        /// Maps an entity name to a DatabaseObject.
+        /// </summary>
+        public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } =
+            new(StringComparer.InvariantCultureIgnoreCase);
+
         public SqlMetadataProvider(
             IOptions<DataGatewayConfig> dataGatewayConfig,
+            IRuntimeConfigProvider runtimeConfigProvider,
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder)
         {
@@ -47,6 +57,7 @@ namespace Azure.DataGateway.Service.Services
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;
+            _runtimeConfigProvider = runtimeConfigProvider;
         }
 
         /// <summary>
@@ -57,6 +68,160 @@ namespace Azure.DataGateway.Service.Services
             ConnectionString = new(string.Empty);
             EntitiesDataSet = new();
             SqlQueryBuilder = new MsSqlQueryBuilder();
+        }
+
+        /// </inheritdoc>
+        public async Task InitializeAsync()
+        {
+            System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
+            await FindDatabaseObjectForEntities();
+            ProcessEntityPermissions();
+            InitFilterParser();
+            timer.Stop();
+            Console.WriteLine($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
+        }
+
+        /// <summary>
+        /// Obtains the underlying TableDefinition for the given entity name.
+        /// </summary>
+        public virtual TableDefinition GetTableDefinition(string name)
+        {
+            if (EntityToDatabaseObject.TryGetValue(name, out DatabaseObject? databaseObject))
+            {
+                throw new InvalidCastException($"Table Definition for {name} has not been inferred.");
+            }
+
+            return databaseObject!.TableDefinition;
+        }
+
+        /// <summary>
+        /// Obtains the underlying source object's name.
+        /// </summary>
+        public virtual string GetDatabaseObjectName(string name)
+        {
+            if (EntityToDatabaseObject.TryGetValue(name, out DatabaseObject? databaseObject))
+            {
+                throw new InvalidCastException($"Table Definition for {name} has not been inferred.");
+            }
+
+            return databaseObject!.Name;
+        }
+
+        /// <summary>
+        /// Obtains the underlying source object's schema name.
+        /// </summary>
+        public virtual string GetSchemaName(string name)
+        {
+            if (EntityToDatabaseObject.TryGetValue(name, out DatabaseObject? databaseObject))
+            {
+                throw new InvalidCastException($"Table Definition for {name} has not been inferred.");
+            }
+
+            return databaseObject!.SchemaName;
+        }
+
+        /// <summary>
+        /// Enrich the entities in the runtime config with the
+        /// table definition information needed by the runtime to serve requests.
+        /// </summary>
+        private async Task FindDatabaseObjectForEntities()
+        {
+            string schemaName = string.Empty;
+            DatabaseType databaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
+            foreach ((string entityName, Entity entity)
+                in GetEntitiesFromRuntimeConfig())
+            {
+                switch (databaseType)
+                {
+                    case DatabaseType.mssql:
+                        await PopulateTableDefinitionAsync(
+                            schemaName,
+                            ,
+                            sqlEntity.TableDefinition);
+                        break;
+                    case DatabaseType.postgresql:
+                        schemaName = "public";
+                        await _sqlMetadataProvider.PopulateTableDefinitionAsync(
+                            schemaName,
+                            sqlEntity.SourceName,
+                            sqlEntity.TableDefinition);
+                        break;
+                    case DatabaseType.mysql:
+                        await _sqlMetadataProvider.PopulateTableDefinitionAsync(
+                            schemaName,
+                            sqlEntity.SourceName,
+                            sqlEntity.TableDefinition);
+                        break;
+                    default:
+                        throw new ArgumentException($"Enriching entities with table definition " +
+                            $"for this database type: {CloudDbType} " +
+                            $"is not supported.");
+                }
+            }
+
+            await _sqlMetadataProvider.PopulateForeignKeyDefinitionAsync(
+                schemaName,
+                RuntimeConfig.Entities.Values);
+
+        }
+
+        /// <summary>
+        /// Processes permissions for all the entities.
+        /// </summary>
+        private void ProcessEntityPermissions()
+        {
+            Dictionary<string, Entity> entities = GetEntitiesFromRuntimeConfig();
+            foreach ((string entityName, Entity entity) in entities)
+            {
+                DetermineHttpVerbPermissions(entityName, entity.Permissions);
+            }
+        }
+
+        private Dictionary<string, Entity> GetEntitiesFromRuntimeConfig()
+        {
+            return _runtimeConfigProvider.GetRuntimeConfig().Entities;
+        }
+
+        private void InitFilterParser()
+        {
+            ODataFilterParser.BuildModel(RuntimeConfig.Entities);
+        }
+
+        /// <summary>
+        /// Determines the allowed HttpRest Verbs and
+        /// their authorization rules for this entity.
+        /// </summary>
+        public override void DetermineHttpVerbPermissions(string entityName, PermissionSetting[] permissions)
+        {
+            TableDefinition tableDefinition = DatabaseSchema.EntityToDatabaseObject[entityName].TableDefinition;
+            foreach (PermissionSetting permission in permissions)
+            {
+                foreach (object action in permission.Actions)
+                {
+                    string actionName;
+                    if (((JsonElement)action).ValueKind == JsonValueKind.Object)
+                    {
+                        Action configAction =
+                            ((JsonElement)action).Deserialize<Action>()!;
+                        actionName = configAction.Name;
+                    }
+                    else
+                    {
+                        actionName = ((JsonElement)action).Deserialize<string>()!;
+                    }
+
+                    OperationAuthorizationRequirement restVerb
+                            = HttpRestVerbs.GetVerb(actionName);
+                    AuthorizationRule rule = new()
+                    {
+                        AuthorizationType =
+                            (AuthorizationType)Enum.Parse(
+                                typeof(AuthorizationType), permission.Role)
+                    };
+
+                    TableDefinition.HttpVerbs.Add(restVerb.ToString()!, rule);
+                }
+            }
         }
 
         /// </inheritdoc>

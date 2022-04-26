@@ -24,7 +24,7 @@ namespace Azure.DataGateway.Service.Services
         /// <exception cref="DataGatewayException"></exception>
         public static void ValidateRequestContext(
             RestRequestContext context,
-            SqlRuntimeConfigProvider runtimeConfigProvider)
+            SqlMetadataProvider runtimeConfigProvider)
         {
             TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, runtimeConfigProvider);
 
@@ -49,7 +49,7 @@ namespace Azure.DataGateway.Service.Services
         /// <exception cref="DataGatewayException"></exception>
         public static void ValidatePrimaryKey(
             RestRequestContext context,
-            SqlRuntimeConfigProvider runtimeConfigProvider)
+            SqlMetadataProvider runtimeConfigProvider)
         {
             TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, runtimeConfigProvider);
 
@@ -158,7 +158,7 @@ namespace Azure.DataGateway.Service.Services
         /// <exception cref="DataGatewayException"></exception>
         public static void ValidateInsertRequestContext(
             InsertRequestContext insertRequestCtx,
-            SqlRuntimeConfigProvider runtimeConfigProvider)
+            SqlMetadataProvider runtimeConfigProvider)
         {
             IEnumerable<string> fieldsInRequestBody = insertRequestCtx.FieldValuePairsInBody.Keys;
             TableDefinition tableDefinition =
@@ -211,7 +211,7 @@ namespace Azure.DataGateway.Service.Services
         /// <exception cref="DataGatewayException"></exception>
         public static void ValidateUpsertRequestContext(
             UpsertRequestContext upsertRequestCtx,
-            SqlRuntimeConfigProvider runtimeConfigProvider)
+            SqlMetadataProvider runtimeConfigProvider)
         {
             IEnumerable<string> fieldsInRequestBody = upsertRequestCtx.FieldValuePairsInBody.Keys;
             TableDefinition tableDefinition =
@@ -303,7 +303,7 @@ namespace Azure.DataGateway.Service.Services
         /// enables referencing DB schema in config.</param>
         /// <exception cref="DataGatewayException"></exception>
 
-        private static TableDefinition TryGetTableDefinition(string entityName, SqlRuntimeConfigProvider runtimeConfigProvider)
+        private static TableDefinition TryGetTableDefinition(string entityName, SqlMetadataProvider runtimeConfigProvider)
         {
             try
             {

@@ -39,5 +39,10 @@ namespace Azure.DataGateway.Service.Services
         public Task PopulateForeignKeyDefinitionAsync(
             string schemaName,
             IEnumerable<Entity> sqlEntities);
+
+        /// <summary>
+        /// Initializes this metadata provider for the runtime.
+        /// </summary>
+        Task InitializeAsync();
     }
 }

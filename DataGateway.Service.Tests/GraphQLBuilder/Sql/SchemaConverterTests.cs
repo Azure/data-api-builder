@@ -121,6 +121,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
         [DataTestMethod]
         [DataRow(typeof(string), "String")]
         [DataRow(typeof(long), "Int")]
+        // TODO: Uncomment these once we have more GraphQL type support - https://github.com/Azure/hawaii-gql/issues/247
         //[DataRow(typeof(int), "Int")]
         //[DataRow(typeof(short), "Int")]
         //[DataRow(typeof(float), "Float")]

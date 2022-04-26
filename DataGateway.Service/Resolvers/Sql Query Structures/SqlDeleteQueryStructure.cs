@@ -15,7 +15,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public SqlDeleteStructure(
             string tableName,
             IGraphQLMetadataProvider metadataStoreProvider,
-            SqlRuntimeConfigProvider runtimeConfigProvider,
+            SqlMetadataProvider runtimeConfigProvider,
             IDictionary<string, object?> mutationParams)
         : base(metadataStoreProvider, runtimeConfigProvider, tableName: tableName)
         {

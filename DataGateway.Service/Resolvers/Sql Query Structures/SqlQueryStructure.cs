@@ -92,7 +92,7 @@ namespace Azure.DataGateway.Service.Resolvers
             IResolverContext ctx,
             IDictionary<string, object> queryParams,
             IGraphQLMetadataProvider metadataStoreProvider,
-            SqlRuntimeConfigProvider runtimeConfigProvider)
+            SqlMetadataProvider runtimeConfigProvider)
             // This constructor simply forwards to the more general constructor
             // that is used to create GraphQL queries. We give it some values
             // that make sense for the outermost query.
@@ -122,7 +122,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public SqlQueryStructure(
             RestRequestContext context,
             IGraphQLMetadataProvider metadataStoreProvider,
-            SqlRuntimeConfigProvider runtimeConfigProvider) :
+            SqlMetadataProvider runtimeConfigProvider) :
             this(metadataStoreProvider,
                 runtimeConfigProvider,
                 new IncrementingInteger(), tableName: context.EntityName)
@@ -190,7 +190,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 IResolverContext ctx,
                 IDictionary<string, object> queryParams,
                 IGraphQLMetadataProvider metadataStoreProvider,
-                SqlRuntimeConfigProvider runtimeConfigProvider,
+                SqlMetadataProvider runtimeConfigProvider,
                 IObjectField schemaField,
                 FieldNode? queryField,
                 IncrementingInteger counter
@@ -292,7 +292,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     string where = (string)whereObject;
 
                     ODataASTVisitor visitor = new(this);
-                    FilterParser parser = SqlRuntimeConfigProvider.ODataFilterParser;
+                    FilterParser parser = SqlMetadataProvider.ODataFilterParser;
                     FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={where}", TableName);
                     FilterPredicates = filterClause.Expression.Accept<string>(visitor);
                 }
@@ -339,7 +339,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         private SqlQueryStructure(
             IGraphQLMetadataProvider metadataStoreProvider,
-            SqlRuntimeConfigProvider runtimeConfigProvider,
+            SqlMetadataProvider runtimeConfigProvider,
             IncrementingInteger counter,
             string tableName = "")
             : base(metadataStoreProvider, runtimeConfigProvider, counter: counter, tableName: tableName)
@@ -526,7 +526,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     IDictionary<string, object> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
 
-                    SqlQueryStructure subquery = new(_ctx, subqueryParams, MetadataStoreProvider, SqlRuntimeConfigProvider, subschemaField, field, Counter);
+                    SqlQueryStructure subquery = new(_ctx, subqueryParams, MetadataStoreProvider, SqlMetadataProvider, subschemaField, field, Counter);
 
                     if (PaginationMetadata.IsPaginated)
                     {
@@ -554,7 +554,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     ObjectType subunderlyingType = subquery._underlyingFieldType;
 
                     GraphQLType subTypeInfo = MetadataStoreProvider.GetGraphQLType(subunderlyingType.Name);
-                    TableDefinition subTableDefinition = SqlRuntimeConfigProvider.GetTableDefinition(subTypeInfo.Table);
+                    TableDefinition subTableDefinition = SqlMetadataProvider.GetTableDefinition(subTypeInfo.Table);
                     GraphQLField fieldInfo = _typeInfo.Fields[fieldName];
 
                     string subtableAlias = subquery.TableAlias;
@@ -613,7 +613,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         case GraphQLRelationshipType.ManyToMany:
                             string associativeTableName = fieldInfo.AssociativeTable;
                             string associativeTableAlias = CreateTableAlias();
-                            TableDefinition associativeTableDefinition = SqlRuntimeConfigProvider.GetTableDefinition(associativeTableName);
+                            TableDefinition associativeTableDefinition = SqlMetadataProvider.GetTableDefinition(associativeTableName);
 
                             ForeignKeyDefinition fkLeft = associativeTableDefinition.ForeignKeys[fieldInfo.LeftForeignKey];
                             List<string> columnsLeft = GetFkRefColumns(fkLeft, GetUnderlyingTableDefinition());

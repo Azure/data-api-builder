@@ -14,7 +14,7 @@ namespace Azure.DataGateway.Service.Resolvers
     /// </summary>
     public abstract class BaseSqlQueryStructure : BaseQueryStructure
     {
-        protected SqlRuntimeConfigProvider SqlRuntimeConfigProvider { get; }
+        protected SqlMetadataProvider SqlMetadataProvider { get; }
 
         protected IGraphQLMetadataProvider MetadataStoreProvider { get; }
 
@@ -36,13 +36,13 @@ namespace Azure.DataGateway.Service.Resolvers
 
         public BaseSqlQueryStructure(
             IGraphQLMetadataProvider metadataStoreProvider,
-            SqlRuntimeConfigProvider runtimeConfigProvider,
+            SqlMetadataProvider runtimeConfigProvider,
             IncrementingInteger? counter = null,
             string tableName = "")
             : base(counter)
         {
             MetadataStoreProvider = metadataStoreProvider;
-            SqlRuntimeConfigProvider = runtimeConfigProvider;
+            SqlMetadataProvider = runtimeConfigProvider;
             TableName = tableName;
             // Default the alias to the table name
             TableAlias = tableName;
@@ -102,7 +102,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         protected TableDefinition GetUnderlyingTableDefinition()
         {
-            return SqlRuntimeConfigProvider.GetTableDefinition(TableName);
+            return SqlMetadataProvider.GetTableDefinition(TableName);
         }
 
         /// <summary>

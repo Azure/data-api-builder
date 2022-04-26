@@ -201,7 +201,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             Entity configEntity = GenerateEmptyEntity() with
             {
                 Relationships = new() {
-                    { foreignKeyTable, new Relationship(Cardinality.One, foreignKeyTable, SourceFields: null, TargetFields: null, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null)} }
+                    { foreignKeyTable, new Relationship(Cardinality.One, foreignKeyTable, SourceFields: null, TargetFields: null, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null) } }
             };
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity);
@@ -231,7 +231,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             Entity configEntity = GenerateEmptyEntity() with
             {
                 Relationships = new() {
-                    { foreignKeyTable, new Relationship(Cardinality.One, foreignKeyTable, SourceFields: null, TargetFields: null, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null)} }
+                    { foreignKeyTable, new Relationship(Cardinality.One, foreignKeyTable, SourceFields: null, TargetFields: null, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null) } }
             };
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity);
@@ -264,7 +264,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             Entity configEntity = GenerateEmptyEntity() with
             {
                 Relationships = new() {
-                    { foreignKeyTable, new Relationship(Cardinality.One, foreignKeyTable, SourceFields: null, TargetFields: null, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null)} }
+                    { foreignKeyTable, new Relationship(Cardinality.One, foreignKeyTable, SourceFields: null, TargetFields: null, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null) } }
             };
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity);
 
@@ -304,7 +304,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             Entity configEntity = GenerateEmptyEntity() with
             {
                 Relationships = new() {
-                    { foreignKeyTable, new Relationship(Cardinality.One, foreignKeyTable, SourceFields: null, TargetFields: null, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null)} }
+                    { foreignKeyTable, new Relationship(Cardinality.One, foreignKeyTable, SourceFields: null, TargetFields: null, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null) } }
             };
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity);
@@ -335,7 +335,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             Entity configEntity = GenerateEmptyEntity() with
             {
                 Relationships = new() {
-                    { foreignKeyTable, new Relationship(Cardinality.One, foreignKeyTable, SourceFields: null, TargetFields: null, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null)} }
+                    { foreignKeyTable, new Relationship(Cardinality.One, foreignKeyTable, SourceFields: null, TargetFields: null, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null) } }
             };
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity);
 
@@ -365,7 +365,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             Entity configEntity = GenerateEmptyEntity() with
             {
                 Relationships = new() {
-                    { foreignKeyTable, new Relationship(Cardinality.Many, foreignKeyTable, SourceFields: null, TargetFields: null, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null)} }
+                    { foreignKeyTable, new Relationship(Cardinality.Many, foreignKeyTable, SourceFields: null, TargetFields: null, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null) } }
             };
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity);
 

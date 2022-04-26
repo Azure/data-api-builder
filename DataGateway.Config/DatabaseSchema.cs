@@ -1,12 +1,15 @@
 namespace Azure.DataGateway.Config
 {
     /// <summary>
-    /// The schema of the database described in a JSON format.
+    /// Represents a database object - which could be a view or table.
     /// </summary>
-    public class DatabaseSchema
+    public class DatabaseObject
     {
-        public Dictionary<string, TableDefinition> Tables { get; set; } =
-            new(StringComparer.InvariantCultureIgnoreCase);
+        public string SchemaName { get; set; } = null!;
+
+        public string Name { get; set; } = null!;
+
+        public TableDefinition TableDefinition { get; set; } = null!;
     }
 
     public class TableDefinition

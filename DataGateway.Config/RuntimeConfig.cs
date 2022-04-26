@@ -70,16 +70,5 @@ namespace Azure.DataGateway.Config
                 }
             }
         }
-
-        /// <summary>
-        /// Processes permissions for all the entities.
-        /// </summary>
-        public void ProcessPermissions()
-        {
-            foreach (Entity entity in Entities.Values)
-            {
-                entity.DetermineHttpVerbPermissions();
-            }
-        }
     }
 }

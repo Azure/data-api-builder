@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Azure.DataGateway.Config;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using static Azure.DataGateway.Service.GraphQLBuilder.Utils;
@@ -9,7 +10,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
     public static class CreateMutationBuilder
     {
         public const string INPUT_ARGUMENT_NAME = "item";
-        private static InputObjectTypeDefinitionNode GenerateCreateInputType(Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs, ObjectTypeDefinitionNode objectTypeDefinitionNode, NameNode name, IEnumerable<HotChocolate.Language.IHasName> definitions, SchemaBuilderType databaseType)
+        private static InputObjectTypeDefinitionNode GenerateCreateInputType(Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs, ObjectTypeDefinitionNode objectTypeDefinitionNode, NameNode name, IEnumerable<HotChocolate.Language.IHasName> definitions, DatabaseType databaseType)
         {
             NameNode inputName = GenerateInputTypeName(name.Value);
 
@@ -56,14 +57,14 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
         /// <param name="databaseType">The type of database to generate for</param>
         /// <param name="definitions">The other named types in the schema</param>
         /// <returns>true if the field is allowed, false if it is not.</returns>
-        private static bool FieldAllowedOnCreateInput(FieldDefinitionNode field, SchemaBuilderType databaseType, IEnumerable<HotChocolate.Language.IHasName> definitions)
+        private static bool FieldAllowedOnCreateInput(FieldDefinitionNode field, DatabaseType databaseType, IEnumerable<HotChocolate.Language.IHasName> definitions)
         {
             if (IsBuiltInType(field.Type))
             {
                 // With Cosmos we need to have the id field included, as Cosmos doesn't do auto-increment or anything
                 return databaseType switch
                 {
-                    SchemaBuilderType.Cosmos => true,
+                    DatabaseType.cosmos => true,
                     _ => field.Name.Value != "id"
                 };
             }
@@ -90,7 +91,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             );
         }
 
-        private static InputValueDefinitionNode GetComplexInputType(Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs, IEnumerable<HotChocolate.Language.IHasName> definitions, FieldDefinitionNode f, string typeName, ObjectTypeDefinitionNode otdn, SchemaBuilderType databaseType)
+        private static InputValueDefinitionNode GetComplexInputType(Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs, IEnumerable<HotChocolate.Language.IHasName> definitions, FieldDefinitionNode f, string typeName, ObjectTypeDefinitionNode otdn, DatabaseType databaseType)
         {
             InputObjectTypeDefinitionNode node;
             NameNode inputTypeName = GenerateInputTypeName(typeName);
@@ -118,7 +119,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             return new($"Create{typeName}Input");
         }
 
-        public static FieldDefinitionNode Build(NameNode name, Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs, ObjectTypeDefinitionNode objectTypeDefinitionNode, DocumentNode root, SchemaBuilderType databaseType)
+        public static FieldDefinitionNode Build(NameNode name, Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs, ObjectTypeDefinitionNode objectTypeDefinitionNode, DocumentNode root, DatabaseType databaseType)
         {
             InputObjectTypeDefinitionNode input = GenerateCreateInputType(inputs, objectTypeDefinitionNode, name, root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>(), databaseType);
 

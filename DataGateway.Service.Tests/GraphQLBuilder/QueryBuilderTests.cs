@@ -97,7 +97,7 @@ type Foo @model {
             Assert.AreEqual(3, returnType.Fields.Count);
             Assert.AreEqual("items", returnType.Fields[0].Name.Value);
             Assert.AreEqual("[Foo!]!", returnType.Fields[0].Type.ToString());
-            Assert.AreEqual("continuation", returnType.Fields[1].Name.Value);
+            Assert.AreEqual(QueryBuilder.END_CURSOR_TOKEN_FIELD_NAME, returnType.Fields[1].Name.Value);
             Assert.AreEqual("String", returnType.Fields[1].Type.NamedType().Name.Value);
             Assert.AreEqual("hasNextPage", returnType.Fields[2].Name.Value);
             Assert.AreEqual("Boolean", returnType.Fields[2].Type.NamedType().Name.Value);

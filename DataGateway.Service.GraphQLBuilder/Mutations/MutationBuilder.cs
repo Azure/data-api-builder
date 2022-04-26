@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using Azure.DataGateway.Config;
 using HotChocolate.Language;
 using static Azure.DataGateway.Service.GraphQLBuilder.Utils;
 
@@ -6,7 +6,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 {
     public static class MutationBuilder
     {
-        public static DocumentNode Build(DocumentNode root, SchemaBuilderType databaseType)
+        public static DocumentNode Build(DocumentNode root, DatabaseType databaseType)
         {
             List<FieldDefinitionNode> mutationFields = new();
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs = new();

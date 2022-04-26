@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
@@ -29,7 +30,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await InitializeTestFixture(context, TestCategory.POSTGRESQL);
 
             // Setup GraphQL Components
-            _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider, new DocumentCache(), new Sha256DocumentHashProvider(), new Configurations.DataGatewayConfig { DatabaseType = Configurations.DatabaseType.PostgreSql });
+            _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider, new DocumentCache(), new Sha256DocumentHashProvider(), new Configurations.DataGatewayConfig { DatabaseType = DatabaseType.postgresql });
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
@@ -567,6 +568,43 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 message: PostgresDbExceptionParser.UNQIUE_VIOLATION_MESSAGE,
                 statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
             );
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Inserts new book and return its id and title with their aliases(arbitrarily set by user while making request)
+        /// <code>Check: </code> If book with the expected values of the new book is present in the database and
+        /// if the mutation query has returned the correct information with Aliases where provided.
+        /// </summary>
+        [TestMethod]
+        public async Task TestAliasSupportForGraphQLMutationQueryFields()
+        {
+            string graphQLMutationName = "insertBook";
+            string graphQLMutation = @"
+                mutation {
+                    insertBook(title: ""My New Book"", publisher_id: 1234) {
+                        book_id: id
+                        book_title: title
+                    }
+                }
+            ";
+
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.id AS book_id,
+                          table0.title AS book_title
+                   FROM books AS table0
+                   WHERE id = 5001
+                     AND title = 'My New Book'
+                     AND publisher_id = 1234
+                   ORDER BY id
+                   LIMIT 1) AS subq
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
         #endregion
     }

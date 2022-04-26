@@ -1,4 +1,5 @@
 using System;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -143,7 +144,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
             DataGatewayConfig config = new()
             {
-                DatabaseType = DatabaseType.MsSql,
+                DatabaseType = DatabaseType.mssql,
                 DatabaseConnection = connection,
                 ResolverConfigFile = DEFAULT_RESOLVER_FILE
             };

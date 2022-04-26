@@ -1,4 +1,5 @@
 using System.Linq;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -23,7 +24,7 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode mutationRoot = MutationBuilder.Build(root, Service.GraphQLBuilder.SchemaBuilderType.Cosmos);
+            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos);
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"createFoo"));
@@ -44,7 +45,7 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode mutationRoot = MutationBuilder.Build(root, Service.GraphQLBuilder.SchemaBuilderType.MSSQL);
+            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.mssql);
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");
@@ -70,7 +71,7 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode mutationRoot = MutationBuilder.Build(root, Service.GraphQLBuilder.SchemaBuilderType.Cosmos);
+            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos);
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");
@@ -98,7 +99,7 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode mutationRoot = MutationBuilder.Build(root, Service.GraphQLBuilder.SchemaBuilderType.Cosmos);
+            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos);
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"createFoo"));
@@ -120,7 +121,7 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode mutationRoot = MutationBuilder.Build(root, Service.GraphQLBuilder.SchemaBuilderType.Cosmos);
+            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos);
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");
@@ -148,7 +149,7 @@ type Bar {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode mutationRoot = MutationBuilder.Build(root, Service.GraphQLBuilder.SchemaBuilderType.Cosmos);
+            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos);
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"createFoo"));
@@ -173,7 +174,7 @@ type Bar {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode mutationRoot = MutationBuilder.Build(root, Service.GraphQLBuilder.SchemaBuilderType.Cosmos);
+            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos);
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");
@@ -197,7 +198,7 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode mutationRoot = MutationBuilder.Build(root, Service.GraphQLBuilder.SchemaBuilderType.Cosmos);
+            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos);
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"deleteFoo"));
@@ -218,7 +219,7 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode mutationRoot = MutationBuilder.Build(root, Service.GraphQLBuilder.SchemaBuilderType.Cosmos);
+            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos);
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"deleteFoo");
@@ -243,7 +244,7 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode mutationRoot = MutationBuilder.Build(root, Service.GraphQLBuilder.SchemaBuilderType.Cosmos);
+            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos);
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"updateFoo"));
@@ -264,7 +265,7 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode mutationRoot = MutationBuilder.Build(root, Service.GraphQLBuilder.SchemaBuilderType.Cosmos);
+            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos);
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"updateFoo");
@@ -290,7 +291,7 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode mutationRoot = MutationBuilder.Build(root, Service.GraphQLBuilder.SchemaBuilderType.Cosmos);
+            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos);
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"updateFoo");
@@ -319,7 +320,7 @@ type Baz @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode mutationRoot = MutationBuilder.Build(root, Service.GraphQLBuilder.SchemaBuilderType.Cosmos);
+            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos);
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");

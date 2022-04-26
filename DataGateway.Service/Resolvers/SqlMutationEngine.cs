@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -163,7 +164,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     /// result set #2: result of the INSERT operation.
                     if (resultRecord != null)
                     {
-                        if (_metadataStoreProvider.CloudDbType == Configurations.DatabaseType.PostgreSql &&
+                        if (_metadataStoreProvider.CloudDbType == DatabaseType.postgresql &&
                             PostgresQueryBuilder.IsInsert(resultRecord))
                         {
                             jsonResultString = JsonSerializer.Serialize(resultRecord);

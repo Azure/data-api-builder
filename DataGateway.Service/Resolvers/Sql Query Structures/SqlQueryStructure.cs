@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
@@ -40,6 +41,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Is the result supposed to be a list or not.
         /// </summary>
         public bool IsListQuery { get; set; }
+
+        /// <summary>
+        /// Columns to use for sorting.
+        /// </summary>
+        public List<OrderByColumn>? OrderByColumns { get; set; }
 
         /// <summary>
         /// Hold the pagination metadata for the query
@@ -135,6 +141,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
             }
 
+            OrderByColumns = context.OrderByClauseInUrl is not null ? context.OrderByClauseInUrl : PrimaryKeyAsOrderByColumns();
+
             if (context.FilterClauseInUrl is not null)
             {
                 // We use the visitor pattern here to traverse the Filter Clause AST
@@ -157,7 +165,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (!string.IsNullOrWhiteSpace(context.After))
             {
-                AddPaginationPredicate(SqlPaginationUtil.ParseEndCursorFromJsonString(context.After, PaginationMetadata));
+                AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromJsonString(context.After, PaginationMetadata));
             }
 
             _limit = context.First is not null ? context.First + 1 : DEFAULT_LIST_LIMIT + 1;
@@ -280,12 +288,13 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
+            OrderByColumns = PrimaryKeyAsOrderByColumns();
+
             // need to run after the rest of the query has been processed since it relies on
             // TableName, TableAlias, Columns, and _limit
             if (PaginationMetadata.IsPaginated)
             {
-                IDictionary<string, object>? afterJsonValues = SqlPaginationUtil.ParseEndCursorFromQueryParams(queryParams, PaginationMetadata);
-                AddPaginationPredicate(afterJsonValues);
+                AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata));
 
                 if (PaginationMetadata.RequestedEndCursorToken)
                 {
@@ -346,7 +355,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Add the predicates associated with the "after" parameter of paginated queries
         /// </summary>
-        void AddPaginationPredicate(IDictionary<string, object> afterJsonValues)
+        public void AddPaginationPredicate(IEnumerable<PaginationColumn> afterJsonValues)
         {
             if (!afterJsonValues.Any())
             {
@@ -354,14 +363,23 @@ namespace Azure.DataGateway.Service.Resolvers
                 return;
             }
 
-            List<Column> primaryKey = PrimaryKeyAsColumns();
-            List<string> pkValues = new();
-            foreach (Column column in primaryKey)
+            try
             {
-                pkValues.Add($"@{MakeParamWithValue(afterJsonValues[column.ColumnName])}");
+                foreach (PaginationColumn column in afterJsonValues)
+                {
+                    column.ParamName = "@" + MakeParamWithValue(
+                            GetParamAsColumnSystemType(column.Value!.ToString()!, column.ColumnName));
+                }
+            }
+            catch (ArgumentException ex)
+            {
+                throw new DataGatewayException(
+                  message: ex.Message,
+                  statusCode: HttpStatusCode.BadRequest,
+                  subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
 
-            PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(primaryKey, pkValues);
+            PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(afterJsonValues.ToList());
         }
 
         /// <summary>
@@ -657,9 +675,9 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// Exposes the primary key of the underlying table of the structure
-        /// as a list of Column
+        /// as a list of OrderByColumn
         /// </summary>
-        public List<Column> PrimaryKeyAsColumns()
+        public List<OrderByColumn> PrimaryKeyAsOrderByColumns()
         {
             if (_primaryKey == null)
             {
@@ -671,7 +689,13 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            return _primaryKey;
+            List<OrderByColumn> orderByList = new();
+            foreach (Column column in _primaryKey)
+            {
+                orderByList.Add(new OrderByColumn(column.TableAlias, column.ColumnName));
+            }
+
+            return orderByList;
         }
 
         /// <summary>

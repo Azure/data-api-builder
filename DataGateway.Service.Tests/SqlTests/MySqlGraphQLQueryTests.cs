@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Services;
@@ -27,7 +28,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await InitializeTestFixture(context, TestCategory.MYSQL);
 
             // Setup GraphQL Components
-            _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _metadataStoreProvider, new DocumentCache(), new Sha256DocumentHashProvider(), new Configurations.DataGatewayConfig { DatabaseType = Configurations.DatabaseType.MySql });
+            _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _metadataStoreProvider, new DocumentCache(), new Sha256DocumentHashProvider(), new Configurations.DataGatewayConfig { DatabaseType = DatabaseType.mysql });
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
@@ -616,6 +617,68 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _ = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
 
             _ = await GetDatabaseResultAsync(mySqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check graphQL support for aliases(arbitrarily set by user while making request).
+        /// book_id and book_title are aliases used for corresponding query fields.
+        /// The response for the query will contain the alias instead of raw db column..
+        /// </summary>
+        [TestMethod]
+        public async Task TestAliasSupportForGraphQLQueryFields()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(first: 2) {
+                    book_id: id
+                    book_title: title
+                }
+            }";
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('book_id', `subq1`.`book_id`, 'book_title', `subq1`.`book_title`)), '[]') AS `data`
+                FROM
+                  (SELECT `table0`.`id` AS `book_id`,
+                          `table0`.`title` AS `book_title`
+                   FROM `books` AS `table0`
+                   WHERE 1 = 1
+                   ORDER BY `table0`.`id`
+                   LIMIT 2) AS `subq1`";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test to check graphQL support for aliases(arbitrarily set by user while making request).
+        /// book_id is an alias, while title is the raw db field.
+        /// The response for the query will use the alias where it is provided in the query.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForMixOfRawDbFieldFieldAndAlias()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(first: 2) {
+                    book_id: id
+                    title
+                }
+            }";
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('book_id', `subq1`.`book_id`, 'title', `subq1`.`title`)), '[]') AS `data`
+                FROM
+                  (SELECT `table0`.`id` AS `book_id`,
+                          `table0`.`title` AS `title`
+                   FROM `books` AS `table0`
+                   WHERE 1 = 1
+                   ORDER BY `table0`.`id`
+                   LIMIT 2) AS `subq1`";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
         #endregion

@@ -1,7 +1,7 @@
 using System;
 using System.Net;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.Models;
 using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
@@ -46,6 +46,20 @@ namespace Azure.DataGateway.Service.Services
                 Uri relativeUri = new(resourcePath + '/' + filterQueryString, UriKind.Relative);
                 ODataUriParser parser = new(_model!, relativeUri);
                 return parser.ParseFilter();
+            }
+            catch (ODataException e)
+            {
+                throw new DataGatewayException(e.Message, HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
+            }
+        }
+
+        public OrderByClause GetOrderByClause(string sortQueryString, string path)
+        {
+            try
+            {
+                Uri relativeUri = new(path + '/' + sortQueryString, UriKind.Relative);
+                ODataUriParser parser = new(_model, relativeUri);
+                return parser.ParseOrderBy();
             }
             catch (ODataException e)
             {

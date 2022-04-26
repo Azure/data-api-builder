@@ -39,7 +39,7 @@ namespace Azure.DataGateway.Service.Resolvers
             string query = $"SELECT {Build(structure.Columns)}"
                 + $" FROM {fromSql}"
                 + $" WHERE {predicates}"
-                + $" ORDER BY {Build(structure.PrimaryKeyAsColumns())}"
+                + $" ORDER BY {Build(structure.OrderByColumns)}"
                 + $" LIMIT {structure.Limit()}";
 
             string subqueryName = QuoteIdentifier($"subq{structure.Counter.Next()}");
@@ -105,6 +105,14 @@ namespace Azure.DataGateway.Service.Resolvers
             }
         }
 
+        /// <summary>
+        /// Build each column and join by ", " separator
+        /// </summary>
+        protected string Build(List<PaginationColumn> columns)
+        {
+            return string.Join(", ", columns.Select(c => Build(c as Column)));
+        }
+
         /// <inheritdoc />
         protected override string Build(KeysetPaginationPredicate? predicate)
         {
@@ -113,10 +121,18 @@ namespace Azure.DataGateway.Service.Resolvers
                 return string.Empty;
             }
 
-            string left = Build(predicate.PrimaryKey);
-            string right = string.Join(", ", predicate.Values);
+            string left = Build(predicate.Columns);
+            string right = string.Empty;
+            foreach (PaginationColumn column in predicate.Columns)
+            {
+                right += $"'{column.Value!.ToString()}'";
+                if (!predicate.Columns.Last().Equals(column))
+                {
+                    right += ", ";
+                }
+            }
 
-            if (predicate.PrimaryKey.Count > 1)
+            if (predicate.Columns.Count > 1)
             {
                 return $"({left}) > ({right})";
             }

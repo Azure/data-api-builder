@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using static Azure.DataGateway.Service.GraphQLBuilder.Utils;
@@ -10,7 +7,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
     public static class QueryBuilder
     {
         public const string PAGINATION_FIELD_NAME = "items";
-        public const string END_CURSOR_TOKEN_FIELD_NAME = "endCursor";
+        public const string END_CURSOR_TOKEN_FIELD_NAME = "after";
         public const string HAS_NEXT_PAGE_FIELD_NAME = "hasNextPage";
         public const string PAGE_START_ARGUMENT_NAME = "first";
 

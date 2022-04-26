@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
@@ -29,7 +30,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await InitializeTestFixture(context, TestCategory.MYSQL);
 
             // Setup GraphQL Components
-            _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider, new DocumentCache(), new Sha256DocumentHashProvider(), new Configurations.DataGatewayConfig { DatabaseType = Configurations.DatabaseType.MySql });
+            _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider, new DocumentCache(), new Sha256DocumentHashProvider(), new Configurations.DataGatewayConfig { DatabaseType = DatabaseType.mysql });
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
@@ -413,6 +414,43 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         AND `table0`.`issue_number` = 1234
                     ORDER BY `table0`.`id` LIMIT 1
                     ) AS `subq2`
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test to check graphQL support for aliases(arbitrarily set by user while making request).
+        /// book_id and book_title are aliases used for corresponding query fields.
+        /// The response for the query will use the alias instead of raw db column.
+        /// </summary>
+        [TestMethod]
+        public async Task TestAliasSupportForGraphQLMutationQueryFields()
+        {
+            string graphQLMutationName = "insertBook";
+            string graphQLMutation = @"
+                mutation {
+                    insertBook(title: ""My New Book"", publisher_id: 1234) {
+                        book_id: id
+                        book_title: title
+                    }
+                }
+            ";
+
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('book_id', `subq`.`book_id`, 'book_title', `subq`.`book_title`) AS `data`
+                FROM (
+                    SELECT `table0`.`id` AS `book_id`,
+                        `table0`.`title` AS `book_title`
+                    FROM `books` AS `table0`
+                    WHERE `id` = 5001
+                        AND `title` = 'My New Book'
+                        AND `publisher_id` = 1234
+                    ORDER BY `id` LIMIT 1
+                    ) AS `subq`
             ";
 
             string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);

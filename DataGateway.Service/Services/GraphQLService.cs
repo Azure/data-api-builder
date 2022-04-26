@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder;
@@ -48,20 +49,18 @@ namespace Azure.DataGateway.Service.Services
 
         public void ParseAsync(string data)
         {
+            if (_config.DatabaseType == null)
+            {
+                throw new DataGatewayException("No database type was configured", System.Net.HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
+            }
+
             DocumentNode root = Utf8GraphQLParser.Parse(data);
 
             ISchemaBuilder sb = SchemaBuilder.New()
                 .AddDocument(root)
                 .AddDirectiveType(CustomDirectives.ModelTypeDirective())
                 .AddDocument(QueryBuilder.Build(root))
-                .AddDocument(MutationBuilder.Build(root, _config.DatabaseType switch
-                {
-                    DatabaseType.Cosmos => SchemaBuilderType.Cosmos,
-                    DatabaseType.MsSql => SchemaBuilderType.MSSQL,
-                    DatabaseType.PostgreSql => SchemaBuilderType.PostgreSQL,
-                    DatabaseType.MySql => SchemaBuilderType.MySQL,
-                    _ => throw new NotImplementedException()
-                }));
+                .AddDocument(MutationBuilder.Build(root, _config.DatabaseType.Value));
 
             Schema = sb
                 .AddAuthorizeDirectiveType()

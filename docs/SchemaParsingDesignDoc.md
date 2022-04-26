@@ -32,3 +32,8 @@ Additionally, the `GraphQLResolverConfig.DatabaseSchema` is populated through th
 ### SqlMetadataProvicer.cs
 >In `SqlMetadataProvider` we populate the foreign key definitions, which depends on an array of schema names and an array of table in the same orering. We provide this in the form of 2 lists which can easily be converted to arrays in the related function call.
 * Use the lists provided to call into the parameter creation helper function `GetForeignKeyQueryParams()`
+
+## Some (as of yet) Unanswered Questions
+* How to change or add binding of the configuration on startup?
+* Replace with or provide the RuntimeConfig components in addition to ResolverConfig components?
+* In place of parsing and storing schema name separately, add a new class to hold schema + tablename or modify current classes to hold schema as well, or create/modify class and add as field?

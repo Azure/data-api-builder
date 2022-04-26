@@ -363,11 +363,11 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Assert.IsTrue(runtimeConfig.MySql == null
                 || runtimeConfig.MySql.GetType() == typeof(MySqlOptions));
 
-            Assert.IsTrue(runtimeConfig.Entities.GetType() == typeof(Dictionary<string, Entity>));
+            Assert.IsInstanceOfType(runtimeConfig.Entities, typeof(Dictionary<string, Entity>));
             foreach (Entity entity in runtimeConfig.Entities.Values)
             {
-                Assert.IsTrue(((JsonElement)entity.Source).ValueKind == JsonValueKind.String ||
-                    ((JsonElement)entity.Source).ValueKind == JsonValueKind.Object);
+                Assert.IsTrue(((JsonElement)entity.Source).ValueKind == JsonValueKind.String
+                    || ((JsonElement)entity.Source).ValueKind == JsonValueKind.Object);
 
                 Assert.IsTrue(entity.Rest == null
                     || ((JsonElement)entity.Rest).ValueKind == JsonValueKind.True
@@ -405,7 +405,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                     }
                 }
 
-                Assert.IsTrue(entity.Permissions.GetType() == typeof(PermissionSetting[]));
+                Assert.IsInstanceOfType(entity.Permissions, typeof(PermissionSetting[]));
                 foreach (PermissionSetting permission in entity.Permissions)
                 {
                     foreach (object action in permission.Actions)

@@ -34,7 +34,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             // Setup REST Components
             RestService restService = new(_queryEngine,
                 _mutationEngine,
-                _metadataStoreProvider,
+                _sqlRuntimeConfigProvider,
                 _httpContextAccessor.Object,
                 _authorizationService.Object);
             _restController = new(restService);

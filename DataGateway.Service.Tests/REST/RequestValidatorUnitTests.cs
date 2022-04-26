@@ -17,12 +17,12 @@ namespace Azure.DataGateway.Service.Tests.REST
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class RequestValidatorUnitTests
     {
-        private static Mock<SqlGraphQLFileMetadataProvider> _mockMetadataStore;
+        private static Mock<SqlRuntimeConfigProvider> _mockMetadataStore;
 
         [ClassInitialize]
         public static void InitializeTestFixture(TestContext context)
         {
-            _mockMetadataStore = new Mock<SqlGraphQLFileMetadataProvider>();
+            _mockMetadataStore = new Mock<SqlRuntimeConfigProvider>();
         }
 
         #region Positive Tests
@@ -231,7 +231,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         /// <param name="subStatusCode">Represents the sub status code that we expect to return.</param>
         public static void PerformTest(
             FindRequestContext findRequestContext,
-            IGraphQLMetadataProvider metadataStore,
+            SqlRuntimeConfigProvider metadataStore,
             bool expectsException,
             HttpStatusCode statusCode = HttpStatusCode.BadRequest,
             DataGatewayException.SubStatusCodes subStatusCode = DataGatewayException.SubStatusCodes.BadRequest)

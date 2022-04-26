@@ -28,13 +28,17 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<string> ReturnColumns { get; }
 
-        public SqlInsertStructure(string tableName, SqlRuntimeConfigProvider metadataStore, IDictionary<string, object?> mutationParams)
-        : base(metadataStore, tableName: tableName)
+        public SqlInsertStructure(
+            string tableName,
+            IGraphQLMetadataProvider metadataStoreProvider,
+            SqlRuntimeConfigProvider runtimeConfigProvider,
+            IDictionary<string, object?> mutationParams)
+        : base(metadataStoreProvider, runtimeConfigProvider, tableName: tableName)
         {
             InsertColumns = new();
             Values = new();
 
-            TableDefinition tableDefinition = GetTableDefinition();
+            TableDefinition tableDefinition = GetUnderlyingTableDefinition();
 
             ReturnColumns = tableDefinition.Columns.Keys.ToList<string>();
 
@@ -83,7 +87,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public ColumnDefinition GetColumnDefinition(string columnName)
         {
-            return GetTableDefinition().Columns[columnName];
+            return GetUnderlyingTableDefinition().Columns[columnName];
         }
     }
 }

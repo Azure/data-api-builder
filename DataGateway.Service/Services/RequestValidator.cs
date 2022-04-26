@@ -20,13 +20,13 @@ namespace Azure.DataGateway.Service.Services
         /// - extra fields specified in the body, will be discarded.
         /// </summary>
         /// <param name="context">Request context containing the REST operation fields and their values.</param>
-        /// <param name="graphQLMetadataProvider">Metadata provider that enables referencing DB schema in config.</param>
+        /// <param name="runtimeConfigProvider">Runtime config provider that enables referencing DB schema in config.</param>
         /// <exception cref="DataGatewayException"></exception>
         public static void ValidateRequestContext(
             RestRequestContext context,
-            SqlGraphQLFileMetadataProvider graphQLMetadataProvider)
+            SqlRuntimeConfigProvider runtimeConfigProvider)
         {
-            TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, graphQLMetadataProvider);
+            TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, runtimeConfigProvider);
 
             foreach (string field in context.FieldsToBeReturned)
             {
@@ -45,13 +45,13 @@ namespace Azure.DataGateway.Service.Services
         /// definition in the configuration file.
         /// </summary>
         /// <param name="context">Request context containing the primary keys and their values.</param>
-        /// <param name="graphQLMetadataProvider">Metadata provider that enables referencing DB schema in config.</param>
+        /// <param name="runtimeConfigProvider">Runtime config provider that enables referencing DB schema in config.</param>
         /// <exception cref="DataGatewayException"></exception>
         public static void ValidatePrimaryKey(
             RestRequestContext context,
-            SqlGraphQLFileMetadataProvider graphQLMetadataProvider)
+            SqlRuntimeConfigProvider runtimeConfigProvider)
         {
-            TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, graphQLMetadataProvider);
+            TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, runtimeConfigProvider);
 
             int countOfPrimaryKeysInSchema = tableDefinition.PrimaryKey.Count;
             int countOfPrimaryKeysInRequest = context.PrimaryKeyValuePairs.Count;
@@ -154,15 +154,15 @@ namespace Azure.DataGateway.Service.Services
         /// and vice versa.
         /// </summary>
         /// <param name="insertRequestCtx">Insert Request context containing the request body.</param>
-        /// <param name="graphQLMetadataProvider">Metadata provider that enables referencing DB schema in config.</param>
+        /// <param name="runtimeConfigProvider">Runtime config provider that enables referencing DB schema in config.</param>
         /// <exception cref="DataGatewayException"></exception>
         public static void ValidateInsertRequestContext(
             InsertRequestContext insertRequestCtx,
-            SqlGraphQLFileMetadataProvider graphQLMetadataProvider)
+            SqlRuntimeConfigProvider runtimeConfigProvider)
         {
             IEnumerable<string> fieldsInRequestBody = insertRequestCtx.FieldValuePairsInBody.Keys;
             TableDefinition tableDefinition =
-                TryGetTableDefinition(insertRequestCtx.EntityName, graphQLMetadataProvider);
+                TryGetTableDefinition(insertRequestCtx.EntityName, runtimeConfigProvider);
 
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
@@ -207,15 +207,15 @@ namespace Azure.DataGateway.Service.Services
         /// and vice versa.
         /// </summary>
         /// <param name="upsertRequestCtx">Upsert Request context containing the request body.</param>
-        /// <param name="graphQLMetadataProvider">Metadata provider that enables referencing DB schema in config.</param>
+        /// <param name="runtimeConfigProvider">Runtime config provider that enables referencing DB schema in config.</param>
         /// <exception cref="DataGatewayException"></exception>
         public static void ValidateUpsertRequestContext(
             UpsertRequestContext upsertRequestCtx,
-            SqlGraphQLFileMetadataProvider graphQLMetadataProvider)
+            SqlRuntimeConfigProvider runtimeConfigProvider)
         {
             IEnumerable<string> fieldsInRequestBody = upsertRequestCtx.FieldValuePairsInBody.Keys;
             TableDefinition tableDefinition =
-                TryGetTableDefinition(upsertRequestCtx.EntityName, graphQLMetadataProvider);
+                TryGetTableDefinition(upsertRequestCtx.EntityName, runtimeConfigProvider);
 
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
@@ -299,15 +299,15 @@ namespace Azure.DataGateway.Service.Services
         /// Tries to get the table definition for the given entity from the Metadata provider.
         /// </summary>
         /// <param name="entityName">Target entity name.</param>
-        /// <param name="graphQLMetadataProvider">Metadata provider that
+        /// <param name="runtimeConfigProvider">Runtime config provider that
         /// enables referencing DB schema in config.</param>
         /// <exception cref="DataGatewayException"></exception>
 
-        private static TableDefinition TryGetTableDefinition(string entityName, SqlGraphQLFileMetadataProvider graphQLMetadataProvider)
+        private static TableDefinition TryGetTableDefinition(string entityName, SqlRuntimeConfigProvider runtimeConfigProvider)
         {
             try
             {
-                TableDefinition tableDefinition = graphQLMetadataProvider.GetTableDefinition(entityName);
+                TableDefinition tableDefinition = runtimeConfigProvider.GetTableDefinition(entityName);
                 return tableDefinition;
             }
             catch (KeyNotFoundException)

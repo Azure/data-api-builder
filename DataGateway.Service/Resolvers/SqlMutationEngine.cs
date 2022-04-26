@@ -227,32 +227,60 @@ namespace Azure.DataGateway.Service.Resolvers
             switch (operationType)
             {
                 case Operation.Insert:
-                    SqlInsertStructure insertQueryStruct = new(tableName, _runtimeConfigProvider, parameters);
+                    SqlInsertStructure insertQueryStruct =
+                        new(tableName,
+                        _metadataStoreProvider,
+                        _runtimeConfigProvider,
+                        parameters);
                     queryString = _queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
                     break;
                 case Operation.Update:
-                    SqlUpdateStructure updateStructure = new(tableName, _runtimeConfigProvider, parameters, isIncrementalUpdate: false);
+                    SqlUpdateStructure updateStructure =
+                        new(tableName,
+                        _metadataStoreProvider,
+                        _runtimeConfigProvider,
+                        parameters,
+                        isIncrementalUpdate: false);
                     queryString = _queryBuilder.Build(updateStructure);
                     queryParameters = updateStructure.Parameters;
                     break;
                 case Operation.UpdateIncremental:
-                    SqlUpdateStructure updateIncrementalStructure = new(tableName, _runtimeConfigProvider, parameters, isIncrementalUpdate: true);
+                    SqlUpdateStructure updateIncrementalStructure =
+                        new(tableName,
+                        _metadataStoreProvider,
+                        _runtimeConfigProvider,
+                        parameters,
+                        isIncrementalUpdate: true);
                     queryString = _queryBuilder.Build(updateIncrementalStructure);
                     queryParameters = updateIncrementalStructure.Parameters;
                     break;
                 case Operation.Delete:
-                    SqlDeleteStructure deleteStructure = new(tableName, _runtimeConfigProvider, parameters);
+                    SqlDeleteStructure deleteStructure =
+                        new(tableName,
+                        _metadataStoreProvider,
+                        _runtimeConfigProvider,
+                        parameters);
                     queryString = _queryBuilder.Build(deleteStructure);
                     queryParameters = deleteStructure.Parameters;
                     break;
                 case Operation.Upsert:
-                    SqlUpsertQueryStructure upsertStructure = new(tableName, _runtimeConfigProvider, parameters, incrementalUpdate: false);
+                    SqlUpsertQueryStructure upsertStructure =
+                        new(tableName,
+                        _metadataStoreProvider,
+                        _runtimeConfigProvider,
+                        parameters,
+                        incrementalUpdate: false);
                     queryString = _queryBuilder.Build(upsertStructure);
                     queryParameters = upsertStructure.Parameters;
                     break;
                 case Operation.UpsertIncremental:
-                    SqlUpsertQueryStructure upsertIncrementalStructure = new(tableName, _runtimeConfigProvider, parameters, incrementalUpdate: true);
+                    SqlUpsertQueryStructure upsertIncrementalStructure =
+                        new(tableName,
+                        _metadataStoreProvider,
+                        _runtimeConfigProvider,
+                        parameters,
+                        incrementalUpdate: true);
                     queryString = _queryBuilder.Build(upsertIncrementalStructure);
                     queryParameters = upsertIncrementalStructure.Parameters;
                     break;

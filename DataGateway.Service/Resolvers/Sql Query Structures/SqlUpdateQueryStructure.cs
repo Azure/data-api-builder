@@ -18,11 +18,16 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<Predicate> UpdateOperations { get; }
 
-        public SqlUpdateStructure(string tableName, SqlRuntimeConfigProvider runtimeConfigProvider, IDictionary<string, object?> mutationParams, bool isIncrementalUpdate)
-        : base(runtimeConfigProvider, tableName: tableName)
+        public SqlUpdateStructure(
+            string tableName,
+            IGraphQLMetadataProvider metadataStoreProvider,
+            SqlRuntimeConfigProvider runtimeConfigProvider,
+            IDictionary<string, object?> mutationParams,
+            bool isIncrementalUpdate)
+        : base(metadataStoreProvider, runtimeConfigProvider, tableName: tableName)
         {
             UpdateOperations = new();
-            TableDefinition tableDefinition = GetTableDefinition();
+            TableDefinition tableDefinition = GetUnderlyingTableDefinition();
 
             List<string> primaryKeys = tableDefinition.PrimaryKey;
             List<string> columns = tableDefinition.Columns.Keys.ToList();

@@ -2,7 +2,7 @@
 This change supports parsing the schema name provided through the developer friendly runtime config. To support this parsing, the minimum changes required will be
 * add deserialization of the developer friendly runtime config json file
 * store or otherwise reference the `Entities` dictionary in the config
-* iterate through each `Entity` and parse the schema name and table name in each entity's source into a `Map<`tableName, schemaName`>` for later consumption
+* iterate through each `Entity` and parse the schema name and table name in each entity's source into a `Map<`tableName, schemaName`>` for later consumption. Parse using algorithm provded here: `https://msdata.visualstudio.com/Database%20Systems/_git/SqlRestApi?path=/SqlREST/Utils/ParamParser.cs`
 * for each tuple in `GraphQLResolverConfig.DatabaseSchema.Tables` use the `schemaName` associated with each `tableName` from the previously created `Map<`tableName, schemaName`>` as the schema name in place of the hard coded default schema names we currently use
 * pass to `PopulateForeignKeyDefinitionAsync` an additional 2 lists, one for the schema names, and another for the table names, ensuring they are in the same ordering
 * must ensure that the ordering of the above tables and schema names are consistent
@@ -26,6 +26,7 @@ Additionally, the `GraphQLResolverConfig.DatabaseSchema` is populated through th
 * In `EnrichDatabaseSchemaWithTableMetadata()` 
     * _foreach_ `entity` in `RuntimeConfig.Entities`
         * Parse Source: add to Map<tableName, schemName>
+        * Parsing can be done using this logic: `https://msdata.visualstudio.com/Database%20Systems/_git/SqlRestApi?path=/SqlREST/Utils/ParamParser.cs`
     * _sqlMetadataProvider.PopulateTableDefinitionAsync(`Map[tableName].`schemaName, tableName, tableDefinition)
     * form 2 lists, one of schemaName and one of tableName with same ordering
     * invoke `PopulateForeignKeyDefinitionAsync()` with these lists added as arguments

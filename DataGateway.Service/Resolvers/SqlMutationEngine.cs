@@ -37,7 +37,7 @@ namespace Azure.DataGateway.Service.Resolvers
             IQueryBuilder queryBuilder,
             IRuntimeConfigProvider runtimeConfigProvider)
         {
-            if (metadataStoreProvider.GetType() != typeof(SqlRuntimeConfigProvider))
+            if (runtimeConfigProvider.GetType() != typeof(SqlRuntimeConfigProvider))
             {
                 throw new DataGatewayException(
                     message: "Unable to instantiate the SQL mutation engine.",

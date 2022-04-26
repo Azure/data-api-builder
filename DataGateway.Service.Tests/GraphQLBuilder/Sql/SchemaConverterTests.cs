@@ -200,9 +200,11 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             });
 
             Dictionary<string, Relationship> relationships =
-                new() {
-                    { foreignKeyTable,
-                      new Relationship(
+                new()
+                {
+                    {
+                        foreignKeyTable,
+                        new Relationship(
                           Cardinality.One,
                           foreignKeyTable,
                           SourceFields: null,
@@ -239,9 +241,11 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             });
 
             Dictionary<string, Relationship> relationships =
-                new() {
-                    { foreignKeyTable,
-                      new Relationship(
+                new()
+                {
+                    {
+                        foreignKeyTable,
+                        new Relationship(
                           Cardinality.One,
                           foreignKeyTable,
                           SourceFields: null,
@@ -280,9 +284,11 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             });
 
             Dictionary<string, Relationship> relationships =
-                new() {
-                    { foreignKeyTable,
-                      new Relationship(
+                new()
+                {
+                    {
+                        foreignKeyTable,
+                        new Relationship(
                           Cardinality.One,
                           foreignKeyTable,
                           SourceFields: null,
@@ -329,9 +335,11 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             }
 
             Dictionary<string, Relationship> relationships =
-                new() {
-                    { foreignKeyTable,
-                      new Relationship(
+                new()
+                {
+                    {
+                        foreignKeyTable,
+                        new Relationship(
                           Cardinality.One,
                           foreignKeyTable,
                           SourceFields: null,
@@ -368,9 +376,11 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             });
 
             Dictionary<string, Relationship> relationships =
-                new() {
-                    { foreignKeyTable,
-                      new Relationship(
+                new()
+                {
+                    {
+                        foreignKeyTable,
+                        new Relationship(
                           Cardinality.One,
                           foreignKeyTable,
                           SourceFields: null,
@@ -407,9 +417,11 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             });
 
             Dictionary<string, Relationship> relationships =
-                new() {
-                    { foreignKeyTable,
-                      new Relationship(
+                new()
+                {
+                    {
+                        foreignKeyTable,
+                        new Relationship(
                           Cardinality.One,
                           foreignKeyTable,
                           SourceFields: null,

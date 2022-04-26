@@ -5,7 +5,7 @@ This change supports parsing the schema name provided through the developer frie
 * iterate through each `Entity` and parse the schema name and table name in each entity's source into a `Map<`tableName, schemaName`>` for later consumption
 * for each tuple in `GraphQLResolverConfig.DatabaseSchema.Tables` use the `schemaName` associated with each `tableName` from the previously created `Map<`tableName, schemaName`>` as the schema name in place of the hard coded default schema names we currently use
 * pass to `PopulateForeignKeyDefinitionAsync` an additional 2 lists, one for the schema names, and another for the table names, ensuring they are in the same ordering
-* ensure that the ordering of the above tables and schema names are consistent, one option is to join on table name, adding the schema to each table via an additional field or other data structure.
+* must ensure that the ordering of the above tables and schema names are consistent
 
 Additionally, the `GraphQLResolverConfig.DatabaseSchema` is populated through the `ResolverConfig` and will not be available once we change to the devloper friendly runtime config. This change may want to replace with or populate with the runtime config in place of the resolver config.
 

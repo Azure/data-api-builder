@@ -16,7 +16,7 @@ namespace Azure.DataGateway.Service.Authorization
     /// </summary>
     public class RequestAuthorizationHandler : AuthorizationHandler<OperationAuthorizationRequirement, RestRequestContext>
     {
-        private readonly SqlRuntimeConfigProvider _runtimeConfigProvider;
+        private readonly SqlMetadataProvider _runtimeConfigProvider;
 
         /// <summary>
         /// Constructor.
@@ -27,7 +27,7 @@ namespace Azure.DataGateway.Service.Authorization
             IRuntimeConfigProvider runtimeConfigProvider,
             bool isMock = false)
         {
-            if (runtimeConfigProvider.GetType() != typeof(SqlRuntimeConfigProvider))
+            if (runtimeConfigProvider.GetType() != typeof(SqlMetadataProvider))
             {
                 throw new DataGatewayException(
                     message: "Unable to instantiate the RequestAuthorization Handler.",
@@ -35,7 +35,7 @@ namespace Azure.DataGateway.Service.Authorization
                     subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
             }
 
-            _runtimeConfigProvider = (SqlRuntimeConfigProvider)runtimeConfigProvider;
+            _runtimeConfigProvider = (SqlMetadataProvider)runtimeConfigProvider;
         }
 
         protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,

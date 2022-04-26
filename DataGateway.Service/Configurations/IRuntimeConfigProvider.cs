@@ -12,10 +12,5 @@ namespace Azure.DataGateway.Service.Configurations
         /// Retrieves the runtime config.
         /// </summary>
         RuntimeConfig GetRuntimeConfig();
-
-        /// <summary>
-        /// Initializes this metadata provider for the runtime.
-        /// </summary>
-        Task InitializeAsync();
     }
 }

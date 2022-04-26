@@ -36,24 +36,11 @@ namespace Azure.DataGateway.Service.Configurations
                 DataGatewayConfig.GetDeserializedConfig<RuntimeConfig>(runtimeConfigJson);
 
             RuntimeConfig.SetDefaults();
-            RuntimeConfig.ProcessPermissions();
-
-            CloudDbType = RuntimeConfig.DataSource.DatabaseType;
         }
 
         public RuntimeConfig GetRuntimeConfig()
         {
             return RuntimeConfig;
-        }
-
-        /// <summary>
-        /// Does further initialization work that needs to happen
-        /// asynchronously and hence not done in the constructor.
-        /// </summary>
-        public virtual Task InitializeAsync()
-        {
-            // no-op
-            return Task.CompletedTask;
         }
     }
 }

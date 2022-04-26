@@ -38,6 +38,8 @@ namespace Azure.DataGateway.Service.Services
 
             CloudDbType = config.DatabaseType.Value;
 
+            // need to read the new runtime config
+            // config needs to have updated config bind in startup
             string? resolverConfigJson = config.ResolverConfig;
             string? graphQLSchema = config.GraphQLSchema;
 
@@ -52,6 +54,7 @@ namespace Azure.DataGateway.Service.Services
                     "The resolver config should be set either via ResolverConfig or ResolverConfigFile.");
             }
 
+            // need to deserialize new runtime config
             GraphQLResolverConfig = GetDeserializedConfig(resolverConfigJson);
 
             if (string.IsNullOrEmpty(GraphQLResolverConfig.GraphQLSchema))

@@ -84,6 +84,9 @@ namespace Azure.DataGateway.Service.Services
                     subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
             }
 
+            // need the deserilized runtime config to get "source" out of each entity
+            // source will hold the schemaName and tableName in the format of schemaName.tableName
+            // for each entity, we parse the source and then call PopulateTableDefinitionAsync
             string schemaName = string.Empty;
             foreach ((string tableName, TableDefinition tableDefinition) in GraphQLResolverConfig.DatabaseSchema.Tables)
             {

@@ -23,7 +23,7 @@ namespace Azure.DataGateway.Service.Resolvers
     {
         private readonly IQueryEngine _queryEngine;
         private readonly IGraphQLMetadataProvider _metadataStoreProvider;
-        private readonly SqlRuntimeConfigProvider _runtimeConfigProvider;
+        private readonly SqlMetadataProvider _runtimeConfigProvider;
         private readonly IQueryExecutor _queryExecutor;
         private readonly IQueryBuilder _queryBuilder;
 
@@ -37,7 +37,7 @@ namespace Azure.DataGateway.Service.Resolvers
             IQueryBuilder queryBuilder,
             IRuntimeConfigProvider runtimeConfigProvider)
         {
-            if (runtimeConfigProvider.GetType() != typeof(SqlRuntimeConfigProvider))
+            if (runtimeConfigProvider.GetType() != typeof(SqlMetadataProvider))
             {
                 throw new DataGatewayException(
                     message: "Unable to instantiate the SQL mutation engine.",
@@ -49,7 +49,7 @@ namespace Azure.DataGateway.Service.Resolvers
             _metadataStoreProvider = metadataStoreProvider;
             _queryExecutor = queryExecutor;
             _queryBuilder = queryBuilder;
-            _runtimeConfigProvider = (SqlRuntimeConfigProvider)runtimeConfigProvider;
+            _runtimeConfigProvider = (SqlMetadataProvider)runtimeConfigProvider;
         }
 
         /// <summary>

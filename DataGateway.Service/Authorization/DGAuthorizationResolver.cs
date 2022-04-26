@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Services;
@@ -44,14 +45,14 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         // Whether Entity.Role has action defined
-        public bool IsActionAllowedForRole(string action, string roleName)
+        public bool IsActionAllowedForRole(string roleName, string entityName, string action)
         {
             // TO-DO #3 pending lock in on DataStructure storing dev config.
             throw new NotImplementedException();
         }
 
         // Compare columns in request body to columns in entity.Role.Action.AllowedColumns
-        public bool IsColumnSetAllowedForAction()
+        public bool AreColumnsAllowedForAction(string roleName, string entityName, string action, List<string> columns)
         {
             //No-Op for now
             throw new NotImplementedException();

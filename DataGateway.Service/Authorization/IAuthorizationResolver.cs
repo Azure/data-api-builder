@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataGateway.Service.Authorization
@@ -13,11 +14,12 @@ namespace Azure.DataGateway.Service.Authorization
         public bool IsRoleDefinedForEntity(string roleName, string entityName);
 
         // Whether Entity.Role has action defined
-        public bool IsActionAllowedForRole(string action, string roleName);
+        public bool IsActionAllowedForRole(string roleName, string entityName, string action);
 
-        // No-Op for now -> compare columns in request body to columns in entity.Role.Action.AllowedColumns
-        public bool IsColumnSetAllowedForAction();
+        // Compare columns in request body to columns in entity.Role.Action.AllowedColumns
+        public bool AreColumnsAllowedForAction(string roleName, string entityName, string action, List<string> columns);
 
+        //  No-Op for now 
         public bool DidProcessDBPolicy(string action, string roleName, HttpContext httpContext);
     }
 }

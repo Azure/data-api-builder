@@ -8,7 +8,6 @@ namespace Azure.DataGateway.Config
     /// <param name="Cardinality">The cardinality of the target entity.</param>
     /// <param name="TargetEntity">Another exposed entity to which the source
     /// entity relates to.</param>
-
     /// <param name="SourceFields">Can be used to designate which columns
     /// to be used in the source entity.</param>
     /// <param name="TargetFields">Can be used to designate which columns

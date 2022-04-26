@@ -422,7 +422,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
                     {
                         foreignKeyTable,
                         new Relationship(
-                          Cardinality.One,
+                          Cardinality.Many,
                           foreignKeyTable,
                           SourceFields: null,
                           TargetFields: null,

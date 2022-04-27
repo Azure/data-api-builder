@@ -13,5 +13,6 @@
     <ODataVersion>7.9.0</ODataVersion>
     <MySQLVersion>2.1.5</MySQLVersion>
     <NetCoreAutorizationVersion>3.1.4</NetCoreAutorizationVersion>
+    <HumanizerVersion>2.14.1</HumanizerVersion>
  </PropertyGroup>
 </Project>

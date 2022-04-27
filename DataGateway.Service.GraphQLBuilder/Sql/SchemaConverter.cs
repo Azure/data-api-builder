@@ -75,7 +75,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 
                     FieldDefinitionNode relationshipField = new(
                         location: null,
-                        Pluralize(fk.ReferencedTable),
+                        Pluralize(fk.ReferencedTable, referencedEntity),
                         description: null,
                         new List<InputValueDefinitionNode>(),
                         // TODO: Check for whether it should be a nullable relationship based on the relationship fields

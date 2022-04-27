@@ -437,5 +437,30 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             FieldDefinitionNode field = od.Fields.First(f => f.Type.NamedType().Name.Value == foreignKeyTable);
             Assert.IsTrue(field.Type.InnerType().IsListType());
         }
+
+        [TestMethod]
+        public void WhenForeignKeyDefinedButNoRelationship_GraphQLWontModelIt()
+        {
+            TableDefinition table = new();
+
+            string columnName = "columnName";
+            table.Columns.Add(columnName, new ColumnDefinition
+            {
+                SystemType = typeof(string),
+                IsNullable = false,
+            });
+            const string foreignKeyTable = "FkTable";
+            const string refColName = "ref_col";
+            table.ForeignKeys.Add("foreign_key", new ForeignKeyDefinition { ReferencedTable = foreignKeyTable, ReferencingColumns = new List<string> { refColName } });
+            table.Columns.Add(refColName, new ColumnDefinition
+            {
+                SystemType = typeof(long)
+            });
+
+            Entity configEntity = GenerateEmptyEntity() with { Relationships = new() };
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity);
+
+            Assert.AreEqual(2, od.Fields.Count);
+        }
     }
 }

@@ -41,52 +41,60 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                 fields.Add(columnName, field);
             }
 
-            foreach ((string _, ForeignKeyDefinition fk) in tableDefinition.ForeignKeys)
+            if (configEntity.Relationships != null)
             {
-                if (configEntity.Relationships == null)
+                foreach ((string _, ForeignKeyDefinition fk) in tableDefinition.ForeignKeys)
                 {
-                    throw new NullReferenceException($"Foreign keys have been deteched for the entity \"{tableName}\" but none were defined in the runtime config. Ensure you define the relationship in the runtime config.");
-                }
+                    if (!configEntity.Relationships.ContainsKey(fk.ReferencedTable))
+                    {
+                        // While the table has a fk, it's not defined as a relationship for the runtime
+                        // meaning we'll assume the developer doesn't want it exposed, so we'll skip it.
 
-                Relationship relationship = configEntity.Relationships[fk.ReferencedTable];
+                        // TODO: Log out a message so someone can see why it wasn't generated
 
-                // Generate the field that represents the relationship to ObjectType, so you can navigate through it
-                // and walk the graph
+                        continue;
+                    }
 
-                // TODO: This will need to be expanded to take care of the query fields that are available
-                //       on the relationship, but until we have the work done to generate the right Input
-                //       types for the queries, it's not worth trying to do it completely.
+                    Relationship relationship = configEntity.Relationships[fk.ReferencedTable];
 
-                INullableTypeNode targetField = relationship.Cardinality switch
-                {
-                    Cardinality.One => new NamedTypeNode(FormatNameForObject(fk.ReferencedTable)),
-                    Cardinality.Many => new ListTypeNode(new NamedTypeNode(FormatNameForObject(fk.ReferencedTable))),
-                    _ => throw new NotImplementedException("Specified cardinality isn't supported"),
-                };
+                    // Generate the field that represents the relationship to ObjectType, so you can navigate through it
+                    // and walk the graph
 
-                FieldDefinitionNode relationshipField = new(
-                    location: null,
-                    Pluralize(fk.ReferencedTable),
-                    description: null,
-                    new List<InputValueDefinitionNode>(),
-                    // TODO: Check for whether it should be a nullable relationship based on the relationship fields
-                    new NonNullTypeNode(targetField),
-                    new List<DirectiveNode>());
+                    // TODO: This will need to be expanded to take care of the query fields that are available
+                    //       on the relationship, but until we have the work done to generate the right Input
+                    //       types for the queries, it's not worth trying to do it completely.
 
-                fields.Add(relationshipField.Name.Value, relationshipField);
+                    INullableTypeNode targetField = relationship.Cardinality switch
+                    {
+                        Cardinality.One => new NamedTypeNode(FormatNameForObject(fk.ReferencedTable)),
+                        Cardinality.Many => new ListTypeNode(new NamedTypeNode(FormatNameForObject(fk.ReferencedTable))),
+                        _ => throw new NotImplementedException("Specified cardinality isn't supported"),
+                    };
 
-                foreach (string columnName in fk.ReferencingColumns)
-                {
-                    ColumnDefinition column = tableDefinition.Columns[columnName];
-                    FieldDefinitionNode field = fields[columnName];
+                    FieldDefinitionNode relationshipField = new(
+                        location: null,
+                        Pluralize(fk.ReferencedTable),
+                        description: null,
+                        new List<InputValueDefinitionNode>(),
+                        // TODO: Check for whether it should be a nullable relationship based on the relationship fields
+                        new NonNullTypeNode(targetField),
+                        new List<DirectiveNode>());
 
-                    fields[columnName] = field.WithDirectives(
-                        new List<DirectiveNode>(field.Directives) {
+                    fields.Add(relationshipField.Name.Value, relationshipField);
+
+                    foreach (string columnName in fk.ReferencingColumns)
+                    {
+                        ColumnDefinition column = tableDefinition.Columns[columnName];
+                        FieldDefinitionNode field = fields[columnName];
+
+                        fields[columnName] = field.WithDirectives(
+                            new List<DirectiveNode>(field.Directives) {
                             new(
                                 RelationshipDirectiveType.DirectiveName,
                                 new ArgumentNode("databaseType", column.SystemType.Name),
                                 new ArgumentNode("cardinality", relationship.Cardinality.ToString()))
-                        });
+                            });
+                    }
                 }
             }
 

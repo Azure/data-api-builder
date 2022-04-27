@@ -57,7 +57,7 @@ namespace Azure.DataGateway.Service.Services
             IQueryBuilder queryBuilder)
         {
             ConnectionString = dataGatewayConfig.Value.DatabaseConnection.ConnectionString;
-            _databaseType = (DatabaseType)dataGatewayConfig.Value.DatabaseType!;
+            DatabaseType = (DatabaseType)dataGatewayConfig.Value.DatabaseType!;
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;

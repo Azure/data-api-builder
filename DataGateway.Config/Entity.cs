@@ -34,7 +34,7 @@ namespace Azure.DataGateway.Config
         /// </summary>
         public string GetSourceName()
         {
-            if(((JsonElement)Source).ValueKind == JsonValueKind.String)
+            if (((JsonElement)Source).ValueKind == JsonValueKind.String)
             {
                 return JsonSerializer.Deserialize<string>((JsonElement)Source)!;
             }

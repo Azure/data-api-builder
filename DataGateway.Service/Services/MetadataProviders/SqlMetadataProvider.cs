@@ -227,7 +227,7 @@ namespace Azure.DataGateway.Service.Services
                     GetDatabaseObjectName(entityName),
                     GetTableDefinition(entityName));
             }
- 
+
             await PopulateForeignKeyDefinitionAsync(EntityToDatabaseObject.Values);
 
         }

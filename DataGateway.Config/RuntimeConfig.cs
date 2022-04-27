@@ -38,10 +38,10 @@ namespace Azure.DataGateway.Config
     {
         public void SetDefaults()
         {
-            foreach(
+            foreach (
                 (GlobalSettingsType settingsType, GlobalSettings settings) in RuntimeSettings)
             {
-                switch(settingsType)
+                switch (settingsType)
                 {
                     case GlobalSettingsType.Rest:
                         if (settings.GetType() != typeof(RestGlobalSettings))

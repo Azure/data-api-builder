@@ -16,9 +16,10 @@ namespace Azure.DataGateway.Service.Services
     {
         public MsSqlMetadataProvider(
             IOptions<DataGatewayConfig> dataGatewayConfig,
+            IRuntimeConfigProvider runtimeConfigProvider,
             IQueryExecutor queryExecutor,
             IQueryBuilder sqlQueryBuilder)
-            : base(dataGatewayConfig, queryExecutor, sqlQueryBuilder)
+            : base(dataGatewayConfig, runtimeConfigProvider, queryExecutor, sqlQueryBuilder)
         {
         }
 

@@ -4,11 +4,13 @@ using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Services
@@ -32,8 +34,6 @@ namespace Azure.DataGateway.Service.Services
         private readonly IQueryExecutor? _queryExecutor;
 
         private const int NUMBER_OF_RESTRICTIONS = 4;
-
-        protected const string TABLE_TYPE = "BASE TABLE";
 
         protected string ConnectionString { get; init; }
 
@@ -71,49 +71,48 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
-        /// Obtains the underlying TableDefinition for the given entity name.
-        /// </summary>
-        public virtual TableDefinition GetTableDefinition(string name)
-        {
-            if (EntityToDatabaseObject.TryGetValue(name, out DatabaseObject? databaseObject))
-            {
-                throw new InvalidCastException($"Table Definition for {name} has not been inferred.");
-            }
-
-            return databaseObject!.TableDefinition;
-        }
-
-        /// <summary>
-        /// Obtains the underlying source object's name.
-        /// </summary>
-        public virtual string GetDatabaseObjectName(string name)
-        {
-            if (EntityToDatabaseObject.TryGetValue(name, out DatabaseObject? databaseObject))
-            {
-                throw new InvalidCastException($"Table Definition for {name} has not been inferred.");
-            }
-
-            return databaseObject!.Name;
-        }
-
-        /// <summary>
         /// Obtains the underlying source object's schema name.
         /// </summary>
-        public virtual string GetSchemaName(string name)
+        public virtual string GetSchemaName(string entityName)
         {
-            if (EntityToDatabaseObject.TryGetValue(name, out DatabaseObject? databaseObject))
+            if (EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
-                throw new InvalidCastException($"Table Definition for {name} has not been inferred.");
+                throw new InvalidCastException($"Table Definition for {entityName} has not been inferred.");
             }
 
             return databaseObject!.SchemaName;
         }
 
-        /// </inheritdoc>
+        /// <summary>
+        /// Obtains the underlying source object's name.
+        /// </summary>
+        public string GetDatabaseObjectName(string entityName)
+        {
+            if (EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
+            {
+                throw new InvalidCastException($"Table Definition for {entityName} has not been inferred.");
+            }
+
+            return databaseObject!.Name;
+        }
+
+        /// <inheritdoc />
+        public TableDefinition GetTableDefinition(string entityName)
+        {
+            if (EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
+            {
+                throw new InvalidCastException($"Table Definition for {entityName} has not been inferred.");
+            }
+
+            return databaseObject!.TableDefinition;
+        }
+
+        /// <inheritdoc />
         public async Task InitializeAsync()
         {
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
-            await FindDatabaseObjectForEntities();
+            GenerateDatabaseObjectForEntities();
+            await PopulateTableDefinitionForEntities();
             ProcessEntityPermissions();
             InitFilterParser();
             timer.Stop();
@@ -156,10 +155,42 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
+        /// Create a DatabaseObject for all the exposed entities.
+        /// </summary>
+        private void GenerateDatabaseObjectForEntities()
+        {
+            DatabaseType databaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
+            foreach ((string entityName, Entity entity)
+                in GetEntitiesFromRuntimeConfig())
+            {
+                string schemaName = GetDefaultSchemaName(databaseType);
+
+                DatabaseObject databaseObject = new()
+                {
+                    SchemaName = schemaName,
+                    Name = entity.SourceName,
+                    TableDefinition = new()
+                };
+
+                EntityToDatabaseObject.Add(entityName, databaseObject);
+            }
+        }
+
+        private virtual string GetDefaultSchemaName()
+            => databaseType switch
+        {
+            DatabaseType.mssql => "dbo",
+            DatabaseType.postgresql => "public",
+            DatabaseType.mysql => string.Empty,
+            _ => throw new NotSupportedException($"Cannot get schema" +
+                $"name for database type {databaseType}")
+        };
+
+        /// <summary>
         /// Enrich the entities in the runtime config with the
         /// table definition information needed by the runtime to serve requests.
         /// </summary>
-        private async Task FindDatabaseObjectForEntities()
+        private async Task PopulateTableDefinitionForEntities()
         {
             foreach (string entityName
                 in GetEntitiesFromRuntimeConfig().Keys)
@@ -195,16 +226,16 @@ namespace Azure.DataGateway.Service.Services
 
         private void InitFilterParser()
         {
-            ODataFilterParser.BuildModel(RuntimeConfig.Entities);
+            ODataFilterParser.BuildModel(EntityToDatabaseObject.Values);
         }
 
         /// <summary>
         /// Determines the allowed HttpRest Verbs and
         /// their authorization rules for this entity.
         /// </summary>
-        public override void DetermineHttpVerbPermissions(string entityName, PermissionSetting[] permissions)
+        private void DetermineHttpVerbPermissions(string entityName, PermissionSetting[] permissions)
         {
-            TableDefinition tableDefinition = DatabaseSchema.EntityToDatabaseObject[entityName].TableDefinition;
+            TableDefinition tableDefinition = GetTableDefinition(entityName);
             foreach (PermissionSetting permission in permissions)
             {
                 foreach (object action in permission.Actions)
@@ -212,8 +243,8 @@ namespace Azure.DataGateway.Service.Services
                     string actionName;
                     if (((JsonElement)action).ValueKind == JsonValueKind.Object)
                     {
-                        Action configAction =
-                            ((JsonElement)action).Deserialize<Action>()!;
+                        Config.Action configAction =
+                            ((JsonElement)action).Deserialize<Config.Action>()!;
                         actionName = configAction.Name;
                     }
                     else
@@ -230,12 +261,18 @@ namespace Azure.DataGateway.Service.Services
                                 typeof(AuthorizationType), permission.Role)
                     };
 
-                    TableDefinition.HttpVerbs.Add(restVerb.ToString()!, rule);
+                    tableDefinition.HttpVerbs.Add(restVerb.ToString()!, rule);
                 }
             }
         }
 
-        /// </inheritdoc>
+        /// <summary>
+        /// Fills the table definition with information of all columns and
+        /// primary keys.
+        /// </summary>
+        /// <param name="schemaName">Name of the schema.</param>
+        /// <param name="tableName">Name of the table.</param>
+        /// <param name="tableDefinition">Table definition to fill.</param>
         private async Task PopulateTableDefinitionAsync(
             string schemaName,
             string tableName,
@@ -272,7 +309,10 @@ namespace Azure.DataGateway.Service.Services
                 columnsInTable);
         }
 
-        /// </inheritdoc>
+        /// <summary>
+        /// Gets the DataTable from the EntitiesDataSet if already present.
+        /// If not present, fills it first and returns the same.
+        /// </summary>
         private async Task<DataTable> GetTableWithSchemaFromDataSetAsync(
             string schemaName,
             string tableName)
@@ -322,7 +362,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <returns>A data table where each row corresponds to a
         /// column of the table.</returns>
-        private async Task<DataTable> GetColumnsAsync(
+        protected virtual async Task<DataTable> GetColumnsAsync(
             string schemaName,
             string tableName)
         {
@@ -372,10 +412,15 @@ namespace Azure.DataGateway.Service.Services
             }
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Fills the table definition with information of the foreign keys
+        /// for all the tables.
+        /// </summary>
+        /// <param name="schemaName">Name of the default schema.</param>
+        /// <param name="tables">Dictionary of all tables.</param>
         private async Task PopulateForeignKeyDefinitionAsync(
-           string defaultSchemaName,
-           IEnumerable<Entity> sqlEntities)
+            string defaultSchemaName,
+            IEnumerable<Entity> sqlEntities)
         {
             // Build the query required to get the foreign key information.
             string queryForForeignKeyInfo =

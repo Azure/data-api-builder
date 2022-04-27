@@ -67,7 +67,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _defaultSchemaName = "public";
                     _dbExceptionParser = new PostgresDbExceptionParser();
                     _queryExecutor = new QueryExecutor<NpgsqlConnection>(config, _dbExceptionParser);
-                    _sqlMetadataProvider = 
+                    _sqlMetadataProvider =
                         new PostgreSqlMetadataProvider(
                             config,
                             _runtimeConfigProvider,
@@ -89,7 +89,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _defaultSchemaName = "mysql";
                     _dbExceptionParser = new MySqlDbExceptionParser();
                     _queryExecutor = new QueryExecutor<MySqlConnection>(config, _dbExceptionParser);
-                    _sqlMetadataProvider = 
+                    _sqlMetadataProvider =
                          new MySqlMetadataProvider(
                              config,
                              _runtimeConfigProvider,
@@ -124,12 +124,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _queryBuilder,
                 _sqlMetadataProvider);
             await ResetDbStateAsync();
+            await _sqlMetadataProvider.InitializeAsync();
         }
 
         protected static async Task ResetDbStateAsync()
         {
             using DbDataReader _ = await _queryExecutor.ExecuteQueryAsync(File.ReadAllText($"{_testCategory}Books.sql"), parameters: null);
-            await _sqlMetadataProvider.InitializeAsync();
         }
 
         /// <summary>

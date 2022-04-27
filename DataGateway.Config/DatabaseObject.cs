@@ -10,6 +10,14 @@ namespace Azure.DataGateway.Config
         public string Name { get; set; } = null!;
 
         public TableDefinition TableDefinition { get; set; } = null!;
+
+        public string FullName
+        {
+            get
+            {
+                return $"{SchemaName}.${Name}";
+            }
+        }
     }
 
     public class TableDefinition

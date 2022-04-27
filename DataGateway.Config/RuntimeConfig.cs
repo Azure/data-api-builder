@@ -38,34 +38,34 @@ namespace Azure.DataGateway.Config
     {
         public void SetDefaults()
         {
-            foreach(
+            foreach (
                 (GlobalSettingsType settingsType, GlobalSettings settings) in RuntimeSettings)
             {
-                switch(settingsType)
+                switch (settingsType)
                 {
                     case GlobalSettingsType.Rest:
-                        if (settings.GetType() != typeof(RestGlobalSettings))
+                        if (settings is not RestGlobalSettings)
                         {
                             RuntimeSettings[settingsType] = new RestGlobalSettings();
                         }
 
                         break;
                     case GlobalSettingsType.GraphQL:
-                        if (settings.GetType() != typeof(GraphQLGlobalSettings))
+                        if (settings is not GraphQLGlobalSettings)
                         {
                             RuntimeSettings[settingsType] = new GraphQLGlobalSettings();
                         }
 
                         break;
                     case GlobalSettingsType.Host:
-                        if (settings.GetType() != typeof(HostGlobalSettings))
+                        if (settings is not HostGlobalSettings)
                         {
                             RuntimeSettings[settingsType] = new HostGlobalSettings();
                         }
 
                         break;
                     default:
-                        throw new NotSupportedException("The runtime does not" +
+                        throw new NotSupportedException("The runtime does not " +
                             " support this global settings type.");
                 }
             }

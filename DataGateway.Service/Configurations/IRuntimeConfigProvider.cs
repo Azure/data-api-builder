@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 
 namespace Azure.DataGateway.Service.Configurations

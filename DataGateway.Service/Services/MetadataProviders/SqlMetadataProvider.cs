@@ -57,11 +57,11 @@ namespace Azure.DataGateway.Service.Services
             IQueryBuilder queryBuilder)
         {
             ConnectionString = dataGatewayConfig.Value.DatabaseConnection.ConnectionString;
+            _databaseType = (DatabaseType)dataGatewayConfig.Value.DatabaseType!;
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;
             _runtimeConfigProvider = runtimeConfigProvider;
-            DatabaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
         }
 
         /// <summary>
@@ -164,7 +164,31 @@ namespace Azure.DataGateway.Service.Services
                     TableDefinition = new()
                 };
 
-                EntityToDatabaseObject.Add(entityName, databaseObject);
+                    EntityToDatabaseObject.Add(entityName, databaseObject);
+
+                    if (entity.Relationships != null)
+                    {
+                        // Add all the linking objects as well - so that we can infer
+                        // their metadata too.
+                        foreach (Relationship relationship in entity.Relationships.Values)
+                        {
+                            if (relationship.LinkingObject != null
+                                && !EntityToDatabaseObject.ContainsKey(relationship.LinkingObject))
+                            {
+                                DatabaseObject linkingDatabaseObject = new()
+                                {
+                                    SchemaName = GetDefaultSchemaName(),
+                                    Name = relationship.LinkingObject,
+                                    TableDefinition = new()
+                                };
+
+                                EntityToDatabaseObject.Add(
+                                    relationship.LinkingObject,
+                                    linkingDatabaseObject);
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -186,14 +210,14 @@ namespace Azure.DataGateway.Service.Services
         private async Task PopulateTableDefinitionForEntities()
         {
             foreach (string entityName
-                in GetEntitiesFromRuntimeConfig().Keys)
+                in EntityToDatabaseObject.Keys)
             {
                 await PopulateTableDefinitionAsync(
                     GetSchemaName(entityName),
                     GetDatabaseObjectName(entityName),
                     GetTableDefinition(entityName));
             }
- 
+
             await PopulateForeignKeyDefinitionAsync(EntityToDatabaseObject.Values);
 
         }

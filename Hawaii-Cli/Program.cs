@@ -1,10 +1,10 @@
-﻿using Abhicruiser.Cli.Classes;
+﻿using Hawaii.Cli.Classes;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 
 var command = args.AsQueryable().FirstOrDefault();
 
-Console.WriteLine("Welcome to Abhicruiser.Cli");
+Console.WriteLine("Welcome to Hawaii.Cli");
 if (command == "init")
 {
     CommandLineHelp.ParseArguments(args);

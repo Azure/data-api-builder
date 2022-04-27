@@ -24,18 +24,10 @@ namespace Azure.DataGateway.Service.Authorization
         /// <param name="metadataStoreProvider">The metadata provider.</param>
         /// <param name="isMock">True, if the provided metadata provider is a mock.</param>
         public RequestAuthorizationHandler(
-            IRuntimeConfigProvider runtimeConfigProvider,
+            ISqlMetadataProvider sqlMetadataProvider,
             bool isMock = false)
         {
-            if (runtimeConfigProvider.GetType() != typeof(ISqlMetadataProvider))
-            {
-                throw new DataGatewayException(
-                    message: "Unable to instantiate the RequestAuthorization Handler.",
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
-            }
-
-            _sqlMetadataProvider = (ISqlMetadataProvider)runtimeConfigProvider;
+            _sqlMetadataProvider = sqlMetadataProvider;
         }
 
         protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,

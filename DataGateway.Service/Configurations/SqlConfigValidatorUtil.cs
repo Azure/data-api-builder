@@ -175,8 +175,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </exception>
         private TableDefinition GetTableWithName(string entityName)
         {
-            SqlEntity sqlEntity = (SqlEntity)_runtimeConfig.Entities[entityName];
-            return sqlEntity.TableDefinition;
+            return _sqlMetadataProvider.GetTableDefinition(entityName);
         }
 
         /// <summary>
@@ -528,8 +527,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <exception cref="KeyNotFoundException" />
         private ForeignKeyDefinition GetFkFromTable(string entityName, string fkName)
         {
-            SqlEntity sqlEntity = (SqlEntity)_runtimeConfig.Entities[entityName];
-            return sqlEntity.TableDefinition.ForeignKeys[fkName];
+            return _sqlMetadataProvider.GetTableDefinition(entityName).ForeignKeys[fkName];
         }
 
         /// <summary>

@@ -19,8 +19,8 @@ namespace Azure.DataGateway.Service.Configurations
     public partial class SqlConfigValidator : IConfigValidator
     {
         private ResolverConfig _resolverConfig;
-        private RuntimeConfig _runtimeConfig;
         private ISchema? _schema;
+        private ISqlMetadataProvider _sqlMetadataProvider;
         private Stack<string> _configValidationStack;
         private Stack<string> _schemaValidationStack;
         private Dictionary<string, FieldDefinitionNode> _queries;
@@ -34,7 +34,7 @@ namespace Azure.DataGateway.Service.Configurations
         public SqlConfigValidator(
             IGraphQLMetadataProvider metadataStoreProvider,
             GraphQLService graphQLService,
-            IRuntimeConfigProvider runtimeConfigProvider)
+            ISqlMetadataProvider sqlMetadataProvider)
         {
             _configValidationStack = MakeConfigPosition(Enumerable.Empty<string>());
             _schemaValidationStack = MakeSchemaPosition(Enumerable.Empty<string>());
@@ -44,7 +44,7 @@ namespace Azure.DataGateway.Service.Configurations
             _graphQLTypesAreValidated = false;
 
             _resolverConfig = metadataStoreProvider.GetResolvedConfig();
-            _runtimeConfig = runtimeConfigProvider.GetRuntimeConfig();
+            _sqlMetadataProvider = sqlMetadataProvider;
             _schema = graphQLService.Schema;
 
             if (_schema != null)

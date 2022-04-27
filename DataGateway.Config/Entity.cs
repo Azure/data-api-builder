@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Azure.DataGateway.Config
@@ -31,11 +32,19 @@ namespace Azure.DataGateway.Config
         /// <summary>
         /// Gets the name of the underlying source database object.
         /// </summary>
-        public string SourceName => Type.GetTypeCode(Source.GetType()) switch
+        public string GetSourceName()
         {
-            TypeCode.String => (string)Source,
-            _ => ((DatabaseObjectSource)Source).Name
-        };
+            if(((JsonElement)Source).ValueKind == JsonValueKind.String)
+            {
+                return JsonSerializer.Deserialize<string>((JsonElement)Source)!;
+            }
+            else
+            {
+                DatabaseObjectSource objectSource
+                    = JsonSerializer.Deserialize<DatabaseObjectSource>((JsonElement)Source)!;
+                return objectSource.Name;
+            }
+        }
     }
 
     /// <summary>

@@ -26,8 +26,6 @@ namespace Azure.DataGateway.Service.Services
     {
         private readonly IRuntimeConfigProvider _runtimeConfigProvider;
 
-        public DatabaseType DatabaseType { get; init; }
-
         private FilterParser _oDataFilterParser = new();
 
         private DatabaseType _databaseType;
@@ -65,16 +63,6 @@ namespace Azure.DataGateway.Service.Services
             _databaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
         }
 
-        /// <summary>
-        /// Default Constructor for Mock tests.
-        /// </summary>
-        public SqlMetadataProvider()
-        {
-            ConnectionString = new(string.Empty);
-            EntitiesDataSet = new();
-            SqlQueryBuilder = new MsSqlQueryBuilder();
-        }
-
         public FilterParser GetOdataFilterParser()
         {
             return _oDataFilterParser;
@@ -90,7 +78,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         public virtual string GetSchemaName(string entityName)
         {
-            if (EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
+            if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
                 throw new InvalidCastException($"Table Definition for {entityName} has not been inferred.");
             }
@@ -103,7 +91,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         public string GetDatabaseObjectName(string entityName)
         {
-            if (EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
+            if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
                 throw new InvalidCastException($"Table Definition for {entityName} has not been inferred.");
             }
@@ -114,7 +102,7 @@ namespace Azure.DataGateway.Service.Services
         /// <inheritdoc />
         public TableDefinition GetTableDefinition(string entityName)
         {
-            if (EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
+            if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
                 throw new InvalidCastException($"Table Definition for {entityName} has not been inferred.");
             }
@@ -181,7 +169,7 @@ namespace Azure.DataGateway.Service.Services
                 DatabaseObject databaseObject = new()
                 {
                     SchemaName = GetDefaultSchemaName(),
-                    Name = entity.SourceName,
+                    Name = entity.GetSourceName(),
                     TableDefinition = new()
                 };
 
@@ -266,14 +254,17 @@ namespace Azure.DataGateway.Service.Services
 
                     OperationAuthorizationRequirement restVerb
                             = HttpRestVerbs.GetVerb(actionName);
-                    AuthorizationRule rule = new()
+                    if (!tableDefinition.HttpVerbs.ContainsKey(restVerb.ToString()!))
                     {
-                        AuthorizationType =
-                            (AuthorizationType)Enum.Parse(
-                                typeof(AuthorizationType), permission.Role)
-                    };
+                        AuthorizationRule rule = new()
+                        {
+                            AuthorizationType =
+                              (AuthorizationType)Enum.Parse(
+                                  typeof(AuthorizationType), permission.Role, ignoreCase: true)
+                        };
 
-                    tableDefinition.HttpVerbs.Add(restVerb.ToString()!, rule);
+                        tableDefinition.HttpVerbs.Add(restVerb.ToString()!, rule);
+                    }
                 }
             }
         }

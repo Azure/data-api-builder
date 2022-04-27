@@ -29,7 +29,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         private string _graphqlSchema = File.ReadAllText("schema.gql");
         private const string COMSMOS_DEFAULT_CONNECTION_STRING = "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
 
-        [TestMethod("Validates that querying for a config that's not set returns a 503.")]
+        [TestMethod("Validates that queries before runtime is configured returns a 503.")]
         public async Task TestNoConfigReturnsServiceUnavailable()
         {
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
@@ -39,11 +39,58 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, result.StatusCode);
         }
 
+        [TestMethod("Validates that once the configuration is set, the config controller isn't reachable.")]
+        public async Task TestConflictAlreadySetConfiguration()
+        {
+            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            HttpClient httpClient = server.CreateClient();
+
+            Dictionary<string, string> config = new()
+            {
+                { "DataGatewayConfig:DatabaseType", "cosmos" },
+                { "DataGatewayConfig:ResolverConfigFile", "cosmos-config.json" },
+                { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
+            };
+
+            _ = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+            ValidateCosmosDbSetup(server);
+
+            HttpResponseMessage result = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+            Assert.AreEqual(HttpStatusCode.Conflict, result.StatusCode);
+        }
+
+        [TestMethod("Validates that the config controller returns a conflict when using local configuration.")]
+        public async Task TestConflictLocalConfiguration()
+        {
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "Cosmos");
+            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            HttpClient httpClient = server.CreateClient();
+
+            ValidateCosmosDbSetup(server);
+
+            Dictionary<string, string> config = new()
+            {
+                { "DataGatewayConfig:DatabaseType", "cosmos" },
+                { "DataGatewayConfig:ResolverConfigFile", "cosmos-config.json" },
+                { "DataGatewayConfig:DatabaseConnection:ConnectionString", "Cosmos" }
+            };
+
+            HttpResponseMessage result = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+            Assert.AreEqual(HttpStatusCode.Conflict, result.StatusCode);
+        }
+
         [TestMethod("Validates that querying for a config that's not set returns a 404.")]
         public async Task TestGettingNonSetConfigurationReturns404()
         {
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
+            Dictionary<string, string> config = new()
+            {
+                { "DataGatewayConfig:DatabaseType", "cosmos" },
+                { "DataGatewayConfig:ResolverConfigFile", "cosmos-config.json" },
+                { "DataGatewayConfig:DatabaseConnection:ConnectionString", "Cosmos" }
+            };
+            _ = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
 
             HttpResponseMessage result = await httpClient.GetAsync("/configuration?key=test");
             Assert.AreEqual(HttpStatusCode.NotFound, result.StatusCode);

@@ -165,15 +165,40 @@ namespace Azure.DataGateway.Service.Services
             foreach ((string entityName, Entity entity)
                 in GetEntitiesFromRuntimeConfig())
             {
-                
-                DatabaseObject databaseObject = new()
+                if (!EntityToDatabaseObject.ContainsKey(entityName))
                 {
-                    SchemaName = GetDefaultSchemaName(),
-                    Name = entity.GetSourceName(),
-                    TableDefinition = new()
-                };
+                    DatabaseObject databaseObject = new()
+                    {
+                        SchemaName = GetDefaultSchemaName(),
+                        Name = entity.GetSourceName(),
+                        TableDefinition = new()
+                    };
 
-                EntityToDatabaseObject.Add(entityName, databaseObject);
+                    EntityToDatabaseObject.Add(entityName, databaseObject);
+
+                    if (entity.Relationships != null)
+                    {
+                        // Add all the linking objects as well - so that we can infer
+                        // their metadata too.
+                        foreach (Relationship relationship in entity.Relationships.Values)
+                        {
+                            if (relationship.LinkingObject != null
+                                && !EntityToDatabaseObject.ContainsKey(relationship.LinkingObject))
+                            {
+                                DatabaseObject linkingDatabaseObject = new()
+                                {
+                                    SchemaName = GetDefaultSchemaName(),
+                                    Name = relationship.LinkingObject,
+                                    TableDefinition = new()
+                                };
+
+                                EntityToDatabaseObject.Add(
+                                    relationship.LinkingObject,
+                                    linkingDatabaseObject);
+                            }
+                        }
+                    }
+                }
             }
         }
 

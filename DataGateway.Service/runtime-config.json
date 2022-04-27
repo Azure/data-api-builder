@@ -226,6 +226,11 @@
           "actions": [ "read" ]
         }
       ]
+    },
+    "website_users": {
+      "source": "website_users",
+      "rest": false,
+      "permissions" : []
     }
   }
 }

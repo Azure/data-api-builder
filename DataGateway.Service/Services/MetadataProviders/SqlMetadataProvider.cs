@@ -56,11 +56,11 @@ namespace Azure.DataGateway.Service.Services
             IQueryBuilder queryBuilder)
         {
             ConnectionString = dataGatewayConfig.Value.DatabaseConnection.ConnectionString;
+            _databaseType = (DatabaseType)dataGatewayConfig.Value.DatabaseType!;
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;
             _runtimeConfigProvider = runtimeConfigProvider;
-            _databaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
         }
 
         public FilterParser GetOdataFilterParser()

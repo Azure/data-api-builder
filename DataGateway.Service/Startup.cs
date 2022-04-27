@@ -59,7 +59,7 @@ namespace Azure.DataGateway.Service
                 }
             }
 
-            services.AddSingleton<IRuntimeConfigProvider>();
+            services.AddSingleton<IRuntimeConfigProvider, RuntimeConfigProvider>();
 
             services.AddSingleton<IGraphQLMetadataProvider, GraphQLFileMetadataProvider>();
             services.AddSingleton<CosmosClientProvider>();

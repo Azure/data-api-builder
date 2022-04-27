@@ -205,6 +205,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             {
                 { "DataGatewayConfig:DatabaseType", "cosmos" },
                 { "DataGatewayConfig:ResolverConfigFile", "cosmos-config.json" },
+                { "DataGatewayConfig:RuntimeConfigFile", "runtime-config.json" },
                 { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
             };
 

@@ -14,7 +14,7 @@ namespace Azure.DataGateway.Service.Resolvers
     /// </summary>
     public abstract class BaseSqlQueryStructure : BaseQueryStructure
     {
-        protected SqlMetadataProvider SqlMetadataProvider { get; }
+        protected ISqlMetadataProvider SqlMetadataProvider { get; }
 
         protected IGraphQLMetadataProvider MetadataStoreProvider { get; }
 
@@ -36,7 +36,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
         public BaseSqlQueryStructure(
             IGraphQLMetadataProvider metadataStoreProvider,
-            SqlMetadataProvider runtimeConfigProvider,
+            ISqlMetadataProvider runtimeConfigProvider,
             IncrementingInteger? counter = null,
             string tableName = "")
             : base(counter)

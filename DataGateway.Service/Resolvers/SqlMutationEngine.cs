@@ -23,7 +23,7 @@ namespace Azure.DataGateway.Service.Resolvers
     {
         private readonly IQueryEngine _queryEngine;
         private readonly IGraphQLMetadataProvider _metadataStoreProvider;
-        private readonly SqlMetadataProvider _runtimeConfigProvider;
+        private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly IQueryExecutor _queryExecutor;
         private readonly IQueryBuilder _queryBuilder;
 
@@ -35,21 +35,13 @@ namespace Azure.DataGateway.Service.Resolvers
             IGraphQLMetadataProvider metadataStoreProvider,
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder,
-            IRuntimeConfigProvider runtimeConfigProvider)
+            ISqlMetadataProvider sqlMetadataProvider)
         {
-            if (runtimeConfigProvider.GetType() != typeof(SqlMetadataProvider))
-            {
-                throw new DataGatewayException(
-                    message: "Unable to instantiate the SQL mutation engine.",
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
-            }
-
             _queryEngine = queryEngine;
             _metadataStoreProvider = metadataStoreProvider;
             _queryExecutor = queryExecutor;
             _queryBuilder = queryBuilder;
-            _runtimeConfigProvider = (SqlMetadataProvider)runtimeConfigProvider;
+            _sqlMetadataProvider = sqlMetadataProvider;
         }
 
         /// <summary>
@@ -86,7 +78,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (!context.Selection.Type.IsScalarType() && mutationResolver.OperationType != Operation.Delete)
             {
-                TableDefinition tableDefinition = _runtimeConfigProvider.GetTableDefinition(tableName);
+                TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(tableName);
 
                 // only extract pk columns
                 // since non pk columns can be null
@@ -172,7 +164,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     /// result set #2: result of the INSERT operation.
                     if (resultRecord != null)
                     {
-                        if (_runtimeConfigProvider.CloudDbType == DatabaseType.postgresql &&
+                        if (_sqlMetadataProvider.DatabaseType == DatabaseType.postgresql &&
                             PostgresQueryBuilder.IsInsert(resultRecord))
                         {
                             jsonResultString = JsonSerializer.Serialize(resultRecord);
@@ -230,7 +222,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     SqlInsertStructure insertQueryStruct =
                         new(tableName,
                         _metadataStoreProvider,
-                        _runtimeConfigProvider,
+                        _sqlMetadataProvider,
                         parameters);
                     queryString = _queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
@@ -239,7 +231,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     SqlUpdateStructure updateStructure =
                         new(tableName,
                         _metadataStoreProvider,
-                        _runtimeConfigProvider,
+                        _sqlMetadataProvider,
                         parameters,
                         isIncrementalUpdate: false);
                     queryString = _queryBuilder.Build(updateStructure);
@@ -249,7 +241,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     SqlUpdateStructure updateIncrementalStructure =
                         new(tableName,
                         _metadataStoreProvider,
-                        _runtimeConfigProvider,
+                        _sqlMetadataProvider,
                         parameters,
                         isIncrementalUpdate: true);
                     queryString = _queryBuilder.Build(updateIncrementalStructure);
@@ -259,7 +251,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     SqlDeleteStructure deleteStructure =
                         new(tableName,
                         _metadataStoreProvider,
-                        _runtimeConfigProvider,
+                        _sqlMetadataProvider,
                         parameters);
                     queryString = _queryBuilder.Build(deleteStructure);
                     queryParameters = deleteStructure.Parameters;
@@ -268,7 +260,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     SqlUpsertQueryStructure upsertStructure =
                         new(tableName,
                         _metadataStoreProvider,
-                        _runtimeConfigProvider,
+                        _sqlMetadataProvider,
                         parameters,
                         incrementalUpdate: false);
                     queryString = _queryBuilder.Build(upsertStructure);
@@ -278,7 +270,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     SqlUpsertQueryStructure upsertIncrementalStructure =
                         new(tableName,
                         _metadataStoreProvider,
-                        _runtimeConfigProvider,
+                        _sqlMetadataProvider,
                         parameters,
                         incrementalUpdate: true);
                     queryString = _queryBuilder.Build(upsertIncrementalStructure);

@@ -57,7 +57,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public SqlUpsertQueryStructure(
             string tableName,
             IGraphQLMetadataProvider metadataStoreProvider,
-            SqlMetadataProvider runtimeConfigProvider,
+            ISqlMetadataProvider runtimeConfigProvider,
             IDictionary<string, object?> mutationParams,
             bool incrementalUpdate)
         : base(metadataStoreProvider, runtimeConfigProvider, tableName: tableName)

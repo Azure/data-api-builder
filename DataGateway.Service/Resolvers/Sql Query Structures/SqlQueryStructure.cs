@@ -92,14 +92,14 @@ namespace Azure.DataGateway.Service.Resolvers
             IResolverContext ctx,
             IDictionary<string, object> queryParams,
             IGraphQLMetadataProvider metadataStoreProvider,
-            SqlMetadataProvider runtimeConfigProvider)
+            ISqlMetadataProvider sqlMetadataProvider)
             // This constructor simply forwards to the more general constructor
             // that is used to create GraphQL queries. We give it some values
             // that make sense for the outermost query.
             : this(ctx,
                 queryParams,
                 metadataStoreProvider,
-                runtimeConfigProvider,
+                sqlMetadataProvider,
                 ctx.Selection.Field,
                 ctx.Selection.SyntaxNode,
                 // The outermost query is where we start, so this can define
@@ -122,9 +122,9 @@ namespace Azure.DataGateway.Service.Resolvers
         public SqlQueryStructure(
             RestRequestContext context,
             IGraphQLMetadataProvider metadataStoreProvider,
-            SqlMetadataProvider runtimeConfigProvider) :
+            ISqlMetadataProvider sqlMetadataProvider) :
             this(metadataStoreProvider,
-                runtimeConfigProvider,
+                sqlMetadataProvider,
                 new IncrementingInteger(), tableName: context.EntityName)
         {
             TableAlias = TableName;
@@ -190,11 +190,11 @@ namespace Azure.DataGateway.Service.Resolvers
                 IResolverContext ctx,
                 IDictionary<string, object> queryParams,
                 IGraphQLMetadataProvider metadataStoreProvider,
-                SqlMetadataProvider runtimeConfigProvider,
+                ISqlMetadataProvider sqlMetadataProvider,
                 IObjectField schemaField,
                 FieldNode? queryField,
                 IncrementingInteger counter
-        ) : this(metadataStoreProvider, runtimeConfigProvider, counter, tableName: string.Empty)
+        ) : this(metadataStoreProvider, sqlMetadataProvider, counter, tableName: string.Empty)
         {
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
@@ -339,10 +339,10 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         private SqlQueryStructure(
             IGraphQLMetadataProvider metadataStoreProvider,
-            SqlMetadataProvider runtimeConfigProvider,
+            ISqlMetadataProvider sqlMetadataProvider,
             IncrementingInteger counter,
             string tableName = "")
-            : base(metadataStoreProvider, runtimeConfigProvider, counter: counter, tableName: tableName)
+            : base(metadataStoreProvider, sqlMetadataProvider, counter: counter, tableName: tableName)
         {
             JoinQueries = new();
             Joins = new();
@@ -526,7 +526,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     IDictionary<string, object> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
 
-                    SqlQueryStructure subquery = new(_ctx, subqueryParams, MetadataStoreProvider, SqlMetadataProvider, subschemaField, field, Counter);
+                    SqlQueryStructure subquery = new(_ctx, subqueryParams, MetadataStoreProvider, ISqlMetadataProvider, subschemaField, field, Counter);
 
                     if (PaginationMetadata.IsPaginated)
                     {

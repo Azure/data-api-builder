@@ -28,12 +28,12 @@ namespace Azure.DataGateway.Service.Services
         private readonly IMutationEngine _mutationEngine;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationService _authorizationService;
-        public SqlMetadataProvider RuntimeConfigProvider { get; }
+        public ISqlMetadataProvider _sqlMetadataProvider { get; }
 
         public RestService(
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
-            IRuntimeConfigProvider runtimeConfigProvider,
+            ISqlMetadataProvider sqlMetadataProvider,
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationService authorizationService
             )
@@ -42,17 +42,7 @@ namespace Azure.DataGateway.Service.Services
             _mutationEngine = mutationEngine;
             _httpContextAccessor = httpContextAccessor;
             _authorizationService = authorizationService;
-
-            if (runtimeConfigProvider is SqlMetadataProvider SqlMetadataProvider)
-            {
-                RuntimeConfigProvider = SqlMetadataProvider;
-            }
-            else
-            {
-                throw new ArgumentException(
-                    $"${nameof(SqlMetadataProvider)} expected to be injected for ${nameof(IRuntimeConfigProvider)}.");
-            }
-
+            _sqlMetadataProvider = sqlMetadataProvider;
         }
 
         /// <summary>

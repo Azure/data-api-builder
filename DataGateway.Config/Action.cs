@@ -87,7 +87,7 @@ namespace Azure.DataGateway.Config
                 "read" => GET,
                 "update" => PATCH,
                 "delete" => DELETE,
-                _ => throw new NotSupportedException($"{action} is not supported.");
+                _ => throw new NotSupportedException($"{action} is not supported.")
             };
     }
 }

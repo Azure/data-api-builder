@@ -24,8 +24,9 @@ namespace Azure.DataGateway.Service.Services
         where DataAdapterT : DbDataAdapter, new()
         where CommandT : DbCommand, new()
     {
-        private readonly DatabaseType _databaseType;
         private readonly IRuntimeConfigProvider _runtimeConfigProvider;
+
+        public DatabaseType DatabaseType { get; init; }
 
         public FilterParser ODataFilterParser { get; private set; } = new();
 
@@ -59,7 +60,7 @@ namespace Azure.DataGateway.Service.Services
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;
             _runtimeConfigProvider = runtimeConfigProvider;
-            _databaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
+            DatabaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
         }
 
         /// <summary>
@@ -185,7 +186,7 @@ namespace Azure.DataGateway.Service.Services
         protected virtual string GetDefaultSchemaName()
         {
             throw new NotSupportedException($"Cannot get default schema " +
-                $"name for database type {_databaseType}");
+                $"name for database type {DatabaseType}");
         }
 
         /// <summary>

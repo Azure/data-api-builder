@@ -16,7 +16,7 @@ namespace Azure.DataGateway.Service.Authorization
     /// </summary>
     public class RequestAuthorizationHandler : AuthorizationHandler<OperationAuthorizationRequirement, RestRequestContext>
     {
-        private readonly SqlMetadataProvider _runtimeConfigProvider;
+        private readonly ISqlMetadataProvider _sqlMetadataProvider;
 
         /// <summary>
         /// Constructor.
@@ -27,7 +27,7 @@ namespace Azure.DataGateway.Service.Authorization
             IRuntimeConfigProvider runtimeConfigProvider,
             bool isMock = false)
         {
-            if (runtimeConfigProvider.GetType() != typeof(SqlMetadataProvider))
+            if (runtimeConfigProvider.GetType() != typeof(ISqlMetadataProvider))
             {
                 throw new DataGatewayException(
                     message: "Unable to instantiate the RequestAuthorization Handler.",
@@ -35,7 +35,7 @@ namespace Azure.DataGateway.Service.Authorization
                     subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
             }
 
-            _runtimeConfigProvider = (SqlMetadataProvider)runtimeConfigProvider;
+            _sqlMetadataProvider = (ISqlMetadataProvider)runtimeConfigProvider;
         }
 
         protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,
@@ -44,7 +44,7 @@ namespace Azure.DataGateway.Service.Authorization
         {
             //Request is validated before Authorization, so table will exist.
             TableDefinition tableDefinition =
-                _runtimeConfigProvider.GetTableDefinition(resource.EntityName);
+                _sqlMetadataProvider.GetTableDefinition(resource.EntityName);
 
             string requestedOperation = resource.HttpVerb.Name;
             if (tableDefinition.HttpVerbs == null || tableDefinition.HttpVerbs.Count == 0)

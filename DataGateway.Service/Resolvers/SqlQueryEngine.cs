@@ -21,7 +21,7 @@ namespace Azure.DataGateway.Service.Resolvers
     public class SqlQueryEngine : IQueryEngine
     {
         private readonly IGraphQLMetadataProvider _metadataStoreProvider;
-        private readonly SqlMetadataProvider _SqlMetadataProvider;
+        private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly IQueryExecutor _queryExecutor;
         private readonly IQueryBuilder _queryBuilder;
 
@@ -32,20 +32,12 @@ namespace Azure.DataGateway.Service.Resolvers
             IGraphQLMetadataProvider metadataStoreProvider,
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder,
-            IRuntimeConfigProvider runtimeConfigProvider)
+            ISqlMetadataProvider sqlMetadataProvider)
         {
-            if (_SqlMetadataProvider.GetType() != typeof(SqlMetadataProvider))
-            {
-                throw new DataGatewayException(
-                    message: "Unable to instantiate the SQL query engine.",
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
-            }
-
             _metadataStoreProvider = metadataStoreProvider;
             _queryExecutor = queryExecutor;
             _queryBuilder = queryBuilder;
-            _SqlMetadataProvider = (SqlMetadataProvider)runtimeConfigProvider;
+            _sqlMetadataProvider = sqlMetadataProvider;
         }
 
         public static async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader, IQueryExecutor executor)
@@ -72,7 +64,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _SqlMetadataProvider);
+            SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _sqlMetadataProvider);
 
             if (structure.PaginationMetadata.IsPaginated)
             {
@@ -94,7 +86,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _SqlMetadataProvider);
+            SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _sqlMetadataProvider);
             string queryString = _queryBuilder.Build(structure);
             Console.WriteLine(queryString);
             using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, structure.Parameters);
@@ -117,7 +109,7 @@ namespace Azure.DataGateway.Service.Resolvers
         // </summary>
         public async Task<JsonDocument> ExecuteAsync(RestRequestContext context)
         {
-            SqlQueryStructure structure = new(context, _metadataStoreProvider, _SqlMetadataProvider);
+            SqlQueryStructure structure = new(context, _metadataStoreProvider, _sqlMetadataProvider);
             return await ExecuteAsync(structure);
         }
 

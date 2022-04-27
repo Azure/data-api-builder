@@ -49,10 +49,12 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             {
                 { "DataGatewayConfig:DatabaseType", "cosmos" },
                 { "DataGatewayConfig:ResolverConfigFile", "cosmos-config.json" },
-                { "DataGatewayConfig:DatabaseConnection:ConnectionString", "Cosmos" }
+                { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
             };
 
             _ = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+            ValidateCosmosDbSetup(server);
+
             HttpResponseMessage result = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
             Assert.AreEqual(HttpStatusCode.Conflict, result.StatusCode);
         }

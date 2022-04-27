@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Azure.DataGateway.Config;
 using Microsoft.OData.Edm;
 
-namespace Azure.DataGateway.Service.Services
+namespace Azure.DataGateway.Service.Parsers
 {
     /// <summary>
     /// This class represents an EdmModelBuilder which can build the needed

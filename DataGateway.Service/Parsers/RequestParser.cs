@@ -4,9 +4,10 @@ using System.Linq;
 using System.Net;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Services;
 using Microsoft.OData.UriParser;
 
-namespace Azure.DataGateway.Service.Services
+namespace Azure.DataGateway.Service.Parsers
 {
     /// <summary>
     /// Class providing parsing logic for different portions of the request url.

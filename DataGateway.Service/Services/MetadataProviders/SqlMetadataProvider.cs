@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.Extensions.Options;
@@ -26,9 +27,9 @@ namespace Azure.DataGateway.Service.Services
     {
         private readonly IRuntimeConfigProvider _runtimeConfigProvider;
 
-        private FilterParser _oDataFilterParser = new();
+        public FilterParser ODataFilterParser { get; } = new();
 
-        private DatabaseType _databaseType;
+        public DatabaseType DatabaseType { get; }
 
         // nullable since Mock tests do not need it.
         // TODO: Refactor the Mock tests to remove the nullability here
@@ -60,17 +61,7 @@ namespace Azure.DataGateway.Service.Services
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;
             _runtimeConfigProvider = runtimeConfigProvider;
-            _databaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
-        }
-
-        public FilterParser GetOdataFilterParser()
-        {
-            return _oDataFilterParser;
-        }
-
-        public DatabaseType GetDatabaseType()
-        {
-            return _databaseType;
+            DatabaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
         }
 
         /// <summary>
@@ -165,11 +156,11 @@ namespace Azure.DataGateway.Service.Services
             foreach ((string entityName, Entity entity)
                 in GetEntitiesFromRuntimeConfig())
             {
-                
+                (string, string) names = EntitySourceNamesParser.ParseSchemaAndTable(entity.GetSourceName())!;
                 DatabaseObject databaseObject = new()
                 {
-                    SchemaName = GetDefaultSchemaName(),
-                    Name = entity.GetSourceName(),
+                    SchemaName = names.Item1,
+                    Name = names.Item2,
                     TableDefinition = new()
                 };
 
@@ -185,7 +176,7 @@ namespace Azure.DataGateway.Service.Services
         protected virtual string GetDefaultSchemaName()
         {
             throw new NotSupportedException($"Cannot get default schema " +
-                $"name for database type {_databaseType}");
+                $"name for database type {DatabaseType}");
         }
 
         /// <summary>
@@ -226,7 +217,7 @@ namespace Azure.DataGateway.Service.Services
 
         private void InitFilterParser()
         {
-            _oDataFilterParser.BuildModel(EntityToDatabaseObject.Values);
+            ODataFilterParser.BuildModel(EntityToDatabaseObject.Values);
         }
 
         /// <summary>

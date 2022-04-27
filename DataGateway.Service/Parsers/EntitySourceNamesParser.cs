@@ -1,9 +1,9 @@
 using System;
 using System.Collections;
 
-namespace Azure.DataGateway.Service.Services
+namespace Azure.DataGateway.Service.Parsers
 {
-    public class EntitySourceSchemaParser
+    public class EntitySourceNamesParser
     {
         /// <summary>
         /// Function to get the schema and table from the parameter input string.
@@ -46,7 +46,7 @@ namespace Azure.DataGateway.Service.Services
         {
             //TODO log here
 
-            if (String.IsNullOrEmpty(input))
+            if (string.IsNullOrEmpty(input))
             {
                 //TODO log here
                 throw new ArgumentException("Input is null or empty string");

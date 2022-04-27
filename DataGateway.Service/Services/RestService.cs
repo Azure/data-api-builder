@@ -11,6 +11,7 @@ using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
@@ -113,7 +114,7 @@ namespace Azure.DataGateway.Service.Services
                 context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
                 RequestParser.ParseQueryString(
                     context,
-                    _sqlMetadataProvider.GetOdataFilterParser(),
+                    _sqlMetadataProvider.ODataFilterParser,
                     _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey);
             }
 

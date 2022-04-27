@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Parsers;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -28,8 +29,8 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         TableDefinition GetTableDefinition(string entityName);
 
-        FilterParser GetOdataFilterParser();
+        DatabaseType DatabaseType { get; }
 
-        DatabaseType GetDatabaseType();
+        FilterParser ODataFilterParser { get; }
     }
 }

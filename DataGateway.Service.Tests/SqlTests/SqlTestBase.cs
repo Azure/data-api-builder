@@ -41,7 +41,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static IQueryEngine _queryEngine;
         protected static IMutationEngine _mutationEngine;
         protected static GraphQLFileMetadataProvider _metadataStoreProvider;
-        protected static SqlMetadataProvider _SqlMetadataProvider;
+        protected static IRuntimeConfigProvider _runtimeConfigProvider;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
         protected static DbExceptionParserBase _dbExceptionParser;
@@ -59,6 +59,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _testCategory = testCategory;
 
             IOptions<DataGatewayConfig> config = SqlTestHelper.LoadConfig($"{_testCategory}IntegrationTest");
+            _runtimeConfigProvider = new RuntimeConfigProvider(config);
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:
@@ -66,27 +67,34 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _defaultSchemaName = "public";
                     _dbExceptionParser = new PostgresDbExceptionParser();
                     _queryExecutor = new QueryExecutor<NpgsqlConnection>(config, _dbExceptionParser);
-                    _SqlMetadataProvider = new SqlMetadataProvider(
-                        config,
-                        new PostgreSqlMetadataProvider(config, _queryExecutor, _queryBuilder));
+                    _sqlMetadataProvider = 
+                        new PostgreSqlMetadataProvider(
+                            config,
+                            _runtimeConfigProvider,
+                            _queryExecutor,
+                            _queryBuilder);
                     break;
                 case TestCategory.MSSQL:
                     _queryBuilder = new MsSqlQueryBuilder();
                     _defaultSchemaName = "dbo";
                     _dbExceptionParser = new DbExceptionParserBase();
                     _queryExecutor = new QueryExecutor<SqlConnection>(config, _dbExceptionParser);
-                    _SqlMetadataProvider = new SqlMetadataProvider(
+                    _sqlMetadataProvider = new MsSqlMetadataProvider(
                         config,
-                        new MsSqlMetadataProvider(config, _queryExecutor, _queryBuilder));
+                        _runtimeConfigProvider,
+                        _queryExecutor, _queryBuilder);
                     break;
                 case TestCategory.MYSQL:
                     _queryBuilder = new MySqlQueryBuilder();
                     _defaultSchemaName = "mysql";
                     _dbExceptionParser = new MySqlDbExceptionParser();
                     _queryExecutor = new QueryExecutor<MySqlConnection>(config, _dbExceptionParser);
-                    _SqlMetadataProvider = new SqlMetadataProvider(
-                         config,
-                         new MySqlMetadataProvider(config, _queryExecutor, _queryBuilder));
+                    _sqlMetadataProvider = 
+                         new MySqlMetadataProvider(
+                             config,
+                             _runtimeConfigProvider,
+                             _queryExecutor,
+                             _queryBuilder);
                     break;
             }
 
@@ -107,14 +115,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _metadataStoreProvider,
                 _queryExecutor,
                 _queryBuilder,
-                _SqlMetadataProvider);
+                _sqlMetadataProvider);
             _mutationEngine =
                 new SqlMutationEngine(
                 _queryEngine,
                 _metadataStoreProvider,
                 _queryExecutor,
                 _queryBuilder,
-                _SqlMetadataProvider);
+                _sqlMetadataProvider);
             await ResetDbStateAsync();
         }
 

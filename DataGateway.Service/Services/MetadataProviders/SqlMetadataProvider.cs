@@ -70,17 +70,6 @@ namespace Azure.DataGateway.Service.Services
             SqlQueryBuilder = new MsSqlQueryBuilder();
         }
 
-        /// </inheritdoc>
-        public async Task InitializeAsync()
-        {
-            System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
-            await FindDatabaseObjectForEntities();
-            ProcessEntityPermissions();
-            InitFilterParser();
-            timer.Stop();
-            Console.WriteLine($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
-        }
-
         /// <summary>
         /// Obtains the underlying TableDefinition for the given entity name.
         /// </summary>
@@ -120,46 +109,68 @@ namespace Azure.DataGateway.Service.Services
             return databaseObject!.SchemaName;
         }
 
+        /// </inheritdoc>
+        public async Task InitializeAsync()
+        {
+            System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
+            await FindDatabaseObjectForEntities();
+            ProcessEntityPermissions();
+            InitFilterParser();
+            timer.Stop();
+            Console.WriteLine($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
+        }
+
+        /// <summary>
+        /// Builds the dictionary of parameters and their values required for the
+        /// foreign key query.
+        /// </summary>
+        /// <param name="schemaNames"></param>
+        /// <param name="tableNames"></param>
+        /// <returns>The dictionary populated with parameters.</returns>
+        protected virtual Dictionary<string, object?>
+            GetForeignKeyQueryParams(
+                string[] schemaNames,
+                string[] tableNames)
+        {
+            Dictionary<string, object?> parameters = new();
+            string[] schemaNameParams =
+                BaseSqlQueryBuilder.CreateParams(
+                    kindOfParam: BaseSqlQueryBuilder.SCHEMA_NAME_PARAM,
+                    schemaNames.Count());
+            string[] tableNameParams =
+                BaseSqlQueryBuilder.CreateParams(
+                    kindOfParam: BaseSqlQueryBuilder.TABLE_NAME_PARAM,
+                    tableNames.Count());
+
+            for (int i = 0; i < schemaNames.Count(); ++i)
+            {
+                parameters.Add(schemaNameParams[i], schemaNames[i]);
+            }
+
+            for (int i = 0; i < tableNames.Count(); ++i)
+            {
+                parameters.Add(tableNameParams[i], tableNames[i]);
+            }
+
+            return parameters;
+        }
+
         /// <summary>
         /// Enrich the entities in the runtime config with the
         /// table definition information needed by the runtime to serve requests.
         /// </summary>
         private async Task FindDatabaseObjectForEntities()
         {
-            string schemaName = string.Empty;
-            DatabaseType databaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
-            foreach ((string entityName, Entity entity)
-                in GetEntitiesFromRuntimeConfig())
+            foreach (string entityName
+                in GetEntitiesFromRuntimeConfig().Keys)
             {
-                switch (databaseType)
-                {
-                    case DatabaseType.mssql:
-                        await PopulateTableDefinitionAsync(
-                            schemaName,
-                            ,
-                            sqlEntity.TableDefinition);
-                        break;
-                    case DatabaseType.postgresql:
-                        schemaName = "public";
-                        await _sqlMetadataProvider.PopulateTableDefinitionAsync(
-                            schemaName,
-                            sqlEntity.SourceName,
-                            sqlEntity.TableDefinition);
-                        break;
-                    case DatabaseType.mysql:
-                        await _sqlMetadataProvider.PopulateTableDefinitionAsync(
-                            schemaName,
-                            sqlEntity.SourceName,
-                            sqlEntity.TableDefinition);
-                        break;
-                    default:
-                        throw new ArgumentException($"Enriching entities with table definition " +
-                            $"for this database type: {CloudDbType} " +
-                            $"is not supported.");
-                }
+                await PopulateTableDefinitionAsync(
+                    GetSchemaName(entityName),
+                    GetDatabaseObjectName(entityName),
+                    GetTableDefinition(entityName));
             }
-
-            await _sqlMetadataProvider.PopulateForeignKeyDefinitionAsync(
+ 
+            await PopulateForeignKeyDefinitionAsync(
                 schemaName,
                 RuntimeConfig.Entities.Values);
 
@@ -225,7 +236,7 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// </inheritdoc>
-        public virtual async Task PopulateTableDefinitionAsync(
+        private async Task PopulateTableDefinitionAsync(
             string schemaName,
             string tableName,
             TableDefinition tableDefinition)
@@ -261,8 +272,108 @@ namespace Azure.DataGateway.Service.Services
                 columnsInTable);
         }
 
+        /// </inheritdoc>
+        private async Task<DataTable> GetTableWithSchemaFromDataSetAsync(
+            string schemaName,
+            string tableName)
+        {
+            DataTable? dataTable = EntitiesDataSet.Tables[tableName];
+            if (dataTable == null)
+            {
+                dataTable = await FillSchemaForTableAsync(schemaName, tableName);
+            }
+
+            return dataTable;
+        }
+
+        /// <summary>
+        /// Using a data adapter, obtains the schema of the given table name
+        /// and adds the corresponding entity in the data set.
+        /// </summary>
+        private async Task<DataTable> FillSchemaForTableAsync(
+            string schemaName,
+            string tableName)
+        {
+            using ConnectionT conn = new();
+            conn.ConnectionString = ConnectionString;
+            await conn.OpenAsync();
+
+            DataAdapterT adapterForTable = new();
+            CommandT selectCommand = new()
+            {
+                Connection = conn
+            };
+            StringBuilder tablePrefix = new(conn.Database);
+            if (!string.IsNullOrEmpty(schemaName))
+            {
+                tablePrefix.Append($".{schemaName}");
+            }
+
+            selectCommand.CommandText = ($"SELECT * FROM {tablePrefix}.{tableName}");
+            adapterForTable.SelectCommand = selectCommand;
+
+            DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableName);
+            return dataTable[0];
+        }
+
+        /// <summary>
+        /// Gets the metadata information of each column of
+        /// the given schema.table
+        /// </summary>
+        /// <returns>A data table where each row corresponds to a
+        /// column of the table.</returns>
+        private async Task<DataTable> GetColumnsAsync(
+            string schemaName,
+            string tableName)
+        {
+            using ConnectionT conn = new();
+            conn.ConnectionString = ConnectionString;
+            await conn.OpenAsync();
+            // We can specify the Catalog, Schema, Table Name, Column Name to get
+            // the specified column(s).
+            // Hence, we should create a 4 members array.
+            string[] columnRestrictions = new string[NUMBER_OF_RESTRICTIONS];
+
+            // To restrict the columns for the current table, specify the table's name
+            // in column restrictions.
+            columnRestrictions[0] = conn.Database;
+            columnRestrictions[1] = schemaName;
+            columnRestrictions[2] = tableName;
+
+            // Each row in the columnsInTable DataTable corresponds to
+            // a single column of the table.
+            DataTable columnsInTable = await conn.GetSchemaAsync("Columns", columnRestrictions);
+
+            return columnsInTable;
+        }
+
+        /// <summary>
+        /// Populates the column definition with HasDefault property.
+        /// </summary>
+        private static void PopulateColumnDefinitionWithHasDefault(
+            TableDefinition tableDefinition,
+            DataTable allColumnsInTable)
+        {
+            foreach (DataRow columnInfo in allColumnsInTable.Rows)
+            {
+                string columnName = (string)columnInfo["COLUMN_NAME"];
+                bool hasDefault =
+                    Type.GetTypeCode(columnInfo["COLUMN_DEFAULT"].GetType()) != TypeCode.DBNull;
+                ColumnDefinition? columnDefinition;
+                if (tableDefinition.Columns.TryGetValue(columnName, out columnDefinition))
+                {
+                    columnDefinition.HasDefault = hasDefault;
+
+                    if (hasDefault)
+                    {
+                        columnDefinition.DefaultValue = columnInfo["COLUMN_DEFAULT"];
+                    }
+                }
+            }
+        }
+
         /// <inheritdoc />
-        public async Task PopulateForeignKeyDefinitionAsync(
+        private async Task PopulateForeignKeyDefinitionAsync(
            string defaultSchemaName,
            IEnumerable<Entity> sqlEntities)
         {
@@ -339,141 +450,6 @@ namespace Azure.DataGateway.Service.Services
 
                 foreignKeyInfo = await _queryExecutor.ExtractRowFromDbDataReader(reader);
             }
-        }
-
-        /// </inheritdoc>
-        public virtual async Task<DataTable> GetTableWithSchemaFromDataSetAsync(
-            string schemaName,
-            string tableName)
-        {
-            DataTable? dataTable = EntitiesDataSet.Tables[tableName];
-            if (dataTable == null)
-            {
-                dataTable = await FillSchemaForTableAsync(schemaName, tableName);
-            }
-
-            return dataTable;
-        }
-
-        /// <summary>
-        /// Using a data adapter, obtains the schema of the given table name
-        /// and adds the corresponding entity in the data set.
-        /// </summary>
-        protected async Task<DataTable> FillSchemaForTableAsync(
-            string schemaName,
-            string tableName)
-        {
-            using ConnectionT conn = new();
-            conn.ConnectionString = ConnectionString;
-            await conn.OpenAsync();
-
-            DataAdapterT adapterForTable = new();
-            CommandT selectCommand = new()
-            {
-                Connection = conn
-            };
-            StringBuilder tablePrefix = new(conn.Database);
-            if (!string.IsNullOrEmpty(schemaName))
-            {
-                tablePrefix.Append($".{schemaName}");
-            }
-
-            selectCommand.CommandText = ($"SELECT * FROM {tablePrefix}.{tableName}");
-            adapterForTable.SelectCommand = selectCommand;
-
-            DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableName);
-            return dataTable[0];
-        }
-
-        /// <summary>
-        /// Gets the metadata information of each column of
-        /// the given schema.table
-        /// </summary>
-        /// <returns>A data table where each row corresponds to a
-        /// column of the table.</returns>
-        protected virtual async Task<DataTable> GetColumnsAsync(
-            string schemaName,
-            string tableName)
-        {
-            using ConnectionT conn = new();
-            conn.ConnectionString = ConnectionString;
-            await conn.OpenAsync();
-            // We can specify the Catalog, Schema, Table Name, Column Name to get
-            // the specified column(s).
-            // Hence, we should create a 4 members array.
-            string[] columnRestrictions = new string[NUMBER_OF_RESTRICTIONS];
-
-            // To restrict the columns for the current table, specify the table's name
-            // in column restrictions.
-            columnRestrictions[0] = conn.Database;
-            columnRestrictions[1] = schemaName;
-            columnRestrictions[2] = tableName;
-
-            // Each row in the columnsInTable DataTable corresponds to
-            // a single column of the table.
-            DataTable columnsInTable = await conn.GetSchemaAsync("Columns", columnRestrictions);
-
-            return columnsInTable;
-        }
-
-        /// <summary>
-        /// Populates the column definition with HasDefault property.
-        /// </summary>
-        protected void PopulateColumnDefinitionWithHasDefault(
-            TableDefinition tableDefinition,
-            DataTable allColumnsInTable)
-        {
-            foreach (DataRow columnInfo in allColumnsInTable.Rows)
-            {
-                string columnName = (string)columnInfo["COLUMN_NAME"];
-                bool hasDefault =
-                    Type.GetTypeCode(columnInfo["COLUMN_DEFAULT"].GetType()) != TypeCode.DBNull;
-                ColumnDefinition? columnDefinition;
-                if (tableDefinition.Columns.TryGetValue(columnName, out columnDefinition))
-                {
-                    columnDefinition.HasDefault = hasDefault;
-
-                    if (hasDefault)
-                    {
-                        columnDefinition.DefaultValue = columnInfo["COLUMN_DEFAULT"];
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Builds the dictionary of parameters and their values required for the
-        /// foreign key query.
-        /// </summary>
-        /// <param name="schemaNames"></param>
-        /// <param name="tableNames"></param>
-        /// <returns>The dictionary populated with parameters.</returns>
-        protected virtual Dictionary<string, object?>
-            GetForeignKeyQueryParams(
-                string[] schemaNames,
-                string[] tableNames)
-        {
-            Dictionary<string, object?> parameters = new();
-            string[] schemaNameParams =
-                BaseSqlQueryBuilder.CreateParams(
-                    kindOfParam: BaseSqlQueryBuilder.SCHEMA_NAME_PARAM,
-                    schemaNames.Count());
-            string[] tableNameParams =
-                BaseSqlQueryBuilder.CreateParams(
-                    kindOfParam: BaseSqlQueryBuilder.TABLE_NAME_PARAM,
-                    tableNames.Count());
-
-            for (int i = 0; i < schemaNames.Count(); ++i)
-            {
-                parameters.Add(schemaNameParams[i], schemaNames[i]);
-            }
-
-            for (int i = 0; i < tableNames.Count(); ++i)
-            {
-                parameters.Add(tableNameParams[i], tableNames[i]);
-            }
-
-            return parameters;
         }
     }
 }

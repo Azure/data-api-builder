@@ -25,5 +25,10 @@ namespace Azure.DataGateway.Service.Services
 
         /// Default Constructor for Mock tests.
         public MsSqlMetadataProvider() : base() { }
+
+        protected override string GetDefaultSchemaName()
+        {
+            return "dbo";
+        }
     }
 }

@@ -14,9 +14,18 @@ namespace Azure.DataGateway.Service.Services
         Task InitializeAsync();
 
         /// <summary>
+        /// Obtains the underlying source object's schema name.
+        /// </summary>
+        string GetSchemaName(string entityName);
+
+        /// <summary>
+        /// Obtains the underlying source object's name.
+        /// </summary>
+        string GetDatabaseObjectName(string entityName);
+
+        /// <summary>
         /// Obtains the underlying TableDefinition for the given entity name.
         /// </summary>
-        public TableDefinition GetTableDefinition(string entityName);
-
+        TableDefinition GetTableDefinition(string entityName);
     }
 }

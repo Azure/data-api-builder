@@ -16,7 +16,7 @@ namespace Azure.DataGateway.Service.Services
     {
         public MySqlMetadataProvider(
             IOptions<DataGatewayConfig> dataGatewayConfig,
-            IRuntimeConfigProvider runtimeConfigProvider)
+            IRuntimeConfigProvider runtimeConfigProvider,
             IQueryExecutor queryExecutor,
             IQueryBuilder sqlQueryBuilder)
             : base(dataGatewayConfig, runtimeConfigProvider, queryExecutor, sqlQueryBuilder)
@@ -92,8 +92,9 @@ namespace Azure.DataGateway.Service.Services
             return parameters;
         }
 
-        protected override GetDefault
+        protected override string GetDefaultSchemaName()
         {
-
+            return string.Empty;
+        }
     }
 }

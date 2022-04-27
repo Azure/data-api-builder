@@ -22,5 +22,10 @@ namespace Azure.DataGateway.Service.Services
             : base(dataGatewayConfig, runtimeConfigProvider, queryExecutor, sqlQueryBuilder)
         {
         }
+
+        protected override string GetDefaultSchemaName()
+        {
+            return "public";
+        }
     }
 }

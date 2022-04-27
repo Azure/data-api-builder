@@ -24,7 +24,8 @@ namespace Azure.DataGateway.Service.Services
         where DataAdapterT : DbDataAdapter, new()
         where CommandT : DbCommand, new()
     {
-        readonly IRuntimeConfigProvider _runtimeConfigProvider;
+        private readonly DatabaseType _databaseType;
+        private readonly IRuntimeConfigProvider _runtimeConfigProvider;
 
         public FilterParser ODataFilterParser { get; private set; } = new();
 
@@ -58,6 +59,7 @@ namespace Azure.DataGateway.Service.Services
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;
             _runtimeConfigProvider = runtimeConfigProvider;
+            _databaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
         }
 
         /// <summary>
@@ -159,11 +161,10 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private void GenerateDatabaseObjectForEntities()
         {
-            DatabaseType databaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
             foreach ((string entityName, Entity entity)
                 in GetEntitiesFromRuntimeConfig())
             {
-                string schemaName = GetDefaultSchemaName(databaseType);
+                string schemaName = GetDefaultSchemaName();
 
                 DatabaseObject databaseObject = new()
                 {
@@ -176,15 +177,16 @@ namespace Azure.DataGateway.Service.Services
             }
         }
 
-        private virtual string GetDefaultSchemaName()
-            => databaseType switch
+        /// <summary>
+        /// Returns the default schema name. Throws exception here since
+        /// each derived class should override this method.
+        /// </summary>
+        /// <exception cref="NotSupportedException"></exception>
+        protected virtual string GetDefaultSchemaName()
         {
-            DatabaseType.mssql => "dbo",
-            DatabaseType.postgresql => "public",
-            DatabaseType.mysql => string.Empty,
-            _ => throw new NotSupportedException($"Cannot get schema" +
-                $"name for database type {databaseType}")
-        };
+            throw new NotSupportedException($"Cannot get default schema " +
+                $"name for database type {_databaseType}");
+        }
 
         /// <summary>
         /// Enrich the entities in the runtime config with the

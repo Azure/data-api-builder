@@ -44,10 +44,10 @@ namespace Azure.DataGateway.Service.Parsers
         {
             foreach (DatabaseObject dbObject in databaseObjects)
             {
-                string entitySourceName = $"{dbObject.SchemaName}.${dbObject.Name}";
+                string entitySourceName = $"{dbObject.SchemaName}.{dbObject.Name}";
                 TableDefinition tableDefinition = dbObject.TableDefinition;
                 EdmEntityType newEntity = new(DEFAULT_NAMESPACE, entitySourceName);
-                string newEntityKey = DEFAULT_NAMESPACE + entitySourceName;
+                string newEntityKey = $"{DEFAULT_NAMESPACE}.{entitySourceName}";
                 _entities.Add(newEntityKey, newEntity);
 
                 // each column represents a property of the current entity we are adding
@@ -115,8 +115,8 @@ namespace Azure.DataGateway.Service.Parsers
             // that has a key, then an entity set can be thought of as a table made up of those rows
             foreach (DatabaseObject dbObject in databaseObjects)
             {
-                string entityName = $"{dbObject.SchemaName}.${dbObject.Name}";
-                container.AddEntitySet(name: entityName, _entities[DEFAULT_NAMESPACE + entityName]);
+                string entityName = $"{dbObject.SchemaName}.{dbObject.Name}";
+                container.AddEntitySet(name: entityName, _entities[$"{DEFAULT_NAMESPACE}.{entityName}"]);
             }
 
             return this;

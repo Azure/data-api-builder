@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Tests.SqlTests;
@@ -201,7 +202,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             string filterString,
             string expected)
         {
-            FilterClause ast = _sqlMetadataProvider.GetOdataFilterParser().
+            FilterClause ast = _sqlMetadataProvider.ODataFilterParser.
                 GetFilterClause(filterString, entityName);
             ODataASTVisitor visitor = CreateVisitor(entityName);
             string actual = ast.Expression.Accept(visitor);

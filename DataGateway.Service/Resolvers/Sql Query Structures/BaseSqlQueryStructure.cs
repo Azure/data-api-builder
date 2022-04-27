@@ -36,13 +36,13 @@ namespace Azure.DataGateway.Service.Resolvers
 
         public BaseSqlQueryStructure(
             IGraphQLMetadataProvider metadataStoreProvider,
-            ISqlMetadataProvider runtimeConfigProvider,
+            ISqlMetadataProvider sqlMetadataProvider,
             IncrementingInteger? counter = null,
             string tableName = "")
             : base(counter)
         {
             MetadataStoreProvider = metadataStoreProvider;
-            SqlMetadataProvider = runtimeConfigProvider;
+            SqlMetadataProvider = sqlMetadataProvider;
             TableName = tableName;
             // Default the alias to the table name
             TableAlias = tableName;

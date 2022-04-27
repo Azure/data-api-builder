@@ -21,10 +21,10 @@ namespace Azure.DataGateway.Service.Resolvers
         public SqlUpdateStructure(
             string tableName,
             IGraphQLMetadataProvider metadataStoreProvider,
-            ISqlMetadataProvider runtimeConfigProvider,
+            ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams,
             bool isIncrementalUpdate)
-        : base(metadataStoreProvider, runtimeConfigProvider, tableName: tableName)
+        : base(metadataStoreProvider, sqlMetadataProvider, tableName: tableName)
         {
             UpdateOperations = new();
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();

@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service.Services
         private readonly IMutationEngine _mutationEngine;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationService _authorizationService;
-        public ISqlMetadataProvider _sqlMetadataProvider { get; }
+        private readonly ISqlMetadataProvider _sqlMetadataProvider;
 
         public RestService(
             IQueryEngine queryEngine,
@@ -80,7 +80,7 @@ namespace Azure.DataGateway.Service.Services
                         operationType);
                     RequestValidator.ValidateInsertRequestContext(
                         (InsertRequestContext)context,
-                        RuntimeConfigProvider);
+                        _sqlMetadataProvider);
                     break;
                 case Operation.Delete:
                     context = new DeleteRequestContext(entityName, isList: false);
@@ -92,7 +92,7 @@ namespace Azure.DataGateway.Service.Services
                 case Operation.UpsertIncremental:
                     JsonElement upsertPayloadRoot = RequestValidator.ValidateUpdateOrUpsertRequest(primaryKeyRoute, requestBody);
                     context = new UpsertRequestContext(entityName, upsertPayloadRoot, GetHttpVerb(operationType), operationType);
-                    RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, RuntimeConfigProvider);
+                    RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
                     break;
                 default:
                     throw new DataGatewayException(message: "This operation is not supported.",
@@ -105,7 +105,7 @@ namespace Azure.DataGateway.Service.Services
                 // After parsing primary key, the Context will be populated with the
                 // correct PrimaryKeyValuePairs.
                 RequestParser.ParsePrimaryKey(primaryKeyRoute, context);
-                RequestValidator.ValidatePrimaryKey(context, RuntimeConfigProvider);
+                RequestValidator.ValidatePrimaryKey(context, _sqlMetadataProvider);
             }
 
             if (!string.IsNullOrWhiteSpace(queryString))
@@ -113,12 +113,12 @@ namespace Azure.DataGateway.Service.Services
                 context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
                 RequestParser.ParseQueryString(
                     context,
-                    RuntimeConfigProvider.ODataFilterParser,
-                    RuntimeConfigProvider.GetTableDefinition(context.EntityName).PrimaryKey);
+                    _sqlMetadataProvider.GetOdataFilterParser(),
+                    _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey);
             }
 
             // At this point for DELETE, the primary key should be populated in the Request Context.
-            RequestValidator.ValidateRequestContext(context, RuntimeConfigProvider);
+            RequestValidator.ValidateRequestContext(context, _sqlMetadataProvider);
 
             // RestRequestContext is finalized for QueryBuilding and QueryExecution.
             // Perform Authorization check prior to moving forward in request pipeline.
@@ -188,7 +188,7 @@ namespace Azure.DataGateway.Service.Services
                                element: rootEnumerated.Last(),
                                nextElement: lastElement,
                                orderByColumns: context.OrderByClauseInUrl,
-                               primaryKey: RuntimeConfigProvider.GetTableDefinition(context.EntityName).PrimaryKey,
+                               primaryKey: _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey,
                                tableAlias: context.EntityName);
 
             // nextLink is the URL needed to get the next page of records using the same query options
@@ -214,7 +214,7 @@ namespace Azure.DataGateway.Service.Services
         /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
         public string ConstructPrimaryKeyRoute(string entityName, JsonElement entity)
         {
-            TableDefinition tableDefinition = RuntimeConfigProvider.GetTableDefinition(entityName);
+            TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
             StringBuilder newPrimaryKeyRoute = new();
 
             foreach (string primaryKey in tableDefinition.PrimaryKey)

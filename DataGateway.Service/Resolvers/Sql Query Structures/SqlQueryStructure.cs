@@ -292,7 +292,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     string where = (string)whereObject;
 
                     ODataASTVisitor visitor = new(this);
-                    FilterParser parser = SqlMetadataProvider.ODataFilterParser;
+                    FilterParser parser = SqlMetadataProvider.GetOdataFilterParser();
                     FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={where}", TableName);
                     FilterPredicates = filterClause.Expression.Accept<string>(visitor);
                 }
@@ -526,7 +526,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     IDictionary<string, object> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
 
-                    SqlQueryStructure subquery = new(_ctx, subqueryParams, MetadataStoreProvider, ISqlMetadataProvider, subschemaField, field, Counter);
+                    SqlQueryStructure subquery = new(_ctx, subqueryParams, MetadataStoreProvider, SqlMetadataProvider, subschemaField, field, Counter);
 
                     if (PaginationMetadata.IsPaginated)
                     {

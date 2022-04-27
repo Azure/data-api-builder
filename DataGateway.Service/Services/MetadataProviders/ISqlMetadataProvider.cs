@@ -27,5 +27,9 @@ namespace Azure.DataGateway.Service.Services
         /// Obtains the underlying TableDefinition for the given entity name.
         /// </summary>
         TableDefinition GetTableDefinition(string entityName);
+
+        FilterParser GetOdataFilterParser();
+
+        DatabaseType GetDatabaseType();
     }
 }

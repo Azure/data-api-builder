@@ -28,7 +28,9 @@ namespace Azure.DataGateway.Service.Services
 
         public DatabaseType DatabaseType { get; init; }
 
-        public FilterParser ODataFilterParser { get; private set; } = new();
+        private FilterParser _oDataFilterParser = new();
+
+        private DatabaseType _databaseType;
 
         // nullable since Mock tests do not need it.
         // TODO: Refactor the Mock tests to remove the nullability here
@@ -60,7 +62,7 @@ namespace Azure.DataGateway.Service.Services
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;
             _runtimeConfigProvider = runtimeConfigProvider;
-            DatabaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
+            _databaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
         }
 
         /// <summary>
@@ -71,6 +73,16 @@ namespace Azure.DataGateway.Service.Services
             ConnectionString = new(string.Empty);
             EntitiesDataSet = new();
             SqlQueryBuilder = new MsSqlQueryBuilder();
+        }
+
+        public FilterParser GetOdataFilterParser()
+        {
+            return _oDataFilterParser;
+        }
+
+        public DatabaseType GetDatabaseType()
+        {
+            return _databaseType;
         }
 
         /// <summary>
@@ -165,11 +177,10 @@ namespace Azure.DataGateway.Service.Services
             foreach ((string entityName, Entity entity)
                 in GetEntitiesFromRuntimeConfig())
             {
-                string schemaName = GetDefaultSchemaName();
-
+                
                 DatabaseObject databaseObject = new()
                 {
-                    SchemaName = schemaName,
+                    SchemaName = GetDefaultSchemaName(),
                     Name = entity.SourceName,
                     TableDefinition = new()
                 };
@@ -186,7 +197,7 @@ namespace Azure.DataGateway.Service.Services
         protected virtual string GetDefaultSchemaName()
         {
             throw new NotSupportedException($"Cannot get default schema " +
-                $"name for database type {DatabaseType}");
+                $"name for database type {_databaseType}");
         }
 
         /// <summary>
@@ -195,31 +206,16 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private async Task PopulateTableDefinitionForEntities()
         {
-            Dictionary<string, DatabaseObject> tables = new();
             foreach (string entityName
                 in GetEntitiesFromRuntimeConfig().Keys)
             {
-                RuntimeConfig config = _runtimeConfigProvider.GetRuntimeConfig();
-                object source = config.Entities[entityName].Source;
-                (string?, string?) names;
-
-                if (source is string)
-                {
-                    names = EntitySourceNamesParser.ParseSchemaAndTable((source as string)!);
-                    tables.Add(entityName, new DatabaseObject()
-                    {
-                        SchemaName = names.Item1!,
-                        Name = names.Item2!
-                    });
-                }
-                
                 await PopulateTableDefinitionAsync(
                     GetSchemaName(entityName),
                     GetDatabaseObjectName(entityName),
                     GetTableDefinition(entityName));
             }
  
-            await PopulateForeignKeyDefinitionAsync(tables);
+            await PopulateForeignKeyDefinitionAsync(EntityToDatabaseObject.Values);
 
         }
 
@@ -242,7 +238,7 @@ namespace Azure.DataGateway.Service.Services
 
         private void InitFilterParser()
         {
-            ODataFilterParser.BuildModel(EntityToDatabaseObject.Values);
+            _oDataFilterParser.BuildModel(EntityToDatabaseObject.Values);
         }
 
         /// <summary>
@@ -434,19 +430,21 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="schemaName">Name of the default schema.</param>
         /// <param name="tables">Dictionary of all tables.</param>
-        private async Task PopulateForeignKeyDefinitionAsync(Dictionary<string, DatabaseObject> tables)
+        private async Task PopulateForeignKeyDefinitionAsync(IEnumerable<DatabaseObject> databaseObjects)
         {
             // Build the query required to get the foreign key information.
             string queryForForeignKeyInfo =
-                ((BaseSqlQueryBuilder)SqlQueryBuilder).BuildForeignKeyInfoQuery(tables.Count());
+                ((BaseSqlQueryBuilder)SqlQueryBuilder).BuildForeignKeyInfoQuery(databaseObjects.Count());
 
             // Build the array storing all the schemaNames, for now the defaultSchemaName.
             List<string> schemaNames = new();
             List<string> tableNames = new();
-            foreach (DatabaseObject dbo in tables.Values)
+            Dictionary<string, TableDefinition> sourceNameToTableDefinition = new();
+            foreach (DatabaseObject dbObject in databaseObjects)
             {
-                schemaNames.Add(dbo.SchemaName);
-                tableNames.Add(dbo.Name);
+                schemaNames.Add(dbObject.SchemaName);
+                tableNames.Add(dbObject.Name);
+                sourceNameToTableDefinition.Add(dbObject.Name, dbObject.TableDefinition);
             }
 
             // Build the parameters dictionary for the foreign key info query
@@ -468,14 +466,14 @@ namespace Azure.DataGateway.Service.Services
             // keep populating the table definition for all tables with all foreign keys.
             while (foreignKeyInfo != null)
             {
-                string twoPartTableName = (string)foreignKeyInfo[nameof(TableDefinition)]!;
-                DatabaseObject? dbo;
+                string tableName = (string)foreignKeyInfo[nameof(TableDefinition)]!;
+                TableDefinition? tableDefinition;
                 string foreignKeyName = (string)foreignKeyInfo[nameof(ForeignKeyDefinition)]!;
                 ForeignKeyDefinition? foreignKeyDefinition;
 
-                if (tables.TryGetValue(twoPartTableName, out dbo))
+                if (sourceNameToTableDefinition.TryGetValue(tableName, out tableDefinition))
                 {
-                    if (!dbo.TableDefinition.ForeignKeys.TryGetValue(foreignKeyName, out foreignKeyDefinition))
+                    if (!tableDefinition.ForeignKeys.TryGetValue(foreignKeyName, out foreignKeyDefinition))
                     {
                         // If this is the first column in this foreign key for this table,
                         // add the referenced table to the tableDefinition.
@@ -484,7 +482,7 @@ namespace Azure.DataGateway.Service.Services
                             ReferencedTable =
                             (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencedTable)]!
                         };
-                        dbo.TableDefinition.ForeignKeys.Add(foreignKeyName, foreignKeyDefinition);
+                        tableDefinition.ForeignKeys.Add(foreignKeyName, foreignKeyDefinition);
                     }
 
                     // add the referenced and referencing columns to the foreign key definition.

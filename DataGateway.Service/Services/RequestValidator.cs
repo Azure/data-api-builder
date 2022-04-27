@@ -20,13 +20,13 @@ namespace Azure.DataGateway.Service.Services
         /// - extra fields specified in the body, will be discarded.
         /// </summary>
         /// <param name="context">Request context containing the REST operation fields and their values.</param>
-        /// <param name="runtimeConfigProvider">Runtime config provider that enables referencing DB schema in config.</param>
+        /// <param name="sqlMetadataProvider">SqlMetadata provider that enables referencing DB schema.</param>
         /// <exception cref="DataGatewayException"></exception>
         public static void ValidateRequestContext(
             RestRequestContext context,
-            SqlMetadataProvider runtimeConfigProvider)
+            ISqlMetadataProvider sqlMetadataProvider)
         {
-            TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, runtimeConfigProvider);
+            TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, sqlMetadataProvider);
 
             foreach (string field in context.FieldsToBeReturned)
             {
@@ -45,13 +45,13 @@ namespace Azure.DataGateway.Service.Services
         /// definition in the configuration file.
         /// </summary>
         /// <param name="context">Request context containing the primary keys and their values.</param>
-        /// <param name="runtimeConfigProvider">Runtime config provider that enables referencing DB schema in config.</param>
+        /// <param name="sqlMetadataProvider">To get the table definition.</param>
         /// <exception cref="DataGatewayException"></exception>
         public static void ValidatePrimaryKey(
             RestRequestContext context,
-            SqlMetadataProvider runtimeConfigProvider)
+            ISqlMetadataProvider sqlMetadataProvider)
         {
-            TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, runtimeConfigProvider);
+            TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, sqlMetadataProvider);
 
             int countOfPrimaryKeysInSchema = tableDefinition.PrimaryKey.Count;
             int countOfPrimaryKeysInRequest = context.PrimaryKeyValuePairs.Count;
@@ -154,15 +154,15 @@ namespace Azure.DataGateway.Service.Services
         /// and vice versa.
         /// </summary>
         /// <param name="insertRequestCtx">Insert Request context containing the request body.</param>
-        /// <param name="runtimeConfigProvider">Runtime config provider that enables referencing DB schema in config.</param>
+        /// <param name="sqlMetadataProvider">To get the table definition.</param>
         /// <exception cref="DataGatewayException"></exception>
         public static void ValidateInsertRequestContext(
             InsertRequestContext insertRequestCtx,
-            SqlMetadataProvider runtimeConfigProvider)
+            ISqlMetadataProvider sqlMetadataProvider)
         {
             IEnumerable<string> fieldsInRequestBody = insertRequestCtx.FieldValuePairsInBody.Keys;
             TableDefinition tableDefinition =
-                TryGetTableDefinition(insertRequestCtx.EntityName, runtimeConfigProvider);
+                TryGetTableDefinition(insertRequestCtx.EntityName, sqlMetadataProvider);
 
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
@@ -207,15 +207,15 @@ namespace Azure.DataGateway.Service.Services
         /// and vice versa.
         /// </summary>
         /// <param name="upsertRequestCtx">Upsert Request context containing the request body.</param>
-        /// <param name="runtimeConfigProvider">Runtime config provider that enables referencing DB schema in config.</param>
+        /// <param name="sqlMetadataProvider">To get the table definition.</param>
         /// <exception cref="DataGatewayException"></exception>
         public static void ValidateUpsertRequestContext(
             UpsertRequestContext upsertRequestCtx,
-            SqlMetadataProvider runtimeConfigProvider)
+            ISqlMetadataProvider sqlMetadataProvider)
         {
             IEnumerable<string> fieldsInRequestBody = upsertRequestCtx.FieldValuePairsInBody.Keys;
             TableDefinition tableDefinition =
-                TryGetTableDefinition(upsertRequestCtx.EntityName, runtimeConfigProvider);
+                TryGetTableDefinition(upsertRequestCtx.EntityName, sqlMetadataProvider);
 
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
@@ -299,15 +299,15 @@ namespace Azure.DataGateway.Service.Services
         /// Tries to get the table definition for the given entity from the Metadata provider.
         /// </summary>
         /// <param name="entityName">Target entity name.</param>
-        /// <param name="runtimeConfigProvider">Runtime config provider that
-        /// enables referencing DB schema in config.</param>
+        /// <param name="sqlMetadataProvider">SqlMetadata provider that
+        /// enables referencing DB schema.</param>
         /// <exception cref="DataGatewayException"></exception>
 
-        private static TableDefinition TryGetTableDefinition(string entityName, SqlMetadataProvider runtimeConfigProvider)
+        private static TableDefinition TryGetTableDefinition(string entityName, ISqlMetadataProvider sqlMetadataProvider)
         {
             try
             {
-                TableDefinition tableDefinition = runtimeConfigProvider.GetTableDefinition(entityName);
+                TableDefinition tableDefinition = sqlMetadataProvider.GetTableDefinition(entityName);
                 return tableDefinition;
             }
             catch (KeyNotFoundException)

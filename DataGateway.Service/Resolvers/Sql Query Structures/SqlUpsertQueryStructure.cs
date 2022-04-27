@@ -51,16 +51,16 @@ namespace Azure.DataGateway.Service.Resolvers
         ///
         /// </summary>
         /// <param name="tableName"></param>
-        /// <param name="runtimeConfigProvider"></param>
+        /// <param name="sqlMetadataProvider"></param>
         /// <param name="mutationParams"></param>
         /// <exception cref="DataGatewayException"></exception>
         public SqlUpsertQueryStructure(
             string tableName,
             IGraphQLMetadataProvider metadataStoreProvider,
-            ISqlMetadataProvider runtimeConfigProvider,
+            ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams,
             bool incrementalUpdate)
-        : base(metadataStoreProvider, runtimeConfigProvider, tableName: tableName)
+        : base(metadataStoreProvider, sqlMetadataProvider, tableName: tableName)
         {
             UpdateOperations = new();
             InsertColumns = new();

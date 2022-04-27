@@ -195,18 +195,31 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private async Task PopulateTableDefinitionForEntities()
         {
+            Dictionary<string, DatabaseObject> tables = new();
             foreach (string entityName
                 in GetEntitiesFromRuntimeConfig().Keys)
             {
+                RuntimeConfig config = _runtimeConfigProvider.GetRuntimeConfig();
+                object source = config.Entities[entityName].Source;
+                (string?, string?) names;
+
+                if (source is string)
+                {
+                    names = EntitySourceNamesParser.ParseSchemaAndTable((source as string)!);
+                    tables.Add(entityName, new DatabaseObject()
+                    {
+                        SchemaName = names.Item1!,
+                        Name = names.Item2!
+                    });
+                }
+                
                 await PopulateTableDefinitionAsync(
                     GetSchemaName(entityName),
                     GetDatabaseObjectName(entityName),
                     GetTableDefinition(entityName));
             }
  
-            await PopulateForeignKeyDefinitionAsync(
-                schemaName,
-                RuntimeConfig.Entities.Values);
+            await PopulateForeignKeyDefinitionAsync(tables);
 
         }
 
@@ -421,34 +434,27 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="schemaName">Name of the default schema.</param>
         /// <param name="tables">Dictionary of all tables.</param>
-        private async Task PopulateForeignKeyDefinitionAsync(
-            string defaultSchemaName,
-            IEnumerable<Entity> sqlEntities)
+        private async Task PopulateForeignKeyDefinitionAsync(Dictionary<string, DatabaseObject> tables)
         {
             // Build the query required to get the foreign key information.
             string queryForForeignKeyInfo =
-                ((BaseSqlQueryBuilder)SqlQueryBuilder).BuildForeignKeyInfoQuery(sqlEntities.Count());
+                ((BaseSqlQueryBuilder)SqlQueryBuilder).BuildForeignKeyInfoQuery(tables.Count());
 
             // Build the array storing all the schemaNames, for now the defaultSchemaName.
-            string[] schemaNames =
-                Enumerable.Range(1, sqlEntities.Count())
-                .Select(x => defaultSchemaName).ToArray();
-
-            // Build a dictionary mapping source entity name to its table definition
-            // for efficient lookups later to populate the retrieved foreign keys.
-            Dictionary<string, TableDefinition> sourceTableDefinition = new();
-            foreach (SqlEntity sqlEntity in sqlEntities)
+            List<string> schemaNames = new();
+            List<string> tableNames = new();
+            foreach (DatabaseObject dbo in tables.Values)
             {
-                // Perhaps, save this dictionary in the RuntimeConfig if useful later on.
-                sourceTableDefinition.Add(sqlEntity.SourceName, sqlEntity.TableDefinition);
+                schemaNames.Add(dbo.SchemaName);
+                tableNames.Add(dbo.Name);
             }
 
             // Build the parameters dictionary for the foreign key info query
             // consisting of all schema names and table names.
             Dictionary<string, object?> parameters =
                 GetForeignKeyQueryParams(
-                    schemaNames,
-                    sourceTableDefinition.Keys.ToArray());
+                    schemaNames.ToArray(),
+                    tableNames.ToArray());
 
             // Execute the foreign key info query.
             using DbDataReader reader =
@@ -463,13 +469,13 @@ namespace Azure.DataGateway.Service.Services
             while (foreignKeyInfo != null)
             {
                 string twoPartTableName = (string)foreignKeyInfo[nameof(TableDefinition)]!;
-                TableDefinition? tableDefinition;
+                DatabaseObject? dbo;
                 string foreignKeyName = (string)foreignKeyInfo[nameof(ForeignKeyDefinition)]!;
                 ForeignKeyDefinition? foreignKeyDefinition;
 
-                if (sourceTableDefinition.TryGetValue(twoPartTableName, out tableDefinition))
+                if (tables.TryGetValue(twoPartTableName, out dbo))
                 {
-                    if (!tableDefinition.ForeignKeys.TryGetValue(foreignKeyName, out foreignKeyDefinition))
+                    if (!dbo.TableDefinition.ForeignKeys.TryGetValue(foreignKeyName, out foreignKeyDefinition))
                     {
                         // If this is the first column in this foreign key for this table,
                         // add the referenced table to the tableDefinition.
@@ -478,7 +484,7 @@ namespace Azure.DataGateway.Service.Services
                             ReferencedTable =
                             (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencedTable)]!
                         };
-                        tableDefinition.ForeignKeys.Add(foreignKeyName, foreignKeyDefinition);
+                        dbo.TableDefinition.ForeignKeys.Add(foreignKeyName, foreignKeyDefinition);
                     }
 
                     // add the referenced and referencing columns to the foreign key definition.

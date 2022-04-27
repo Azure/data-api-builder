@@ -19,7 +19,7 @@ namespace Azure.DataGateway.Service.Configurations
             "DatabaseType": "",
             "ResolverConfigFile" : ""
             "ResolverConfig" : ""
-            "RuntimeConfig" : ""
+            "RuntimeConfigFile" : ""
             "GraphQLSchema": ""
             "DatabaseConnection": {
                 "ServerEndpointUrl": "",

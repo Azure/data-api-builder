@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -27,13 +28,17 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<string> ReturnColumns { get; }
 
-        public SqlInsertStructure(string tableName, SqlGraphQLFileMetadataProvider metadataStore, IDictionary<string, object?> mutationParams)
-        : base(metadataStore, tableName: tableName)
+        public SqlInsertStructure(
+            string tableName,
+            IGraphQLMetadataProvider metadataStoreProvider,
+            ISqlMetadataProvider sqlMetadataProvider,
+            IDictionary<string, object?> mutationParams)
+        : base(metadataStoreProvider, sqlMetadataProvider, tableName: tableName)
         {
             InsertColumns = new();
             Values = new();
 
-            TableDefinition tableDefinition = GetTableDefinition();
+            TableDefinition tableDefinition = GetUnderlyingTableDefinition();
 
             ReturnColumns = tableDefinition.Columns.Keys.ToList<string>();
 
@@ -82,7 +87,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public ColumnDefinition GetColumnDefinition(string columnName)
         {
-            return GetTableDefinition().Columns[columnName];
+            return GetUnderlyingTableDefinition().Columns[columnName];
         }
     }
 }

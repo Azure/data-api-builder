@@ -25,13 +25,12 @@ namespace Azure.DataGateway.Service.Services
         /// <summary>
         /// Build the model from the provided schema.
         /// </summary>
-        /// <param name="databaseEntities">All the exposed sql database entities
-        /// with their table definitions.</param>
+        /// <param name="databaseObjects">All the database objects to build the model for.</param>
         /// <returns>An EdmModelBuilder that can be used to get a model.</returns>
-        public EdmModelBuilder BuildModel(Dictionary<string, Entity> databaseEntities)
+        public EdmModelBuilder BuildModel(IEnumerable<DatabaseObject> databaseObjects)
         {
-            return BuildEntityTypes(databaseEntities)
-                .BuildEntitySets(databaseEntities.Values);
+            return BuildEntityTypes(databaseObjects)
+                .BuildEntitySets(databaseObjects);
         }
 
         /// <summary>
@@ -41,13 +40,12 @@ namespace Azure.DataGateway.Service.Services
         /// with their table definitions.</param>
         /// <returns>this model builder</returns>
         private EdmModelBuilder BuildEntityTypes(
-            Dictionary<string, Entity> databaseEntities)
+            IEnumerable<DatabaseObject> databaseObjects)
         {
-            foreach (Entity entity in databaseEntities.Values)
+            foreach (DatabaseObject dbObject in databaseObjects)
             {
-                SqlEntity sqlEntity = (SqlEntity)entity;
-                string entitySourceName = sqlEntity.SourceName;
-                TableDefinition tableDefinition = databaseEntities[entitySourceName].TableDefinition;
+                string entitySourceName = $"{dbObject.SchemaName}.${dbObject.Name}";
+                TableDefinition tableDefinition = dbObject.TableDefinition;
                 EdmEntityType newEntity = new(DEFAULT_NAMESPACE, entitySourceName);
                 string newEntityKey = DEFAULT_NAMESPACE + entitySourceName;
                 _entities.Add(newEntityKey, newEntity);
@@ -79,8 +77,8 @@ namespace Azure.DataGateway.Service.Services
                             type = EdmPrimitiveTypeKind.Double;
                             break;
                         default:
-                            throw new ArgumentException($"No resolver for column type" +
-                                $" {columnSystemType.Name}");
+                            throw new ArgumentException($"Column type" +
+                                $" {columnSystemType.Name} not yet supported.");
                     }
 
                     // if column is in our list of keys we add as a key to entity
@@ -108,16 +106,16 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="sqlEntities">All the sql entities with their table definitions.</param>
         /// <returns>this model builder</returns>
-        private EdmModelBuilder BuildEntitySets(IEnumerable<SqlEntity> sqlEntities)
+        private EdmModelBuilder BuildEntitySets(IEnumerable<DatabaseObject> databaseObjects)
         {
             EdmEntityContainer container = new(DEFAULT_NAMESPACE, DEFAULT_CONTAINER_NAME);
             _model.AddElement(container);
 
             // Entity set is a collection of the same entity, if we think of an entity as a row of data
             // that has a key, then an entity set can be thought of as a table made up of those rows
-            foreach (SqlEntity sqlEntity in sqlEntities)
+            foreach (DatabaseObject dbObject in databaseObjects)
             {
-                string entityName = sqlEntity.SourceName;
+                string entityName = $"{dbObject.SchemaName}.${dbObject.Name}";
                 container.AddEntitySet(name: entityName, _entities[DEFAULT_NAMESPACE + entityName]);
             }
 

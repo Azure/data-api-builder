@@ -40,7 +40,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static IQueryBuilder _queryBuilder;
         protected static IQueryEngine _queryEngine;
         protected static IMutationEngine _mutationEngine;
-        protected static SqlGraphQLFileMetadataProvider _metadataStoreProvider;
+        protected static GraphQLFileMetadataProvider _metadataStoreProvider;
+        protected static IRuntimeConfigProvider _runtimeConfigProvider;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
         protected static DbExceptionParserBase _dbExceptionParser;
@@ -58,6 +59,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _testCategory = testCategory;
 
             IOptions<DataGatewayConfig> config = SqlTestHelper.LoadConfig($"{_testCategory}IntegrationTest");
+            _runtimeConfigProvider = new RuntimeConfigProvider(config);
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:
@@ -65,30 +67,38 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _defaultSchemaName = "public";
                     _dbExceptionParser = new PostgresDbExceptionParser();
                     _queryExecutor = new QueryExecutor<NpgsqlConnection>(config, _dbExceptionParser);
-                    _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
-                        config,
-                        new PostgreSqlMetadataProvider(config, _queryExecutor, _queryBuilder));
+                    _sqlMetadataProvider = 
+                        new PostgreSqlMetadataProvider(
+                            config,
+                            _runtimeConfigProvider,
+                            _queryExecutor,
+                            _queryBuilder);
                     break;
                 case TestCategory.MSSQL:
                     _queryBuilder = new MsSqlQueryBuilder();
                     _defaultSchemaName = "dbo";
                     _dbExceptionParser = new DbExceptionParserBase();
                     _queryExecutor = new QueryExecutor<SqlConnection>(config, _dbExceptionParser);
-                    _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
+                    _sqlMetadataProvider = new MsSqlMetadataProvider(
                         config,
-                        new MsSqlMetadataProvider(config, _queryExecutor, _queryBuilder));
+                        _runtimeConfigProvider,
+                        _queryExecutor, _queryBuilder);
                     break;
                 case TestCategory.MYSQL:
                     _queryBuilder = new MySqlQueryBuilder();
                     _defaultSchemaName = "mysql";
                     _dbExceptionParser = new MySqlDbExceptionParser();
                     _queryExecutor = new QueryExecutor<MySqlConnection>(config, _dbExceptionParser);
-                    _metadataStoreProvider = new SqlGraphQLFileMetadataProvider(
-                         config,
-                         new MySqlMetadataProvider(config, _queryExecutor, _queryBuilder));
+                    _sqlMetadataProvider = 
+                         new MySqlMetadataProvider(
+                             config,
+                             _runtimeConfigProvider,
+                             _queryExecutor,
+                             _queryBuilder);
                     break;
             }
 
+            _metadataStoreProvider = new GraphQLFileMetadataProvider(config);
             // Setup AuthorizationService to always return Authorized.
             _authorizationService = new Mock<IAuthorizationService>();
             _authorizationService.Setup(x => x.AuthorizeAsync(
@@ -101,15 +111,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _httpContextAccessor = new Mock<IHttpContextAccessor>();
             _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
 
-            _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
-            _mutationEngine = new SqlMutationEngine(_queryEngine, _metadataStoreProvider, _queryExecutor, _queryBuilder);
+            _queryEngine = new SqlQueryEngine(
+                _metadataStoreProvider,
+                _queryExecutor,
+                _queryBuilder,
+                _sqlMetadataProvider);
+            _mutationEngine =
+                new SqlMutationEngine(
+                _queryEngine,
+                _metadataStoreProvider,
+                _queryExecutor,
+                _queryBuilder,
+                _sqlMetadataProvider);
             await ResetDbStateAsync();
         }
 
         protected static async Task ResetDbStateAsync()
         {
             using DbDataReader _ = await _queryExecutor.ExecuteQueryAsync(File.ReadAllText($"{_testCategory}Books.sql"), parameters: null);
-            await _metadataStoreProvider.InitializeAsync();
+            await _sqlMetadataProvider.InitializeAsync();
         }
 
         /// <summary>

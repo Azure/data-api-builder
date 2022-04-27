@@ -91,16 +91,6 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
-        /// Does further initialization work that needs to happen
-        /// asynchronously and hence not done in the constructor.
-        /// </summary>
-        public virtual Task InitializeAsync()
-        {
-            // no-op
-            return Task.CompletedTask;
-        }
-
-        /// <summary>
         /// Reads generated JSON configuration file with GraphQL Schema
         /// </summary>
         /// <returns>GraphQL schema as string </returns>

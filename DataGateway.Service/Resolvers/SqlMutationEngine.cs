@@ -7,6 +7,7 @@ using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -21,27 +22,26 @@ namespace Azure.DataGateway.Service.Resolvers
     public class SqlMutationEngine : IMutationEngine
     {
         private readonly IQueryEngine _queryEngine;
-        private readonly SqlGraphQLFileMetadataProvider _metadataStoreProvider;
+        private readonly IGraphQLMetadataProvider _metadataStoreProvider;
+        private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly IQueryExecutor _queryExecutor;
         private readonly IQueryBuilder _queryBuilder;
 
         /// <summary>
         /// Constructor
         /// </summary>
-        public SqlMutationEngine(IQueryEngine queryEngine, IGraphQLMetadataProvider metadataStoreProvider, IQueryExecutor queryExecutor, IQueryBuilder queryBuilder)
+        public SqlMutationEngine(
+            IQueryEngine queryEngine,
+            IGraphQLMetadataProvider metadataStoreProvider,
+            IQueryExecutor queryExecutor,
+            IQueryBuilder queryBuilder,
+            ISqlMetadataProvider sqlMetadataProvider)
         {
-            if (metadataStoreProvider.GetType() != typeof(SqlGraphQLFileMetadataProvider))
-            {
-                throw new DataGatewayException(
-                    message: "Unable to instantiate the SQL mutation engine.",
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
-            }
-
             _queryEngine = queryEngine;
-            _metadataStoreProvider = (SqlGraphQLFileMetadataProvider)metadataStoreProvider;
+            _metadataStoreProvider = metadataStoreProvider;
             _queryExecutor = queryExecutor;
             _queryBuilder = queryBuilder;
+            _sqlMetadataProvider = sqlMetadataProvider;
         }
 
         /// <summary>
@@ -78,7 +78,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (!context.Selection.Type.IsScalarType() && mutationResolver.OperationType != Operation.Delete)
             {
-                TableDefinition tableDefinition = _metadataStoreProvider.GetTableDefinition(tableName);
+                TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(tableName);
 
                 // only extract pk columns
                 // since non pk columns can be null
@@ -164,7 +164,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     /// result set #2: result of the INSERT operation.
                     if (resultRecord != null)
                     {
-                        if (_metadataStoreProvider.CloudDbType == DatabaseType.postgresql &&
+                        if (_sqlMetadataProvider.GetDatabaseType() == DatabaseType.postgresql &&
                             PostgresQueryBuilder.IsInsert(resultRecord))
                         {
                             jsonResultString = JsonSerializer.Serialize(resultRecord);
@@ -219,32 +219,60 @@ namespace Azure.DataGateway.Service.Resolvers
             switch (operationType)
             {
                 case Operation.Insert:
-                    SqlInsertStructure insertQueryStruct = new(tableName, _metadataStoreProvider, parameters);
+                    SqlInsertStructure insertQueryStruct =
+                        new(tableName,
+                        _metadataStoreProvider,
+                        _sqlMetadataProvider,
+                        parameters);
                     queryString = _queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
                     break;
                 case Operation.Update:
-                    SqlUpdateStructure updateStructure = new(tableName, _metadataStoreProvider, parameters, isIncrementalUpdate: false);
+                    SqlUpdateStructure updateStructure =
+                        new(tableName,
+                        _metadataStoreProvider,
+                        _sqlMetadataProvider,
+                        parameters,
+                        isIncrementalUpdate: false);
                     queryString = _queryBuilder.Build(updateStructure);
                     queryParameters = updateStructure.Parameters;
                     break;
                 case Operation.UpdateIncremental:
-                    SqlUpdateStructure updateIncrementalStructure = new(tableName, _metadataStoreProvider, parameters, isIncrementalUpdate: true);
+                    SqlUpdateStructure updateIncrementalStructure =
+                        new(tableName,
+                        _metadataStoreProvider,
+                        _sqlMetadataProvider,
+                        parameters,
+                        isIncrementalUpdate: true);
                     queryString = _queryBuilder.Build(updateIncrementalStructure);
                     queryParameters = updateIncrementalStructure.Parameters;
                     break;
                 case Operation.Delete:
-                    SqlDeleteStructure deleteStructure = new(tableName, _metadataStoreProvider, parameters);
+                    SqlDeleteStructure deleteStructure =
+                        new(tableName,
+                        _metadataStoreProvider,
+                        _sqlMetadataProvider,
+                        parameters);
                     queryString = _queryBuilder.Build(deleteStructure);
                     queryParameters = deleteStructure.Parameters;
                     break;
                 case Operation.Upsert:
-                    SqlUpsertQueryStructure upsertStructure = new(tableName, _metadataStoreProvider, parameters, incrementalUpdate: false);
+                    SqlUpsertQueryStructure upsertStructure =
+                        new(tableName,
+                        _metadataStoreProvider,
+                        _sqlMetadataProvider,
+                        parameters,
+                        incrementalUpdate: false);
                     queryString = _queryBuilder.Build(upsertStructure);
                     queryParameters = upsertStructure.Parameters;
                     break;
                 case Operation.UpsertIncremental:
-                    SqlUpsertQueryStructure upsertIncrementalStructure = new(tableName, _metadataStoreProvider, parameters, incrementalUpdate: true);
+                    SqlUpsertQueryStructure upsertIncrementalStructure =
+                        new(tableName,
+                        _metadataStoreProvider,
+                        _sqlMetadataProvider,
+                        parameters,
+                        incrementalUpdate: true);
                     queryString = _queryBuilder.Build(upsertIncrementalStructure);
                     queryParameters = upsertIncrementalStructure.Parameters;
                     break;

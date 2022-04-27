@@ -53,9 +53,9 @@ namespace Azure.DataGateway.Config
     /// <param name="Cors">Settings related to Cross Origin Resource Sharing.</param>
     /// <param name="Authentication">Authentication configuration properties.</param>
     public record HostGlobalSettings
-        (HostModeType Mode,
-         Cors? Cors,
-         AuthenticationConfig? Authentication)
+        (HostModeType Mode = HostModeType.Production,
+         Cors? Cors = null,
+         AuthenticationConfig? Authentication = null)
         : GlobalSettings();
 
     /// <summary>

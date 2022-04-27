@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Microsoft.Extensions.Options;
 
@@ -35,22 +34,12 @@ namespace Azure.DataGateway.Service.Configurations
             RuntimeConfig =
                 DataGatewayConfig.GetDeserializedConfig<RuntimeConfig>(runtimeConfigJson);
 
-            CloudDbType = RuntimeConfig.DataSource.DatabaseType;
+            RuntimeConfig.SetDefaults();
         }
 
         public RuntimeConfig GetRuntimeConfig()
         {
             return RuntimeConfig;
-        }
-
-        /// <summary>
-        /// Does further initialization work that needs to happen
-        /// asynchronously and hence not done in the constructor.
-        /// </summary>
-        public virtual Task InitializeAsync()
-        {
-            // no-op
-            return Task.CompletedTask;
         }
     }
 }

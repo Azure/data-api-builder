@@ -59,6 +59,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             {
                 { "DataGatewayConfig:DatabaseType", "cosmos" },
                 { "DataGatewayConfig:ResolverConfigFile", "cosmos-config.json" },
+                { "DataGatewayConfig:RuntimeConfigFile", "runtime-config.json" },
                 { "DataGatewayConfig:DatabaseConnection:ConnectionString", "Cosmos" }
             };
             HttpResponseMessage postResult = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
@@ -105,7 +106,10 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Assert.IsInstanceOfType(queryExecutor, typeof(QueryExecutor<SqlConnection>));
 
             object graphQLMetadataProvider = server.Services.GetService(typeof(IGraphQLMetadataProvider));
-            Assert.IsInstanceOfType(graphQLMetadataProvider, typeof(SqlGraphQLFileMetadataProvider));
+            Assert.IsInstanceOfType(graphQLMetadataProvider, typeof(GraphQLFileMetadataProvider));
+
+            object runtimeConfigProvider = server.Services.GetService(typeof(IRuntimeConfigProvider));
+            Assert.IsInstanceOfType(runtimeConfigProvider, typeof(RuntimeConfigProvider));
 
             object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
             Assert.IsInstanceOfType(sqlMetadataProvider, typeof(MsSqlMetadataProvider));
@@ -133,7 +137,10 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Assert.IsInstanceOfType(queryExecutor, typeof(QueryExecutor<NpgsqlConnection>));
 
             object graphQLMetadataProvider = server.Services.GetService(typeof(IGraphQLMetadataProvider));
-            Assert.IsInstanceOfType(graphQLMetadataProvider, typeof(SqlGraphQLFileMetadataProvider));
+            Assert.IsInstanceOfType(graphQLMetadataProvider, typeof(GraphQLFileMetadataProvider));
+
+            object runtimeConfigProvider = server.Services.GetService(typeof(IRuntimeConfigProvider));
+            Assert.IsInstanceOfType(runtimeConfigProvider, typeof(RuntimeConfigProvider));
 
             object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
             Assert.IsInstanceOfType(sqlMetadataProvider, typeof(PostgreSqlMetadataProvider));
@@ -161,7 +168,10 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Assert.IsInstanceOfType(queryExecutor, typeof(QueryExecutor<MySqlConnection>));
 
             object graphQLMetadataProvider = server.Services.GetService(typeof(IGraphQLMetadataProvider));
-            Assert.IsInstanceOfType(graphQLMetadataProvider, typeof(SqlGraphQLFileMetadataProvider));
+            Assert.IsInstanceOfType(graphQLMetadataProvider, typeof(GraphQLFileMetadataProvider));
+
+            object runtimeConfigProvider = server.Services.GetService(typeof(IRuntimeConfigProvider));
+            Assert.IsInstanceOfType(runtimeConfigProvider, typeof(RuntimeConfigProvider));
 
             object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
             Assert.IsInstanceOfType(sqlMetadataProvider, typeof(MySqlMetadataProvider));
@@ -195,6 +205,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             {
                 { "DataGatewayConfig:DatabaseType", "cosmos" },
                 { "DataGatewayConfig:ResolverConfigFile", "cosmos-config.json" },
+                { "DataGatewayConfig:RuntimeConfigFile", "runtime-config.json" },
                 { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
             };
 
@@ -213,6 +224,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             {
                 { "DataGatewayConfig:DatabaseType", "cosmos" },
                 { "DataGatewayConfig:ResolverConfig", _cosmosResolverConfig },
+                { "DataGatewayConfig:RuntimeConfigFile", "runtime-config.json" },
                 { "DataGatewayConfig:GraphQLSchema", _graphqlSchema },
                 { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
             };
@@ -328,7 +340,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("Validates if deserialization of new runtime config format succeeds.")]
         public void TestReadingRuntimeConfig()
         {
-            string jsonString = File.ReadAllText("runtime-config-test.json");
+            string jsonString = File.ReadAllText("runtime-config.json");
             // use camel case
             // convert Enum to strings
             // case insensitive
@@ -344,7 +356,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             RuntimeConfig runtimeConfig =
                     JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
             Assert.IsNotNull(runtimeConfig.Schema);
-            Assert.IsTrue(runtimeConfig.DataSource.GetType() == typeof(DataSource));
+            Assert.IsInstanceOfType(runtimeConfig.DataSource, typeof(DataSource));
             Assert.IsTrue(runtimeConfig.CosmosDb == null
                 || runtimeConfig.CosmosDb.GetType() == typeof(CosmosDbOptions));
             Assert.IsTrue(runtimeConfig.MsSql == null
@@ -354,11 +366,11 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Assert.IsTrue(runtimeConfig.MySql == null
                 || runtimeConfig.MySql.GetType() == typeof(MySqlOptions));
 
-            Assert.IsTrue(runtimeConfig.Entities.GetType() == typeof(Dictionary<string, Entity>));
+            Assert.IsInstanceOfType(runtimeConfig.Entities, typeof(Dictionary<string, Entity>));
             foreach (Entity entity in runtimeConfig.Entities.Values)
             {
-                Assert.IsTrue(((JsonElement)entity.Source).ValueKind == JsonValueKind.String ||
-                    ((JsonElement)entity.Source).ValueKind == JsonValueKind.Object);
+                Assert.IsTrue(((JsonElement)entity.Source).ValueKind == JsonValueKind.String
+                    || ((JsonElement)entity.Source).ValueKind == JsonValueKind.Object);
 
                 Assert.IsTrue(entity.Rest == null
                     || ((JsonElement)entity.Rest).ValueKind == JsonValueKind.True
@@ -396,7 +408,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                     }
                 }
 
-                Assert.IsTrue(entity.Permissions.GetType() == typeof(PermissionSetting[]));
+                Assert.IsInstanceOfType(entity.Permissions, typeof(PermissionSetting[]));
                 foreach (PermissionSetting permission in entity.Permissions)
                 {
                     foreach (object action in permission.Actions)
@@ -442,6 +454,9 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         {
             object metadataProvider = server.Services.GetService(typeof(IGraphQLMetadataProvider));
             Assert.IsInstanceOfType(metadataProvider, typeof(GraphQLFileMetadataProvider));
+
+            object runtimeConfigProvider = server.Services.GetService(typeof(IRuntimeConfigProvider));
+            Assert.IsInstanceOfType(runtimeConfigProvider, typeof(RuntimeConfigProvider));
 
             object queryEngine = server.Services.GetService(typeof(IQueryEngine));
             Assert.IsInstanceOfType(queryEngine, typeof(CosmosQueryEngine));

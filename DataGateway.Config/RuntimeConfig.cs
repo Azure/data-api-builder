@@ -34,5 +34,41 @@ namespace Azure.DataGateway.Config
         MySqlOptions? MySql,
         [property: JsonPropertyName("runtime")]
         Dictionary<GlobalSettingsType, GlobalSettings> RuntimeSettings,
-        Dictionary<string, Entity> Entities);
+        Dictionary<string, Entity> Entities)
+    {
+        public void SetDefaults()
+        {
+            foreach(
+                (GlobalSettingsType settingsType, GlobalSettings settings) in RuntimeSettings)
+            {
+                switch(settingsType)
+                {
+                    case GlobalSettingsType.Rest:
+                        if (settings.GetType() != typeof(RestGlobalSettings))
+                        {
+                            RuntimeSettings[settingsType] = new RestGlobalSettings();
+                        }
+
+                        break;
+                    case GlobalSettingsType.GraphQL:
+                        if (settings.GetType() != typeof(GraphQLGlobalSettings))
+                        {
+                            RuntimeSettings[settingsType] = new GraphQLGlobalSettings();
+                        }
+
+                        break;
+                    case GlobalSettingsType.Host:
+                        if (settings.GetType() != typeof(HostGlobalSettings))
+                        {
+                            RuntimeSettings[settingsType] = new HostGlobalSettings();
+                        }
+
+                        break;
+                    default:
+                        throw new NotSupportedException("The runtime does not" +
+                            " support this global settings type.");
+                }
+            }
+        }
+    }
 }

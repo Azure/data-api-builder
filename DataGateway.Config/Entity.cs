@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Azure.DataGateway.Config
@@ -7,22 +8,17 @@ namespace Azure.DataGateway.Config
     /// </summary>   
     /// <param name="Source">The underlying database object to which
     /// the exposed entity is connected to.</param>
-
     /// <param name="Rest">Can be a bool or RestEntitySettings type.
     /// When boolean, it describes if the entity is to be exposed.
     /// When RestEntitySettings, describes the REST endpoint settings
     /// specific to this entity.</param>
-
     /// <param name="GraphQL">Can be a bool or GraphQLEntitySettings type.
     /// When GraphQLEntitySettings, describes the GraphQL settings
     /// specific to this entity.</param>
-
     /// <param name="Permissions">Permissions assigned to this entity.</param>
-
     /// <param name="Relationships">Defines how an entity is related to other exposed
     /// entities and optionally provides details on what underlying database
     /// objects can be used to support such relationships.</param>
-
     /// <param name="Mappings"> Defines mappings between database fields
     /// and GraphQL and REST fields.</param>
     public record Entity(
@@ -31,32 +27,24 @@ namespace Azure.DataGateway.Config
         object? GraphQL,
         PermissionSetting[] Permissions,
         Dictionary<string, Relationship>? Relationships,
-        Dictionary<string, string>? Mappings);
-
-    public record SqlEntity(
-        object Source,
-        object? Rest,
-        object? GraphQL,
-        PermissionSettings[] Permissions,
-        Relationship? Relationships,
-        Dictionary<string, string>? Mappings) :
-            Entity(Source,
-                   Rest,
-                   GraphQL,
-                   Permissions,
-                   Relationships,
-                   Mappings)
+        Dictionary<string, string>? Mappings)
     {
-        public TableDefinition TableDefinition { get; set; } = new();
-
         /// <summary>
         /// Gets the name of the underlying source database object.
         /// </summary>
-        public string SourceName => Type.GetTypeCode(Source.GetType()) switch
+        public string GetSourceName()
         {
-            TypeCode.String => (string)Source,
-            _ => ((DatabaseObjectSource)Source).Name
-        };
+            if(((JsonElement)Source).ValueKind == JsonValueKind.String)
+            {
+                return JsonSerializer.Deserialize<string>((JsonElement)Source)!;
+            }
+            else
+            {
+                DatabaseObjectSource objectSource
+                    = JsonSerializer.Deserialize<DatabaseObjectSource>((JsonElement)Source)!;
+                return objectSource.Name;
+            }
+        }
     }
 
     /// <summary>

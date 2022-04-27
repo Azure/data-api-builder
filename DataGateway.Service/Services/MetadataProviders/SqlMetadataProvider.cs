@@ -220,7 +220,7 @@ namespace Azure.DataGateway.Service.Services
         private async Task PopulateTableDefinitionForEntities()
         {
             foreach (string entityName
-                in GetEntitiesFromRuntimeConfig().Keys)
+                in EntityToDatabaseObject.Keys)
             {
                 await PopulateTableDefinitionAsync(
                     GetSchemaName(entityName),

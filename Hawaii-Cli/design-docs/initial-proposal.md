@@ -1,3 +1,16 @@
+Problem Statement:
+To provide an easy way to connect to different DBs by generating config for the runtime engine.
+
+Why CLI?
+1) It's much faster and efficient than any other type of Interface.
+2) It requires fewer resources, reducing dependencies on other systems for GUI.
+The Hawaii CLI tool is designed to help you be more productive on our platform by making app development faster. 
+
+Why C#.NET?
+Common Language Infrastructure Framework also makes C# more speedy and offers better performance than Python has.
+C# is a better option in the matters of efficiency of performance, lack of inconsistencies in the formatting rules and syntax, and great Microsoft integration.
+
+Implementation proposal:
 This tool will generate a JSON config from the argument values passed through the CLI tool.
 
 hawaii init --name todo-001 --database-type mssql --connection-string "localhost:5001" 

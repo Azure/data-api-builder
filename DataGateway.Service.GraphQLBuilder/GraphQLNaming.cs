@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Azure.DataGateway.Config;
 using HotChocolate.Language;
+using Humanizer;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder
 {
@@ -53,9 +54,19 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             return string.Join("", nameSegments.Select((n, i) => $"{(i == 0 ? char.ToLowerInvariant(n[0]) : char.ToUpperInvariant(n[0]))}{n[1..]}"));
         }
 
-        public static NameNode Pluralize(string name)
+        public static NameNode Pluralize(string name, Entity configEntity)
         {
-            return new NameNode($"{FormatNameForField(name)}s");
+            if (configEntity.GraphQL is SingularPlural namingRules)
+            {
+                if (!string.IsNullOrEmpty(namingRules.Plural))
+                {
+                    return new NameNode(namingRules.Plural);
+                }
+
+                name = string.IsNullOrEmpty(namingRules.Singular) ? name : namingRules.Singular;
+            }
+
+            return new NameNode(FormatNameForField(name).Pluralize());
         }
     }
 }

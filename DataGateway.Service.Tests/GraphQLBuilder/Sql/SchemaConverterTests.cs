@@ -398,7 +398,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
         }
 
         [TestMethod]
-        public void CardinalityOfManyWillBeSingleObjectRelationship()
+        public void CardinalityOfManyWillBeListRelationship()
         {
             TableDefinition table = new();
 

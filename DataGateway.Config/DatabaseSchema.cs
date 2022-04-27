@@ -5,8 +5,21 @@ namespace Azure.DataGateway.Config
     /// </summary>
     public class DatabaseSchema
     {
-        public Dictionary<string, TableDefinition> Tables { get; set; } =
-            new(StringComparer.InvariantCultureIgnoreCase);
+        public Dictionary<Entity, DatabaseObject> Tables { get; set; } = new();
+    }
+
+    public class DatabaseObject
+    {
+        public string SchemaName { get; set; }
+        public string Name { get; set; }
+        public TableDefinition TableDefinition { get; set; }
+
+        public DatabaseObject(string schemaName, string name)
+        {
+            SchemaName = schemaName;
+            Name = name;
+            TableDefinition = new();
+        }
     }
 
     public class TableDefinition

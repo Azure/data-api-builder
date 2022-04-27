@@ -12,11 +12,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
         /// <summary>
         /// Generate a GraphQL object type from a SQL table definition, combined with the runtime config entity information
         /// </summary>
-        /// <param name="tableName">Name of the table to generate the GraphQL object type for.</param>
+        /// <param name="entityName">Name of the entity in the runtime config to generate the GraphQL object type for.</param>
         /// <param name="tableDefinition">SQL table definition information.</param>
         /// <param name="configEntity">Runtime config information for the table.</param>
         /// <returns>A GraphQL object type to be provided to a Hot Chocolate GraphQL document.</returns>
-        public static ObjectTypeDefinitionNode FromTableDefinition(string tableName, TableDefinition tableDefinition, [NotNull] Entity configEntity)
+        public static ObjectTypeDefinitionNode FromTableDefinition(string entityName, TableDefinition tableDefinition, [NotNull] Entity configEntity, Dictionary<string, Entity> entities)
         {
             Dictionary<string, FieldDefinitionNode> fields = new();
 
@@ -64,10 +64,12 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                     //       on the relationship, but until we have the work done to generate the right Input
                     //       types for the queries, it's not worth trying to do it completely.
 
+                    Entity referencedEntity = entities[fk.ReferencedTable];
+
                     INullableTypeNode targetField = relationship.Cardinality switch
                     {
-                        Cardinality.One => new NamedTypeNode(FormatNameForObject(fk.ReferencedTable)),
-                        Cardinality.Many => new ListTypeNode(new NamedTypeNode(FormatNameForObject(fk.ReferencedTable))),
+                        Cardinality.One => new NamedTypeNode(FormatNameForObject(fk.ReferencedTable, referencedEntity)),
+                        Cardinality.Many => new ListTypeNode(new NamedTypeNode(FormatNameForObject(fk.ReferencedTable, referencedEntity))),
                         _ => throw new NotImplementedException("Specified cardinality isn't supported"),
                     };
 
@@ -100,7 +102,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 
             return new ObjectTypeDefinitionNode(
                 location: null,
-                new(FormatNameForObject(tableName)),
+                new(FormatNameForObject(entityName, configEntity)),
                 description: null,
                 new List<DirectiveNode>() { new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", tableName)) },
                 new List<NamedTypeNode>(),

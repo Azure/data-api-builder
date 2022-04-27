@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Azure.DataGateway.Config;
 using HotChocolate.Language;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder
@@ -33,8 +34,13 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             return nameSegments;
         }
 
-        public static string FormatNameForObject(string name)
+        public static string FormatNameForObject(string name, Entity configEntity)
         {
+            if (configEntity.GraphQL is SingularPlural namingRules)
+            {
+                name = string.IsNullOrEmpty(namingRules.Singular) ? name : namingRules.Singular;
+            }
+
             string[] nameSegments = SanitizeGraphQLName(name);
 
             return string.Join("", nameSegments.Select(n => $"{char.ToUpperInvariant(n[0])}{n[1..]}"));

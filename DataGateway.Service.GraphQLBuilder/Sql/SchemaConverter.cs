@@ -79,7 +79,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 
                     if (foreignKeyDefinitions is not null)
                     {
-                        foreach(ForeignKeyDefinition fk in foreignKeyDefinitions)
+                        foreach (ForeignKeyDefinition fk in foreignKeyDefinitions)
                         {
                             foreach (string columnName in fk.ReferencingColumns)
                             {

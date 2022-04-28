@@ -43,40 +43,21 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 
             if (configEntity.Relationships is not null)
             {
-                foreach ((string _, ForeignKeyDefinition fk) in tableDefinition.ForeignKeys)
+                foreach ((string relationshipKey, Relationship relationship) in configEntity.Relationships)
                 {
-                    Relationship? relationship = configEntity.Relationships.Values
-                        .FirstOrDefault(r => r.TargetEntity.Contains(fk.ReferencedTable, StringComparison.OrdinalIgnoreCase));
-
-                    if (relationship is null)
-                    {
-                        // While the table has a fk, it's not defined as a relationship for the runtime
-                        // meaning we'll assume the developer doesn't want it exposed, so we'll skip it.
-
-                        // TODO: Log out a message so someone can see why it wasn't generated
-
-                        continue;
-                    }
-
-                    // Generate the field that represents the relationship to ObjectType, so you can navigate through it
-                    // and walk the graph
-
-                    // TODO: This will need to be expanded to take care of the query fields that are available
-                    //       on the relationship, but until we have the work done to generate the right Input
-                    //       types for the queries, it's not worth trying to do it completely.
-
-                    Entity referencedEntity = entities[fk.ReferencedTable];
+                    string referencedEntityName = relationship.TargetEntity;
+                    Entity referencedEntity = entities[referencedEntityName];
 
                     INullableTypeNode targetField = relationship.Cardinality switch
                     {
-                        Cardinality.One => new NamedTypeNode(FormatNameForObject(fk.ReferencedTable, referencedEntity)),
-                        Cardinality.Many => new ListTypeNode(new NamedTypeNode(FormatNameForObject(fk.ReferencedTable, referencedEntity))),
+                        Cardinality.One => new NamedTypeNode(FormatNameForObject(relationshipKey, referencedEntity)),
+                        Cardinality.Many => new ListTypeNode(new NamedTypeNode(FormatNameForObject(relationshipKey, referencedEntity))),
                         _ => throw new NotImplementedException("Specified cardinality isn't supported"),
                     };
 
                     FieldDefinitionNode relationshipField = new(
                         location: null,
-                        Pluralize(fk.ReferencedTable, referencedEntity),
+                        Pluralize(referencedEntityName, referencedEntity),
                         description: null,
                         new List<InputValueDefinitionNode>(),
                         // TODO: Check for whether it should be a nullable relationship based on the relationship fields
@@ -85,18 +66,36 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 
                     fields.Add(relationshipField.Name.Value, relationshipField);
 
-                    foreach (string columnName in fk.ReferencingColumns)
-                    {
-                        ColumnDefinition column = tableDefinition.Columns[columnName];
-                        FieldDefinitionNode field = fields[columnName];
+                    // The addition of directives is optional but might be useful metadata.
+                    string referencedSourceName = referencedEntity.GetSourceName();
 
-                        fields[columnName] = field.WithDirectives(
-                            new List<DirectiveNode>(field.Directives) {
-                            new(
-                                RelationshipDirective.DirectiveName,
-                                new ArgumentNode("databaseType", column.SystemType.Name),
-                                new ArgumentNode("cardinality", relationship.Cardinality.ToString()))
-                            });
+                    // Get all the foreign key definitions between the underlying source db object of
+                    // the given entity and the underlying source db oject of the referenced entity.
+                    IEnumerable<ForeignKeyDefinition>? foreignKeyDefinitions =
+                        tableDefinition.ForeignKeys.Values
+                        .Where(fk => fk.ReferencedTable.Equals(
+                            referencedSourceName,
+                            StringComparison.OrdinalIgnoreCase));
+
+                    if (foreignKeyDefinitions is not null)
+                    {
+                        foreach(ForeignKeyDefinition fk in foreignKeyDefinitions)
+                        {
+                            foreach (string columnName in fk.ReferencingColumns)
+                            {
+                                ColumnDefinition column = tableDefinition.Columns[columnName];
+                                FieldDefinitionNode field = fields[columnName];
+
+                                fields[columnName] = field.WithDirectives(
+                                    new List<DirectiveNode>(field.Directives) {
+                                    new(
+                                        RelationshipDirective.DirectiveName,
+                                        new ArgumentNode("databaseType", column.SystemType.Name),
+                                        new ArgumentNode("cardinality", relationship.Cardinality.ToString()),
+                                        new ArgumentNode("referencedType", relationship.TargetEntity))
+                                    });
+                            }
+                        }
                     }
                 }
             }

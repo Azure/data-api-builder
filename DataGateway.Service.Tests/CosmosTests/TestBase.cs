@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
@@ -12,6 +13,7 @@ using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -47,10 +49,22 @@ type Planet @model {
     id : ID,
     name : String
 }";
+            DataGatewayConfig dataGatewayConfig = new() { DatabaseType = Config.DatabaseType.cosmos };
+
+            RuntimeConfigProvider configProvider = new(Options.Create(dataGatewayConfig));
+
             _metadataStoreProvider.GraphQLSchema = jsonString;
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
-            _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider, new DocumentCache(), new Sha256DocumentHashProvider(), new Configurations.DataGatewayConfig { DatabaseType = Config.DatabaseType.cosmos });
+            _graphQLService = new GraphQLService(
+                _queryEngine,
+                _mutationEngine,
+                _metadataStoreProvider,
+                new DocumentCache(),
+                new Sha256DocumentHashProvider(),
+                dataGatewayConfig,
+                configProvider,
+                sqlMetadataProvider: null);
             _controller = new GraphQLController(_graphQLService);
             Client = _clientProvider.Client;
         }

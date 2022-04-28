@@ -30,7 +30,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await InitializeTestFixture(context, TestCategory.MYSQL);
 
             // Setup GraphQL Components
-            _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider, new DocumentCache(), new Sha256DocumentHashProvider(), new Configurations.DataGatewayConfig { DatabaseType = DatabaseType.mysql });
+            _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider, new DocumentCache(), new Sha256DocumentHashProvider(), new Configurations.DataGatewayConfig { DatabaseType = DatabaseType.mysql }, _runtimeConfigProvider, _sqlMetadataProvider);
             _graphQLController = new GraphQLController(_graphQLService);
         }
 

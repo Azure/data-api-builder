@@ -666,13 +666,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// limit the number of records returned and then sorting by
         /// content, with multiple column primary key in the table.
         /// </summary>
-        /// <remarks>
-        /// Converted to virtual so the Pg test can be overwritten <br/>
-        /// PostgreSql Sorts a-z > A-Z <br/>
-        /// (My|Ms)Sql Sort A-Z > a-z
-        /// </remarks>
         [TestMethod]
-        public virtual async Task FindTestWithFirstMultiKeyPaginationAndOrderBy()
+        public async Task FindTestWithFirstMultiKeyPaginationAndOrderBy()
         {
             string after = "[{\"Value\":\"Indeed a great book\",\"Direction\":1,\"TableAlias\":\"reviews\",\"ColumnName\":\"content\"}," +
                             "{\"Value\":1,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"book_id\"}," +

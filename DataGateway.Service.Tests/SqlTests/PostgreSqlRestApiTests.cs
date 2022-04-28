@@ -1,8 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Web;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -917,24 +915,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public override string GetQuery(string key)
         {
             return _queryMap[key];
-        }
-
-        /// <inheritdoc />
-        [TestMethod]
-        public override async Task FindTestWithFirstMultiKeyPaginationAndOrderBy()
-        {
-            string after = "[{\"Value\":\"best book I read in years\",\"Direction\":1,\"TableAlias\":\"reviews\",\"ColumnName\":\"content\"}," +
-                            "{\"Value\":1,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"book_id\"}," +
-                            "{\"Value\":569,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"id\"}]";
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: string.Empty,
-                queryString: "?$first=1&$orderby=content desc",
-                entity: _tableWithCompositePrimaryKey,
-                sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyPaginationAndOrderBy)),
-                controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
-                paginated: true
-            );
         }
     }
 }

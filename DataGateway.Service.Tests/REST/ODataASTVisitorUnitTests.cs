@@ -201,7 +201,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             string filterString,
             string expected)
         {
-            FilterClause ast = _metadataStoreProvider.ODataFilterParser.
+            FilterClause ast = _sqlMetadataProvider.GetOdataFilterParser().
                 GetFilterClause(filterString, entityName);
             ODataASTVisitor visitor = CreateVisitor(entityName);
             string actual = ast.Expression.Accept(visitor);
@@ -219,7 +219,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             bool isList = false)
         {
             FindRequestContext context = new(entityName, isList);
-            Mock<SqlQueryStructure> structure = new(context, _metadataStoreProvider);
+            Mock<SqlQueryStructure> structure = new(context, _metadataStoreProvider, _sqlMetadataProvider);
             return new ODataASTVisitor(structure.Object);
         }
 

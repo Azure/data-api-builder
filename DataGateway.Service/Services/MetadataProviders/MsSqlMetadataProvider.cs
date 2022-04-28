@@ -16,13 +16,16 @@ namespace Azure.DataGateway.Service.Services
     {
         public MsSqlMetadataProvider(
             IOptions<DataGatewayConfig> dataGatewayConfig,
+            IRuntimeConfigProvider runtimeConfigProvider,
             IQueryExecutor queryExecutor,
             IQueryBuilder sqlQueryBuilder)
-            : base(dataGatewayConfig, queryExecutor, sqlQueryBuilder)
+            : base(dataGatewayConfig, runtimeConfigProvider, queryExecutor, sqlQueryBuilder)
         {
         }
 
-        /// Default Constructor for Mock tests.
-        public MsSqlMetadataProvider() : base() { }
+        protected override string GetDefaultSchemaName()
+        {
+            return "dbo";
+        }
     }
 }

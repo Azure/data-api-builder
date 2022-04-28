@@ -19,8 +19,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Directives
                 false,
                 new List<InputValueDefinitionNode> {
                     new(location: null,
-                    new NameNode("databaseType"),
-                    new StringValueNode("The underlying database type"),
+                    new NameNode("target"),
+                    new StringValueNode("The target entity of the relationship"),
                     new StringType().ToTypeNode(),
                     defaultValue: null,
                     new List<DirectiveNode>()),

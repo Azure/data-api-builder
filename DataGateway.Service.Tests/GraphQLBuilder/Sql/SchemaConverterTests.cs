@@ -306,9 +306,8 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity, new() { { foreignKeyTable, relationshipEntity } });
 
-            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == refColName);
+            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == "fkTables");
 
-            Assert.AreEqual(refColName, field.Name.Value);
             Assert.AreEqual(1, field.Directives.Count);
             Assert.AreEqual(RelationshipDirective.DirectiveName, field.Directives[0].Name.Value);
         }
@@ -359,7 +358,6 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity, new() { { foreignKeyTable, relationshipEntity } });
 
-            Assert.AreEqual(refColCount, od.Fields.Count(f => f.Directives.Any(d => d.Name.Value == RelationshipDirective.DirectiveName)));
             Assert.AreEqual(1, od.Fields.Count(f => f.Type.NamedType().Name.Value == foreignKeyTable));
         }
 

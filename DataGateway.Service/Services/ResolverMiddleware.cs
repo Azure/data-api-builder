@@ -150,6 +150,7 @@ namespace Azure.DataGateway.Service.Services
             {
                 if (argument.DefaultValue != null)
                 {
+                    Console.WriteLine(argument.Name.Value + "-->" + ArgumentValue(argument.DefaultValue, variables));
                     parameters.Add(argument.Name.Value, ArgumentValue(argument.DefaultValue, variables));
                 }
             }
@@ -166,6 +167,8 @@ namespace Azure.DataGateway.Service.Services
                 {
                     parameters.Add(argument.Name.Value, ArgumentValue(argument.Value, variables));
                 }
+
+                Console.WriteLine(parameters[argument.Name.Value] + "--->" + ArgumentValue(argument.Value, variables));
             }
 
             return parameters;

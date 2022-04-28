@@ -18,7 +18,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class RequestAuthorizationHandlerUnitTests
     {
-        private Mock<SqlGraphQLFileMetadataProvider> _metadataStore;
+        private Mock<ISqlMetadataProvider> _metadataStore;
         private const string TEST_ENTITY = "TEST_ENTITY";
 
         #region Positive Tests
@@ -171,7 +171,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 table.HttpVerbs.Add(httpOperation, new AuthorizationRule());
             }
 
-            _metadataStore = new Mock<SqlGraphQLFileMetadataProvider>();
+            _metadataStore = new Mock<ISqlMetadataProvider>();
             _metadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(table);
         }
 

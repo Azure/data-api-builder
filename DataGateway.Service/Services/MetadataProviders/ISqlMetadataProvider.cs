@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Data;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 
@@ -11,33 +9,27 @@ namespace Azure.DataGateway.Service.Services
     public interface ISqlMetadataProvider
     {
         /// <summary>
-        /// Gets the DataTable from the EntitiesDataSet if already present.
-        /// If not present, fills it first and returns the same.
+        /// Initializes this metadata provider for the runtime.
         /// </summary>
-        public Task<DataTable> GetTableWithSchemaFromDataSetAsync(
-            string schemaName,
-            string tableName);
+        Task InitializeAsync();
 
         /// <summary>
-        /// Fills the table definition with information of all columns and
-        /// primary keys.
+        /// Obtains the underlying source object's schema name.
         /// </summary>
-        /// <param name="schemaName">Name of the schema.</param>
-        /// <param name="tableName">Name of the table.</param>
-        /// <param name="tableDefinition">Table definition to fill.</param>
-        public Task PopulateTableDefinitionAsync(
-            string schemaName,
-            string tableName,
-            TableDefinition tableDefinition);
+        string GetSchemaName(string entityName);
 
         /// <summary>
-        /// Fills the table definition with information of the foreign keys
-        /// for all the tables.
+        /// Obtains the underlying source object's name.
         /// </summary>
-        /// <param name="schemaName">Name of the default schema.</param>
-        /// <param name="tables">Dictionary of all tables.</param>
-        public Task PopulateForeignKeyDefinitionAsync(
-            string schemaName,
-            Dictionary<string, TableDefinition> tables);
+        string GetDatabaseObjectName(string entityName);
+
+        /// <summary>
+        /// Obtains the underlying TableDefinition for the given entity name.
+        /// </summary>
+        TableDefinition GetTableDefinition(string entityName);
+
+        FilterParser GetOdataFilterParser();
+
+        DatabaseType GetDatabaseType();
     }
 }

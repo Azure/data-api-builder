@@ -10,6 +10,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
     {
         private const string DEFAULT_CONNECTION_STRING = "Server=tcp:127.0.0.1";
         private const string DEFAULT_RESOLVER_FILE = "cosmos-config.json";
+        private const string DEFAULT_RUNTIME_CONFIG_FILE = "runtime-config.json";
         private const string DEFAULT_ISSUER = "https://login.microsoftonline.com";
 
         #region Positive Tests
@@ -146,7 +147,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             {
                 DatabaseType = DatabaseType.mssql,
                 DatabaseConnection = connection,
-                ResolverConfigFile = DEFAULT_RESOLVER_FILE
+                ResolverConfigFile = DEFAULT_RESOLVER_FILE,
+                RuntimeConfigFile = DEFAULT_RUNTIME_CONFIG_FILE
             };
 
             return config;

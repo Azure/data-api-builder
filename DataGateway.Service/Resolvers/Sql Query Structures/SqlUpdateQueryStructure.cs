@@ -19,12 +19,12 @@ namespace Azure.DataGateway.Service.Resolvers
         public List<Predicate> UpdateOperations { get; }
 
         public SqlUpdateStructure(
-            string tableName,
+            string entityName,
             IGraphQLMetadataProvider metadataStoreProvider,
             ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams,
             bool isIncrementalUpdate)
-        : base(metadataStoreProvider, sqlMetadataProvider, tableName: tableName)
+        : base(metadataStoreProvider, sqlMetadataProvider, entityName: entityName)
         {
             UpdateOperations = new();
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
@@ -44,7 +44,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 else if (param.Value == null)
                 {
                     predicate = new(
-                        new PredicateOperand(new Column(tableAlias: null, param.Key)),
+                        new PredicateOperand(new Column(tableSchema: null, tableName: null, param.Key)),
                         PredicateOperation.Equal,
                         new PredicateOperand($"@{MakeParamWithValue(null)}")
                     );
@@ -52,7 +52,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 else
                 {
                     predicate = new(
-                        new PredicateOperand(new Column(null, param.Key)),
+                        new PredicateOperand(new Column(tableSchema: null, tableName: null, param.Key)),
                         PredicateOperation.Equal,
                         new PredicateOperand($"@{MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, param.Key))}")
                     );

@@ -126,9 +126,8 @@ namespace Azure.DataGateway.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider) :
             this(metadataStoreProvider,
                 sqlMetadataProvider,
-                new IncrementingInteger(), tableName: context.EntityName)
+                new IncrementingInteger(), entityName: context.EntityName)
         {
-            TableAlias = TableName;
             IsListQuery = context.IsMany;
 
             context.FieldsToBeReturned.ForEach(fieldName => AddColumn(fieldName));
@@ -195,7 +194,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 IObjectField schemaField,
                 FieldNode? queryField,
                 IncrementingInteger counter
-        ) : this(metadataStoreProvider, sqlMetadataProvider, counter, tableName: string.Empty)
+        ) : this(metadataStoreProvider, sqlMetadataProvider, counter, entityName: string.Empty)
         {
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
@@ -342,8 +341,8 @@ namespace Azure.DataGateway.Service.Resolvers
             IGraphQLMetadataProvider metadataStoreProvider,
             ISqlMetadataProvider sqlMetadataProvider,
             IncrementingInteger counter,
-            string tableName = "")
-            : base(metadataStoreProvider, sqlMetadataProvider, counter: counter, tableName: tableName)
+            string entityName = "")
+            : base(metadataStoreProvider, sqlMetadataProvider, entityName: entityName, counter: counter )
         {
             JoinQueries = new();
             Joins = new();
@@ -360,7 +359,7 @@ namespace Azure.DataGateway.Service.Resolvers
             foreach (KeyValuePair<string, object> parameter in queryParams)
             {
                 Predicates.Add(new Predicate(
-                    new PredicateOperand(new Column(TableAlias, parameter.Key)),
+                    new PredicateOperand(new Column(SchemaName, TableAlias, parameter.Key)),
                     PredicateOperation.Equal,
                     new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
                 ));
@@ -414,7 +413,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     parameterName = MakeParamWithValue(
                         GetParamAsColumnSystemType(value.ToString()!, field));
                     Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(TableAlias, field)),
+                        new PredicateOperand(new Column(SchemaName, TableAlias, field)),
                         op,
                         new PredicateOperand($"@{parameterName}")));
                 }
@@ -450,8 +449,8 @@ namespace Azure.DataGateway.Service.Resolvers
             return leftColumnNames.Zip(rightColumnNames,
                     (leftColumnName, rightColumnName) =>
                     {
-                        Column leftColumn = new(leftTableAlias, leftColumnName);
-                        Column rightColumn = new(rightTableAlias, rightColumnName);
+                        Column leftColumn = new(tableSchema: null, leftTableAlias, leftColumnName);
+                        Column rightColumn = new(tableSchema: null, rightTableAlias, rightColumnName);
                         return new Predicate(
                             new PredicateOperand(leftColumn),
                             PredicateOperation.Equal,
@@ -652,7 +651,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     string subqueryAlias = $"{subtableAlias}_subq";
                     JoinQueries.Add(subqueryAlias, subquery);
-                    Columns.Add(new LabelledColumn(subqueryAlias, DATA_IDENT, fieldName));
+                    Columns.Add(new LabelledColumn(tableSchema: null, subqueryAlias, DATA_IDENT, fieldName));
                 }
             }
         }
@@ -700,14 +699,14 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 foreach (string column in PrimaryKey())
                 {
-                    _primaryKey.Add(new Column(TableAlias, column));
+                    _primaryKey.Add(new Column(SchemaName, TableAlias, column));
                 }
             }
 
             List<OrderByColumn> orderByList = new();
             foreach (Column column in _primaryKey)
             {
-                orderByList.Add(new OrderByColumn(column.TableAlias, column.ColumnName));
+                orderByList.Add(new OrderByColumn(column.TableSchema, column.TableName, column.ColumnName));
             }
 
             return orderByList;
@@ -718,7 +717,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         protected void AddColumn(string columnName)
         {
-            Columns.Add(new LabelledColumn(TableAlias, columnName, label: columnName));
+            Columns.Add(new LabelledColumn(SchemaName, TableAlias, columnName, label: columnName));
         }
 
         /// <summary>
@@ -726,7 +725,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public bool IsSubqueryColumn(Column column)
         {
-            return column.TableAlias == null ? false : JoinQueries.ContainsKey(column.TableAlias);
+            return column.TableName == null ? false : JoinQueries.ContainsKey(column.TableName);
         }
 
         /// <summary>

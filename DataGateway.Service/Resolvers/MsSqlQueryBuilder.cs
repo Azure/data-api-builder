@@ -26,8 +26,8 @@ namespace Azure.DataGateway.Service.Resolvers
         public string Build(SqlQueryStructure structure)
         {
             string dataIdent = QuoteIdentifier(SqlQueryStructure.DATA_IDENT);
-            string fromSql = $"{QuoteIdentifier(structure.TableName)} AS {QuoteIdentifier(structure.TableAlias)}{Build(structure.Joins)}";
-            ;
+            string fromSql = $"{QuoteIdentifier(structure.SchemaName)}.{QuoteIdentifier(structure.TableName)} " +
+                             $"AS {QuoteIdentifier($"{structure.SchemaName}.{structure.TableAlias}")}{Build(structure.Joins)}";
 
             fromSql += string.Join(
                     "",
@@ -57,7 +57,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public string Build(SqlInsertStructure structure)
         {
 
-            return $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
+            return $"INSERT INTO {QuoteIdentifier(structure.SchemaName)}.{QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
                     $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
                     $"VALUES ({string.Join(", ", structure.Values)});";
         }
@@ -65,7 +65,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlUpdateStructure structure)
         {
-            return $"UPDATE {QuoteIdentifier(structure.TableName)} " +
+            return $"UPDATE {QuoteIdentifier(structure.SchemaName)}.{QuoteIdentifier(structure.TableName)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                     $"OUTPUT {MakeOutputColumns(structure.PrimaryKey(), OutputQualifier.Inserted)} " +
                     $"WHERE {Build(structure.Predicates)};";
@@ -74,7 +74,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlDeleteStructure structure)
         {
-            return $"DELETE FROM {QuoteIdentifier(structure.TableName)} " +
+            return $"DELETE FROM {QuoteIdentifier(structure.SchemaName)}.{QuoteIdentifier(structure.TableName)} " +
                     $"WHERE {Build(structure.Predicates)} ";
         }
 
@@ -88,20 +88,20 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             if (structure.IsFallbackToUpdate)
             {
-                return $"UPDATE {QuoteIdentifier(structure.TableName)} " +
+                return $"UPDATE {QuoteIdentifier(structure.SchemaName)}.{QuoteIdentifier(structure.TableName)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                     $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
                     $"WHERE {Build(structure.Predicates)};";
             }
             else
             {
-                return $"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;BEGIN TRANSACTION; UPDATE { QuoteIdentifier(structure.TableName)} " +
+                return $"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;BEGIN TRANSACTION; UPDATE {QuoteIdentifier(structure.SchemaName)}.{QuoteIdentifier(structure.TableName)} " +
                     $"WITH(UPDLOCK) SET {Build(structure.UpdateOperations, ", ")} " +
                     $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
                     $"WHERE {Build(structure.Predicates)} " +
                     $"IF @@ROWCOUNT = 0 " +
                     $"BEGIN; " +
-                    $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
+                    $"INSERT INTO {QuoteIdentifier(structure.SchemaName)}.{QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
                     $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
                     $"VALUES ({string.Join(", ", structure.Values)}) " +
                     $"END; COMMIT TRANSACTION";
@@ -147,7 +147,7 @@ namespace Azure.DataGateway.Service.Resolvers
             return string.Join(", ",
                 structure.Columns.Select(
                     c => structure.IsSubqueryColumn(c) ?
-                        WrapSubqueryColumn(c, structure.JoinQueries[c.TableAlias!]) + $" AS {QuoteIdentifier(c.Label)}" :
+                        WrapSubqueryColumn(c, structure.JoinQueries[c.TableName!]) + $" AS {QuoteIdentifier(c.Label)}" :
                         Build(c)
             ));
         }

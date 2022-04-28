@@ -4,6 +4,7 @@ using System.Text.Json;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
+using Microsoft.OData.Edm;
 
 namespace Azure.DataGateway.Service.Models
 {
@@ -18,10 +19,12 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
         public InsertRequestContext(
             string entityName,
+            string schemaName,
+            string tableName,
             JsonElement insertPayloadRoot,
             OperationAuthorizationRequirement httpVerb,
             Operation operationType)
-            : base(httpVerb, entityName)
+            : base(httpVerb, entityName, schemaName, tableName)
         {
             FieldsToBeReturned = new();
             PrimaryKeyValuePairs = new();

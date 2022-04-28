@@ -2176,7 +2176,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: "Could not find a property named 'Pinecone' on type 'default_namespace.books'.",
+                expectedErrorMessage: "Could not find a property named 'Pinecone' on type 'default_namespace.dbo.books'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

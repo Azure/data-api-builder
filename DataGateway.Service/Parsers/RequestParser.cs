@@ -100,11 +100,14 @@ namespace Azure.DataGateway.Service.Parsers
                         // save the AST that represents the filter for the query
                         // ?$filter=<filter clause using microsoft api guidelines>
                         string filterQueryString = $"?{FILTER_URL}={context.ParsedQueryString[key]}";
-                        context.FilterClauseInUrl = filterParser.GetFilterClause(filterQueryString, context.EntityName);
+                        context.FilterClauseInUrl = filterParser.GetFilterClause(filterQueryString, $"{context.SchemaName}.{context.TableName}");
                         break;
                     case SORT_URL:
                         string sortQueryString = $"?{SORT_URL}={context.ParsedQueryString[key]}";
-                        context.OrderByClauseInUrl = GenerateOrderByList(filterParser.GetOrderByClause(sortQueryString, context.EntityName), context.EntityName, primaryKeys);
+                        context.OrderByClauseInUrl = GenerateOrderByList(filterParser.GetOrderByClause(sortQueryString, $"{context.SchemaName}.{context.TableName}"),
+                                                                         context.SchemaName,
+                                                                         context.TableName,
+                                                                         primaryKeys);
                         break;
                     case AFTER_URL:
                         context.After = context.ParsedQueryString[key];
@@ -126,7 +129,7 @@ namespace Azure.DataGateway.Service.Parsers
         /// <param name="tableAlias">The name of the Table the columns are from.</param>
         /// <paramref name="primaryKeys">A list of the primaryKeys of the given table.</paramref>/>
         /// <returns>A List<OrderByColumns></returns>
-        private static List<OrderByColumn>? GenerateOrderByList(OrderByClause node, string tableAlias, List<string> primaryKeys)
+        private static List<OrderByColumn>? GenerateOrderByList(OrderByClause node, string schemaName, string tableName, List<string> primaryKeys)
         {
             // Create set of primary key columns
             // we always have the primary keys in
@@ -160,7 +163,7 @@ namespace Azure.DataGateway.Service.Parsers
                 // We convert to an Enum of our own that matches the SQL text we want
                 Models.OrderByDir direction = GetDirection(node.Direction);
                 // Add OrderByColumn and remove any matching columns from our primary key set
-                orderByList.Add(new OrderByColumn(tableAlias, columnName, direction));
+                orderByList.Add(new OrderByColumn(schemaName, tableName, columnName, direction));
                 remainingKeys.Remove(columnName);
                 node = node.ThenBy;
             }
@@ -168,7 +171,7 @@ namespace Azure.DataGateway.Service.Parsers
             // Remaining primary key columns are added here
             foreach (string column in remainingKeys)
             {
-                orderByList.Add(new OrderByColumn(tableAlias, column));
+                orderByList.Add(new OrderByColumn(schemaName, tableName, column));
             }
 
             return orderByList;

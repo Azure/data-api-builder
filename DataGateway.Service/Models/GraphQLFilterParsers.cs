@@ -60,7 +60,7 @@ namespace Azure.DataGateway.Service.Models
             TableDefinition table,
             Func<object, string> processLiterals)
         {
-            Column column = new(tableAlias, name);
+            Column column = new(tableSchema: null, tableAlias, name);
             Type columnType = table.Columns[name].SystemType;
             switch (columnType.ToString())
             {

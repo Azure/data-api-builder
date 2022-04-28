@@ -208,7 +208,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// on the table and returns result as JSON object asynchronously.
         /// </summary>
         private async Task<DbDataReader> PerformMutationOperation(
-            string tableName,
+            string entityName,
             Operation operationType,
             IDictionary<string, object?> parameters)
         {
@@ -219,7 +219,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 case Operation.Insert:
                     SqlInsertStructure insertQueryStruct =
-                        new(tableName,
+                        new(entityName,
                         _metadataStoreProvider,
                         _sqlMetadataProvider,
                         parameters);
@@ -228,7 +228,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     break;
                 case Operation.Update:
                     SqlUpdateStructure updateStructure =
-                        new(tableName,
+                        new(entityName,
                         _metadataStoreProvider,
                         _sqlMetadataProvider,
                         parameters,
@@ -238,7 +238,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     break;
                 case Operation.UpdateIncremental:
                     SqlUpdateStructure updateIncrementalStructure =
-                        new(tableName,
+                        new(entityName,
                         _metadataStoreProvider,
                         _sqlMetadataProvider,
                         parameters,
@@ -248,7 +248,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     break;
                 case Operation.Delete:
                     SqlDeleteStructure deleteStructure =
-                        new(tableName,
+                        new(entityName,
                         _metadataStoreProvider,
                         _sqlMetadataProvider,
                         parameters);
@@ -257,7 +257,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     break;
                 case Operation.Upsert:
                     SqlUpsertQueryStructure upsertStructure =
-                        new(tableName,
+                        new(entityName,
                         _metadataStoreProvider,
                         _sqlMetadataProvider,
                         parameters,
@@ -267,7 +267,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     break;
                 case Operation.UpsertIncremental:
                     SqlUpsertQueryStructure upsertIncrementalStructure =
-                        new(tableName,
+                        new(entityName,
                         _metadataStoreProvider,
                         _sqlMetadataProvider,
                         parameters,

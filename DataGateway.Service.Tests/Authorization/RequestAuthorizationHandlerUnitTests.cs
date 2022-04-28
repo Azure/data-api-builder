@@ -20,6 +20,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
     {
         private Mock<ISqlMetadataProvider> _metadataStore;
         private const string TEST_ENTITY = "TEST_ENTITY";
+        private const string TEST_SCHEMA_NAME = "dbo";
+        private const string TEST_TABLE_NAME = "TEST_TABLE";
 
         #region Positive Tests
         /// <summary>
@@ -34,7 +36,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             SetupTable(HttpMethod.Get.ToString(), authZType: AuthorizationType.Anonymous);
 
-            bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, user);
+            bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, TEST_SCHEMA_NAME, TEST_TABLE_NAME, user);
 
             //Evaluate Result
             Assert.IsTrue(result);
@@ -53,7 +55,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             SetupTable(HttpMethod.Get.ToString(), authZType: AuthorizationType.Anonymous);
 
-            bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, user);
+            bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, TEST_SCHEMA_NAME, TEST_TABLE_NAME, user);
 
             Assert.IsTrue(result);
         }
@@ -71,7 +73,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             SetupTable(HttpMethod.Get.ToString(), authZType: AuthorizationType.Authenticated);
 
-            bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, user);
+            bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, TEST_SCHEMA_NAME, TEST_TABLE_NAME, user);
 
             Assert.IsFalse(result);
         }
@@ -86,7 +88,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             // Create table with no HttpVerbs (permissions) config
             SetupTable(HttpMethod.Get.ToString(), setupHttpVerbs: false);
 
-            bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, user);
+            bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, TEST_SCHEMA_NAME, TEST_TABLE_NAME, user);
 
             Assert.IsFalse(result);
         }
@@ -102,7 +104,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             // Request is GET by default, so POST will not match.
             SetupTable(HttpMethod.Post.ToString());
 
-            bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, user);
+            bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, TEST_SCHEMA_NAME, TEST_TABLE_NAME, user);
 
             Assert.IsFalse(result);
         }
@@ -119,7 +121,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             // NoAccess.
             SetupTable(HttpMethod.Get.ToString(), defaultAuthZRule: true);
 
-            bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, user);
+            bool result = await IsAuthorizationSuccessful(entityName: TEST_ENTITY, TEST_SCHEMA_NAME, TEST_TABLE_NAME, user);
 
             Assert.IsFalse(result);
         }
@@ -131,9 +133,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// <param name="entityName">Table/Entity that is being queried.</param>
         /// <param name="user">ClaimsPrincipal / user that has authentication status defined.</param>
         /// <returns></returns>
-        private async Task<bool> IsAuthorizationSuccessful(string entityName, ClaimsPrincipal user)
+        private async Task<bool> IsAuthorizationSuccessful(string entityName, string schemaName, string tableName, ClaimsPrincipal user)
         {
-            FindRequestContext request = new(entityName, isList: false);
+            FindRequestContext request = new(entityName, schemaName, tableName, isList: false);
             AuthorizationHandlerContext context = new(new List<IAuthorizationRequirement> { HttpRestVerbs.GET }, user, request);
             RequestAuthorizationHandler handler =
                 new(_metadataStore.Object,

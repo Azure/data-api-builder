@@ -105,15 +105,19 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// Build column as
-        /// {TableAlias}.{ColumnName}
-        /// If TableAlias is null
-        /// {ColumnName}
+        /// [{schema}.{table}].[{ColumnName}]
+        /// or if schema empty
+        /// [{table}].[{ColumnName}]
+        /// or if TableName is null as
+        /// [{ColumnName}]
         /// </summary>
         protected virtual string Build(Column column)
         {
-            if (column.TableAlias != null)
+            if (column.TableName != null)
             {
-                return QuoteIdentifier(column.TableAlias) + "." + QuoteIdentifier(column.ColumnName);
+                // MySql has empty schema so we check if schema is null or empty and then do not append in this case
+                return !string.IsNullOrEmpty(column.TableSchema) ? QuoteIdentifier($"{column.TableSchema}.{column.TableName}") + "." + QuoteIdentifier(column.ColumnName) :
+                    QuoteIdentifier($"{column.TableName}") + "." + QuoteIdentifier(column.ColumnName);
             }
             else
             {

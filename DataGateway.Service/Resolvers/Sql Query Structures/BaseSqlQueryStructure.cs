@@ -23,6 +23,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public string TableName { get; protected set; }
         /// <summary>
+        /// The schema name of the main table to be queried.
+        /// </summary>
+        public string SchemaName { get; protected set; }
+
+        /// <summary>
         /// The alias of the main table to be queried.
         /// </summary>
         public string TableAlias { get; protected set; }
@@ -37,15 +42,16 @@ namespace Azure.DataGateway.Service.Resolvers
         public BaseSqlQueryStructure(
             IGraphQLMetadataProvider metadataStoreProvider,
             ISqlMetadataProvider sqlMetadataProvider,
-            IncrementingInteger? counter = null,
-            string tableName = "")
+            string entityName,
+            IncrementingInteger? counter = null)
             : base(counter)
         {
             MetadataStoreProvider = metadataStoreProvider;
             SqlMetadataProvider = sqlMetadataProvider;
-            TableName = tableName;
-            // Default the alias to the table name
-            TableAlias = tableName;
+            TableName = sqlMetadataProvider.EntityToDatabaseObject[entityName].Name;
+            SchemaName = sqlMetadataProvider.EntityToDatabaseObject[entityName].SchemaName;
+            // Default the alias to the full name
+            TableAlias = TableName;
         }
 
         /// <summary>
@@ -72,7 +78,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 else
                 {
                     Predicate predicate = new(
-                        new PredicateOperand(new Column(null, leftoverColumn)),
+                        new PredicateOperand(new Column(null, null, leftoverColumn)),
                         PredicateOperation.Equal,
                         new PredicateOperand($"@{MakeParamWithValue(null)}")
                     );

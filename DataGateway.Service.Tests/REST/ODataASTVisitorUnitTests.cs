@@ -21,6 +21,8 @@ namespace Azure.DataGateway.Service.Tests.REST
     public class ODataASTVisitorUnitTests : SqlTestBase
     {
         private const string DEFAULT_ENTITY = "books";
+        private const string DEFAULT_SCHEMA_NAME = "dbo";
+        private const string DEFAULT_TABLE_NAME = "books";
 
         [ClassInitialize]
         public static async Task InitializeTestFixture(TestContext context)
@@ -38,6 +40,8 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             PerformVisitorTest(
                 entityName: DEFAULT_ENTITY,
+                schemaName: DEFAULT_SCHEMA_NAME,
+                tableName: DEFAULT_TABLE_NAME,
                 filterString: "?$filter=id eq null",
                 expected: "(id IS NULL)"
                 );
@@ -52,6 +56,8 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             PerformVisitorTest(
                 entityName: DEFAULT_ENTITY,
+                schemaName: DEFAULT_SCHEMA_NAME,
+                tableName: DEFAULT_TABLE_NAME,
                 filterString: "?$filter=id ne null",
                 expected: "(id IS NOT NULL)"
                 );
@@ -66,6 +72,8 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             PerformVisitorTest(
                 entityName: DEFAULT_ENTITY,
+                schemaName: DEFAULT_SCHEMA_NAME,
+                tableName: DEFAULT_TABLE_NAME,
                 filterString: "?$filter=null eq id",
                 expected: "(id IS NULL)"
                 );
@@ -80,6 +88,8 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             PerformVisitorTest(
                 entityName: DEFAULT_ENTITY,
+                schemaName: DEFAULT_SCHEMA_NAME,
+                tableName: DEFAULT_TABLE_NAME,
                 filterString: "?$filter=id gt null",
                 expected: "(id > NULL)"
                 );
@@ -97,7 +107,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
 
             ConstantNode nodeIn = CreateConstantNode(constantValue: string.Empty, literalText: "text", EdmPrimitiveTypeKind.Geography);
-            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY);
+            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY, DEFAULT_SCHEMA_NAME, DEFAULT_TABLE_NAME);
             Assert.ThrowsException<NotSupportedException>(() => visitor.Visit(nodeIn));
         }
 
@@ -112,7 +122,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         public void InvalidValueTypeTest()
         {
             ConstantNode nodeIn = CreateConstantNode(constantValue: string.Empty, literalText: "text", EdmPrimitiveTypeKind.Int64);
-            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY);
+            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY, DEFAULT_SCHEMA_NAME, DEFAULT_TABLE_NAME);
             Assert.ThrowsException<ArgumentException>(() => visitor.Visit(nodeIn));
         }
 
@@ -125,7 +135,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             ConstantNode constantNode = CreateConstantNode(constantValue: "null", literalText: "null", EdmPrimitiveTypeKind.None, isNull: true);
             BinaryOperatorNode binaryNode = CreateBinaryNode(constantNode, constantNode, BinaryOperatorKind.And);
-            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY);
+            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY, DEFAULT_SCHEMA_NAME, DEFAULT_TABLE_NAME);
             Assert.ThrowsException<NotSupportedException>(() => visitor.Visit(binaryNode));
         }
 
@@ -138,7 +148,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             ConstantNode constantNode = CreateConstantNode(constantValue: "null", literalText: "null", EdmPrimitiveTypeKind.None, isNull: true);
             UnaryOperatorNode binaryNode = CreateUnaryNode(constantNode, UnaryOperatorKind.Negate);
-            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY);
+            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY, DEFAULT_SCHEMA_NAME, DEFAULT_TABLE_NAME);
             Assert.ThrowsException<ArgumentException>(() => visitor.Visit(binaryNode));
         }
 
@@ -151,6 +161,8 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             Assert.ThrowsException<DataGatewayException>(() => PerformVisitorTest(
                 entityName: DEFAULT_ENTITY,
+                schemaName: DEFAULT_SCHEMA_NAME,
+                tableName: DEFAULT_TABLE_NAME,
                 filterString: "?$filter=id eq (publisher_id gt 1)",
                 expected: string.Empty
                 ));
@@ -166,6 +178,8 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             Assert.ThrowsException<ArgumentException>(() => PerformVisitorTest(
                 entityName: DEFAULT_ENTITY,
+                schemaName: DEFAULT_SCHEMA_NAME,
+                tableName: DEFAULT_TABLE_NAME,
                 filterString: "?$filter=id eq (publisher_id add 1)",
                 expected: string.Empty
                 ));
@@ -181,6 +195,8 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             Assert.ThrowsException<DataGatewayException>(() => PerformVisitorTest(
                 entityName: DEFAULT_ENTITY,
+                schemaName: DEFAULT_SCHEMA_NAME,
+                tableName: DEFAULT_TABLE_NAME,
                 filterString: "?$filter=null add 1",
                 expected: string.Empty
                 ));
@@ -199,12 +215,14 @@ namespace Azure.DataGateway.Service.Tests.REST
         /// <param name="expected">The expected filter after parsing.</param>
         private static void PerformVisitorTest(
             string entityName,
+            string schemaName,
+            string tableName,
             string filterString,
             string expected)
         {
             FilterClause ast = _sqlMetadataProvider.ODataFilterParser.
                 GetFilterClause(filterString, entityName);
-            ODataASTVisitor visitor = CreateVisitor(entityName);
+            ODataASTVisitor visitor = CreateVisitor(entityName, schemaName, tableName);
             string actual = ast.Expression.Accept(visitor);
             Assert.AreEqual(expected, actual);
         }
@@ -217,9 +235,11 @@ namespace Azure.DataGateway.Service.Tests.REST
         /// <returns></returns>
         private static ODataASTVisitor CreateVisitor(
             string entityName,
+            string schemaName,
+            string tableName,
             bool isList = false)
         {
-            FindRequestContext context = new(entityName, isList);
+            FindRequestContext context = new(entityName, schemaName, tableName, isList);
             Mock<SqlQueryStructure> structure = new(context, _metadataStoreProvider, _sqlMetadataProvider);
             return new ODataASTVisitor(structure.Object);
         }

@@ -164,28 +164,27 @@ namespace Azure.DataGateway.Service.Services
                     TableDefinition = new()
                 };
 
-                    EntityToDatabaseObject.Add(entityName, databaseObject);
+                EntityToDatabaseObject.Add(entityName, databaseObject);
 
-                    if (entity.Relationships != null)
+                if (entity.Relationships != null)
+                {
+                    // Add all the linking objects as well - so that we can infer
+                    // their metadata too.
+                    foreach (Relationship relationship in entity.Relationships.Values)
                     {
-                        // Add all the linking objects as well - so that we can infer
-                        // their metadata too.
-                        foreach (Relationship relationship in entity.Relationships.Values)
+                        if (relationship.LinkingObject != null
+                            && !EntityToDatabaseObject.ContainsKey(relationship.LinkingObject))
                         {
-                            if (relationship.LinkingObject != null
-                                && !EntityToDatabaseObject.ContainsKey(relationship.LinkingObject))
+                            DatabaseObject linkingDatabaseObject = new()
                             {
-                                DatabaseObject linkingDatabaseObject = new()
-                                {
-                                    SchemaName = GetDefaultSchemaName(),
-                                    Name = relationship.LinkingObject,
-                                    TableDefinition = new()
-                                };
+                                SchemaName = GetDefaultSchemaName(),
+                                Name = relationship.LinkingObject,
+                                TableDefinition = new()
+                            };
 
-                                EntityToDatabaseObject.Add(
-                                    relationship.LinkingObject,
-                                    linkingDatabaseObject);
-                            }
+                            EntityToDatabaseObject.Add(
+                                relationship.LinkingObject,
+                                linkingDatabaseObject);
                         }
                     }
                 }
@@ -511,3 +510,4 @@ namespace Azure.DataGateway.Service.Services
         }
     }
 }
+ 

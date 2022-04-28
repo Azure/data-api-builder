@@ -41,7 +41,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             };
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
 
-            FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
+            FindRequestContext findRequestContext = new(entityName: "entity", schemaName: "dbo", tableName: "entity", isList: false);
             string primaryKeyRoute = "id/1";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
@@ -61,7 +61,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 PrimaryKey = new(primaryKeys)
             };
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
+            FindRequestContext findRequestContext = new(entityName: "entity", schemaName: "dbo", tableName: "entity", isList: false);
             string primaryKeyRoute = "id/2/isbn/12345";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
@@ -82,7 +82,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 PrimaryKey = new(primaryKeys)
             };
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
+            FindRequestContext findRequestContext = new(entityName: "entity", schemaName: "dbo", tableName: "entity", isList: false);
             string primaryKeyRoute = "isbn/12345/id/2";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
@@ -105,7 +105,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 PrimaryKey = new(primaryKeys)
             };
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
+            FindRequestContext findRequestContext = new(entityName: "entity", schemaName: "dbo", tableName: "entity", isList: false);
             string primaryKeyRoute = "name/Catch22";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
@@ -152,7 +152,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 PrimaryKey = new(primaryKeys)
             };
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
+            FindRequestContext findRequestContext = new(entityName: "entity", schemaName: "dbo", tableName: "entity", isList: false);
             string primaryKeyRoute = "name/1";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
@@ -172,7 +172,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 PrimaryKey = new(primaryKeys)
             };
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
+            FindRequestContext findRequestContext = new(entityName: "entity", schemaName: "dbo", tableName: "entity", isList: false);
             string primaryKeyRoute = "id/12345/name/2";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
@@ -192,7 +192,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 PrimaryKey = new(primaryKeys)
             };
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
+            FindRequestContext findRequestContext = new(entityName: "entity", schemaName: "dbo", tableName: "entity", isList: false);
             string primaryKeyRoute = "id/12345/isbn/2/name/TwoTowers";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
@@ -206,8 +206,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         [TestMethod]
         public void PrimaryKeyWithNoValueTest()
         {
-            FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
-
+            FindRequestContext findRequestContext = new(entityName: "entity", schemaName: "dbo", tableName: "entity", isList: false);
             string primaryKeyRoute = "id/";
             PerformRequestParserPrimaryKeyTest(findRequestContext, primaryKeyRoute, expectsException: true);
 
@@ -269,7 +268,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         /// </summary>
         private static void PerformDuplicatePrimaryKeysTest(string[] primaryKeys)
         {
-            FindRequestContext findRequestContext = new(entityName: "entity", isList: false);
+            FindRequestContext findRequestContext = new(entityName: "entity", schemaName: "dbo", tableName: "entity", isList: false);
             StringBuilder primaryKeyRoute = new();
 
             foreach (string key in primaryKeys)

@@ -12,8 +12,8 @@ namespace Azure.DataGateway.Service.Models
         /// Constructor.
         /// </summary>
 
-        public FindRequestContext(string entityName, bool isList)
-            : base(HttpRestVerbs.GET, entityName)
+        public FindRequestContext(string entityName, string schemaName, string tableName, bool isList)
+            : base(HttpRestVerbs.GET, entityName, schemaName, tableName)
         {
             FieldsToBeReturned = new();
             PrimaryKeyValuePairs = new();

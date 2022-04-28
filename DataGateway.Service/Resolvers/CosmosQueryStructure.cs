@@ -46,12 +46,12 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 if (fieldNode != null)
                 {
-                    Columns.AddRange(fieldNode.SelectionSet!.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.ToString())));
+                    Columns.AddRange(fieldNode.SelectionSet!.Selections.Select(x => new LabelledColumn(tableSchema: null, _containerAlias, "", x.ToString())));
                 }
             }
             else
             {
-                Columns.AddRange(selection.SyntaxNode.SelectionSet!.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.ToString())));
+                Columns.AddRange(selection.SyntaxNode.SelectionSet!.Selections.Select(x => new LabelledColumn(tableSchema: null, _containerAlias, "", x.ToString())));
             }
 
             Container = graphqlType.ContainerName;
@@ -74,7 +74,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
 
                 Predicates.Add(new Predicate(
-                    new PredicateOperand(new Column(_containerAlias, parameter.Key)),
+                    new PredicateOperand(new Column(tableSchema: null, _containerAlias, parameter.Key)),
                     PredicateOperation.Equal,
                     new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
                 ));

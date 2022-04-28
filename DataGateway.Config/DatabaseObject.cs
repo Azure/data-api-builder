@@ -15,7 +15,7 @@ namespace Azure.DataGateway.Config
         {
             get
             {
-                return $"{SchemaName}.${Name}";
+                return $"{SchemaName}.{Name}";
             }
         }
     }

@@ -41,11 +41,14 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                 fields.Add(columnName, field);
             }
 
-            if (configEntity.Relationships != null)
+            if (configEntity.Relationships is not null)
             {
                 foreach ((string _, ForeignKeyDefinition fk) in tableDefinition.ForeignKeys)
                 {
-                    if (!configEntity.Relationships.ContainsKey(fk.ReferencedTable))
+                    Relationship? relationship = configEntity.Relationships.Values
+                        .FirstOrDefault(r => r.TargetEntity.Contains(fk.ReferencedTable, StringComparison.OrdinalIgnoreCase));
+
+                    if (relationship is null)
                     {
                         // While the table has a fk, it's not defined as a relationship for the runtime
                         // meaning we'll assume the developer doesn't want it exposed, so we'll skip it.
@@ -54,8 +57,6 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 
                         continue;
                     }
-
-                    Relationship relationship = configEntity.Relationships[fk.ReferencedTable];
 
                     // Generate the field that represents the relationship to ObjectType, so you can navigate through it
                     // and walk the graph

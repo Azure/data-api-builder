@@ -51,9 +51,10 @@ type Planet @model {
 }";
             DataGatewayConfig dataGatewayConfig = new() { DatabaseType = Config.DatabaseType.cosmos };
 
-            RuntimeConfigProvider configProvider = new(Options.Create(dataGatewayConfig));
+            IRuntimeConfigProvider configProvider = new TestRuntimeConfigProvider();
 
             _metadataStoreProvider.GraphQLSchema = jsonString;
+
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
             _graphQLService = new GraphQLService(

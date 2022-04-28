@@ -91,7 +91,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task InsertMutationForConstantdefaultValue()
         {
-            string graphQLMutationName = "insertReview"
+            string graphQLMutationName = "insertReview";
             string graphQLMutation = @"
                 mutation {
                     insertReview(book_id: 1) {

@@ -64,6 +64,16 @@ namespace Azure.DataGateway.Service.Services
             _runtimeConfigProvider = runtimeConfigProvider;
         }
 
+        public FilterParser GetOdataFilterParser()
+        {
+            return _oDataFilterParser;
+        }
+
+        public DatabaseType GetDatabaseType()
+        {
+            return _databaseType;
+        }
+
         /// <summary>
         /// Obtains the underlying source object's schema name.
         /// </summary>

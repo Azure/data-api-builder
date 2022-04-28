@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.AuthenticationHelpers;
@@ -252,10 +253,21 @@ namespace Azure.DataGateway.Service
             {
                 IOptionsMonitor<DataGatewayConfig>? dataGatewayConfig = context.RequestServices.GetService<IOptionsMonitor<DataGatewayConfig>>();
 
-                bool isConfigPath = context.Request.Path.StartsWithSegments("/configuration");
-                if (isRuntimeReady || isConfigPath)
+                bool isSettingConfig = context.Request.Path.StartsWithSegments("/configuration") && context.Request.Method == HttpMethod.Post.Method;
+                if (isRuntimeReady)
                 {
                     await next.Invoke();
+                }
+                else if (isSettingConfig)
+                {
+                    if (isRuntimeReady)
+                    {
+                        context.Response.StatusCode = StatusCodes.Status409Conflict;
+                    }
+                    else
+                    {
+                        await next.Invoke();
+                    }
                 }
                 else
                 {

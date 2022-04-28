@@ -12,9 +12,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Directives
                                .Description("A directive to indicate the relationship between two tables")
                                .Location(DirectiveLocation.FieldDefinition);
 
-            descriptor.Argument("databaseType")
+            descriptor.Argument("target")
                   .Type<StringType>()
-                  .Description("The underlying database type");
+                  .Description("The name of the entity the relationship targets");
 
             descriptor.Argument("cardinality")
                   .Type<StringType>()

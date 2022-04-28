@@ -1,4 +1,5 @@
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLNaming;
@@ -25,7 +26,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 if (definition is ObjectTypeDefinitionNode objectTypeDefinitionNode && IsModelType(objectTypeDefinitionNode))
                 {
                     NameNode name = objectTypeDefinitionNode.Name;
-                    Entity entity = entities[name.Value];
+                    string dbEntityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
+                    Entity entity = entities[dbEntityName];
 
                     ObjectTypeDefinitionNode returnType = GenerateReturnType(name);
                     returnTypes.Add(returnType);
@@ -107,6 +109,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 );
             }
 
+            // Query field for the parent object type
+            // Generates a file like:
+            //    books(first: Int, after: String, _filter: BooksFilterInput, _filterOData: String): BooksConnection!
             return new(
                 location: null,
                 Pluralize(name, entity),
@@ -136,36 +141,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                     }
                     else
                     {
-                        IDefinitionNode fieldTypeNode = root.Definitions.First(d => d is HotChocolate.Language.IHasName named && named.Name.Value == fieldTypeName);
-
-                        InputObjectTypeDefinitionNode inputObjectType =
-                            fieldTypeNode switch
-                            {
-                                ObjectTypeDefinitionNode node when !inputTypes.ContainsKey(GenerateObjectInputFilterName(node)) => new(
-                                    location: null,
-                                    new NameNode(GenerateObjectInputFilterName(node)),
-                                    new StringValueNode($"Filter input for {node.Name} GraphQL type"),
-                                    new List<DirectiveNode>(),
-                                    GenerateInputFieldsForType(node, inputTypes, root)),
-
-                                ObjectTypeDefinitionNode node =>
-                                    inputTypes[GenerateObjectInputFilterName(node)],
-
-                                EnumTypeDefinitionNode node when !inputTypes.ContainsKey(GenerateObjectInputFilterName(node)) => new(
-                                    location: null,
-                                    new NameNode(GenerateObjectInputFilterName(node)),
-                                    new StringValueNode($"Filter input for {node.Name} GraphQL type"),
-                                    new List<DirectiveNode>(),
-                                    new List<InputValueDefinitionNode> {
-                                        new InputValueDefinitionNode(location : null, new NameNode("eq"), new StringValueNode("Equals"), new FloatType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
-                                        new InputValueDefinitionNode(location : null, new NameNode("neq"), new StringValueNode("Not Equals"), new FloatType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>())
-                                    }),
-
-                                EnumTypeDefinitionNode node =>
-                                    inputTypes[GenerateObjectInputFilterName(node)],
-
-                                _ => throw new InvalidOperationException($"Unable to work with type {fieldTypeName}")
-                            };
+                        InputObjectTypeDefinitionNode inputObjectType = GenerateComplexInputObject(inputTypes, root, fieldTypeName);
 
                         inputTypes.Add(fieldTypeName, inputObjectType);
                     }
@@ -177,6 +153,45 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             }
 
             return inputFields;
+        }
+
+        private static InputObjectTypeDefinitionNode GenerateComplexInputObject(Dictionary<string, InputObjectTypeDefinitionNode> inputTypes, DocumentNode root, string fieldTypeName)
+        {
+            IDefinitionNode fieldTypeNode = root.Definitions.First(d => d is HotChocolate.Language.IHasName named && named.Name.Value == fieldTypeName);
+
+            return
+                fieldTypeNode switch
+                {
+                    ObjectTypeDefinitionNode node when !inputTypes.ContainsKey(GenerateObjectInputFilterName(node)) => new(
+                        location: null,
+                        new NameNode(GenerateObjectInputFilterName(node)),
+                        new StringValueNode($"Filter input for {node.Name} GraphQL type"),
+                        new List<DirectiveNode>(),
+                        GenerateInputFieldsForType(node, inputTypes, root)),
+
+                    ObjectTypeDefinitionNode node =>
+                        inputTypes[GenerateObjectInputFilterName(node)],
+
+                    EnumTypeDefinitionNode node when !inputTypes.ContainsKey(GenerateObjectInputFilterName(node)) => new(
+                        location: null,
+                        new NameNode(GenerateObjectInputFilterName(node)),
+                        new StringValueNode($"Filter input for {node.Name} GraphQL type"),
+                        new List<DirectiveNode>(),
+                        new List<InputValueDefinitionNode> {
+                            new InputValueDefinitionNode(location : null, new NameNode("eq"), new StringValueNode("Equals"), new FloatType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
+                            new InputValueDefinitionNode(location : null, new NameNode("neq"), new StringValueNode("Not Equals"), new FloatType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>())
+                        }),
+
+                    EnumTypeDefinitionNode node =>
+                        inputTypes[GenerateObjectInputFilterName(node)],
+
+                    _ => throw new InvalidOperationException($"Unable to work with type {fieldTypeName}")
+                };
+        }
+
+        private static string GenerateObjectInputFilterName(INamedSyntaxNode objectDefNode)
+        {
+            return $"{objectDefNode.Name}FilterInput";
         }
 
         public static ObjectType PaginationTypeToModelType(ObjectType underlyingFieldType, IReadOnlyCollection<INamedType> types)
@@ -191,11 +206,6 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         public static bool IsPaginationType(ObjectType objectType)
         {
             return objectType.Name.Value.EndsWith(PAGINATION_OBJECT_TYPE_SUFFIX);
-        }
-
-        private static string GenerateObjectInputFilterName(INamedSyntaxNode objectDefNode)
-        {
-            return $"{objectDefNode.Name}FilterInput";
         }
 
         private static ObjectTypeDefinitionNode GenerateReturnType(NameNode name)

@@ -43,21 +43,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 
             if (configEntity.Relationships is not null)
             {
-                foreach ((string _, ForeignKeyDefinition fk) in tableDefinition.ForeignKeys)
+                foreach ((string _, Relationship relationship) in configEntity.Relationships)
                 {
-                    Relationship? relationship = configEntity.Relationships.Values
-                        .FirstOrDefault(r => r.TargetEntity.Contains(fk.ReferencedTable, StringComparison.OrdinalIgnoreCase));
-
-                    if (relationship is null)
-                    {
-                        // While the table has a fk, it's not defined as a relationship for the runtime
-                        // meaning we'll assume the developer doesn't want it exposed, so we'll skip it.
-
-                        // TODO: Log out a message so someone can see why it wasn't generated
-
-                        continue;
-                    }
-
                     // Generate the field that represents the relationship to ObjectType, so you can navigate through it
                     // and walk the graph
 
@@ -65,39 +52,28 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                     //       on the relationship, but until we have the work done to generate the right Input
                     //       types for the queries, it's not worth trying to do it completely.
 
-                    Entity referencedEntity = entities[fk.ReferencedTable];
+                    string targetTableName = relationship.TargetEntity.Split('.').Last();
+                    Entity referencedEntity = entities[targetTableName];
 
                     INullableTypeNode targetField = relationship.Cardinality switch
                     {
-                        Cardinality.One => new NamedTypeNode(FormatNameForObject(fk.ReferencedTable, referencedEntity)),
-                        Cardinality.Many => new ListTypeNode(new NamedTypeNode(FormatNameForObject(fk.ReferencedTable, referencedEntity))),
+                        Cardinality.One => new NamedTypeNode(FormatNameForObject(targetTableName, referencedEntity)),
+                        Cardinality.Many => new ListTypeNode(new NamedTypeNode(FormatNameForObject(targetTableName, referencedEntity))),
                         _ => throw new NotImplementedException("Specified cardinality isn't supported"),
                     };
 
                     FieldDefinitionNode relationshipField = new(
                         location: null,
-                        Pluralize(fk.ReferencedTable, referencedEntity),
+                        Pluralize(targetTableName, referencedEntity),
                         description: null,
                         new List<InputValueDefinitionNode>(),
                         // TODO: Check for whether it should be a nullable relationship based on the relationship fields
                         new NonNullTypeNode(targetField),
-                        new List<DirectiveNode>());
+                        new List<DirectiveNode> {
+                                new(RelationshipDirectiveType.DirectiveName, new ArgumentNode("target", FormatNameForObject(targetTableName, referencedEntity)), new ArgumentNode("cardinality", relationship.Cardinality.ToString()))
+                        });
 
                     fields.Add(relationshipField.Name.Value, relationshipField);
-
-                    foreach (string columnName in fk.ReferencingColumns)
-                    {
-                        ColumnDefinition column = tableDefinition.Columns[columnName];
-                        FieldDefinitionNode field = fields[columnName];
-
-                        fields[columnName] = field.WithDirectives(
-                            new List<DirectiveNode>(field.Directives) {
-                            new(
-                                RelationshipDirectiveType.DirectiveName,
-                                new ArgumentNode("databaseType", column.SystemType.Name),
-                                new ArgumentNode("cardinality", relationship.Cardinality.ToString()))
-                            });
-                    }
                 }
             }
 

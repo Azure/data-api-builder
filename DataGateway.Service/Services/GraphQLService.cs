@@ -171,7 +171,7 @@ namespace Azure.DataGateway.Service.Services
             {
                 if (entity.GraphQL is not null)
                 {
-                    if (entity.GraphQL is bool g && g == false)
+                    if (entity.GraphQL is bool graphql && graphql == false)
                     {
                         continue;
                     }

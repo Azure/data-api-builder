@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
 using Humanizer;
 
@@ -82,6 +83,13 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             }
 
             return new NameNode(FormatNameForField(name).Pluralize());
+        }
+
+        public static string ObjectTypeToEntityName(ObjectTypeDefinitionNode node)
+        {
+            DirectiveNode modelDirective = node.Directives.First(d => d.Name.Value == ModelDirectiveType.DirectiveName);
+
+            return modelDirective.Arguments.Count == 1 ? (string)(modelDirective.Arguments[0].Value.Value ?? node.Name.Value) : node.Name.Value;
         }
     }
 }

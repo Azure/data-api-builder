@@ -88,6 +88,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     dbDataReader,
                     onlyExtract: tableDefinition.PrimaryKey);
 
+                Console.WriteLine(searchParams.ToString());
+
                 if (searchParams == null)
                 {
                     string searchedPK = '<' + string.Join(", ", tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
@@ -194,8 +196,6 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     break;
             }
-
-            Console.WriteLine(jsonResultString);
 
             if (jsonResultString == null)
             {

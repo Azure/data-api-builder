@@ -91,7 +91,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task InsertMutationForConstantdefaultValue()
         {
-            string graphQLMutationName = "insertReview";
+            string graphQLMutationName = "insertReview"
             string graphQLMutation = @"
                 mutation {
                     insertReview(book_id: 1) {
@@ -108,7 +108,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         `table0`.`content` AS `content`
                     FROM `reviews` AS `table0`
                     WHERE `id` = 5001
-                        AND `content` = 'Its a classic'
+                        AND `title` = 'Its a classic'
                         AND `book_id` = 1
                     ORDER BY `id` LIMIT 1
                     ) AS `subq`

@@ -105,7 +105,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 SELECT to_jsonb(subq) AS DATA
                 FROM
                   (SELECT table0.id AS id,
-                          table0.title AS content
+                          table0.content AS content
                    FROM reviews AS table0
                    WHERE id = 5001
                      AND content = 'Its a classic'

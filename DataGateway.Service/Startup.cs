@@ -60,44 +60,9 @@ namespace Azure.DataGateway.Service
                 }
             }
 
-            services.AddSingleton<ISqlMetadataProvider>(implementationFactory: (serviceProvider) =>
-            {
-                IOptionsMonitor<DataGatewayConfig> dataGatewayConfig =
-                    ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
-                switch (dataGatewayConfig.CurrentValue.DatabaseType)
-                {
-                    case DatabaseType.cosmos:
-                        return null!;
-                    case DatabaseType.mssql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlMetadataProvider>(serviceProvider);
-                    case DatabaseType.postgresql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlMetadataProvider>(serviceProvider);
-                    case DatabaseType.mysql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<MySqlMetadataProvider>(serviceProvider);
-                    default:
-                        throw new NotSupportedException(string.Format("The provided DatabaseType value: {0} is currently not supported." +
-                            "Please check the configuration file.", dataGatewayConfig.CurrentValue.DatabaseType));
-                }
-            });
+            services.AddSingleton<IRuntimeConfigProvider, RuntimeConfigProvider>();
 
-            services.AddSingleton<IGraphQLMetadataProvider>(implementationFactory: (serviceProvider) =>
-            {
-                IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
-                switch (dataGatewayConfig.CurrentValue.DatabaseType)
-                {
-                    case DatabaseType.cosmos:
-                        return ActivatorUtilities.
-                            GetServiceOrCreateInstance<GraphQLFileMetadataProvider>(serviceProvider);
-                    case DatabaseType.mssql:
-                    case DatabaseType.postgresql:
-                    case DatabaseType.mysql:
-                        return ActivatorUtilities.
-                            GetServiceOrCreateInstance<SqlGraphQLFileMetadataProvider>(serviceProvider);
-                    default:
-                        throw new NotSupportedException(string.Format("The provided DatabaseType value: {0} is currently not supported." +
-                            "Please check the configuration file.", dataGatewayConfig.CurrentValue.DatabaseType));
-                }
-            });
+            services.AddSingleton<IGraphQLMetadataProvider, GraphQLFileMetadataProvider>();
             services.AddSingleton<CosmosClientProvider>();
 
             services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
@@ -189,7 +154,27 @@ namespace Azure.DataGateway.Service
                 }
             });
 
-            services.AddSingleton<DbExceptionParserBase>(implementationFactory: (serviceProvider) =>
+            services.AddSingleton<ISqlMetadataProvider>(implementationFactory: (serviceProvider) =>
+            {
+                IOptionsMonitor<DataGatewayConfig> dataGatewayConfig =
+                    ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
+                switch (dataGatewayConfig.CurrentValue.DatabaseType)
+                {
+                    case DatabaseType.cosmos:
+                        return null!;
+                    case DatabaseType.mssql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlMetadataProvider>(serviceProvider);
+                    case DatabaseType.postgresql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlMetadataProvider>(serviceProvider);
+                    case DatabaseType.mysql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<MySqlMetadataProvider>(serviceProvider);
+                    default:
+                        throw new NotSupportedException(string.Format("The provided DatabaseType value: {0} is currently not supported." +
+                            "Please check the configuration file.", dataGatewayConfig.CurrentValue.DatabaseType));
+                }
+            });
+
+            services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
                 IOptionsMonitor<DataGatewayConfig> dataGatewayConfig = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<DataGatewayConfig>>(serviceProvider);
                 switch (dataGatewayConfig.CurrentValue.DatabaseType)
@@ -320,9 +305,13 @@ namespace Azure.DataGateway.Service
         {
             try
             {
-                IGraphQLMetadataProvider graphQLMetadataProvider =
-                app.ApplicationServices.GetService<IGraphQLMetadataProvider>()!;
-                await graphQLMetadataProvider.InitializeAsync();
+                ISqlMetadataProvider? sqlMetadataProvider =
+                    app.ApplicationServices.GetService<ISqlMetadataProvider>();
+
+                if (sqlMetadataProvider is not null)
+                {
+                    await sqlMetadataProvider.InitializeAsync();
+                }
 
                 // Now that the configuration has been set, perform validation.
                 app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();

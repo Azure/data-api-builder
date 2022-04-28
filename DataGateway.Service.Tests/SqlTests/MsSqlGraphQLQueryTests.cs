@@ -620,9 +620,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             string msSqlQuery = $"SELECT TOP 100 id, title, issue_number FROM magazines ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
 
-            _ = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
 
-            _ = await GetDatabaseResultAsync(msSqlQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
         /// <summary>
@@ -641,9 +642,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             string msSqlQuery = $"SELECT TOP 100 id, username FROM website_users ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
 
-            _ = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
 
-            _ = await GetDatabaseResultAsync(msSqlQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
         /// <summary>
@@ -685,6 +687,90 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
             string msSqlQuery = $"SELECT TOP 2 id AS book_id, title AS title FROM books ORDER by id FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Tests _orderBy on a list query
+        /// </summary>
+        [TestMethod]
+        public async Task TestOrderByInListQuery()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(first: 100 _orderBy: {title: Desc}) {
+                    id
+                    title
+                }
+            }";
+            string msSqlQuery = $"SELECT id, title FROM books ORDER BY title DESC, id ASC FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Use multiple order options and order an entity with a composite pk
+        /// </summary>
+        [TestMethod]
+        public async Task TestOrderByInListQueryOnCompPkType()
+        {
+            string graphQLQueryName = "getReviews";
+            string graphQLQuery = @"{
+                getReviews(_orderBy: {content: Asc id: Desc}) {
+                    id
+                    content
+                }
+            }";
+            string msSqlQuery = $"SELECT id, content FROM reviews ORDER BY content ASC, id DESC, book_id ASC FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Tests null fields in _orderBy are ignored
+        /// </summary>
+        [TestMethod]
+        public async Task TestNullFieldsInOrderByAreIgnored()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(first: 100 _orderBy: {title: Desc id: null}) {
+                    id
+                    title
+                }
+            }";
+            string msSqlQuery = $"SELECT id, title FROM books ORDER BY title DESC, id ASC FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Tests that an _orderBy with only null fields results in default pk sorting
+        /// </summary>
+        [TestMethod]
+        public async Task TestOrderByWithOnlyNullFieldsDefaultsToPkSorting()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(first: 100 _orderBy: {title: null}) {
+                    id
+                    title
+                }
+            }";
+            string msSqlQuery = $"SELECT id, title FROM books ORDER BY id ASC FOR JSON PATH, INCLUDE_NULL_VALUES";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(msSqlQuery);

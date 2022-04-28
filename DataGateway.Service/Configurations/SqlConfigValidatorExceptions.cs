@@ -296,8 +296,8 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateRefColumnsExistInRefTable(List<string> referencedColumns, string referencedTable)
         {
-            _ = GetTableWithName(referencedTable).Columns.Keys.ToList();
-            IEnumerable<string> unmatchedColumns = referencedColumns.Except(referencedColumns);
+            List<string> referencedTableColumns = GetTableWithName(referencedTable).Columns.Keys.ToList();
+            IEnumerable<string> unmatchedColumns = referencedColumns.Except(referencedTableColumns);
 
             if (unmatchedColumns.Any())
             {

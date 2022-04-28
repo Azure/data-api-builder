@@ -27,6 +27,11 @@ namespace Azure.DataGateway.Service.Models
 
             foreach (ObjectFieldNode field in fields)
             {
+                if (field.Value is NullValueNode)
+                {
+                    continue;
+                }
+
                 string name = field.Name.ToString();
 
                 bool fieldIsAnd = string.Equals(name, $"{PredicateOperation.AND}", StringComparison.OrdinalIgnoreCase);
@@ -89,11 +94,7 @@ namespace Azure.DataGateway.Service.Models
         {
             if (predicates.Count == 0)
             {
-                return new Predicate(
-                    new PredicateOperand("1"),
-                    PredicateOperation.NotEqual,
-                    new PredicateOperand("1")
-                );
+                return Predicate.MakeFalsePredicate();
             }
 
             List<PredicateOperand> operands = new();
@@ -115,6 +116,11 @@ namespace Azure.DataGateway.Service.Models
             int pos = 0,
             bool addParenthesis = true)
         {
+            if (operands.Count == 0)
+            {
+                return Predicate.MakeFalsePredicate();
+            }
+
             if (pos == operands.Count - 1)
             {
                 return operands[pos].AsPredicate()!;
@@ -150,6 +156,11 @@ namespace Azure.DataGateway.Service.Models
 
             foreach (ObjectFieldNode field in fields)
             {
+                if (field.Value is NullValueNode)
+                {
+                    continue;
+                }
+
                 string name = field.Name.ToString();
                 object value;
                 bool processLiteral = true;
@@ -223,6 +234,11 @@ namespace Azure.DataGateway.Service.Models
 
             foreach (ObjectFieldNode field in fields)
             {
+                if (field.Value is NullValueNode)
+                {
+                    continue;
+                }
+
                 string ruleName = field.Name.ToString();
                 string ruleValue;
                 bool processLiteral = true;

@@ -390,12 +390,13 @@ namespace Azure.DataGateway.Service.Configurations
                 ["after"] = new[] { "String" }
             };
 
+            string returnedPaginationType = InnerTypeStr(field.Type);
+            string itemsType = InnerTypeStr(GetTypeFields(returnedPaginationType)["items"].Type);
+            string capitalizedItemsType = CapitalizeFirstCharOnly(itemsType);
             Dictionary<string, IEnumerable<string>> optionalArguments = new()
             {
-                ["_filter"] = new[] { "BookFilterInput", "PublisherFilterInput", "AuthorFilterInput", "ReviewFilterInput",
-                                        "MagazineFilterInput",
-                                        "BookFilterInput!", "PublisherFilterInput!", "AuthorFilterInput!", "ReviewFilterInput!",
-                                        "MagazineFilterInput!" },
+                ["_filter"] = new[] { $"{capitalizedItemsType}FilterInput", $"{capitalizedItemsType}FilterInput!" },
+                ["_orderBy"] = new[] { $"{capitalizedItemsType}OrderByInput", $"{capitalizedItemsType}OrderByInput!" },
                 ["_filterOData"] = new[] { "String", "String!" }
             };
 
@@ -415,13 +416,13 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateListTypeFieldArguments(FieldDefinitionNode field)
         {
+            string returnedType = InnerTypeStr(field.Type);
+            string capitalizedReturnedType = CapitalizeFirstCharOnly(returnedType);
             Dictionary<string, IEnumerable<string>> optionalArguments = new()
             {
                 ["first"] = new[] { "Int", "Int!" },
-                ["_filter"] = new[] { "BookFilterInput", "PublisherFilterInput", "AuthorFilterInput", "ReviewFilterInput",
-                                        "MagazineFilterInput", "WebsiteUserFilterInput",
-                                        "BookFilterInput!", "PublisherFilterInput!", "AuthorFilterInput!", "ReviewFilterInput!",
-                                        "MagazineFilterInput!", "WebsiteUserFilterInput!" },
+                ["_filter"] = new[] { $"{capitalizedReturnedType}FilterInput", $"{capitalizedReturnedType}FilterInput!" },
+                ["_orderBy"] = new[] { $"{capitalizedReturnedType}OrderByInput", $"{capitalizedReturnedType}OrderByInput!" },
                 ["_filterOData"] = new[] { "String", "String!" }
             };
 

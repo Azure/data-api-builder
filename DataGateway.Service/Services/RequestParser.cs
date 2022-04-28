@@ -125,17 +125,13 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="tableAlias">The name of the Table the columns are from.</param>
         /// <paramref name="primaryKeys">A list of the primaryKeys of the given table.</paramref>/>
         /// <returns>A List<OrderByColumns></returns>
-        private static List<OrderByColumn>? GenerateOrderByList(OrderByClause node, string tableAlias, List<string> primaryKeys)
+        private static List<OrderByColumn> GenerateOrderByList(OrderByClause node, string tableAlias, List<string> primaryKeys)
         {
-            // Create set of primary key columns
+            // Create list of primary key columns
             // we always have the primary keys in
             // the order by statement for the case
             // of tie breaking and pagination
-            HashSet<string> remainingKeys = new();
-            foreach (string key in primaryKeys)
-            {
-                remainingKeys.Add(key);
-            }
+            List<string> remainingKeys = new(primaryKeys);
 
             List<OrderByColumn> orderByList = new();
             // OrderBy AST is in the form of a linked list

@@ -88,7 +88,10 @@ namespace Azure.DataGateway.Service.Resolvers
                     dbDataReader,
                     onlyExtract: tableDefinition.PrimaryKey);
 
-                Console.WriteLine(searchParams.ToString());
+                foreach( KeyValuePair<string, object?> pair in searchParams)
+                {
+                    Console.WriteLine(pair.Key, pair.Value);
+                }
 
                 if (searchParams == null)
                 {

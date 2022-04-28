@@ -10,7 +10,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
     {
         public static FieldDefinitionNode Build(NameNode name, ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
-            FieldDefinitionNode idField = FindIdField(objectTypeDefinitionNode);
+            FieldDefinitionNode idField = FindPrimaryKeyField(objectTypeDefinitionNode);
             return new(
                 null,
                 new NameNode($"delete{FormatNameForObject(name)}"),

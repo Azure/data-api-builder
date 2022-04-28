@@ -8,9 +8,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
     public static class QueryBuilder
     {
         public const string PAGINATION_FIELD_NAME = "items";
-        public const string END_CURSOR_TOKEN_FIELD_NAME = "after";
+        public const string PAGINATION_TOKEN_FIELD_NAME = "after";
         public const string HAS_NEXT_PAGE_FIELD_NAME = "hasNextPage";
         public const string PAGE_START_ARGUMENT_NAME = "first";
+        public const string PAGINATION_OBJECT_TYPE_SUFFIX = "Connection";
 
         public static DocumentNode Build(DocumentNode root)
         {
@@ -43,6 +44,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
         private static FieldDefinitionNode GenerateByPKQuery(ObjectTypeDefinitionNode objectTypeDefinitionNode, NameNode name)
         {
+            FieldDefinitionNode primaryKeyField = FindPrimaryKeyField(objectTypeDefinitionNode);
             return new(
                 location: null,
                 new NameNode($"{FormatNameForField(name)}_by_pk"),
@@ -50,9 +52,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 new List<InputValueDefinitionNode> {
                 new InputValueDefinitionNode(
                     location : null,
-                    new NameNode("id"),
+                    primaryKeyField.Name,
                     description: null,
-                    objectTypeDefinitionNode.Fields.First(f => f.Name.Value == "id").Type,
+                    primaryKeyField.Type,
                     defaultValue: null,
                     new List<DirectiveNode>())
                 },
@@ -102,9 +104,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 Pluralize(name),
                 new StringValueNode($"Get a list of all the {name} items from the database"),
                 new List<InputValueDefinitionNode> {
-                    new InputValueDefinitionNode(location : null, new NameNode(PAGE_START_ARGUMENT_NAME), description: null, new IntType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
-                    new InputValueDefinitionNode(location : null, new NameNode(END_CURSOR_TOKEN_FIELD_NAME), new StringValueNode("A endCursor token from a previous query to continue through a paginated list"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
-                    new(location : null, new NameNode("_filter"), new StringValueNode("Filter options for query"), new NamedTypeNode(filterInputName), defaultValue: null, new List<DirectiveNode>())
+                    new(location : null, new NameNode(PAGE_START_ARGUMENT_NAME), description: null, new IntType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
+                    new(location : null, new NameNode(PAGINATION_TOKEN_FIELD_NAME), new StringValueNode("A pagination token from a previous query to continue through a paginated list"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
+                    new(location : null, new NameNode("_filter"), new StringValueNode("Filter options for query"), new NamedTypeNode(filterInputName), defaultValue: null, new List<DirectiveNode>()),
+                    new(location : null, new NameNode("_filterOData"), new StringValueNode("Filter options for query expressed as OData query language"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>())
                 },
                 new NonNullTypeNode(new NamedTypeNode(returnType.Name)),
                 new List<DirectiveNode>()
@@ -168,6 +171,20 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             return inputFields;
         }
 
+        public static ObjectType PaginationTypeToModelType(ObjectType underlyingFieldType, IReadOnlyCollection<INamedType> types)
+        {
+            IEnumerable<ObjectType> modelTypes = types.Where(t => t is ObjectType)
+                .Cast<ObjectType>()
+                .Where(IsModelType);
+
+            return modelTypes.First(t => t.Name.Value == underlyingFieldType.Name.Value.Replace(PAGINATION_OBJECT_TYPE_SUFFIX, ""));
+        }
+
+        public static bool IsPaginationType(ObjectType objectType)
+        {
+            return objectType.Name.Value.EndsWith(PAGINATION_OBJECT_TYPE_SUFFIX);
+        }
+
         private static string GenerateObjectInputFilterName(INamedSyntaxNode objectDefNode)
         {
             return $"{objectDefNode.Name}FilterInput";
@@ -177,8 +194,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         {
             return new(
                 location: null,
-                new NameNode($"{name}Connection"),
-                new StringValueNode("The return object from a filter query that supports a endCursor token for paging through results"),
+                new NameNode($"{name}{PAGINATION_OBJECT_TYPE_SUFFIX}"),
+                new StringValueNode("The return object from a filter query that supports a pagination token for paging through results"),
                 new List<DirectiveNode>(),
                 new List<NamedTypeNode>(),
                 new List<FieldDefinitionNode> {
@@ -191,8 +208,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                         new List<DirectiveNode>()),
                     new FieldDefinitionNode(
                         location : null,
-                        new NameNode(END_CURSOR_TOKEN_FIELD_NAME),
-                        new StringValueNode("A endCursor token to provide to subsequent pages of a query"),
+                        new NameNode(PAGINATION_TOKEN_FIELD_NAME),
+                        new StringValueNode("A pagination token to provide to subsequent pages of a query"),
                         new List<InputValueDefinitionNode>(),
                         new StringType().ToTypeNode(),
                         new List<DirectiveNode>()),

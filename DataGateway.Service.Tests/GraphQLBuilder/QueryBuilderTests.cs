@@ -97,10 +97,29 @@ type Foo @model {
             Assert.AreEqual(3, returnType.Fields.Count);
             Assert.AreEqual("items", returnType.Fields[0].Name.Value);
             Assert.AreEqual("[Foo!]!", returnType.Fields[0].Type.ToString());
-            Assert.AreEqual(QueryBuilder.END_CURSOR_TOKEN_FIELD_NAME, returnType.Fields[1].Name.Value);
+            Assert.AreEqual(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME, returnType.Fields[1].Name.Value);
             Assert.AreEqual("String", returnType.Fields[1].Type.NamedType().Name.Value);
             Assert.AreEqual("hasNextPage", returnType.Fields[2].Name.Value);
             Assert.AreEqual("Boolean", returnType.Fields[2].Type.NamedType().Name.Value);
+        }
+
+        [TestMethod]
+        public void PrimaryKeyFieldAsQueryInput()
+        {
+            string gql =
+                @"
+type Foo @model {
+    foo_id: Int! @primaryKey(databaseType: ""bigint"")
+}
+";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
+            DocumentNode queryRoot = QueryBuilder.Build(root);
+
+            ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
+            FieldDefinitionNode byIdQuery = query.Fields.First(f => f.Name.Value == $"foo_by_pk");
+            Assert.AreEqual("foo_id", byIdQuery.Arguments[0].Name.Value);
         }
 
         private static ObjectTypeDefinitionNode GetQueryNode(DocumentNode queryRoot)

@@ -86,7 +86,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                 new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(name.Value)}"),
                 f.Type,
                 null,
-                f.Directives
+                new List<DirectiveNode>()
             );
         }
 

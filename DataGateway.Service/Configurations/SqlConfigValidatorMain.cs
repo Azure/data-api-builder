@@ -297,7 +297,7 @@ namespace Azure.DataGateway.Service.Configurations
             List<string> paginationTypeRequiredFields = new()
             {
                 GraphQLBuilder.Queries.QueryBuilder.PAGINATION_FIELD_NAME,
-                GraphQLBuilder.Queries.QueryBuilder.END_CURSOR_TOKEN_FIELD_NAME,
+                GraphQLBuilder.Queries.QueryBuilder.PAGINATION_TOKEN_FIELD_NAME,
                 GraphQLBuilder.Queries.QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME
             };
 
@@ -305,7 +305,7 @@ namespace Azure.DataGateway.Service.Configurations
             ValidatePaginationFieldsHaveNoArguments(fields, paginationTypeRequiredFields);
 
             ValidateItemsFieldType(fields[GraphQLBuilder.Queries.QueryBuilder.PAGINATION_FIELD_NAME]);
-            ValidateEndCursorFieldType(fields[GraphQLBuilder.Queries.QueryBuilder.END_CURSOR_TOKEN_FIELD_NAME]);
+            ValidateAfterFieldType(fields[GraphQLBuilder.Queries.QueryBuilder.PAGINATION_TOKEN_FIELD_NAME]);
             ValidateHasNextPageFieldType(fields[GraphQLBuilder.Queries.QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME]);
 
             ValidatePaginationTypeName(typeName);

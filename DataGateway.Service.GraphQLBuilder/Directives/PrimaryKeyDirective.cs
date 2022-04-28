@@ -1,4 +1,3 @@
-using HotChocolate;
 using HotChocolate.Types;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Directives
@@ -10,13 +9,13 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Directives
         protected override void Configure(IDirectiveTypeDescriptor descriptor)
         {
             descriptor
-                    .Name(new NameString(DirectiveName))
+                    .Name(DirectiveName)
                     .Description("A directive to indicate the primary key field of an item.")
                     .Location(DirectiveLocation.FieldDefinition);
 
             descriptor
-                    .Argument(new NameString("databaseType"))
-                        .Type(new StringType().ToTypeNode())
+                    .Argument("databaseType")
+                        .Type<StringType>()
                         .Description("The underlying database type");
         }
     }

@@ -1,4 +1,3 @@
-using HotChocolate;
 using HotChocolate.Types;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Directives
@@ -9,15 +8,15 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Directives
 
         protected override void Configure(IDirectiveTypeDescriptor descriptor)
         {
-            descriptor.Name(new NameString(DirectiveName))
+            descriptor.Name(DirectiveName)
                                .Description("A directive to indicate the relationship between two tables")
-                                .Location(DirectiveLocation.FieldDefinition);
+                               .Location(DirectiveLocation.FieldDefinition);
 
-            descriptor.Argument(new NameString("databaseType"))
+            descriptor.Argument("databaseType")
                   .Type<StringType>()
                   .Description("The underlying database type");
 
-            descriptor.Argument(new NameString("cardinality"))
+            descriptor.Argument("cardinality")
                   .Type<StringType>()
                   .Description("The relationship cardinality");
         }

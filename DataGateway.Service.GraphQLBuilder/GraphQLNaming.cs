@@ -59,7 +59,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
 
         public static NameNode Pluralize(string name)
         {
-            return new NameNode($"{FormatNameForField(name)}s");
+            return new NameNode($"{FormatNameForField(name)}{(name.EndsWith("s") ? "" : "s")}");
         }
 
         public static NameNode Pluralize(NameNode name)

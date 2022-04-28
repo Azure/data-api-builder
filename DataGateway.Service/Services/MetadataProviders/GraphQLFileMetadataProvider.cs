@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using Azure.DataGateway.Service.Models;
+using HotChocolate.Types;
 using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Services
@@ -120,11 +123,29 @@ namespace Azure.DataGateway.Service.Services
             return resolver;
         }
 
+        public GraphQLType GetGraphQLType(ObjectType objectType)
+        {
+            IDirective nameDirective = objectType.Directives.First(d => d.Name == ModelDirectiveType.DirectiveName);
+
+            string nameFromDirective = nameDirective.GetArgument<string>("name");
+
+            if (string.IsNullOrEmpty(nameFromDirective))
+            {
+                return GetGraphQLType(objectType.Name);
+            }
+
+            return GetGraphQLType(nameFromDirective);
+        }
+
         public GraphQLType GetGraphQLType(string name)
         {
             if (!GraphQLResolverConfig.GraphQLTypes.TryGetValue(name, out GraphQLType? typeInfo))
             {
-                throw new KeyNotFoundException($"Table Definition for {name} does not exist.");
+                typeInfo = GraphQLResolverConfig.GraphQLTypes.Values.FirstOrDefault(t => t.Table == name);
+                if (typeInfo is null)
+                {
+                    throw new KeyNotFoundException($"Table Definition for {name} does not exist.");
+                }
             }
 
             return typeInfo;

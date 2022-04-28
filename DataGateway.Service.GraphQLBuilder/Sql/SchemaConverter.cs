@@ -94,7 +94,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                 location: null,
                 new(FormatNameForObject(tableName)),
                 description: null,
-                new List<DirectiveNode>() { new(ModelDirectiveType.DirectiveName) },
+                new List<DirectiveNode>() { new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", tableName)) },
                 new List<NamedTypeNode>(),
                 fields.Values.ToImmutableList());
         }

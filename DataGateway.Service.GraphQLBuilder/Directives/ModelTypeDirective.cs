@@ -1,4 +1,3 @@
-using HotChocolate;
 using HotChocolate.Types;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Directives
@@ -9,9 +8,14 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Directives
 
         protected override void Configure(IDirectiveTypeDescriptor descriptor)
         {
-            descriptor.Name(DirectiveName).Description("A directive to indicate the type is maps to a storable entity not a nested entity.");
+            descriptor.Name(DirectiveName)
+                .Description("A directive to indicate the type is maps to a storable entity not a nested entity.");
 
             descriptor.Location(DirectiveLocation.Object);
+
+            descriptor.Argument("name")
+                .Description("Underlying name of the database entity")
+                .Type<StringType>();
         }
     }
 }

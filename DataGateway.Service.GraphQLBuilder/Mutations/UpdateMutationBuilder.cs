@@ -19,6 +19,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
         {
             if (IsBuiltInType(field.Type))
             {
+                // TODO: handle primary key fields properly
                 return field.Name.Value != "id";
             }
 
@@ -80,7 +81,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                 new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(name.Value)}"),
                 f.Type.NullableType(),
                 defaultValue: null,
-                f.Directives
+                new List<DirectiveNode>()
             );
         }
 
@@ -116,7 +117,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
         {
             InputObjectTypeDefinitionNode input = GenerateUpdateInputType(inputs, objectTypeDefinitionNode, name, root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>());
 
-            FieldDefinitionNode idField = FindIdField(objectTypeDefinitionNode);
+            FieldDefinitionNode idField = FindPrimaryKeyField(objectTypeDefinitionNode);
 
             return new(
                 location: null,

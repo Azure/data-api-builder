@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.GraphQLBuilder;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
@@ -163,8 +163,27 @@ namespace Azure.DataGateway.Service.Services
 
             foreach((string tableName, TableDefinition tableDefinition) in tables)
             {
+                // TODO: Remove this workaround (skipping tables that have no HTTP verbs set)
+                if (!tableDefinition.HttpVerbs.Any())
+                {
+                    continue;
+                }
+
                 // TODO: replace this with the new config properly
-                Entity tableEntity = new(tableName, null, null, Array.Empty<PermissionSetting>(), new Dictionary<string, Relationship>(), null);
+
+                // ---- MOCK ENTITY CODE
+                Dictionary<string, Relationship> relationships = new();
+                foreach ((string _, ForeignKeyDefinition fk) in tableDefinition.ForeignKeys)
+                {
+                    relationships.Add(
+                        fk.ReferencedTable,
+                        new Relationship(Cardinality.One, fk.ReferencedTable, fk.ReferencingColumns.ToArray(), fk.ReferencedColumns.ToArray(), null, null, null)
+                    );
+                }
+
+                Entity tableEntity = new(tableName, null, null, Array.Empty<PermissionSetting>(), relationships, null);
+                // ---- END MOCK
+
                 ObjectTypeDefinitionNode node = SchemaConverter.FromTableDefinition(tableName, tableDefinition, tableEntity);
                 graphQLObjects.Add(node);
             }

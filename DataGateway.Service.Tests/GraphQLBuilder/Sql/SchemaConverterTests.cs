@@ -29,7 +29,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
         [DataRow("T.est", "Test")]
         [DataRow("T_est", "T_est")]
         [DataRow("Test1", "Test1")]
-        public void TableNameBecomesObjectName(string entityName, string expected)
+        public void EntityNameBecomesObjectName(string entityName, string expected)
         {
             TableDefinition table = new();
 

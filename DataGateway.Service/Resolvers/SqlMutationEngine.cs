@@ -195,6 +195,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     break;
             }
 
+            Console.WriteLine(jsonResultString);
+
             if (jsonResultString == null)
             {
                 return null;

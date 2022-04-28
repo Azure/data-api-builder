@@ -43,8 +43,7 @@ CREATE TABLE reviews(
     book_id bigint NOT NULL,
     id bigint AUTO_INCREMENT,
     content text DEFAULT ('Its a classic') NOT NULL,
-    PRIMARY KEY(book_id, id),
-    INDEX (id)
+    PRIMARY KEY(book_id, id)
 );
 
 CREATE TABLE book_author_link(

@@ -40,11 +40,11 @@ CREATE TABLE authors(
 );
 
 CREATE TABLE reviews(
-    book_id bigint NOT NULL,
     id bigint AUTO_INCREMENT,
+    book_id bigint NOT NULL,
     content text DEFAULT ('Its a classic') NOT NULL,
-    PRIMARY KEY(book_id, id),
-    KEY(id)
+    PRIMARY KEY(id, book_id),
+    INDEX(id)
 );
 
 CREATE TABLE book_author_link(

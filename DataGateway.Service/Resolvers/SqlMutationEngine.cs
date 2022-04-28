@@ -90,7 +90,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 foreach( KeyValuePair<string, object?> pair in searchParams)
                 {
-                    Console.WriteLine(pair.Key, pair.Value);
+                    Console.WriteLine(pair.Key + " -> " + pair.Value);
                 }
 
                 if (searchParams == null)

@@ -14,7 +14,9 @@ namespace Azure.DataGateway.Service.Resolvers
     /// </summary>
     public abstract class BaseSqlQueryStructure : BaseQueryStructure
     {
-        protected SqlGraphQLFileMetadataProvider MetadataStoreProvider { get; }
+        protected ISqlMetadataProvider SqlMetadataProvider { get; }
+
+        protected IGraphQLMetadataProvider MetadataStoreProvider { get; }
 
         /// <summary>
         /// The name of the main table to be queried.
@@ -33,13 +35,14 @@ namespace Azure.DataGateway.Service.Resolvers
         public string? FilterPredicates { get; set; }
 
         public BaseSqlQueryStructure(
-            SqlGraphQLFileMetadataProvider metadataStoreProvider,
+            IGraphQLMetadataProvider metadataStoreProvider,
+            ISqlMetadataProvider sqlMetadataProvider,
             IncrementingInteger? counter = null,
             string tableName = "")
             : base(counter)
         {
             MetadataStoreProvider = metadataStoreProvider;
-
+            SqlMetadataProvider = sqlMetadataProvider;
             TableName = tableName;
             // Default the alias to the table name
             TableAlias = tableName;
@@ -84,7 +87,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public Type GetColumnSystemType(string columnName)
         {
-            if (GetTableDefinition().Columns.TryGetValue(columnName, out ColumnDefinition? column))
+            if (GetUnderlyingTableDefinition().Columns.TryGetValue(columnName, out ColumnDefinition? column))
             {
                 return column.SystemType;
             }
@@ -97,9 +100,9 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Returns the TableDefinition for the the table of this query.
         /// </summary>
-        protected TableDefinition GetTableDefinition()
+        protected TableDefinition GetUnderlyingTableDefinition()
         {
-            return MetadataStoreProvider.GetTableDefinition(TableName);
+            return SqlMetadataProvider.GetTableDefinition(TableName);
         }
 
         /// <summary>
@@ -107,7 +110,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<string> PrimaryKey()
         {
-            return GetTableDefinition().PrimaryKey;
+            return GetUnderlyingTableDefinition().PrimaryKey;
         }
 
         /// <summary>
@@ -115,7 +118,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<string> AllColumns()
         {
-            return GetTableDefinition().Columns.Select(col => col.Key).ToList();
+            return GetUnderlyingTableDefinition().Columns.Select(col => col.Key).ToList();
         }
 
         ///<summary>

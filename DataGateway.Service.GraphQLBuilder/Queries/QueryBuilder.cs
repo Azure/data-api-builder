@@ -1,3 +1,4 @@
+using Azure.DataGateway.Config;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLNaming;
@@ -13,7 +14,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         public const string PAGE_START_ARGUMENT_NAME = "first";
         public const string PAGINATION_OBJECT_TYPE_SUFFIX = "Connection";
 
-        public static DocumentNode Build(DocumentNode root)
+        public static DocumentNode Build(DocumentNode root, IDictionary<string, Entity> entities)
         {
             List<FieldDefinitionNode> queryFields = new();
             List<ObjectTypeDefinitionNode> returnTypes = new();
@@ -24,11 +25,12 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 if (definition is ObjectTypeDefinitionNode objectTypeDefinitionNode && IsModelType(objectTypeDefinitionNode))
                 {
                     NameNode name = objectTypeDefinitionNode.Name;
+                    Entity entity = entities[name.Value];
 
                     ObjectTypeDefinitionNode returnType = GenerateReturnType(name);
                     returnTypes.Add(returnType);
 
-                    queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, returnType, inputTypes, root));
+                    queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, returnType, inputTypes, root, entity));
                     queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name));
                 }
             }
@@ -63,7 +65,13 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             );
         }
 
-        private static FieldDefinitionNode GenerateGetAllQuery(ObjectTypeDefinitionNode objectTypeDefinitionNode, NameNode name, ObjectTypeDefinitionNode returnType, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes, DocumentNode root)
+        private static FieldDefinitionNode GenerateGetAllQuery(
+            ObjectTypeDefinitionNode objectTypeDefinitionNode,
+            NameNode name,
+            ObjectTypeDefinitionNode returnType,
+            Dictionary<string, InputObjectTypeDefinitionNode> inputTypes,
+            DocumentNode root,
+            Entity entity)
         {
             List<InputValueDefinitionNode> inputFields = GenerateInputFieldsForType(objectTypeDefinitionNode, inputTypes, root);
 
@@ -101,7 +109,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
             return new(
                 location: null,
-                Pluralize(name),
+                Pluralize(name, entity),
                 new StringValueNode($"Get a list of all the {name} items from the database"),
                 new List<InputValueDefinitionNode> {
                     new(location : null, new NameNode(PAGE_START_ARGUMENT_NAME), description: null, new IntType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),

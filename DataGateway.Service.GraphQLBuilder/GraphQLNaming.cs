@@ -47,9 +47,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             return string.Join("", nameSegments.Select(n => $"{char.ToUpperInvariant(n[0])}{n[1..]}"));
         }
 
-        public static string FormatNameForObject(NameNode name)
+        public static string FormatNameForObject(NameNode name, Entity configEntity)
         {
-            return FormatNameForObject(name.Value);
+            return FormatNameForObject(name.Value, configEntity);
         }
 
         public static string FormatNameForField(string name)
@@ -64,9 +64,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             return FormatNameForField(name.Value);
         }
 
-        public static NameNode Pluralize(NameNode name)
+        public static NameNode Pluralize(NameNode name, Entity configEntity)
         {
-            return Pluralize(name.Value);
+            return Pluralize(name.Value, configEntity);
         }
 
         public static NameNode Pluralize(string name, Entity configEntity)

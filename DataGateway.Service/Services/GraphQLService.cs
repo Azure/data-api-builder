@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
@@ -27,6 +26,8 @@ namespace Azure.DataGateway.Service.Services
         private readonly IMutationEngine _mutationEngine;
         private readonly IGraphQLMetadataProvider _graphQLMetadataProvider;
         private readonly DataGatewayConfig _config;
+        private readonly IRuntimeConfigProvider _runtimeConfigProvider;
+        private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly IDocumentCache _documentCache;
         private readonly IDocumentHashProvider _documentHashProvider;
 
@@ -39,18 +40,23 @@ namespace Azure.DataGateway.Service.Services
             IGraphQLMetadataProvider graphQLMetadataProvider,
             IDocumentCache documentCache,
             IDocumentHashProvider documentHashProvider,
-            DataGatewayConfig config)
+            DataGatewayConfig config,
+            IRuntimeConfigProvider runtimeConfigProvider,
+            ISqlMetadataProvider sqlMetadataProvider)
         {
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
             _graphQLMetadataProvider = graphQLMetadataProvider;
             _config = config;
+            _runtimeConfigProvider = runtimeConfigProvider;
+            _sqlMetadataProvider = sqlMetadataProvider;
             _documentCache = documentCache;
             _documentHashProvider = documentHashProvider;
+
             InitializeSchemaAndResolvers();
         }
 
-        private void ParseAsync(DocumentNode root)
+        private void ParseAsync(DocumentNode root, Dictionary<string, Entity> entities)
         {
             if (_config.DatabaseType == null)
             {
@@ -62,8 +68,8 @@ namespace Azure.DataGateway.Service.Services
                 .AddDirectiveType<ModelDirectiveType>()
                 .AddDirectiveType<RelationshipDirectiveType>()
                 .AddDirectiveType<PrimaryKeyDirectiveType>()
-                .AddDocument(QueryBuilder.Build(root))
-                .AddDocument(MutationBuilder.Build(root, _config.DatabaseType.Value));
+                .AddDocument(QueryBuilder.Build(root, entities))
+                .AddDocument(MutationBuilder.Build(root, _config.DatabaseType.Value, entities));
 
             Schema = sb
                 .AddAuthorizeDirectiveType()
@@ -143,48 +149,39 @@ namespace Azure.DataGateway.Service.Services
                 throw new DataGatewayException("No database type was configured", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
             }
 
+            Dictionary<string, Entity> entities = _runtimeConfigProvider.GetRuntimeConfig().Entities;
+
             DocumentNode root = _config.DatabaseType switch
             {
                 DatabaseType.cosmos => GenerateCosmosGraphQLObjects(),
                 DatabaseType.mssql or
                 DatabaseType.postgresql or
-                DatabaseType.mysql => GenerateSqlGraphQLObjects(),
+                DatabaseType.mysql => GenerateSqlGraphQLObjects(entities),
                 _ => throw new NotImplementedException()
             };
 
-            ParseAsync(root);
+            ParseAsync(root, entities);
         }
 
-        private DocumentNode GenerateSqlGraphQLObjects()
+        private DocumentNode GenerateSqlGraphQLObjects(Dictionary<string, Entity> entities)
         {
             List<ObjectTypeDefinitionNode> graphQLObjects = new();
 
-            Dictionary<string, TableDefinition> tables = _graphQLMetadataProvider.GetResolvedConfig().DatabaseSchema!.Tables;
-
-            foreach((string tableName, TableDefinition tableDefinition) in tables)
+            foreach ((string entityName, Entity entity) in entities)
             {
-                // TODO: Remove this workaround (skipping tables that have no HTTP verbs set)
-                if (!tableDefinition.HttpVerbs.Any())
+                if (entity.GraphQL is not null)
                 {
-                    continue;
+                    if (entity.GraphQL is bool g && g == false)
+                    {
+                        continue;
+                    }
+
+                    // TODO: Do we need to check the object version of `entity.GraphQL`?
                 }
 
-                // TODO: replace this with the new config properly
+                TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
 
-                // ---- MOCK ENTITY CODE
-                Dictionary<string, Relationship> relationships = new();
-                foreach ((string _, ForeignKeyDefinition fk) in tableDefinition.ForeignKeys)
-                {
-                    relationships.Add(
-                        fk.ReferencedTable,
-                        new Relationship(Cardinality.One, fk.ReferencedTable, fk.ReferencingColumns.ToArray(), fk.ReferencedColumns.ToArray(), null, null, null)
-                    );
-                }
-
-                Entity tableEntity = new(tableName, null, null, Array.Empty<PermissionSetting>(), relationships, null);
-                // ---- END MOCK
-
-                ObjectTypeDefinitionNode node = SchemaConverter.FromTableDefinition(tableName, tableDefinition, tableEntity);
+                ObjectTypeDefinitionNode node = SchemaConverter.FromTableDefinition(entityName, tableDefinition, entity, entities);
                 graphQLObjects.Add(node);
             }
 

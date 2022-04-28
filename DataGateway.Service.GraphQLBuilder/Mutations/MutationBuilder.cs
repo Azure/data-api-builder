@@ -6,7 +6,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 {
     public static class MutationBuilder
     {
-        public static DocumentNode Build(DocumentNode root, DatabaseType databaseType)
+        public static DocumentNode Build(DocumentNode root, DatabaseType databaseType, IDictionary<string, Entity> entities)
         {
             List<FieldDefinitionNode> mutationFields = new();
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs = new();
@@ -16,10 +16,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                 if (definition is ObjectTypeDefinitionNode objectTypeDefinitionNode && IsModelType(objectTypeDefinitionNode))
                 {
                     NameNode name = objectTypeDefinitionNode.Name;
+                    Entity configEntity = entities[name.Value];
 
-                    mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType));
-                    mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root));
-                    mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode));
+                    mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, configEntity));
+                    mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, configEntity));
+                    mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, configEntity));
                 }
             }
 

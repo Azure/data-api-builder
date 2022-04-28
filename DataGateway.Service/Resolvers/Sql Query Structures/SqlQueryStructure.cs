@@ -206,7 +206,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 _underlyingFieldType = QueryBuilder.PaginationTypeToModelType(_underlyingFieldType, ctx.Schema.Types);
             }
 
-            _typeInfo = MetadataStoreProvider.GetGraphQLType(_underlyingFieldType);
+            _typeInfo = MetadataStoreProvider.GetGraphQLType(_underlyingFieldType.Name.Value);
             PaginationMetadata.IsPaginated = _typeInfo.IsPaginationType;
 
             if (PaginationMetadata.IsPaginated)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
@@ -26,6 +27,7 @@ namespace Azure.DataGateway.Service.Services
             RestRequestContext context,
             ISqlMetadataProvider sqlMetadataProvider)
         {
+            ValidateEntity(context.EntityName, sqlMetadataProvider.EntityToDatabaseObject.Keys);
             TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, sqlMetadataProvider);
 
             foreach (string field in context.FieldsToBeReturned)
@@ -293,6 +295,23 @@ namespace Azure.DataGateway.Service.Services
                 message: message,
                 statusCode: HttpStatusCode.BadRequest,
                 subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+        }
+
+        /// <summary>
+        /// Validates that the entity in the request is valid.
+        /// </summary>
+        /// <param name="entityName">entity in the request.</param>
+        /// <param name="entities">collection of valid entities.</param>
+        /// <exception cref="DataGatewayException"></exception>
+        public static void ValidateEntity(string entityName, IEnumerable<string> entities)
+        {
+            if (!entities.Contains(entityName))
+            {
+                throw new DataGatewayException(
+                    message: "Entity provided is invalid.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    DataGatewayException.SubStatusCodes.BadRequest);
+            }
         }
 
         /// <summary>

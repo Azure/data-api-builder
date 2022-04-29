@@ -29,6 +29,8 @@ namespace Azure.DataGateway.Config
         Dictionary<string, Relationship>? Relationships,
         Dictionary<string, string>? Mappings)
     {
+        public const string CONFIG_PROPERTY_NAME = "entities";
+
         /// <summary>
         /// Gets the name of the underlying source database object.
         /// </summary>

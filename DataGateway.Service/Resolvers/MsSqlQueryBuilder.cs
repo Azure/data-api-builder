@@ -17,7 +17,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private static DbCommandBuilder _builder = new SqlCommandBuilder();
 
         /// <inheritdoc />
-        protected override string QuoteIdentifier(string ident)
+        protected override string QuoteIdentifier(string ident) // [dbo_books] [ + schemaname = _ + tablename + ]      QuoteIdentifier(schema_table)
         {
             return _builder.QuoteIdentifier(ident);
         }
@@ -27,7 +27,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             string dataIdent = QuoteIdentifier(SqlQueryStructure.DATA_IDENT);
             string fromSql = $"{QuoteIdentifier(structure.SchemaName)}.{QuoteIdentifier(structure.TableName)} " +
-                             $"AS {QuoteIdentifier($"{structure.SchemaName}.{structure.TableAlias}")}{Build(structure.Joins)}";
+                             $"AS {QuoteIdentifier($"{structure.TableAlias}")}{Build(structure.Joins)}"; // just use table alias in AS part
 
             fromSql += string.Join(
                     "",

@@ -163,7 +163,7 @@ namespace Azure.DataGateway.Service.Parsers
                 // We convert to an Enum of our own that matches the SQL text we want
                 Models.OrderByDir direction = GetDirection(node.Direction);
                 // Add OrderByColumn and remove any matching columns from our primary key set
-                orderByList.Add(new OrderByColumn(schemaName, tableName, columnName, direction));
+                orderByList.Add(new OrderByColumn(schemaName, tableName, columnName, direction: direction));
                 remainingKeys.Remove(columnName);
                 node = node.ThenBy;
             }

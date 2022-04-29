@@ -129,7 +129,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 new IncrementingInteger(), entityName: context.EntityName)
         {
             IsListQuery = context.IsMany;
-
+            TableAlias = $"{SchemaName}_{TableName}";
             context.FieldsToBeReturned.ForEach(fieldName => AddColumn(fieldName));
             if (Columns.Count == 0)
             {
@@ -151,6 +151,13 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             OrderByColumns = context.OrderByClauseInUrl is not null ? context.OrderByClauseInUrl : PrimaryKeyAsOrderByColumns();
+            foreach (OrderByColumn column in OrderByColumns)
+            {
+                if (string.IsNullOrEmpty(column.TableAlias))
+                {
+                    column.TableAlias = TableAlias;
+                }
+            }
 
             if (context.FilterClauseInUrl is not null)
             {
@@ -413,7 +420,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     parameterName = MakeParamWithValue(
                         GetParamAsColumnSystemType(value.ToString()!, field));
                     Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(SchemaName, TableAlias, field)),
+                        new PredicateOperand(new Column(SchemaName, TableName, field, TableAlias)),
                         op,
                         new PredicateOperand($"@{parameterName}")));
                 }
@@ -699,14 +706,14 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 foreach (string column in PrimaryKey())
                 {
-                    _primaryKey.Add(new Column(SchemaName, TableAlias, column));
+                    _primaryKey.Add(new Column(SchemaName, TableName, column, TableAlias));
                 }
             }
 
             List<OrderByColumn> orderByList = new();
             foreach (Column column in _primaryKey)
             {
-                orderByList.Add(new OrderByColumn(column.TableSchema, column.TableName, column.ColumnName));
+                orderByList.Add(new OrderByColumn(column.TableSchema, column.TableName, column.ColumnName, column.TableAlias!));
             }
 
             return orderByList;
@@ -717,7 +724,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         protected void AddColumn(string columnName)
         {
-            Columns.Add(new LabelledColumn(SchemaName, TableAlias, columnName, label: columnName));
+            Columns.Add(new LabelledColumn(SchemaName, TableName, columnName, label: columnName, TableAlias));
         }
 
         /// <summary>

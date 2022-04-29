@@ -64,16 +64,6 @@ namespace Azure.DataGateway.Service.Services
             _runtimeConfigProvider = runtimeConfigProvider;
         }
 
-        public FilterParser GetOdataFilterParser()
-        {
-            return _oDataFilterParser;
-        }
-
-        public DatabaseType GetDatabaseType()
-        {
-            return _databaseType;
-        }
-
         /// <summary>
         /// Obtains the underlying source object's schema name.
         /// </summary>
@@ -167,10 +157,21 @@ namespace Azure.DataGateway.Service.Services
                 in GetEntitiesFromRuntimeConfig())
             {
                 (string, string) names = EntitySourceNamesParser.ParseSchemaAndTable(entity.GetSourceName())!;
+                string schemaName = names.Item1;
+                string dbObjectName = names.Item2;
+
+                if (string.IsNullOrEmpty(schemaName))
+                {
+                    if (!CheckConnectionStringForSchema(out schemaName))
+                    {
+                        schemaName = GetDefaultSchemaName();
+                    }
+                }
+
                 DatabaseObject databaseObject = new()
                 {
-                    SchemaName = names.Item1,
-                    Name = names.Item2,
+                    SchemaName = schemaName,
+                    Name = dbObjectName,
                     TableDefinition = new()
                 };
 
@@ -187,7 +188,7 @@ namespace Azure.DataGateway.Service.Services
                         {
                             DatabaseObject linkingDatabaseObject = new()
                             {
-                                SchemaName = GetDefaultSchemaName(),
+                                SchemaName = schemaName,
                                 Name = relationship.LinkingObject,
                                 TableDefinition = new()
                             };
@@ -199,6 +200,32 @@ namespace Azure.DataGateway.Service.Services
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// The connection string could contain the
+        /// schema, in which case it will be associated
+        /// with the keyword 'SearchPath' and continue
+        /// until the character ';'. If schema exists in
+        /// connection string we save this to schemaName
+        /// otherwise we save schemaName as empty string.
+        /// </summary>
+        /// <param name="schemaName">the schema name we save.</param>
+        /// <returns>true if schema in connection string, false otherwise.</returns>
+        private bool CheckConnectionStringForSchema(out string schemaName)
+        {
+            string connectionString = _runtimeConfigProvider.GetRuntimeConfig().DataSource.ConnectionString;
+            int startIndex = connectionString.IndexOf("SearchPath");
+            if (startIndex != -1)
+            {
+                int endIndex = connectionString.IndexOf(';', startIndex);
+                schemaName = connectionString[startIndex..endIndex];
+                return true;
+            }
+
+            schemaName = "";
+
+            return false;
         }
 
         /// <summary>

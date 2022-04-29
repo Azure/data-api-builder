@@ -17,15 +17,20 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
         public string? TableName { get; }
         /// <summary>
+        /// Name of the alias of the table which owns the column
+        /// </summary>
+        public string? TableAlias { get; set; }
+        /// <summary>
         /// Name of the column
         /// </summary>
         public string ColumnName { get; }
 
-        public Column(string? tableSchema, string? tableName, string columnName)
+        public Column(string? tableSchema, string? tableName, string columnName, string tableAlias = "")
         {
             TableSchema = tableSchema;
             TableName = tableName;
             ColumnName = columnName;
+            TableAlias = tableAlias;
         }
     }
 
@@ -35,8 +40,8 @@ namespace Azure.DataGateway.Service.Models
     public class OrderByColumn : Column
     {
         public OrderByDir Direction { get; }
-        public OrderByColumn(string? schemaName, string? tableAlias, string columnName, OrderByDir direction = OrderByDir.Asc)
-            : base(schemaName, tableAlias, columnName)
+        public OrderByColumn(string? schemaName, string? tableName, string columnName, string tableAlias = "", OrderByDir direction = OrderByDir.Asc)
+            : base(schemaName, tableName, columnName, tableAlias)
         {
             Direction = direction;
         }
@@ -50,8 +55,8 @@ namespace Azure.DataGateway.Service.Models
     {
         public object? Value { get; }
         public string? ParamName { get; set; }
-        public PaginationColumn(string? schemaName, string? tableAlias, string columnName, object? value, OrderByDir direction = OrderByDir.Asc, string? paramName = null)
-            : base(schemaName, tableAlias, columnName, direction)
+        public PaginationColumn(string? schemaName, string? tableName, string columnName, object? value, string tableAlias= "", OrderByDir direction = OrderByDir.Asc, string? paramName = null)
+            : base(schemaName, tableName, columnName, tableAlias, direction)
         {
             Value = value;
             ParamName = paramName;
@@ -68,8 +73,8 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
         public string Label { get; }
 
-        public LabelledColumn(string? tableSchema, string tableAlias, string columnName, string label)
-            : base(tableSchema, tableAlias, columnName)
+        public LabelledColumn(string? tableSchema, string tableName, string columnName, string label, string tableAlias = "")
+            : base(tableSchema, tableName, columnName, tableAlias)
         {
             Label = label;
         }

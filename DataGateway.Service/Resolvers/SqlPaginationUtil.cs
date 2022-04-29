@@ -140,7 +140,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 foreach (OrderByColumn column in orderByColumns)
                 {
                     object value = ResolveJsonElementToScalarVariable(element.GetProperty(column.ColumnName));
-                    cursorJson.Add(new PaginationColumn(schemaName: schemaName, tableAlias: tableName, column.ColumnName, value, column.Direction));
+                    cursorJson.Add(new PaginationColumn(schemaName: schemaName, tableName: tableName, column.ColumnName, value, direction: column.Direction));
                     remainingKeys.Remove(column.ColumnName);
                 }
             }
@@ -160,9 +160,9 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (remainingKeys.Contains(column))
                 {
                     cursorJson.Add(new PaginationColumn(schemaName: schemaName,
-                                                        tableAlias: tableName,
+                                                        tableName: tableName,
                                                         column,
-                                                        ResolveJsonElementToScalarVariable(element.GetProperty(column)), OrderByDir.Asc));
+                                                        ResolveJsonElementToScalarVariable(element.GetProperty(column)), direction: OrderByDir.Asc));
                     remainingKeys.Remove(column);
                 }
 

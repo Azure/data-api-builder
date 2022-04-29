@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
@@ -17,7 +16,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private readonly string _containerAlias = "c";
         public string Container { get; internal set; }
         public string Database { get; internal set; }
-        public string? After { get; internal set; }
+        public string? Continuation { get; internal set; }
         public int MaxItemCount { get; internal set; }
 
         protected IGraphQLMetadataProvider MetadataStoreProvider { get; }
@@ -68,15 +67,9 @@ namespace Azure.DataGateway.Service.Resolvers
                     continue;
                 }
 
-                if (parameter.Key == QueryBuilder.PAGINATION_TOKEN_FIELD_NAME)
+                if (parameter.Key == "after")
                 {
-                    After = (string)parameter.Value;
-                    continue;
-                }
-
-                if (parameter.Key == "_filter")
-                {
-                    // TODO: Build out the predicates based on the filter
+                    Continuation = (string)parameter.Value;
                     continue;
                 }
 

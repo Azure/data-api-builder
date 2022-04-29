@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
@@ -201,12 +200,7 @@ namespace Azure.DataGateway.Service.Resolvers
             IOutputType outputType = schemaField.Type;
             _underlyingFieldType = UnderlyingType(outputType);
 
-            if (QueryBuilder.IsPaginationType(_underlyingFieldType))
-            {
-                _underlyingFieldType = QueryBuilder.PaginationTypeToModelType(_underlyingFieldType, ctx.Schema.Types);
-            }
-
-            _typeInfo = MetadataStoreProvider.GetGraphQLType(_underlyingFieldType.Name.Value);
+            _typeInfo = MetadataStoreProvider.GetGraphQLType(_underlyingFieldType.Name);
             PaginationMetadata.IsPaginated = _typeInfo.IsPaginationType;
 
             if (PaginationMetadata.IsPaginated)
@@ -312,7 +306,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata));
 
-                if (PaginationMetadata.RequestedAfterToken)
+                if (PaginationMetadata.RequestedEndCursor)
                 {
                     // add the primary keys in the selected columns if they are missing
                     IEnumerable<string> extraNeededColumns = PrimaryKey().Except(Columns.Select(c => c.Label));
@@ -375,7 +369,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Add the predicates associated with the "after" parameter of paginated queries
         /// </summary>
-        public void AddPaginationPredicate(IEnumerable<PaginationColumn> afterJsonValues)
+        public void AddPaginationPredicate(List<PaginationColumn> afterJsonValues)
         {
             if (!afterJsonValues.Any())
             {
@@ -399,7 +393,7 @@ namespace Azure.DataGateway.Service.Resolvers
                   subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
 
-            PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(afterJsonValues.ToList());
+            PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(afterJsonValues);
         }
 
         /// <summary>
@@ -490,13 +484,13 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 switch (fieldName)
                 {
-                    case QueryBuilder.PAGINATION_FIELD_NAME:
+                    case "items":
                         PaginationMetadata.RequestedItems = true;
                         break;
-                    case QueryBuilder.PAGINATION_TOKEN_FIELD_NAME:
-                        PaginationMetadata.RequestedAfterToken = true;
+                    case "endCursor":
+                        PaginationMetadata.RequestedEndCursor = true;
                         break;
-                    case QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME:
+                    case "hasNextPage":
                         PaginationMetadata.RequestedHasNextPage = true;
                         break;
                 }

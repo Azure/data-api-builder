@@ -3,7 +3,6 @@ using System.Linq;
 using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 
@@ -62,29 +61,12 @@ namespace Azure.DataGateway.Service.Resolvers
                 // primary keys used as predicates
                 if (primaryKeys.Contains(param.Key))
                 {
-                    Predicates.Add(new(
-                        new PredicateOperand(new Column(null, param.Key)),
-                        PredicateOperation.Equal,
-                        new PredicateOperand($"@{MakeParamWithValue(param.Value)}")
-                    ));
+                    Predicates.Add(predicate);
                 }
-                // Unpack the input argument type as columns to update
-                else if (param.Key == UpdateMutationBuilder.INPUT_ARGUMENT_NAME)
+                // use columns to determine values to edit
+                else if (columns.Contains(param.Key))
                 {
-                    IDictionary<string, object?> updateFields = ArgumentToDictionary(mutationParams, UpdateMutationBuilder.INPUT_ARGUMENT_NAME);
-
-                    foreach (KeyValuePair<string, object?> field in updateFields)
-                    {
-                        if (columns.Contains(field.Key))
-                        {
-                            UpdateOperations.Add(new(
-                                new PredicateOperand(new Column(null, field.Key)),
-                                PredicateOperation.Equal,
-                                new PredicateOperand($"@{MakeParamWithValue(field.Value)}")
-                            ));
-                        }
-                    }
-
+                    UpdateOperations.Add(predicate);
                 }
 
                 columns.Remove(param.Key);

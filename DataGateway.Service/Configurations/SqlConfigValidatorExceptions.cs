@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate;
@@ -292,17 +291,17 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate the type of <see cref="QueryBuilder.PAGINATION_TOKEN_FIELD_NAME"/> field in a Pagination type
+        /// Validate the type of "endCursor" field in a Pagination type
         /// </summary>
-        private void ValidateAfterFieldType(FieldDefinitionNode afterField)
+        private void ValidateEndCursorFieldType(FieldDefinitionNode endCursorField)
         {
-            ITypeNode afterFieldType = afterField.Type;
-            if (IsListType(afterFieldType) ||
-                InnerTypeStr(afterFieldType) != "String" ||
-                afterFieldType.IsNonNullType())
+            ITypeNode endCursorFieldType = endCursorField.Type;
+            if (IsListType(endCursorFieldType) ||
+                InnerTypeStr(endCursorFieldType) != "String" ||
+                endCursorFieldType.IsNonNullType())
             {
                 throw new ConfigValidationException(
-                    $"\"{QueryBuilder.PAGINATION_TOKEN_FIELD_NAME}\" must return a nullable \"String\" type.",
+                    "\"endCursor\" must return a nullable \"String\" type.",
                     _schemaValidationStack);
             }
         }
@@ -318,7 +317,7 @@ namespace Azure.DataGateway.Service.Configurations
                 IsNullableType(hasNextPageFieldType))
             {
                 throw new ConfigValidationException(
-                    $"\"{QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME}\" must return a non nullable \"Boolean!\" type.",
+                    "\"hasNextPage\" must return a non nullable \"Boolean!\" type.",
                     _schemaValidationStack);
             }
         }
@@ -328,7 +327,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidatePaginationTypeName(string paginationTypeName)
         {
-            FieldDefinitionNode itemsField = GetTypeFields(paginationTypeName)[QueryBuilder.PAGINATION_FIELD_NAME];
+            FieldDefinitionNode itemsField = GetTypeFields(paginationTypeName)["items"];
             string paginationUnderlyingType = InnerTypeStr(itemsField.Type);
             string expectedTypeName = $"{paginationUnderlyingType}Connection";
             if (paginationTypeName != expectedTypeName)

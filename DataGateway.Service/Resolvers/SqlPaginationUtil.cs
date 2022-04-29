@@ -6,7 +6,6 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -39,7 +38,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 hasExtraElement = rootEnumerated.Count() == paginationMetadata.Structure!.Limit();
 
                 // add hasNextPage to connection elements
-                connectionJson.Add(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, hasExtraElement ? true : false);
+                connectionJson.Add("hasNextPage", hasExtraElement ? true : false);
 
                 if (hasExtraElement)
                 {
@@ -56,23 +55,23 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     // use rootEnumerated to make the *Connection.items since the last element of rootEnumerated
                     // is removed if the result has an extra element
-                    connectionJson.Add(QueryBuilder.PAGINATION_FIELD_NAME, JsonSerializer.Serialize(rootEnumerated.ToArray()));
+                    connectionJson.Add("items", JsonSerializer.Serialize(rootEnumerated.ToArray()));
                 }
                 else
                 {
                     // if the result doesn't have an extra element, just return the dbResult for *Conneciton.items
-                    connectionJson.Add(QueryBuilder.PAGINATION_FIELD_NAME, root.ToString()!);
+                    connectionJson.Add("items", root.ToString()!);
                 }
             }
 
-            if (paginationMetadata.RequestedAfterToken)
+            if (paginationMetadata.RequestedEndCursor)
             {
-                // parse *Connection.after if there are no elements
-                // if no after is added, but it has been requested HotChocolate will report it as null
+                // parse *Connection.endCursor if there are no elements
+                // if no endCursor is added, but it has been requested HotChocolate will report it as null
                 if (returnedElemNo > 0)
                 {
                     JsonElement lastElemInRoot = rootEnumerated.ElementAtOrDefault(returnedElemNo - 1);
-                    connectionJson.Add(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME, MakeCursorFromJsonElement(lastElemInRoot, paginationMetadata.Structure!.PrimaryKey()));
+                    connectionJson.Add("endCursor", MakeCursorFromJsonElement(lastElemInRoot, paginationMetadata.Structure!.PrimaryKey()));
                 }
             }
 
@@ -167,29 +166,38 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Parse the value of "after" parameter from query parameters, validate it, and return the json object it stores
         /// </summary>
-        public static IEnumerable<PaginationColumn> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
+        public static List<PaginationColumn> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
         {
-            if (queryParams.TryGetValue(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME, out object? conitainuationObject))
+            List<PaginationColumn> after = new();
+            object? afterObject = null;
+
+            if (queryParams.ContainsKey("after"))
             {
-                string afterPlainText = (string)conitainuationObject;
-                return ParseAfterFromJsonString(afterPlainText, paginationMetadata);
+                afterObject = queryParams["after"];
             }
 
-            return Enumerable.Empty<PaginationColumn>();
+            if (afterObject != null)
+            {
+                string afterPlainText = (string)afterObject;
+                after = ParseAfterFromJsonString(afterPlainText, paginationMetadata);
+
+            }
+
+            return after;
         }
 
         /// <summary>
         /// Validate the value associated with $after, and return list of orderby columns
         /// it represents.
         /// </summary>
-        public static IEnumerable<PaginationColumn> ParseAfterFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
+        public static List<PaginationColumn> ParseAfterFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
         {
-            IEnumerable<PaginationColumn> after;
+            List<PaginationColumn> after;
             try
             {
                 afterJsonString = Base64Decode(afterJsonString);
-                after = JsonSerializer.Deserialize<IEnumerable<PaginationColumn>>(afterJsonString)!;
-                IEnumerable<string> primaryKeys = paginationMetadata.Structure!.PrimaryKey();
+                after = JsonSerializer.Deserialize<List<PaginationColumn>>(afterJsonString)!;
+                List<string> primaryKeys = paginationMetadata.Structure!.PrimaryKey();
 
                 // verify that primary keys is a sub set of after's column names
                 // if any primary keys are not contained in after's column names we throw exception

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -41,13 +40,9 @@ namespace Azure.DataGateway.Service.Resolvers
 
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
 
-            // return primary key so the inserted row can be identified
-            //ReturnColumns = tableDefinition.PrimaryKey;
-            ReturnColumns = tableDefinition.Columns.Keys.ToList();
+            ReturnColumns = tableDefinition.Columns.Keys.ToList<string>();
 
-            IDictionary<string, object?> createInput = ArgumentToDictionary(mutationParams, CreateMutationBuilder.INPUT_ARGUMENT_NAME);
-
-            foreach (KeyValuePair<string, object?> param in createInput)
+            foreach (KeyValuePair<string, object?> param in mutationParams)
             {
                 PopulateColumnsAndParams(param.Key, param.Value);
             }

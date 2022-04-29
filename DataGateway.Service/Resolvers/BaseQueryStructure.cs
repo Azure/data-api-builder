@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 using HotChocolate.Language;
 using HotChocolate.Types;
@@ -84,7 +83,8 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         internal static ObjectType UnderlyingType(IType type)
         {
-            if (type is ObjectType underlyingType)
+            ObjectType? underlyingType = type as ObjectType;
+            if (underlyingType != null)
             {
                 return underlyingType;
             }
@@ -97,7 +97,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         internal static IObjectField ExtractItemsSchemaField(IObjectField connectionSchemaField)
         {
-            return UnderlyingType(connectionSchemaField.Type).Fields[QueryBuilder.PAGINATION_FIELD_NAME];
+            return UnderlyingType(connectionSchemaField.Type).Fields["items"];
         }
     }
 }

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Azure.DataGateway.Service
+namespace Azure.DataGateway.Service.Models.Authorization
 {
     class EntityToRole
     {

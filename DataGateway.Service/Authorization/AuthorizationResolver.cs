@@ -1,57 +1,59 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Models.Authorization;
 using Action = Azure.DataGateway.Config.Action;
+using Microsoft.AspNetCore.Http;
 
-namespace Azure.DataGateway.Service
+namespace Azure.DataGateway.Service.Authorization
 {
-    public class AuthZConfigDS
+    public class AuthorizationResolver : IAuthorizationResolver
     {
-        Dictionary<string, EntityToRole>? _entityConfigMap;
-        public bool ReadConfig()
+        private IRuntimeConfigProvider _runtimeConfigProvider;
+        private Dictionary<string, EntityToRole> _entityConfigMap;
+
+        public AuthorizationResolver(IRuntimeConfigProvider runtimeConfigProvider)
         {
-            string json;
-            using (StreamReader sr = new("D:\\directory\\DataGateway.Service.Tests\\runtime-config-test.json"))
+            if (runtimeConfigProvider.GetType() != typeof(IRuntimeConfigProvider))
             {
-                json = sr.ReadToEnd();
+                throw new DataGatewayException(
+                    message: "Unable to instantiate the SQL query engine.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
             }
 
-            JsonSerializerOptions? options = new()
-            {
-                PropertyNameCaseInsensitive = true,
-                Converters = { new JsonStringEnumConverter() }
-            };
+            _runtimeConfigProvider = (RuntimeConfigProvider)runtimeConfigProvider;
 
-            RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(json, options);
-            _entityConfigMap = GetEntityConfigMap(runtimeConfig);
-
-            string entityName = "magazines";
-            string roleName = "authenticated";
-            string action = "read";
-            List<string> columns = new() { "issue_number"};
-
-            if (!IsRoleDefinedForEntity(roleName, entityName))
-            {
-                return false; //invalid entity/role
-            }
-
-            if (!IsActionAllowedForRole(roleName, entityName, action))
-            {
-                return false; //invalid action
-            }
-
-            if (!AreColumnsAllowedForAction(roleName, entityName, action, columns))
-            {
-                return false; //columns not allowed
-            }
-
-            return true;
+            // Datastructure constructor will pull required properties from metadataprovider.
+            _entityConfigMap = GetEntityConfigMap(_runtimeConfigProvider.GetRuntimeConfig());
         }
 
-        private bool IsRoleDefinedForEntity(string roleName, string entityName)
+        /// <summary>
+        /// Whether X-DG-Role Http Request Header is present in httpContext.Identity.Claims.Roles
+        /// </summary>
+        /// <param name="httpRequestData"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public bool IsValidRoleContext(HttpRequest httpRequestData)
+        {
+            // TO-DO #1
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Whether X-DG-Role Http Request Header value is present in DeveloperConfig:Entity
+        /// This should fail if entity does not exist. For now: should be 403 Forbidden instead of 404
+        /// to avoid leaking Schema data.
+        /// </summary>
+        /// <param name="roleName"></param>
+        /// <param name="entityName"></param>
+        /// <returns></returns>
+        public bool IsRoleDefinedForEntity(string roleName, string entityName)
         {
             //At this point we don't know if entityName and roleName is valid/exists
             if (!_entityConfigMap.ContainsKey(entityName) || !_entityConfigMap[entityName].roleToActionMap.ContainsKey(roleName))
@@ -62,7 +64,14 @@ namespace Azure.DataGateway.Service
             return true;
         }
 
-        private bool IsActionAllowedForRole(string roleName, string entityName, string action)
+        /// <summary>
+        /// Whether Entity.Role has action defined
+        /// </summary>
+        /// <param name="roleName"></param>
+        /// <param name="entityName"></param>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public bool IsActionAllowedForRole(string roleName, string entityName, string action)
         {
             // At this point we don't know if action is a valid action,
             // in sense that it exists for the given entity/role combination.
@@ -76,7 +85,15 @@ namespace Azure.DataGateway.Service
             return false;
         }
 
-        private bool AreColumnsAllowedForAction(string roleName, string entityName, string action, List<string> columns)
+        /// <summary>
+        /// Compare columns in request body to columns in entity.Role.Action.AllowedColumns
+        /// </summary>
+        /// <param name="roleName"></param>
+        /// <param name="entityName"></param>
+        /// <param name="action"></param>
+        /// <param name="columns"></param>
+        /// <returns></returns>
+        public bool AreColumnsAllowedForAction(string roleName, string entityName, string action, List<string> columns)
         {
             ActionToColumn actionToColumnMap;
             if (_entityConfigMap[entityName].roleToActionMap[roleName].actionToColumnMap.ContainsKey("*"))
@@ -114,6 +131,20 @@ namespace Azure.DataGateway.Service
             return true;
         }
 
+        /// <summary>
+        /// Processes policies.
+        /// </summary>
+        /// <param name="action"></param>
+        /// <param name="roleName"></param>
+        /// <param name="httpContext"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public bool DidProcessDBPolicy(string action, string roleName, HttpContext httpContext)
+        {
+            throw new NotImplementedException();
+        }
+
+        #region Helpers
         // Method to read in data from the config class into a Dictionary for quick lookup
         // during runtime.
         private static Dictionary<string, EntityToRole> GetEntityConfigMap(RuntimeConfig? runtimeConfig)
@@ -131,9 +162,9 @@ namespace Azure.DataGateway.Service
                 {
                     string role = permission.Role;
                     RoleToAction roleToActionMap = new();
-                    Object[] Actions = permission.Actions;
+                    object[] Actions = permission.Actions;
                     ActionToColumn actionToColumnMap;
-                    foreach (Object Action in Actions)
+                    foreach (object Action in Actions)
                     {
                         JsonElement action = (JsonElement)Action;
                         string actionName = "";
@@ -187,5 +218,6 @@ namespace Azure.DataGateway.Service
 
             return result;
         }
+        #endregion
     }
 }

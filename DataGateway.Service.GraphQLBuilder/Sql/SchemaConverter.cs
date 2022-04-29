@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
+using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLNaming;
 
@@ -57,9 +58,12 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 
                     INullableTypeNode targetField = relationship.Cardinality switch
                     {
-                        Cardinality.One => new NamedTypeNode(FormatNameForObject(targetTableName, referencedEntity)),
-                        Cardinality.Many => new ListTypeNode(new NamedTypeNode(FormatNameForObject(targetTableName, referencedEntity))),
-                        _ => throw new NotImplementedException("Specified cardinality isn't supported"),
+                        Cardinality.One =>
+                            new NamedTypeNode(FormatNameForObject(targetTableName, referencedEntity)),
+                        Cardinality.Many =>
+                            new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(FormatNameForObject(targetTableName, referencedEntity))),
+                        _ =>
+                            throw new NotImplementedException("Specified cardinality isn't supported"),
                     };
 
                     FieldDefinitionNode relationshipField = new(

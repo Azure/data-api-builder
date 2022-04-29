@@ -30,7 +30,7 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode queryRoot = QueryBuilder.Build(root, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } });
+            DocumentNode queryRoot = QueryBuilder.Build(root, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"foo_by_pk"));
@@ -50,7 +50,7 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode queryRoot = QueryBuilder.Build(root, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } });
+            DocumentNode queryRoot = QueryBuilder.Build(root, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"foo_by_pk");
@@ -76,7 +76,7 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode queryRoot = QueryBuilder.Build(root, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } });
+            DocumentNode queryRoot = QueryBuilder.Build(root, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"foos"));
@@ -96,7 +96,7 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode queryRoot = QueryBuilder.Build(root, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } });
+            DocumentNode queryRoot = QueryBuilder.Build(root, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             string returnTypeName = query.Fields.First(f => f.Name.Value == $"foos").Type.NamedType().Name.Value;
@@ -122,7 +122,7 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode queryRoot = QueryBuilder.Build(root, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } });
+            DocumentNode queryRoot = QueryBuilder.Build(root, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             FieldDefinitionNode byIdQuery = query.Fields.First(f => f.Name.Value == $"foo_by_pk");

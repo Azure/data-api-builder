@@ -15,11 +15,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         public const string PAGE_START_ARGUMENT_NAME = "first";
         public const string PAGINATION_OBJECT_TYPE_SUFFIX = "Connection";
 
-        public static DocumentNode Build(DocumentNode root, IDictionary<string, Entity> entities)
+        public static DocumentNode Build(DocumentNode root, IDictionary<string, Entity> entities, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
         {
             List<FieldDefinitionNode> queryFields = new();
             List<ObjectTypeDefinitionNode> returnTypes = new();
-            Dictionary<string, InputObjectTypeDefinitionNode> inputTypes = new();
 
             foreach (IDefinitionNode definition in root.Definitions)
             {
@@ -32,7 +31,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                     ObjectTypeDefinitionNode returnType = GenerateReturnType(name);
                     returnTypes.Add(returnType);
 
-                    queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, returnType, inputTypes, root, entity));
+                    queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, returnType, inputTypes, entity));
                     queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name));
                 }
             }
@@ -42,7 +41,6 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 new ObjectTypeDefinitionNode(location: null, new NameNode("Query"), description: null, new List<DirectiveNode>(), new List<NamedTypeNode>(), queryFields),
             };
             definitionNodes.AddRange(returnTypes);
-            definitionNodes.AddRange(inputTypes.Values);
             return new(definitionNodes);
         }
 
@@ -72,12 +70,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             NameNode name,
             ObjectTypeDefinitionNode returnType,
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes,
-            DocumentNode root,
             Entity entity)
         {
-            List<InputValueDefinitionNode> inputFields = GenerateInputFieldsForType(objectTypeDefinitionNode, inputTypes, root);
+            List<InputValueDefinitionNode> inputFields = GenerateInputFieldsForType(objectTypeDefinitionNode);
 
-            string filterInputName = GenerateObjectInputFilterName(objectTypeDefinitionNode);
+            string filterInputName = GenerateObjectInputFilterName(objectTypeDefinitionNode.Name.Value);
 
             if (!inputTypes.ContainsKey(objectTypeDefinitionNode.Name.Value))
             {
@@ -127,71 +124,66 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             );
         }
 
-        private static List<InputValueDefinitionNode> GenerateInputFieldsForType(ObjectTypeDefinitionNode objectTypeDefinitionNode, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes, DocumentNode root)
+        private static List<InputValueDefinitionNode> GenerateInputFieldsForType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
             List<InputValueDefinitionNode> inputFields = new();
             foreach (FieldDefinitionNode field in objectTypeDefinitionNode.Fields)
             {
-                string fieldTypeName = field.Type.NamedType().Name.Value;
-                if (!inputTypes.ContainsKey(fieldTypeName))
-                {
-                    if (IsBuiltInType(field.Type))
-                    {
-                        inputTypes.Add(fieldTypeName, StandardQueryInputs.InputTypes[fieldTypeName]);
-                    }
-                    else
-                    {
-                        InputObjectTypeDefinitionNode inputObjectType = GenerateComplexInputObject(inputTypes, root, fieldTypeName);
+                NamedTypeNode fieldTypeName = field.Type.NamedType();
 
-                        inputTypes.Add(fieldTypeName, inputObjectType);
-                    }
-                }
-
-                InputObjectTypeDefinitionNode inputType = inputTypes[fieldTypeName];
-
-                inputFields.Add(new(location: null, field.Name, new StringValueNode($"Filter options for {field.Name}"), new NamedTypeNode(inputType.Name.Value), defaultValue: null, new List<DirectiveNode>()));
+                inputFields.Add(
+                    new(location: null,
+                        field.Name,
+                        new StringValueNode($"Filter options for {field.Name}"),
+                        new NamedTypeNode(GenerateObjectInputFilterName(fieldTypeName.Name.Value)),
+                        defaultValue: null,
+                        new List<DirectiveNode>())
+                );
             }
 
             return inputFields;
         }
 
-        private static InputObjectTypeDefinitionNode GenerateComplexInputObject(Dictionary<string, InputObjectTypeDefinitionNode> inputTypes, DocumentNode root, string fieldTypeName)
+        public static ObjectTypeDefinitionNode AddQueryArgumentsForRelationships(ObjectTypeDefinitionNode node, Entity entity, Dictionary<string, InputObjectTypeDefinitionNode> inputObjects)
         {
-            IDefinitionNode fieldTypeNode = root.Definitions.First(d => d is HotChocolate.Language.IHasName named && named.Name.Value == fieldTypeName);
+            if (entity.Relationships is null)
+            {
+                return node;
+            }
 
-            return
-                fieldTypeNode switch
+            foreach ((string relationshipName, Relationship relationship) in entity.Relationships)
+            {
+                if (relationship.Cardinality != Cardinality.Many)
                 {
-                    ObjectTypeDefinitionNode node when !inputTypes.ContainsKey(GenerateObjectInputFilterName(node)) => new(
-                        location: null,
-                        new NameNode(GenerateObjectInputFilterName(node)),
-                        new StringValueNode($"Filter input for {node.Name} GraphQL type"),
-                        new List<DirectiveNode>(),
-                        GenerateInputFieldsForType(node, inputTypes, root)),
+                    continue;
+                }
 
-                    ObjectTypeDefinitionNode node =>
-                        inputTypes[GenerateObjectInputFilterName(node)],
+                FieldDefinitionNode field = node.Fields.First(f => f.Name.Value == relationshipName);
 
-                    EnumTypeDefinitionNode node when !inputTypes.ContainsKey(GenerateObjectInputFilterName(node)) => new(
-                        location: null,
-                        new NameNode(GenerateObjectInputFilterName(node)),
-                        new StringValueNode($"Filter input for {node.Name} GraphQL type"),
-                        new List<DirectiveNode>(),
-                        new List<InputValueDefinitionNode> {
-                            new InputValueDefinitionNode(location : null, new NameNode("eq"), new StringValueNode("Equals"), new FloatType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
-                            new InputValueDefinitionNode(location : null, new NameNode("neq"), new StringValueNode("Not Equals"), new FloatType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>())
-                        }),
+                DirectiveNode directive = field.Directives.First(d => d.Name.Value == RelationshipDirectiveType.DirectiveName);
 
-                    EnumTypeDefinitionNode node =>
-                        inputTypes[GenerateObjectInputFilterName(node)],
+                InputObjectTypeDefinitionNode input = inputObjects[(string)directive.Arguments.First(a => a.Name.Value == "target").Value.Value!];
 
-                    _ => throw new InvalidOperationException($"Unable to work with type {fieldTypeName}")
+                List<InputValueDefinitionNode> args = new()
+                {
+                    new(location: null, new NameNode(PAGE_START_ARGUMENT_NAME), description: null, new IntType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
+                    new(location: null, new NameNode(PAGINATION_TOKEN_FIELD_NAME), new StringValueNode("A pagination token from a previous query to continue through a paginated list"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
+                    new(location: null, new NameNode("_filter"), new StringValueNode("Filter options for query"), new NamedTypeNode(input.Name), defaultValue: null, new List<DirectiveNode>()),
+                    new(location: null, new NameNode("_filterOData"), new StringValueNode("Filter options for query expressed as OData query language"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>())
                 };
+
+                List<FieldDefinitionNode> fields = node.Fields.ToList();
+                fields[fields.FindIndex(f => f.Name == field.Name)] = field.WithArguments(args);
+
+                node = node.WithFields(fields);
+            }
+
+            return node;
         }
 
-        private static string GenerateObjectInputFilterName(INamedSyntaxNode objectDefNode)
+        private static string GenerateObjectInputFilterName(string name)
         {
-            return $"{objectDefNode.Name}FilterInput";
+            return $"{name}FilterInput";
         }
 
         public static ObjectType PaginationTypeToModelType(ObjectType underlyingFieldType, IReadOnlyCollection<INamedType> types)
@@ -208,11 +200,16 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             return objectType.Name.Value.EndsWith(PAGINATION_OBJECT_TYPE_SUFFIX);
         }
 
+        public static bool IsPaginationType(NamedTypeNode objectType)
+        {
+            return objectType.Name.Value.EndsWith(PAGINATION_OBJECT_TYPE_SUFFIX);
+        }
+
         private static ObjectTypeDefinitionNode GenerateReturnType(NameNode name)
         {
             return new(
                 location: null,
-                new NameNode($"{name}{PAGINATION_OBJECT_TYPE_SUFFIX}"),
+                new NameNode(GeneratePaginationTypeName(name.Value)),
                 new StringValueNode("The return object from a filter query that supports a pagination token for paging through results"),
                 new List<DirectiveNode>(),
                 new List<NamedTypeNode>(),
@@ -240,6 +237,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                         new List<DirectiveNode>())
                 }
             );
+        }
+
+        public static string GeneratePaginationTypeName(string name)
+        {
+            return $"{name}{PAGINATION_OBJECT_TYPE_SUFFIX}";
         }
     }
 }

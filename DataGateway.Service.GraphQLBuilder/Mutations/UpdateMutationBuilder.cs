@@ -3,6 +3,8 @@ using HotChocolate.Types;
 using static Azure.DataGateway.Service.GraphQLBuilder.Utils;
 using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLNaming;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.GraphQLBuilder.Directives;
+using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 {
@@ -22,6 +24,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             {
                 // TODO: handle primary key fields properly
                 return field.Name.Value != "id";
+            }
+
+            if (QueryBuilder.IsPaginationType(field.Type.NamedType()))
+            {
+                return false;
             }
 
             HotChocolate.Language.IHasName? definition = definitions.FirstOrDefault(d => d.Name.Value == field.Type.NamedType().Name.Value);
@@ -55,7 +62,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                 {
                     if (!IsBuiltInType(f.Type))
                     {
-                        string typeName = f.Type.NamedType().Name.Value;
+                        string typeName = RelationshipDirectiveType.Target(f);
                         HotChocolate.Language.IHasName def = definitions.First(d => d.Name.Value == typeName);
                         if (def is ObjectTypeDefinitionNode otdn)
                         {

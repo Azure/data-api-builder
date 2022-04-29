@@ -1,4 +1,6 @@
+using HotChocolate.Language;
 using HotChocolate.Types;
+using DirectiveLocation = HotChocolate.Types.DirectiveLocation;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Directives
 {
@@ -19,6 +21,15 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Directives
             descriptor.Argument("cardinality")
                   .Type<StringType>()
                   .Description("The relationship cardinality");
+        }
+
+        public static string Target(FieldDefinitionNode field)
+        {
+            DirectiveNode directive = field.Directives.First(d => d.Name.Value == DirectiveName);
+
+            ArgumentNode arg = directive.Arguments.First(a => a.Name.Value == "target");
+
+            return (string)arg.Value.Value!;
         }
     }
 }

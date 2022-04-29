@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
@@ -56,7 +58,7 @@ namespace Azure.DataGateway.Service.Services
             InitializeSchemaAndResolvers();
         }
 
-        private void ParseAsync(DocumentNode root, Dictionary<string, Entity> entities)
+        private void ParseAsync(DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes, Dictionary<string, Entity> entities)
         {
             if (_config.DatabaseType == null)
             {
@@ -68,7 +70,7 @@ namespace Azure.DataGateway.Service.Services
                 .AddDirectiveType<ModelDirectiveType>()
                 .AddDirectiveType<RelationshipDirectiveType>()
                 .AddDirectiveType<PrimaryKeyDirectiveType>()
-                .AddDocument(QueryBuilder.Build(root, entities))
+                .AddDocument(QueryBuilder.Build(root, entities, inputTypes))
                 .AddDocument(MutationBuilder.Build(root, _config.DatabaseType.Value, entities));
 
             Schema = sb
@@ -151,7 +153,7 @@ namespace Azure.DataGateway.Service.Services
 
             Dictionary<string, Entity> entities = _runtimeConfigProvider.GetRuntimeConfig().Entities;
 
-            DocumentNode root = _config.DatabaseType switch
+            (DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = _config.DatabaseType switch
             {
                 DatabaseType.cosmos => GenerateCosmosGraphQLObjects(),
                 DatabaseType.mssql or
@@ -160,13 +162,15 @@ namespace Azure.DataGateway.Service.Services
                 _ => throw new NotImplementedException()
             };
 
-            ParseAsync(root, entities);
+            ParseAsync(root, inputTypes, entities);
         }
 
-        private DocumentNode GenerateSqlGraphQLObjects(Dictionary<string, Entity> entities)
+        private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateSqlGraphQLObjects(Dictionary<string, Entity> entities)
         {
-            List<ObjectTypeDefinitionNode> graphQLObjects = new();
+            Dictionary<string, ObjectTypeDefinitionNode> objectTypes = new();
+            Dictionary<string, InputObjectTypeDefinitionNode> inputObjects = new();
 
+            // First pass - build up the object and input types for all the entities
             foreach ((string entityName, Entity entity) in entities)
             {
                 if (entity.GraphQL is not null)
@@ -182,13 +186,33 @@ namespace Azure.DataGateway.Service.Services
                 TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
 
                 ObjectTypeDefinitionNode node = SchemaConverter.FromTableDefinition(entityName, tableDefinition, entity, entities);
-                graphQLObjects.Add(node);
+                InputTypeBuilder.GenerateInputTypeForObjectType(node, inputObjects);
+                objectTypes.Add(entityName, node);
             }
 
-            return new DocumentNode(graphQLObjects);
+            // Pass two - Add the arguments to the many-to-* relationship fields
+            foreach ((string entityName, Entity entity) in entities)
+            {
+                if (entity.GraphQL is not null)
+                {
+                    if (entity.GraphQL is bool graphql && graphql == false)
+                    {
+                        continue;
+                    }
+
+                    // TODO: Do we need to check the object version of `entity.GraphQL`?
+                }
+
+                ObjectTypeDefinitionNode node = objectTypes[entityName];
+                node = QueryBuilder.AddQueryArgumentsForRelationships(node, entity, inputObjects);
+                objectTypes[entityName] = node;
+            }
+
+            List<IDefinitionNode> nodes = new(objectTypes.Values);
+            return (new DocumentNode(nodes.Concat(inputObjects.Values).ToImmutableList()), inputObjects);
         }
 
-        private DocumentNode GenerateCosmosGraphQLObjects()
+        private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateCosmosGraphQLObjects()
         {
             string graphqlSchema = _graphQLMetadataProvider.GetGraphQLSchema();
 
@@ -197,7 +221,7 @@ namespace Azure.DataGateway.Service.Services
                 throw new DataGatewayException("No GraphQL object model was provided for CosmosDB. Please define a GraphQL object model and link it in the runtime config.", System.Net.HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
             }
 
-            return Utf8GraphQLParser.Parse(graphqlSchema);
+            return (Utf8GraphQLParser.Parse(graphqlSchema), new Dictionary<string, InputObjectTypeDefinitionNode>());
         }
 
         /// <summary>

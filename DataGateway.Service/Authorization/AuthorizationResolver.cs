@@ -12,6 +12,10 @@ using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataGateway.Service.Authorization
 {
+    /// <summary>
+    /// Authorization stages that require passing before a request is executed
+    /// against a database.
+    /// </summary>
     public class AuthorizationResolver : IAuthorizationResolver
     {
         private IRuntimeConfigProvider _runtimeConfigProvider;
@@ -46,21 +50,21 @@ namespace Azure.DataGateway.Service.Authorization
         ///     Header present, valid value -> TRUE
         /// </returns>
         /// <exception cref="NotImplementedException"></exception>
-        public bool IsValidRoleContext(HttpRequest httpRequestData)
+        public bool IsValidRoleContext(HttpContext httpContext)
         {
-            if (!httpRequestData.Headers.ContainsKey(CLIENT_ROLE_HEADER))
+            if (!httpContext.Request.Headers.ContainsKey(CLIENT_ROLE_HEADER))
             {
                 return true;
             }
 
-            if (httpRequestData.Headers[CLIENT_ROLE_HEADER].ToString().Length == 0)
+            if (httpContext.Request.Headers[CLIENT_ROLE_HEADER].ToString().Length == 0)
             {
                 return false;
             }
 
-            string clientRole = httpRequestData.Headers[CLIENT_ROLE_HEADER].ToString();
+            string clientRole = httpContext.Request.Headers[CLIENT_ROLE_HEADER].ToString();
 
-            if (httpRequestData.HttpContext.User.IsInRole(clientRole))
+            if (httpContext.User.IsInRole(clientRole))
             {
                 return true;
             }

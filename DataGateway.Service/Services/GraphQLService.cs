@@ -68,6 +68,8 @@ namespace Azure.DataGateway.Service.Services
                .AddAuthorizeDirectiveType()
                .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine, _graphQLMetadataProvider))
                .Create();
+
+            MakeSchemaExecutable();
         }
 
         /// <summary>

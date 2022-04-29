@@ -25,7 +25,12 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Directives
 
         public static string Target(FieldDefinitionNode field)
         {
-            DirectiveNode directive = field.Directives.First(d => d.Name.Value == DirectiveName);
+            DirectiveNode? directive = field.Directives.FirstOrDefault(d => d.Name.Value == DirectiveName);
+
+            if (directive == null)
+            {
+                return field.Type.NamedType().Name.Value;
+            }
 
             ArgumentNode arg = directive.Arguments.First(a => a.Name.Value == "target");
 

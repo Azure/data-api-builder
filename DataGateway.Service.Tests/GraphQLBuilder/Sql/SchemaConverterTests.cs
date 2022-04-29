@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
+using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.GraphQLBuilder.Sql;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -313,7 +314,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
         }
 
         [TestMethod]
-        public void CardinalityOfManyWillBeListRelationship()
+        public void CardinalityOfManyWillBeConnectionRelationship()
         {
             TableDefinition table = new();
 
@@ -351,8 +352,8 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity, new() { { foreignKeyTable, relationshipEntity } });
 
-            FieldDefinitionNode field = od.Fields.First(f => f.Type.NamedType().Name.Value == foreignKeyTable);
-            Assert.IsTrue(field.Type.InnerType().IsListType());
+            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == "fkTable");
+            Assert.IsTrue(QueryBuilder.IsPaginationType(field.Type.NamedType()));
         }
 
         [TestMethod]

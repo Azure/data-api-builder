@@ -327,11 +327,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         items {
             title
             authors(first: 100) {
-                name
-                books(first: 100) {
-                    title
-                    authors(first: 100) {
-                        name
+                items {
+                    name
+                    books(first: 100) {
+                        items {
+                            title
+                            authors(first: 100) {
+                                items {
+                                    name
+                                }
+                            }
+                        }
                     }
                 }
             }

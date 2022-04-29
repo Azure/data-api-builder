@@ -32,6 +32,7 @@ namespace Azure.DataGateway.Service.Services
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly IDocumentCache _documentCache;
         private readonly IDocumentHashProvider _documentHashProvider;
+        private readonly bool _useLegacySchema;
 
         public ISchema? Schema { private set; get; }
         public IRequestExecutor? Executor { private set; get; }
@@ -55,9 +56,27 @@ namespace Azure.DataGateway.Service.Services
             _documentCache = documentCache;
             _documentHashProvider = documentHashProvider;
 
+            _useLegacySchema = true;
+
             InitializeSchemaAndResolvers();
         }
 
+        public void ParseAsync(string data)
+        {
+            Schema = SchemaBuilder.New()
+               .AddDocumentFromString(data)
+               .AddAuthorizeDirectiveType()
+               .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine, _graphQLMetadataProvider))
+               .Create();
+        }
+
+        /// <summary>
+        /// Take the raw GraphQL objects and generate the full schema from them
+        /// </summary>
+        /// <param name="root">Root document containing the GraphQL object and input types</param>
+        /// <param name="inputTypes">Reference table of the input types for query lookup</param>
+        /// <param name="entities">Runtime config entities</param>
+        /// <exception cref="DataGatewayException">Error will be raised if no database type is set</exception>
         private void ParseAsync(DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes, Dictionary<string, Entity> entities)
         {
             if (_config.DatabaseType == null)
@@ -78,6 +97,11 @@ namespace Azure.DataGateway.Service.Services
                 .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine, _graphQLMetadataProvider))
                 .Create();
 
+            MakeSchemaExecutable();
+        }
+
+        private void MakeSchemaExecutable()
+        {
             // Below is pretty much an inlined version of
             // ISchema.MakeExecutable. The reason that we inline it is that
             // same changes need to be made in the middle of it, such as
@@ -86,29 +110,29 @@ namespace Azure.DataGateway.Service.Services
                 .AddGraphQL()
                 .AddAuthorization()
                 .AddErrorFilter(error =>
-            {
-                if (error.Exception != null)
                 {
-                    Console.Error.WriteLine(error.Exception.Message);
-                    Console.Error.WriteLine(error.Exception.StackTrace);
-                }
+                    if (error.Exception != null)
+                    {
+                        Console.Error.WriteLine(error.Exception.Message);
+                        Console.Error.WriteLine(error.Exception.StackTrace);
+                    }
 
-                return error;
-            })
+                    return error;
+                })
                 .AddErrorFilter(error =>
-            {
-                if (error.Exception is DataGatewayException)
                 {
-                    DataGatewayException thrownException = (DataGatewayException)error.Exception;
-                    return error.RemoveException()
-                            .RemoveLocations()
-                            .RemovePath()
-                            .WithMessage(thrownException.Message)
-                            .WithCode($"{thrownException.SubStatusCode}");
-                }
+                    if (error.Exception is DataGatewayException)
+                    {
+                        DataGatewayException thrownException = (DataGatewayException)error.Exception;
+                        return error.RemoveException()
+                                .RemoveLocations()
+                                .RemovePath()
+                                .WithMessage(thrownException.Message)
+                                .WithCode($"{thrownException.SubStatusCode}");
+                    }
 
-                return error;
-            });
+                    return error;
+                });
 
             // Sadly IRequestExecutorBuilder.Configure is internal, so we also
             // inline that one here too
@@ -146,23 +170,37 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private void InitializeSchemaAndResolvers()
         {
-            if (_config.DatabaseType == null)
+            if (_useLegacySchema)
             {
-                throw new DataGatewayException("No database type was configured", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
+                // Attempt to get schema from the metadata store.
+                string graphqlSchema = _graphQLMetadataProvider.GetGraphQLSchema();
+
+                // If the schema is available, parse it and attach resolvers.
+                if (!string.IsNullOrEmpty(graphqlSchema))
+                {
+                    ParseAsync(graphqlSchema);
+                }
             }
-
-            Dictionary<string, Entity> entities = _runtimeConfigProvider.GetRuntimeConfig().Entities;
-
-            (DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = _config.DatabaseType switch
+            else if (!_useLegacySchema)
             {
-                DatabaseType.cosmos => GenerateCosmosGraphQLObjects(),
-                DatabaseType.mssql or
-                DatabaseType.postgresql or
-                DatabaseType.mysql => GenerateSqlGraphQLObjects(entities),
-                _ => throw new NotImplementedException()
-            };
+                if (_config.DatabaseType == null)
+                {
+                    throw new DataGatewayException("No database type was configured", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
+                }
 
-            ParseAsync(root, inputTypes, entities);
+                Dictionary<string, Entity> entities = _runtimeConfigProvider.GetRuntimeConfig().Entities;
+
+                (DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = _config.DatabaseType switch
+                {
+                    DatabaseType.cosmos => GenerateCosmosGraphQLObjects(),
+                    DatabaseType.mssql or
+                    DatabaseType.postgresql or
+                    DatabaseType.mysql => GenerateSqlGraphQLObjects(entities),
+                    _ => throw new NotImplementedException()
+                };
+
+                ParseAsync(root, inputTypes, entities);
+            }
         }
 
         private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateSqlGraphQLObjects(Dictionary<string, Entity> entities)

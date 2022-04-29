@@ -343,9 +343,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithAfterSingleKeyPagination()
         {
+            string after = SqlPaginationUtil.Base64Encode("[{\"Value\":7,\"Direction\":0,\"TableSchema\":\"dbo\",\"TableName\":\"books\",\"ColumnName\":\"id\"}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":7,\"Direction\":0,\"ColumnName\":\"id\"}]"))}",
+                queryString: $"?$after={HttpUtility.UrlEncode(after)}",
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithAfterSingleKeyPagination)),
                 controller: _restController
@@ -359,8 +360,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithAfterMultiKeyPagination()
         {
-            string after = "[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"book_id\"}," +
-                            "{\"Value\":567,\"Direction\":0,\"ColumnName\":\"id\"}]";
+            string after = "[{\"Value\":1,\"Direction\":0,\"TableSchema\":\"dbo\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}," +
+                            "{\"Value\":567,\"Direction\":0,\"TableSchema\":\"dbo\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}]";
+
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
@@ -370,14 +372,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             );
         }
 
-                                //string? schemaName,
-                                //string? tableName,
-                                //string columnName,
-                                //object? value,
-                                //string? tableAlias = null,
-                                //OrderByDir direction = OrderByDir.Asc,
-                                //string? paramName = null)
-
         /// <summary>
         /// Tests the REST Api for Find operation using pagination
         /// to verify that we return an $after cursor that has the
@@ -386,13 +380,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithPaginationVerifSinglePrimaryKeyInAfter()
         {
+            string after = SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"TableSchema\":\"dbo\",\"TableName\":\"books\",\"ColumnName\":\"id\"}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$first=1",
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithPaginationVerifSinglePrimaryKeyInAfter)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(after)}",
                 paginated: true
             );
         }
@@ -405,8 +400,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithPaginationVerifMultiplePrimaryKeysInAfter()
         {
-            string after = "[{\"Value\":1,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"book_id\"}," +
-                            "{\"Value\":567,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"id\"}]";
+            string after = "[{\"Value\":1,\"Direction\":0,\"TableSchema\":\"dbo\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}," +
+                            "{\"Value\":567,\"Direction\":0,\"TableSchema\":\"dbo\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$first=1",
@@ -458,8 +453,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstSingleKeyPaginationAndOrderBy()
         {
-            string after = "[{\"Value\":\"Also Awesome book\",\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"title\"}," +
-                            "{\"Value\":2,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]";
+            string after = "[{\"Value\":\"Also Awesome book\",\"Direction\":0,\"TableSchema\":\"dbo\",\"TableName\":\"books\",\"ColumnName\":\"title\"}," +
+                            "{\"Value\":2,\"Direction\":0,\"TableSchema\":\"dbo\",\"TableName\":\"books\",\"ColumnName\":\"id\"}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=title",
@@ -479,13 +474,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstSingleKeyIncludedInOrderByAndPagination()
         {
+            string after = SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"TableSchema\":\"dbo\",\"TableName\":\"books\",\"ColumnName\":\"id\"}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=id",
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyIncludedInOrderByAndPagination)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(after)}",
                 paginated: true
             );
         }
@@ -498,13 +494,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstTwoOrderByAndPagination()
         {
+            string after = SqlPaginationUtil.Base64Encode("[{\"Value\":2,\"Direction\":0,\"TableSchema\":\"dbo\",\"TableName\":\"books\",\"ColumnName\":\"id\"}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=2&$orderby=id",
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstTwoOrderByAndPagination)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":2,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(after)}",
                 paginated: true
             );
         }
@@ -517,9 +514,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstTwoVerifyAfterFormedCorrectlyWithOrderBy()
         {
-            string after = "[{\"Value\":\"2001-01-01\",\"Direction\":0,\"TableAlias\":\"authors\",\"ColumnName\":\"birthdate\"}," +
-                            "{\"Value\":\"Aniruddh\",\"Direction\":0,\"TableAlias\":\"authors\",\"ColumnName\":\"name\"}," +
-                            "{\"Value\":125,\"Direction\":1,\"TableAlias\":\"authors\",\"ColumnName\":\"id\"}]";
+            string after = "[{\"Value\":\"2001-01-01\",\"Direction\":0,\"TableSchema\":\"dbo\",\"TableName\":\"authors\",\"ColumnName\":\"birthdate\"}," +
+                            "{\"Value\":\"Aniruddh\",\"Direction\":0,\"TableSchema\":\"dbo\",\"TableName\":\"authors\",\"ColumnName\":\"name\"}," +
+                            "{\"Value\":125,\"Direction\":1,\"TableSchema\":\"dbo\",\"TableName\":\"authors\",\"ColumnName\":\"id\"}]";
             after = $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
@@ -564,8 +561,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstMultiKeyIncludeAllInOrderByAndPagination()
         {
-            string after = "[{\"Value\":569,\"Direction\":1,\"TableAlias\":\"reviews\",\"ColumnName\":\"id\"}," +
-                            "{\"Value\":1,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"book_id\"}]";
+            string after = "[{\"Value\":569,\"Direction\":1,\"TableSchema\":\"dbo\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}," +
+                            "{\"Value\":1,\"Direction\":0,\"TableSchema\":\"dbo\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=id desc, book_id",
@@ -586,8 +583,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstMultiKeyIncludeOneInOrderByAndPagination()
         {
-            string after = "[{\"Value\":1,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"book_id\"}," +
-                            "{\"Value\":567,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"id\"}]";
+            string after = "[{\"Value\":1,\"Direction\":0,\"TableSchema\":\"dbo\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}," +
+                            "{\"Value\":567,\"Direction\":0,\"TableSchema\":\"dbo\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=book_id",
@@ -609,9 +606,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstAndMultiColumnOrderBy()
         {
-            string after = "[{\"Value\":2345,\"Direction\":1,\"TableAlias\":\"books\",\"ColumnName\":\"publisher_id\"}," +
-                            "{\"Value\":\"US history in a nutshell\",\"Direction\":1,\"TableAlias\":\"books\",\"ColumnName\":\"title\"}," +
-                            "{\"Value\":4,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]";
+            string after = "[{\"Value\":2345,\"Direction\":1,\"TableSchema\":\"dbo\",\"TableName\":\"books\",\"ColumnName\":\"publisher_id\"}," +
+                            "{\"Value\":\"US history in a nutshell\",\"Direction\":1,\"TableSchema\":\"dbo\",\"TableName\":\"books\",\"ColumnName\":\"title\"}," +
+                            "{\"Value\":4,\"Direction\":0,\"TableSchema\":\"dbo\",\"TableName\":\"books\",\"ColumnName\":\"id\"}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=publisher_id desc, title desc",
@@ -632,8 +629,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstAndTiedColumnOrderBy()
         {
-            string after = "[{\"Value\":2345,\"Direction\":1,\"TableAlias\":\"books\",\"ColumnName\":\"publisher_id\"}," +
-                            "{\"Value\":3,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]";
+            string after = "[{\"Value\":2345,\"Direction\":1,\"TableSchema\":\"dbo\",\"TableName\":\"books\",\"ColumnName\":\"publisher_id\"}," +
+                            "{\"Value\":3,\"Direction\":0,\"TableSchema\":\"dbo\",\"TableName\":\"books\",\"ColumnName\":\"id\"}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=publisher_id desc",
@@ -678,9 +675,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstMultiKeyPaginationAndOrderBy()
         {
-            string after = "[{\"Value\":\"Indeed a great book\",\"Direction\":1,\"TableAlias\":\"reviews\",\"ColumnName\":\"content\"}," +
-                            "{\"Value\":1,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"book_id\"}," +
-                            "{\"Value\":567,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"id\"}]";
+            string after = "[{\"Value\":\"Indeed a great book\",\"Direction\":1,\"TableSchema\":\"dbo\",\"TableName\":\"reviews\",\"ColumnName\":\"content\"}," +
+                            "{\"Value\":1,\"Direction\":0,\"TableSchema\":\"dbo\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}," +
+                            "{\"Value\":567,\"Direction\":0,\"TableSchema\":\"dbo\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=content desc",

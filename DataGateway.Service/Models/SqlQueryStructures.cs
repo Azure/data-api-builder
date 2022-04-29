@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Azure.DataGateway.Service.Models
 {
@@ -11,11 +12,11 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Schema name of the table which owns the column
         /// </summary>
-        public string? TableSchema{ get; }
+        public string? TableSchema { get; set; }
         /// <summary>
         /// Name of the table which owns the column
         /// </summary>
-        public string? TableName { get; }
+        public string? TableName { get; set; }
         /// <summary>
         /// Name of the alias of the table which owns the column
         /// </summary>
@@ -23,7 +24,7 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Name of the column
         /// </summary>
-        public string ColumnName { get; }
+        public string ColumnName { get; set; }
 
         public Column(string? tableSchema, string? tableName, string columnName, string? tableAlias = "")
         {
@@ -39,9 +40,9 @@ namespace Azure.DataGateway.Service.Models
     /// </summary>
     public class OrderByColumn : Column
     {
-        public OrderByDir Direction { get; }
-        public OrderByColumn(string? schemaName, string? tableName, string columnName, string? tableAlias = "", OrderByDir direction = OrderByDir.Asc)
-            : base(schemaName, tableName, columnName, tableAlias)
+        public OrderByDir Direction { get; set; }
+        public OrderByColumn(string? tableSchema, string? tableName, string columnName, string? tableAlias = "", OrderByDir direction = OrderByDir.Asc)
+            : base(tableSchema, tableName, columnName, tableAlias)
         {
             Direction = direction;
         }
@@ -53,16 +54,16 @@ namespace Azure.DataGateway.Service.Models
     /// </summary>
     public class PaginationColumn : OrderByColumn
     {
-        public object? Value { get; }
+        public object? Value { get; set; }
         public string? ParamName { get; set; }
-        public PaginationColumn(string? schemaName,
+        public PaginationColumn(string? tableSchema,
                                 string? tableName,
                                 string columnName,
                                 object? value,
                                 string? tableAlias= null,
                                 OrderByDir direction = OrderByDir.Asc,
                                 string? paramName = null)
-            : base(schemaName, tableName, columnName, tableAlias, direction)
+            : base(tableSchema, tableName, columnName, tableAlias, direction)
         {
             Value = value;
             ParamName = paramName;

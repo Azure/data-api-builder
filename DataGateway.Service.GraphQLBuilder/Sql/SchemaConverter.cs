@@ -43,7 +43,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 
             if (configEntity.Relationships is not null)
             {
-                foreach ((string _, Relationship relationship) in configEntity.Relationships)
+                foreach ((string relationshipName, Relationship relationship) in configEntity.Relationships)
                 {
                     // Generate the field that represents the relationship to ObjectType, so you can navigate through it
                     // and walk the graph
@@ -64,7 +64,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 
                     FieldDefinitionNode relationshipField = new(
                         location: null,
-                        Pluralize(targetTableName, referencedEntity),
+                        new NameNode(FormatNameForField(relationshipName)),
                         description: null,
                         new List<InputValueDefinitionNode>(),
                         // TODO: Check for whether it should be a nullable relationship based on the relationship fields

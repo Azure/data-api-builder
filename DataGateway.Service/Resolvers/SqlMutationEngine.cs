@@ -88,11 +88,6 @@ namespace Azure.DataGateway.Service.Resolvers
                     dbDataReader,
                     onlyExtract: tableDefinition.PrimaryKey);
 
-                foreach (KeyValuePair<string, object?> pair in searchParams)
-                {
-                    Console.WriteLine(pair.Key + " @-> " + pair.Value);
-                }
-
                 if (searchParams == null)
                 {
                     string searchedPK = '<' + string.Join(", ", tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
@@ -282,12 +277,6 @@ namespace Azure.DataGateway.Service.Resolvers
                     break;
                 default:
                     throw new NotSupportedException($"Unexpected mutation operation \" {operationType}\" requested.");
-            }
-
-            Console.WriteLine(queryString);
-            foreach(KeyValuePair<string, object> kvp in queryParameters)
-            {
-                Console.WriteLine(kvp.Key + "&->" +  kvp.Value);
             }
 
             return await _queryExecutor.ExecuteQueryAsync(queryString, queryParameters);

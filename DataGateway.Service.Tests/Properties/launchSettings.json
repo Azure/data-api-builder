@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Azure.DataGateway.Service.Tests": {
+      "commandName": "Project",
+      "sqlDebugging": true
+    }
+  }
+}

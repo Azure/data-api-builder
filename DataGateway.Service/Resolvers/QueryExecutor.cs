@@ -106,16 +106,9 @@ namespace Azure.DataGateway.Service.Resolvers
                             {
                                 row.Add(columnName, value: null);
                             }
-
-                            Console.WriteLine(columnName + " ::-> " + dbDataReader[columnName]);
                         }
                     }
                 }
-            }
-
-            foreach(KeyValuePair<string, object?> pair in row)
-            {
-                Console.WriteLine(pair.Key + "#->" + pair.Value);
             }
 
             // no row was read

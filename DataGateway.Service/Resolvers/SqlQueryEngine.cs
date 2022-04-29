@@ -62,10 +62,6 @@ namespace Azure.DataGateway.Service.Resolvers
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _sqlMetadataProvider);
-            foreach (KeyValuePair<string, object> p in structure.Parameters)
-            {
-                Console.WriteLine(p.Key + "*->" + p.Value);
-            }
 
             if (structure.PaginationMetadata.IsPaginated)
             {

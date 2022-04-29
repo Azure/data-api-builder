@@ -127,7 +127,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
         private static string GenerateObjectInputFilterName(INamedSyntaxNode node)
         {
-           return GenerateObjectInputFilterName(node.Name.Value);
+            return GenerateObjectInputFilterName(node.Name.Value);
         }
 
         private static string GenerateObjectInputFilterName(string name)

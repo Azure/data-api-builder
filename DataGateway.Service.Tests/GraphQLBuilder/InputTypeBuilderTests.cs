@@ -1,8 +1,5 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -33,7 +30,7 @@ type Foo @model {{
             ObjectTypeDefinitionNode node = root.Definitions[0] as ObjectTypeDefinitionNode;
             InputTypeBuilder.GenerateInputTypeForObjectType(node, inputTypes);
 
-            Assert.AreEqual(expectedFilterName, inputTypes["Foo"].Fields.First(f => f.Name.Value=="id").Type.NamedType().Name.Value);
+            Assert.AreEqual(expectedFilterName, inputTypes["Foo"].Fields.First(f => f.Name.Value == "id").Type.NamedType().Name.Value);
         }
 
         [TestMethod]

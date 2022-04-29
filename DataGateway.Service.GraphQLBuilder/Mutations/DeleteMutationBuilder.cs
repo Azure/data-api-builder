@@ -1,8 +1,8 @@
+using Azure.DataGateway.Config;
 using HotChocolate.Language;
 using HotChocolate.Types;
-using static Azure.DataGateway.Service.GraphQLBuilder.Utils;
 using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLNaming;
-using Azure.DataGateway.Config;
+using static Azure.DataGateway.Service.GraphQLBuilder.Utils;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 {

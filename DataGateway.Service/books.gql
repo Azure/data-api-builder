@@ -18,7 +18,6 @@ type Mutation {
     insertMagazine(id: Int!, title: String!, issue_number: Int): Magazine
     insertWebsiteUser(id: Int!, username: String): WebsiteUser
     insertWebsitePlacement(book_id: Int!, price: Int!): BookWebsitePlacement
-    insertReview(book_id: Int!, content: String! = "Its a classic"): Review
     addAuthorToBook(author_id: Int!, book_id: Int!): Boolean
     deleteBook(id: Int!): Book
     deleteReview(id: Int!, book_id: Int!): Review

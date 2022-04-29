@@ -20,7 +20,7 @@ namespace Azure.DataGateway.Service.Resolvers
         : base(metadataStoreProvider, sqlMetadataProvider, entityName: entityName)
         {
             DatabaseObject dbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
-            string schemaName = dbObject.Name;
+            string schemaName = dbObject.SchemaName;
             string tableName = dbObject.Name;
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
 

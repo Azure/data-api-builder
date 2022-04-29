@@ -388,6 +388,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 foreach (PaginationColumn column in afterJsonValues)
                 {
+                    column.TableAlias = TableAlias;
                     column.ParamName = "@" + MakeParamWithValue(
                             GetParamAsColumnSystemType(column.Value!.ToString()!, column.ColumnName));
                 }

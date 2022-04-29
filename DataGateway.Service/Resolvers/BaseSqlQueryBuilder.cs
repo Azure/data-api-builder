@@ -121,7 +121,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (!string.IsNullOrEmpty(column.TableSchema))
                 {
                     return !string.IsNullOrEmpty(column.TableAlias) ? $"{QuoteIdentifier(column.TableAlias)}.{QuoteIdentifier(column.ColumnName)}" :
-                            QuoteIdentifier($"{column.TableSchema}.{column.TableName}") + "." + QuoteIdentifier(column.ColumnName);
+                            $"{QuoteIdentifier(column.TableSchema)}.{QuoteIdentifier(column.TableName)}.{QuoteIdentifier(column.ColumnName)}";
                 } else
                 {
                     return QuoteIdentifier($"{column.TableName}") + "." + QuoteIdentifier(column.ColumnName);

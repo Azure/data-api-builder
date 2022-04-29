@@ -25,7 +25,7 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
         public string ColumnName { get; }
 
-        public Column(string? tableSchema, string? tableName, string columnName, string tableAlias = "")
+        public Column(string? tableSchema, string? tableName, string columnName, string? tableAlias = "")
         {
             TableSchema = tableSchema;
             TableName = tableName;
@@ -40,7 +40,7 @@ namespace Azure.DataGateway.Service.Models
     public class OrderByColumn : Column
     {
         public OrderByDir Direction { get; }
-        public OrderByColumn(string? schemaName, string? tableName, string columnName, string tableAlias = "", OrderByDir direction = OrderByDir.Asc)
+        public OrderByColumn(string? schemaName, string? tableName, string columnName, string? tableAlias = "", OrderByDir direction = OrderByDir.Asc)
             : base(schemaName, tableName, columnName, tableAlias)
         {
             Direction = direction;
@@ -55,7 +55,13 @@ namespace Azure.DataGateway.Service.Models
     {
         public object? Value { get; }
         public string? ParamName { get; set; }
-        public PaginationColumn(string? schemaName, string? tableName, string columnName, object? value, string tableAlias= "", OrderByDir direction = OrderByDir.Asc, string? paramName = null)
+        public PaginationColumn(string? schemaName,
+                                string? tableName,
+                                string columnName,
+                                object? value,
+                                string? tableAlias= null,
+                                OrderByDir direction = OrderByDir.Asc,
+                                string? paramName = null)
             : base(schemaName, tableName, columnName, tableAlias, direction)
         {
             Value = value;

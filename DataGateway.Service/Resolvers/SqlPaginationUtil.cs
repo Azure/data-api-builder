@@ -140,7 +140,11 @@ namespace Azure.DataGateway.Service.Resolvers
                 foreach (OrderByColumn column in orderByColumns)
                 {
                     object value = ResolveJsonElementToScalarVariable(element.GetProperty(column.ColumnName));
-                    cursorJson.Add(new PaginationColumn(schemaName: schemaName, tableName: tableName, column.ColumnName, value, direction: column.Direction));
+                    cursorJson.Add(new PaginationColumn(schemaName: schemaName,
+                                                        tableName: tableName,
+                                                        column.ColumnName,
+                                                        value, tableAlias: null,
+                                                        direction: column.Direction));
                     remainingKeys.Remove(column.ColumnName);
                 }
             }

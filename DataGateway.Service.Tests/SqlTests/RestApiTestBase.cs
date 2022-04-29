@@ -303,13 +303,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstSingleKeyPagination()
         {
+            string after = SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"TableSchema\":\"dbo\",\"TableName\":\"books\",\"ColumnName\":\"id\"}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1",
                 entity: _integrationTableName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyPagination)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(after)}",
                 paginated: true
             );
         }
@@ -322,8 +323,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstMultiKeyPagination()
         {
-            string after = "[{\"Value\":1,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"book_id\"}," +
-                            "{\"Value\":567,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"id\"}]";
+            string after = "[{\"Value\":1,\"Direction\":0,\"TableSchema\":\"dbo\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}," +
+                            "{\"Value\":567,\"Direction\":0,\"TableSchema\":\"dbo\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1",
@@ -368,6 +369,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController
             );
         }
+
+                                //string? schemaName,
+                                //string? tableName,
+                                //string columnName,
+                                //object? value,
+                                //string? tableAlias = null,
+                                //OrderByDir direction = OrderByDir.Asc,
+                                //string? paramName = null)
 
         /// <summary>
         /// Tests the REST Api for Find operation using pagination

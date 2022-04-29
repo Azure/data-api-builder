@@ -84,7 +84,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Inserts new review with default content for a Book and return its id and content
+        /// <code>Do: </code> Inserts new review with default content for a Review and return its id and content
         /// <code>Check: </code> If book with the given id is present in the database then
         /// the mutation query will return the review Id with the content of the review added
         /// </summary>

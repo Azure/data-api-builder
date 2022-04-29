@@ -1,6 +1,9 @@
+using System;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 
 namespace Azure.DataGateway.Service
@@ -15,8 +18,28 @@ namespace Azure.DataGateway.Service
         public static IHostBuilder CreateHostBuilder(string[] args) =>
 
             Host.CreateDefaultBuilder(args)
-                .ConfigureAppConfiguration((_, configuration) =>
+                .ConfigureAppConfiguration((hostingContext, configuration) =>
                 {
+                    configuration.Sources.Clear();
+                    IHostEnvironment env = hostingContext.HostingEnvironment;
+
+                    configuration
+                        .AddJsonFile(RuntimeConfig.DefaultRuntimeConfigName)
+                        .AddJsonFile
+                            ($"{RuntimeConfig.CONFIGFILE_NAME}.{env.EnvironmentName}" +
+                            $".{RuntimeConfig.CONFIG_EXTENSION}");
+
+                    string? runtimeEnvironmentValue
+                        = Environment.GetEnvironmentVariable(RuntimeConfig.RUNTIME_ENVIRONMENT_VARIABLE_NAME);
+                    if (runtimeEnvironmentValue != null)
+                    {
+                        configuration
+                            .AddJsonFile($"{RuntimeConfig.CONFIGFILE_NAME}" +
+                                $".{runtimeEnvironmentValue}.{RuntimeConfig.CONFIG_EXTENSION}");
+                    }
+
+                    configuration.AddEnvironmentVariables();
+                    configuration.AddCommandLine(args);
                     configuration.AddInMemoryUpdateableConfiguration();
                 })
                 .ConfigureWebHostDefaults(webBuilder =>

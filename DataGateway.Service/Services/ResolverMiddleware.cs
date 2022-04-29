@@ -168,7 +168,7 @@ namespace Azure.DataGateway.Service.Services
                     parameters.Add(argument.Name.Value, ArgumentValue(argument.Value, variables));
                 }
 
-                Console.WriteLine(parameters[argument.Name.Value] + "--->" + ArgumentValue(argument.Value, variables));
+                Console.WriteLine(argument.Name.Value + "--->" + ArgumentValue(argument.Value, variables));
             }
 
             return parameters;

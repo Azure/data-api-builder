@@ -1,32 +1,22 @@
-using HotChocolate.Language;
 using HotChocolate.Types;
-using DirectiveLocation = HotChocolate.Language.DirectiveLocation;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Directives
 {
-    public static class PrimaryKeyDirective
+    public class PrimaryKeyDirectiveType : DirectiveType
     {
         public static string DirectiveName { get; } = "primaryKey";
 
-        public static DirectiveDefinitionNode Directive
+        protected override void Configure(IDirectiveTypeDescriptor descriptor)
         {
-            get
-            {
-                return new(
-                location: null,
-                new NameNode(DirectiveName),
-                new StringValueNode("A directive to indicate the primary key field of an item"),
-                false,
-                new List<InputValueDefinitionNode> {
-                    new(location: null,
-                    new NameNode("databaseType"),
-                    new StringValueNode("The underlying database type"),
-                    new StringType().ToTypeNode(),
-                    defaultValue: null,
-                    new List<DirectiveNode>())
-                },
-                new List<NameNode> { new NameNode(DirectiveLocation.FieldDefinition.Value) });
-            }
+            descriptor
+                    .Name(DirectiveName)
+                    .Description("A directive to indicate the primary key field of an item.")
+                    .Location(DirectiveLocation.FieldDefinition);
+
+            descriptor
+                    .Argument("databaseType")
+                        .Type<StringType>()
+                        .Description("The underlying database type");
         }
     }
 }

@@ -9,7 +9,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         public static InputObjectTypeDefinitionNode IdInputType() =>
             new(
                 null,
-                new NameNode("IdInputType"),
+                new NameNode("IdFilterInput"),
                 new StringValueNode("Input type for adding ID filters"),
                 new List<DirectiveNode>(),
                 new List<InputValueDefinitionNode> {
@@ -21,7 +21,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         public static InputObjectTypeDefinitionNode BooleanInputType() =>
             new(
                 null,
-                new NameNode("BooleanInputType"),
+                new NameNode("BooleanFilterInput"),
                 new StringValueNode("Input type for adding Boolean filters"),
                 new List<DirectiveNode>(),
                 new List<InputValueDefinitionNode> {
@@ -33,7 +33,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         public static InputObjectTypeDefinitionNode IntInputType() =>
             new(
                 null,
-                new NameNode("IntInputType"),
+                new NameNode("IntFilterInput"),
                 new StringValueNode("Input type for adding Int filters"),
                 new List<DirectiveNode>(),
                 new List<InputValueDefinitionNode> {
@@ -49,7 +49,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         public static InputObjectTypeDefinitionNode FloatInputType() =>
             new(
                 null,
-                new NameNode("FloatInputType"),
+                new NameNode("FloatFilterInput"),
                 new StringValueNode("Input type for adding Float filters"),
                 new List<DirectiveNode>(),
                 new List<InputValueDefinitionNode> {
@@ -65,7 +65,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         public static InputObjectTypeDefinitionNode StringInputType() =>
             new(
                 null,
-                new NameNode("StringInputType"),
+                new NameNode("StringFilterInput"),
                 new StringValueNode("Input type for adding String filters"),
                 new List<DirectiveNode>(),
                 new List<InputValueDefinitionNode> {

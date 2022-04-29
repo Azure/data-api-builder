@@ -1,39 +1,24 @@
-using HotChocolate.Language;
 using HotChocolate.Types;
-using DirectiveLocation = HotChocolate.Language.DirectiveLocation;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Directives
 {
-    public static class RelationshipDirective
+    public class RelationshipDirectiveType : DirectiveType
     {
         public static string DirectiveName { get; } = "relationship";
 
-        public static DirectiveDefinitionNode Directive
+        protected override void Configure(IDirectiveTypeDescriptor descriptor)
         {
-            get
-            {
-                return new(
-                location: null,
-                new NameNode(DirectiveName),
-                new StringValueNode("A directive to indicate the relationship between two tables"),
-                false,
-                new List<InputValueDefinitionNode> {
-                    new(location: null,
-                    new NameNode("target"),
-                    new StringValueNode("The target entity of the relationship"),
-                    new StringType().ToTypeNode(),
-                    defaultValue: null,
-                    new List<DirectiveNode>()),
+            descriptor.Name(DirectiveName)
+                               .Description("A directive to indicate the relationship between two tables")
+                               .Location(DirectiveLocation.FieldDefinition);
 
-                    new(location: null,
-                    new NameNode("cardinality"),
-                    new StringValueNode("The relationship cardinality"),
-                    new StringType().ToTypeNode(),
-                    defaultValue: null,
-                    new List<DirectiveNode>())
-                },
-                new List<NameNode> { new NameNode(DirectiveLocation.FieldDefinition.Value) });
-            }
+            descriptor.Argument("target")
+                  .Type<StringType>()
+                  .Description("The name of the entity the relationship targets");
+
+            descriptor.Argument("cardinality")
+                  .Type<StringType>()
+                  .Description("The relationship cardinality");
         }
     }
 }

@@ -32,7 +32,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             // Setup GraphQL Components
             //
-            _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _metadataStoreProvider, new DocumentCache(), new Sha256DocumentHashProvider(), new Configurations.DataGatewayConfig { DatabaseType = DatabaseType.mssql });
+            _graphQLService = new GraphQLService(_queryEngine, mutationEngine: null, _metadataStoreProvider, new DocumentCache(), new Sha256DocumentHashProvider(), new Configurations.DataGatewayConfig { DatabaseType = DatabaseType.mssql }, _runtimeConfigProvider, _sqlMetadataProvider);
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
@@ -167,9 +167,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task OneToOneJoinQuery()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"query {
-                getBooks {
+                books {
                     id
                     website_placement {
                         id
@@ -321,21 +321,23 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task DeeplyNestedManyToManyJoinQuery()
         {
             string graphQLQueryName = "books";
-            string graphQLQuery = @"{
+            string graphQLQuery = @"
+{
+    books(first: 100) {
+        items {
+            title
+            authors(first: 100) {
+                name
                 books(first: 100) {
-                    items {
-                        title
-                        authors(first: 100) {
-                          name
-                            books(first: 100) {
-                            title
-                            authors(first: 100) {
-                                name
-                            }
-                        }
+                    title
+                    authors(first: 100) {
+                        name
                     }
                 }
-            }";
+            }
+        }
+    }
+}";
 
             string msSqlQuery = @"
                 SELECT TOP 100 [table0].[title] AS [title],
@@ -627,12 +629,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestQueryingTypeWithNullableIntFields()
         {
-            string graphQLQueryName = "getMagazines";
+            string graphQLQueryName = "magazines";
             string graphQLQuery = @"{
-                getMagazines{
-                    id
-                    title
-                    issue_number
+                magazines {
+                    items {
+                        id
+                        title
+                        issue_number
+                    }
                 }
             }";
 
@@ -649,11 +653,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestQueryingTypeWithNullableStringFields()
         {
-            string graphQLQueryName = "getWebsiteUsers";
+            string graphQLQueryName = "websiteUsers";
             string graphQLQuery = @"{
-                getWebsiteUsers{
-                    id
-                    username
+                websiteUsers {
+                    items {
+                        id
+                        username
+                    }
                 }
             }";
 
@@ -672,11 +678,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestAliasSupportForGraphQLQueryFields()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                getBooks(first: 2) {
-                    book_id: id
-                    book_title: title
+                books(first: 2) {
+                    items {
+                        book_id: id
+                        book_title: title
+                    }
                 }
             }";
             string msSqlQuery = $"SELECT TOP 2 id AS book_id, title AS book_title FROM books ORDER by id FOR JSON PATH, INCLUDE_NULL_VALUES";
@@ -695,11 +703,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestSupportForMixOfRawDbFieldFieldAndAlias()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                getBooks(first: 2) {
-                    book_id: id
-                    title
+                books(first: 2) {
+                    items {
+                        book_id: id
+                        title
+                    }
                 }
             }";
             string msSqlQuery = $"SELECT TOP 2 id AS book_id, title AS title FROM books ORDER by id FOR JSON PATH, INCLUDE_NULL_VALUES";

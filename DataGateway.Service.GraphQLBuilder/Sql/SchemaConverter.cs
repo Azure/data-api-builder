@@ -26,7 +26,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 
                 if (tableDefinition.PrimaryKey.Contains(columnName))
                 {
-                    directives.Add(new DirectiveNode(PrimaryKeyDirective.DirectiveName, new ArgumentNode("databaseType", column.SystemType.Name)));
+                    directives.Add(new DirectiveNode(PrimaryKeyDirectiveType.DirectiveName, new ArgumentNode("databaseType", column.SystemType.Name)));
                 }
 
                 NamedTypeNode fieldType = new(GetGraphQLTypeForColumnType(column.SystemType));
@@ -70,7 +70,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                         // TODO: Check for whether it should be a nullable relationship based on the relationship fields
                         new NonNullTypeNode(targetField),
                         new List<DirectiveNode> {
-                                new(RelationshipDirective.DirectiveName, new ArgumentNode("target", FormatNameForObject(targetTableName, referencedEntity)), new ArgumentNode("cardinality", relationship.Cardinality.ToString()))
+                            new(RelationshipDirectiveType.DirectiveName, new ArgumentNode("target", FormatNameForObject(targetTableName, referencedEntity)), new ArgumentNode("cardinality", relationship.Cardinality.ToString()))
                         });
 
                     fields.Add(relationshipField.Name.Value, relationshipField);
@@ -81,7 +81,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                 location: null,
                 new(FormatNameForObject(entityName, configEntity)),
                 description: null,
-                new List<DirectiveNode>(),
+                new List<DirectiveNode>() { new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", entityName)) },
                 new List<NamedTypeNode>(),
                 fields.Values.ToImmutableList());
         }

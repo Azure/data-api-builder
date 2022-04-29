@@ -93,7 +93,7 @@
       "relationships": {
         "publisher": {
           "cardinality": "one",
-          "target.entity": "publisher"
+          "target.entity": "dbo.publishers"
         },
         "websiteplacement": {
           "cardinality": "one",

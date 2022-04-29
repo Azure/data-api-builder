@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
@@ -50,7 +51,7 @@ namespace Azure.DataGateway.Service.Resolvers
             Container container = _clientProvider.Client.GetDatabase(structure.Database).GetContainer(structure.Container);
 
             QueryRequestOptions queryRequestOptions = new();
-            string requestEndCursor = null;
+            string requestAfterField = null;
 
             string queryString = _queryBuilder.Build(structure);
 
@@ -64,10 +65,10 @@ namespace Azure.DataGateway.Service.Resolvers
             if (structure.IsPaginated)
             {
                 queryRequestOptions.MaxItemCount = (int?)structure.MaxItemCount;
-                requestEndCursor = Base64Decode(structure.EndCursor);
+                requestAfterField = Base64Decode(structure.After);
             }
 
-            FeedResponse<JObject> firstPage = await container.GetItemQueryIterator<JObject>(querySpec, requestEndCursor, queryRequestOptions).ReadNextAsync();
+            FeedResponse<JObject> firstPage = await container.GetItemQueryIterator<JObject>(querySpec, requestAfterField, queryRequestOptions).ReadNextAsync();
 
             if (structure.IsPaginated)
             {
@@ -79,16 +80,16 @@ namespace Azure.DataGateway.Service.Resolvers
                     jarray.Add(item);
                 }
 
-                string responseEndCursor = firstPage.ContinuationToken;
-                if (string.IsNullOrEmpty(responseEndCursor))
+                string responseAfterToken = firstPage.ContinuationToken;
+                if (string.IsNullOrEmpty(responseAfterToken))
                 {
-                    responseEndCursor = null;
+                    responseAfterToken = null;
                 }
 
                 JObject res = new(
-                   new JProperty("endCursor", Base64Encode(responseEndCursor)),
-                   new JProperty("hasNextPage", responseEndCursor != null),
-                   new JProperty("items", jarray));
+                   new JProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME, Base64Encode(responseAfterToken)),
+                   new JProperty(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, responseAfterToken != null),
+                   new JProperty(QueryBuilder.PAGINATION_FIELD_NAME, jarray));
 
                 // This extra deserialize/serialization will be removed after moving to Newtonsoft from System.Text.Json
                 return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(res.ToString()), null);

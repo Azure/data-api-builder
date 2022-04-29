@@ -1,18 +1,34 @@
-using System.Collections.Generic;
-using System.Linq;
 using Azure.DataGateway.Config;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using static Azure.DataGateway.Service.GraphQLBuilder.Utils;
+using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLNaming;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 {
     public static class CreateMutationBuilder
     {
         public const string INPUT_ARGUMENT_NAME = "item";
-        private static InputObjectTypeDefinitionNode GenerateCreateInputType(Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs, ObjectTypeDefinitionNode objectTypeDefinitionNode, NameNode name, IEnumerable<HotChocolate.Language.IHasName> definitions, DatabaseType databaseType)
+
+        /// <summary>
+        /// Generate the GraphQL input type from an object type
+        /// </summary>
+        /// <param name="inputs">Reference table of all known input types.</param>
+        /// <param name="objectTypeDefinitionNode">GraphQL object to generate the input type for.</param>
+        /// <param name="name">Name of the GraphQL object type.</param>
+        /// <param name="definitions">All named GraphQL items in the schema (objects, enums, scalars, etc.)</param>
+        /// <param name="databaseType">Database type to generate input type for.</param>
+        /// <param name="entity">Runtime config information.</param>
+        /// <returns>A GraphQL input type with all expected fields mapped as GraphQL inputs.</returns>
+        private static InputObjectTypeDefinitionNode GenerateCreateInputType(
+            Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
+            ObjectTypeDefinitionNode objectTypeDefinitionNode,
+            NameNode name,
+            IEnumerable<HotChocolate.Language.IHasName> definitions,
+            DatabaseType databaseType,
+            Entity entity)
         {
-            NameNode inputName = GenerateInputTypeName(name.Value);
+            NameNode inputName = GenerateInputTypeName(name.Value, entity);
 
             if (inputs.ContainsKey(inputName))
             {
@@ -30,11 +46,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                         HotChocolate.Language.IHasName def = definitions.First(d => d.Name.Value == typeName);
                         if (def is ObjectTypeDefinitionNode otdn)
                         {
-                            return GetComplexInputType(inputs, definitions, f, typeName, otdn, databaseType);
+                            return GetComplexInputType(inputs, definitions, f, typeName, otdn, databaseType, entity);
                         }
                     }
 
-                    return GenerateSimpleInputType(name, f);
+                    return GenerateSimpleInputType(name, f, entity);
                 });
 
             InputObjectTypeDefinitionNode input =
@@ -79,25 +95,43 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             return true;
         }
 
-        private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f)
+        private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f, Entity entity)
         {
             return new(
                 null,
                 f.Name,
-                new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(name.Value)}"),
+                new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(name.Value, entity)}"),
                 f.Type,
                 null,
-                f.Directives
+                new List<DirectiveNode>()
             );
         }
 
-        private static InputValueDefinitionNode GetComplexInputType(Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs, IEnumerable<HotChocolate.Language.IHasName> definitions, FieldDefinitionNode f, string typeName, ObjectTypeDefinitionNode otdn, DatabaseType databaseType)
+        /// <summary>
+        /// Generates a GraphQL Input Type value for an object type, generally one provided from the database.
+        /// </summary>
+        /// <param name="inputs">Dictionary of all input types, allowing reuse where possible.</param>
+        /// <param name="definitions">All named GraphQL types from the schema (objects, enums, etc.) for referencing.</param>
+        /// <param name="f">Field that the input type is being generated for.</param>
+        /// <param name="typeName">Name of the input type in the dictionary.</param>
+        /// <param name="otdn">The GraphQL object type to create the input type for.</param>
+        /// <param name="databaseType">Database type to generate the input type for.</param>
+        /// <param name="entity">Runtime configuration information for the current type.</param>
+        /// <returns>A GraphQL input type value.</returns>
+        private static InputValueDefinitionNode GetComplexInputType(
+            Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
+            IEnumerable<HotChocolate.Language.IHasName> definitions,
+            FieldDefinitionNode f,
+            string typeName,
+            ObjectTypeDefinitionNode otdn,
+            DatabaseType databaseType,
+            Entity entity)
         {
             InputObjectTypeDefinitionNode node;
-            NameNode inputTypeName = GenerateInputTypeName(typeName);
+            NameNode inputTypeName = GenerateInputTypeName(typeName, entity);
             if (!inputs.ContainsKey(inputTypeName))
             {
-                node = GenerateCreateInputType(inputs, otdn, f.Type.NamedType().Name, definitions, databaseType);
+                node = GenerateCreateInputType(inputs, otdn, f.Type.NamedType().Name, definitions, databaseType, entity);
             }
             else
             {
@@ -108,35 +142,57 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                 null,
                 f.Name,
                 new StringValueNode($"Input for field {f.Name} on type {inputTypeName}"),
-                new NonNullTypeNode(new NamedTypeNode(node.Name)), // todo - figure out how to properly walk the graph, so you can do [Foo!]!
+                new NonNullTypeNode(new NamedTypeNode(node.Name)), // TODO - figure out how to properly walk the graph, so you can do [Foo!]!
                 null,
                 f.Directives
             );
         }
 
-        private static NameNode GenerateInputTypeName(string typeName)
+        private static NameNode GenerateInputTypeName(string typeName, Entity entity)
         {
-            return new($"Create{typeName}Input");
+            return new($"Create{FormatNameForObject(typeName, entity)}Input");
         }
 
-        public static FieldDefinitionNode Build(NameNode name, Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs, ObjectTypeDefinitionNode objectTypeDefinitionNode, DocumentNode root, DatabaseType databaseType)
+        /// <summary>
+        /// Generate the `create` mutation field for the GraphQL mutations for a given Object Definition
+        /// </summary>
+        /// <param name="name">Name of the GraphQL object to generate the create field for.</param>
+        /// <param name="inputs">All known GraphQL input types.</param>
+        /// <param name="objectTypeDefinitionNode">The GraphQL object type to generate for.</param>
+        /// <param name="root">The GraphQL document root to find GraphQL schema items in.</param>
+        /// <param name="databaseType">Type of database we're generating the field for.</param>
+        /// <param name="entity">Runtime config information for the type.</param>
+        /// <returns>A GraphQL field definition named <c>create*EntityName*</c> to be attached to the Mutations type in the GraphQL schema.</returns>
+        public static FieldDefinitionNode Build(
+            NameNode name,
+            Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
+            ObjectTypeDefinitionNode objectTypeDefinitionNode,
+            DocumentNode root,
+            DatabaseType databaseType,
+            Entity entity)
         {
-            InputObjectTypeDefinitionNode input = GenerateCreateInputType(inputs, objectTypeDefinitionNode, name, root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>(), databaseType);
+            InputObjectTypeDefinitionNode input = GenerateCreateInputType(
+                inputs,
+                objectTypeDefinitionNode,
+                name,
+                root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>(),
+                databaseType,
+                entity);
 
             return new(
-                null,
-                new NameNode($"create{name}"),
+                location: null,
+                new NameNode($"create{FormatNameForObject(name, entity)}"),
                 new StringValueNode($"Creates a new {name}"),
                 new List<InputValueDefinitionNode> {
                 new InputValueDefinitionNode(
-                    null,
+                    location : null,
                     new NameNode(INPUT_ARGUMENT_NAME),
                     new StringValueNode($"Input representing all the fields for creating {name}"),
                     new NonNullTypeNode(new NamedTypeNode(input.Name)),
-                    null,
+                    defaultValue: null,
                     new List<DirectiveNode>())
                 },
-                new NamedTypeNode(name),
+                new NamedTypeNode(FormatNameForObject(name, entity)),
                 new List<DirectiveNode>()
             );
         }

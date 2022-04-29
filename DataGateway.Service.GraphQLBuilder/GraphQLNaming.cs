@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
 using Humanizer;
 
@@ -47,11 +48,26 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             return string.Join("", nameSegments.Select(n => $"{char.ToUpperInvariant(n[0])}{n[1..]}"));
         }
 
+        public static string FormatNameForObject(NameNode name, Entity configEntity)
+        {
+            return FormatNameForObject(name.Value, configEntity);
+        }
+
         public static string FormatNameForField(string name)
         {
             string[] nameSegments = SanitizeGraphQLName(name);
 
             return string.Join("", nameSegments.Select((n, i) => $"{(i == 0 ? char.ToLowerInvariant(n[0]) : char.ToUpperInvariant(n[0]))}{n[1..]}"));
+        }
+
+        public static string FormatNameForField(NameNode name)
+        {
+            return FormatNameForField(name.Value);
+        }
+
+        public static NameNode Pluralize(NameNode name, Entity configEntity)
+        {
+            return Pluralize(name.Value, configEntity);
         }
 
         public static NameNode Pluralize(string name, Entity configEntity)
@@ -67,6 +83,13 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             }
 
             return new NameNode(FormatNameForField(name).Pluralize());
+        }
+
+        public static string ObjectTypeToEntityName(ObjectTypeDefinitionNode node)
+        {
+            DirectiveNode modelDirective = node.Directives.First(d => d.Name.Value == ModelDirectiveType.DirectiveName);
+
+            return modelDirective.Arguments.Count == 1 ? (string)(modelDirective.Arguments[0].Value.Value ?? node.Name.Value) : node.Name.Value;
         }
     }
 }

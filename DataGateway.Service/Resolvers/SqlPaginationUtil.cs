@@ -65,14 +65,14 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            if (paginationMetadata.RequestedEndCursorToken)
+            if (paginationMetadata.RequestedAfterToken)
             {
-                // parse *Connection.endCursor if there are no elements
-                // if no endCursor is added, but it has been requested HotChocolate will report it as null
+                // parse *Connection.after if there are no elements
+                // if no after is added, but it has been requested HotChocolate will report it as null
                 if (returnedElemNo > 0)
                 {
                     JsonElement lastElemInRoot = rootEnumerated.ElementAtOrDefault(returnedElemNo - 1);
-                    connectionJson.Add(QueryBuilder.END_CURSOR_TOKEN_FIELD_NAME, MakeCursorFromJsonElement(lastElemInRoot, paginationMetadata.Structure!.PrimaryKey()));
+                    connectionJson.Add(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME, MakeCursorFromJsonElement(lastElemInRoot, paginationMetadata.Structure!.PrimaryKey()));
                 }
             }
 
@@ -169,7 +169,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public static IEnumerable<PaginationColumn> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
         {
-            if (queryParams.TryGetValue(QueryBuilder.END_CURSOR_TOKEN_FIELD_NAME, out object? conitainuationObject))
+            if (queryParams.TryGetValue(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME, out object? conitainuationObject))
             {
                 string afterPlainText = (string)conitainuationObject;
                 return ParseAfterFromJsonString(afterPlainText, paginationMetadata);

@@ -1,5 +1,6 @@
-using System.Linq;
+using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
+using HotChocolate.Types;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder
 {
@@ -7,19 +8,14 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
     {
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
-            string modelDirectiveName = CustomDirectives.ModelTypeDirectiveName;
+            string modelDirectiveName = ModelDirectiveType.DirectiveName;
             return objectTypeDefinitionNode.Directives.Any(d => d.Name.ToString() == modelDirectiveName);
         }
 
-        public static string FormatNameForField(NameNode name)
+        public static bool IsModelType(ObjectType objectType)
         {
-            string rawName = name.Value;
-            return $"{char.ToLowerInvariant(rawName[0])}{rawName[1..]}";
-        }
-
-        public static NameNode Pluralize(NameNode name)
-        {
-            return new NameNode($"{FormatNameForField(name)}s");
+            string modelDirectiveName = ModelDirectiveType.DirectiveName;
+            return objectType.Directives.Any(d => d.Name.ToString() == modelDirectiveName);
         }
 
         public static bool IsBuiltInType(ITypeNode typeNode)
@@ -33,9 +29,25 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             return false;
         }
 
-        public static FieldDefinitionNode FindIdField(ObjectTypeDefinitionNode node)
+        public static FieldDefinitionNode FindPrimaryKeyField(ObjectTypeDefinitionNode node)
         {
-            return node.Fields.First(f => f.Name.Value == "id");
+            FieldDefinitionNode? fieldDefinitionNode = node.Fields.FirstOrDefault(f => f.Directives.Any(d => d.Name.Value == PrimaryKeyDirectiveType.DirectiveName));
+
+            // By convention we look for a `@primaryKey` directive, if that didn't exist
+            // fallback to using an expected field name on the GraphQL object
+            if (fieldDefinitionNode == null)
+            {
+                fieldDefinitionNode = node.Fields.FirstOrDefault(f => f.Name.Value == "id");
+            }
+
+            // Nothing explicitly defined nor could we find anything using our conventions, fail out
+            if (fieldDefinitionNode == null)
+            {
+                // TODO: Proper exception type
+                throw new Exception("No primary key defined and conventions couldn't locate a fallback");
+            }
+
+            return fieldDefinitionNode;
         }
     }
 }

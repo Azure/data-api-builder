@@ -1,13 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.GraphQLBuilder;
+using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
+using Azure.DataGateway.Service.GraphQLBuilder.Sql;
 using Azure.DataGateway.Service.Resolvers;
 using HotChocolate;
 using HotChocolate.Execution;
@@ -24,6 +26,8 @@ namespace Azure.DataGateway.Service.Services
         private readonly IMutationEngine _mutationEngine;
         private readonly IGraphQLMetadataProvider _graphQLMetadataProvider;
         private readonly DataGatewayConfig _config;
+        private readonly IRuntimeConfigProvider _runtimeConfigProvider;
+        private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly IDocumentCache _documentCache;
         private readonly IDocumentHashProvider _documentHashProvider;
 
@@ -36,31 +40,36 @@ namespace Azure.DataGateway.Service.Services
             IGraphQLMetadataProvider graphQLMetadataProvider,
             IDocumentCache documentCache,
             IDocumentHashProvider documentHashProvider,
-            DataGatewayConfig config)
+            DataGatewayConfig config,
+            IRuntimeConfigProvider runtimeConfigProvider,
+            ISqlMetadataProvider sqlMetadataProvider)
         {
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
             _graphQLMetadataProvider = graphQLMetadataProvider;
             _config = config;
+            _runtimeConfigProvider = runtimeConfigProvider;
+            _sqlMetadataProvider = sqlMetadataProvider;
             _documentCache = documentCache;
             _documentHashProvider = documentHashProvider;
+
             InitializeSchemaAndResolvers();
         }
 
-        public void ParseAsync(string data)
+        private void ParseAsync(DocumentNode root, Dictionary<string, Entity> entities)
         {
             if (_config.DatabaseType == null)
             {
-                throw new DataGatewayException("No database type was configured", System.Net.HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
+                throw new DataGatewayException("No database type was configured", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
             }
-
-            DocumentNode root = Utf8GraphQLParser.Parse(data);
 
             ISchemaBuilder sb = SchemaBuilder.New()
                 .AddDocument(root)
-                .AddDirectiveType(CustomDirectives.ModelTypeDirective())
-                .AddDocument(QueryBuilder.Build(root))
-                .AddDocument(MutationBuilder.Build(root, _config.DatabaseType.Value));
+                .AddDirectiveType<ModelDirectiveType>()
+                .AddDirectiveType<RelationshipDirectiveType>()
+                .AddDirectiveType<PrimaryKeyDirectiveType>()
+                .AddDocument(QueryBuilder.Build(root, entities))
+                .AddDocument(MutationBuilder.Build(root, _config.DatabaseType.Value, entities));
 
             Schema = sb
                 .AddAuthorizeDirectiveType()
@@ -135,14 +144,60 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private void InitializeSchemaAndResolvers()
         {
-            // Attempt to get schema from the metadata store.
+            if (_config.DatabaseType == null)
+            {
+                throw new DataGatewayException("No database type was configured", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
+            }
+
+            Dictionary<string, Entity> entities = _runtimeConfigProvider.GetRuntimeConfig().Entities;
+
+            DocumentNode root = _config.DatabaseType switch
+            {
+                DatabaseType.cosmos => GenerateCosmosGraphQLObjects(),
+                DatabaseType.mssql or
+                DatabaseType.postgresql or
+                DatabaseType.mysql => GenerateSqlGraphQLObjects(entities),
+                _ => throw new NotImplementedException()
+            };
+
+            ParseAsync(root, entities);
+        }
+
+        private DocumentNode GenerateSqlGraphQLObjects(Dictionary<string, Entity> entities)
+        {
+            List<ObjectTypeDefinitionNode> graphQLObjects = new();
+
+            foreach ((string entityName, Entity entity) in entities)
+            {
+                if (entity.GraphQL is not null)
+                {
+                    if (entity.GraphQL is bool graphql && graphql == false)
+                    {
+                        continue;
+                    }
+
+                    // TODO: Do we need to check the object version of `entity.GraphQL`?
+                }
+
+                TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
+
+                ObjectTypeDefinitionNode node = SchemaConverter.FromTableDefinition(entityName, tableDefinition, entity, entities);
+                graphQLObjects.Add(node);
+            }
+
+            return new DocumentNode(graphQLObjects);
+        }
+
+        private DocumentNode GenerateCosmosGraphQLObjects()
+        {
             string graphqlSchema = _graphQLMetadataProvider.GetGraphQLSchema();
 
-            // If the schema is available, parse it and attach resolvers.
-            if (!string.IsNullOrEmpty(graphqlSchema))
+            if (string.IsNullOrEmpty(graphqlSchema))
             {
-                ParseAsync(graphqlSchema);
+                throw new DataGatewayException("No GraphQL object model was provided for CosmosDB. Please define a GraphQL object model and link it in the runtime config.", System.Net.HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
             }
+
+            return Utf8GraphQLParser.Parse(graphqlSchema);
         }
 
         /// <summary>

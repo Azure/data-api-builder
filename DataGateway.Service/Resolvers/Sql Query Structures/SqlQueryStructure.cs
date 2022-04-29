@@ -201,7 +201,12 @@ namespace Azure.DataGateway.Service.Resolvers
             IOutputType outputType = schemaField.Type;
             _underlyingFieldType = UnderlyingType(outputType);
 
-            _typeInfo = MetadataStoreProvider.GetGraphQLType(_underlyingFieldType.Name);
+            if (QueryBuilder.IsPaginationType(_underlyingFieldType))
+            {
+                _underlyingFieldType = QueryBuilder.PaginationTypeToModelType(_underlyingFieldType, ctx.Schema.Types);
+            }
+
+            _typeInfo = MetadataStoreProvider.GetGraphQLType(_underlyingFieldType.Name.Value);
             PaginationMetadata.IsPaginated = _typeInfo.IsPaginationType;
 
             if (PaginationMetadata.IsPaginated)
@@ -307,7 +312,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata));
 
-                if (PaginationMetadata.RequestedEndCursorToken)
+                if (PaginationMetadata.RequestedAfterToken)
                 {
                     // add the primary keys in the selected columns if they are missing
                     IEnumerable<string> extraNeededColumns = PrimaryKey().Except(Columns.Select(c => c.Label));
@@ -488,8 +493,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     case QueryBuilder.PAGINATION_FIELD_NAME:
                         PaginationMetadata.RequestedItems = true;
                         break;
-                    case QueryBuilder.END_CURSOR_TOKEN_FIELD_NAME:
-                        PaginationMetadata.RequestedEndCursorToken = true;
+                    case QueryBuilder.PAGINATION_TOKEN_FIELD_NAME:
+                        PaginationMetadata.RequestedAfterToken = true;
                         break;
                     case QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME:
                         PaginationMetadata.RequestedHasNextPage = true;

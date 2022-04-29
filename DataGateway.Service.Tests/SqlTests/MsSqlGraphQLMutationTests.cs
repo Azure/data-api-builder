@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
@@ -30,7 +29,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await InitializeTestFixture(context, TestCategory.MSSQL);
 
             // Setup GraphQL Components
-            _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider, new DocumentCache(), new Sha256DocumentHashProvider(), new Configurations.DataGatewayConfig { DatabaseType = DatabaseType.mssql }, _runtimeConfigProvider, _sqlMetadataProvider);
+            _graphQLService = new GraphQLService(
+                _queryEngine,
+                mutationEngine: null,
+                _metadataStoreProvider,
+                new DocumentCache(),
+                new Sha256DocumentHashProvider(),
+                new() { DatabaseType = Config.DatabaseType.mssql },
+                _runtimeConfigProvider,
+                _sqlMetadataProvider);
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
@@ -55,10 +62,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task InsertMutation()
         {
-            string graphQLMutationName = "createBook";
+            string graphQLMutationName = "insertBook";
             string graphQLMutation = @"
                 mutation {
-                    createBook(item: { title: ""My New Book"", publisher_id: 1234 }) {
+                    insertBook(title: ""My New Book"", publisher_id: 1234) {
                         id
                         title
                     }
@@ -84,39 +91,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
-        [TestMethod]
-        public async Task InsertMutationWithVariable()
-        {
-            string graphQLMutationName = "createBook";
-            string graphQLMutation = @"
-                mutation ($item: CreateBookInput!) {
-                    createBook(item: $item) {
-                        id
-                        title
-                    }
-                }
-            ";
-            var variables = new { title = "My New Book", publisher_id = 1234 };
-
-            string msSqlQuery = @"
-                SELECT TOP 1 [table0].[id] AS [id],
-                    [table0].[title] AS [title]
-                FROM [books] AS [table0]
-                WHERE [table0].[id] = 5001
-                    AND [table0].[title] = 'My New Book'
-                    AND [table0].[publisher_id] = 1234
-                ORDER BY [id]
-                FOR JSON PATH,
-                    INCLUDE_NULL_VALUES,
-                    WITHOUT_ARRAY_WRAPPER
-            ";
-
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController, new() { { "item", variables } });
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-        }
-
         /// <summary>
         /// <code>Do: </code>Update book in database and return its updated fields
         /// <code>Check: </code>if the book with the id of the edited book and the new values exists in the database
@@ -125,10 +99,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task UpdateMutation()
         {
-            string graphQLMutationName = "updateBook";
+            string graphQLMutationName = "editBook";
             string graphQLMutation = @"
                 mutation {
-                    updateBook(id: 1, item: { title: ""Even Better Title"", publisher_id: 2345 }) {
+                    editBook(id: 1, title: ""Even Better Title"", publisher_id: 2345) {
                         title
                         publisher_id
                     }
@@ -242,10 +216,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task NestedQueryingInMutation()
         {
-            string graphQLMutationName = "createBook";
+            string graphQLMutationName = "insertBook";
             string graphQLMutation = @"
                 mutation {
-                    createBook(item: { title: ""My New Book"", publisher_id: 1234 }) {
+                    insertBook(title: ""My New Book"", publisher_id: 1234) {
                         id
                         title
                         publisher {
@@ -477,10 +451,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task InsertWithInvalidForeignKey()
         {
-            string graphQLMutationName = "createBook";
+            string graphQLMutationName = "insertBook";
             string graphQLMutation = @"
                 mutation {
-                    createBook(item: { title: ""My New Book"", publisher_id: -1 }) {
+                    insertBook(title: ""My New Book"", publisher_id: -1) {
                         id
                         title
                     }
@@ -516,10 +490,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task UpdateWithInvalidForeignKey()
         {
-            string graphQLMutationName = "updateBook";
+            string graphQLMutationName = "editBook";
             string graphQLMutation = @"
                 mutation {
-                    updateBook(id: 1, item: { publisher_id: -1 }) {
+                    editBook(id: 1, publisher_id: -1) {
                         id
                         title
                     }
@@ -556,10 +530,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task UpdateWithNoNewValues()
         {
-            string graphQLMutationName = "updateBook";
+            string graphQLMutationName = "editBook";
             string graphQLMutation = @"
                 mutation {
-                    updateBook(id: 1, item: {}) {
+                    editBook(id: 1) {
                         id
                         title
                     }
@@ -577,10 +551,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task UpdateWithInvalidIdentifier()
         {
-            string graphQLMutationName = "updateBook";
+            string graphQLMutationName = "editBook";
             string graphQLMutation = @"
                 mutation {
-                    updateBook(id: -1, item: {title: ""Even Better Title"" }) {
+                    editBook(id: -1, title: ""Even Better Title"") {
                         id
                         title
                     }

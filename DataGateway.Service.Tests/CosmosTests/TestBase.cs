@@ -36,24 +36,43 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             _clientProvider = new CosmosClientProvider(TestHelper.DataGatewayConfigMonitor);
             _metadataStoreProvider = new MetadataStoreProviderForTest();
             string jsonString = @"
-type Character @model {
-        id : ID,
-        name : String,
-        type: String,
-        homePlanet: Int,
-        primaryFunction: String
+type Query {
+    characterList: [Character]
+    characterById (id : ID!): Character
+    planetById (id: ID! = 1): Planet
+    getPlanet(id: ID, name: String): Planet
+    planetList: [Planet]
+    planets(first: Int, after: String): PlanetConnection
 }
 
-type Planet @model {
+type Mutation {
+    addPlanet(id: String, name: String): Planet
+    deletePlanet(id: String): Planet
+}
+
+type PlanetConnection {
+    items: [Planet]
+    endCursor: String
+    hasNextPage: Boolean
+}
+
+type Character {
+    id : ID,
+    name : String,
+    type: String,
+    homePlanet: Int,
+    primaryFunction: String
+}
+
+type Planet {
     id : ID,
     name : String
 }";
-            DataGatewayConfig dataGatewayConfig = new() { DatabaseType = Config.DatabaseType.cosmos };
 
+            DataGatewayConfig dataGatewayConfig = new() { DatabaseType = Config.DatabaseType.cosmos };
             IRuntimeConfigProvider configProvider = new TestRuntimeConfigProvider();
 
             _metadataStoreProvider.GraphQLSchema = jsonString;
-
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
             _graphQLService = new GraphQLService(

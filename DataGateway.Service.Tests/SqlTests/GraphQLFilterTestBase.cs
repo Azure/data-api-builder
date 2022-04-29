@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Services;
@@ -26,13 +25,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestStringFiltersEq()
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "getBooks";
             string gqlQuery = @"{
-                books(_filter: {title: {eq: ""Awesome book""}})
+                getBooks(_filter: {title: {eq: ""Awesome book""}})
                 {
-                    items {
-                        title
-                    }
+                    title
                 }
             }";
 
@@ -52,13 +49,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestStringFiltersNeq()
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "getBooks";
             string gqlQuery = @"{
-                books(_filter: {title: {neq: ""Awesome book""}})
+                getBooks(_filter: {title: {neq: ""Awesome book""}})
                 {
-                    items {
-                        title
-                    }
+                    title
                 }
             }";
 
@@ -78,13 +73,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestStringFiltersStartsWith()
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "getBooks";
             string gqlQuery = @"{
-                books(_filter: {title: {startsWith: ""Awe""}})
+                getBooks(_filter: {title: {startsWith: ""Awe""}})
                 {
-                    items {
-                        title
-                    }
+                    title
                 }
             }";
 
@@ -104,13 +97,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestStringFiltersEndsWith()
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "getBooks";
             string gqlQuery = @"{
-                books(_filter: {title: {endsWith: ""book""}})
+                getBooks(_filter: {title: {endsWith: ""book""}})
                 {
-                    items {
-                        title
-                    }
+                    title
                 }
             }";
 
@@ -130,13 +121,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestStringFiltersContains()
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "getBooks";
             string gqlQuery = @"{
-                books(_filter: {title: {contains: ""some""}})
+                getBooks(_filter: {title: {contains: ""some""}})
                 {
-                    items {
-                        title
-                    }
+                    title
                 }
             }";
 
@@ -156,13 +145,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestStringFiltersNotContains()
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "getBooks";
             string gqlQuery = @"{
-                books(_filter: {title: {notContains: ""book""}})
+                getBooks(_filter: {title: {notContains: ""book""}})
                 {
-                    items {
-                        title
-                    }
+                    title
                 }
             }";
 
@@ -182,13 +169,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestStringFiltersContainsWithSpecialChars()
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "getBooks";
             string gqlQuery = @"{
-                books(_filter: {title: {contains: ""%""}})
+                getBooks(_filter: {title: {contains: ""%""}})
                 {
-                    items {
-                        title
-                    }
+                    title
                 }
             }";
 
@@ -202,13 +187,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestIntFiltersEq()
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "getBooks";
             string gqlQuery = @"{
-                books(_filter: {id: {eq: 2}})
+                getBooks(_filter: {id: {eq: 2}})
                 {
-                    items {
-                        id
-                    }
+                    id
                 }
             }";
 
@@ -228,13 +211,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestIntFiltersNeq()
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "getBooks";
             string gqlQuery = @"{
-                books(_filter: {id: {neq: 2}})
+                getBooks(_filter: {id: {neq: 2}})
                 {
-                    items {
-                        id
-                    }
+                    id
                 }
             }";
 
@@ -254,13 +235,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestIntFiltersGtLt()
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "getBooks";
             string gqlQuery = @"{
-                books(_filter: {id: {gt: 2 lt: 4}})
+                getBooks(_filter: {id: {gt: 2 lt: 4}})
                 {
-                    items {
-                        id
-                    }
+                    id
                 }
             }";
 
@@ -280,13 +259,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestIntFiltersGteLte()
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "getBooks";
             string gqlQuery = @"{
-                books(_filter: {id: {gte: 2 lte: 4}})
+                getBooks(_filter: {id: {gte: 2 lte: 4}})
                 {
-                    items {
-                        id
-                    }
+                    id
                 }
             }";
 
@@ -313,9 +290,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </remarks>
         public async Task TestCreatingParenthesis1()
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "getBooks";
             string gqlQuery = @"{
-                books(_filter: {
+                getBooks(_filter: {
                                     title: {contains: ""book""}
                                     or: [
                                         {id:{gt: 2 lt: 4}},
@@ -323,10 +300,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                     ]
                                 })
                 {
-                    items {
-                        id
-                        title
-                    }
+                    id
+                    title
                 }
             }";
 
@@ -353,19 +328,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </remarks>
         public async Task TestCreatingParenthesis2()
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "getBooks";
             string gqlQuery = @"{
-                books(_filter: {
+                getBooks(_filter: {
                                     or: [
                                         {id: {gt: 2} and: [{id: {lt: 4}}]},
                                         {id: {gte: 4} title: {contains: ""book""}}
                                     ]
                                 })
                 {
-                    items {
-                        id
-                        title
-                    }
+                    id
+                    title
                 }
             }";
 
@@ -388,9 +361,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </summart>
         public async Task TestComplicatedFilter()
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "getBooks";
             string gqlQuery = @"{
-                books(_filter: {
+                getBooks(_filter: {
                                     id: {gte: 2}
                                     title: {notContains: ""book""}
                                     and: [
@@ -409,11 +382,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                     ]
                                 })
                 {
-                    items {
-                        id
-                        title
-                        publisher_id
-                    }
+                    id
+                    title
+                    publisher_id
                 }
             }";
 
@@ -435,13 +406,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestOnlyEmptyAnd()
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "getBooks";
             string gqlQuery = @"{
-                books(_filter: {and: []})
+                getBooks(_filter: {and: []})
                 {
-                    items {
-                        id
-                    }
+                    id
                 }
             }";
 
@@ -455,13 +424,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestOnlyEmptyOr()
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "getBooks";
             string gqlQuery = @"{
-                books(_filter: {or: []})
+                getBooks(_filter: {or: []})
                 {
-                    items {
-                        id
-                    }
+                    id
                 }
             }";
 
@@ -476,13 +443,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestFilterAndFilterODataUsedTogether()
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "getBooks";
             string gqlQuery = @"{
-                books(_filter: {id: {gte: 2}}, _filterOData: ""id lt 4"")
+                getBooks(_filter: {id: {gte: 2}}, _filterOData: ""id lt 4"")
                 {
-                    items {
-                        id
-                    }
+                    id
                 }
             }";
 
@@ -608,12 +573,5 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             List<string> queriedColumns,
             string predicate,
             List<string> pkColumns = null);
-
-        protected override async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController, Dictionary<string, object> variables = null, bool failOnErrors = true)
-        {
-            string dataResult = await base.GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, graphQLController, variables, failOnErrors);
-
-            return JsonDocument.Parse(dataResult).RootElement.GetProperty("items").ToString();
-        }
     }
 }

@@ -16,6 +16,7 @@ namespace Azure.DataGateway.Service.Authorization
     {
         private IRuntimeConfigProvider _runtimeConfigProvider;
         private Dictionary<string, EntityToRole> _entityConfigMap;
+        private const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
 
         public AuthorizationResolver(IRuntimeConfigProvider runtimeConfigProvider)
         {
@@ -34,15 +35,39 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <summary>
-        /// Whether X-DG-Role Http Request Header is present in httpContext.Identity.Claims.Roles
+        /// Whether X-MS-API-Role Http Request Header is present in httpContext.Identity.Claims.Roles
         /// </summary>
         /// <param name="httpRequestData"></param>
-        /// <returns></returns>
+        /// <returns>
+        /// X-MS-API-Role
+        ///     Header not present -> TRUE, request is anonymous
+        ///     Header present, no value -> FALSE
+        ///     Header present, invalid value -> FALSE
+        ///     Header present, valid value -> TRUE
+        /// </returns>
         /// <exception cref="NotImplementedException"></exception>
         public bool IsValidRoleContext(HttpRequest httpRequestData)
         {
-            // TO-DO #1
-            throw new NotImplementedException();
+            if (!httpRequestData.Headers.ContainsKey(CLIENT_ROLE_HEADER))
+            {
+                return true;
+            }
+
+            if (httpRequestData.Headers[CLIENT_ROLE_HEADER].ToString().Length == 0)
+            {
+                return false;
+            }
+
+            string clientRole = httpRequestData.Headers[CLIENT_ROLE_HEADER].ToString();
+
+            if (httpRequestData.HttpContext.User.IsInRole(clientRole))
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
 
         /// <summary>

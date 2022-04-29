@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
@@ -27,7 +26,6 @@ namespace Azure.DataGateway.Service.Services
         private readonly IQueryEngine _queryEngine;
         private readonly IMutationEngine _mutationEngine;
         private readonly IGraphQLMetadataProvider _graphQLMetadataProvider;
-        private readonly DataGatewayConfig _config;
         private readonly IRuntimeConfigProvider _runtimeConfigProvider;
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly IDocumentCache _documentCache;
@@ -43,14 +41,12 @@ namespace Azure.DataGateway.Service.Services
             IGraphQLMetadataProvider graphQLMetadataProvider,
             IDocumentCache documentCache,
             IDocumentHashProvider documentHashProvider,
-            DataGatewayConfig config,
             IRuntimeConfigProvider runtimeConfigProvider,
             ISqlMetadataProvider sqlMetadataProvider)
         {
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
             _graphQLMetadataProvider = graphQLMetadataProvider;
-            _config = config;
             _runtimeConfigProvider = runtimeConfigProvider;
             _sqlMetadataProvider = sqlMetadataProvider;
             _documentCache = documentCache;
@@ -81,18 +77,14 @@ namespace Azure.DataGateway.Service.Services
         /// <exception cref="DataGatewayException">Error will be raised if no database type is set</exception>
         private void ParseAsync(DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes, Dictionary<string, Entity> entities)
         {
-            if (_config.DatabaseType == null)
-            {
-                throw new DataGatewayException("No database type was configured", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
-            }
-
+            DatabaseType databaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
             ISchemaBuilder sb = SchemaBuilder.New()
                 .AddDocument(root)
                 .AddDirectiveType<ModelDirectiveType>()
                 .AddDirectiveType<RelationshipDirectiveType>()
                 .AddDirectiveType<PrimaryKeyDirectiveType>()
                 .AddDocument(QueryBuilder.Build(root, entities, inputTypes))
-                .AddDocument(MutationBuilder.Build(root, _config.DatabaseType.Value, entities));
+                .AddDocument(MutationBuilder.Build(root, databaseType, entities));
 
             Schema = sb
                 .AddAuthorizeDirectiveType()
@@ -185,14 +177,10 @@ namespace Azure.DataGateway.Service.Services
             }
             else if (!_useLegacySchema)
             {
-                if (_config.DatabaseType == null)
-                {
-                    throw new DataGatewayException("No database type was configured", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
-                }
-
+                DatabaseType databaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
                 Dictionary<string, Entity> entities = _runtimeConfigProvider.GetRuntimeConfig().Entities;
 
-                (DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = _config.DatabaseType switch
+                (DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = databaseType switch
                 {
                     DatabaseType.cosmos => GenerateCosmosGraphQLObjects(),
                     DatabaseType.mssql or
@@ -278,7 +266,7 @@ namespace Azure.DataGateway.Service.Services
 
             Utf8GraphQLRequestParser requestParser = new(
                 graphQLData,
-                _parserOptions,
+                parserOptions,
                 _documentCache,
                 _documentHashProvider);
 

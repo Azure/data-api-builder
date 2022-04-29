@@ -36,7 +36,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _metadataStoreProvider,
                 new DocumentCache(),
                 new Sha256DocumentHashProvider(),
-                new() { DatabaseType = Config.DatabaseType.mssql },
                 _runtimeConfigProvider,
                 _sqlMetadataProvider);
             _graphQLController = new GraphQLController(_graphQLService);

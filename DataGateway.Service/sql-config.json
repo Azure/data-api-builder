@@ -3,12 +3,12 @@
   "GraphQLSchemaFile": "books.gql",
   "MutationResolvers": [
     {
-      "Id": "createBook",
+      "Id": "insertBook",
       "Table": "books",
       "OperationType": "Insert"
     },
     {
-      "Id": "updateBook",
+      "Id": "editBook",
       "Table": "books",
       "OperationType": "UpdateIncremental"
     },

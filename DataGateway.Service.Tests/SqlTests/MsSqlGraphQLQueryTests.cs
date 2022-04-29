@@ -32,7 +32,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             //
             _graphQLService = new GraphQLService(
                 _queryEngine,
-                mutationEngine: null,
+                _mutationEngine,
                 _metadataStoreProvider,
                 new DocumentCache(),
                 new Sha256DocumentHashProvider(),

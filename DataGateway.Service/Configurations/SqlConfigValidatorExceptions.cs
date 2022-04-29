@@ -1049,7 +1049,7 @@ namespace Azure.DataGateway.Service.Configurations
                 string argName = nameArgPair.Key;
                 InputValueDefinitionNode argument = nameArgPair.Value;
 
-                bool isNullable = table.Columns[argName].HasDefault && table.Columns[argName].IsNullable;
+                bool isNullable = table.Columns[argName].IsNullable;
                 if (isNullable && argument.Type.IsNonNullType())
                 {
                     shouldBeNullable.Add(argName);

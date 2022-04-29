@@ -57,17 +57,17 @@
 
 
   <ItemGroup>
-    <Content Remove="runtime-config.json" />
+    <Content Remove="hawaii-config.mssql.json" />
   </ItemGroup>
 
 
   <ItemGroup>
-    <Watch Remove="runtime-config.json" />
+    <Watch Remove="hawaii-config.mssql.json" />
   </ItemGroup>
 
 
   <ItemGroup>
-    <None Include="runtime-config.json">
+    <None Include="hawaii-config.mssql.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

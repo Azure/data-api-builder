@@ -111,6 +111,11 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
+            foreach(KeyValuePair<string, object?> pair in row)
+            {
+                Console.WriteLine(pair.Key + "#->" + pair.Value);
+            }
+
             // no row was read
             if (row.Count == 0)
             {

@@ -389,7 +389,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("Validates if deserialization of new runtime config format succeeds.")]
         public void TestReadingRuntimeConfig()
         {
-            string jsonString = File.ReadAllText("runtime-config.json");
+            string jsonString = File.ReadAllText(RuntimeConfig.DefaultRuntimeConfigName);
             // use camel case
             // convert Enum to strings
             // case insensitive

@@ -285,6 +285,10 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             Console.WriteLine(queryString);
+            foreach(KeyValuePair<string, object> kvp in queryParameters)
+            {
+                Console.WriteLine(kvp.Key + "&->" +  kvp.Value);
+            }
 
             return await _queryExecutor.ExecuteQueryAsync(queryString, queryParameters);
         }

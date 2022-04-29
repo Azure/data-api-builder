@@ -27,7 +27,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             string dataIdent = QuoteIdentifier(SqlQueryStructure.DATA_IDENT);
             string fromSql = $"{QuoteIdentifier(structure.SchemaName)}.{QuoteIdentifier(structure.TableName)} " +
-                             $"AS {QuoteIdentifier($"{structure.TableAlias}")}{Build(structure.Joins)}"; // just use table alias in AS part
+                             $"AS {QuoteIdentifier($"{structure.TableAlias}")}{Build(structure.Joins)}";
 
             fromSql += string.Join(
                     "",

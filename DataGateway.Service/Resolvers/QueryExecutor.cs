@@ -106,6 +106,8 @@ namespace Azure.DataGateway.Service.Resolvers
                             {
                                 row.Add(columnName, value: null);
                             }
+
+                            Console.WriteLine(columnName + " ::-> " + dbDataReader[columnName]);
                         }
                     }
                 }

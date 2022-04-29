@@ -166,7 +166,6 @@ namespace Azure.DataGateway.Service.Services
                 {
                     parameters.Add(argument.Name.Value, ArgumentValue(argument.Value, variables));
                 }
-
             }
 
             return parameters;

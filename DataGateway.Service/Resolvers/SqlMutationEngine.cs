@@ -279,6 +279,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     throw new NotSupportedException($"Unexpected mutation operation \" {operationType}\" requested.");
             }
 
+            Console.WriteLine(queryString);
+
             return await _queryExecutor.ExecuteQueryAsync(queryString, queryParameters);
         }
 

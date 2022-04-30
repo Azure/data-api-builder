@@ -10,31 +10,31 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
     class TestHelper
     {
         public static readonly string DB_NAME = "graphqlTestDb";
-        private static Lazy<IOptions<DataGatewayConfig>> _dataGatewayConfig = new(() => TestHelper.LoadConfig());
+        private static Lazy<IOptions<RuntimeConfig>> _runtimeConfig = new(() => TestHelper.LoadConfig());
 
-        private static IOptions<DataGatewayConfig> LoadConfig()
+        private static IOptions<RuntimeConfig> LoadConfig()
         {
-            DataGatewayConfig dataGatewayConfig = new();
+            RuntimeConfig runtimeConfig = new();
             IConfigurationRoot config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile($"appsettings.Cosmos.json")
                 .Build();
 
-            config.Bind(nameof(DataGatewayConfig), dataGatewayConfig);
+            config.Bind(nameof(RuntimeConfig), runtimeConfig);
 
-            return Options.Create(dataGatewayConfig);
+            return Options.Create(runtimeConfig);
         }
 
-        public static IOptions<DataGatewayConfig> DataGatewayConfig
+        public static IOptions<RuntimeConfig> RuntimeConfig
         {
-            get { return _dataGatewayConfig.Value; }
+            get { return _runtimeConfig.Value; }
         }
 
-        public static IOptionsMonitor<DataGatewayConfig> DataGatewayConfigMonitor
+        public static IOptionsMonitor<RuntimeConfig> RuntimeConfigMonitor
         {
             get
             {
-                return Mock.Of<IOptionsMonitor<DataGatewayConfig>>(_ => _.CurrentValue == DataGatewayConfig.Value);
+                return Mock.Of<IOptionsMonitor<RuntimeConfig>>(_ => _.CurrentValue == RuntimeConfig.Value);
             }
         }
 

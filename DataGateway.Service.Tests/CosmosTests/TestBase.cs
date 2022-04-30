@@ -32,7 +32,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         [ClassInitialize]
         public static void Init(TestContext context)
         {
-            _clientProvider = new CosmosClientProvider(TestHelper.DataGatewayConfigMonitor);
+            _clientProvider = new CosmosClientProvider(TestHelper.RuntimeConfigMonitor);
             _metadataStoreProvider = new MetadataStoreProviderForTest();
             string jsonString = @"
 type Query {

@@ -11,7 +11,7 @@ namespace Azure.DataGateway.Service.Tests
 
         public MetadataProviderTests()
         {
-            _fileProvider = new GraphQLFileMetadataProvider(TestHelper.DataGatewayConfig);
+            _fileProvider = new GraphQLFileMetadataProvider(TestHelper.RuntimeConfig);
         }
 
         [TestMethod]

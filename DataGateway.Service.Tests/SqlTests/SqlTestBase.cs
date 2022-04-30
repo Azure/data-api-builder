@@ -41,7 +41,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static IQueryEngine _queryEngine;
         protected static IMutationEngine _mutationEngine;
         protected static GraphQLFileMetadataProvider _metadataStoreProvider;
-        protected static IRuntimeConfigProvider _runtimeConfigProvider;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
         protected static DbExceptionParserBase _dbExceptionParser;
@@ -58,7 +57,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             _testCategory = testCategory;
 
-            IOptions<DataGatewayConfig> config = SqlTestHelper.LoadConfig($"{_testCategory}IntegrationTest");
+            IOptions<RuntimeConfig> config = SqlTestHelper.LoadConfig($"{_testCategory}IntegrationTest");
             _runtimeConfigProvider = new RuntimeConfigProvider(config);
             switch (_testCategory)
             {

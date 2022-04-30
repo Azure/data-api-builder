@@ -18,19 +18,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 {
     public class SqlTestHelper
     {
-        public static IOptions<DataGatewayConfig> LoadConfig(string environment)
+        public static IOptions<RuntimeConfig> LoadConfig(string environment)
         {
 
-            DataGatewayConfig dataGatewayConfig = new();
             IConfigurationRoot config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile($"appsettings.{environment}.json")
+                .AddJsonFile(.{environment}.json")
                 .AddJsonFile($"appsettings.{environment}.overrides.json", optional: true)
                 .Build();
 
-            config.Bind(nameof(DataGatewayConfig), dataGatewayConfig);
+            config.Bind(nameof(RuntimeConfig), runtimeConfig);
 
-            return Options.Create(dataGatewayConfig);
+            return Options.Create(runtimeConfig);
         }
 
         /// <summary>

@@ -24,11 +24,11 @@ namespace Azure.DataGateway.Service.Services
         where DataAdapterT : DbDataAdapter, new()
         where CommandT : DbCommand, new()
     {
-        private readonly IRuntimeConfigProvider _runtimeConfigProvider;
-
         private FilterParser _oDataFilterParser = new();
 
-        private DatabaseType _databaseType;
+        private readonly DatabaseType _databaseType;
+
+        private readonly Dictionary<string, Entity> _entities;
 
         // nullable since Mock tests do not need it.
         // TODO: Refactor the Mock tests to remove the nullability here
@@ -50,17 +50,16 @@ namespace Azure.DataGateway.Service.Services
             new(StringComparer.InvariantCultureIgnoreCase);
 
         public SqlMetadataProvider(
-            IOptions<DataGatewayConfig> dataGatewayConfig,
-            IRuntimeConfigProvider runtimeConfigProvider,
+            IOptions<RuntimeConfig> runtimeConfig,
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder)
         {
-            ConnectionString = dataGatewayConfig.Value.DatabaseConnection.ConnectionString;
-            _databaseType = (DatabaseType)dataGatewayConfig.Value.DatabaseType!;
+            ConnectionString = runtimeConfig.Value.ConnectionString!;
+            _databaseType = (DatabaseType)runtimeConfig.Value.DatabaseType!;
+            _entities = runtimeConfig.Value.Entities;
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;
-            _runtimeConfigProvider = runtimeConfigProvider;
         }
 
         public FilterParser GetOdataFilterParser()
@@ -163,7 +162,7 @@ namespace Azure.DataGateway.Service.Services
         private void GenerateDatabaseObjectForEntities()
         {
             foreach ((string entityName, Entity entity)
-                in GetEntitiesFromRuntimeConfig())
+                in _entities)
             {
                 if (!EntityToDatabaseObject.ContainsKey(entityName))
                 {
@@ -237,16 +236,10 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private void ProcessEntityPermissions()
         {
-            Dictionary<string, Entity> entities = GetEntitiesFromRuntimeConfig();
-            foreach ((string entityName, Entity entity) in entities)
+            foreach ((string entityName, Entity entity) in _entities)
             {
                 DetermineHttpVerbPermissions(entityName, entity.Permissions);
             }
-        }
-
-        private Dictionary<string, Entity> GetEntitiesFromRuntimeConfig()
-        {
-            return _runtimeConfigProvider.GetRuntimeConfig().Entities;
         }
 
         private void InitFilterParser()

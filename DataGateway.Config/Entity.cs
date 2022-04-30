@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -47,6 +48,15 @@ namespace Azure.DataGateway.Config
                 return objectSource.Name;
             }
         }
+
+        public Entity()
+            : this(Source: null!,
+                  Rest: null,
+                  GraphQL: null,
+                  Permissions: null!,
+                  Relationships: null,
+                  Mappings: null)
+        { }
     }
 
     /// <summary>

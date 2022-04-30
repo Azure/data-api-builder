@@ -23,22 +23,23 @@ namespace Azure.DataGateway.Service
                     configuration.Sources.Clear();
                     IHostEnvironment env = hostingContext.HostingEnvironment;
 
+                    string jsonFileNameToAdd =
+                        !string.IsNullOrWhiteSpace(env.EnvironmentName)
+                         ? $"{RuntimeConfig.CONFIGFILE_NAME}.{env.EnvironmentName}{RuntimeConfig.CONFIG_EXTENSION}"
+                         : $"{RuntimeConfig.DefaultRuntimeConfigName}";
                     configuration
-                        .AddJsonFile(RuntimeConfig.DefaultRuntimeConfigName)
-                        .AddJsonFile
-                            ($"{RuntimeConfig.CONFIGFILE_NAME}.{env.EnvironmentName}" +
-                            $".{RuntimeConfig.CONFIG_EXTENSION}");
+                        .AddJsonFile(jsonFileNameToAdd);
 
                     string? runtimeEnvironmentValue
-                        = Environment.GetEnvironmentVariable(RuntimeConfig.RUNTIME_ENVIRONMENT_VARIABLE_NAME);
+                        = Environment.GetEnvironmentVariable(RuntimeConfig.RUNTIME_ENVIRONMENT_VAR_NAME);
                     if (runtimeEnvironmentValue != null)
                     {
                         configuration
                             .AddJsonFile($"{RuntimeConfig.CONFIGFILE_NAME}" +
-                                $".{runtimeEnvironmentValue}.{RuntimeConfig.CONFIG_EXTENSION}");
+                                $".{runtimeEnvironmentValue}{RuntimeConfig.CONFIG_EXTENSION}");
                     }
 
-                    configuration.AddEnvironmentVariables();
+                    configuration.AddEnvironmentVariables(prefix: RuntimeConfig.ENVIRONMENT_VAR_PREFIX);
                     configuration.AddCommandLine(args);
                     configuration.AddInMemoryUpdateableConfiguration();
                 })

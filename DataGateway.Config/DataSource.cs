@@ -12,13 +12,24 @@ namespace Azure.DataGateway.Config
         [property: JsonPropertyName(DataSource.DATABASE_PROPERTY_NAME)]
         DatabaseType? DatabaseType,
         [property: JsonPropertyName(DataSource.CONNSTRING_PROPERTY_NAME)]
-        string ConnectionString,
+        string? ConnectionString,
+        [property: JsonPropertyName(RuntimeConfig.RESOLVER_CONFIG_PROPERTY_NAME)]
         string? ResolverConfigFile,
-        string? ResovlerConfig)
+        string? ResolverConfig,
+        string? GraphQLSchema)
     {
         public const string CONFIG_PROPERTY_NAME = "data-source";
         public const string DATABASE_PROPERTY_NAME = "database-type";
         public const string CONNSTRING_PROPERTY_NAME = "connection-string";
+
+        public DataSource() :
+            this(
+                DatabaseType: null,
+                ConnectionString: null,
+                ResolverConfigFile: null,
+                ResolverConfig: null,
+                GraphQLSchema: null)
+        { }
     }
 
     /// <summary>
@@ -37,6 +48,9 @@ namespace Azure.DataGateway.Config
         bool SetSessionContext = true)
     {
         public const string CONFIG_PROPERTY_NAME = nameof(DatabaseType.mssql);
+
+        public MsSqlOptions()
+            : this(SetSessionContext: true) { }
     }
 
     /// <summary>

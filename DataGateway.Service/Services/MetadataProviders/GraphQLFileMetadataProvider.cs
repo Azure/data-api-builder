@@ -21,42 +21,40 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private Dictionary<string, MutationResolver> _mutationResolvers;
 
-        public DatabaseType CloudDbType { get; set; }
-
         public GraphQLFileMetadataProvider(
-            IOptions<DataGatewayConfig> dataGatewayConfig)
+            IOptions<RuntimeConfig> runtimeConfig)
         {
-            DataGatewayConfig config = dataGatewayConfig.Value;
-            if (!config.DatabaseType.HasValue)
+            RuntimeConfig config = runtimeConfig.Value;
+            if (!config.DoesDatabaseTypeHaveValue())
             {
-                throw new ArgumentNullException("dataGatewayConfig.DatabaseType",
-                    "The database type should be set before creating a MetadataStoreProvider");
+                throw new ArgumentNullException("runtime-config.data-source.database-type",
+                    "The database type should be set before creating a GraphQLFileMetadataProvider");
             }
 
-            CloudDbType = config.DatabaseType.Value;
+            string? resolverConfigJson = config.DataSource.ResolverConfig;
+            string? graphQLSchema = config.DataSource.GraphQLSchema;
 
-            string? resolverConfigJson = config.ResolverConfig;
-            string? graphQLSchema = config.GraphQLSchema;
-
-            if (string.IsNullOrEmpty(resolverConfigJson) && !string.IsNullOrEmpty(config.ResolverConfigFile))
+            if (string.IsNullOrEmpty(resolverConfigJson) &&
+                !string.IsNullOrEmpty(config.DataSource.ResolverConfigFile))
             {
-                resolverConfigJson = File.ReadAllText(config.ResolverConfigFile);
+                resolverConfigJson = File.ReadAllText(config.DataSource.ResolverConfigFile);
             }
 
             if (string.IsNullOrEmpty(resolverConfigJson))
             {
-                throw new ArgumentNullException("dataGatewayConfig.ResolverConfig",
+                throw new ArgumentNullException("runtime-config.data-source.resolver-config-file",
                     "The resolver config should be set either via ResolverConfig or ResolverConfigFile.");
             }
 
             GraphQLResolverConfig =
-                DataGatewayConfig.GetDeserializedConfig<ResolverConfig>(resolverConfigJson);
+                RuntimeConfig.GetDeserializedConfig<ResolverConfig>(resolverConfigJson);
 
             if (string.IsNullOrEmpty(GraphQLResolverConfig.GraphQLSchema))
             {
                 if (string.IsNullOrEmpty(graphQLSchema))
                 {
-                    graphQLSchema = File.ReadAllText(GraphQLResolverConfig.GraphQLSchemaFile ?? "schema.gql");
+                    graphQLSchema = File.ReadAllText(
+                        GraphQLResolverConfig.GraphQLSchemaFile ?? "schema.gql");
                 }
 
                 GraphQLResolverConfig = GraphQLResolverConfig with { GraphQLSchema = graphQLSchema };
@@ -78,7 +76,6 @@ namespace Azure.DataGateway.Service.Services
         {
             GraphQLResolverConfig = source.GraphQLResolverConfig;
             _mutationResolvers = source._mutationResolvers;
-            CloudDbType = source.CloudDbType;
         }
 
         /// Default Constructor for Mock tests.
@@ -86,7 +83,6 @@ namespace Azure.DataGateway.Service.Services
         {
             GraphQLResolverConfig = new(string.Empty, string.Empty);
             _mutationResolvers = new();
-            CloudDbType = DatabaseType.mssql;
         }
 
         /// <summary>

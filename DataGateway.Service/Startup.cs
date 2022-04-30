@@ -57,8 +57,6 @@ namespace Azure.DataGateway.Service
                 }
             }
 
-            services.AddSingleton<IRuntimeConfigProvider, RuntimeConfigProvider>();
-
             services.AddSingleton<IGraphQLMetadataProvider, GraphQLFileMetadataProvider>();
             services.AddSingleton<CosmosClientProvider>();
 
@@ -232,7 +230,7 @@ namespace Azure.DataGateway.Service
             IOptionsMonitor<RuntimeConfig> runtimeConfig
                 = app.ApplicationServices.GetService<IOptionsMonitor<RuntimeConfig>>()!;
             bool isRuntimeReady = false;
-            if (runtimeConfig.CurrentValue.DataSource.DatabaseType.HasValue)
+            if (runtimeConfig.CurrentValue.DoesDatabaseTypeHaveValue())
             {
                 isRuntimeReady =
                     PerformOnConfigChangeAsync(app).Result;
@@ -309,7 +307,7 @@ namespace Azure.DataGateway.Service
                 Configuration.GetSection(RuntimeConfig.CONFIGFILE_PROPERTY_NAME).Get<string>();
             if (runtimeConfigFileName != default)
             {
-                runtimeConfig = RuntimeConfig.GetDeserializedConfig(runtimeConfigFileName);
+                runtimeConfig = RuntimeConfig.GetDeserializedConfig<RuntimeConfig>(runtimeConfigFileName);
             }
             else
             {
@@ -326,13 +324,12 @@ namespace Azure.DataGateway.Service
                     Configuration.GetSection(PostgreSqlOptions.CONFIG_PROPERTY_NAME).Get<PostgreSqlOptions>();
                 MySqlOptions? mysqlOptions =
                     Configuration.GetSection(MySqlOptions.CONFIG_PROPERTY_NAME).Get<MySqlOptions>();
-                Dictionary<GlobalSettingsType, object> runtimeSettings =
+                Dictionary<GlobalSettingsType, object>? runtimeSettings =
                     Configuration.GetSection(GlobalSettings.CONFIG_PROPERTY_NAME)
                         .Get<Dictionary<GlobalSettingsType, object>>();
                 Dictionary<string, Entity> entities =
                     Configuration.GetSection(Entity.CONFIG_PROPERTY_NAME)
                         .Get<Dictionary<string, Entity>>();
-                string resolverConfigFile = Configuration.GetValue<string>(RuntimeConfig.RESOLVER_CONFIG_PROPERTY_NAME);
 
                 runtimeConfig = new(
                     schemaName,
@@ -342,8 +339,7 @@ namespace Azure.DataGateway.Service
                     postgreSqlOptions,
                     mysqlOptions,
                     runtimeSettings,
-                    entities,
-                    resolverConfigFile);
+                    entities);
             }
 
             Configuration.Bind(RuntimeConfig.CONFIG_PROPERTY_NAME, runtimeConfig);

@@ -59,23 +59,23 @@ namespace Azure.DataGateway.Config
         MySqlOptions? MySql,
         [property: JsonPropertyName(GlobalSettings.CONFIG_PROPERTY_NAME)]
         Dictionary<GlobalSettingsType, object> RuntimeSettings,
-        Dictionary<string, Entity> Entities,
-        [property: JsonPropertyName(RuntimeConfig.RESOLVER_CONFIG_PROPERTY_NAME)]
-        string? ResolverConfigFile)
+        Dictionary<string, Entity> Entities)
     {
         public const string CONFIG_PROPERTY_NAME = "runtime-config";
         public const string CONFIGFILE_PROPERTY_NAME = "runtime-config-file";
         public const string CONFIGFILE_NAME = "hawaii-config";
         public const string CONFIG_EXTENSION = ".json";
-        public const string RUNTIME_ENVIRONMENT_VARIABLE_NAME = "HAWAII_ENVIRONMENT";
         public const string SCHEMA_PROPERTY_NAME = "$schema";
         public const string RESOLVER_CONFIG_PROPERTY_NAME = "resolver-config-file";
+
+        public const string RUNTIME_ENVIRONMENT_VAR_NAME = "HAWAII_ENVIRONMENT";
+        public static string ENVIRONMENT_VAR_PREFIX = "HAWAII";
 
         public static string DefaultRuntimeConfigName
         {
             get
             {
-                return $"{CONFIGFILE_NAME}.{CONFIG_EXTENSION}";
+                return $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}";
             }
         }
 
@@ -114,7 +114,7 @@ namespace Azure.DataGateway.Config
             }
         }
 
-        public static RuntimeConfig GetDeserializedConfig(string configJson)
+        public static T GetDeserializedConfig<T>(string configJson)
         {
             JsonSerializerOptions options = new()
             {
@@ -124,20 +124,13 @@ namespace Azure.DataGateway.Config
 
             // This feels verbose but it avoids having to make _config nullable - which would result in more
             // down the line issues and null check requirements
-            RuntimeConfig? deserializedConfig;
-            if ((deserializedConfig = JsonSerializer.Deserialize<RuntimeConfig>(configJson, options)) == null)
+            T? deserializedConfig;
+            if ((deserializedConfig = JsonSerializer.Deserialize<T>(configJson, options)) == null)
             {
                 throw new JsonException("Failed to get a deserialized config from the provided config");
             }
 
             return deserializedConfig!;
-        }
-
-        public bool IsEasyAuthAuthenticationProvider()
-        {
-            return AuthNConfig != null
-                   ? AuthNConfig.IsEasyAuthAuthenticationProvider()
-                    : false;
         }
 
         public AuthenticationConfig? AuthNConfig
@@ -150,114 +143,112 @@ namespace Azure.DataGateway.Config
             }
         }
 
-        /// <summary>
-        /// Post configuration processing for DataGatewayConfig.
-        /// We check for database connection options. If the user does not provide connection string,
-        /// we build a connection string from other connection settings and finally set the ConnectionString setting.
-        ///
-        /// This inteface is called before IValidateOptions. Hence, we need to do some validation here.
-        /// </summary>
-        public class RuntimeConfigPostConfiguration : IPostConfigureOptions<RuntimeConfig>
+        public bool IsEasyAuthAuthenticationProvider()
         {
-            public void PostConfigure(string name, RuntimeConfig options)
+            return AuthNConfig != null
+                   ? AuthNConfig.IsEasyAuthAuthenticationProvider()
+                    : false;
+        }
+
+        public bool DoesDatabaseTypeHaveValue()
+        {
+            return DatabaseType.HasValue;
+        }
+
+        public DatabaseType? DatabaseType
+        {
+            get
             {
-                if (!options.DatabaseType.HasValue)
-                {
-                    return;
-                }
-
-                bool connStringProvided = !string.IsNullOrEmpty(options.DatabaseConnection.ConnectionString);
-                bool serverProvided = !string.IsNullOrEmpty(options.DatabaseConnection.Server);
-                bool dbProvided = !string.IsNullOrEmpty(options.DatabaseConnection.Database);
-                if (!connStringProvided && !serverProvided && !dbProvided)
-                {
-                    throw new NotSupportedException("Either Server and Database or ConnectionString need to be provided");
-                }
-                else if (connStringProvided && (serverProvided || dbProvided))
-                {
-                    throw new NotSupportedException("Either Server and Database or ConnectionString need to be provided, not both");
-                }
-
-                bool isResolverConfigSet = !string.IsNullOrEmpty(options.ResolverConfig);
-                bool isResolverConfigFileSet = !string.IsNullOrEmpty(options.ResolverConfigFile);
-                bool isGraphQLSchemaSet = !string.IsNullOrEmpty(options.GraphQLSchema);
-                bool isRuntimeConfigFileSet = !string.IsNullOrEmpty(options.RuntimeConfigFile);
-                if (!(isResolverConfigSet ^ isResolverConfigFileSet))
-                {
-                    throw new NotSupportedException("Either the Resolver Config or the Resolver Config File needs to be provided. Not both.");
-                }
-
-                if (isResolverConfigSet && !isGraphQLSchemaSet)
-                {
-                    throw new NotSupportedException("The GraphQLSchema should be provided with the config.");
-                }
-
-                if (!isRuntimeConfigFileSet)
-                {
-                    throw new NotSupportedException("The Runtime Config File needs to be provided.");
-                }
-
-                if (string.IsNullOrWhiteSpace(options.DatabaseConnection.ConnectionString))
-                {
-                    if ((!serverProvided && dbProvided) || (serverProvided && !dbProvided))
-                    {
-                        throw new NotSupportedException("Both Server and Database need to be provided");
-                    }
-
-                    SqlConnectionStringBuilder builder = new()
-                    {
-                        InitialCatalog = options.DatabaseConnection.Database,
-                        DataSource = options.DatabaseConnection.Server,
-
-                        IntegratedSecurity = true
-                    };
-                    options.DatabaseConnection.ConnectionString = builder.ToString();
-                }
-
-                ValidateAuthenticationConfig(options);
-            }
-
-            private static void ValidateAuthenticationConfig(DataGatewayConfig options)
-            {
-                bool isAuthenticationTypeSet = !string.IsNullOrEmpty(options.Authentication.Provider);
-                bool isAudienceSet = !string.IsNullOrEmpty(options.Authentication.Audience);
-                bool isIssuerSet = !string.IsNullOrEmpty(options.Authentication.Issuer);
-                if (!isAuthenticationTypeSet)
-                {
-                    throw new NotSupportedException("Authentication.Provider must be defined.");
-                }
-                else
-                {
-                    if (options.Authentication.Provider != "EasyAuth" && (!isAudienceSet || !isIssuerSet))
-                    {
-                        throw new NotSupportedException("Audience and Issuer must be set when not using EasyAuth.");
-                    }
-
-                    if (options.Authentication.Provider == "EasyAuth" && (isAudienceSet || isIssuerSet))
-                    {
-                        throw new NotSupportedException("Audience and Issuer should not be set and are not used with EasyAuth.");
-                    }
-                }
+                return DataSource.DatabaseType;
             }
         }
 
-        /// <summary>
-        /// Validate config.
-        /// This happens after post configuration.
-        /// </summary>
-        public class DataGatewayConfigValidation : IValidateOptions<DataGatewayConfig>
+        public string? ConnectionString
         {
-            public ValidateOptionsResult Validate(string name, DataGatewayConfig options)
+            get
             {
-                if (!options.DatabaseType.HasValue)
-                {
-                    return ValidateOptionsResult.Success;
-                }
-
-                return string.IsNullOrWhiteSpace(options.DatabaseConnection.ConnectionString)
-                    ? ValidateOptionsResult.Fail("Invalid connection string.")
-                    : ValidateOptionsResult.Success;
+                return DataSource.ConnectionString;
             }
+        }
+    }
+
+    /// <summary>
+    /// Post configuration processing for RuntimeConfig.
+    /// We check for database connection options.
+    ///
+    /// This inteface is called before IValidateOptions. Hence, we need to do some validation here.
+    /// </summary>
+    public class RuntimeConfigPostConfiguration : IPostConfigureOptions<RuntimeConfig>
+    {
+        public void PostConfigure(string name, RuntimeConfig options)
+        {
+            if (!options.DoesDatabaseTypeHaveValue())
+            {
+                return;
+            }
+
+            bool isResolverConfigSet = !string.IsNullOrEmpty(options.DataSource.ResolverConfig);
+            bool isResolverConfigFileSet = !string.IsNullOrEmpty(options.DataSource.ResolverConfigFile);
+            bool isGraphQLSchemaSet = !string.IsNullOrEmpty(options.DataSource.GraphQLSchema);
+            if (!(isResolverConfigSet ^ isResolverConfigFileSet))
+            {
+                throw new NotSupportedException
+                    ("Either the Resolver Config or the Resolver Config File needs to be provided. Not both.");
+            }
+
+            if (isResolverConfigSet && !isGraphQLSchemaSet)
+            {
+                throw new NotSupportedException("The GraphQLSchema should be provided with the config.");
+            }
+
+            if (string.IsNullOrWhiteSpace(options.DataSource.ConnectionString))
+            {
+                throw new NotSupportedException($"The Connection String should be provided.");
+            }
+
+            ValidateAuthenticationConfig(options);
+        }
+
+        private static void ValidateAuthenticationConfig(RuntimeConfig options)
+        {
+            bool isAudienceSet =
+                options.AuthNConfig != null &&
+                options.AuthNConfig.Jwt != null &&
+                !string.IsNullOrEmpty(options.AuthNConfig.Jwt.Audience);
+            bool isIssuerSet =
+                options.AuthNConfig != null &&
+                options.AuthNConfig.Jwt != null &&
+                !string.IsNullOrEmpty(options.AuthNConfig.Jwt.Issuer);
+            if (!options.IsEasyAuthAuthenticationProvider() && (!isAudienceSet || !isIssuerSet))
+            {
+                throw new NotSupportedException("Audience and Issuer must be set" +
+                    " when not using EasyAuth.");
+            }
+
+            if (!options.IsEasyAuthAuthenticationProvider() && (isAudienceSet || isIssuerSet))
+            {
+                throw new NotSupportedException("Audience and Issuer should not be set" +
+                    " and are not used with EasyAuth.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Validate config.
+    /// This happens after post configuration.
+    /// </summary>
+    public class RuntimeConfigValidation : IValidateOptions<RuntimeConfig>
+    {
+        public ValidateOptionsResult Validate(string name, RuntimeConfig options)
+        {
+            if (!options.DoesDatabaseTypeHaveValue())
+            {
+                return ValidateOptionsResult.Success;
+            }
+
+            return string.IsNullOrWhiteSpace(options.ConnectionString)
+                ? ValidateOptionsResult.Fail("Invalid connection string.")
+                : ValidateOptionsResult.Success;
         }
     }
 }

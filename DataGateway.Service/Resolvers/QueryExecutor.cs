@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Microsoft.Extensions.Options;
 
@@ -14,12 +15,12 @@ namespace Azure.DataGateway.Service.Resolvers
     public class QueryExecutor<ConnectionT> : IQueryExecutor
         where ConnectionT : DbConnection, new()
     {
-        private readonly DataGatewayConfig _dataGatewayConfig;
+        private readonly RuntimeConfig _runtimeConfig;
         private readonly DbExceptionParserBase _dbExceptionParser;
 
-        public QueryExecutor(IOptions<DataGatewayConfig> dataGatewayConfig, DbExceptionParserBase dbExceptionParser)
+        public QueryExecutor(IOptions<RuntimeConfig> runtimeConfig, DbExceptionParserBase dbExceptionParser)
         {
-            _dataGatewayConfig = dataGatewayConfig.Value;
+            _runtimeConfig = runtimeConfig.Value;
             _dbExceptionParser = dbExceptionParser;
         }
 
@@ -33,7 +34,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             ConnectionT conn = new()
             {
-                ConnectionString = _dataGatewayConfig.DatabaseConnection.ConnectionString
+                ConnectionString = _runtimeConfig.ConnectionString
             };
             await conn.OpenAsync();
             DbCommand cmd = conn.CreateCommand();

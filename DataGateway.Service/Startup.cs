@@ -38,15 +38,16 @@ namespace Azure.DataGateway.Service
 
         private void OnConfigurationChanged(object state)
         {
-            BindRuntimeConfig();
+            RuntimeConfigPath options = new();
+            Configuration.Bind(RuntimeConfigPath.CONFIGFILE_PROPERTY_NAME, options);
         }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            RuntimeConfig runtimeConfig = BindRuntimeConfig();
-            services.Configure<RuntimeConfig>(Configuration.GetSection(RuntimeConfig.CONFIG_PROPERTY_NAME));
-
+            string runtimeConfigJson =
+                Configuration.GetValue<string>(RuntimeConfigPath.GetFileNameAsPerEnvironment());
+            services.AddSingleton()
             if (Configuration is IConfigurationRoot root)
             {
                 if (root.Providers.First(prov => prov is InMemoryUpdateableConfigurationProvider) is InMemoryUpdateableConfigurationProvider provider)
@@ -64,7 +65,7 @@ namespace Azure.DataGateway.Service
             {
                 IOptionsMonitor<RuntimeConfig> runtimeConfig
                     = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfig>>(serviceProvider);
-                switch (runtimeConfig.CurrentValue.DataSource.DatabaseType)
+                switch (runtimeConfig.CurrentValue.DatabaseType)
                 {
                     case DatabaseType.cosmos:
                         return ActivatorUtilities.GetServiceOrCreateInstance<CosmosQueryEngine>(serviceProvider);
@@ -73,8 +74,8 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.mysql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<SqlQueryEngine>(serviceProvider);
                     default:
-                        throw new NotSupportedException(string.Format("The provided DatabaseType value: {0} is currently not supported." +
-                            "Please check the configuration file.", runtimeConfig.CurrentValue.DataSource.DatabaseType));
+                        throw new NotSupportedException(string.Format("The provided Database_Type value: {0} is currently not supported." +
+                            "Please check the configuration file.", runtimeConfig.CurrentValue.DatabaseType));
                 }
             });
 
@@ -82,7 +83,7 @@ namespace Azure.DataGateway.Service
             {
                 IOptionsMonitor<RuntimeConfig> runtimeConfig
                                     = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfig>>(serviceProvider);
-                switch (runtimeConfig.CurrentValue.DataSource.DatabaseType)
+                switch (runtimeConfig.CurrentValue.DatabaseType)
                 {
                     case DatabaseType.cosmos:
                         return ActivatorUtilities.GetServiceOrCreateInstance<CosmosMutationEngine>(serviceProvider);
@@ -91,8 +92,8 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.mysql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<SqlMutationEngine>(serviceProvider);
                     default:
-                        throw new NotSupportedException(string.Format("The provided DatabaseType value: {0} is currently not supported." +
-                            "Please check the configuration file.", runtimeConfig.CurrentValue.DataSource.DatabaseType));
+                        throw new NotSupportedException(string.Format("The provided Database_Type value: {0} is currently not supported." +
+                            "Please check the configuration file.", runtimeConfig.CurrentValue.DatabaseType));
                 }
             });
 
@@ -100,7 +101,7 @@ namespace Azure.DataGateway.Service
             {
                 IOptionsMonitor<RuntimeConfig> runtimeConfig
                     = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfig>>(serviceProvider);
-                switch (runtimeConfig.CurrentValue.DataSource.DatabaseType)
+                switch (runtimeConfig.CurrentValue.DatabaseType)
                 {
                     case DatabaseType.cosmos:
                         return ActivatorUtilities.GetServiceOrCreateInstance<CosmosConfigValidator>(serviceProvider);
@@ -109,8 +110,8 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.mysql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<SqlConfigValidator>(serviceProvider);
                     default:
-                        throw new NotSupportedException(string.Format("The provided DatabaseType value: {0} is currently not supported." +
-                            "Please check the configuration file.", runtimeConfig.CurrentValue.DataSource.DatabaseType));
+                        throw new NotSupportedException(string.Format("The provided Database_Type value: {0} is currently not supported." +
+                            "Please check the configuration file.", runtimeConfig.CurrentValue.DatabaseType));
                 }
             });
 
@@ -118,7 +119,7 @@ namespace Azure.DataGateway.Service
             {
                 IOptionsMonitor<RuntimeConfig> runtimeConfig
                     = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfig>>(serviceProvider);
-                switch (runtimeConfig.CurrentValue.DataSource.DatabaseType)
+                switch (runtimeConfig.CurrentValue.DatabaseType)
                 {
                     case DatabaseType.cosmos:
                         return null!;
@@ -129,8 +130,8 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.mysql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<MySqlConnection>>(serviceProvider);
                     default:
-                        throw new NotSupportedException(string.Format("The provided DatabaseType value: {0} is currently not supported." +
-                            "Please check the configuration file.", runtimeConfig.CurrentValue.DataSource.DatabaseType));
+                        throw new NotSupportedException(string.Format("The provided Database_Type value: {0} is currently not supported." +
+                            "Please check the configuration file.", runtimeConfig.CurrentValue.DatabaseType));
                 }
             });
 
@@ -138,7 +139,7 @@ namespace Azure.DataGateway.Service
             {
                 IOptionsMonitor<RuntimeConfig> runtimeConfig
                     = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfig>>(serviceProvider);
-                switch (runtimeConfig.CurrentValue.DataSource.DatabaseType)
+                switch (runtimeConfig.CurrentValue.DatabaseType)
                 {
                     case DatabaseType.cosmos:
                         return null!;
@@ -149,8 +150,8 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.mysql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<MySqlQueryBuilder>(serviceProvider);
                     default:
-                        throw new NotSupportedException(string.Format("The provided DatabaseType value: {0} is currently not supported." +
-                            "Please check the configuration file.", runtimeConfig.CurrentValue.DataSource.DatabaseType));
+                        throw new NotSupportedException(string.Format("The provided Database_Type value: {0} is currently not supported." +
+                            "Please check the configuration file.", runtimeConfig.CurrentValue.DatabaseType));
                 }
             });
 
@@ -158,7 +159,7 @@ namespace Azure.DataGateway.Service
             {
                 IOptionsMonitor<RuntimeConfig> runtimeConfig
                     = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfig>>(serviceProvider);
-                switch (runtimeConfig.CurrentValue.DataSource.DatabaseType)
+                switch (runtimeConfig.CurrentValue.DatabaseType)
                 {
                     case DatabaseType.cosmos:
                         return null!;
@@ -169,8 +170,8 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.mysql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<MySqlMetadataProvider>(serviceProvider);
                     default:
-                        throw new NotSupportedException(string.Format("The provided DatabaseType value: {0} is currently not supported." +
-                            "Please check the configuration file.", runtimeConfig.CurrentValue.DataSource.DatabaseType));
+                        throw new NotSupportedException(string.Format("The provided Database_Type value: {0} is currently not supported." +
+                            "Please check the configuration file.", runtimeConfig.CurrentValue.DatabaseType));
                 }
             });
 
@@ -178,7 +179,7 @@ namespace Azure.DataGateway.Service
             {
                 IOptionsMonitor<RuntimeConfig> runtimeConfig
                     = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfig>>(serviceProvider);
-                switch (runtimeConfig.CurrentValue.DataSource.DatabaseType)
+                switch (runtimeConfig.CurrentValue.DatabaseType)
                 {
                     case DatabaseType.cosmos:
                         return null!;
@@ -189,8 +190,8 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.mysql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<MySqlDbExceptionParser>(serviceProvider);
                     default:
-                        throw new NotSupportedException(String.Format("The provided DatabaseType value: {0} is currently not supported." +
-                            "Please check the configuration file.", runtimeConfig.CurrentValue.DataSource.DatabaseType));
+                        throw new NotSupportedException(String.Format("The provided Database_Type value: {0} is currently not supported." +
+                            "Please check the configuration file.", runtimeConfig.CurrentValue.DatabaseType));
                 }
             });
 
@@ -300,7 +301,7 @@ namespace Azure.DataGateway.Service
             });
         }
 
-        private RuntimeConfig BindRuntimeConfig()
+        private RuntimeConfig GetRunTimeConfig()
         {
             RuntimeConfig runtimeConfig;
             string runtimeConfigFileName =
@@ -315,7 +316,8 @@ namespace Azure.DataGateway.Service
                 // all these sections - get them separately and
                 // create a new "RuntimeConfig" using these sections.
                 string schemaName = Configuration.GetValue<string>(RuntimeConfig.SCHEMA_PROPERTY_NAME);
-                DataSource dataSource = Configuration.GetSection(DataSource.CONFIG_PROPERTY_NAME).Get<DataSource>();
+                IConfigurationSection? dataSourceSection = Configuration.GetSection(DataSource.CONFIG_PROPERTY_NAME);
+                DataSource dataSource = dataSourceSection.Get<DataSource>();
                 CosmosDbOptions? cosmosDbOptions =
                     Configuration.GetSection(CosmosDbOptions.CONFIG_PROPERTY_NAME).Get<CosmosDbOptions>();
                 MsSqlOptions? msSqlOptions =
@@ -325,8 +327,7 @@ namespace Azure.DataGateway.Service
                 MySqlOptions? mysqlOptions =
                     Configuration.GetSection(MySqlOptions.CONFIG_PROPERTY_NAME).Get<MySqlOptions>();
                 Dictionary<GlobalSettingsType, object>? runtimeSettings =
-                    Configuration.GetSection(GlobalSettings.CONFIG_PROPERTY_NAME)
-                        .Get<Dictionary<GlobalSettingsType, object>>();
+                    Configuration.GetValue<Dictionary<GlobalSettingsType, object>>(GlobalSettings.CONFIG_PROPERTY_NAME);
                 Dictionary<string, Entity> entities =
                     Configuration.GetSection(Entity.CONFIG_PROPERTY_NAME)
                         .Get<Dictionary<string, Entity>>();
@@ -342,8 +343,7 @@ namespace Azure.DataGateway.Service
                     entities);
             }
 
-            Configuration.Bind(RuntimeConfig.CONFIG_PROPERTY_NAME, runtimeConfig);
-            runtimeConfig.SetDefaults();
+            //runtimeConfig.SetDefaults();
             return runtimeConfig;
         }
 

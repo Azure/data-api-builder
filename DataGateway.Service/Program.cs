@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Microsoft.AspNetCore;
@@ -23,23 +24,14 @@ namespace Azure.DataGateway.Service
                     configuration.Sources.Clear();
                     IHostEnvironment env = hostingContext.HostingEnvironment;
 
-                    string jsonFileNameToAdd =
-                        !string.IsNullOrWhiteSpace(env.EnvironmentName)
-                         ? $"{RuntimeConfig.CONFIGFILE_NAME}.{env.EnvironmentName}{RuntimeConfig.CONFIG_EXTENSION}"
-                         : $"{RuntimeConfig.DefaultRuntimeConfigName}";
+                    string configFileNameKey
+                        = RuntimeConfigPath.GetFileNameAsPerEnvironment(env.EnvironmentName);
+                    string path = Path.Combine(
+                        Directory.GetCurrentDirectory(), configFileNameKey);
                     configuration
-                        .AddJsonFile(jsonFileNameToAdd);
+                        .AddKeyPerFile(directoryPath: path);
 
-                    string? runtimeEnvironmentValue
-                        = Environment.GetEnvironmentVariable(RuntimeConfig.RUNTIME_ENVIRONMENT_VAR_NAME);
-                    if (runtimeEnvironmentValue != null)
-                    {
-                        configuration
-                            .AddJsonFile($"{RuntimeConfig.CONFIGFILE_NAME}" +
-                                $".{runtimeEnvironmentValue}{RuntimeConfig.CONFIG_EXTENSION}");
-                    }
-
-                    configuration.AddEnvironmentVariables(prefix: RuntimeConfig.ENVIRONMENT_VAR_PREFIX);
+                    configuration.AddEnvironmentVariables(prefix: RuntimeConfigPath.ENVIRONMENT_VAR_PREFIX);
                     configuration.AddCommandLine(args);
                     configuration.AddInMemoryUpdateableConfiguration();
                 })

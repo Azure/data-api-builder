@@ -61,23 +61,8 @@ namespace Azure.DataGateway.Config
         Dictionary<GlobalSettingsType, object> RuntimeSettings,
         Dictionary<string, Entity> Entities)
     {
-        public const string CONFIG_PROPERTY_NAME = "runtime-config";
-        public const string CONFIGFILE_PROPERTY_NAME = "runtime-config-file";
-        public const string CONFIGFILE_NAME = "hawaii-config";
-        public const string CONFIG_EXTENSION = ".json";
         public const string SCHEMA_PROPERTY_NAME = "$schema";
         public const string RESOLVER_CONFIG_PROPERTY_NAME = "resolver-config-file";
-
-        public const string RUNTIME_ENVIRONMENT_VAR_NAME = "HAWAII_ENVIRONMENT";
-        public static string ENVIRONMENT_VAR_PREFIX = "HAWAII";
-
-        public static string DefaultRuntimeConfigName
-        {
-            get
-            {
-                return $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}";
-            }
-        }
 
         public void SetDefaults()
         {

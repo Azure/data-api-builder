@@ -4,8 +4,8 @@
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
 # Generated Files
-# bin/
-# obj/
+bin/
+obj/
 
 # Local History for Visual Studio
 .localhistory/

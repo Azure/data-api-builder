@@ -19,13 +19,7 @@ namespace Hawaii.Cli.Classes
                 File.Delete(configPath);
             }
 
-            // using (var tw = new StreamWriter(configPath, true)) {
-            //     tw.WriteLine(JSONresult.ToString());
-            //     tw.Close();
-            // }
             File.WriteAllText(configPath, JSONresult);
-
-            //addEntitiesToConfig(fileName: fileName);
 
         }
 
@@ -33,6 +27,7 @@ namespace Hawaii.Cli.Classes
                                              string source, string permissions,
                                              string? rest_route, string? graphQL_type)
         {
+            //TODO: fix the fileName issue. It should be picked up from argument and not hard coded.
             string configPath = "generatedConfigs/" + "todo-001" + ".json";
 
             if (!File.Exists(configPath))
@@ -58,26 +53,18 @@ namespace Hawaii.Cli.Classes
                 dict.Add("graphql", JObject.FromObject(new { type = new { singular = $"{graphQL_type}", plural = $"{graphQL_type}" } }));
             }
 
-            // if(jObject["entities"]!=null) {
-            //     jObject["entities"][entity] = JObject.FromObject(new ());
-            // }
-            // var jObjToExtend = jObject.SelectToken($"{entity}");
-
             dict.Add("source", source);
             string[] permission_array = permissions.Split(":");
             string permission = JsonConvert.SerializeObject(new Permission(permission_array[0], permission_array[1]));
             JArray jArray = new JArray();
             jArray.Add(JObject.Parse(permission));
             dict.Add("permissions", jArray);
+
+            //TODO: add support for multiple entities.
             jObject["entities"][entity] = JObject.FromObject(dict);
 
             string JSONresult = JsonConvert.SerializeObject(jObject, Formatting.Indented);
             File.WriteAllText(configPath, JSONresult);
-
-        }
-
-        public static void updateConfig()
-        {
 
         }
 

@@ -37,9 +37,6 @@ namespace Hawaii.Cli.Classes
 
             ParserResult<CommandLineOptions> results = parser.ParseArguments<CommandLineOptions>(args);
 
-            // results.WithParsed<CommandLineOptions>(Operations.RunWork).WithNotParsed(errors =>
-            //     CommandLineHelp.DisplayHelp(results, errors));
-
             var command = args.AsQueryable().FirstOrDefault();
             string entity = "";
 

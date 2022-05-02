@@ -37,12 +37,41 @@ namespace Hawaii.Cli.Classes
 
             ParserResult<CommandLineOptions> results = parser.ParseArguments<CommandLineOptions>(args);
 
-            results.WithParsed<CommandLineOptions>(Operations.RunWork).WithNotParsed(errors =>
-                CommandLineHelp.DisplayHelp(results, errors));
+            // results.WithParsed<CommandLineOptions>(Operations.RunWork).WithNotParsed(errors =>
+            //     CommandLineHelp.DisplayHelp(results, errors));
+
+            var command = args.AsQueryable().FirstOrDefault();
+            string entity = "";
+
+            switch (command)
+            {
+                case "init":
+                    results.WithParsed<CommandLineOptions>(Operations.Init)
+                           .WithNotParsed(errors => CommandLineHelp.DisplayHelp(results, errors));
+                    break;
+
+                case "add":
+                    entity = args.AsQueryable().ElementAt(1);
+                    results.WithParsed<CommandLineOptions>(opt => Operations.Add(entity, opt))
+                            .WithNotParsed(errors => CommandLineHelp.DisplayHelp(results, errors));
+                    break;
+
+                case "update":
+                    entity = args.AsQueryable().ElementAt(1);
+                    results.WithParsed<CommandLineOptions>(opt => Operations.Update(entity, opt))
+                            .WithNotParsed(errors => CommandLineHelp.DisplayHelp(results, errors));
+                    break;
+
+                default:
+                    Console.WriteLine($"Could not execute because the specified command was not found.");
+                    Console.WriteLine("please do init to initialize the config file.");
+                    break;
+
+            }
 
         }
     }
 
-    
+
 
 }

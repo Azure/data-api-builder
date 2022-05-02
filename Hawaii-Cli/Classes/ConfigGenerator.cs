@@ -5,6 +5,7 @@ namespace Hawaii.Cli.Classes
 {
     public class ConfigGenerator
     {
+        // public static string base_path = Directory.GetCurrentDirectory();
         public static void generateConfig(string fileName, string database_type, string connection_string)
         {
             Config config = new Config();
@@ -12,13 +13,13 @@ namespace Hawaii.Cli.Classes
             config.data_source.connection_string = connection_string;
 
             string JSONresult = JsonConvert.SerializeObject(config, Formatting.Indented);
-            string configPath = "generatedConfigs/" + fileName + ".json";
+
+            string configPath = fileName + ".json";
 
             if (File.Exists(configPath))
             {
                 File.Delete(configPath);
             }
-
             File.WriteAllText(configPath, JSONresult);
 
         }
@@ -28,7 +29,7 @@ namespace Hawaii.Cli.Classes
                                              string? rest_route, string? graphQL_type)
         {
             //TODO: fix the fileName issue. It should be picked up from argument and not hard coded.
-            string configPath = "generatedConfigs/" + "todo-001" + ".json";
+            string configPath = "todo-001" + ".json";
 
             if (!File.Exists(configPath))
             {

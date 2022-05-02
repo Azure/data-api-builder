@@ -8,17 +8,16 @@ namespace Hawaii.Cli.Classes
 {
     public class Operations
     {
-        public static string fileName = "";
         public static void Init(CommandLineOptions options)
         {
-            fileName = options.name;
+            var fileName = options.name;
             var databaseType = options.databaseType;
             var connectionString = options.connectionString;
 
             if (fileName == null || databaseType == null || connectionString == null)
             {
                 Console.WriteLine(@"Please check if any required arguments are not missing.
-                                Required options: --name, --database_type, --connection_string");
+                Required options: --name, --database_type, --connection_string");
                 return;
             }
             ConfigGenerator.generateConfig(fileName, databaseType, connectionString);
@@ -27,6 +26,7 @@ namespace Hawaii.Cli.Classes
 
         public static void Add(string entity, CommandLineOptions options)
         {
+            var fileName = "";
             var source = options.source;
             var restRoute = options.restRoute;
             var graphQLType = options.graphQLType;

@@ -17,7 +17,7 @@ namespace Hawaii.Cli.Classes
             var help = HelpText.AutoBuild(result, helpText =>
             {
                 helpText.AdditionalNewLineAfterOption = false;
-                helpText.Heading = "Get your subscription duration";
+                helpText.Heading = "See all the available options";
 
                 return HelpText.DefaultParsingErrorsHandler(result, helpText);
 
@@ -60,6 +60,7 @@ namespace Hawaii.Cli.Classes
                     break;
 
                 default:
+                    results.WithNotParsed(errors => CommandLineHelp.DisplayHelp(results, errors));
                     Console.WriteLine($"Could not execute because the specified command was not found.");
                     Console.WriteLine("please do init to initialize the config file.");
                     break;

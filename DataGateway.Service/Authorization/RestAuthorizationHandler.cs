@@ -58,12 +58,22 @@ namespace Azure.DataGateway.Service.Authorization
             }
             else if (requirement is Stage2PermissionsRequirement)
             {
-                AuthorizationMetadata authData = (AuthorizationMetadata)context.Resource;
-                bool status = _authorizationResolver.IsRoleDefinedForEntity(roleName: authData.roleName, entityName: authData.entityName);
-
-                if (status)
+                if (context.Resource != null)
                 {
-                    context.Succeed(requirement);
+                    AuthorizationMetadata authData = (AuthorizationMetadata)context.Resource;
+                    if (authData.RoleName != null && authData.EntityName != null)
+                    {
+                        bool status = _authorizationResolver.IsRoleDefinedForEntity(roleName: authData.RoleName, entityName: authData.EntityName);
+
+                        if (status)
+                        {
+                            context.Succeed(requirement);
+                        }
+                    }
+                }
+                else
+                {
+                    context.Fail();
                 }
             }
             else if (requirement is Stage3ConfiguredPermissionsRequirement)

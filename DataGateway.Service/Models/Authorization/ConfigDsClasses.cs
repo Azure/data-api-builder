@@ -17,4 +17,6 @@ namespace Azure.DataGateway.Service.Models.Authorization
         public Dictionary<string, bool>? included = new();
         public Dictionary<string, bool>? excluded = new();
     }
+
+    public record AuthorizationMetadata (string? RoleName, string? EntityName, string? ActionName, List<string>? Columns);
 }

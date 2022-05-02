@@ -270,63 +270,6 @@
           }
         }
       },
-      "BOOKS_VIEW_ALL": {
-        "HttpVerbs": {
-          "GET": {
-            "AuthorizationType": "Anonymous"
-          },
-          "POST": {
-            "AuthorizationType": "Authenticated"
-          },
-          "DELETE": {
-            "Authorization": "Authenticated"
-          },
-          "PUT": {
-            "Authorization": "Authenticated"
-          },
-          "PATCH": {
-            "Authorization": "Authenticated"
-          }
-        }
-      },
-      "STOCKS_VIEW_SELECTED": {
-        "HttpVerbs": {
-          "GET": {
-            "AuthorizationType": "Anonymous"
-          },
-          "POST": {
-            "AuthorizationType": "Authenticated"
-          },
-          "DELETE": {
-            "Authorization": "Authenticated"
-          },
-          "PUT": {
-            "Authorization": "Authenticated"
-          },
-          "PATCH": {
-            "Authorization": "Authenticated"
-          }
-        }
-      },
-      "BOOKS_PUBLISHERS_VIEW_COMPOSITE": {
-        "HttpVerbs": {
-          "GET": {
-            "AuthorizationType": "Anonymous"
-          },
-          "POST": {
-            "AuthorizationType": "Authenticated"
-          },
-          "DELETE": {
-            "Authorization": "Authenticated"
-          },
-          "PUT": {
-            "Authorization": "Authenticated"
-          },
-          "PATCH": {
-            "Authorization": "Authenticated"
-          }
-        }
-      },
       "comics": {
         "HttpVerbs": {
           "GET": {

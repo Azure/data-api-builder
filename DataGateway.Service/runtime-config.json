@@ -35,7 +35,7 @@
   },
   "entities": {
     "publishers": {
-      "source": "dbo.publishers",
+      "source": "publishers",
       "rest": true,
       "graphql": true,
       "permissions": [
@@ -56,7 +56,7 @@
       }
     },
     "stocks": {
-      "source": "dbo.stocks",
+      "source": "stocks",
       "rest": true,
       "graphql": true,
       "permissions": [
@@ -78,8 +78,59 @@
         }
       }
     },
+    "BOOKS_VIEW_ALL": {
+      "source": "BOOKS_VIEW_ALL",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
+    "STOCKS_VIEW_SELECTED": {
+      "source": "STOCKS_VIEW_SELECTED",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
+    "BOOKS_PUBLISHERS_VIEW_COMPOSITE": {
+      "source": "BOOKS_PUBLISHERS_VIEW_COMPOSITE",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
     "books": {
-      "source": "dbo.books",
+      "source": "books",
       "permissions": [
         {
           "role": "anonymous",
@@ -107,13 +158,13 @@
           "cardinality": "many",
           "target.entity": "authors",
           "linking.object": "book_author_link",
-          "linking.source.fields": ["book_id"],
-          "linking.target.fields": ["author_id"]
+          "linking.source.fields": [ "book_id" ],
+          "linking.target.fields": [ "author_id" ]
         }
       }
     },
     "book_website_placements": {
-      "source": "dbo.book_website_placements",
+      "source": "book_website_placements",
       "rest": true,
       "graphql": true,
       "permissions": [
@@ -123,20 +174,20 @@
         },
         {
           "role": "authenticated",
-          "actions": [ 
-            "create", 
+          "actions": [
+            "create",
             "update",
             {
-              "action" : "delete",
+              "action": "delete",
               "policy": {
                 "database": "@claims.id eq @item.id"
               },
-             "fields": {
-               "include": ["*"],
-               "exclude": ["id"]
+              "fields": {
+                "include": [ "*" ],
+                "exclude": [ "id" ]
               }
             }
-            ]
+          ]
         }
       ],
       "relationships": {
@@ -147,7 +198,7 @@
       }
     },
     "authors": {
-      "source": "dbo.authors",
+      "source": "authors",
       "rest": true,
       "graphql": true,
       "permissions": [
@@ -165,7 +216,7 @@
       }
     },
     "reviews": {
-      "source": "dbo.reviews",
+      "source": "reviews",
       "rest": true,
       "permissions": [
         {
@@ -181,7 +232,7 @@
       }
     },
     "magazines": {
-      "source": "dbo.magazines",
+      "source": "magazines",
       "graphql": true,
       "permissions": [
         {
@@ -192,10 +243,10 @@
           "role": "authenticated",
           "actions": [
             {
-              "action" : "*",
+              "action": "*",
               "fields": {
-                "include": ["*"],
-                "exclude": ["issue_number"]
+                "include": [ "*" ],
+                "exclude": [ "issue_number" ]
               }
             }
           ]
@@ -203,7 +254,7 @@
       ]
     },
     "comics": {
-      "source": "dbo.comics",
+      "source": "comics",
       "rest": true,
       "graphql": false,
       "permissions": [
@@ -218,7 +269,7 @@
       ]
     },
     "brokers": {
-      "source": "dbo.brokers",
+      "source": "brokers",
       "graphql": false,
       "permissions": [
         {
@@ -226,6 +277,11 @@
           "actions": [ "read" ]
         }
       ]
+    },
+    "website_users": {
+      "source": "website_users",
+      "rest": false,
+      "permissions": []
     }
   }
 }

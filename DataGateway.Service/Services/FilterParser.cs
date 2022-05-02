@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
@@ -18,10 +19,10 @@ namespace Azure.DataGateway.Service.Services
 
         public FilterParser() { }
 
-        public void BuildModel(DatabaseSchema schema)
+        public void BuildModel(IEnumerable<DatabaseObject> databaseObjects)
         {
             EdmModelBuilder builder = new();
-            _model = builder.BuildModel(schema).GetModel();
+            _model = builder.BuildModel(databaseObjects).GetModel();
         }
 
         /// <summary>

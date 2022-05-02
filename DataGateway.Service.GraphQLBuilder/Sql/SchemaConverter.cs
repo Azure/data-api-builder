@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
@@ -8,7 +9,14 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 {
     public static class SchemaConverter
     {
-        public static ObjectTypeDefinitionNode FromTableDefinition(string tableName, TableDefinition tableDefinition)
+        /// <summary>
+        /// Generate a GraphQL object type from a SQL table definition, combined with the runtime config entity information
+        /// </summary>
+        /// <param name="entityName">Name of the entity in the runtime config to generate the GraphQL object type for.</param>
+        /// <param name="tableDefinition">SQL table definition information.</param>
+        /// <param name="configEntity">Runtime config information for the table.</param>
+        /// <returns>A GraphQL object type to be provided to a Hot Chocolate GraphQL document.</returns>
+        public static ObjectTypeDefinitionNode FromTableDefinition(string entityName, TableDefinition tableDefinition, [NotNull] Entity configEntity, Dictionary<string, Entity> entities)
         {
             Dictionary<string, FieldDefinitionNode> fields = new();
 
@@ -33,46 +41,45 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                 fields.Add(columnName, field);
             }
 
-            foreach ((string _, ForeignKeyDefinition fk) in tableDefinition.ForeignKeys)
+            if (configEntity.Relationships is not null)
             {
-                // Generate the field that represents the relationship to ObjectType, so you can navigate through it
-                // and walk the graph
-
-                // TODO: This will need to be expanded to take care of the query fields that are available
-                //       on the relationship, but until we have the work done to generate the right Input
-                //       types for the queries, it's not worth trying to do it completely.
-
-                // TODO: Also need to look at the cardinality of the relationship. If it's a 1-M then this
-                //       side should be a singular not plural field.
-                FieldDefinitionNode relationshipField = new(
-                    location: null,
-                    Pluralize(fk.ReferencedTable),
-                    description: null,
-                    new List<InputValueDefinitionNode>(),
-                    new NonNullTypeNode(new NamedTypeNode(FormatNameForObject(fk.ReferencedTable))),
-                    new List<DirectiveNode>());
-
-                fields.Add(relationshipField.Name.Value, relationshipField);
-
-                foreach (string columnName in fk.ReferencingColumns)
+                foreach ((string relationshipName, Relationship relationship) in configEntity.Relationships)
                 {
-                    ColumnDefinition column = tableDefinition.Columns[columnName];
-                    FieldDefinitionNode field = fields[columnName];
+                    // Generate the field that represents the relationship to ObjectType, so you can navigate through it
+                    // and walk the graph
 
-                    fields[columnName] = field.WithDirectives(
-                        new List<DirectiveNode>(field.Directives) {
-                            new(
-                                RelationshipDirective.DirectiveName,
-                                new ArgumentNode("databaseType", column.SystemType.Name),
-                                // TODO: Set cardinality when it's available in config
-                                new ArgumentNode("cardinality", ""))
+                    // TODO: This will need to be expanded to take care of the query fields that are available
+                    //       on the relationship, but until we have the work done to generate the right Input
+                    //       types for the queries, it's not worth trying to do it completely.
+
+                    string targetTableName = relationship.TargetEntity.Split('.').Last();
+                    Entity referencedEntity = entities[targetTableName];
+
+                    INullableTypeNode targetField = relationship.Cardinality switch
+                    {
+                        Cardinality.One => new NamedTypeNode(FormatNameForObject(targetTableName, referencedEntity)),
+                        Cardinality.Many => new ListTypeNode(new NamedTypeNode(FormatNameForObject(targetTableName, referencedEntity))),
+                        _ => throw new NotImplementedException("Specified cardinality isn't supported"),
+                    };
+
+                    FieldDefinitionNode relationshipField = new(
+                        location: null,
+                        new NameNode(FormatNameForField(relationshipName)),
+                        description: null,
+                        new List<InputValueDefinitionNode>(),
+                        // TODO: Check for whether it should be a nullable relationship based on the relationship fields
+                        new NonNullTypeNode(targetField),
+                        new List<DirectiveNode> {
+                                new(RelationshipDirective.DirectiveName, new ArgumentNode("target", FormatNameForObject(targetTableName, referencedEntity)), new ArgumentNode("cardinality", relationship.Cardinality.ToString()))
                         });
+
+                    fields.Add(relationshipField.Name.Value, relationshipField);
                 }
             }
 
             return new ObjectTypeDefinitionNode(
                 location: null,
-                new(FormatNameForObject(tableName)),
+                new(FormatNameForObject(entityName, configEntity)),
                 description: null,
                 new List<DirectiveNode>(),
                 new List<NamedTypeNode>(),

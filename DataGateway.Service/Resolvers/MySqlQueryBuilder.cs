@@ -225,6 +225,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
+            Console.WriteLine(string.Join(", ", selections));
             return string.Join(", ", selections);
         }
 

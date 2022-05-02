@@ -20,6 +20,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "FindViewAll",
+                $"SELECT * FROM { _booksViewAll } " +
+                $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindViewSelected",
+                $"SELECT categoryid,pieceid,categoryName,piecesAvailable FROM {_stocksViewSelected} " +
+                $"WHERE categoryid = 2 AND pieceid = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindViewComposite",
+                $"SELECT name,id,publisher_id FROM {_booksPublishersCompositeView} " +
+                $"WHERE id=2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "FindByIdTestWithQueryStringFields",
                 $"SELECT[id], [title] FROM { _integrationTableName } " +
                 $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"

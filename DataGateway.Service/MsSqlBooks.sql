@@ -1,3 +1,6 @@
+DROP VIEW IF EXISTS BOOKS_VIEW_ALL;
+DROP VIEW IF EXISTS STOCKS_VIEW_SELECTED;
+DROP VIEW IF EXISTS BOOKS_PUBLISHERS_VIEW_COMPOSITE;
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
@@ -161,3 +164,13 @@ INSERT INTO magazines(id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, '
 INSERT INTO brokers([ID Number], [First Name], [Last Name]) VALUES (1, 'Michael', 'Burry'), (2, 'Jordan', 'Belfort');
 INSERT INTO comics(id, title, categoryName) VALUES (1, 'Star Trek', 'SciFi'), (2, 'Cinderella', 'FairyTales'),(3,'Unknown','');
 INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2, 1, 'FairyTales'),(0,1,'');
+
+EXEC('CREATE VIEW BOOKS_VIEW_ALL AS SELECT * FROM dbo.books');
+EXEC('CREATE VIEW STOCKS_VIEW_SELECTED AS SELECT
+      categoryid,pieceid,categoryName,piecesAvailable
+      FROM dbo.stocks');
+EXEC('CREATE VIEW BOOKS_PUBLISHERS_VIEW_COMPOSITE as SELECT
+      publishers.name,books.id,books.publisher_id
+      FROM dbo.books,dbo.publishers
+      where publishers.id = books.publisher_id;');
+

@@ -191,6 +191,9 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// Make the SELECT arguments to select the primary key of the last inserted element
+        /// The SELECT clause looks for the inserted columns first, then Primary Key and then the Columns with Default values. 
+        /// For Example:book_id is the inserted column (book_id, id) are primary key, content has default value
+        /// SELECT @param1 as `book_id`, last_insert_id() as `id`, @param0 as `content` WHERE @ROWCOUNT > 0;
         /// </summary>
         private string MakeInsertSelections(SqlInsertStructure structure)
         {
@@ -225,7 +228,6 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            Console.WriteLine(string.Join(", ", selections));
             return string.Join(", ", selections);
         }
 

@@ -120,15 +120,18 @@ namespace Azure.DataGateway.Service.Resolvers
                 // MySql has empty schema so we check if schema is null or empty and then do not append in this case
                 if (!string.IsNullOrEmpty(column.TableSchema))
                 {
+                    // when table alias is not empty we return [{tableAlias}].[{ColumnName}], otherwise [{schema}.{table}].[{ColumnName}]
                     return !string.IsNullOrEmpty(column.TableAlias) ? $"{QuoteIdentifier(column.TableAlias)}.{QuoteIdentifier(column.ColumnName)}" :
-                            $"{QuoteIdentifier(column.TableSchema)}.{QuoteIdentifier(column.TableName)}.{QuoteIdentifier(column.ColumnName)}";
+                           $"{QuoteIdentifier(column.TableSchema)}.{QuoteIdentifier(column.TableName)}.{QuoteIdentifier(column.ColumnName)}";
                 } else
                 {
+                    // schema was empty so we return [{table}].[{ColumnName}]
                     return QuoteIdentifier($"{column.TableName}") + "." + QuoteIdentifier(column.ColumnName);
                 }
             }
             else
             {
+                // [{ColumnName}]
                 return QuoteIdentifier(column.ColumnName);
             }
         }

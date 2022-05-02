@@ -71,7 +71,10 @@ namespace Azure.DataGateway.Service.Services
             switch (operationType)
             {
                 case Operation.Find:
-                    context = new FindRequestContext(entityName, schemaName: dbObject.SchemaName, tableName: dbObject.Name, isList: string.IsNullOrEmpty(primaryKeyRoute));
+                    context = new FindRequestContext(entityName,
+                                                     schemaName: dbObject.SchemaName,
+                                                     tableName: dbObject.Name,
+                                                     isList: string.IsNullOrEmpty(primaryKeyRoute));
                     break;
                 case Operation.Insert:
                     JsonElement insertPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);
@@ -87,7 +90,10 @@ namespace Azure.DataGateway.Service.Services
                         _sqlMetadataProvider);
                     break;
                 case Operation.Delete:
-                    context = new DeleteRequestContext(entityName, schemaName: dbObject.SchemaName, tableName: dbObject.Name, isList: false);
+                    context = new DeleteRequestContext(entityName,
+                                                       schemaName: dbObject.SchemaName,
+                                                       tableName: dbObject.Name,
+                                                       isList: false);
                     RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                     break;
                 case Operation.Update:

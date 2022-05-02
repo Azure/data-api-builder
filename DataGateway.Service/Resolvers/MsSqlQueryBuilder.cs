@@ -17,7 +17,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private static DbCommandBuilder _builder = new SqlCommandBuilder();
 
         /// <inheritdoc />
-        protected override string QuoteIdentifier(string ident) // [dbo_books] [ + schemaname = _ + tablename + ]      QuoteIdentifier(schema_table)
+        protected override string QuoteIdentifier(string ident)
         {
             return _builder.QuoteIdentifier(ident);
         }

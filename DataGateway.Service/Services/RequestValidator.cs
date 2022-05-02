@@ -32,7 +32,7 @@ namespace Azure.DataGateway.Service.Services
 
             foreach (string field in context.FieldsToBeReturned)
             {
-                if (!tableDefinition.Columns.ContainsKey(field)) // and doesn't exist as a value in the mappings values or (isa key but nota value)
+                if (!tableDefinition.Columns.ContainsKey(field))
                 {
                     throw new DataGatewayException(
                         message: "Invalid Column name requested: " + field,
@@ -308,7 +308,7 @@ namespace Azure.DataGateway.Service.Services
             if (!entities.Contains(entityName))
             {
                 throw new DataGatewayException(
-                    message: "Entity provided is invalid.",
+                    message: $"{entityName} is not a valid entity.",
                     statusCode: HttpStatusCode.BadRequest,
                     DataGatewayException.SubStatusCodes.BadRequest);
             }
@@ -326,7 +326,7 @@ namespace Azure.DataGateway.Service.Services
         {
             try
             {
-                TableDefinition tableDefinition = sqlMetadataProvider.GetTableDefinition(entityName); // check if entity exists in runtime config for validation
+                TableDefinition tableDefinition = sqlMetadataProvider.GetTableDefinition(entityName);
                 return tableDefinition;
             }
             catch (KeyNotFoundException)

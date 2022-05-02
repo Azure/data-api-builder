@@ -156,13 +156,20 @@ namespace Azure.DataGateway.Service.Services
             foreach ((string entityName, Entity entity)
                 in GetEntitiesFromRuntimeConfig())
             {
+                // parse source name into a tuple of (schemaName, databaseObjectName)
                 (string, string) names = EntitySourceNamesParser.ParseSchemaAndTable(entity.GetSourceName())!;
                 string schemaName = names.Item1;
                 string dbObjectName = names.Item2;
 
+                // if schemaName is empty we check if the DB type is postgresql
+                // and if the schema name was included in the connection string
+                // as a value associated with the keyword 'SearchPath'.
+                // if the DB type is not postgresql or if the connection string
+                // does not include the schema name, we use the default schema name
                 if (string.IsNullOrEmpty(schemaName))
                 {
-                    if (!CheckConnectionStringForSchema(out schemaName))
+                    // if DatabaseType is not postgresql will short circuit and use default
+                    if (DatabaseType is not DatabaseType.postgresql || !CheckConnectionStringForSchema(out schemaName))
                     {
                         schemaName = GetDefaultSchemaName();
                     }
@@ -215,10 +222,12 @@ namespace Azure.DataGateway.Service.Services
         private bool CheckConnectionStringForSchema(out string schemaName)
         {
             string connectionString = _runtimeConfigProvider.GetRuntimeConfig().DataSource.ConnectionString;
-            int startIndex = connectionString.IndexOf("SearchPath");
+            // get the index of the first char after 'SearchPath'
+            int startIndex = connectionString.IndexOf("SearchPath") + "SearchPath".Length;
             if (startIndex != -1)
             {
                 int endIndex = connectionString.IndexOf(';', startIndex);
+                // gets the substring bounded by 'SearchPath' and ';'
                 schemaName = connectionString[startIndex..endIndex];
                 return true;
             }

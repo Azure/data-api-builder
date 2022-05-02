@@ -117,7 +117,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
             string expected = await GetDatabaseResultAsync(mySqlQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual+"asda");
         }
 
         /// <summary>

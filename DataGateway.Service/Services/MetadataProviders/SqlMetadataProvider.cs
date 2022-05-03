@@ -223,9 +223,11 @@ namespace Azure.DataGateway.Service.Services
         {
             string connectionString = _runtimeConfigProvider.GetRuntimeConfig().DataSource.ConnectionString;
             // get the index of the first char after 'SearchPath'
-            int startIndex = connectionString.IndexOf("SearchPath") + "SearchPath".Length;
+            int startIndex = connectionString.IndexOf("SearchPath");
             if (startIndex != -1)
             {
+                // first char starts after length of word
+                startIndex += +"SearchPath".Length;
                 int endIndex = connectionString.IndexOf(';', startIndex);
                 // gets the substring bounded by 'SearchPath' and ';'
                 schemaName = connectionString[startIndex..endIndex];

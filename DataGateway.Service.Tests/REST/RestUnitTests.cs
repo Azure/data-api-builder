@@ -65,7 +65,8 @@ namespace Azure.DataGateway.Service.Tests.REST
             _restController.ControllerContext.HttpContext = httpContext;
 
             // Setup params to invoke function with
-            string entityName = string.Empty;
+            // Must use valid entity name
+            string entityName = "Books";
             Operation operationType = Operation.None;
             string primaryKeyRoute = string.Empty;
 

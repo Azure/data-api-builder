@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
-using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models.Authorization;
 using Action = Azure.DataGateway.Config.Action;
 using Microsoft.AspNetCore.Http;
@@ -24,15 +22,7 @@ namespace Azure.DataGateway.Service.Authorization
 
         public AuthorizationResolver(IRuntimeConfigProvider runtimeConfigProvider)
         {
-            if (runtimeConfigProvider.GetType() != typeof(IRuntimeConfigProvider))
-            {
-                throw new DataGatewayException(
-                    message: "Unable to instantiate the SQL query engine.",
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
-            }
-
-            _runtimeConfigProvider = (RuntimeConfigProvider)runtimeConfigProvider;
+            _runtimeConfigProvider = runtimeConfigProvider;
 
             // Datastructure constructor will pull required properties from metadataprovider.
             _entityConfigMap = GetEntityConfigMap(_runtimeConfigProvider.GetRuntimeConfig());
@@ -52,9 +42,19 @@ namespace Azure.DataGateway.Service.Authorization
         /// <exception cref="NotImplementedException"></exception>
         public bool IsValidRoleContext(HttpContext httpContext)
         {
+            // Anonymous requests must specifically set the Anonymous role.
             if (!httpContext.Request.Headers.ContainsKey(CLIENT_ROLE_HEADER))
             {
-                return true;
+                return false;
+            }
+
+            // Multiple header fields with the same field-name(X-MS-API-ROLE) MAY be present in a message,
+            // but are NOT supported.
+            // Valid scenario per HTTP Spec: http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
+            // Discussion: https://stackoverflow.com/a/3097052/18174950
+            if (httpContext.Request.Headers[CLIENT_ROLE_HEADER].Count > 1)
+            {
+                return false;
             }
 
             if (httpContext.Request.Headers[CLIENT_ROLE_HEADER].ToString().Length == 0)
@@ -136,14 +136,14 @@ namespace Azure.DataGateway.Service.Authorization
 
             foreach (string column in columns)
             {
-
                 if (!actionToColumnMap!.excluded!.ContainsKey(column) && !actionToColumnMap!.included!.ContainsKey(column))
                 {
                     // If a column is absent from both excluded,included
                     // it can be valid/invalid.
                     // If the column turns out to be an invalid one
                     // an error would be thrown during request validation.
-                    continue;
+                    // continue;
+                    return false;
                 }
 
                 if (actionToColumnMap.excluded.ContainsKey(column) ||
@@ -178,7 +178,6 @@ namespace Azure.DataGateway.Service.Authorization
         // during runtime.
         private static Dictionary<string, EntityToRole> GetEntityConfigMap(RuntimeConfig? runtimeConfig)
         {
-
             Dictionary<string, EntityToRole> entityConfigMap = new();
 
             foreach (KeyValuePair<string, Entity> entityPair in runtimeConfig!.Entities)
@@ -195,7 +194,7 @@ namespace Azure.DataGateway.Service.Authorization
                     ActionToColumn actionToColumnMap;
                     foreach (object Action in Actions)
                     {
-                        JsonElement action = (JsonElement)Action;
+                        JsonElement action = JsonSerializer.SerializeToElement(Action);
                         string actionName = "";
                         actionToColumnMap = new ActionToColumn();
                         if (action.ValueKind == JsonValueKind.String)

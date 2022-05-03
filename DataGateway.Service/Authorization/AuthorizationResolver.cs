@@ -115,7 +115,8 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <summary>
-        /// Compare columns in request body to columns in entity.Role.Action.AllowedColumns
+        /// Compare columns in request body to columns in entity.Role.Action.AllowedColumns.
+        /// This stage assumes that all provided columns are valid for entity (request validation occurs prior to this check).
         /// </summary>
         /// <param name="roleName"></param>
         /// <param name="entityName"></param>
@@ -136,17 +137,7 @@ namespace Azure.DataGateway.Service.Authorization
 
             foreach (string column in columns)
             {
-                if (!actionToColumnMap!.excluded!.ContainsKey(column) && !actionToColumnMap!.included!.ContainsKey(column))
-                {
-                    // If a column is absent from both excluded,included
-                    // it can be valid/invalid.
-                    // If the column turns out to be an invalid one
-                    // an error would be thrown during request validation.
-                    // continue;
-                    return false;
-                }
-
-                if (actionToColumnMap.excluded.ContainsKey(column) ||
+                if ((actionToColumnMap.excluded != null && actionToColumnMap.excluded.ContainsKey(column)) ||
                     !(actionToColumnMap.included != null && (actionToColumnMap.included.ContainsKey("*") || actionToColumnMap.included.ContainsKey(column))))
                 {
                     // If column is present in excluded OR
@@ -154,7 +145,6 @@ namespace Azure.DataGateway.Service.Authorization
                     // return false
                     return false;
                 }
-
             }
 
             return true;
@@ -174,8 +164,12 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         #region Helpers
-        // Method to read in data from the config class into a Dictionary for quick lookup
-        // during runtime.
+        /// <summary>
+        /// Method to read in data from the config class into a Dictionary for quick lookup
+        /// during runtime.
+        /// </summary>
+        /// <param name="runtimeConfig"></param>
+        /// <returns></returns>
         private static Dictionary<string, EntityToRole> GetEntityConfigMap(RuntimeConfig? runtimeConfig)
         {
             Dictionary<string, EntityToRole> entityConfigMap = new();
@@ -236,6 +230,13 @@ namespace Azure.DataGateway.Service.Authorization
 
             return entityConfigMap;
         }
+
+        /// <summary>
+        /// Parses runtime config Included and Excluded columns into
+        /// key/value store for use in the entityConfigMap.
+        /// </summary>
+        /// <param name="columns"></param>
+        /// <returns></returns>
         private static Dictionary<string, bool> AddFieldsToMap(string[] columns)
         {
             Dictionary<string, bool> result = new();

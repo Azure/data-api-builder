@@ -23,6 +23,11 @@
       "OperationType": "Delete"
     },
     {
+      "Id": "deleteReview",
+      "Table": "reviews",
+      "OperationType": "Delete"
+    },
+    {
       "Id": "insertWebsitePlacement",
       "Table": "book_website_placements",
       "OperationType": "Insert"

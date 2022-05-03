@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Config;
-using Action = Azure.DataGateway.Config.Action;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using Action = Azure.DataGateway.Config.Action;
 
 namespace Azure.DataGateway.Service.Tests.Authorization
 {

@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataGateway.Config;
-using Action = Azure.DataGateway.Config.Action;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models.Authorization;
 using Microsoft.AspNetCore.Http;
+using Action = Azure.DataGateway.Config.Action;
 
 namespace Azure.DataGateway.Service.Authorization
 {

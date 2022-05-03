@@ -5,10 +5,10 @@ namespace Azure.DataGateway.Service.Authorization
 {
     public interface IAuthorizationResolver
     {
-        // Whether X-DG-Role Http Request Header is present in httpContext.Identity.Claims.Roles
+        // Whether X-MS-API-ROLE Http Request Header is present in httpContext.Identity.Claims.Roles
         public bool IsValidRoleContext(HttpContext httpContext);
 
-        // Whether X-DG-Role Http Request Header value is present in DeveloperConfig:Entity
+        // Whether X-MS-API-ROLE Http Request Header value is present in DeveloperConfig:Entity
         // This should fail if entity does not exist. For now: should be 403 Forbidden instead of 404
         // to avoid leaking Schema data.
         public bool IsRoleDefinedForEntity(string roleName, string entityName);
@@ -16,7 +16,7 @@ namespace Azure.DataGateway.Service.Authorization
         // Whether Entity.Role has action defined
         public bool IsActionAllowedForRole(string roleName, string entityName, string action);
 
-        // Compare columns in request body to columns in entity.Role.Action.AllowedColumns
+        // Compare columns in request body to columns in entity.Role.Action.IncludedColumns
         public bool AreColumnsAllowedForAction(string roleName, string entityName, string action, List<string> columns);
 
         //  Parse policy into query predicate for request

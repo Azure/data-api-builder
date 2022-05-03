@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Action = Azure.DataGateway.Config.Action;
 using Azure.DataGateway.Config;
+using Action = Azure.DataGateway.Config.Action;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Microsoft.AspNetCore.Http;

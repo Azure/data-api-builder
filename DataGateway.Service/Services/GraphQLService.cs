@@ -186,7 +186,7 @@ namespace Azure.DataGateway.Service.Services
                     DatabaseType.mssql or
                     DatabaseType.postgresql or
                     DatabaseType.mysql => GenerateSqlGraphQLObjects(entities),
-                    _ => throw new NotImplementedException()
+                    _ => throw new NotImplementedException($"This database type {databaseType} is not yet implemented.")
                 };
 
                 ParseAsync(root, inputTypes, entities);

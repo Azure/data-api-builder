@@ -618,7 +618,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
-            string msSqlQuery = $"SELECT TOP 100 id, title, issue_number FROM magazines ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string msSqlQuery = $"SELECT TOP 100 id, title, issue_number FROM [foo].[magazines] ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
 
             _ = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
 

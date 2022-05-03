@@ -27,7 +27,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
-        protected override string MakeQueryOn(string table, List<string> queriedColumns, string predicate, List<string> pkColumns = null)
+        protected override string MakeQueryOn(string table, List<string> queriedColumns, string predicate, string schema = "", List<string> pkColumns = null)
         {
             if (pkColumns == null)
             {

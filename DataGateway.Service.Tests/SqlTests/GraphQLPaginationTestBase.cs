@@ -341,7 +341,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     }
                 }
             ";
-
             string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
             string expected = @"{
               ""publisher"": {

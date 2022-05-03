@@ -131,8 +131,9 @@ namespace Azure.DataGateway.Service.Resolvers
             }
             else
             {
-                // [{ColumnName}]
-                return QuoteIdentifier(column.ColumnName);
+                // if table alias is provided then [{tableAlias}].[{ColumnName}] otherwise [{ColumnName}]
+                return !string.IsNullOrEmpty(column.TableAlias) ? $"{QuoteIdentifier(column.TableAlias)}.{QuoteIdentifier(column.ColumnName)}" :
+                                           $"{QuoteIdentifier(column.ColumnName)}";
             }
         }
 

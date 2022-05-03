@@ -5,7 +5,7 @@ DROP TABLE IF EXISTS book_website_placements;
 DROP TABLE IF EXISTS website_users;
 DROP TABLE IF EXISTS books;
 DROP TABLE IF EXISTS publishers;
-DROP TABLE IF EXISTS magazines;
+DROP TABLE IF EXISTS [foo].[magazines];
 DROP TABLE IF EXISTS stocks_price;
 DROP TABLE IF EXISTS stocks;
 DROP TABLE IF EXISTS comics;
@@ -56,7 +56,7 @@ CREATE TABLE book_author_link(
     PRIMARY KEY(book_id, author_id)
 );
 
-CREATE TABLE magazines(
+CREATE TABLE [foo].[magazines](
     id bigint PRIMARY KEY,
     title varchar(max) NOT NULL,
     issue_number bigint NULL
@@ -157,7 +157,7 @@ INSERT INTO reviews(id, book_id, content) VALUES (567, 1, 'Indeed a great book')
 SET IDENTITY_INSERT reviews OFF
 
 INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95'), (5, 'null');
-INSERT INTO magazines(id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);
+INSERT INTO [foo].[magazines](id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);
 INSERT INTO brokers([ID Number], [First Name], [Last Name]) VALUES (1, 'Michael', 'Burry'), (2, 'Jordan', 'Belfort');
 INSERT INTO comics(id, title, categoryName) VALUES (1, 'Star Trek', 'SciFi'), (2, 'Cinderella', 'FairyTales'),(3,'Unknown','');
 INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2, 1, 'FairyTales'),(0,1,'');

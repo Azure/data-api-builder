@@ -93,7 +93,8 @@ namespace Azure.DataGateway.Service.Resolvers
             IResolverContext ctx,
             IDictionary<string, object> queryParams,
             IGraphQLMetadataProvider metadataStoreProvider,
-            ISqlMetadataProvider sqlMetadataProvider)
+            ISqlMetadataProvider sqlMetadataProvider,
+            string entityName = "")
             // This constructor simply forwards to the more general constructor
             // that is used to create GraphQL queries. We give it some values
             // that make sense for the outermost query.
@@ -106,7 +107,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 // The outermost query is where we start, so this can define
                 // create the IncrementingInteger that will be shared between
                 // all subqueries in this query.
-                new IncrementingInteger())
+                new IncrementingInteger(),
+                entityName: entityName)
         {
             // support identification of entities by primary key when query is non list type nor paginated
             // only perform this action for the outermost query as subqueries shouldn't provide primary key search
@@ -200,8 +202,9 @@ namespace Azure.DataGateway.Service.Resolvers
                 ISqlMetadataProvider sqlMetadataProvider,
                 IObjectField schemaField,
                 FieldNode? queryField,
-                IncrementingInteger counter
-        ) : this(metadataStoreProvider, sqlMetadataProvider, counter, entityName: string.Empty)
+                IncrementingInteger counter,
+                string entityName = ""
+        ) : this(metadataStoreProvider, sqlMetadataProvider, counter, entityName: entityName)
         {
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
@@ -240,6 +243,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 PaginationMetadata.Subqueries.Add("items", PaginationMetadata.MakeEmptyPaginationMetadata());
             }
 
+            SchemaName = sqlMetadataProvider.GetSchemaName(_typeInfo.Table);
             TableName = _typeInfo.Table;
             TableAlias = CreateTableAlias();
 
@@ -286,7 +290,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (filterObject != null)
                 {
                     List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
-                    Predicates.Add(GQLFilterParser.Parse(filterFields, TableAlias, GetUnderlyingTableDefinition(), MakeParamWithValue));
+                    Predicates.Add(GQLFilterParser.Parse(filterFields, SchemaName, TableName, TableAlias, GetUnderlyingTableDefinition(), MakeParamWithValue));
                 }
             }
 
@@ -300,7 +304,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     ODataASTVisitor visitor = new(this);
                     FilterParser parser = SqlMetadataProvider.ODataFilterParser;
-                    FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={where}", TableName);
+                    FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={where}", $"{SchemaName}.{TableName}");
                     FilterPredicates = filterClause.Expression.Accept<string>(visitor);
                 }
             }
@@ -366,7 +370,7 @@ namespace Azure.DataGateway.Service.Resolvers
             foreach (KeyValuePair<string, object> parameter in queryParams)
             {
                 Predicates.Add(new Predicate(
-                    new PredicateOperand(new Column(SchemaName, TableAlias, parameter.Key)),
+                    new PredicateOperand(new Column(SchemaName, TableName, parameter.Key, TableAlias)),
                     PredicateOperation.Equal,
                     new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
                 ));
@@ -457,8 +461,8 @@ namespace Azure.DataGateway.Service.Resolvers
             return leftColumnNames.Zip(rightColumnNames,
                     (leftColumnName, rightColumnName) =>
                     {
-                        Column leftColumn = new(tableSchema: null, leftTableAlias, leftColumnName);
-                        Column rightColumn = new(tableSchema: null, rightTableAlias, rightColumnName);
+                        Column leftColumn = new(tableSchema: null, tableName: null, leftColumnName, leftTableAlias);
+                        Column rightColumn = new(tableSchema: null, tableName: null, rightColumnName, rightTableAlias);
                         return new Predicate(
                             new PredicateOperand(leftColumn),
                             PredicateOperation.Equal,

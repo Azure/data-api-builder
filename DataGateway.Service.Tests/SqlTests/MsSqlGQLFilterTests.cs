@@ -27,18 +27,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
-        protected override string MakeQueryOn(string table, List<string> queriedColumns, string predicate, List<string> pkColumns = null)
+        protected override string MakeQueryOn(string table, List<string> queriedColumns, string predicate, string schema = "", List<string> pkColumns = null)
         {
             if (pkColumns == null)
             {
                 pkColumns = new() { "id" };
             }
 
+            string schemaAndTable = string.IsNullOrEmpty(schema) ? $"[{table}]" : $"[{schema}].[{table}]";
             string orderBy = string.Join(", ", pkColumns.Select(c => $"[table0].[{c}]"));
 
             return @"
                 SELECT TOP 100 " + string.Join(", ", queriedColumns) + @"
-                FROM [" + table + @"] AS [table0]
+                FROM " + schemaAndTable + @" AS [table0]
                 WHERE " + predicate + @"
                 ORDER BY " + orderBy + @"
                 FOR JSON PATH,

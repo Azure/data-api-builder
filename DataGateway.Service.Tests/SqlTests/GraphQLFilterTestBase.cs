@@ -480,7 +480,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string dbQuery = MakeQueryOn(
                 "magazines",
                 new List<string> { "id", "title", "issue_number" },
-                "issue_number IS NULL");
+                "issue_number IS NULL",
+                "foo");
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -506,7 +507,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string dbQuery = MakeQueryOn(
                 "magazines",
                 new List<string> { "id", "title", "issue_number" },
-                "issue_number IS NOT NULL");
+                "issue_number IS NOT NULL",
+                "foo");
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -572,6 +574,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string table,
             List<string> queriedColumns,
             string predicate,
+            string schema = "",
             List<string> pkColumns = null);
     }
 }

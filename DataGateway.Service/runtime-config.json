@@ -181,7 +181,7 @@
       }
     },
     "magazines": {
-      "source": "dbo.magazines",
+      "source": "foo.magazines",
       "graphql": true,
       "permissions": [
         {

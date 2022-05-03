@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Action = Azure.DataGateway.Config.Action;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models.Authorization;
-using Action = Azure.DataGateway.Config.Action;
 using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataGateway.Service.Authorization

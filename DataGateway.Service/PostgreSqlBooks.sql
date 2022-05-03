@@ -55,7 +55,7 @@ CREATE TABLE book_author_link(
     PRIMARY KEY(book_id, author_id)
 );
 
-EXEC('CREATE SCHEMA [foo]');
+EXEC sys.sp_executesql N'CREATE SCHEMA foo;'
 
 CREATE TABLE foo.magazines(
     id bigint PRIMARY KEY,

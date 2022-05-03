@@ -35,7 +35,7 @@
   },
   "entities": {
     "publishers": {
-      "source": "dbo.publishers",
+      "source": "publishers",
       "rest": true,
       "graphql": true,
       "permissions": [
@@ -56,7 +56,7 @@
       }
     },
     "stocks": {
-      "source": "dbo.stocks",
+      "source": "stocks",
       "rest": true,
       "graphql": true,
       "permissions": [
@@ -113,7 +113,7 @@
       }
     },
     "book_website_placements": {
-      "source": "dbo.book_website_placements",
+      "source": "book_website_placements",
       "rest": true,
       "graphql": true,
       "permissions": [
@@ -147,7 +147,7 @@
       }
     },
     "authors": {
-      "source": "dbo.authors",
+      "source": "authors",
       "rest": true,
       "graphql": true,
       "permissions": [
@@ -165,7 +165,7 @@
       }
     },
     "reviews": {
-      "source": "dbo.reviews",
+      "source": "reviews",
       "rest": true,
       "permissions": [
         {
@@ -203,7 +203,7 @@
       ]
     },
     "comics": {
-      "source": "dbo.comics",
+      "source": "comics",
       "rest": true,
       "graphql": false,
       "permissions": [
@@ -218,7 +218,7 @@
       ]
     },
     "brokers": {
-      "source": "dbo.brokers",
+      "source": "brokers",
       "graphql": false,
       "permissions": [
         {
@@ -228,7 +228,7 @@
       ]
     },
     "website_users": {
-      "source": "dbo.website_users",
+      "source": "website_users",
       "rest": false,
       "permissions" : []
     }

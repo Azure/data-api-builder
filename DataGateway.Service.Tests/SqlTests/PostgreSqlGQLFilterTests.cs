@@ -34,7 +34,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 pkColumns = new() { "id" };
             }
 
-            string schemaAndTable = string.IsNullOrEmpty(schema) ? $"[{table}]" : $"[{schema}].[{table}]";
+            string schemaAndTable = string.IsNullOrEmpty(schema) ? $"{table}" : $"{schema}.{table}";
             string orderBy = string.Join(", ", pkColumns.Select(c => $"\"table0\".\"{c}\""));
 
             return @"

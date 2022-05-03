@@ -15,6 +15,7 @@ DROP TABLE IF EXISTS brokers;
 --This allows for tests using the same id values for both languages
 --Starting with id > 5000 is chosen arbitrarily so that the incremented id-s won't conflict with the manually inserted ids in this script
 
+
 CREATE TABLE publishers(
     id bigint IDENTITY(5001, 1) PRIMARY KEY,
     name varchar(max) NOT NULL
@@ -55,6 +56,8 @@ CREATE TABLE book_author_link(
     author_id bigint NOT NULL,
     PRIMARY KEY(book_id, author_id)
 );
+
+EXEC('CREATE SCHEMA [foo]')
 
 CREATE TABLE [foo].[magazines](
     id bigint PRIMARY KEY,

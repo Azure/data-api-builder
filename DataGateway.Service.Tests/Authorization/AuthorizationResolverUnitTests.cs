@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Action = Azure.DataGateway.Config.Action;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
@@ -7,7 +8,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using Action = Azure.DataGateway.Config.Action;
 
 namespace Azure.DataGateway.Service.Tests.Authorization
 {
@@ -178,7 +178,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 entityName: "SampleEntity",
                 roleName: "Writer",
                 actionName: "Create",
-                includedCols: new string[] { "col1" , "col2" , "col3" }
+                includedCols: new string[] { "col1", "col2", "col3" }
                 );
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
@@ -186,7 +186,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string entityName = "SampleEntity";
             string roleName = "Writer";
             string actionName = "Create";
-            List<string> columns = new(new string[] { "col1" }); 
+            List<string> columns = new(new string[] { "col1" });
 
             Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(roleName, entityName, actionName, columns));
         }
@@ -331,7 +331,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string entityName = "SampleEntity";
             string roleName = "Writer";
             string actionName = "Create";
-            List<string> columns = new(new string[] { "col4" , "col5" });
+            List<string> columns = new(new string[] { "col4", "col5" });
 
             Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(roleName, entityName, actionName, columns));
         }

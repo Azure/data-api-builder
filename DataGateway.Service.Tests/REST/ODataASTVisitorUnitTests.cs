@@ -4,7 +4,6 @@ using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
-using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;

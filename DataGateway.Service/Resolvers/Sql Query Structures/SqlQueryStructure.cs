@@ -353,7 +353,7 @@ namespace Azure.DataGateway.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IncrementingInteger counter,
             string entityName = "")
-            : base(metadataStoreProvider, sqlMetadataProvider, entityName: entityName, counter: counter )
+            : base(metadataStoreProvider, sqlMetadataProvider, entityName: entityName, counter: counter)
         {
             JoinQueries = new();
             Joins = new();

@@ -57,7 +57,7 @@ namespace Azure.DataGateway.Service.Services
             Operation operationType,
             string? primaryKeyRoute)
         {
-            DatabaseObject dbObject= _sqlMetadataProvider.EntityToDatabaseObject[entityName];
+            DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[entityName];
             QueryString? query = GetHttpContext().Request.QueryString;
             string queryString = query is null ? string.Empty : GetHttpContext().Request.QueryString.ToString();
 

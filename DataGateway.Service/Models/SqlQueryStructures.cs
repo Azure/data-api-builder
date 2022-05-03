@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
 
 namespace Azure.DataGateway.Service.Models
 {
@@ -60,7 +59,7 @@ namespace Azure.DataGateway.Service.Models
                                 string? tableName,
                                 string columnName,
                                 object? value,
-                                string? tableAlias= null,
+                                string? tableAlias = null,
                                 OrderByDir direction = OrderByDir.Asc,
                                 string? paramName = null)
             : base(tableSchema, tableName, columnName, tableAlias, direction)

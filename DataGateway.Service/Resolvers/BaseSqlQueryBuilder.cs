@@ -123,7 +123,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     // when table alias is not empty we return [{tableAlias}].[{ColumnName}], otherwise [{schema}.{table}].[{ColumnName}]
                     return !string.IsNullOrEmpty(column.TableAlias) ? $"{QuoteIdentifier(column.TableAlias)}.{QuoteIdentifier(column.ColumnName)}" :
                            $"{QuoteIdentifier(column.TableSchema)}.{QuoteIdentifier(column.TableName)}.{QuoteIdentifier(column.ColumnName)}";
-                } else
+                }
+                else
                 {
                     // schema was empty so we return [{table}].[{ColumnName}]
                     return QuoteIdentifier($"{column.TableName}") + "." + QuoteIdentifier(column.ColumnName);

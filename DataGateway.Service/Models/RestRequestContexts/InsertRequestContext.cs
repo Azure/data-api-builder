@@ -4,7 +4,6 @@ using System.Text.Json;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
-using Microsoft.OData.Edm;
 
 namespace Azure.DataGateway.Service.Models
 {

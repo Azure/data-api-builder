@@ -53,6 +53,11 @@ namespace Azure.DataGateway.Service.Resolvers
                 TableName = sqlMetadataProvider.EntityToDatabaseObject[entityName].Name;
                 SchemaName = sqlMetadataProvider.EntityToDatabaseObject[entityName].SchemaName;
             }
+            else
+            {
+                TableName = string.Empty;
+                SchemaName = string.Empty;
+            }
 
             // Default the alias to the empty string
             TableAlias = string.Empty;

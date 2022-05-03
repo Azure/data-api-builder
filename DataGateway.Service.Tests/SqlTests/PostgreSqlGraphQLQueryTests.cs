@@ -548,7 +548,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title, \"issue_number\" FROM magazines ORDER BY id) as table0 LIMIT 100";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title, \"issue_number\" FROM foo.magazines ORDER BY id) as table0 LIMIT 100";
 
             _ = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
 

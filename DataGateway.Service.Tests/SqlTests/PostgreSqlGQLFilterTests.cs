@@ -34,13 +34,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 pkColumns = new() { "id" };
             }
 
+            string schemaAndTable = string.IsNullOrEmpty(schema) ? $"[{table}]" : $"[{schema}].[{table}]";
             string orderBy = string.Join(", ", pkColumns.Select(c => $"\"table0\".\"{c}\""));
 
             return @"
                 SELECT COALESCE(jsonb_agg(to_jsonb(subq3)), '[]') AS DATA
                 FROM
                   (SELECT " + string.Join(", ", queriedColumns.Select(c => $"\"{c}\"")) + @"
-                   FROM " + table + @" AS table0
+                   FROM " + schemaAndTable + @" AS table0
                    WHERE " + predicate + @"
                    ORDER BY " + orderBy + @"
                    LIMIT 100) AS subq3

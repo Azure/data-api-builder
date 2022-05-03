@@ -10,6 +10,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class PostgreSqlRestApiTests : RestApiTestBase
     {
+        protected static string DEFAULT_SCHEMA = "public";
         protected static Dictionary<string, string> _queryMap = new()
         {
             {
@@ -910,6 +911,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task TestCleanup()
         {
             await ResetDbStateAsync();
+        }
+
+        public override string GetDefaultSchema()
+        {
+            return DEFAULT_SCHEMA;
         }
 
         public override string GetQuery(string key)

@@ -13,6 +13,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     [TestClass, TestCategory(TestCategory.MYSQL)]
     public class MySqlRestApiTests : RestApiTestBase
     {
+        protected static string DEFAULT_SCHEMA = string.Empty;
         protected static Dictionary<string, string> _queryMap = new()
         {
             {
@@ -941,6 +942,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         #endregion
+
+        public override string GetDefaultSchema()
+        {
+            return DEFAULT_SCHEMA;
+        }
 
         public override string GetQuery(string key)
         {

@@ -12,6 +12,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class MsSqlRestApiTests : RestApiTestBase
     {
+        protected static string DEFAULT_SCHEMA = "dbo";
         private static Dictionary<string, string> _queryMap = new()
         {
             {
@@ -556,6 +557,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         #endregion
+
+        public override string GetDefaultSchema()
+        {
+            return DEFAULT_SCHEMA;
+        }
 
         public override string GetQuery(string key)
         {

@@ -16,7 +16,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Directives
             descriptor
                     .Argument("databaseType")
                         .Type<StringType>()
-                        .Description("The underlying database type");
+                        .Description("The underlying database type.");
         }
     }
 }

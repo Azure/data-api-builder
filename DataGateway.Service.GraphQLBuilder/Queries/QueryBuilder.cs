@@ -74,7 +74,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes,
             Entity entity)
         {
-            string filterInputName = GenerateObjectInputFilterName(objectTypeDefinitionNode.Name.Value);
+            string filterInputName = InputTypeBuilder.GenerateObjectInputFilterName(objectTypeDefinitionNode.Name.Value);
 
             if (!inputTypes.ContainsKey(objectTypeDefinitionNode.Name.Value))
             {
@@ -133,11 +133,6 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             }
 
             return node;
-        }
-
-        private static string GenerateObjectInputFilterName(string name)
-        {
-            return $"{name}FilterInput";
         }
 
         public static ObjectType PaginationTypeToModelType(ObjectType underlyingFieldType, IReadOnlyCollection<INamedType> types)

@@ -26,7 +26,6 @@ namespace Azure.DataGateway.Service.Services
             RestRequestContext context,
             ISqlMetadataProvider sqlMetadataProvider)
         {
-            ValidateEntity(context.EntityName, sqlMetadataProvider.EntityToDatabaseObject.Keys);
             TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, sqlMetadataProvider);
 
             foreach (string field in context.FieldsToBeReturned)

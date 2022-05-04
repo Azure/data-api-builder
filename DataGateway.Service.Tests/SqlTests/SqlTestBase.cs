@@ -59,7 +59,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _testCategory = testCategory;
 
             IOptions<DataGatewayConfig> config = SqlTestHelper.LoadConfig($"{_testCategory}IntegrationTest");
-            _runtimeConfigProvider = new RuntimeConfigProvider(config);
+            _runtimeConfigProvider = new RuntimeConfigProvider(SqlTestHelper.GetRuntimeConfigJsonString(_testCategory));
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:

@@ -165,7 +165,10 @@ namespace Azure.DataGateway.Service.Services
                 // and if the schema name was included in the connection string
                 // as a value associated with the keyword 'SearchPath'.
                 // if the DB type is not postgresql or if the connection string
-                // does not include the schema name, we use the default schema name
+                // does not include the schema name, we use the default schema name.
+                // if schemaName is not empty we must check if Database Type is MySql
+                // and in this case we throw an exception since there should be no
+                // schema name in this case.
                 if (string.IsNullOrEmpty(schemaName))
                 {
                     // if DatabaseType is not postgresql will short circuit and use default
@@ -173,6 +176,12 @@ namespace Azure.DataGateway.Service.Services
                     {
                         schemaName = GetDefaultSchemaName();
                     }
+                }
+                else if (DatabaseType is DatabaseType.mysql)
+                {
+                    throw new DataGatewayException(message: $"Invalid database object name: \"{schemaName}.{dbObjectName}\"",
+                                                   statusCode: System.Net.HttpStatusCode.BadRequest,
+                                                   subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
 
                 DatabaseObject databaseObject = new()

@@ -15,6 +15,14 @@ namespace Azure.DataGateway.Service.Configurations
 
         public DatabaseType CloudDbType { get; init; }
 
+        public RuntimeConfigProvider(string runtimeConfigJson)
+        {
+            RuntimeConfig =
+                DataGatewayConfig.GetDeserializedConfig<RuntimeConfig>(runtimeConfigJson);
+
+            RuntimeConfig.SetDefaults();
+        }
+
         public RuntimeConfigProvider(
             IOptions<DataGatewayConfig> dataGatewayConfig)
         {

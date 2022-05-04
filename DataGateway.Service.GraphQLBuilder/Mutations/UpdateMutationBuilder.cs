@@ -77,7 +77,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                 new(
                     location: null,
                     inputName,
-                    new StringValueNode($"Input type for creating {name}"),
+                    new StringValueNode($"Input type for updating {name}"),
                     new List<DirectiveNode>(),
                     inputFields.ToList()
                 );

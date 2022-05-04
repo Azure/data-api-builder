@@ -201,14 +201,9 @@ namespace Azure.DataGateway.Service.Services
             // First pass - build up the object and input types for all the entities
             foreach ((string entityName, Entity entity) in entities)
             {
-                if (entity.GraphQL is not null)
+                if (entity.GraphQL is not null && entity.GraphQL is bool graphql && graphql == false)
                 {
-                    if (entity.GraphQL is bool graphql && graphql == false)
-                    {
-                        continue;
-                    }
-
-                    // TODO: Do we need to check the object version of `entity.GraphQL`?
+                    continue;
                 }
 
                 TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);

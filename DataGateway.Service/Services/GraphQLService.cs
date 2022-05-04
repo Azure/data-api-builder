@@ -57,7 +57,7 @@ namespace Azure.DataGateway.Service.Services
             InitializeSchemaAndResolvers();
         }
 
-        public void ParseAsync(string data)
+        public void Parse(string data)
         {
             Schema = SchemaBuilder.New()
                .AddDocumentFromString(data)
@@ -75,7 +75,7 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="inputTypes">Reference table of the input types for query lookup</param>
         /// <param name="entities">Runtime config entities</param>
         /// <exception cref="DataGatewayException">Error will be raised if no database type is set</exception>
-        private void ParseAsync(DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes, Dictionary<string, Entity> entities)
+        private void Parse(DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes, Dictionary<string, Entity> entities)
         {
             DatabaseType databaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
             ISchemaBuilder sb = SchemaBuilder.New()
@@ -172,7 +172,7 @@ namespace Azure.DataGateway.Service.Services
                 // If the schema is available, parse it and attach resolvers.
                 if (!string.IsNullOrEmpty(graphqlSchema))
                 {
-                    ParseAsync(graphqlSchema);
+                    Parse(graphqlSchema);
                 }
             }
             else if (!_useLegacySchema)
@@ -189,7 +189,7 @@ namespace Azure.DataGateway.Service.Services
                     _ => throw new NotImplementedException($"This database type {databaseType} is not yet implemented.")
                 };
 
-                ParseAsync(root, inputTypes, entities);
+                Parse(root, inputTypes, entities);
             }
         }
 

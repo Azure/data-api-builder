@@ -57,7 +57,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
             InputObjectTypeDefinitionNode input =
                 new(
-                    null,
+                    location: null,
                     inputName,
                     new StringValueNode($"Input type for creating {name}"),
                     new List<DirectiveNode>(),
@@ -105,11 +105,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
         private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f, Entity entity)
         {
             return new(
-                null,
+                location: null,
                 f.Name,
                 new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(name.Value, entity)}"),
                 f.Type,
-                null,
+                defaultValue: null,
                 new List<DirectiveNode>()
             );
         }
@@ -146,11 +146,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             }
 
             return new(
-                null,
+                location: null,
                 f.Name,
                 new StringValueNode($"Input for field {f.Name} on type {inputTypeName}"),
                 new NonNullTypeNode(new NamedTypeNode(node.Name)), // TODO - figure out how to properly walk the graph, so you can do [Foo!]!
-                null,
+                defaultValue: null,
                 f.Directives
             );
         }

@@ -49,11 +49,11 @@ namespace Azure.DataGateway.Service.Services
             new(StringComparer.InvariantCultureIgnoreCase);
 
         public SqlMetadataProvider(
-            IOptions<RuntimeConfigPath> runtimeConfigPath,
+            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder)
         {
-            RuntimeConfig runtimeConfig = runtimeConfigPath.Value.ObtainRuntimeConfig()!;
+            RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
             ConnectionString = runtimeConfig.ConnectionString!;
             _databaseType = (DatabaseType)runtimeConfig.DatabaseType!;
             _entities = runtimeConfig.Entities;
@@ -270,9 +270,9 @@ namespace Azure.DataGateway.Service.Services
                         actionName = ((JsonElement)action).Deserialize<string>()!;
                     }
 
-                    OperationAuthorizationRequirement restVerb
+                    string restVerb
                             = HttpRestVerbs.GetVerb(actionName);
-                    if (!tableDefinition.HttpVerbs.ContainsKey(restVerb.ToString()!))
+                    if (!tableDefinition.HttpVerbs.ContainsKey(restVerb))
                     {
                         AuthorizationRule rule = new()
                         {
@@ -281,7 +281,7 @@ namespace Azure.DataGateway.Service.Services
                                   typeof(AuthorizationType), permission.Role, ignoreCase: true)
                         };
 
-                        tableDefinition.HttpVerbs.Add(restVerb.ToString()!, rule);
+                        tableDefinition.HttpVerbs.Add(restVerb, rule);
                     }
                 }
             }

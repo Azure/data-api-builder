@@ -38,16 +38,13 @@ namespace Azure.DataGateway.Service
         private void OnConfigurationChanged(object state)
         {
             RuntimeConfigPath options = new();
-            Configuration.Bind(nameof(RuntimeConfigPath.ConfigFileName), options);
+            Configuration.Bind(options);
         }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            IConfigurationSection configSection =
-                Configuration.GetSection(nameof(RuntimeConfigPath.ConfigFileName));
-
-            services.Configure<RuntimeConfigPath>(configSection);
+            services.Configure<RuntimeConfigPath>(Configuration);
 
             if (Configuration is IConfigurationRoot root)
             {
@@ -66,7 +63,7 @@ namespace Azure.DataGateway.Service
             {
                 IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
                     = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
-                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ObtainRuntimeConfig()!;
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
 
                 switch (runtimeConfig.DatabaseType)
                 {
@@ -86,7 +83,7 @@ namespace Azure.DataGateway.Service
             {
                 IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
-                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ObtainRuntimeConfig()!;
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
 
                 switch (runtimeConfig.DatabaseType)
                 {
@@ -106,7 +103,7 @@ namespace Azure.DataGateway.Service
             {
                 IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
                     = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
-                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ObtainRuntimeConfig()!;
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
 
                 switch (runtimeConfig.DatabaseType)
                 {
@@ -126,7 +123,7 @@ namespace Azure.DataGateway.Service
             {
                 IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
                     = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
-                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ObtainRuntimeConfig()!;
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
 
                 switch (runtimeConfig.DatabaseType)
                 {
@@ -148,7 +145,7 @@ namespace Azure.DataGateway.Service
             {
                 IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
                     = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
-                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ObtainRuntimeConfig()!;
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
 
                 switch (runtimeConfig.DatabaseType)
                 {
@@ -170,7 +167,7 @@ namespace Azure.DataGateway.Service
             {
                 IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
                     = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
-                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ObtainRuntimeConfig()!;
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
 
                 switch (runtimeConfig.DatabaseType)
                 {
@@ -192,7 +189,7 @@ namespace Azure.DataGateway.Service
             {
                 IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
                     = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
-                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ObtainRuntimeConfig()!;
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
 
                 switch (runtimeConfig.DatabaseType)
                 {
@@ -233,7 +230,8 @@ namespace Azure.DataGateway.Service
         {
             IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
                 = app.ApplicationServices.GetService<IOptionsMonitor<RuntimeConfigPath>>()!;
-            RuntimeConfig? runtimeConfig = runtimeConfigPath.CurrentValue.ObtainRuntimeConfig();
+            runtimeConfigPath.CurrentValue.SetRuntimeConfigValue();
+            RuntimeConfig? runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue;
             bool isRuntimeReady = false;
             if (runtimeConfig is not null)
             {
@@ -244,6 +242,7 @@ namespace Azure.DataGateway.Service
             {
                 runtimeConfigPath.OnChange(async (newConfig) =>
                 {
+                    runtimeConfigPath.CurrentValue.SetRuntimeConfigValue();
                     isRuntimeReady =
                         await PerformOnConfigChangeAsync(app);
                 });
@@ -336,10 +335,9 @@ namespace Azure.DataGateway.Service
         private void ConfigureAuthentication(IServiceCollection services)
         {
             // Read configuration and use it locally.
-            RuntimeConfigPath runtimeConfigPath = new();
-            Configuration.Bind(nameof(RuntimeConfigPath.ConfigFileName),
-                runtimeConfigPath);
-            RuntimeConfig? runtimeConfig = runtimeConfigPath.ObtainRuntimeConfig();
+            RuntimeConfigPath runtimeConfigPath = Configuration.Get<RuntimeConfigPath>();
+            runtimeConfigPath.SetRuntimeConfigValue();
+            RuntimeConfig? runtimeConfig = runtimeConfigPath.ConfigValue;
 
             // Parameterless AddAuthentication() , i.e. No defaultScheme, allows the custom JWT middleware
             // to manually call JwtBearerHandler.HandleAuthenticateAsync() and populate the User if successful.

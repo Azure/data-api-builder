@@ -80,16 +80,16 @@ namespace Azure.DataGateway.Config
         public static OperationAuthorizationRequirement PATCH =
             new() { Name = nameof(PATCH) };
 
-        public static OperationAuthorizationRequirement
+        public static string
             GetVerb(string action) => action switch
             {
-                "create" => POST,
-                "read" => GET,
-                "update" => PATCH,
-                "delete" => DELETE,
+                "create" => "POST",
+                "read" => "GET",
+                "update" => PATCH.ToString()!,
+                "delete" => DELETE.ToString()!,
                 // TODO: This mapping will no longer be required after AuthZ engine work
                 // Hence, simply returning GET to pass the test.
-                "*" => GET,
+                "*" => GET.ToString()!,
                 _ => throw new NotSupportedException($"{action} is not supported.")
             };
     }

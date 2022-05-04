@@ -15,7 +15,7 @@ namespace Azure.DataGateway.Service.Services
         SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand>
     {
         public MsSqlMetadataProvider(
-            IOptions<RuntimeConfigPath> runtimeConfigPath,
+            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,
             IQueryExecutor queryExecutor,
             IQueryBuilder sqlQueryBuilder)
             : base(runtimeConfigPath, queryExecutor, sqlQueryBuilder)

@@ -17,9 +17,9 @@ namespace Azure.DataGateway.Service.Resolvers
         private readonly RuntimeConfig _runtimeConfig;
         private readonly DbExceptionParserBase _dbExceptionParser;
 
-        public QueryExecutor(IOptions<RuntimeConfig> runtimeConfig, DbExceptionParserBase dbExceptionParser)
+        public QueryExecutor(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath, DbExceptionParserBase dbExceptionParser)
         {
-            _runtimeConfig = runtimeConfig.Value;
+            _runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
             _dbExceptionParser = dbExceptionParser;
         }
 

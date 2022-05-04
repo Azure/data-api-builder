@@ -9,6 +9,8 @@ namespace Azure.DataGateway.Config
 
         public string? ConfigFileName { get; set; }
 
+        public RuntimeConfig? ConfigValue { get; set; }
+
         public static string DefaultName
         {
             get
@@ -23,7 +25,7 @@ namespace Azure.DataGateway.Config
         /// </summary>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
-        public RuntimeConfig? ObtainRuntimeConfig()
+        public void SetRuntimeConfigValue()
         {
             string? runtimeConfigJson = null;
             if (!string.IsNullOrEmpty(ConfigFileName) && File.Exists(ConfigFileName))
@@ -31,12 +33,10 @@ namespace Azure.DataGateway.Config
                 runtimeConfigJson = File.ReadAllText(ConfigFileName);
             }
 
-            if (string.IsNullOrEmpty(runtimeConfigJson))
+            if (!string.IsNullOrEmpty(runtimeConfigJson))
             {
-                return null;
+                ConfigValue = RuntimeConfig.GetDeserializedConfig<RuntimeConfig>(runtimeConfigJson);
             }
-
-            return RuntimeConfig.GetDeserializedConfig<RuntimeConfig>(runtimeConfigJson);
         }
 
         public static string GetFileNameAsPerEnvironment(string hostingEnvironmentName)

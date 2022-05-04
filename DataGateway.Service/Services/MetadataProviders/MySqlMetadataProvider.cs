@@ -15,7 +15,7 @@ namespace Azure.DataGateway.Service.Services
     public class MySqlMetadataProvider : SqlMetadataProvider<MySqlConnection, MySqlDataAdapter, MySqlCommand>, ISqlMetadataProvider
     {
         public MySqlMetadataProvider(
-            IOptions<RuntimeConfigPath> runtimeConfigPath,
+            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,
             IQueryExecutor queryExecutor,
             IQueryBuilder sqlQueryBuilder)
             : base(runtimeConfigPath, queryExecutor, sqlQueryBuilder)

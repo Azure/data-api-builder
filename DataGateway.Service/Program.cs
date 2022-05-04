@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service
                     Dictionary<string, string> configFileNameMap = new()
                     {
                         {  nameof(RuntimeConfigPath.ConfigFileName),
-                            configFileName }
+                             configFileName }
                     };
 
                     configurationBuilder

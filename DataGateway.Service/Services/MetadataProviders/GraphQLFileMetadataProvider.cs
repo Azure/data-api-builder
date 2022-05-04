@@ -21,9 +21,9 @@ namespace Azure.DataGateway.Service.Services
         private Dictionary<string, MutationResolver> _mutationResolvers;
 
         public GraphQLFileMetadataProvider(
-            IOptions<RuntimeConfigPath> runtimeConfigPath)
+            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
         {
-            RuntimeConfig config = runtimeConfigPath.Value.ObtainRuntimeConfig()!;
+            RuntimeConfig config = runtimeConfigPath.CurrentValue.ConfigValue!;
             if (!config.DoesDatabaseTypeHaveValue())
             {
                 throw new ArgumentNullException("runtime-config.data-source.database-type",

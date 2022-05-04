@@ -186,17 +186,17 @@ namespace Azure.DataGateway.Service.Authorization
                     RoleToAction roleToActionMap = new();
                     object[] Actions = permission.Actions;
                     ActionToColumn actionToColumnMap;
-                    foreach (object Action in Actions)
+                    foreach (object action in Actions)
                     {
-                        JsonElement action = JsonSerializer.SerializeToElement(Action);
+                        JsonElement actionElement = JsonSerializer.SerializeToElement(action);
                         string actionName = "";
                         actionToColumnMap = new ActionToColumn();
-                        if (action.ValueKind == JsonValueKind.String)
+                        if (actionElement.ValueKind == JsonValueKind.String)
                         {
-                            actionName = action.ToString();
+                            actionName = actionElement.ToString();
                             actionToColumnMap!.included!.Add("*", true);
                         }
-                        else if (action.ValueKind == JsonValueKind.Object)
+                        else if (actionElement.ValueKind == JsonValueKind.Object)
                         {
                             JsonSerializerOptions options = new()
                             {
@@ -204,7 +204,7 @@ namespace Azure.DataGateway.Service.Authorization
                                 Converters = { new JsonStringEnumConverter() }
                             };
 
-                            Action? actionObj = JsonSerializer.Deserialize<Action>(action.ToString(), options);
+                            Action? actionObj = JsonSerializer.Deserialize<Action>(actionElement.ToString(), options);
                             actionName = actionObj!.Name;
 
                             if (actionObj!.Fields!.Include != null)

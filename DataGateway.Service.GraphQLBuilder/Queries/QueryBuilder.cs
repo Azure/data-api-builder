@@ -25,8 +25,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 if (definition is ObjectTypeDefinitionNode objectTypeDefinitionNode && IsModelType(objectTypeDefinitionNode))
                 {
                     NameNode name = objectTypeDefinitionNode.Name;
-                    string dbEntityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
-                    Entity entity = entities[dbEntityName];
+                    string entityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
+                    Entity entity = entities[entityName];
 
                     ObjectTypeDefinitionNode returnType = GenerateReturnType(name);
                     returnTypes.Add(returnType);

@@ -152,6 +152,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
             }
 
+            // OrderByColumns may lack TableAlias 
             OrderByColumns = context.OrderByClauseInUrl is not null ? context.OrderByClauseInUrl : PrimaryKeyAsOrderByColumns();
             foreach (OrderByColumn column in OrderByColumns)
             {

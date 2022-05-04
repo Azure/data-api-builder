@@ -193,6 +193,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }
         }
 
+        /// <summary>
+        /// For testing we use a JSON string that represents
+        /// the runtime config that would otherwise be generated
+        /// by the client for use by the runtime. This makes it
+        /// easier to test with different configurations, and allows
+        /// for different formats between database types.
+        /// </summary>
+        /// <param name="dbType"> the database type associated with this config.</param>
+        /// <returns></returns>
         public static string GetRuntimeConfigJsonString(string dbType)
         {
             string magazinesSource = string.Empty;

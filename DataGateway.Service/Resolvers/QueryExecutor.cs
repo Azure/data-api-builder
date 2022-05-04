@@ -4,7 +4,6 @@ using System.Data;
 using System.Data.Common;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Configurations;
 using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Resolvers

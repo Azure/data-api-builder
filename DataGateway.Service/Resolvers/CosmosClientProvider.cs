@@ -1,6 +1,5 @@
 using System;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Configurations;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Fluent;
 using Microsoft.Extensions.Options;

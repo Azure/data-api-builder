@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models;
 using Microsoft.Extensions.Options;
 
@@ -22,9 +21,9 @@ namespace Azure.DataGateway.Service.Services
         private Dictionary<string, MutationResolver> _mutationResolvers;
 
         public GraphQLFileMetadataProvider(
-            IOptions<RuntimeConfig> runtimeConfig)
+            IOptions<RuntimeConfigPath> runtimeConfigPath)
         {
-            RuntimeConfig config = runtimeConfig.Value;
+            RuntimeConfig config = runtimeConfigPath.Value.ObtainRuntimeConfig()!;
             if (!config.DoesDatabaseTypeHaveValue())
             {
                 throw new ArgumentNullException("runtime-config.data-source.database-type",

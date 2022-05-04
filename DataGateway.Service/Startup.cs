@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -39,15 +38,17 @@ namespace Azure.DataGateway.Service
         private void OnConfigurationChanged(object state)
         {
             RuntimeConfigPath options = new();
-            Configuration.Bind(RuntimeConfigPath.CONFIGFILE_PROPERTY_NAME, options);
+            Configuration.Bind(nameof(RuntimeConfigPath.ConfigFileName), options);
         }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            string runtimeConfigJson =
-                Configuration.GetValue<string>(RuntimeConfigPath.GetFileNameAsPerEnvironment());
-            services.AddSingleton()
+            IConfigurationSection configSection =
+                Configuration.GetSection(nameof(RuntimeConfigPath.ConfigFileName));
+
+            services.Configure<RuntimeConfigPath>(configSection);
+
             if (Configuration is IConfigurationRoot root)
             {
                 if (root.Providers.First(prov => prov is InMemoryUpdateableConfigurationProvider) is InMemoryUpdateableConfigurationProvider provider)
@@ -63,9 +64,11 @@ namespace Azure.DataGateway.Service
 
             services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
             {
-                IOptionsMonitor<RuntimeConfig> runtimeConfig
-                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfig>>(serviceProvider);
-                switch (runtimeConfig.CurrentValue.DatabaseType)
+                IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
+                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ObtainRuntimeConfig()!;
+
+                switch (runtimeConfig.DatabaseType)
                 {
                     case DatabaseType.cosmos:
                         return ActivatorUtilities.GetServiceOrCreateInstance<CosmosQueryEngine>(serviceProvider);
@@ -75,15 +78,17 @@ namespace Azure.DataGateway.Service
                         return ActivatorUtilities.GetServiceOrCreateInstance<SqlQueryEngine>(serviceProvider);
                     default:
                         throw new NotSupportedException(string.Format("The provided Database_Type value: {0} is currently not supported." +
-                            "Please check the configuration file.", runtimeConfig.CurrentValue.DatabaseType));
+                            "Please check the configuration file.", runtimeConfig.DatabaseType));
                 }
             });
 
             services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
             {
-                IOptionsMonitor<RuntimeConfig> runtimeConfig
-                                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfig>>(serviceProvider);
-                switch (runtimeConfig.CurrentValue.DatabaseType)
+                IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
+                   = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ObtainRuntimeConfig()!;
+
+                switch (runtimeConfig.DatabaseType)
                 {
                     case DatabaseType.cosmos:
                         return ActivatorUtilities.GetServiceOrCreateInstance<CosmosMutationEngine>(serviceProvider);
@@ -93,15 +98,17 @@ namespace Azure.DataGateway.Service
                         return ActivatorUtilities.GetServiceOrCreateInstance<SqlMutationEngine>(serviceProvider);
                     default:
                         throw new NotSupportedException(string.Format("The provided Database_Type value: {0} is currently not supported." +
-                            "Please check the configuration file.", runtimeConfig.CurrentValue.DatabaseType));
+                            "Please check the configuration file.", runtimeConfig.DatabaseType));
                 }
             });
 
             services.AddSingleton<IConfigValidator>(implementationFactory: (serviceProvider) =>
             {
-                IOptionsMonitor<RuntimeConfig> runtimeConfig
-                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfig>>(serviceProvider);
-                switch (runtimeConfig.CurrentValue.DatabaseType)
+                IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
+                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ObtainRuntimeConfig()!;
+
+                switch (runtimeConfig.DatabaseType)
                 {
                     case DatabaseType.cosmos:
                         return ActivatorUtilities.GetServiceOrCreateInstance<CosmosConfigValidator>(serviceProvider);
@@ -111,15 +118,17 @@ namespace Azure.DataGateway.Service
                         return ActivatorUtilities.GetServiceOrCreateInstance<SqlConfigValidator>(serviceProvider);
                     default:
                         throw new NotSupportedException(string.Format("The provided Database_Type value: {0} is currently not supported." +
-                            "Please check the configuration file.", runtimeConfig.CurrentValue.DatabaseType));
+                            "Please check the configuration file.", runtimeConfig.DatabaseType));
                 }
             });
 
             services.AddSingleton<IQueryExecutor>(implementationFactory: (serviceProvider) =>
             {
-                IOptionsMonitor<RuntimeConfig> runtimeConfig
-                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfig>>(serviceProvider);
-                switch (runtimeConfig.CurrentValue.DatabaseType)
+                IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
+                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ObtainRuntimeConfig()!;
+
+                switch (runtimeConfig.DatabaseType)
                 {
                     case DatabaseType.cosmos:
                         return null!;
@@ -131,15 +140,17 @@ namespace Azure.DataGateway.Service
                         return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<MySqlConnection>>(serviceProvider);
                     default:
                         throw new NotSupportedException(string.Format("The provided Database_Type value: {0} is currently not supported." +
-                            "Please check the configuration file.", runtimeConfig.CurrentValue.DatabaseType));
+                            "Please check the configuration file.", runtimeConfig.DatabaseType));
                 }
             });
 
             services.AddSingleton<IQueryBuilder>(implementationFactory: (serviceProvider) =>
             {
-                IOptionsMonitor<RuntimeConfig> runtimeConfig
-                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfig>>(serviceProvider);
-                switch (runtimeConfig.CurrentValue.DatabaseType)
+                IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
+                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ObtainRuntimeConfig()!;
+
+                switch (runtimeConfig.DatabaseType)
                 {
                     case DatabaseType.cosmos:
                         return null!;
@@ -151,15 +162,17 @@ namespace Azure.DataGateway.Service
                         return ActivatorUtilities.GetServiceOrCreateInstance<MySqlQueryBuilder>(serviceProvider);
                     default:
                         throw new NotSupportedException(string.Format("The provided Database_Type value: {0} is currently not supported." +
-                            "Please check the configuration file.", runtimeConfig.CurrentValue.DatabaseType));
+                            "Please check the configuration file.", runtimeConfig.DatabaseType));
                 }
             });
 
             services.AddSingleton<ISqlMetadataProvider>(implementationFactory: (serviceProvider) =>
             {
-                IOptionsMonitor<RuntimeConfig> runtimeConfig
-                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfig>>(serviceProvider);
-                switch (runtimeConfig.CurrentValue.DatabaseType)
+                IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
+                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ObtainRuntimeConfig()!;
+
+                switch (runtimeConfig.DatabaseType)
                 {
                     case DatabaseType.cosmos:
                         return null!;
@@ -171,15 +184,17 @@ namespace Azure.DataGateway.Service
                         return ActivatorUtilities.GetServiceOrCreateInstance<MySqlMetadataProvider>(serviceProvider);
                     default:
                         throw new NotSupportedException(string.Format("The provided Database_Type value: {0} is currently not supported." +
-                            "Please check the configuration file.", runtimeConfig.CurrentValue.DatabaseType));
+                            "Please check the configuration file.", runtimeConfig.DatabaseType));
                 }
             });
 
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
-                IOptionsMonitor<RuntimeConfig> runtimeConfig
-                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfig>>(serviceProvider);
-                switch (runtimeConfig.CurrentValue.DatabaseType)
+                IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
+                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ObtainRuntimeConfig()!;
+
+                switch (runtimeConfig.DatabaseType)
                 {
                     case DatabaseType.cosmos:
                         return null!;
@@ -191,7 +206,7 @@ namespace Azure.DataGateway.Service
                         return ActivatorUtilities.GetServiceOrCreateInstance<MySqlDbExceptionParser>(serviceProvider);
                     default:
                         throw new NotSupportedException(String.Format("The provided Database_Type value: {0} is currently not supported." +
-                            "Please check the configuration file.", runtimeConfig.CurrentValue.DatabaseType));
+                            "Please check the configuration file.", runtimeConfig.DatabaseType));
                 }
             });
 
@@ -206,19 +221,7 @@ namespace Azure.DataGateway.Service
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
 
-            // Parameterless AddAuthentication() , i.e. No defaultScheme, allows the custom JWT middleware
-            // to manually call JwtBearerHandler.HandleAuthenticateAsync() and populate the User if successful.
-            // This also enables the custom middleware to send the AuthN failure reason in the challenge header.
-            if (runtimeConfig.AuthNConfig != null &&
-                !runtimeConfig.IsEasyAuthAuthenticationProvider())
-            {
-                services.AddAuthentication()
-                .AddJwtBearer(options =>
-                {
-                    options.Audience = runtimeConfig.AuthNConfig.Jwt!.Audience;
-                    options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
-                });
-            }
+            ConfigureAuthentication(services);
 
             services.AddAuthorization();
             services.AddSingleton<IAuthorizationHandler, RequestAuthorizationHandler>();
@@ -228,17 +231,18 @@ namespace Azure.DataGateway.Service
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            IOptionsMonitor<RuntimeConfig> runtimeConfig
-                = app.ApplicationServices.GetService<IOptionsMonitor<RuntimeConfig>>()!;
+            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
+                = app.ApplicationServices.GetService<IOptionsMonitor<RuntimeConfigPath>>()!;
+            RuntimeConfig? runtimeConfig = runtimeConfigPath.CurrentValue.ObtainRuntimeConfig();
             bool isRuntimeReady = false;
-            if (runtimeConfig.CurrentValue.DoesDatabaseTypeHaveValue())
+            if (runtimeConfig is not null)
             {
                 isRuntimeReady =
                     PerformOnConfigChangeAsync(app).Result;
             }
             else
             {
-                runtimeConfig.OnChange(async (newConfig) =>
+                runtimeConfigPath.OnChange(async (newConfig) =>
                 {
                     isRuntimeReady =
                         await PerformOnConfigChangeAsync(app);
@@ -255,9 +259,6 @@ namespace Azure.DataGateway.Service
             app.UseRouting();
             app.Use(async (context, next) =>
             {
-                IOptionsMonitor<RuntimeConfig>? runtimeConfig
-                    = context.RequestServices.GetService<IOptionsMonitor<RuntimeConfig>>();
-
                 bool isSettingConfig = context.Request.Path.StartsWithSegments("/configuration")
                     && context.Request.Method == HttpMethod.Post.Method;
                 if (isRuntimeReady)
@@ -283,7 +284,7 @@ namespace Azure.DataGateway.Service
             app.UseAuthentication();
 
             // Conditionally add EasyAuth middleware if no JwtAuth configuration supplied.
-            if (runtimeConfig.CurrentValue.IsEasyAuthAuthenticationProvider())
+            if (runtimeConfig is not null && runtimeConfig.IsEasyAuthAuthenticationProvider())
             {
                 app.UseEasyAuthMiddleware();
             }
@@ -299,52 +300,6 @@ namespace Azure.DataGateway.Service
                 endpoints.MapControllers();
                 endpoints.MapBananaCakePop("/graphql");
             });
-        }
-
-        private RuntimeConfig GetRunTimeConfig()
-        {
-            RuntimeConfig runtimeConfig;
-            string runtimeConfigFileName =
-                Configuration.GetSection(RuntimeConfig.CONFIGFILE_PROPERTY_NAME).Get<string>();
-            if (runtimeConfigFileName != default)
-            {
-                runtimeConfig = RuntimeConfig.GetDeserializedConfig<RuntimeConfig>(runtimeConfigFileName);
-            }
-            else
-            {
-                // Since the runtime config has no name at the root level that encapsulates
-                // all these sections - get them separately and
-                // create a new "RuntimeConfig" using these sections.
-                string schemaName = Configuration.GetValue<string>(RuntimeConfig.SCHEMA_PROPERTY_NAME);
-                IConfigurationSection? dataSourceSection = Configuration.GetSection(DataSource.CONFIG_PROPERTY_NAME);
-                DataSource dataSource = dataSourceSection.Get<DataSource>();
-                CosmosDbOptions? cosmosDbOptions =
-                    Configuration.GetSection(CosmosDbOptions.CONFIG_PROPERTY_NAME).Get<CosmosDbOptions>();
-                MsSqlOptions? msSqlOptions =
-                    Configuration.GetSection(MsSqlOptions.CONFIG_PROPERTY_NAME).Get<MsSqlOptions>();
-                PostgreSqlOptions? postgreSqlOptions =
-                    Configuration.GetSection(PostgreSqlOptions.CONFIG_PROPERTY_NAME).Get<PostgreSqlOptions>();
-                MySqlOptions? mysqlOptions =
-                    Configuration.GetSection(MySqlOptions.CONFIG_PROPERTY_NAME).Get<MySqlOptions>();
-                Dictionary<GlobalSettingsType, object>? runtimeSettings =
-                    Configuration.GetValue<Dictionary<GlobalSettingsType, object>>(GlobalSettings.CONFIG_PROPERTY_NAME);
-                Dictionary<string, Entity> entities =
-                    Configuration.GetSection(Entity.CONFIG_PROPERTY_NAME)
-                        .Get<Dictionary<string, Entity>>();
-
-                runtimeConfig = new(
-                    schemaName,
-                    dataSource,
-                    cosmosDbOptions,
-                    msSqlOptions,
-                    postgreSqlOptions,
-                    mysqlOptions,
-                    runtimeSettings,
-                    entities);
-            }
-
-            //runtimeConfig.SetDefaults();
-            return runtimeConfig;
         }
 
         /// <summary>
@@ -375,6 +330,30 @@ namespace Azure.DataGateway.Service
                 Console.WriteLine($"Unable to complete runtime " +
                     $"intialization operations due to: {ex.Message}.");
                 return false;
+            }
+        }
+
+        private void ConfigureAuthentication(IServiceCollection services)
+        {
+            // Read configuration and use it locally.
+            RuntimeConfigPath runtimeConfigPath = new();
+            Configuration.Bind(nameof(RuntimeConfigPath.ConfigFileName),
+                runtimeConfigPath);
+            RuntimeConfig? runtimeConfig = runtimeConfigPath.ObtainRuntimeConfig();
+
+            // Parameterless AddAuthentication() , i.e. No defaultScheme, allows the custom JWT middleware
+            // to manually call JwtBearerHandler.HandleAuthenticateAsync() and populate the User if successful.
+            // This also enables the custom middleware to send the AuthN failure reason in the challenge header.
+            if (runtimeConfig != null &&
+                runtimeConfig.AuthNConfig != null &&
+                !runtimeConfig.IsEasyAuthAuthenticationProvider())
+            {
+                services.AddAuthentication()
+                .AddJwtBearer(options =>
+                {
+                    options.Audience = runtimeConfig.AuthNConfig.Jwt!.Audience;
+                    options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
+                });
             }
         }
     }

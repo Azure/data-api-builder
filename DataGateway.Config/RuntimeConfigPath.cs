@@ -1,14 +1,13 @@
 namespace Azure.DataGateway.Config
 {
-    public record RuntimeConfigPath(string ConfigFileName)
+    public class RuntimeConfigPath
     {
         public const string CONFIGFILE_NAME = "hawaii-config";
         public const string CONFIG_EXTENSION = ".json";
-        public const string CONFIGFILE_PROPERTY_NAME = "runtime-config-file";
-
 
         public const string RUNTIME_ENVIRONMENT_VAR_NAME = "HAWAII_ENVIRONMENT";
-        public static string ENVIRONMENT_VAR_PREFIX = "HAWAII";
+
+        public string? ConfigFileName { get; set; }
 
         public static string DefaultName
         {
@@ -16,6 +15,28 @@ namespace Azure.DataGateway.Config
             {
                 return $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}";
             }
+        }
+
+        /// <summary>
+        /// Reads the contents of the json config file,
+        /// and returns the deserialized RuntimeConfig object.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public RuntimeConfig? ObtainRuntimeConfig()
+        {
+            string? runtimeConfigJson = null;
+            if (!string.IsNullOrEmpty(ConfigFileName) && File.Exists(ConfigFileName))
+            {
+                runtimeConfigJson = File.ReadAllText(ConfigFileName);
+            }
+
+            if (string.IsNullOrEmpty(runtimeConfigJson))
+            {
+                return null;
+            }
+
+            return RuntimeConfig.GetDeserializedConfig<RuntimeConfig>(runtimeConfigJson);
         }
 
         public static string GetFileNameAsPerEnvironment(string hostingEnvironmentName)
@@ -32,12 +53,6 @@ namespace Azure.DataGateway.Config
                     ? $"{CONFIGFILE_NAME}.{hostingEnvironmentName}{CONFIG_EXTENSION}"
         :               $"{DefaultName}";
             }
-        }
-
-        public RuntimeConfigPath()
-            : this (ConfigFileName: DefaultName)
-        {
-
         }
     }
 }

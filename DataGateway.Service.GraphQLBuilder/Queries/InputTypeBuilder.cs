@@ -96,7 +96,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             return GenerateObjectInputFilterName(node.Name.Value);
         }
 
-        private static string GenerateObjectInputFilterName(string name)
+        public static string GenerateObjectInputFilterName(string name)
         {
             return $"{name}FilterInput";
         }

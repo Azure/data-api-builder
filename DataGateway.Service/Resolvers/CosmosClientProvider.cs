@@ -10,21 +10,25 @@ namespace Azure.DataGateway.Service.Resolvers
     {
         private string? _connectionString;
         public CosmosClient? Client { get; private set; }
-        public CosmosClientProvider(IOptionsMonitor<RuntimeConfig> runtimeConfig)
+        public CosmosClientProvider(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
         {
-            runtimeConfig.OnChange((newValue) =>
+            runtimeConfigPath.OnChange((newValue) =>
             {
-                InitializeClient(newValue);
+                newValue.SetRuntimeConfigValue();
+                InitializeClient(runtimeConfigPath.CurrentValue.ConfigValue);
             });
 
-            if (runtimeConfig.CurrentValue is not null)
-            {
-                InitializeClient(runtimeConfig.CurrentValue);
-            }
+            InitializeClient(runtimeConfigPath.CurrentValue.ConfigValue);
         }
 
-        private void InitializeClient(RuntimeConfig configuration)
+        private void InitializeClient(RuntimeConfig? configuration)
         {
+            if (configuration is null)
+            {
+                throw new ArgumentNullException(nameof(configuration),
+                    "Cannot initialize a CosmosClientProvider without the runtime config.");
+            }
+
             if (configuration.DatabaseType != DatabaseType.cosmos)
             {
                 throw new InvalidOperationException("We shouldn't need a CosmosClientProvider if we're not accessing a CosmosDb");

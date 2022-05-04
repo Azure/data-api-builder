@@ -85,11 +85,11 @@ namespace Azure.DataGateway.Config
             {
                 "create" => "POST",
                 "read" => "GET",
-                "update" => PATCH.ToString()!,
-                "delete" => DELETE.ToString()!,
+                "update" => "PATCH",
+                "delete" => "DELETE",
                 // TODO: This mapping will no longer be required after AuthZ engine work
                 // Hence, simply returning GET to pass the test.
-                "*" => GET.ToString()!,
+                "*" => "GET",
                 _ => throw new NotSupportedException($"{action} is not supported.")
             };
     }

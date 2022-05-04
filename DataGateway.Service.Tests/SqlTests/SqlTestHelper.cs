@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -18,18 +19,38 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 {
     public class SqlTestHelper
     {
-        public static IOptions<RuntimeConfig> LoadConfig(string environment)
+        public static IOptionsMonitor<RuntimeConfigPath> LoadConfig(string environment)
         {
+            string overriddenEnvironment = $"{environment}.overrides";
+            string configFileName;
+            string overriddenConfigFileName =
+                RuntimeConfigPath.GetFileNameAsPerEnvironment(overriddenEnvironment);
+            if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), overriddenConfigFileName)))
+            {
+                configFileName = overriddenConfigFileName;
+            }
+            else
+            {
+                configFileName = RuntimeConfigPath.GetFileNameAsPerEnvironment(environment);
+            }
+
+            Dictionary<string, string> configFileNameMap = new()
+            {
+                {
+                    nameof(RuntimeConfigPath.ConfigFileName),
+                    configFileName
+                }
+            };
 
             IConfigurationRoot config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile(.{environment}.json")
-                .AddJsonFile($"appsettings.{environment}.overrides.json", optional: true)
+                .AddInMemoryCollection(configFileNameMap)
                 .Build();
 
-            config.Bind(nameof(RuntimeConfig), runtimeConfig);
+            RuntimeConfigPath configPath = config.Get<RuntimeConfigPath>();
+            configPath.SetRuntimeConfigValue();
 
-            return Options.Create(runtimeConfig);
+            return (IOptionsMonitor<RuntimeConfigPath>)configPath;
         }
 
         /// <summary>

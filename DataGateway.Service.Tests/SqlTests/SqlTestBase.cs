@@ -57,19 +57,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             _testCategory = testCategory;
 
-            IOptions<RuntimeConfig> config = SqlTestHelper.LoadConfig($"{_testCategory}IntegrationTest");
-            _runtimeConfigProvider = new RuntimeConfigProvider(config);
+            IOptionsMonitor<RuntimeConfigPath> configPath =
+                SqlTestHelper.LoadConfig($"{_testCategory}IntegrationTest");
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:
                     _queryBuilder = new PostgresQueryBuilder();
                     _defaultSchemaName = "public";
                     _dbExceptionParser = new PostgresDbExceptionParser();
-                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(config, _dbExceptionParser);
+                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(configPath, _dbExceptionParser);
                     _sqlMetadataProvider =
                         new PostgreSqlMetadataProvider(
-                            config,
-                            _runtimeConfigProvider,
+                            configPath,
                             _queryExecutor,
                             _queryBuilder);
                     break;
@@ -77,27 +76,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _queryBuilder = new MsSqlQueryBuilder();
                     _defaultSchemaName = "dbo";
                     _dbExceptionParser = new DbExceptionParserBase();
-                    _queryExecutor = new QueryExecutor<SqlConnection>(config, _dbExceptionParser);
+                    _queryExecutor = new QueryExecutor<SqlConnection>(configPath, _dbExceptionParser);
                     _sqlMetadataProvider = new MsSqlMetadataProvider(
-                        config,
-                        _runtimeConfigProvider,
+                        configPath,
                         _queryExecutor, _queryBuilder);
                     break;
                 case TestCategory.MYSQL:
                     _queryBuilder = new MySqlQueryBuilder();
                     _defaultSchemaName = "mysql";
                     _dbExceptionParser = new MySqlDbExceptionParser();
-                    _queryExecutor = new QueryExecutor<MySqlConnection>(config, _dbExceptionParser);
+                    _queryExecutor = new QueryExecutor<MySqlConnection>(configPath, _dbExceptionParser);
                     _sqlMetadataProvider =
                          new MySqlMetadataProvider(
-                             config,
-                             _runtimeConfigProvider,
+                             configPath,
                              _queryExecutor,
                              _queryBuilder);
                     break;
             }
 
-            _metadataStoreProvider = new GraphQLFileMetadataProvider(config);
+            _metadataStoreProvider = new GraphQLFileMetadataProvider(configPath);
             // Setup AuthorizationService to always return Authorized.
             _authorizationService = new Mock<IAuthorizationService>();
             _authorizationService.Setup(x => x.AuthorizeAsync(

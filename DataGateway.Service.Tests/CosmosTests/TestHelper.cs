@@ -1,6 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
-using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Config;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -10,32 +11,31 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
     class TestHelper
     {
         public static readonly string DB_NAME = "graphqlTestDb";
-        private static Lazy<IOptions<RuntimeConfig>> _runtimeConfig = new(() => TestHelper.LoadConfig());
+        private static Lazy<IOptionsMonitor<RuntimeConfigPath>>
+            _runtimeConfigPath = new(() => LoadConfig());
 
-        private static IOptions<RuntimeConfig> LoadConfig()
+        private static IOptionsMonitor<RuntimeConfigPath> LoadConfig()
         {
-            RuntimeConfig runtimeConfig = new();
+            Dictionary<string, string> configFileNameMap = new()
+            {
+                {
+                    nameof(RuntimeConfigPath.ConfigFileName),
+                    RuntimeConfigPath.GetFileNameAsPerEnvironment("cosmos")
+                }
+            };
             IConfigurationRoot config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile($"appsettings.Cosmos.json")
+                .AddInMemoryCollection(configFileNameMap)
                 .Build();
 
-            config.Bind(nameof(RuntimeConfig), runtimeConfig);
-
-            return Options.Create(runtimeConfig);
+            RuntimeConfigPath configPath = config.Get<RuntimeConfigPath>();
+            configPath.SetRuntimeConfigValue();
+            return (IOptionsMonitor<RuntimeConfigPath>)configPath;
         }
 
-        public static IOptions<RuntimeConfig> RuntimeConfig
+        public static IOptionsMonitor<RuntimeConfigPath> ConfigPath
         {
-            get { return _runtimeConfig.Value; }
-        }
-
-        public static IOptionsMonitor<RuntimeConfig> RuntimeConfigMonitor
-        {
-            get
-            {
-                return Mock.Of<IOptionsMonitor<RuntimeConfig>>(_ => _.CurrentValue == RuntimeConfig.Value);
-            }
+            get { return _runtimeConfigPath.Value; }
         }
 
         public static object GetItem(string id)

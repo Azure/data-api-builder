@@ -14,6 +14,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         public const string HAS_NEXT_PAGE_FIELD_NAME = "hasNextPage";
         public const string PAGE_START_ARGUMENT_NAME = "first";
         public const string PAGINATION_OBJECT_TYPE_SUFFIX = "Connection";
+        public const string FILTER_FIELD_NAME = "_filter";
+        public const string ODATA_FILTER_FIELD_NAME = "_filterOData";
 
         public static DocumentNode Build(DocumentNode root, IDictionary<string, Entity> entities, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
         {
@@ -72,38 +74,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes,
             Entity entity)
         {
-            List<InputValueDefinitionNode> inputFields = GenerateInputFieldsForType(objectTypeDefinitionNode);
-
             string filterInputName = GenerateObjectInputFilterName(objectTypeDefinitionNode.Name.Value);
 
             if (!inputTypes.ContainsKey(objectTypeDefinitionNode.Name.Value))
             {
-                inputFields.Add(new(
-                    location: null,
-                    new("and"),
-                    new("Conditions to be treated as AND operations"),
-                    new ListTypeNode(new NamedTypeNode(filterInputName)),
-                    defaultValue: null,
-                    new List<DirectiveNode>()));
-
-                inputFields.Add(new(
-                    location: null,
-                    new("or"),
-                    new("Conditions to be treated as OR operations"),
-                    new ListTypeNode(new NamedTypeNode(filterInputName)),
-                    defaultValue: null,
-                    new List<DirectiveNode>()));
-
-                inputTypes.Add(
-                    objectTypeDefinitionNode.Name.Value,
-                    new(
-                        location: null,
-                        new NameNode(filterInputName),
-                        new StringValueNode($"Filter input for {objectTypeDefinitionNode.Name} GraphQL type"),
-                        new List<DirectiveNode>(),
-                        inputFields
-                    )
-                );
+                InputTypeBuilder.GenerateInputTypeForObjectType(objectTypeDefinitionNode, inputTypes);
             }
 
             // Query field for the parent object type
@@ -113,35 +88,20 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 location: null,
                 Pluralize(name, entity),
                 new StringValueNode($"Get a list of all the {name} items from the database"),
-                new List<InputValueDefinitionNode> {
-                    new(location : null, new NameNode(PAGE_START_ARGUMENT_NAME), description: null, new IntType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
-                    new(location : null, new NameNode(PAGINATION_TOKEN_FIELD_NAME), new StringValueNode("A pagination token from a previous query to continue through a paginated list"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
-                    new(location : null, new NameNode("_filter"), new StringValueNode("Filter options for query"), new NamedTypeNode(filterInputName), defaultValue: null, new List<DirectiveNode>()),
-                    new(location : null, new NameNode("_filterOData"), new StringValueNode("Filter options for query expressed as OData query language"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>())
-                },
+                QueryArgumentsForField(filterInputName),
                 new NonNullTypeNode(new NamedTypeNode(returnType.Name)),
                 new List<DirectiveNode>()
             );
         }
 
-        private static List<InputValueDefinitionNode> GenerateInputFieldsForType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
+        private static List<InputValueDefinitionNode> QueryArgumentsForField(string filterInputName)
         {
-            List<InputValueDefinitionNode> inputFields = new();
-            foreach (FieldDefinitionNode field in objectTypeDefinitionNode.Fields)
-            {
-                NamedTypeNode fieldTypeName = field.Type.NamedType();
-
-                inputFields.Add(
-                    new(location: null,
-                        field.Name,
-                        new StringValueNode($"Filter options for {field.Name}"),
-                        new NamedTypeNode(GenerateObjectInputFilterName(fieldTypeName.Name.Value)),
-                        defaultValue: null,
-                        new List<DirectiveNode>())
-                );
-            }
-
-            return inputFields;
+            return new() {
+                    new(location: null, new NameNode(PAGE_START_ARGUMENT_NAME), description: new StringValueNode("The number of items to return from the page start point"), new IntType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
+                    new(location: null, new NameNode(PAGINATION_TOKEN_FIELD_NAME), new StringValueNode("A pagination token from a previous query to continue through a paginated list"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
+                    new(location: null, new NameNode(FILTER_FIELD_NAME), new StringValueNode("Filter options for query"), new NamedTypeNode(filterInputName), defaultValue: null, new List<DirectiveNode>()),
+                    new(location: null, new NameNode(ODATA_FILTER_FIELD_NAME), new StringValueNode("Filter options for query expressed as OData query language"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>())
+                };
         }
 
         public static ObjectTypeDefinitionNode AddQueryArgumentsForRelationships(ObjectTypeDefinitionNode node, Entity entity, Dictionary<string, InputObjectTypeDefinitionNode> inputObjects)
@@ -164,13 +124,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
                 InputObjectTypeDefinitionNode input = inputObjects[(string)directive.Arguments.First(a => a.Name.Value == "target").Value.Value!];
 
-                List<InputValueDefinitionNode> args = new()
-                {
-                    new(location: null, new NameNode(PAGE_START_ARGUMENT_NAME), description: null, new IntType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
-                    new(location: null, new NameNode(PAGINATION_TOKEN_FIELD_NAME), new StringValueNode("A pagination token from a previous query to continue through a paginated list"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
-                    new(location: null, new NameNode("_filter"), new StringValueNode("Filter options for query"), new NamedTypeNode(input.Name), defaultValue: null, new List<DirectiveNode>()),
-                    new(location: null, new NameNode("_filterOData"), new StringValueNode("Filter options for query expressed as OData query language"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>())
-                };
+                List<InputValueDefinitionNode> args = QueryArgumentsForField(input.Name.Value);
 
                 List<FieldDefinitionNode> fields = node.Fields.ToList();
                 fields[fields.FindIndex(f => f.Name == field.Name)] = field.WithArguments(args);

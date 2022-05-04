@@ -242,11 +242,10 @@ namespace Azure.DataGateway.Service.Services
                 endIndex = endIndex == -1 ? connectionString.Length : endIndex;
                 // gets the substring bounded by 'SearchPath=' and ';' or the end of the string
                 schemaName = connectionString[startIndex..endIndex];
-                return true;
+                return string.IsNullOrEmpty(schemaName) ? false : true;
             }
 
             schemaName = "";
-
             return false;
         }
 

@@ -92,7 +92,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// information.
         /// Only use as constructor for the outermost queries not subqueries
         /// </summary>
-        public SqlQueryStructure(IResolverContext ctx, IDictionary<string, object> queryParams, SqlGraphQLFileMetadataProvider metadataStoreProvider)
+        public SqlQueryStructure(IResolverContext ctx, IDictionary<string, object?> queryParams, SqlGraphQLFileMetadataProvider metadataStoreProvider)
             // This constructor simply forwards to the more general constructor
             // that is used to create GraphQL queries. We give it some values
             // that make sense for the outermost query.
@@ -182,7 +182,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         private SqlQueryStructure(
                 IResolverContext ctx,
-                IDictionary<string, object> queryParams,
+                IDictionary<string, object?> queryParams,
                 SqlGraphQLFileMetadataProvider metadataStoreProvider,
                 IObjectField schemaField,
                 FieldNode? queryField,
@@ -250,7 +250,6 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 if (firstObject != null)
                 {
-                    // due to the way parameters get resolved,
                     int first = (int)firstObject;
 
                     if (first <= 0)
@@ -353,9 +352,9 @@ namespace Azure.DataGateway.Service.Resolvers
         ///<summary>
         /// Adds predicates for the primary keys in the paramters of the graphql query
         ///</summary>
-        private void AddPrimaryKeyPredicates(IDictionary<string, object> queryParams)
+        private void AddPrimaryKeyPredicates(IDictionary<string, object?> queryParams)
         {
-            foreach (KeyValuePair<string, object> parameter in queryParams)
+            foreach (KeyValuePair<string, object?> parameter in queryParams)
             {
                 Predicates.Add(new Predicate(
                     new PredicateOperand(new Column(TableAlias, parameter.Key)),
@@ -523,7 +522,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         throw new DataGatewayException("No GraphQL context exists", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
                     }
 
-                    IDictionary<string, object> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
+                    IDictionary<string, object?> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
 
                     SqlQueryStructure subquery = new(_ctx, subqueryParams, MetadataStoreProvider, subschemaField, field, Counter);
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.GraphQLBuilder;
 using Azure.DataGateway.Service.Models;
 using HotChocolate.Language;
 
@@ -392,7 +393,7 @@ namespace Azure.DataGateway.Service.Configurations
 
             string returnedPaginationType = InnerTypeStr(field.Type);
             string itemsType = InnerTypeStr(GetTypeFields(returnedPaginationType)["items"].Type);
-            string capitalizedItemsType = CapitalizeFirstCharOnly(itemsType);
+            string capitalizedItemsType = GraphQLNaming.FormatNameForObject(itemsType);
             Dictionary<string, IEnumerable<string>> optionalArguments = new()
             {
                 ["_filter"] = new[] { $"{capitalizedItemsType}FilterInput", $"{capitalizedItemsType}FilterInput!" },
@@ -417,7 +418,7 @@ namespace Azure.DataGateway.Service.Configurations
         private void ValidateListTypeFieldArguments(FieldDefinitionNode field)
         {
             string returnedType = InnerTypeStr(field.Type);
-            string capitalizedReturnedType = CapitalizeFirstCharOnly(returnedType);
+            string capitalizedReturnedType = GraphQLNaming.FormatNameForObject(returnedType);
             Dictionary<string, IEnumerable<string>> optionalArguments = new()
             {
                 ["first"] = new[] { "Int", "Int!" },

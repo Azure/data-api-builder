@@ -164,7 +164,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Parse the value of "after" parameter from query parameters, validate it, and return the json object it stores
         /// </summary>
-        public static List<PaginationColumn> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
+        public static List<PaginationColumn> ParseAfterFromQueryParams(IDictionary<string, object?> queryParams, PaginationMetadata paginationMetadata)
         {
             List<PaginationColumn> after = new();
             object? afterObject = null;

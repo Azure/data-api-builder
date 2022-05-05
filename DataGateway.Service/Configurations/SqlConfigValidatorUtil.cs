@@ -628,18 +628,5 @@ namespace Azure.DataGateway.Service.Configurations
 
             return result;
         }
-
-        /// <summary>
-        /// Capitalizes first character of the string
-        /// </summary>
-        private static string CapitalizeFirstCharOnly(string text)
-        {
-            if (string.IsNullOrEmpty(text))
-            {
-                return text;
-            }
-
-            return char.ToUpper(text[0]) + text.Substring(1);
-        }
     }
 }

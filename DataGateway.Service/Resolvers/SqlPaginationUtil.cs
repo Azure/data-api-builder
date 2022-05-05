@@ -109,7 +109,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// The JSON is encoded in base64 for opaqueness. The cursor should function as a token that the user copies and pastes
         /// without needing to understand how it works.
         /// </summary>
-        public static string MakeCursorFromJsonElement(JsonElement element, List<string> primaryKey, List<OrderByColumn>? orderByColumns = null, string? tableAlias = null)
+        public static string MakeCursorFromJsonElement(
+            JsonElement element,
+            List<string> primaryKey,
+            List<OrderByColumn>? orderByColumns = null,
+            string? tableAlias = null)
         {
             List<PaginationColumn> cursorJson = new();
             JsonSerializerOptions options = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };

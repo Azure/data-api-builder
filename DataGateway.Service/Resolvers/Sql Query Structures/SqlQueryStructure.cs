@@ -277,13 +277,13 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             OrderByColumns = PrimaryKeyAsOrderByColumns();
-            if (IsListQuery && queryParams.ContainsKey("_orderBy"))
+            if (IsListQuery && queryParams.ContainsKey("orderBy"))
             {
-                object? orderByObject = queryParams["_orderBy"];
+                object? orderByObject = queryParams["orderBy"];
 
                 if (orderByObject != null)
                 {
-                    OrderByColumns = ProcessGqlOrderByArg(orderByObject);
+                    OrderByColumns = ProcessGqlOrderByArg((List<ObjectFieldNode>)orderByObject);
                 }
             }
 
@@ -687,18 +687,16 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Create a list of orderBy columns from the _orderBy argument
+        /// Create a list of orderBy columns from the orderBy argument
         /// passed to the gql query
         /// </summary>
-        private List<OrderByColumn> ProcessGqlOrderByArg(object orderByObject)
+        private List<OrderByColumn> ProcessGqlOrderByArg(List<ObjectFieldNode> orderByFields)
         {
             // Create list of primary key columns
             // we always have the primary keys in
             // the order by statement for the case
             // of tie breaking and pagination
             List<OrderByColumn> orderByColumnsList = new();
-
-            List<ObjectFieldNode> orderByFields = (List<ObjectFieldNode>)orderByObject;
 
             List<string> remainingPkCols = new(PrimaryKey());
 
@@ -712,7 +710,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 string fieldName = field.Name.ToString();
 
                 // remove pk column from list if it was specified as a
-                // field in _orderBy
+                // field in orderBy
                 remainingPkCols.Remove(fieldName);
 
                 EnumValueNode enumValue = (EnumValueNode)field.Value;

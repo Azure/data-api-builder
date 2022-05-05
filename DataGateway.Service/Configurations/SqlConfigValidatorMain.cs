@@ -396,7 +396,7 @@ namespace Azure.DataGateway.Service.Configurations
             Dictionary<string, IEnumerable<string>> optionalArguments = new()
             {
                 ["_filter"] = new[] { $"{capitalizedItemsType}FilterInput", $"{capitalizedItemsType}FilterInput!" },
-                ["_orderBy"] = new[] { $"{capitalizedItemsType}OrderByInput", $"{capitalizedItemsType}OrderByInput!" },
+                ["orderBy"] = new[] { $"{capitalizedItemsType}OrderByInput", $"{capitalizedItemsType}OrderByInput!" },
                 ["_filterOData"] = new[] { "String", "String!" }
             };
 
@@ -422,7 +422,7 @@ namespace Azure.DataGateway.Service.Configurations
             {
                 ["first"] = new[] { "Int", "Int!" },
                 ["_filter"] = new[] { $"{capitalizedReturnedType}FilterInput", $"{capitalizedReturnedType}FilterInput!" },
-                ["_orderBy"] = new[] { $"{capitalizedReturnedType}OrderByInput", $"{capitalizedReturnedType}OrderByInput!" },
+                ["orderBy"] = new[] { $"{capitalizedReturnedType}OrderByInput", $"{capitalizedReturnedType}OrderByInput!" },
                 ["_filterOData"] = new[] { "String", "String!" }
             };
 

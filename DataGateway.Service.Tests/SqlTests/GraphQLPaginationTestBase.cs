@@ -587,7 +587,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string graphQLQueryName = "stocks";
             string graphQLQuery = @"{
-                stocks(first: 2 _orderBy: {pieceid: Desc}) {
+                stocks(first: 2 orderBy: {pieceid: Desc}) {
                     items {
                         pieceid
                         categoryid
@@ -627,7 +627,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string graphQLQueryName = "books";
             string graphQLQuery1 = @"{
-                books(first: 2 _orderBy: {title: Desc publisher_id: Asc id: Desc}) {
+                books(first: 2 orderBy: {title: Desc publisher_id: Asc id: Desc}) {
                     items {
                         id
                         title
@@ -665,7 +665,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected1, actual1);
 
             string graphQLQuery2 = @"{
-                books(first: 2, after: """ + expectedAfter1 + @""" _orderBy: {title: Desc publisher_id: Asc id: Desc}) {
+                books(first: 2, after: """ + expectedAfter1 + @""" orderBy: {title: Desc publisher_id: Asc id: Desc}) {
                     items {
                         id
                         title
@@ -834,7 +834,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "books";
             string after = SqlPaginationUtil.Base64Encode("[{\"Value\":2,\"Direction\":0,\"ColumnName\":\"id\"}]");
             string graphQLQuery = @"{
-                 books(" + $"after: \"{after}\"" + @" _orderBy: {id: Asc title: Desc}) {
+                 books(" + $"after: \"{after}\"" + @" orderBy: {id: Asc title: Desc}) {
                     items {
                         id
                         title
@@ -857,7 +857,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "[{\"Value\":2,\"Direction\":0,\"ColumnName\":\"id\"}," +
                 "{\"Value\":1234,\"Direction\":1,\"ColumnName\":\"publisher_id\"}]");
             string graphQLQuery = @"{
-                 books(" + $"after: \"{after}\"" + @" _orderBy: {id: Asc title: Desc}) {
+                 books(" + $"after: \"{after}\"" + @" orderBy: {id: Asc title: Desc}) {
                     items {
                         id
                         title
@@ -879,7 +879,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "books";
             string after = SqlPaginationUtil.Base64Encode("[{\"Value\":2,\"Direction\":0,\"ColumnName\":\"id\"}]");
             string graphQLQuery = @"{
-                 books(" + $"after: \"{after}\"" + @" _orderBy: {id: Desc}) {
+                 books(" + $"after: \"{after}\"" + @" orderBy: {id: Desc}) {
                     items {
                         id
                         title

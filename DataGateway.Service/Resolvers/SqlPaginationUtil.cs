@@ -143,7 +143,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     cursorJson.Add(new PaginationColumn(tableSchema: schemaName,
                                                         tableName: tableName,
                                                         column.ColumnName,
-                                                        value, tableAlias: null,
+                                                        value,
+                                                        tableAlias: null,
                                                         direction: column.Direction));
                     remainingKeys.Remove(column.ColumnName);
                 }
@@ -166,7 +167,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     cursorJson.Add(new PaginationColumn(tableSchema: schemaName,
                                                         tableName: tableName,
                                                         column,
-                                                        ResolveJsonElementToScalarVariable(element.GetProperty(column)), direction: OrderByDir.Asc));
+                                                        ResolveJsonElementToScalarVariable(element.GetProperty(column)),
+                                                        direction: OrderByDir.Asc));
                     remainingKeys.Remove(column);
                 }
 

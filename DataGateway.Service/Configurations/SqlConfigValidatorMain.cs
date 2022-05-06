@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.GraphQLBuilder;
 using Azure.DataGateway.Service.Models;
 using HotChocolate.Language;
 
@@ -224,11 +223,10 @@ namespace Azure.DataGateway.Service.Configurations
 
             string returnedPaginationType = InnerTypeStr(field.Type);
             string itemsType = InnerTypeStr(GetTypeFields(returnedPaginationType)["items"].Type);
-            string capitalizedItemsType = GraphQLNaming.FormatNameForField(itemsType);
             Dictionary<string, IEnumerable<string>> optionalArguments = new()
             {
-                ["_filter"] = new[] { $"{capitalizedItemsType}FilterInput", $"{capitalizedItemsType}FilterInput!" },
-                ["orderBy"] = new[] { $"{capitalizedItemsType}OrderByInput", $"{capitalizedItemsType}OrderByInput!" },
+                ["_filter"] = new[] { $"{itemsType}FilterInput", $"{itemsType}FilterInput!" },
+                ["orderBy"] = new[] { $"{itemsType}OrderByInput", $"{itemsType}OrderByInput!" },
                 ["_filterOData"] = new[] { "String", "String!" }
             };
 
@@ -249,12 +247,11 @@ namespace Azure.DataGateway.Service.Configurations
         private void ValidateListTypeFieldArguments(FieldDefinitionNode field)
         {
             string returnedType = InnerTypeStr(field.Type);
-            string capitalizedReturnedType = GraphQLNaming.FormatNameForField(returnedType);
             Dictionary<string, IEnumerable<string>> optionalArguments = new()
             {
                 ["first"] = new[] { "Int", "Int!" },
-                ["_filter"] = new[] { $"{capitalizedReturnedType}FilterInput", $"{capitalizedReturnedType}FilterInput!" },
-                ["orderBy"] = new[] { $"{capitalizedReturnedType}OrderByInput", $"{capitalizedReturnedType}OrderByInput!" },
+                ["_filter"] = new[] { $"{returnedType}FilterInput", $"{returnedType}FilterInput!" },
+                ["orderBy"] = new[] { $"{returnedType}OrderByInput", $"{returnedType}OrderByInput!" },
                 ["_filterOData"] = new[] { "String", "String!" }
             };
 

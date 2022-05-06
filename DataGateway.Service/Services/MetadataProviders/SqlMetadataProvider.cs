@@ -83,7 +83,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="entityName">entity whose map we get.</param>
         /// <returns>mapping belonging to eneity.</returns>
-        public virtual Dictionary<string,string>? GetMappingForEntity(string entityName)
+        public virtual Dictionary<string,string>? GetMappingForEntity (string entityName)
         {
             Entity entity;
             _runtimeConfigProvider.GetRuntimeConfig().Entities.TryGetValue(entityName, out entity!);

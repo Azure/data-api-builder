@@ -703,6 +703,91 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected2, actual2);
         }
 
+        /// <summary>
+        /// Paginate ordering with a column for which multiple entries
+        /// have the same value, and check that the column tie break is resolved properly
+        /// </summary>
+        [TestMethod]
+        public async Task TestColumnTieBreak()
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery1 = @"{
+                books(first: 4 orderBy: {publisher_id: Desc}) {
+                    items {
+                        id
+                        publisher_id
+                    }
+                    endCursor
+                    hasNextPage
+                }
+            }";
+
+            string actual1 = await GetGraphQLResultAsync(graphQLQuery1, graphQLQueryName, _graphQLController);
+
+            string expectedAfter1 = SqlPaginationUtil.Base64Encode(
+                  "[{\"Value\":2324,\"Direction\":1,\"ColumnName\":\"publisher_id\"}," +
+                  "{\"Value\":7,\"Direction\":0,\"ColumnName\":\"id\"}]");
+
+            string expected1 = @"{
+              ""items"": [
+                {
+                  ""id"": 3,
+                  ""publisher_id"": 2345
+                },
+                {
+                  ""id"": 4,
+                  ""publisher_id"": 2345
+                },
+                {
+                  ""id"": 6,
+                  ""publisher_id"": 2324
+                },
+                {
+                  ""id"": 7,
+                  ""publisher_id"": 2324
+                }
+              ],
+              ""endCursor"": """ + expectedAfter1 + @""",
+              ""hasNextPage"": true
+            }";
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected1, actual1);
+
+            string graphQLQuery2 = @"{
+                books(first: 2, after: """ + expectedAfter1 + @""" orderBy: {publisher_id: Desc}) {
+                    items {
+                        id
+                        publisher_id
+                    }
+                    endCursor
+                    hasNextPage
+                }
+            }";
+
+            string actual2 = await GetGraphQLResultAsync(graphQLQuery2, graphQLQueryName, _graphQLController);
+
+            string expectedAfter2 = SqlPaginationUtil.Base64Encode(
+                  "[{\"Value\":2323,\"Direction\":1,\"ColumnName\":\"publisher_id\"}," +
+                  "{\"Value\":5,\"Direction\":0,\"ColumnName\":\"id\"}]");
+
+            string expected2 = @"{
+              ""items"": [
+                {
+                  ""id"": 8,
+                  ""publisher_id"": 2324
+                },
+                {
+                  ""id"": 5,
+                  ""publisher_id"": 2323
+                }
+              ],
+              ""endCursor"": """ + expectedAfter2 + @""",
+              ""hasNextPage"": true
+            }";
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected2, actual2);
+        }
+
         #endregion
 
         #region Negative Tests

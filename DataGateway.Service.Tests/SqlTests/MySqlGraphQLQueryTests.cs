@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Services;
@@ -42,6 +43,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         #endregion
 
         #region Tests
+
+        [TestMethod]
+        public void TestConfigIsValid()
+        {
+            IConfigValidator configValidator = new SqlConfigValidator(_metadataStoreProvider, _graphQLService, _sqlMetadataProvider);
+            configValidator.ValidateConfig();
+        }
 
         [TestMethod]
         public async Task MultipleResultQuery()

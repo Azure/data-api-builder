@@ -6,7 +6,7 @@ using Humanizer;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder
 {
-    internal static class GraphQLNaming
+    public static class GraphQLNaming
     {
         // Name must start with an upper or lowercase letter
         private static readonly Regex _graphQLNameStart = new("^[a-zA-Z].*");

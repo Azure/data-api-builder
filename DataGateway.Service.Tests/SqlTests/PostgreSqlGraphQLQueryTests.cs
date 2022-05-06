@@ -558,9 +558,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title, \"issue_number\" FROM magazines ORDER BY id) as table0 LIMIT 100";
 
-            _ = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(postgresQuery);
 
-            _ = await GetDatabaseResultAsync(postgresQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
         /// <summary>
@@ -579,9 +580,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, username FROM website_users ORDER BY id) as table0 LIMIT 100";
 
-            _ = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(postgresQuery);
 
-            _ = await GetDatabaseResultAsync(postgresQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
         /// <summary>
@@ -623,6 +625,92 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id as book_id, title as title FROM books ORDER BY id) as table0 LIMIT 100";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Tests orderBy on a list query
+        /// </summary>
+        [TestMethod]
+        public async Task TestOrderByInListQuery()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(first: 100 orderBy: {title: Desc}) {
+                    id
+                    title
+                }
+            }";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY title DESC, id ASC) as table0 LIMIT 100";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Use multiple order options and order an entity with a composite pk
+        /// </summary>
+        [TestMethod]
+        public async Task TestOrderByInListQueryOnCompPkType()
+        {
+            string graphQLQueryName = "getReviews";
+            string graphQLQuery = @"{
+                getReviews(orderBy: {content: Asc id: Desc}) {
+                    id
+                    content
+                }
+            }";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, content FROM reviews ORDER BY content ASC, id DESC, book_id ASC) as table0 LIMIT 100";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Tests null fields in orderBy are ignored
+        /// meaning that null pk columns are included in the ORDER BY clause
+        /// as ASC by default while null non-pk columns are completely ignored
+        /// </summary>
+        [TestMethod]
+        public async Task TestNullFieldsInOrderByAreIgnored()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(first: 100 orderBy: {title: Desc id: null publisher_id: null}) {
+                    id
+                    title
+                }
+            }";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY title DESC, id ASC) as table0 LIMIT 100";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Tests that an orderBy with only null fields results in default pk sorting
+        /// </summary>
+        [TestMethod]
+        public async Task TestOrderByWithOnlyNullFieldsDefaultsToPkSorting()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(first: 100 orderBy: {title: null}) {
+                    id
+                    title
+                }
+            }";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id ASC) as table0 LIMIT 100";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(postgresQuery);

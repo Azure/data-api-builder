@@ -580,9 +580,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq1`
             ";
 
-            _ = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
 
-            _ = await GetDatabaseResultAsync(mySqlQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
         /// <summary>
@@ -610,9 +611,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq1`
             ";
 
-            _ = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
 
-            _ = await GetDatabaseResultAsync(mySqlQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
         /// <summary>
@@ -670,6 +672,124 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    WHERE 1 = 1
                    ORDER BY `table0`.`id`
                    LIMIT 2) AS `subq1`";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Tests orderBy on a list query
+        /// </summary>
+        [TestMethod]
+        public async Task TestOrderByInListQuery()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(first: 100 orderBy: {title: Desc}) {
+                    id
+                    title
+                }
+            }";
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', `subq1`.`id`, 'title', `subq1`.`title`)), '[]') AS `data`
+                FROM
+                  (SELECT `table0`.`id` AS `id`,
+                          `table0`.`title` AS `title`
+                   FROM `books` AS `table0`
+                   WHERE 1 = 1
+                   ORDER BY `table0`.`title` DESC, `table0`.`id` ASC
+                   LIMIT 100) AS `subq1`";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Use multiple order options and order an entity with a composite pk
+        /// </summary>
+        [TestMethod]
+        public async Task TestOrderByInListQueryOnCompPkType()
+        {
+            string graphQLQueryName = "getReviews";
+            string graphQLQuery = @"{
+                getReviews(orderBy: {content: Asc id: Desc}) {
+                    id
+                    content
+                }
+            }";
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', `subq1`.`id`, 'content', `subq1`.`content`)), '[]') AS `data`
+                FROM
+                  (SELECT `table0`.`id` AS `id`,
+                          `table0`.`content` AS `content`
+                   FROM `reviews` AS `table0`
+                   WHERE 1 = 1
+                   ORDER BY `table0`.`content` ASC, `table0`.`id` DESC, `table0`.`book_id` ASC
+                   LIMIT 100) AS `subq1`";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Tests null fields in orderBy are ignored
+        /// meaning that null pk columns are included in the ORDER BY clause
+        /// as ASC by default while null non-pk columns are completely ignored
+        /// </summary>
+        [TestMethod]
+        public async Task TestNullFieldsInOrderByAreIgnored()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(first: 100 orderBy: {title: Desc id: null publisher_id: null}) {
+                    id
+                    title
+                }
+            }";
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', `subq1`.`id`, 'title', `subq1`.`title`)), '[]') AS `data`
+                FROM
+                  (SELECT `table0`.`id` AS `id`,
+                          `table0`.`title` AS `title`
+                   FROM `books` AS `table0`
+                   WHERE 1 = 1
+                   ORDER BY `table0`.`title` DESC, `table0`.`id` ASC
+                   LIMIT 100) AS `subq1`";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Tests that an orderBy with only null fields results in default pk sorting
+        /// </summary>
+        [TestMethod]
+        public async Task TestOrderByWithOnlyNullFieldsDefaultsToPkSorting()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"{
+                getBooks(first: 100 orderBy: {title: null}) {
+                    id
+                    title
+                }
+            }";
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', `subq1`.`id`, 'title', `subq1`.`title`)), '[]') AS `data`
+                FROM
+                  (SELECT `table0`.`id` AS `id`,
+                          `table0`.`title` AS `title`
+                   FROM `books` AS `table0`
+                   WHERE 1 = 1
+                   ORDER BY `table0`.`id` ASC
+                   LIMIT 100) AS `subq1`";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(mySqlQuery);

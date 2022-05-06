@@ -107,6 +107,9 @@
     "WebsiteUser": {
       "Table": "website_users"
     },
+    "Stock": {
+      "Table": "stocks"
+    },
     "Author": {
       "Table": "authors",
       "Fields": {

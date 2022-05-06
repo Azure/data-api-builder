@@ -75,7 +75,8 @@ namespace Azure.DataGateway.Service.Services
                     context = new FindRequestContext(entityName,
                                                      schemaName: dbObject.SchemaName,
                                                      tableName: dbObject.Name,
-                                                     isList: string.IsNullOrEmpty(primaryKeyRoute));
+                                                     isList: string.IsNullOrEmpty(primaryKeyRoute),
+                                                     mapping: _sqlMetadataProvider.GetMappingForEntity(entityName));
                     break;
                 case Operation.Insert:
                     JsonElement insertPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);

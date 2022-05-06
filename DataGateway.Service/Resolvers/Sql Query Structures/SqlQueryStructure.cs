@@ -132,13 +132,23 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             IsListQuery = context.IsMany;
             TableAlias = $"{SchemaName}_{TableName}";
-            context.FieldsToBeReturned.ForEach(fieldName => AddColumn(fieldName));
+            AddFields(context);
             if (Columns.Count == 0)
             {
                 TableDefinition tableDefinition = GetUnderlyingTableDefinition();
                 foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
                 {
-                    AddColumn(column.Key);
+                    // if mapping is null or doesnt have our column just use column name
+                    if (context.MappingFromEntity is null || !context.MappingFromEntity!.ContainsKey(column.Key))
+                    {
+                        AddColumn(column.Key);
+
+                    }
+                    // otherwise the mapping must contain the label to use
+                    else
+                    {
+                        AddColumn(column.Key, context.MappingFromEntity[column.Key]);
+                    }
                 }
             }
 
@@ -189,6 +199,48 @@ namespace Azure.DataGateway.Service.Resolvers
 
             _limit = context.First is not null ? context.First + 1 : DEFAULT_LIST_LIMIT + 1;
             ParametrizeColumns();
+        }
+
+        /// <summary>
+        /// For fields specifically selected, we check
+        /// to see if the field is a 
+        /// </summary>
+        /// <param name="context"></param>
+        private void AddFields(RestRequestContext context)
+        {
+            Dictionary<string, string> mapping = context.MappingFromEntity!;
+            foreach (string field in context.FieldsToBeReturned)
+            {
+                // we know fields are valid, so if
+                // the mapping is null we use only field,
+                // if the field is named in the keys
+                // which represent columns we use only field
+                // or if the field isn't a mapped value it must
+                // be a column and we only use field
+                if ((mapping is null) ||
+                    (mapping.ContainsKey(field)) ||
+                    (!mapping.ContainsValue(field)))
+                {
+                    AddColumn(field);
+                }
+                // if the above case all fail it must be a value.
+                // since we know it is a value in the mapping
+                // we iterate through the keys and add a column
+                // with the label of the field matched to the
+                // given column. Since mappings are 1:1, we break
+                // once we find the pairing.
+                else
+                {
+                    foreach (string column in mapping.Keys)
+                    {
+                        if (mapping[column] == field)
+                        {
+                            AddColumn(column, field);
+                            break;
+                        }
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -730,11 +782,21 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Adds a labelled column to this query's columns
+        /// Adds a labelled column to this query's columns, where
+        /// the column name is all that is provided, and we add
+        /// a labeled column with a label equal to column name.
         /// </summary>
         protected void AddColumn(string columnName)
         {
-            Columns.Add(new LabelledColumn(SchemaName, TableName, columnName, label: columnName, TableAlias));
+            AddColumn(columnName, columnName);
+        }
+
+        /// <summary>
+        /// Adds a labelled column to this query's columns.
+        /// </summary>
+        protected void AddColumn(string columnName, string labelName)
+        {
+            Columns.Add(new LabelledColumn(SchemaName, TableName, columnName, labelName, TableAlias));
         }
 
         /// <summary>

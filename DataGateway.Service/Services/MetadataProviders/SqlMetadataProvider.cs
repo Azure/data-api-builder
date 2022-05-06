@@ -78,6 +78,19 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
+        /// Obtains the underlying mapping that belongs
+        /// to a given entity.
+        /// </summary>
+        /// <param name="entityName">entity whose map we get.</param>
+        /// <returns>mapping belonging to eneity.</returns>
+        public virtual Dictionary<string,string>? GetMappingForEntity(string entityName)
+        {
+            Entity entity;
+            _runtimeConfigProvider.GetRuntimeConfig().Entities.TryGetValue(entityName, out entity!);
+            return entity.Mappings;
+        }
+
+        /// <summary>
         /// Obtains the underlying source object's name.
         /// </summary>
         public string GetDatabaseObjectName(string entityName)

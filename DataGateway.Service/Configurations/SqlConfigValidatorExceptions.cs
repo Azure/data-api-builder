@@ -18,30 +18,33 @@ namespace Azure.DataGateway.Service.Configurations
     /// Each function checks for only one thing and throws only one exception.
     public partial class SqlConfigValidator : IConfigValidator
     {
-        private ResolverConfig _config;
+        private ResolverConfig _resolverConfig;
         private ISchema? _schema;
+        private ISqlMetadataProvider _sqlMetadataProvider;
         private Stack<string> _configValidationStack;
         private Stack<string> _schemaValidationStack;
         private Dictionary<string, FieldDefinitionNode> _queries;
         private Dictionary<string, FieldDefinitionNode> _mutations;
         private Dictionary<string, ObjectTypeDefinitionNode> _types;
-        private bool _dbSchemaIsValidated;
         private bool _graphQLTypesAreValidated;
 
         /// <summary>
         /// Sets the config and schema for the validator
         /// </summary>
-        public SqlConfigValidator(IGraphQLMetadataProvider metadataStoreProvider, GraphQLService graphQLService)
+        public SqlConfigValidator(
+            IGraphQLMetadataProvider metadataStoreProvider,
+            GraphQLService graphQLService,
+            ISqlMetadataProvider sqlMetadataProvider)
         {
             _configValidationStack = MakeConfigPosition(Enumerable.Empty<string>());
             _schemaValidationStack = MakeSchemaPosition(Enumerable.Empty<string>());
             _types = new();
             _mutations = new();
             _queries = new();
-            _dbSchemaIsValidated = false;
             _graphQLTypesAreValidated = false;
 
-            _config = metadataStoreProvider.GetResolvedConfig();
+            _resolverConfig = metadataStoreProvider.GetResolvedConfig();
+            _sqlMetadataProvider = sqlMetadataProvider;
             _schema = graphQLService.Schema;
 
             if (_schema != null)
@@ -68,25 +71,11 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate that config has a DatabaseSchema element
-        /// </summary>
-        private void ValidateConfigHasDatabaseSchema()
-        {
-            if (_config.DatabaseSchema == null)
-            {
-                throw new ConfigValidationException(
-                    $"Config must have a \"DatabaseSchema\" element.",
-                    _configValidationStack
-                );
-            }
-        }
-
-        /// <summary>
         /// Validate that config has a GraphQLTypes element
         /// </summary>
         private void ValidateConfigHasGraphQLTypes()
         {
-            if (_config.GraphQLTypes == null || _config.GraphQLTypes.Count == 0)
+            if (_resolverConfig.GraphQLTypes == null || _resolverConfig.GraphQLTypes.Count == 0)
             {
                 throw new ConfigValidationException(
                     $"Config must have a non empty \"GraphQLTypes\" element.",
@@ -101,7 +90,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateConfigHasMutationResolvers()
         {
-            if (_config.MutationResolvers == null || _config.MutationResolvers.Count == 0)
+            if (_resolverConfig.MutationResolvers == null || _resolverConfig.MutationResolvers.Count == 0)
             {
                 throw new ConfigValidationException(
                     $"Config must have a non empty \"MutationResolvers\" element to resolve " +
@@ -117,254 +106,12 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateNoMutationResolvers()
         {
-            if (_config.MutationResolvers != null)
+            if (_resolverConfig.MutationResolvers != null)
             {
                 throw new ConfigValidationException(
                     "Config doesn't need a \"MutationResolvers\" element. No mutations in the schema.",
                     _configValidationStack
                 );
-            }
-        }
-
-        /// <summary>
-        /// Validate database has tables
-        /// </summary>
-        private void ValidateDatabaseHasTables()
-        {
-            if (_config.DatabaseSchema!.Tables == null || _config.DatabaseSchema!.Tables.Count == 0)
-            {
-                throw new ConfigValidationException(
-                    "Database schema must have a non empty \"Tables\" element.",
-                    _configValidationStack
-                );
-            }
-        }
-
-        /// <summary>
-        /// Validate table has columns
-        /// </summary>
-        private void ValidateTableHasColumns(TableDefinition table)
-        {
-            if (table.Columns == null || table.Columns.Count == 0)
-            {
-                throw new ConfigValidationException(
-                    "Table must have a non \"Columns\" element.",
-                    _configValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Validate table has primary key
-        /// </summary>
-        private void ValidateTableHasPrimaryKey(TableDefinition table)
-        {
-            if (table.PrimaryKey == null || table.PrimaryKey.Count == 0)
-            {
-                throw new ConfigValidationException(
-                    "Table must have a non empty \"PrimaryKey\" element.",
-                    _configValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Validate that all primary key columns are unique
-        /// </summary>
-        private void ValidateNoDuplicatePkColumns(TableDefinition table)
-        {
-            IEnumerable<string> duplicatePkCols = GetDuplicates(table.PrimaryKey);
-
-            if (duplicatePkCols.Any())
-            {
-                throw new ConfigValidationException(
-                    "All primary key columns must be unique. Found duplicate columns " +
-                    $"[{string.Join(", ", duplicatePkCols)}].",
-                    _configValidationStack
-                );
-            }
-        }
-
-        /// <summary>
-        /// Validate that the primary key columns match columns of the table
-        /// </summary>
-        private void ValidatePkColsMatchTableCols(TableDefinition table)
-        {
-            IEnumerable<string> unmatchedPks = table.PrimaryKey.Except(table.Columns.Keys);
-
-            if (unmatchedPks.Any())
-            {
-                throw new ConfigValidationException(
-                    $"Primary Key columns [{string.Join(", ", unmatchedPks)}] do not have equivalent columns " +
-                    "in the table.",
-                    _configValidationStack
-                );
-            }
-        }
-
-        /// <summary>
-        /// Validate that primary columns do not have "hasDefault" column property set to true
-        /// Primary Key columns can only be autogenerated ("IsAutoGenerated": true)
-        /// </summart>
-        private void ValidateNoPkColsWithDefaultValue(TableDefinition table)
-        {
-            IEnumerable<string> pkColsWithDefaultValue =
-                table.PrimaryKey.Where(pkCol => table.Columns[pkCol].HasDefault);
-
-            if (pkColsWithDefaultValue.Any())
-            {
-                throw new ConfigValidationException(
-                    $"Primary Key columns [{string.Join(", ", pkColsWithDefaultValue)}] must not " +
-                    "have \"hasDefault\" column property set to true.",
-                    _configValidationStack
-                );
-            }
-        }
-
-        /// <summary>
-        /// Validate that both IsAutoGenerated and HasDefault are not set to true for a colum
-        /// since IsAutoGenerated implies HasDefault so no need to increase verbosity in the
-        /// config by specifying both each time a column in IsAutoGenerated
-        /// </summary>
-        private void ValidateNoAutoGeneratedAndHasDefault(ColumnDefinition column)
-        {
-            if (column.IsAutoGenerated == true && column.HasDefault == true)
-            {
-                throw new ConfigValidationException(
-                    "No need to specify both \"IsAutoGenerated\" and \"HasDefault\". Auto generated implies has default.",
-                    _configValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Validate foreign key has referenced table
-        /// </summary>
-        public void ValidateForeignKeyHasRefTable(ForeignKeyDefinition foreignKey)
-        {
-            if (string.IsNullOrEmpty(foreignKey.ReferencedTable))
-            {
-                throw new ConfigValidationException(
-                    "Foreign key must have a non empty string \"ReferencedTable\" element.",
-                    _configValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Validate foreign key referenced table
-        /// </summary>
-        private void ValidateForeignKeyRefTableExists(ForeignKeyDefinition foreignKey)
-        {
-            if (!ExistsTableWithName(foreignKey.ReferencedTable))
-            {
-                throw new ConfigValidationException(
-                    $"Referenced table \"{foreignKey.ReferencedTable}\" does not exit in the database schema.",
-                    _configValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Validate that the foreign key columns have unique names amongst themselves
-        /// </summary>
-        private void ValidateNoDuplicateFkColumns(List<string> columns, bool refColumns)
-        {
-            IEnumerable<string> duplicateCols = GetDuplicates(columns);
-
-            if (duplicateCols.Any())
-            {
-                throw new ConfigValidationException(
-                    $"Foreign key {(refColumns ? "referenced" : string.Empty)} columns must be unique amongst " +
-                    $"themselves. Duplicate columns [{string.Join(", ", duplicateCols)}] found.",
-                    _configValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Validates that the count of foreign key columns matches the number of  referenced columns of the
-        /// referenced table
-        /// </summary>
-        private void ValidateColCountMatchesRefColCount(List<string> columns, List<string> refColumns, string refTableName)
-        {
-            if (columns.Count != refColumns.Count)
-            {
-                throw new ConfigValidationException(
-                    $"Mismatch between foreign key column count and referenced table \"{refTableName}\"" +
-                    "'s referenced columns count.",
-                    _configValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Validates that the referenced columns of the foreign key exist in the referenced table
-        /// </summary>
-        private void ValidateRefColumnsExistInRefTable(List<string> referencedColumns, string referencedTable)
-        {
-            List<string> referencedTableColumns = GetTableWithName(referencedTable).Columns.Keys.ToList();
-            IEnumerable<string> unmatchedColumns = referencedColumns.Except(referencedTableColumns);
-
-            if (unmatchedColumns.Any())
-            {
-                throw new ConfigValidationException(
-                    $"Referenced columns [{string.Join(", ", unmatchedColumns)}] do not exist in " +
-                    $"referenced table \"{referencedTable}\".",
-                    _configValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Validates that the foreign key columns have matching columns in the table the foreign key
-        /// belongs to
-        /// </summary>
-        private void ValidateFKColumnsHaveMatchingTableColumns(ForeignKeyDefinition foreignKey, TableDefinition table)
-        {
-            IEnumerable<string> unmatchedFkCols = foreignKey.ReferencingColumns.Except(table.Columns.Keys);
-
-            if (unmatchedFkCols.Any())
-            {
-                throw new ConfigValidationException(
-                    $"Table does not contain columns for foreign key columns [{string.Join(", ", unmatchedFkCols)}].",
-                    _configValidationStack
-                );
-            }
-        }
-
-        /// <summary>
-        /// Validate that the type of the foreign key columns match their equivalent referenced
-        /// columns in the referenced table
-        /// </summary>
-        private void ValidateFKColTypesMatchRefTabPKColTypes(
-            List<string> columns,
-            TableDefinition table,
-            List<string> refColumns,
-            string refTableName,
-            TableDefinition refTable
-        )
-        {
-            for (int columnIndex = 0; columnIndex < columns.Count; columnIndex++)
-            {
-                string columnName = columns[columnIndex];
-                Type columnType = table.Columns[columnName].SystemType;
-                string refColumnName = refColumns[columnIndex];
-                ColumnDefinition refColumn = refTable.Columns[refColumnName];
-
-                if (!ReferenceEquals(columnType, refColumn.SystemType))
-                {
-                    throw new ConfigValidationException(
-                        $"Type mismatch between foreign key column \"{columnName}\" with type \"{columnType}\" and " +
-                        $"referenced column \"{refTableName}\".\"{refColumnName}\" " +
-                        $"with type \"{refColumn.SystemType}\". Look into Models.ColumnDefinition.TypesAreEqual " +
-                        "to learn about how type equality is determined.",
-                        _configValidationStack);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Validate that database schema has already been validated
-        /// </summary>
-        private void ValidateDatabaseSchemaIsValidated()
-        {
-            if (!IsDatabaseSchemaValidated())
-            {
-                throw new NotSupportedException(
-                    "Current validation functions requires that the database schema is validated first.");
             }
         }
 
@@ -1085,21 +832,6 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate that the field's associative table exists
-        /// </summary>
-        private void ValidateAssociativeTableExists(GraphQLField field)
-        {
-            if (!ExistsTableWithName(field.AssociativeTable))
-            {
-                throw new ConfigValidationException(
-                    $"Associative table \"{field.AssociativeTable}\" does not exits in the " +
-                    "config database schema.",
-                    _configValidationStack
-                );
-            }
-        }
-
-        /// <summary>
         /// Validate the left and right foreign keys for many to many field
         /// </summary>
         private void ValidateLeftAndRightFkForM2MField(GraphQLField field)
@@ -1199,21 +931,6 @@ namespace Azure.DataGateway.Service.Configurations
                 throw new ConfigValidationException(
                     "Mutation resolver must have a non empty string \"Table\" element.",
                     _configValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Validate that the mutation resolver table exists in the database schema
-        /// </summary>
-        private void ValidateMutResolverTableExists(string tableName)
-        {
-            if (!ExistsTableWithName(tableName))
-            {
-                throw new ConfigValidationException(
-                    $"Mutation resolver table \"{tableName}\" does not exist in " +
-                    "the database schema.",
-                    _configValidationStack
-                );
             }
         }
 

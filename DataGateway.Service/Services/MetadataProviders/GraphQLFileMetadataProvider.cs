@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models;
@@ -52,7 +49,8 @@ namespace Azure.DataGateway.Service.Services
                     "The resolver config should be set either via ResolverConfig or ResolverConfigFile.");
             }
 
-            GraphQLResolverConfig = GetDeserializedConfig(resolverConfigJson);
+            GraphQLResolverConfig =
+                DataGatewayConfig.GetDeserializedConfig<ResolverConfig>(resolverConfigJson);
 
             if (string.IsNullOrEmpty(GraphQLResolverConfig.GraphQLSchema))
             {
@@ -92,16 +90,6 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
-        /// Does further initialization work that needs to happen
-        /// asynchronously and hence not done in the constructor.
-        /// </summary>
-        public virtual Task InitializeAsync()
-        {
-            // no-op
-            return Task.CompletedTask;
-        }
-
-        /// <summary>
         /// Reads generated JSON configuration file with GraphQL Schema
         /// </summary>
         /// <returns>GraphQL schema as string </returns>
@@ -133,25 +121,6 @@ namespace Azure.DataGateway.Service.Services
         public ResolverConfig GetResolvedConfig()
         {
             return GraphQLResolverConfig;
-        }
-
-        public static ResolverConfig GetDeserializedConfig(string resolverConfigJson)
-        {
-            JsonSerializerOptions options = new()
-            {
-                PropertyNameCaseInsensitive = true,
-            };
-            options.Converters.Add(new JsonStringEnumConverter());
-
-            // This feels verbose but it avoids having to make _config nullable - which would result in more
-            // down the line issues and null check requirements
-            ResolverConfig? deserializedConfig;
-            if ((deserializedConfig = JsonSerializer.Deserialize<ResolverConfig>(resolverConfigJson, options)) == null)
-            {
-                throw new JsonException("Failed to get a ResolverConfig from the provided config");
-            }
-
-            return deserializedConfig!;
         }
     }
 }

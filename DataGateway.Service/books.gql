@@ -15,11 +15,13 @@ type Mutation {
     editBook(id: Int!, title: String, publisher_id: Int): Book
     updateMagazine(id: Int!, title: String, issue_number: Int): Magazine
     insertBook(title: String!, publisher_id: Int!): Book
+    insertReview(book_id: Int!, content: String! = "Its a classic"): Review
     insertMagazine(id: Int!, title: String!, issue_number: Int): Magazine
     insertWebsiteUser(id: Int!, username: String): WebsiteUser
     insertWebsitePlacement(book_id: Int!, price: Int!): BookWebsitePlacement
     addAuthorToBook(author_id: Int!, book_id: Int!): Boolean
     deleteBook(id: Int!): Book
+    deleteReview(id: Int!, book_id: Int!): Review
 }
 
 type Publisher {

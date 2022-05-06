@@ -84,6 +84,43 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Inserts new review with default content for a Review and return its id and content
+        /// <code>Check: </code> If book with the given id is present in the database then
+        /// the mutation query will return the review Id with the content of the review added
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMutationForConstantdefaultValue()
+        {
+            string graphQLMutationName = "insertReview";
+            string graphQLMutation = @"
+                mutation {
+                    insertReview(book_id: 1) {
+                        id
+                        content
+                    }
+                }
+            ";
+
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.id AS id,
+                          table0.content AS content
+                   FROM reviews AS table0
+                   WHERE id = 5001
+                     AND content = 'Its a classic'
+                     AND book_id = 1
+                   ORDER BY id
+                   LIMIT 1) AS subq
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
         /// <code>Do: </code>Update book in database and return its updated fields
         /// <code>Check: </code>if the book with the id of the edited book and the new values exists in the database
         /// and if the mutation query has returned the values correctly

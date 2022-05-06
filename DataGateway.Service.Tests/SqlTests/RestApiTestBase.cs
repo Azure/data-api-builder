@@ -1095,7 +1095,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     entity: _Composite_NonAutoGenPK,
                     sqlQuery: GetQuery("PutOne_Insert_Nulled_Test"),
                     controller: _restController,
-                    operationType: Operation.UpsertIncremental,
+                    operationType: Operation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: expectedLocationHeader

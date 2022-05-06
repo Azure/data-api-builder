@@ -1,7 +1,5 @@
-using System.Net;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -15,7 +13,7 @@ namespace Azure.DataGateway.Service.Authorization
     /// </summary>
     public class RequestAuthorizationHandler : AuthorizationHandler<OperationAuthorizationRequirement, RestRequestContext>
     {
-        private readonly SqlGraphQLFileMetadataProvider _configurationProvider;
+        private readonly ISqlMetadataProvider _sqlMetadataProvider;
 
         /// <summary>
         /// Constructor.
@@ -23,19 +21,10 @@ namespace Azure.DataGateway.Service.Authorization
         /// <param name="metadataStoreProvider">The metadata provider.</param>
         /// <param name="isMock">True, if the provided metadata provider is a mock.</param>
         public RequestAuthorizationHandler(
-            IGraphQLMetadataProvider metadataStoreProvider,
+            ISqlMetadataProvider sqlMetadataProvider,
             bool isMock = false)
         {
-            if (metadataStoreProvider.GetType() != typeof(SqlGraphQLFileMetadataProvider)
-                && !isMock)
-            {
-                throw new DataGatewayException(
-                    message: "Unable to instantiate the request authorization service.",
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
-            }
-
-            _configurationProvider = (SqlGraphQLFileMetadataProvider)metadataStoreProvider;
+            _sqlMetadataProvider = sqlMetadataProvider;
         }
 
         protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,
@@ -43,7 +32,8 @@ namespace Azure.DataGateway.Service.Authorization
                                                   RestRequestContext resource)
         {
             //Request is validated before Authorization, so table will exist.
-            TableDefinition tableDefinition = _configurationProvider.GetTableDefinition(resource.EntityName);
+            TableDefinition tableDefinition =
+                _sqlMetadataProvider.GetTableDefinition(resource.EntityName);
 
             string requestedOperation = resource.HttpVerb.Name;
             if (tableDefinition.HttpVerbs == null || tableDefinition.HttpVerbs.Count == 0)

@@ -92,13 +92,18 @@ namespace Azure.DataGateway.Service.Resolvers
         /// information.
         /// Only use as constructor for the outermost queries not subqueries
         /// </summary>
-        public SqlQueryStructure(IResolverContext ctx, IDictionary<string, object?> queryParams, SqlGraphQLFileMetadataProvider metadataStoreProvider)
+        public SqlQueryStructure(
+            IResolverContext ctx,
+            IDictionary<string, object?> queryParams,
+            IGraphQLMetadataProvider metadataStoreProvider,
+            ISqlMetadataProvider sqlMetadataProvider)
             // This constructor simply forwards to the more general constructor
             // that is used to create GraphQL queries. We give it some values
             // that make sense for the outermost query.
             : this(ctx,
                 queryParams,
                 metadataStoreProvider,
+                sqlMetadataProvider,
                 ctx.Selection.Field,
                 ctx.Selection.SyntaxNode,
                 // The outermost query is where we start, so this can define
@@ -118,8 +123,13 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Generate the structure for a SQL query based on FindRequestContext,
         /// which is created by a FindById or FindMany REST request.
         /// </summary>
-        public SqlQueryStructure(RestRequestContext context, SqlGraphQLFileMetadataProvider metadataStoreProvider) :
-            this(metadataStoreProvider, new IncrementingInteger(), tableName: context.EntityName)
+        public SqlQueryStructure(
+            RestRequestContext context,
+            IGraphQLMetadataProvider metadataStoreProvider,
+            ISqlMetadataProvider sqlMetadataProvider) :
+            this(metadataStoreProvider,
+                sqlMetadataProvider,
+                new IncrementingInteger(), tableName: context.EntityName)
         {
             TableAlias = TableName;
             IsListQuery = context.IsMany;
@@ -127,7 +137,7 @@ namespace Azure.DataGateway.Service.Resolvers
             context.FieldsToBeReturned.ForEach(fieldName => AddColumn(fieldName));
             if (Columns.Count == 0)
             {
-                TableDefinition tableDefinition = GetTableDefinition();
+                TableDefinition tableDefinition = GetUnderlyingTableDefinition();
                 foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
                 {
                     AddColumn(column.Key);
@@ -183,11 +193,12 @@ namespace Azure.DataGateway.Service.Resolvers
         private SqlQueryStructure(
                 IResolverContext ctx,
                 IDictionary<string, object?> queryParams,
-                SqlGraphQLFileMetadataProvider metadataStoreProvider,
+                IGraphQLMetadataProvider metadataStoreProvider,
+                ISqlMetadataProvider sqlMetadataProvider,
                 IObjectField schemaField,
                 FieldNode? queryField,
                 IncrementingInteger counter
-        ) : this(metadataStoreProvider, counter, tableName: string.Empty)
+        ) : this(metadataStoreProvider, sqlMetadataProvider, counter, tableName: string.Empty)
         {
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
@@ -271,7 +282,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (filterObject != null)
                 {
                     List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
-                    Predicates.Add(GQLFilterParser.Parse(filterFields, TableAlias, GetTableDefinition(), MakeParamWithValue));
+                    Predicates.Add(GQLFilterParser.Parse(filterFields, TableAlias, GetUnderlyingTableDefinition(), MakeParamWithValue));
                 }
             }
 
@@ -295,7 +306,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     string where = (string)whereObject;
 
                     ODataASTVisitor visitor = new(this);
-                    FilterParser parser = MetadataStoreProvider.ODataFilterParser;
+                    FilterParser parser = SqlMetadataProvider.GetOdataFilterParser();
                     FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={where}", TableName);
                     FilterPredicates = filterClause.Expression.Accept<string>(visitor);
                 }
@@ -338,8 +349,12 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Private constructor that is used as a base by all public
         /// constructors.
         /// </summary>
-        private SqlQueryStructure(SqlGraphQLFileMetadataProvider metadataStoreProvider, IncrementingInteger counter, string tableName = "")
-            : base(metadataStoreProvider, counter: counter, tableName: tableName)
+        private SqlQueryStructure(
+            IGraphQLMetadataProvider metadataStoreProvider,
+            ISqlMetadataProvider sqlMetadataProvider,
+            IncrementingInteger counter,
+            string tableName = "")
+            : base(metadataStoreProvider, sqlMetadataProvider, counter: counter, tableName: tableName)
         {
             JoinQueries = new();
             Joins = new();
@@ -524,7 +539,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     IDictionary<string, object?> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
 
-                    SqlQueryStructure subquery = new(_ctx, subqueryParams, MetadataStoreProvider, subschemaField, field, Counter);
+                    SqlQueryStructure subquery = new(_ctx, subqueryParams, MetadataStoreProvider, SqlMetadataProvider, subschemaField, field, Counter);
 
                     if (PaginationMetadata.IsPaginated)
                     {
@@ -552,7 +567,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     ObjectType subunderlyingType = subquery._underlyingFieldType;
 
                     GraphQLType subTypeInfo = MetadataStoreProvider.GetGraphQLType(subunderlyingType.Name);
-                    TableDefinition subTableDefinition = MetadataStoreProvider.GetTableDefinition(subTypeInfo.Table);
+                    TableDefinition subTableDefinition = SqlMetadataProvider.GetTableDefinition(subTypeInfo.Table);
                     GraphQLField fieldInfo = _typeInfo.Fields[fieldName];
 
                     string subtableAlias = subquery.TableAlias;
@@ -566,14 +581,14 @@ namespace Azure.DataGateway.Service.Resolvers
                         case GraphQLRelationshipType.OneToOne:
                             if (!string.IsNullOrEmpty(fieldInfo.LeftForeignKey))
                             {
-                                fk = GetTableDefinition().ForeignKeys[fieldInfo.LeftForeignKey];
-                                columns = GetFkColumns(fk, GetTableDefinition());
+                                fk = GetUnderlyingTableDefinition().ForeignKeys[fieldInfo.LeftForeignKey];
+                                columns = GetFkColumns(fk, GetUnderlyingTableDefinition());
                                 subTableColumns = GetFkRefColumns(fk, subTableDefinition);
                             }
                             else
                             {
                                 fk = subTableDefinition.ForeignKeys[fieldInfo.RightForeignKey];
-                                columns = GetFkRefColumns(fk, GetTableDefinition());
+                                columns = GetFkRefColumns(fk, GetUnderlyingTableDefinition());
                                 subTableColumns = GetFkColumns(fk, subTableDefinition);
                             }
 
@@ -585,8 +600,8 @@ namespace Azure.DataGateway.Service.Resolvers
                             ));
                             break;
                         case GraphQLRelationshipType.ManyToOne:
-                            fk = GetTableDefinition().ForeignKeys[fieldInfo.LeftForeignKey];
-                            columns = GetFkColumns(fk, GetTableDefinition());
+                            fk = GetUnderlyingTableDefinition().ForeignKeys[fieldInfo.LeftForeignKey];
+                            columns = GetFkColumns(fk, GetUnderlyingTableDefinition());
                             subTableColumns = GetFkRefColumns(fk, subTableDefinition);
 
                             subquery.Predicates.AddRange(CreateJoinPredicates(
@@ -598,7 +613,7 @@ namespace Azure.DataGateway.Service.Resolvers
                             break;
                         case GraphQLRelationshipType.OneToMany:
                             fk = subTableDefinition.ForeignKeys[fieldInfo.RightForeignKey];
-                            columns = GetFkRefColumns(fk, GetTableDefinition());
+                            columns = GetFkRefColumns(fk, GetUnderlyingTableDefinition());
                             subTableColumns = GetFkColumns(fk, subTableDefinition);
 
                             subquery.Predicates.AddRange(CreateJoinPredicates(
@@ -611,10 +626,10 @@ namespace Azure.DataGateway.Service.Resolvers
                         case GraphQLRelationshipType.ManyToMany:
                             string associativeTableName = fieldInfo.AssociativeTable;
                             string associativeTableAlias = CreateTableAlias();
-                            TableDefinition associativeTableDefinition = MetadataStoreProvider.GetTableDefinition(associativeTableName);
+                            TableDefinition associativeTableDefinition = SqlMetadataProvider.GetTableDefinition(associativeTableName);
 
                             ForeignKeyDefinition fkLeft = associativeTableDefinition.ForeignKeys[fieldInfo.LeftForeignKey];
-                            List<string> columnsLeft = GetFkRefColumns(fkLeft, GetTableDefinition());
+                            List<string> columnsLeft = GetFkRefColumns(fkLeft, GetUnderlyingTableDefinition());
                             List<string> subTableColumnsLeft = GetFkColumns(fkLeft, associativeTableDefinition);
 
                             ForeignKeyDefinition fkRight = associativeTableDefinition.ForeignKeys[fieldInfo.RightForeignKey];

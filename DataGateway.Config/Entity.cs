@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Azure.DataGateway.Config
@@ -26,7 +27,25 @@ namespace Azure.DataGateway.Config
         object? GraphQL,
         PermissionSetting[] Permissions,
         Dictionary<string, Relationship>? Relationships,
-        Dictionary<string, string>? Mappings);
+        Dictionary<string, string>? Mappings)
+    {
+        /// <summary>
+        /// Gets the name of the underlying source database object.
+        /// </summary>
+        public string GetSourceName()
+        {
+            if (((JsonElement)Source).ValueKind is JsonValueKind.String)
+            {
+                return JsonSerializer.Deserialize<string>((JsonElement)Source)!;
+            }
+            else
+            {
+                DatabaseObjectSource objectSource
+                    = JsonSerializer.Deserialize<DatabaseObjectSource>((JsonElement)Source)!;
+                return objectSource.Name;
+            }
+        }
+    }
 
     /// <summary>
     /// Describes the type, name and parameters for a

@@ -46,7 +46,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             configValidator.ValidateConfig();
         }
 
-
         /// <summary>
         /// Gets array of results for querying more than one item.
         /// </summary>

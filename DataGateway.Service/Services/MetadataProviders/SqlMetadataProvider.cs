@@ -326,7 +326,7 @@ namespace Azure.DataGateway.Service.Services
 
                     OperationAuthorizationRequirement restVerb
                             = HttpRestVerbs.GetVerb(actionName);
-                    if (!tableDefinition.HttpVerbs.ContainsKey(restVerb.ToString()!))
+                    if (!tableDefinition.HttpVerbs.ContainsKey(restVerb.Name.ToString()!))
                     {
                         AuthorizationRule rule = new()
                         {
@@ -335,7 +335,7 @@ namespace Azure.DataGateway.Service.Services
                                   typeof(AuthorizationType), permission.Role, ignoreCase: true)
                         };
 
-                        tableDefinition.HttpVerbs.Add(restVerb.ToString()!, rule);
+                        tableDefinition.HttpVerbs.Add(restVerb.Name.ToString()!, rule);
                     }
                 }
             }

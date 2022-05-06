@@ -12,12 +12,17 @@ namespace Azure.DataGateway.Service.Models
     /// </summary>
     public abstract class RestRequestContext
     {
-        protected RestRequestContext(OperationAuthorizationRequirement httpVerb, string entityName, string schemaName, string tableName)
+        protected RestRequestContext(OperationAuthorizationRequirement httpVerb,
+                                     string entityName,
+                                     string schemaName,
+                                     string tableName,
+                                     Dictionary<string, string>? mapping = null)
         {
             HttpVerb = httpVerb;
             EntityName = entityName;
             SchemaName = schemaName;
             TableName = tableName;
+            MappingFromEntity = mapping;
         }
 
         /// <summary>
@@ -39,6 +44,11 @@ namespace Azure.DataGateway.Service.Models
         /// Field names of the entity that are queried in the request.
         /// </summary>
         public List<string> FieldsToBeReturned { get; set; } = new();
+
+        /// <summary>
+        /// Mapping of database object names to request/response names.
+        /// </summary>
+        public Dictionary<string, string>? MappingFromEntity { get; }
 
         /// <summary>
         /// Dictionary of primary key and their values specified in the request.

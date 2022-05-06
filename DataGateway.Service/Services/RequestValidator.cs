@@ -30,13 +30,40 @@ namespace Azure.DataGateway.Service.Services
 
             foreach (string field in context.FieldsToBeReturned)
             {
-                if (!tableDefinition.Columns.ContainsKey(field))
-                {
-                    throw new DataGatewayException(
-                        message: "Invalid Column name requested: " + field,
+                ValidateField(tableDefinition.Columns.Keys, context.MappingFromEntity!, field);
+            }
+        }
+
+        /// <summary>
+        /// Validate that the fields to be returned are valid.
+        /// This function takes into account the mappings provided
+        /// for the given entity that maps database object names
+        /// to names in the request/response. If mappings is null
+        /// then we only look if the columns contain the field.
+        /// Otherwise, we look these cases:
+        /// 1. not a valid column and not in the values of our mapping
+        /// 2. valid column and in the values of the mappings, and column != key
+        /// 3. valid column and not in the values of the mappings, but a key in the mapping.
+        /// </summary>
+        /// <param name="columns">columns of this table definition</param>
+        /// <param name="mapping">mappings from this entity</param>
+        /// <param name="field">field to be returned</param>
+        /// <exception cref="DataGatewayException"></exception>
+        public static void ValidateField(IEnumerable<string> columns, Dictionary<string, string> mapping, string field)
+        {
+            if (mapping is null && columns.Contains(field))
+            {
+                return;
+            }
+            else if ((mapping is null && !columns.Contains(field)) ||
+                    (!columns.Contains(field) && !mapping!.ContainsValue(field)) ||
+                    (mapping!.ContainsKey(field) && !mapping.ContainsValue(field)) ||
+                    (mapping.ContainsKey(field) && mapping.ContainsValue(field) && mapping[field] != field))
+            {
+                throw new DataGatewayException(
+                        message: "Invalid field to be returned requested: " + field,
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
-                }
             }
         }
 

@@ -112,6 +112,9 @@
     "WebsiteUser": {
       "Table": "website_users"
     },
+    "Stock": {
+      "Table": "stocks"
+    },
     "Author": {
       "Table": "authors",
       "Fields": {
@@ -148,6 +151,9 @@
     "IsPaginationType": true
     },
     "ReviewConnection": {
+    "IsPaginationType": true
+    },
+    "StockConnection": {
     "IsPaginationType": true
     }
   }

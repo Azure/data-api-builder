@@ -4,7 +4,6 @@ using System.IO;
 using Azure.DataGateway.Config;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
-using Moq;
 
 namespace Azure.DataGateway.Service.Tests.CosmosTests
 {

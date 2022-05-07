@@ -1,6 +1,6 @@
 using System;
+using System.Collections.Generic;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Configurations;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.Configuration
@@ -10,19 +10,14 @@ namespace Azure.DataGateway.Service.Tests.Configuration
     {
         private const string DEFAULT_CONNECTION_STRING = "Server=tcp:127.0.0.1";
         private const string DEFAULT_RESOLVER_FILE = "cosmos-config.json";
-        private const string DEFAULT_RUNTIME_CONFIG_FILE = "runtime-config.json";
         private const string DEFAULT_ISSUER = "https://login.microsoftonline.com";
 
         #region Positive Tests
-        [TestMethod("AuthN config passes validation with EasyAuth as Provider")]
+        [TestMethod("AuthN config passes validation with EasyAuth as default Provider")]
         public void ValidateEasyAuthConfig()
         {
-            RuntimeConfig config = CreateDGConfig();
-            config.Authentication = new AuthenticationProviderConfig()
-            {
-                Provider = "EasyAuth"
-            };
-
+            RuntimeConfig config =
+                CreateRuntimeConfigWithAuthN(new AuthenticationConfig());
             RuntimeConfigPostConfiguration dgPostConfig = new();
 
             try
@@ -38,13 +33,14 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("AuthN validation passes when all values are provided when provider not EasyAuth")]
         public void ValidateJwtConfigParamsSet()
         {
-            RuntimeConfig config = CreateDGConfig();
-            config.Authentication = new AuthenticationProviderConfig()
-            {
-                Provider = "AzureAD",
-                Issuer = "https://login.microsoftonline.com/common",
-                Audience = "12345"
-            };
+            Jwt jwt = new(
+                Audience: "12345",
+                Issuer: "https://login.microsoftonline.com/common",
+                IssuerKey: "XYZ");
+            AuthenticationConfig authNConfig = new(
+                Provider: "AzureAD",
+                Jwt: jwt);
+            RuntimeConfig config = CreateRuntimeConfigWithAuthN(authNConfig);
 
             RuntimeConfigPostConfiguration dgPostConfig = new();
 
@@ -58,45 +54,36 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             }
         }
         #endregion
+
         #region Negative Tests
-        [TestMethod("Authentication config section with no values set for params fails validation")]
-        public void ValidateAuthenticationConfigSet()
-        {
-            RuntimeConfig config = CreateDGConfig();
-            config.Authentication = new AuthenticationProviderConfig();
-
-            RuntimeConfigPostConfiguration dgPostConfig = new();
-
-            Assert.ThrowsException<NotSupportedException>(() =>
-            {
-                dgPostConfig.PostConfigure(name: string.Empty, options: config);
-            });
-        }
 
         [TestMethod("AuthN validation fails when either Issuer or Audience not provided not EasyAuth")]
         public void ValidateFailureWithIncompleteJwtConfig()
         {
-            RuntimeConfig config = CreateDGConfig();
-            config.Authentication = new AuthenticationProviderConfig()
-            {
-                Provider = "AzureAD",
-                Issuer = "",
-                Audience = "12345"
-            };
+            Jwt jwt = new(
+                Audience: "12345",
+                Issuer: string.Empty,
+                IssuerKey: string.Empty);
+            AuthenticationConfig authNConfig = new(
+                Provider: "AzureAD",
+                Jwt: jwt);
+
+            RuntimeConfig config = CreateRuntimeConfigWithAuthN(authNConfig);
 
             RuntimeConfigPostConfiguration dgPostConfig = new();
-
             Assert.ThrowsException<NotSupportedException>(() =>
             {
                 dgPostConfig.PostConfigure(name: string.Empty, options: config);
             });
 
-            config.Authentication = new AuthenticationProviderConfig()
-            {
-                Provider = "AzureAD",
-                Issuer = DEFAULT_ISSUER,
-                Audience = ""
-            };
+            jwt = new(
+                Audience: string.Empty,
+                Issuer: DEFAULT_ISSUER,
+                IssuerKey: "XYZ");
+            authNConfig = new(
+                Provider: "AzureAD",
+                Jwt: jwt);
+            config = CreateRuntimeConfigWithAuthN(authNConfig);
 
             Assert.ThrowsException<NotSupportedException>(() =>
             {
@@ -107,14 +94,12 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("AuthN validation fails when either Issuer or Audience are provided for EasyAuth")]
         public void ValidateFailureWithUnneededEasyAuthConfig()
         {
-            RuntimeConfig config = CreateDGConfig();
-            config.Authentication = new AuthenticationProviderConfig()
-            {
-                Provider = "EasyAuth",
-                Issuer = DEFAULT_ISSUER,
-                Audience = ""
-            };
-
+            Jwt jwt = new(
+                Audience: "12345",
+                Issuer: string.Empty,
+                IssuerKey: string.Empty);
+            AuthenticationConfig authNConfig = new(Provider: "EasyAuth", Jwt: jwt);
+            RuntimeConfig config = CreateRuntimeConfigWithAuthN(authNConfig);
             RuntimeConfigPostConfiguration dgPostConfig = new();
 
             Assert.ThrowsException<NotSupportedException>(() =>
@@ -122,12 +107,12 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 dgPostConfig.PostConfigure(name: string.Empty, options: config);
             });
 
-            config.Authentication = new AuthenticationProviderConfig()
-            {
-                Provider = "EasyAuth",
-                Issuer = "",
-                Audience = "12345"
-            };
+            jwt = new(
+                Audience: string.Empty,
+                Issuer: DEFAULT_ISSUER,
+                IssuerKey: "XYZ");
+            authNConfig = new(Provider: "EasyAuth", Jwt: jwt);
+            config = CreateRuntimeConfigWithAuthN(authNConfig);
 
             Assert.ThrowsException<NotSupportedException>(() =>
             {
@@ -136,20 +121,29 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         }
         #endregion
         #region Helper Functions
-        private static RuntimeConfig CreateDGConfig()
+        private static RuntimeConfig CreateRuntimeConfigWithAuthN(AuthenticationConfig authNConfig)
         {
-            DatabaseConnectionConfig connection = new()
-            {
-                ConnectionString = DEFAULT_CONNECTION_STRING
-            };
-
-            RuntimeConfig config = new()
+            DataSource dataSource = new()
             {
                 DatabaseType = DatabaseType.mssql,
-                DatabaseConnection = connection,
-                ResolverConfigFile = DEFAULT_RESOLVER_FILE,
-                RuntimeConfigFile = DEFAULT_RUNTIME_CONFIG_FILE
+                ConnectionString = DEFAULT_CONNECTION_STRING,
+                ResolverConfigFile = DEFAULT_RESOLVER_FILE
             };
+
+            HostGlobalSettings hostGlobal = new(Authentication: authNConfig);
+            Dictionary<GlobalSettingsType, object> runtimeSettings = new();
+            runtimeSettings.TryAdd(GlobalSettingsType.Host, hostGlobal);
+            Dictionary<string, Entity> entities = new();
+            RuntimeConfig config = new(
+                Schema: RuntimeConfig.SCHEMA,
+                DataSource: dataSource,
+                CosmosDb: null,
+                MsSql: null,
+                PostgreSql: null,
+                MySql: null,
+                RuntimeSettings : runtimeSettings,
+                Entities : entities
+            );
 
             return config;
         }

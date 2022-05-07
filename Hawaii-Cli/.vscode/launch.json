@@ -11,8 +11,13 @@
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
             "program": "${workspaceFolder}/bin/Debug/net6.0/hawaii-cli.dll",
-            "args": ["init", "-n", "asd", "--database_type", "mysql", "--connection_string", "sadasdasdas"],
-            // "args": ["add", "todo", "--source", "s001.todo", "--rest", "todo", "--graphql", "todo", "--permissions", "anonymous:*"],
+            "args": ["init", "-n", "dev-test", "--database_type", "mysql", "--connection_string", "sadasdasdas"],
+            // "args": ["add", "todo", "-n", "dev-test", "--source", "s001.todo", "--rest", "todo", "--graphql", "todo", "--permissions", "anonymous:*"],
+            // "args": ["add", "category", "-n", "dev-test", "--source", "s001.category", "--rest", "category", "--graphql", "category", "--permissions", "anonymous:create,read,update"],
+            // "args": ["add", "books", "-n", "dev-test", "--source", "s001.books", "--rest", "books", "--graphql", "books", "--permissions", "anonymous:create,read,update", "--fields.include", "id,type,review"],
+            // "args": ["add", "books", "-n", "dev-test", "--source", "s001.books", "--rest", "books", "--graphql", "books", "--permissions", "anonymous:create", "--fields.include", "id,type,review"],
+            // "args": ["add", "review", "-n", "dev-test", "--source", "s001.review", "--rest", "true", "--graphql", "review", "--permissions", "anonymous:update", "--fields.exclude", "id,time"],
+            // "args": ["update", "review", "-n", "dev-test", "--source", "s001.reviews", "--rest", "review", "--graphql", "review", "--permissions", "anonymous:update", "--fields.exclude", "id,time"],
             // "args": ["--help"],
             "cwd": "${workspaceFolder}",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console

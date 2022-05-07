@@ -8,29 +8,42 @@ namespace Hawaii.Cli.Classes
 {
     public class Operations
     {
+        public static string DEFAULT_CONFIG_FILENAME = "hawaii-config";
         public static void Init(CommandLineOptions options)
         {
             var fileName = options.name;
             var databaseType = options.databaseType;
             var connectionString = options.connectionString;
 
-            if (fileName == null || databaseType == null || connectionString == null)
+            if(fileName == null) {
+                Console.WriteLine("Using default file hawaii-config");
+                fileName = DEFAULT_CONFIG_FILENAME;
+            }
+
+            if (databaseType == null || connectionString == null)
             {
                 Console.WriteLine(@"Please check if any required arguments are not missing.
-                Required options: --name, --database_type, --connection_string");
+                Required options: --database_type, --connection_string");
                 return;
             }
-            ConfigGenerator.generateConfig(fileName, databaseType, connectionString);
+            ConfigGenerator.GenerateConfig(fileName, databaseType, connectionString);
             Console.WriteLine($"generating config with file name: {fileName}, database type: {databaseType}, and connectionString: {connectionString}");
         }
 
         public static void Add(string entity, CommandLineOptions options)
         {
-            var fileName = "";
+            var fileName = options.name;
             var source = options.source;
-            var restRoute = options.restRoute;
-            var graphQLType = options.graphQLType;
+            var rest = options.restRoute;
+            var graphQL = options.graphQLType;
             var permissions = options.permissions;
+            var fieldsToInclude = options.fieldsToInclude;
+            var fieldsToExclude = options.fieldsToExclude;
+
+            if(fileName == null) {
+                Console.WriteLine("Using default file hawaii-config");
+                fileName = DEFAULT_CONFIG_FILENAME;
+            }
 
             if (source == null || permissions == null)
             {
@@ -39,13 +52,25 @@ namespace Hawaii.Cli.Classes
                 return;
             }
 
-            ConfigGenerator.addEntitiesToConfig(fileName: fileName, entity: entity, source: source, permissions: permissions,
-                                                 rest_route: restRoute, graphQL_type: graphQLType);
+            ConfigGenerator.AddEntitiesToConfig(fileName, entity, source, permissions, rest, graphQL, fieldsToInclude, fieldsToExclude);
             Console.WriteLine($"adding source: {source} to config: {fileName} with permissions: {permissions}.");
         }
 
         public static void Update(string entity, CommandLineOptions options)
         {
+            var fileName = options.name;
+            var source = options.source;
+            var rest = options.restRoute;
+            var graphQL = options.graphQLType;
+            var permissions = options.permissions;
+            var fieldsToInclude = options.fieldsToInclude;
+            var fieldsToExclude = options.fieldsToExclude;
+
+            if(fileName == null) {
+                Console.WriteLine("Using default file hawaii-config");
+                fileName = DEFAULT_CONFIG_FILENAME;
+            }
+            ConfigGenerator.UpdateEntity(fileName, entity, source, permissions, rest, graphQL, fieldsToInclude, fieldsToExclude);
             Console.WriteLine($"Updating config.");
         }
     }

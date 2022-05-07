@@ -30,6 +30,12 @@ namespace Hawaii.Cli.Classes
         [Option("permissions", Required = false, HelpText = "permission required to acess source table")]
         public String? permissions { get; set; }
 
+        [Option("fields.include", Required = false, HelpText = "fields that are allowed access to permission")]
+        public String? fieldsToInclude { get; set; }
+
+        [Option("fields.exclude", Required = false, HelpText = "fields that are excluded from the action lists")]
+        public String? fieldsToExclude { get; set; }
+
         [Option(Default = false, HelpText = "Prints all messages to standard output.")]
         public bool Verbose { get; set; }
 

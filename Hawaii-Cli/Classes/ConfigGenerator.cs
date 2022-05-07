@@ -1,71 +1,96 @@
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
+using Azure.DataGateway.Config;
+using static Hawaii.Cli.Classes.Utils;
 
 namespace Hawaii.Cli.Classes
 {
     public class ConfigGenerator
     {
-        // public static string base_path = Directory.GetCurrentDirectory();
-        public static void generateConfig(string fileName, string database_type, string connection_string)
+        public static void GenerateConfig(string fileName, string database_type, string connection_string)
         {
-            Config config = new Config();
-            config.data_source.database_type = database_type;
-            config.data_source.connection_string = connection_string;
 
-            string JSONresult = JsonConvert.SerializeObject(config, Formatting.Indented);
+            DatabaseType dbType = Enum.Parse<DatabaseType>(database_type);
+            DataSource dataSource = new DataSource(dbType, connection_string);
 
-            string configPath = fileName + ".json";
+            string file = fileName + ".json";
 
-            if (File.Exists(configPath))
-            {
-                File.Delete(configPath);
+            string schema = Directory.GetCurrentDirectory().Replace("\\", "/") + "/" + file;
+
+            RuntimeConfig runtimeConfig = new RuntimeConfig(schema, dataSource, null, null, null, null, GetRuntimeSettings(), new Dictionary<string, Entity>());
+
+            string JSONresult = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
+
+            if (File.Exists(file)) {
+                File.Delete(file);
             }
-            File.WriteAllText(configPath, JSONresult);
+            File.WriteAllText(file, JSONresult);
 
         }
 
-        public static void addEntitiesToConfig(string fileName, string entity,
-                                             string source, string permissions,
-                                             string? rest_route, string? graphQL_type)
+        public static void AddEntitiesToConfig(string fileName, string entity,
+                                             object source, string permissions,
+                                             object? rest, object? graphQL, string? fieldsToInclude, string? fieldsToExclude)
         {
-            //TODO: fix the fileName issue. It should be picked up from argument and not hard coded.
-            string configPath = "todo-001" + ".json";
+            string file = fileName + ".json";
 
-            if (!File.Exists(configPath))
+            if (!File.Exists(file))
             {
-                Console.WriteLine($"Couldn't find config  file: {configPath}.");
+                Console.WriteLine($"Couldn't find config  file: {file}.");
                 Console.WriteLine($"Please do hawaii init <options> to create a new config file.");
                 return;
             }
-
-            string jsonString = File.ReadAllText(configPath);
-
-            var jObject = JObject.Parse(jsonString);
-            jObject.Add("entities", JObject.FromObject(new()));
-
-            Dictionary<string, Object> dict = new();
-            if (rest_route != null)
-            {
-                dict.Add("rest", JObject.FromObject(new { route = $"/{rest_route}" }));
-            }
-
-            if (graphQL_type != null)
-            {
-                dict.Add("graphql", JObject.FromObject(new { type = new { singular = $"{graphQL_type}", plural = $"{graphQL_type}" } }));
-            }
-
-            dict.Add("source", source);
             string[] permission_array = permissions.Split(":");
-            string permission = JsonConvert.SerializeObject(new Permission(permission_array[0], permission_array[1]));
-            JArray jArray = new JArray();
-            jArray.Add(JObject.Parse(permission));
-            dict.Add("permissions", jArray);
+            string role = permission_array[0];
+            string actions = permission_array[1];
+            PermissionSetting[] permissionSettings = CreatePermissions(role, actions, fieldsToInclude, fieldsToExclude);
+            Entity entity_details = new Entity(source, GetRestDetails(rest), GetGraphQLDetails(graphQL), permissionSettings, null, null);
 
-            //TODO: add support for multiple entities.
-            jObject["entities"][entity] = JObject.FromObject(dict);
+            
 
-            string JSONresult = JsonConvert.SerializeObject(jObject, Formatting.Indented);
-            File.WriteAllText(configPath, JSONresult);
+            string jsonString = File.ReadAllText(file);
+            var options = GetSerializationOptions();
+
+            RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
+
+            if(runtimeConfig.Entities.ContainsKey(entity)) {
+                Console.WriteLine($"Entity:{entity} is already present. No new changes are added to Config.");
+                return;
+            }
+
+            runtimeConfig.Entities.Add(entity, entity_details);
+
+            string JSONresult = JsonSerializer.Serialize(runtimeConfig, options);
+            File.WriteAllText(file, JSONresult);
+
+        }
+
+        public static void UpdateEntity(string fileName, string entity,
+                                             object? source, string? permissions,
+                                             object? rest, object? graphQL, string? fieldsToInclude, string? fieldsToExclude) {
+            
+            string file = fileName + ".json";
+            string jsonString = File.ReadAllText(file);
+            var options = GetSerializationOptions();
+
+            RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
+            if(!runtimeConfig.Entities.ContainsKey(entity)) {
+                Console.WriteLine($"Entity:{entity} is not present. No new changes are added to Config.");
+                return;
+            }
+            
+            Entity updatedEntity = runtimeConfig.Entities[entity];
+            if(source!=null) {
+                updatedEntity = new Entity(source, updatedEntity.Rest, updatedEntity.GraphQL, updatedEntity.Permissions, updatedEntity.Relationships, updatedEntity.Mappings);
+            }
+            if(rest!=null) {
+                updatedEntity = new Entity(updatedEntity.Source, GetRestDetails(rest), updatedEntity.GraphQL, updatedEntity.Permissions, updatedEntity.Relationships, updatedEntity.Mappings);
+            }
+            if(graphQL!=null) {
+                updatedEntity = new Entity(updatedEntity.Source, updatedEntity.Rest, GetGraphQLDetails(graphQL), updatedEntity.Permissions, updatedEntity.Relationships, updatedEntity.Mappings);
+            }
+            runtimeConfig.Entities[entity] = updatedEntity;
+            string JSONresult = JsonSerializer.Serialize(runtimeConfig, options);
+            File.WriteAllText(file, JSONresult);
 
         }
 

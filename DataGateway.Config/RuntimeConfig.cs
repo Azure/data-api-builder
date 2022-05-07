@@ -63,6 +63,7 @@ namespace Azure.DataGateway.Config
     {
         public const string SCHEMA_PROPERTY_NAME = "$schema";
         public const string RESOLVER_CONFIG_PROPERTY_NAME = "resolver-config-file";
+        public const string SCHEMA = "hawaii.draft-01.schema.json";
 
         public void SetDefaults()
         {

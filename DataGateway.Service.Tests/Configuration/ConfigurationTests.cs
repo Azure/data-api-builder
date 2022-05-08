@@ -45,8 +45,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Dictionary<string, string> config = new()
             {
                 {
-                  $"{nameof(RuntimeConfigPath.ConfigFileName)}",
-                  $"{RuntimeConfigPath.CONFIGFILE_NAME}.cosmos{RuntimeConfigPath.CONFIG_EXTENSION}"
+                    $"{nameof(RuntimeConfigPath.ConfigFileName)}",
+                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.cosmos{RuntimeConfigPath.CONFIG_EXTENSION}"
                 }
             };
 
@@ -445,7 +445,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         public void TestCommandLineConfigurationProvider()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "mssql");
-            string[] args = new[]{ "--ConfigFileName=hawaii-config.cosmos.json" };
+            string[] args = new[] { "--ConfigFileName=hawaii-config.cosmos.json" };
             TestServer server = new(Program.CreateWebHostBuilder(args));
 
             ValidateCosmosDbSetup(server);
@@ -474,31 +474,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             CosmosClientProvider cosmosClientProvider = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
             Assert.IsNotNull(cosmosClientProvider);
             Assert.IsNotNull(cosmosClientProvider.Client);
-        }
-
-        /// <summary>
-        /// Verifies that an exception of type T is thrown. Also checks AggregateException recursively.
-        /// </summary>
-        /// <typeparam name="T">The expected exception type.</typeparam>
-        /// <param name="func">The function to execute that should throw.</param>
-        private async Task VerifyThrowsException<T>(Func<Task> func) where T : Exception
-        {
-            bool exceptionThrown = false;
-            try
-            {
-                await func();
-            }
-            catch (AggregateException aggregate)
-            {
-                aggregate.Handle(HandleException<T>);
-                exceptionThrown = true;
-            }
-            catch (T)
-            {
-                exceptionThrown = true;
-            }
-
-            Assert.IsTrue(exceptionThrown);
         }
 
         private bool HandleException<T>(Exception e) where T : Exception

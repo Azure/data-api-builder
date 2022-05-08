@@ -141,8 +141,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 MsSql: null,
                 PostgreSql: null,
                 MySql: null,
-                RuntimeSettings : runtimeSettings,
-                Entities : entities
+                RuntimeSettings: runtimeSettings,
+                Entities: entities
             );
 
             return config;

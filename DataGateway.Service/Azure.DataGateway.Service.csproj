@@ -75,7 +75,7 @@
 
 
   <ItemGroup>
-    <None Include="hawaii-config.MsSql.json">
+    <None Include="hawaii-config.mssql.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

@@ -16,27 +16,11 @@ namespace Azure.DataGateway.Service
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
-
             Host.CreateDefaultBuilder(args)
                 .ConfigureAppConfiguration((hostingContext, configurationBuilder) =>
                 {
-                    configurationBuilder.Sources.Clear();
                     IHostEnvironment env = hostingContext.HostingEnvironment;
-
-                    string configFileName
-                        = RuntimeConfigPath.GetFileNameAsPerEnvironment(env.EnvironmentName);
-                    Dictionary<string, string> configFileNameMap = new()
-                    {
-                        {  nameof(RuntimeConfigPath.ConfigFileName),
-                             configFileName }
-                    };
-
-                    configurationBuilder
-                        .AddInMemoryCollection(configFileNameMap);
-
-                    configurationBuilder.AddCommandLine(args);
-
-                    configurationBuilder.AddInMemoryUpdateableConfiguration();
+                    AddConfigurationProviders(env, configurationBuilder, args);
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
@@ -47,9 +31,50 @@ namespace Azure.DataGateway.Service
         // IWebHostbuilder, instead of a IHostBuilder.
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
+            .ConfigureAppConfiguration((hostingContext, builder) =>
+            {
+                IHostEnvironment env = hostingContext.HostingEnvironment;
+                AddConfigurationProviders(env, builder, args);
+            }).UseStartup<Startup>();
+
+        // This is used for testing purposes only. The test web server takes in a
+        // IWebHostbuilder, instead of a IHostBuilder.
+        public static IWebHostBuilder CreateWebHostFromInMemoryUpdateableConfBuilder(string[] args) =>
+            WebHost.CreateDefaultBuilder(args)
             .ConfigureAppConfiguration((builder) =>
             {
                 builder.AddInMemoryUpdateableConfiguration();
             }).UseStartup<Startup>();
+
+        /// <summary>
+        /// Add the various configuration providers.
+        /// </summary>
+        /// <param name="env">The hosting environment.</param>
+        /// <param name="configurationBuilder">The configuration builder.</param>
+        /// <param name="args">The command line arguments.</param>
+        private static void AddConfigurationProviders(
+            IHostEnvironment env,
+            IConfigurationBuilder configurationBuilder,
+            string[] args)
+        {
+            configurationBuilder.Sources.Clear();
+
+            string configFileName
+                = RuntimeConfigPath.GetFileNameAsPerEnvironment(env.EnvironmentName);
+            Dictionary<string, string> configFileNameMap = new()
+            {
+                {
+                    nameof(RuntimeConfigPath.ConfigFileName),
+                    configFileName
+                }
+            };
+
+            configurationBuilder
+                .AddInMemoryCollection(configFileNameMap);
+
+            configurationBuilder.AddCommandLine(args);
+
+            configurationBuilder.AddInMemoryUpdateableConfiguration();
+        }
     }
 }

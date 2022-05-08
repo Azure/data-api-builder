@@ -1,12 +1,9 @@
 {
   "$schema": "../../project-hawaii/playground/hawaii.draft-01.schema.json",
   "data-source": {
-    "database-type": "mssql",
-    "connection-string": "DO NOT EDIT, look at CONTRIBUTING.md on how to run tests",
+    "database-type": "mysql",
+    "connection-string": "server=localhost;database=datagatewaytest;Allow User Variables=true;uid=root;pwd=REPLACEME",
     "resolver-config-file": "sql-config.json"
-  },
-  "mssql": {
-    "set-session-context": true
   },
   "runtime": {
     "rest": {

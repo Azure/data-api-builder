@@ -1,0 +1,39 @@
+{
+  "$schema": "../../project-hawaii/playground/hawaii.draft-01.schema.json",
+  "data-source": {
+    "database-type": "cosmos",
+    "connection-string": "DO NOT EDIT, look at CONTRIBUTING.md on how to run tests",
+    "resolver-config-file": "cosmos-config.json"
+  },
+  "cosmos": {
+    "database": "graphqldb"
+  },
+  "runtime": {
+    "rest": {
+      "enabled": false
+    },
+    "graphql": {
+      "enabled": true,
+      "path": "/graphql",
+      "allow-introspection": true
+    },
+    "host": {
+      "mode": "Development",
+      "cors": {
+        "origins": [ "1", "2" ],
+        "allow-credentials": true
+      },
+      "authentication": {
+        "provider": "EasyAuth"
+      }
+    }
+  },
+  "entities": {
+    "Planet": {
+      "source": "planet"
+    },
+    "Character": {
+      "source": "character"
+     }
+  }
+}

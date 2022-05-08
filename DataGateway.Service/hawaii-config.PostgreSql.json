@@ -1,12 +1,11 @@
 {
   "$schema": "../../project-hawaii/playground/hawaii.draft-01.schema.json",
   "data-source": {
-    "database-type": "mssql",
+    "database-type": "postgresql",
     "connection-string": "DO NOT EDIT, look at CONTRIBUTING.md on how to run tests",
     "resolver-config-file": "sql-config.json"
   },
-  "mssql": {
-    "set-session-context": true
+  "postgresql": {
   },
   "runtime": {
     "rest": {

@@ -11,20 +11,10 @@ namespace Azure.DataGateway.Config
 
         public RuntimeConfig? ConfigValue { get; set; }
 
-        public static string DefaultName
-        {
-            get
-            {
-                return $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}";
-            }
-        }
-
         /// <summary>
-        /// Reads the contents of the json config file,
-        /// and returns the deserialized RuntimeConfig object.
+        /// Reads the contents of the json config file if it exists,
+        /// and sets the deserialized RuntimeConfig object.
         /// </summary>
-        /// <returns></returns>
-        /// <exception cref="ArgumentNullException"></exception>
         public void SetRuntimeConfigValue()
         {
             string? runtimeConfigJson = null;
@@ -39,20 +29,84 @@ namespace Azure.DataGateway.Config
             }
         }
 
-        public static string GetFileNameAsPerEnvironment(string hostingEnvironmentName)
+        /// <summary>
+        /// Precedence of environments is
+        /// 1) Value of HAWAII_ENVIRONMENT.
+        /// 2) Value of ASPNETCORE_ENVIRONMENT.
+        /// 3) Default config file name.
+        /// In each case, overidden file name takes precedence.
+        /// The first file name that exists in current directory is returned.
+        /// The fall back options are hawaii-config.overrides.json/hawaii-config.json
+        /// If no file exists, this will return an empty string.
+        /// </summary>
+        /// <param name="hostingEnvironmentName">Value of ASPNETCORE_ENVIRONMENT variable</param>
+        /// <returns></returns>
+        public static string GetFileNameAsPerEnvironment(string? hostingEnvironmentName)
         {
-            string? runtimeEnvironmentValue
-                = Environment.GetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME);
-            if (runtimeEnvironmentValue != null)
+            string configFileNameWithExtension = string.Empty;
+            string?[] environmentPrecedence = new[]
             {
-                return $"{CONFIGFILE_NAME}.{runtimeEnvironmentValue}{CONFIG_EXTENSION}";
+                Environment.GetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME),
+                hostingEnvironmentName,
+                string.Empty
+            };
+
+            for (short index = 0;
+                index < environmentPrecedence.Length
+                && string.IsNullOrEmpty(configFileNameWithExtension);
+                index++)
+            {
+                if (!string.IsNullOrWhiteSpace(environmentPrecedence[index])
+                    // The last index is for the default case - the last fallback option.
+                    || index == environmentPrecedence.Length - 1)
+                {
+                    configFileNameWithExtension =
+                        GetFileNameConsideringOverrides(environmentPrecedence[index]);
+                }
+            }
+
+            return configFileNameWithExtension;
+        }
+
+        // Used for testing
+        public static string DefaultName
+        {
+            get
+            {
+                return $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}";
+            }
+        }
+
+        private static string GetFileNameConsideringOverrides(string? environmentValue)
+        {
+            string configFileName =
+                !string.IsNullOrEmpty(environmentValue)
+                ? $"{CONFIGFILE_NAME}.{environmentValue}"
+                : $"{CONFIGFILE_NAME}";
+            string overriddenConfigFileNameWithExtension = GetOverriddenName(configFileName);
+            if (DoesFileExistInCurrentDirectory(overriddenConfigFileNameWithExtension))
+            {
+                return overriddenConfigFileNameWithExtension;
+            }
+            else if (DoesFileExistInCurrentDirectory($"{configFileName}{CONFIG_EXTENSION}"))
+            {
+                return $"{configFileName}{CONFIG_EXTENSION}";
             }
             else
             {
-                return !string.IsNullOrWhiteSpace(hostingEnvironmentName)
-                    ? $"{CONFIGFILE_NAME}.{hostingEnvironmentName}{CONFIG_EXTENSION}"
-        :               $"{DefaultName}";
+                return string.Empty;
             }
+        }
+
+        private static string GetOverriddenName(string fileName)
+        {
+            return $"{fileName}.overrides{CONFIG_EXTENSION}";
+        }
+
+        private static bool DoesFileExistInCurrentDirectory(string fileName)
+        {
+            string currentDir = Directory.GetCurrentDirectory();
+            return File.Exists(Path.Combine(currentDir, fileName));
         }
     }
 }

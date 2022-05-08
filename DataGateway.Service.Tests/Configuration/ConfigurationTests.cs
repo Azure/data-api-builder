@@ -327,7 +327,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// This function will attempt to read the runtime-config-test.json
+        /// This function will attempt to read the hawaii-config.json
         /// file into the RuntimeConfig class. It verifies the deserialization succeeds.
         /// </summary>
         [TestMethod("Validates if deserialization of new runtime config format succeeds.")]
@@ -435,6 +435,20 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                     entity.Mappings.GetType()
                         == typeof(Dictionary<string, string>));
             }
+        }
+
+        /// <summary>
+        /// This function verifies command line configuration provider takes higher
+        /// precendence than default configuration file hawaii-config.json
+        /// </summary>
+        [TestMethod("Validates command line configuration provider.")]
+        public void TestCommandLineConfigurationProvider()
+        {
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "mssql");
+            string[] args = new[]{ "--ConfigFileName=hawaii-config.cosmos.json" };
+            TestServer server = new(Program.CreateWebHostBuilder(args));
+
+            ValidateCosmosDbSetup(server);
         }
 
         [TestCleanup]

@@ -8,6 +8,11 @@
       "OperationType": "Insert"
     },
     {
+      "Id": "insertReview",
+      "Table": "reviews",
+      "OperationType": "Insert"
+    },
+    {
       "Id": "editBook",
       "Table": "books",
       "OperationType": "UpdateIncremental"
@@ -20,6 +25,11 @@
     {
       "Id": "deleteBook",
       "Table": "books",
+      "OperationType": "Delete"
+    },
+    {
+      "Id": "deleteReview",
+      "Table": "reviews",
       "OperationType": "Delete"
     },
     {
@@ -102,6 +112,9 @@
     "WebsiteUser": {
       "Table": "website_users"
     },
+    "Stock": {
+      "Table": "stocks"
+    },
     "Author": {
       "Table": "authors",
       "Fields": {
@@ -138,6 +151,9 @@
     "IsPaginationType": true
     },
     "ReviewConnection": {
+    "IsPaginationType": true
+    },
+    "StockConnection": {
     "IsPaginationType": true
     }
   }

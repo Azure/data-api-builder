@@ -29,7 +29,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>
         /// returns the list of jsons result and a metadata object required to resolve the Json.
         /// </returns>
-        public Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters);
+        public Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object?> parameters);
 
         /// <summary>
         /// Given the RestRequestContext structure, obtains the query text and executes it against the backend.

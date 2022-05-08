@@ -13,7 +13,7 @@ jobs:
       solution: '**/*.sln'
       buildPlatform: 'Any CPU'
       buildConfiguration: 'Release'
-      DataGatewayConfig.DatabaseConnection.ConnectionString: $(ConnectionStringSQLExpressVariable)
+      data-source.connection-string: $(ConnectionStringSQLExpressVariable)
 
   steps:
   - task: NuGetToolInstaller@1
@@ -35,7 +35,7 @@ jobs:
     displayName: Get and Start Ubuntu SQL Server Image Docker
 
   - task: FileTransform@1
-    displayName: 'Generate appsettings.MsSqlIntegrationTest.json'
+    displayName: 'Generate hawaii-config.MsSql.json'
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
@@ -43,7 +43,7 @@ jobs:
       # whereas IntegrationTests use MsSqlIntegrationTest.json.
       # In order to fix the connection string variables on all such files,
       # use file transform on all of them that match the pattern.
-      targetFiles: 'DataGateway.Service/appsettings.MsSql*.json'
+      targetFiles: 'DataGateway.Service/hawaii-config.MsSql.json'
 
   - task: DotNetCoreCLI@2
     displayName: Build
@@ -73,7 +73,7 @@ jobs:
       solution: '**/*.sln'
       buildPlatform: 'Any CPU'
       buildConfiguration: 'Release'
-      DataGatewayConfig.DatabaseConnection.ConnectionString: $(ConnectionStringLocalDBVariable)
+      data-source.connection-string: $(ConnectionStringLocalDBVariable)
       InstallerUrl: https://download.microsoft.com/download/7/c/1/7c14e92e-bdcb-4f89-b7cf-93543e7112d1/SqlLocalDB.msi
       SqlVersionCode: '15.0'
 
@@ -109,7 +109,7 @@ jobs:
         SqlLocalDb.exe info "MSSQLLocalDB"
 
   - task: FileTransform@1
-    displayName: 'Generate appsettings.MsSqlIntegrationTest.json'
+    displayName: 'Generate hawaii-config.MsSql.json'
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
@@ -117,7 +117,7 @@ jobs:
       # whereas IntegrationTests use MsSqlIntegrationTest.json.
       # In order to fix the connection string variables on all such files,
       # use file transform on all of them that match the pattern.
-      targetFiles: 'DataGateway.Service/appsettings.MsSql*.json'
+      targetFiles: 'DataGateway.Service/hawaii-config.MsSql.json'
 
   - task: DotNetCoreCLI@2
     displayName: Build

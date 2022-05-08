@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Services
@@ -269,7 +270,7 @@ namespace Azure.DataGateway.Service.Services
                         actionName = ((JsonElement)action).Deserialize<string>()!;
                     }
 
-                    string restVerb
+                    OperationAuthorizationRequirement restVerb
                             = HttpRestVerbs.GetVerb(actionName);
                     if (!tableDefinition.HttpVerbs.ContainsKey(restVerb.Name.ToString()!))
                     {

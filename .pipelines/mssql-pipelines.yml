@@ -35,7 +35,7 @@ jobs:
     displayName: Get and Start Ubuntu SQL Server Image Docker
 
   - task: FileTransform@1
-    displayName: 'Generate hawaii-config.MsSql.json'
+    displayName: 'Generate hawaii-config.mssql.json'
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
@@ -43,7 +43,7 @@ jobs:
       # whereas IntegrationTests use MsSqlIntegrationTest.json.
       # In order to fix the connection string variables on all such files,
       # use file transform on all of them that match the pattern.
-      targetFiles: 'DataGateway.Service/hawaii-config.MsSql.json'
+      targetFiles: 'DataGateway.Service/hawaii-config.mssql.json'
 
   - task: DotNetCoreCLI@2
     displayName: Build
@@ -109,7 +109,7 @@ jobs:
         SqlLocalDb.exe info "MSSQLLocalDB"
 
   - task: FileTransform@1
-    displayName: 'Generate hawaii-config.MsSql.json'
+    displayName: 'Generate hawaii-config.mssql.json'
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
@@ -117,7 +117,7 @@ jobs:
       # whereas IntegrationTests use MsSqlIntegrationTest.json.
       # In order to fix the connection string variables on all such files,
       # use file transform on all of them that match the pattern.
-      targetFiles: 'DataGateway.Service/hawaii-config.MsSql.json'
+      targetFiles: 'DataGateway.Service/hawaii-config.mssql.json'
 
   - task: DotNetCoreCLI@2
     displayName: Build

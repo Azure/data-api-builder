@@ -106,12 +106,19 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
         private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f, Entity entity)
         {
+            IValueNode? defaultValue = null;
+
+            if (DefaultValueDirectiveType.TryGetDefaultValue(f, out ObjectValueNode? value))
+            {
+                defaultValue = value.Fields[0].Value;
+            }
+
             return new(
                 location: null,
                 f.Name,
                 new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(name.Value, entity)}"),
                 f.Type,
-                defaultValue: null,
+                defaultValue,
                 new List<DirectiveNode>()
             );
         }

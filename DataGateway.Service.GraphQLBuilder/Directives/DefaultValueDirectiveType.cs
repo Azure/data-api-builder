@@ -22,7 +22,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Directives
                 .Type<DefaultValueType>();
         }
 
-        public static bool TryGetDefaultValue(FieldDefinitionNode field, [NotNullWhen(true)]out ObjectValueNode? value)
+        public static bool TryGetDefaultValue(FieldDefinitionNode field, [NotNullWhen(true)] out ObjectValueNode? value)
         {
             DirectiveNode? directive = field.Directives.FirstOrDefault(d => d.Name.Value == DirectiveName);
 

@@ -1,3 +1,6 @@
+DROP VIEW IF EXISTS magazines_view_subset;
+DROP VIEW IF EXISTS stocks_view_subset;
+DROP VIEW IF EXISTS books_publishers_view_composite;
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
@@ -161,3 +164,13 @@ INSERT INTO magazines(id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, '
 INSERT INTO brokers([ID Number], [First Name], [Last Name]) VALUES (1, 'Michael', 'Burry'), (2, 'Jordan', 'Belfort');
 INSERT INTO comics(id, title, categoryName) VALUES (1, 'Star Trek', 'SciFi'), (2, 'Cinderella', 'FairyTales'),(3,'Unknown','');
 INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2, 1, 'FairyTales'),(0,1,'');
+
+EXEC('CREATE VIEW magazines_view_subset AS SELECT id,issue_number FROM magazines');
+
+EXEC('CREATE VIEW stocks_view_subset AS SELECT
+     categoryid,pieceid,categoryName,piecesAvailable
+     FROM stocks');
+EXEC('CREATE VIEW books_publishers_view_composite as SELECT
+     books.id,publishers.name,books.publisher_id
+     FROM books,publishers
+     where publishers.id = books.publisher_id;');

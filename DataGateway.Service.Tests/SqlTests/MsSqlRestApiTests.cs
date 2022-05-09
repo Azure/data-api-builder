@@ -360,6 +360,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "PutOne_Update_NonNullableUnselected_View_Test",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable] " +
+                $"FROM { _simple_subset_sto } " +
+                $"WHERE [categoryid] = 2 AND [pieceid] = 1 AND [categoryName] = 'FairyTales' " +
+                $"AND [piecesAvailable] = 2 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PutOne_Update_NullableMissingFromJsonBody_View_Test",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable] " +
+                $"FROM { _simple_subset_sto } " +
+                $"WHERE [categoryid] = 2 AND [pieceid] = 1 AND [categoryName] = '' " +
+                $"AND [piecesAvailable] is NULL " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "PutOne_Update_Nulled_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
                 $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
@@ -417,6 +433,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
                 $"WHERE [categoryid] = 4 AND [pieceid] = 1 AND [categoryName] = '' " +
                 $"AND [piecesAvailable] = 2 AND [piecesRequired] = 3 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PutOne_Insert_NonNullableDefaultUnselected_View_Test",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable] " +
+                $"FROM { _simple_subset_sto } " +
+                $"WHERE [categoryid] = 3 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
+                $"AND [piecesAvailable] = 2 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PutOne_Insert_NullableMissingFromJsonBody_View_Test",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable] " +
+                $"FROM { _simple_subset_sto } " +
+                $"WHERE [categoryid] = 4 AND [pieceid] = 1 AND [categoryName] = 'FairyTales' " +
+                $"AND [piecesAvailable] = 0 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {

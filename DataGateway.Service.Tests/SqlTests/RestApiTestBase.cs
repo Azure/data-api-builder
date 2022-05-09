@@ -29,6 +29,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static readonly string _Composite_NonAutoGenPK = "stocks";
         protected static readonly string _integrationTableHasColumnWithSpace = "brokers";
         protected static readonly string _integrationTieBreakTable = "authors";
+        protected static readonly string _simple_subset_mag = "magazines_view_subset";
+        protected static readonly string _simple_subset_sto = "stocks_view_subset";
         public static readonly int _numRecordsReturnedFromTieBreakTable = 2;
 
         public abstract string GetQuery(string key);
@@ -902,6 +904,44 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 );
         }
 
+        [TestMethod]
+        public virtual async Task PutOne_Update_View_Test()
+        {
+            // Case E
+            string requestBody = @"
+            {
+               ""categoryName"":""FairyTales"",
+               ""piecesAvailable"":""2""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/2/pieceid/1",
+                queryString: null,
+                entity: _simple_subset_sto,
+                sqlQuery: GetQuery("PutOne_Update_NonNullableUnselected_View_Test"),
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.NoContent
+                );
+
+            //Case F
+            requestBody = @"
+            {
+               ""categoryName"":""""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/2/pieceid/1",
+                queryString: null,
+                entity: _simple_subset_sto,
+                sqlQuery: GetQuery("PutOne_Update_NullableMissingFromJsonBody_View_Test"),
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.NoContent
+                );
+        }
         /// <summary>
         /// Tests the PutOne functionality with a REST PUT request using
         /// headers that include as a key "If-Match" with an item that does exist,
@@ -1063,6 +1103,51 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 queryString: null,
                 entity: _Composite_NonAutoGenPK,
                 sqlQuery: GetQuery("PutOne_Insert_Empty_Test"),
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+                );
+        }
+
+        [TestMethod]
+        public async Task PutOne_Insert_View_Test()
+        {
+            // Case B : Successfully executes a PUT INSERT on the view in which the view
+            // does not have a NonNullable but default column from the base table.
+            string requestBody = @"
+            {
+               ""categoryName"":""SciFi"",
+               ""piecesAvailable"":""2""
+            }";
+
+            string expectedLocationHeader = $"categoryid/3/pieceid/1";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: expectedLocationHeader,
+                queryString: null,
+                entity: _simple_subset_sto,
+                sqlQuery: GetQuery("PutOne_Insert_NonNullableDefaultUnselected_View_Test"),
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+                );
+
+            //Case C: Successfully executes a PUT INSERT on the view in which
+            // a nullable column is missing from the request body.
+            requestBody = @"
+            {
+               ""categoryName"":""FairyTales""
+            }";
+
+            expectedLocationHeader = $"categoryid/4/pieceid/1";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: expectedLocationHeader,
+                queryString: null,
+                entity: _simple_subset_sto,
+                sqlQuery: GetQuery("PutOne_Insert_NullableMissingFromJsonBody_View_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
@@ -1674,6 +1759,53 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expectedErrorMessage: "Invalid request body. Missing field in body: categoryName.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
+            );
+        }
+
+        [TestMethod]
+        public virtual async Task PutOneWithNonNullableFieldMissingInJsonBodyViewTest()
+        {
+            //Case D : Fails to execute a PUT Insert on the view where a non-nullable
+            // column was missing from the requestBody
+            string requestBody = @"
+            {
+                ""piecesAvailable"":""6""
+            }";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/3/pieceid/1",
+                queryString: string.Empty,
+                entity: _simple_subset_sto,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Invalid request body. Missing field in body: categoryName.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: "BadRequest"
+            );
+        }
+
+        [TestMethod]
+        public virtual async Task PutOneInsertWithNonNullableNonDefaultFieldNotSelectedInView()
+        {
+            //Case A
+            string requestBody = @"
+            {
+                ""issue_number"":""6""
+            }";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/4",
+                queryString: string.Empty,
+                entity: _simple_subset_mag,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
+                expectedStatusCode: HttpStatusCode.InternalServerError,
+                expectedSubStatusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
             );
         }
 

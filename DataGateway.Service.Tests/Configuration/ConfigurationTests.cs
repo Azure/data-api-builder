@@ -25,6 +25,10 @@ namespace Azure.DataGateway.Service.Tests.Configuration
     public class ConfigurationTests
     {
         private const string ASP_NET_CORE_ENVIRONMENT_VAR_NAME = "ASPNETCORE_ENVIRONMENT";
+        private const string COSMOS_ENVIRONMENT = TestCategory.COSMOS;
+        private const string MSSQL_ENVIRONMENT = TestCategory.MSSQL;
+        private const string MYSQL_ENVIRONMENT = TestCategory.MYSQL;
+        private const string POSTGRESQL_ENVIRONMENT = TestCategory.POSTGRESQL;
 
         [TestMethod("Validates that queries before runtime is configured returns a 503.")]
         public async Task TestNoConfigReturnsServiceUnavailable()
@@ -46,7 +50,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             {
                 {
                     $"{nameof(RuntimeConfigPath.ConfigFileName)}",
-                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.cosmos{RuntimeConfigPath.CONFIG_EXTENSION}"
+                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
                 }
             };
 
@@ -60,7 +64,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("Validates that the config controller returns a conflict when using local configuration.")]
         public async Task TestConflictLocalConfiguration()
         {
-            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "cosmos");
+            Environment.SetEnvironmentVariable
+                (ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
@@ -70,7 +75,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             {
                 {
                     $"{nameof(RuntimeConfigPath.ConfigFileName)}",
-                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.cosmos{RuntimeConfigPath.CONFIG_EXTENSION}"
+                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
                 }
             };
 
@@ -88,7 +93,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             {
                 {
                     $"{nameof(RuntimeConfigPath.ConfigFileName)}",
-                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.cosmos{RuntimeConfigPath.CONFIG_EXTENSION}"
+                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
                 }
             };
 
@@ -107,7 +112,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             {
                 {
                     $"{nameof(RuntimeConfigPath.ConfigFileName)}",
-                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.cosmos{RuntimeConfigPath.CONFIG_EXTENSION}"
+                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
                 },
             };
 
@@ -129,7 +134,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("Validates that local cosmos settings can be loaded and the correct classes are in the service provider.")]
         public void TestLoadingLocalCosmosSettings()
         {
-            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "cosmos");
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
             ValidateCosmosDbSetup(server);
@@ -138,7 +143,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("Validates that local MsSql settings can be loaded and the correct classes are in the service provider.")]
         public void TestLoadingLocalMsSqlSettings()
         {
-            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "mssql");
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
             object queryEngine = server.Services.GetService(typeof(IQueryEngine));
@@ -166,7 +171,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("Validates that local PostgreSql settings can be loaded and the correct classes are in the service provider.")]
         public void TestLoadingLocalPostgresSettings()
         {
-            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "postgresql");
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, POSTGRESQL_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
             object queryEngine = server.Services.GetService(typeof(IQueryEngine));
@@ -194,7 +199,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("Validates that local MySql settings can be loaded and the correct classes are in the service provider.")]
         public void TestLoadingLocalMySqlSettings()
         {
-            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "mysql");
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MYSQL_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
             object queryEngine = server.Services.GetService(typeof(IQueryEngine));
@@ -222,14 +227,14 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("Validates that trying to override configs that are already set fail.")]
         public async Task TestOverridingLocalSettingsFails()
         {
-            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "cosmos");
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
             HttpClient client = server.CreateClient();
             Dictionary<string, string> config = new()
             {
                 {
                     $"{nameof(RuntimeConfigPath.ConfigFileName)}",
-                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.mssql{RuntimeConfigPath.CONFIG_EXTENSION}"
+                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{MSSQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
                 }
             };
 
@@ -237,7 +242,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Assert.AreEqual(HttpStatusCode.Conflict, postResult.StatusCode);
             // Since the body of the response when there's a conflict is the conflicting key:value pair, here we
             // expect DatabaseType:mssql.
-            Assert.AreEqual("ConfigFileName:hawaii-config.mssql.json", await postResult.Content.ReadAsStringAsync());
+            Assert.AreEqual($"ConfigFileName:hawaii-config.{MSSQL_ENVIRONMENT}.json",
+                await postResult.Content.ReadAsStringAsync());
         }
 
         [TestMethod("Validates that setting the configuration at runtime will instantiate the proper classes.")]
@@ -249,7 +255,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             {
                 {
                     $"{nameof(RuntimeConfigPath.ConfigFileName)}",
-                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.cosmos{RuntimeConfigPath.CONFIG_EXTENSION}"
+                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
                 }
             };
 
@@ -267,7 +273,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             {
                 {
                     $"{nameof(RuntimeConfigPath.ConfigFileName)}",
-                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.cosmos{RuntimeConfigPath.CONFIG_EXTENSION}"
+                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
                 }
             };
 
@@ -282,7 +288,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             else
             {
                 Assert.AreEqual(
-                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.cosmos{RuntimeConfigPath.CONFIG_EXTENSION}",
+                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}",
                     finalConfigFileName);
             }
 
@@ -299,12 +305,12 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             {
                 {
                     $"{nameof(RuntimeConfigPath.ConfigFileName)}",
-                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.postgresql{RuntimeConfigPath.CONFIG_EXTENSION}"
+                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{POSTGRESQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
                 }
             };
             provider.SetManyAndReload(toUpdate);
             Assert.AreEqual(
-                $"{RuntimeConfigPath.CONFIGFILE_NAME}.postgresql{RuntimeConfigPath.CONFIG_EXTENSION}",
+                $"{RuntimeConfigPath.CONFIGFILE_NAME}.{POSTGRESQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}",
                 finalConfigFileName);
         }
 
@@ -444,8 +450,12 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("Validates command line configuration provider.")]
         public void TestCommandLineConfigurationProvider()
         {
-            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "mssql");
-            string[] args = new[] { "--ConfigFileName=hawaii-config.cosmos.json" };
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
+            string[] args = new[]
+            {
+                $"--ConfigFileName={RuntimeConfigPath.CONFIGFILE_NAME}.{MSSQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
+            };
+
             TestServer server = new(Program.CreateWebHostBuilder(args));
 
             ValidateCosmosDbSetup(server);

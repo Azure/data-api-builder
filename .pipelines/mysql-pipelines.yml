@@ -14,7 +14,7 @@ jobs:
       solution: '**/*.sln'
       buildPlatform: 'Any CPU'
       buildConfiguration: 'Release'
-      DataGatewayConfig.DatabaseConnection.ConnectionString: $(ConnectionStringMySql)
+      data-source.connection-string: $(ConnectionStringMySql)
 
   steps:
   - task: NuGetToolInstaller@1
@@ -39,15 +39,11 @@ jobs:
     displayName: Get and Start Ubuntu MySql Image Docker
 
   - task: FileTransform@1
-    displayName: 'Generate appsettings.MySqlIntegrationTest.json'
+    displayName: 'Generate hawaii-config.MySql.json'
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      # The ConfigurationTests use appsettings.MySql.json
-      # whereas IntegrationTests use MySqlIntegrationTest.json.
-      # In order to fix the connection string variables on all such files,
-      # use file transform on all of them that match the pattern.
-      targetFiles: 'DataGateway.Service/appsettings.MySql*.json'
+      targetFiles: 'DataGateway.Service/hawaii-config.MySql.json'
 
   - task: DotNetCoreCLI@2
     displayName: Build

@@ -10,7 +10,7 @@ jobs:
       solution: '**/*.sln'
       buildPlatform: 'Any CPU'
       buildConfiguration: 'Release'
-      DataGatewayConfig.DatabaseConnection.ConnectionString: $(ConnectionStringPostgres)
+      data-source.connection-string: $(ConnectionStringPostgres)
 
   steps:
   - task: NuGetToolInstaller@1
@@ -35,15 +35,11 @@ jobs:
     displayName: Get and Start Ubuntu Postgres Image Docker
 
   - task: FileTransform@1
-    displayName: 'Generate appsettings.PostgreSqlIntegrationTest.json'
+    displayName: 'Generate hawaii-config.PostgreSql.json'
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      # The ConfigurationTests use appsettings.PostgreSql.json
-      # whereas IntegrationTests use PostSqlIntegrationTest.json.
-      # In order to fix the connection string variables on all such files,
-      # use file transform on all of them that match the pattern.
-      targetFiles: 'DataGateway.Service/appsettings.PostgreSql*.json'
+      targetFiles: 'DataGateway.Service/hawaii-config.PostgreSql.json'
 
   - task: DotNetCoreCLI@2
     displayName: Build

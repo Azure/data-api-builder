@@ -19,7 +19,16 @@ namespace Azure.DataGateway.Service.Resolvers
 
         public QueryExecutor(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath, DbExceptionParserBase dbExceptionParser)
         {
-            _runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
+            if (runtimeConfigPath.CurrentValue.ConfigValue is not null)
+            {
+                _runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue;
+            }
+            else
+            {
+                throw new ArgumentNullException("runtime-config",
+                    "The runtime-config value has not been set yet.");
+            }
+
             _dbExceptionParser = dbExceptionParser;
         }
 

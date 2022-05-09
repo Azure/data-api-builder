@@ -34,6 +34,7 @@ namespace Azure.DataGateway.Config
         MySqlOptions? MySql,
         [property: JsonPropertyName("runtime")]
         Dictionary<GlobalSettingsType, GlobalSettings> RuntimeSettings,
+        [property: JsonPropertyName("entities")]
         Dictionary<string, Entity> Entities)
     {
         public void SetDefaults()

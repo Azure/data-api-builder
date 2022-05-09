@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using System.Runtime.Serialization;
 
 namespace Azure.DataGateway.Config
 {
@@ -73,8 +74,11 @@ namespace Azure.DataGateway.Config
     /// </summary>
     public enum GlobalSettingsType
     {
+        [EnumMember(Value = "rest")]
         Rest,
+        [EnumMember(Value = "graphql")]
         GraphQL,
+        [EnumMember(Value = "host")]
         Host
     }
 

@@ -5,7 +5,7 @@ namespace Azure.DataGateway.Config
 {
     /// <summary>
     /// Defines the Entities that are exposed.
-    /// </summary>   
+    /// </summary>
     /// <param name="Source">The underlying database object to which
     /// the exposed entity is connected to.</param>
     /// <param name="Rest">Can be a bool or RestEntitySettings type.
@@ -22,9 +22,13 @@ namespace Azure.DataGateway.Config
     /// <param name="Mappings"> Defines mappings between database fields
     /// and GraphQL and REST fields.</param>
     public record Entity(
+        [property: JsonPropertyName("source")]
         object Source,
+        [property: JsonPropertyName("rest")]
         object? Rest,
+        [property: JsonPropertyName("graphQL")]
         object? GraphQL,
+        [property: JsonPropertyName("permissions")]
         PermissionSetting[] Permissions,
         Dictionary<string, Relationship>? Relationships,
         Dictionary<string, string>? Mappings)

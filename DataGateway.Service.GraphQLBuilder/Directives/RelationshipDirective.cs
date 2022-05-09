@@ -1,3 +1,4 @@
+using Azure.DataGateway.Config;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using DirectiveLocation = HotChocolate.Types.DirectiveLocation;
@@ -23,6 +24,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Directives
                   .Description("The relationship cardinality");
         }
 
+        /// <summary>
+        /// Gets the target object type name for a field with a relationship directive.
+        /// </summary>
+        /// <param name="field">The field that has a relationship directive defined.</param>
+        /// <returns>The name of the GraphQL object type that the relationship targets. If no relationship is defined, the object type of the field is returned.</returns>
         public static string Target(FieldDefinitionNode field)
         {
             DirectiveNode? directive = field.Directives.FirstOrDefault(d => d.Name.Value == DirectiveName);
@@ -37,18 +43,24 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Directives
             return (string)arg.Value.Value!;
         }
 
-        public static string Cardinality(FieldDefinitionNode field)
+        /// <summary>
+        /// Gets the cardinality of the relationship.
+        /// </summary>
+        /// <param name="field">The field that has a relationship directive defined.</param>
+        /// <returns>Relationship cardinality</returns>
+        /// <exception cref="ArgumentException">Thrown if the field does not have a defined relationship.</exception>
+        public static Cardinality Cardinality(FieldDefinitionNode field)
         {
             DirectiveNode? directive = field.Directives.FirstOrDefault(d => d.Name.Value == DirectiveName);
 
             if (directive == null)
             {
-                return field.Type.NamedType().Name.Value;
+                throw new ArgumentException("The specified field does not have a relationship directive defined.");
             }
 
             ArgumentNode arg = directive.Arguments.First(a => a.Name.Value == "cardinality");
 
-            return (string)arg.Value.Value!;
+            return Enum.Parse<Cardinality>((string)arg.Value.Value!);
         }
     }
 }

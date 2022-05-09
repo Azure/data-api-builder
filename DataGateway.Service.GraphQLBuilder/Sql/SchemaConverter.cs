@@ -53,11 +53,6 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                 {
                     // Generate the field that represents the relationship to ObjectType, so you can navigate through it
                     // and walk the graph
-
-                    // TODO: This will need to be expanded to take care of the query fields that are available
-                    //       on the relationship, but until we have the work done to generate the right Input
-                    //       types for the queries, it's not worth trying to do it completely.
-
                     string targetTableName = relationship.TargetEntity.Split('.').Last();
                     Entity referencedEntity = entities[targetTableName];
 

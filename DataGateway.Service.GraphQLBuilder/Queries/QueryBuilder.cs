@@ -112,15 +112,14 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
             foreach (FieldDefinitionNode field in relationshipFields)
             {
-                DirectiveNode relationshipDirective = field.Directives.First(d => d.Name.Value == RelationshipDirectiveType.DirectiveName);
-                if (RelationshipDirectiveType.Cardinality(field) != "Many")
+                if (RelationshipDirectiveType.Cardinality(field) != Cardinality.Many)
                 {
                     continue;
                 }
 
-                DirectiveNode directive = field.Directives.First(d => d.Name.Value == RelationshipDirectiveType.DirectiveName);
+                string target = RelationshipDirectiveType.Target(field);
 
-                InputObjectTypeDefinitionNode input = inputObjects[(string)directive.Arguments.First(a => a.Name.Value == "target").Value.Value!];
+                InputObjectTypeDefinitionNode input = inputObjects[target];
 
                 List<InputValueDefinitionNode> args = QueryArgumentsForField(input.Name.Value);
 

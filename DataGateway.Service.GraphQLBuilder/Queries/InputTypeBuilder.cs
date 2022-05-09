@@ -72,8 +72,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 }
                 else
                 {
-                    DirectiveNode relationshipDirective = field.Directives.First(f => f.Name.Value == RelationshipDirectiveType.DirectiveName);
-                    string targetEntityName = (string)relationshipDirective.Arguments.First(a => a.Name.Value == "target").Value.Value!;
+                    string targetEntityName = RelationshipDirectiveType.Target(field);
 
                     inputFields.Add(
                         new(

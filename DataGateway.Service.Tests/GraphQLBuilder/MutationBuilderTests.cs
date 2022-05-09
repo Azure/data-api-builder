@@ -570,6 +570,30 @@ type Baz @model {
             Assert.AreEqual("id", argType.Fields[0].Name.Value);
         }
 
+        [DataTestMethod]
+        [DataRow(1, "int", "Int")]
+        [DataRow("test", "string", "String")]
+        [DataRow(true, "boolean", "Boolean")]
+        [DataRow(1.2f, "float", "Float")]
+        [TestCategory("Mutation Builder - Create")]
+        public void CreateMutationWillHonorDefaultValue(object defaultValue, string fieldName, string fieldType)
+        {
+            string gql =
+                @$"
+type Foo @model {{
+    id: {fieldType}! @defaultValue(value: {{ {fieldName}: {(defaultValue is string ? $"\"{defaultValue}\"" : defaultValue)} }})
+}}
+                ";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
+            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } });
+            InputObjectTypeDefinitionNode createFooInput = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is InputObjectTypeDefinitionNode node && node.Name.Value == "CreateFooInput");
+
+            // Serialization has them as strings, so we'll just do string compares
+            Assert.AreEqual(defaultValue.ToString(), createFooInput.Fields[0].DefaultValue.Value);
+        }
+
         private static ObjectTypeDefinitionNode GetMutationNode(DocumentNode mutationRoot)
         {
             return (ObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is ObjectTypeDefinitionNode node && node.Name.Value == "Mutation");

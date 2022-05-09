@@ -37,8 +37,9 @@ namespace Azure.DataGateway.Service
 
         private void OnConfigurationChanged(object state)
         {
-            RuntimeConfigPath options = new();
-            Configuration.Bind(options);
+            RuntimeConfigPath runtimeConfigPath = new();
+            Configuration.Bind(runtimeConfigPath);
+            runtimeConfigPath.SetRuntimeConfigValue();
         }
 
         // This method gets called by the runtime. Use this method to add services to the container.

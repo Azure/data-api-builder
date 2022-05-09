@@ -40,7 +40,8 @@ namespace Azure.DataGateway.Service.Services
             {
                 throw new ArgumentNullException("runtime-config.data-source.resolver-config-file",
                     $"The resolver config should be set via ResolverConfigFile: " +
-                    $"{config.DataSource.ResolverConfigFile}");
+                    $"{config.DataSource.ResolverConfigFile}\n" +
+                    $"RuntimeConfigPath: {runtimeConfigPath.CurrentValue}");
             }
 
             GraphQLResolverConfig =

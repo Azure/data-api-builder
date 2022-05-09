@@ -5,6 +5,6 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - "./DataGateway.Service/appsettings.mssql.json:/App/appsettings.json"
-      - "./DataGateway.Service/sql-config.json:/App/config.json"
       - "./DataGateway.Service/books.gql:/App/books.gql"
+      - "./DataGateway.Service/hawaii-config.MsSql.json:/App/hawaii-config.MsSql.json"
+      - "./DataGateway.Service/sql-config.json:/App/config.json"

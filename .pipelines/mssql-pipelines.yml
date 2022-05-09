@@ -13,7 +13,6 @@ jobs:
       solution: '**/*.sln'
       buildPlatform: 'Any CPU'
       buildConfiguration: 'Release'
-      data-source.connection-string: $(ConnectionStringSQLExpressVariable)
 
   steps:
   - task: NuGetToolInstaller@1

@@ -9,3 +9,5 @@
 
 # Local History for Visual Studio
 .localhistory/
+.vs/
+.code-workspace

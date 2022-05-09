@@ -14,7 +14,7 @@ namespace Azure.DataGateway.Service.Resolvers
     /// <summary>
     /// Contains methods to help generating the *Connection result for pagination
     /// </summary>
-    public class SqlPaginationUtil
+    public static class SqlPaginationUtil
     {
         /// <summary>
         /// Receives the result of a query as a JsonElement and parses:
@@ -86,7 +86,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public static JsonDocument CreatePaginationConnectionFromJsonDocument(JsonDocument jsonDocument, PaginationMetadata paginationMetadata)
         {
             // necessary for MsSql because it doesn't coalesce list query results like Postgres
-            if (jsonDocument == null)
+            if (jsonDocument is null)
             {
                 jsonDocument = JsonDocument.Parse("[]");
             }
@@ -179,12 +179,22 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public static IEnumerable<PaginationColumn> ParseAfterFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
         {
-            IEnumerable<PaginationColumn> after;
+            IEnumerable<PaginationColumn>? after;
             try
             {
                 afterJsonString = Base64Decode(afterJsonString);
-                after = JsonSerializer.Deserialize<IEnumerable<PaginationColumn>>(afterJsonString)!;
-                IEnumerable<string> primaryKeys = paginationMetadata.Structure!.PrimaryKey();
+                after = JsonSerializer.Deserialize<IEnumerable<PaginationColumn>>(afterJsonString);
+
+                if (after is null)
+                {
+                    throw new ArgumentException("Failed to parse the pagination information from the provided token");
+                }
+
+                Dictionary<string, PaginationColumn> afterDict = new();
+                foreach (PaginationColumn column in after)
+                {
+                    afterDict.Add(column.ColumnName, column);
+                }
 
                 // verify that primary keys is a sub set of after's column names
                 // if any primary keys are not contained in after's column names we throw exception
@@ -210,8 +220,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         afterDict[columnName].Direction != column.Direction)
                     {
                         throw new ArgumentException(
-                            $"Could not match order by column {columnName} with a column in the pagination token " +
-                            "with the same name and direction.");
+                            $"Could not match order by column {columnName} with a column in the pagination token with the same name and direction.");
                     }
 
                     orderByColumnCount++;
@@ -263,22 +272,14 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Resolves a JsonElement representing a variable to the appropriate type
         /// </summary>
         /// <exception cref="ArgumentException" />
-        public static object ResolveJsonElementToScalarVariable(JsonElement element)
+        public static object ResolveJsonElementToScalarVariable(JsonElement element) => element.ValueKind switch
         {
-            switch (element.ValueKind)
-            {
-                case JsonValueKind.String:
-                    return element.GetString()!;
-                case JsonValueKind.Number:
-                    return element.GetInt64();
-                case JsonValueKind.True:
-                    return true;
-                case JsonValueKind.False:
-                    return false;
-                default:
-                    throw new ArgumentException("Unexpected JsonElement value");
-            }
-        }
+            JsonValueKind.String => element.GetString()!,
+            JsonValueKind.Number => element.GetInt64(),
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            _ => throw new ArgumentException("Unexpected JsonElement value"),
+        };
 
         /// <summary>
         /// Encodes string to base64
@@ -324,7 +325,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 new
                 {
-                    nextLink = @$"{path}?{nvc.ToString()}"
+                    nextLink = @$"{path}?{nvc}"
                 }
             });
             return JsonSerializer.Deserialize<JsonElement>(jsonString);

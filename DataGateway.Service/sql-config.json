@@ -148,7 +148,7 @@
     "ReviewConnection": {
       "IsPaginationType": true
     },
-    "PublisherConnection": {
+    "StockConnection": {
       "IsPaginationType": true
     }
   }

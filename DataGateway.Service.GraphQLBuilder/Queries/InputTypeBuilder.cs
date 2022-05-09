@@ -72,8 +72,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 }
                 else
                 {
-                    DirectiveNode relationshipDirective = field.Directives.First(f => f.Name.Value == RelationshipDirectiveType.DirectiveName);
-                    string targetEntityName = (string)relationshipDirective.Arguments.First(a => a.Name.Value == "target").Value.Value!;
+                    string targetEntityName = RelationshipDirectiveType.Target(field);
 
                     inputFields.Add(
                         new(
@@ -91,46 +90,12 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             return inputFields;
         }
 
-        //private static InputObjectTypeDefinitionNode GenerateComplexInputObject(Dictionary<string, InputObjectTypeDefinitionNode> inputTypes, DocumentNode root, string fieldTypeName)
-        //{
-        //    IDefinitionNode fieldTypeNode = root.Definitions.First(d => d is HotChocolate.Language.IHasName named && named.Name.Value == fieldTypeName);
-
-        //    return
-        //        fieldTypeNode switch
-        //        {
-        //            ObjectTypeDefinitionNode node when !inputTypes.ContainsKey(GenerateObjectInputFilterName(node)) => new(
-        //                location: null,
-        //                new NameNode(GenerateObjectInputFilterName(node)),
-        //                new StringValueNode($"Filter input for {node.Name} GraphQL type"),
-        //                new List<DirectiveNode>(),
-        //                GenerateInputFieldsForType(node, inputTypes, root)),
-
-        //            ObjectTypeDefinitionNode node =>
-        //                inputTypes[GenerateObjectInputFilterName(node)],
-
-        //            EnumTypeDefinitionNode node when !inputTypes.ContainsKey(GenerateObjectInputFilterName(node)) => new(
-        //                location: null,
-        //                new NameNode(GenerateObjectInputFilterName(node)),
-        //                new StringValueNode($"Filter input for {node.Name} GraphQL type"),
-        //                new List<DirectiveNode>(),
-        //                new List<InputValueDefinitionNode> {
-        //                    new InputValueDefinitionNode(location : null, new NameNode("eq"), new StringValueNode("Equals"), new FloatType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
-        //                    new InputValueDefinitionNode(location : null, new NameNode("neq"), new StringValueNode("Not Equals"), new FloatType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>())
-        //                }),
-
-        //            EnumTypeDefinitionNode node =>
-        //                inputTypes[GenerateObjectInputFilterName(node)],
-
-        //            _ => throw new InvalidOperationException($"Unable to work with type {fieldTypeName}")
-        //        };
-        //}
-
         private static string GenerateObjectInputFilterName(INamedSyntaxNode node)
         {
             return GenerateObjectInputFilterName(node.Name.Value);
         }
 
-        private static string GenerateObjectInputFilterName(string name)
+        public static string GenerateObjectInputFilterName(string name)
         {
             return $"{name}FilterInput";
         }

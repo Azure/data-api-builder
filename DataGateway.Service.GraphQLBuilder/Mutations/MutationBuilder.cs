@@ -21,7 +21,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                     Entity entity = entities[dbEntityName];
 
                     mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entity));
-                    mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entity));
+                    mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entity, databaseType));
                     mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entity));
                 }
             }

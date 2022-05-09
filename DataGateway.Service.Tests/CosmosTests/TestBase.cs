@@ -69,7 +69,6 @@ type Planet {
     name : String
 }";
 
-            DataGatewayConfig dataGatewayConfig = new() { DatabaseType = Config.DatabaseType.cosmos };
             IRuntimeConfigProvider configProvider = new TestRuntimeConfigProvider();
 
             _metadataStoreProvider.GraphQLSchema = jsonString;
@@ -81,7 +80,6 @@ type Planet {
                 _metadataStoreProvider,
                 new DocumentCache(),
                 new Sha256DocumentHashProvider(),
-                dataGatewayConfig,
                 configProvider,
                 sqlMetadataProvider: null);
             _controller = new GraphQLController(_graphQLService);

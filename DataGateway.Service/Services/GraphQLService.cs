@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
+using Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.GraphQLBuilder.Sql;
@@ -27,7 +27,6 @@ namespace Azure.DataGateway.Service.Services
         private readonly IQueryEngine _queryEngine;
         private readonly IMutationEngine _mutationEngine;
         private readonly IGraphQLMetadataProvider _graphQLMetadataProvider;
-        private readonly DataGatewayConfig _config;
         private readonly IRuntimeConfigProvider _runtimeConfigProvider;
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly IDocumentCache _documentCache;
@@ -43,14 +42,12 @@ namespace Azure.DataGateway.Service.Services
             IGraphQLMetadataProvider graphQLMetadataProvider,
             IDocumentCache documentCache,
             IDocumentHashProvider documentHashProvider,
-            DataGatewayConfig config,
             IRuntimeConfigProvider runtimeConfigProvider,
             ISqlMetadataProvider sqlMetadataProvider)
         {
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
             _graphQLMetadataProvider = graphQLMetadataProvider;
-            _config = config;
             _runtimeConfigProvider = runtimeConfigProvider;
             _sqlMetadataProvider = sqlMetadataProvider;
             _documentCache = documentCache;
@@ -61,7 +58,7 @@ namespace Azure.DataGateway.Service.Services
             InitializeSchemaAndResolvers();
         }
 
-        public void ParseAsync(string data)
+        public void Parse(string data)
         {
             Schema = SchemaBuilder.New()
                .AddDocumentFromString(data)
@@ -79,23 +76,22 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="inputTypes">Reference table of the input types for query lookup</param>
         /// <param name="entities">Runtime config entities</param>
         /// <exception cref="DataGatewayException">Error will be raised if no database type is set</exception>
-        private void ParseAsync(DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes, Dictionary<string, Entity> entities)
+        private void Parse(DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes, Dictionary<string, Entity> entities)
         {
-            if (_config.DatabaseType == null)
-            {
-                throw new DataGatewayException("No database type was configured", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
-            }
-
+            DatabaseType databaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
             ISchemaBuilder sb = SchemaBuilder.New()
                 .AddDocument(root)
                 .AddDirectiveType<ModelDirectiveType>()
                 .AddDirectiveType<RelationshipDirectiveType>()
                 .AddDirectiveType<PrimaryKeyDirectiveType>()
+                .AddDirectiveType<DefaultValueDirectiveType>()
+                .AddType<DefaultValueType>()
                 .AddDocument(QueryBuilder.Build(root, entities, inputTypes))
-                .AddDocument(MutationBuilder.Build(root, _config.DatabaseType.Value, entities));
+                .AddDocument(MutationBuilder.Build(root, databaseType, entities));
 
             Schema = sb
                 .AddAuthorizeDirectiveType()
+                .ModifyOptions(o => o.EnableOneOf = true)
                 .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine, _graphQLMetadataProvider))
                 .Create();
 
@@ -180,28 +176,24 @@ namespace Azure.DataGateway.Service.Services
                 // If the schema is available, parse it and attach resolvers.
                 if (!string.IsNullOrEmpty(graphqlSchema))
                 {
-                    ParseAsync(graphqlSchema);
+                    Parse(graphqlSchema);
                 }
             }
             else if (!_useLegacySchema)
             {
-                if (_config.DatabaseType == null)
-                {
-                    throw new DataGatewayException("No database type was configured", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
-                }
-
+                DatabaseType databaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
                 Dictionary<string, Entity> entities = _runtimeConfigProvider.GetRuntimeConfig().Entities;
 
-                (DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = _config.DatabaseType switch
+                (DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = databaseType switch
                 {
                     DatabaseType.cosmos => GenerateCosmosGraphQLObjects(),
                     DatabaseType.mssql or
                     DatabaseType.postgresql or
                     DatabaseType.mysql => GenerateSqlGraphQLObjects(entities),
-                    _ => throw new NotImplementedException()
+                    _ => throw new NotImplementedException($"This database type {databaseType} is not yet implemented.")
                 };
 
-                ParseAsync(root, inputTypes, entities);
+                Parse(root, inputTypes, entities);
             }
         }
 
@@ -213,14 +205,9 @@ namespace Azure.DataGateway.Service.Services
             // First pass - build up the object and input types for all the entities
             foreach ((string entityName, Entity entity) in entities)
             {
-                if (entity.GraphQL is not null)
+                if (entity.GraphQL is not null && entity.GraphQL is bool graphql && graphql == false)
                 {
-                    if (entity.GraphQL is bool graphql && graphql == false)
-                    {
-                        continue;
-                    }
-
-                    // TODO: Do we need to check the object version of `entity.GraphQL`?
+                    continue;
                 }
 
                 TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
@@ -231,21 +218,9 @@ namespace Azure.DataGateway.Service.Services
             }
 
             // Pass two - Add the arguments to the many-to-* relationship fields
-            foreach ((string entityName, Entity entity) in entities)
+            foreach ((string entityName, ObjectTypeDefinitionNode node) in objectTypes)
             {
-                if (entity.GraphQL is not null)
-                {
-                    if (entity.GraphQL is bool graphql && graphql == false)
-                    {
-                        continue;
-                    }
-
-                    // TODO: Do we need to check the object version of `entity.GraphQL`?
-                }
-
-                ObjectTypeDefinitionNode node = objectTypes[entityName];
-                node = QueryBuilder.AddQueryArgumentsForRelationships(node, entity, inputObjects);
-                objectTypes[entityName] = node;
+                objectTypes[entityName] = QueryBuilder.AddQueryArgumentsForRelationships(node, inputObjects);
             }
 
             List<IDefinitionNode> nodes = new(objectTypes.Values);

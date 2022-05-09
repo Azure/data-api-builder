@@ -55,7 +55,7 @@ namespace Azure.DataGateway.Service.Services
             if (string.IsNullOrEmpty(GraphQLResolverConfig.GraphQLSchema))
             {
                 throw new ArgumentNullException(
-                    "hawaii-config.data-source.resolver-config-file.graphql-schema", 
+                    "hawaii-config.data-source.resolver-config-file.graphql-schema",
                     "GraphQLSchema is required in the resolver-config-file.");
             }
 

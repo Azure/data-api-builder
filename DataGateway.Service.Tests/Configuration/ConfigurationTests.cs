@@ -462,6 +462,23 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             ValidateCosmosDbSetup(server);
         }
 
+        /// <summary>
+        /// This function verifies the environment variable HAWAII_RUNTIME
+        /// takes precendence than ASPNET_CORE for the configuration file.
+        /// </summary>
+        [TestMethod("Validates precedence is given to HAWAII_RUNTIME environment variable name")]
+        public void TestRuntimeEnvironmentVariable()
+        {
+            Environment.SetEnvironmentVariable(
+                ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
+            Environment.SetEnvironmentVariable(
+                RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
+
+            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+
+            ValidateCosmosDbSetup(server);
+        }
+
         [TestCleanup]
         public void Cleanup()
         {

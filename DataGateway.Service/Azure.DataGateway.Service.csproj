@@ -57,11 +57,6 @@
 
 
   <ItemGroup>
-    <Content Remove="hawaii-config.mssql.json" />
-  </ItemGroup>
-
-
-  <ItemGroup>
     <Watch Remove="hawaii-config.cosmos.json" />
     <Watch Remove="hawaii-config.Cosmos.overrides.example.json" />
     <Watch Remove="hawaii-config.json" />
@@ -71,13 +66,6 @@
     <Watch Remove="hawaii-config.MySql.overrides.example.json" />
     <Watch Remove="hawaii-config.postgresql.json" />
     <Watch Remove="hawaii-config.PostgreSql.overrides.example.json" />
-  </ItemGroup>
-
-
-  <ItemGroup>
-    <None Include="hawaii-config.mssql.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
 

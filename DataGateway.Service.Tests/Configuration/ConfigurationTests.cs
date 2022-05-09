@@ -453,7 +453,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
             string[] args = new[]
             {
-                $"--ConfigFileName={RuntimeConfigPath.CONFIGFILE_NAME}.{MSSQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
+                $"--ConfigFileName={RuntimeConfigPath.CONFIGFILE_NAME}." +
+                $"{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
             };
 
             TestServer server = new(Program.CreateWebHostBuilder(args));

@@ -8,6 +8,7 @@ using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
+using Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.GraphQLBuilder.Sql;
@@ -83,6 +84,8 @@ namespace Azure.DataGateway.Service.Services
                 .AddDirectiveType<ModelDirectiveType>()
                 .AddDirectiveType<RelationshipDirectiveType>()
                 .AddDirectiveType<PrimaryKeyDirectiveType>()
+                .AddDirectiveType<DefaultValueDirectiveType>()
+                .AddType<DefaultValueType>()
                 .AddDocument(QueryBuilder.Build(root, entities, inputTypes))
                 .AddDocument(MutationBuilder.Build(root, databaseType, entities));
 

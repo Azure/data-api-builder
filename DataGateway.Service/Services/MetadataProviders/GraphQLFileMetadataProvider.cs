@@ -39,7 +39,8 @@ namespace Azure.DataGateway.Service.Services
             if (string.IsNullOrEmpty(resolverConfigJson))
             {
                 throw new ArgumentNullException("runtime-config.data-source.resolver-config-file",
-                    "The resolver config should be set via ResolverConfigFile.");
+                    $"The resolver config should be set via ResolverConfigFile: " +
+                    $"{config.DataSource.ResolverConfigFile}");
             }
 
             GraphQLResolverConfig =

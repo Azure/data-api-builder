@@ -30,11 +30,8 @@ namespace Azure.DataGateway.Service.Services
                     "The database type should be set before creating a GraphQLFileMetadataProvider");
             }
 
-            string? resolverConfigJson = config.DataSource.ResolverConfig;
-            string? graphQLSchema = config.DataSource.GraphQLSchema;
-
-            if (string.IsNullOrEmpty(resolverConfigJson) &&
-                !string.IsNullOrEmpty(config.DataSource.ResolverConfigFile))
+            string? resolverConfigJson = null;
+            if (!string.IsNullOrEmpty(config.DataSource.ResolverConfigFile))
             {
                 resolverConfigJson = File.ReadAllText(config.DataSource.ResolverConfigFile);
             }
@@ -42,7 +39,7 @@ namespace Azure.DataGateway.Service.Services
             if (string.IsNullOrEmpty(resolverConfigJson))
             {
                 throw new ArgumentNullException("runtime-config.data-source.resolver-config-file",
-                    "The resolver config should be set either via ResolverConfig or ResolverConfigFile.");
+                    "The resolver config should be set via ResolverConfigFile.");
             }
 
             GraphQLResolverConfig =
@@ -50,13 +47,16 @@ namespace Azure.DataGateway.Service.Services
 
             if (string.IsNullOrEmpty(GraphQLResolverConfig.GraphQLSchema))
             {
-                if (string.IsNullOrEmpty(graphQLSchema))
-                {
-                    graphQLSchema = File.ReadAllText(
+                string graphQLSchema = File.ReadAllText(
                         GraphQLResolverConfig.GraphQLSchemaFile ?? "schema.gql");
-                }
-
                 GraphQLResolverConfig = GraphQLResolverConfig with { GraphQLSchema = graphQLSchema };
+            }
+
+            if (string.IsNullOrEmpty(GraphQLResolverConfig.GraphQLSchema))
+            {
+                throw new ArgumentNullException(
+                    "hawaii-config.data-source.resolver-config-file.graphql-schema", 
+                    "GraphQLSchema is required in the resolver-config-file.");
             }
 
             _mutationResolvers = new();

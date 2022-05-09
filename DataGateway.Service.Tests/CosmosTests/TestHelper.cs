@@ -4,6 +4,7 @@ using System.IO;
 using Azure.DataGateway.Config;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using Moq;
 
 namespace Azure.DataGateway.Service.Tests.CosmosTests
 {
@@ -29,7 +30,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
 
             RuntimeConfigPath configPath = config.Get<RuntimeConfigPath>();
             configPath.SetRuntimeConfigValue();
-            return (IOptionsMonitor<RuntimeConfigPath>)configPath;
+            return Mock.Of<IOptionsMonitor<RuntimeConfigPath>>(_ => _.CurrentValue == configPath);
         }
 
         public static IOptionsMonitor<RuntimeConfigPath> ConfigPath

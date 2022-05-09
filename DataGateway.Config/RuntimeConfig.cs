@@ -173,18 +173,10 @@ namespace Azure.DataGateway.Config
                 return;
             }
 
-            bool isResolverConfigSet = !string.IsNullOrEmpty(options.DataSource.ResolverConfig);
-            bool isResolverConfigFileSet = !string.IsNullOrEmpty(options.DataSource.ResolverConfigFile);
-            bool isGraphQLSchemaSet = !string.IsNullOrEmpty(options.DataSource.GraphQLSchema);
-            if (!(isResolverConfigSet ^ isResolverConfigFileSet))
+            if (string.IsNullOrEmpty(options.DataSource.ResolverConfigFile))
             {
-                throw new NotSupportedException
-                    ("Either the Resolver Config or the Resolver Config File needs to be provided. Not both.");
-            }
-
-            if (isResolverConfigSet && !isGraphQLSchemaSet)
-            {
-                throw new NotSupportedException("The GraphQLSchema should be provided with the config.");
+                throw new NotSupportedException("The ResolverConfigFile should be provided" +
+                    " with the runtime config.");
             }
 
             if (string.IsNullOrWhiteSpace(options.DataSource.ConnectionString))
@@ -211,7 +203,7 @@ namespace Azure.DataGateway.Config
                     " when not using EasyAuth.");
             }
 
-            if (!options.IsEasyAuthAuthenticationProvider() && (isAudienceSet || isIssuerSet))
+            if (options.IsEasyAuthAuthenticationProvider() && (isAudienceSet || isIssuerSet))
             {
                 throw new NotSupportedException("Audience and Issuer should not be set" +
                     " and are not used with EasyAuth.");

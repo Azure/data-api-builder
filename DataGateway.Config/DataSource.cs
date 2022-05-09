@@ -14,9 +14,7 @@ namespace Azure.DataGateway.Config
         [property: JsonPropertyName(DataSource.CONNSTRING_PROPERTY_NAME)]
         string? ConnectionString,
         [property: JsonPropertyName(RuntimeConfig.RESOLVER_CONFIG_PROPERTY_NAME)]
-        string? ResolverConfigFile,
-        string? ResolverConfig,
-        string? GraphQLSchema)
+        string? ResolverConfigFile)
     {
         public const string CONFIG_PROPERTY_NAME = "data-source";
         public const string DATABASE_PROPERTY_NAME = "database-type";
@@ -26,9 +24,7 @@ namespace Azure.DataGateway.Config
             this(
                 DatabaseType: null,
                 ConnectionString: null,
-                ResolverConfigFile: null,
-                ResolverConfig: null,
-                GraphQLSchema: null)
+                ResolverConfigFile: null)
         { }
     }
 

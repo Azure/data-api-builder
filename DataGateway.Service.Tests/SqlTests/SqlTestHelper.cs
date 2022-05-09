@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
@@ -48,7 +49,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             RuntimeConfigPath configPath = config.Get<RuntimeConfigPath>();
             configPath.SetRuntimeConfigValue();
 
-            return (IOptionsMonitor<RuntimeConfigPath>)configPath;
+            return Mock.Of<IOptionsMonitor<RuntimeConfigPath>>(_ => _.CurrentValue == configPath);
+
         }
 
         /// <summary>

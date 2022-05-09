@@ -16,7 +16,7 @@ namespace Hawaii.Cli.Classes
 
             string schema = Directory.GetCurrentDirectory().Replace("\\", "/") + "/" + file;
 
-            RuntimeConfig runtimeConfig = new RuntimeConfig(schema, dataSource, null, null, null, null, GetRuntimeSettings(), new Dictionary<string, Entity>());
+            RuntimeConfig runtimeConfig = new RuntimeConfig(schema, dataSource, null, null, null, null, null, new Dictionary<string, Entity>());
 
             string JSONresult = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
 

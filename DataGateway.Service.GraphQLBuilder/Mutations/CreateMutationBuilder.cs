@@ -121,7 +121,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
         /// </summary>
         /// <param name="inputs">Dictionary of all input types, allowing reuse where possible.</param>
         /// <param name="definitions">All named GraphQL types from the schema (objects, enums, etc.) for referencing.</param>
-        /// <param name="f">Field that the input type is being generated for.</param>
+        /// <param name="field">Field that the input type is being generated for.</param>
         /// <param name="typeName">Name of the input type in the dictionary.</param>
         /// <param name="otdn">The GraphQL object type to create the input type for.</param>
         /// <param name="databaseType">Database type to generate the input type for.</param>
@@ -130,7 +130,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
         private static InputValueDefinitionNode GetComplexInputType(
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
             IEnumerable<HotChocolate.Language.IHasName> definitions,
-            FieldDefinitionNode f,
+            FieldDefinitionNode field,
             string typeName,
             ObjectTypeDefinitionNode otdn,
             DatabaseType databaseType,
@@ -140,21 +140,51 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             NameNode inputTypeName = GenerateInputTypeName(typeName, entity);
             if (!inputs.ContainsKey(inputTypeName))
             {
-                node = GenerateCreateInputType(inputs, otdn, f.Type.NamedType().Name, definitions, databaseType, entity);
+                node = GenerateCreateInputType(inputs, otdn, field.Type.NamedType().Name, definitions, databaseType, entity);
             }
             else
             {
                 node = inputs[inputTypeName];
             }
 
+            ITypeNode type = new NamedTypeNode(node.Name);
+
+            // For a type like [Bar!]! we have to first unpack the outer non-null
+            if (field.Type.IsNonNullType())
+            {
+                // The innerType is the raw List, scalar or object type without null settings
+                ITypeNode innerType = field.Type.InnerType();
+
+                if (innerType.IsListType())
+                {
+                    type = GenerateListType(type, innerType);
+                }
+
+                // Wrap the input with non-null to match the field definition
+                type = new NonNullTypeNode((INullableTypeNode)type);
+            }
+            else if (field.Type.IsListType())
+            {
+                type = GenerateListType(type, field.Type);
+            }
+
             return new(
                 location: null,
-                f.Name,
-                new StringValueNode($"Input for field {f.Name} on type {inputTypeName}"),
-                new NonNullTypeNode(new NamedTypeNode(node.Name)), // TODO - figure out how to properly walk the graph, so you can do [Foo!]!
+                field.Name,
+                new StringValueNode($"Input for field {field.Name} on type {inputTypeName}"),
+                type,
                 defaultValue: null,
-                f.Directives
+                field.Directives
             );
+        }
+
+        private static ITypeNode GenerateListType(ITypeNode type, ITypeNode fieldType)
+        {
+            // Look at the inner type of the list type, eg: [Bar]'s inner type is Bar
+            // and if it's nullable, make the input also nullable
+            return fieldType.InnerType().IsNonNullType()
+                ? new ListTypeNode(new NonNullTypeNode((INullableTypeNode)type))
+                : new ListTypeNode(type);
         }
 
         private static NameNode GenerateInputTypeName(string typeName, Entity entity)

@@ -53,7 +53,7 @@ namespace Azure.DataGateway.Service.Services
             _documentCache = documentCache;
             _documentHashProvider = documentHashProvider;
 
-            _useLegacySchema = true;
+            _useLegacySchema = false;
 
             InitializeSchemaAndResolvers();
         }
@@ -236,7 +236,17 @@ namespace Azure.DataGateway.Service.Services
                 throw new DataGatewayException("No GraphQL object model was provided for CosmosDB. Please define a GraphQL object model and link it in the runtime config.", System.Net.HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
             }
 
-            return (Utf8GraphQLParser.Parse(graphqlSchema), new Dictionary<string, InputObjectTypeDefinitionNode>());
+            Dictionary<string, InputObjectTypeDefinitionNode> inputObjects = new();
+            DocumentNode root = Utf8GraphQLParser.Parse(graphqlSchema);
+
+            IEnumerable<ObjectTypeDefinitionNode> objectNodes = root.Definitions.Where(d => d is ObjectTypeDefinitionNode).Cast<ObjectTypeDefinitionNode>();
+
+            foreach (ObjectTypeDefinitionNode node in objectNodes)
+            {
+                InputTypeBuilder.GenerateInputTypeForObjectType(node, inputObjects);
+            }
+
+            return (root.WithDefinitions(root.Definitions.Concat(inputObjects.Values).ToImmutableList()), inputObjects);
         }
 
         /// <summary>

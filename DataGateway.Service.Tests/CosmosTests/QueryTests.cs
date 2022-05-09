@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.CosmosTests
@@ -11,39 +12,35 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
     {
         private static readonly string _containerName = Guid.NewGuid().ToString();
 
-        public static readonly string PlanetByIdQueryFormat = @"
+        public static readonly string PlanetByPKQuery = @"
 query ($id: ID) {
-    planetById (id: $id) {
+    planet_by_pk (id: $id) {
         id
         name
     }
 }";
-        public static readonly string PlanetListQuery = @"{planetList{ id, name}}";
-        public static readonly string PlanetConnectionQueryStringFormat = @"
+        public static readonly string PlanetsQuery = @"
 query ($first: Int!, $after: String) {
     planets (first: $first, after: $after) {
         items {
             id
             name
         }
-        endCursor
+        after
         hasNextPage
     }
 }";
 
         private static List<string> _idList;
+        private const int TOTAL_ITEM_COUNT = 10;
 
-        /// <summary>
-        /// Executes once for the test class.
-        /// </summary>
-        /// <param name="context"></param>
         [ClassInitialize]
         public static void TestFixtureSetup(TestContext context)
         {
             Init(context);
             Client.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
             Client.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
-            _idList = CreateItems(DATABASE_NAME, _containerName, 10);
+            _idList = CreateItems(DATABASE_NAME, _containerName, TOTAL_ITEM_COUNT);
             RegisterGraphQLType("Planet", DATABASE_NAME, _containerName);
             RegisterGraphQLType("PlanetConnection", DATABASE_NAME, _containerName, true);
         }
@@ -53,37 +50,29 @@ query ($first: Int!, $after: String) {
         {
             // Run query
             string id = _idList[0];
-            JsonElement response = await ExecuteGraphQLRequestAsync("planetById", PlanetByIdQueryFormat, new() { { "id", id } });
+            JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", PlanetByPKQuery, new() { { "id", id } });
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
         }
 
-        /// <summary>
-        /// This test runs a query to list all the items in a container. Then, gets all the items by
-        /// running a paginated query that gets n items per page. We then make sure the number of documents match
-        /// </summary>
         [TestMethod]
         public async Task GetPaginatedWithVariables()
         {
-            // Run query
-            JsonElement response = await ExecuteGraphQLRequestAsync("planetList", PlanetListQuery);
-            int actualElements = response.GetArrayLength();
-            // Run paginated query
+            const int pagesize = TOTAL_ITEM_COUNT / 2;
+            string afterToken = null;
             int totalElementsFromPaginatedQuery = 0;
-            string continuationToken = null;
-            const int pagesize = 5;
 
             do
             {
-                JsonElement page = await ExecuteGraphQLRequestAsync("planets", PlanetConnectionQueryStringFormat, new() { { "first", pagesize }, { "after", continuationToken } });
-                JsonElement continuation = page.GetProperty("endCursor");
-                continuationToken = continuation.ToString();
-                totalElementsFromPaginatedQuery += page.GetProperty("items").GetArrayLength();
-            } while (!string.IsNullOrEmpty(continuationToken));
+                JsonElement page = await ExecuteGraphQLRequestAsync("planets", PlanetsQuery, new() { { "first", pagesize }, { "after", afterToken } });
+                JsonElement after = page.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME);
+                afterToken = after.ToString();
+                totalElementsFromPaginatedQuery += page.GetProperty(QueryBuilder.PAGINATION_FIELD_NAME).GetArrayLength();
+            } while (!string.IsNullOrEmpty(afterToken));
 
             // Validate results
-            Assert.AreEqual(actualElements, totalElementsFromPaginatedQuery);
+            Assert.AreEqual(TOTAL_ITEM_COUNT, totalElementsFromPaginatedQuery);
         }
 
         [TestMethod]
@@ -93,12 +82,12 @@ query ($first: Int!, $after: String) {
             string id = _idList[0];
             string query = @$"
 query {{
-    planetById (id: ""{id}"") {{
+    planet_by_pk (id: ""{id}"") {{
         id
         name
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("planetById", query);
+            JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", query);
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
@@ -107,46 +96,38 @@ query {{
         [TestMethod]
         public async Task GetPaginatedWithoutVariables()
         {
-            // Run query
-            JsonElement response = await ExecuteGraphQLRequestAsync("planetList", PlanetListQuery);
-            int actualElements = response.GetArrayLength();
-            // Run paginated query
+            const int pagesize = TOTAL_ITEM_COUNT / 2;
             int totalElementsFromPaginatedQuery = 0;
-            string continuationToken = null;
-            const int pagesize = 5;
+            string afterToken = null;
 
             do
             {
                 string planetConnectionQueryStringFormat = @$"
 query {{
-    planets (first: {pagesize}, after: {(continuationToken == null ? "null" : "\"" + continuationToken + "\"")}) {{
+    planets (first: {pagesize}, after: {(afterToken == null ? "null" : "\"" + afterToken + "\"")}) {{
         items {{
             id
             name
         }}
-        endCursor
+        after
         hasNextPage
     }}
 }}";
 
                 JsonElement page = await ExecuteGraphQLRequestAsync("planets", planetConnectionQueryStringFormat, new());
-                JsonElement continuation = page.GetProperty("endCursor");
-                continuationToken = continuation.ToString();
-                totalElementsFromPaginatedQuery += page.GetProperty("items").GetArrayLength();
-            } while (!string.IsNullOrEmpty(continuationToken));
+                JsonElement after = page.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME);
+                afterToken = after.ToString();
+                totalElementsFromPaginatedQuery += page.GetProperty(QueryBuilder.PAGINATION_FIELD_NAME).GetArrayLength();
+            } while (!string.IsNullOrEmpty(afterToken));
 
             // Validate results
-            Assert.AreEqual(actualElements, totalElementsFromPaginatedQuery);
+            Assert.AreEqual(TOTAL_ITEM_COUNT, totalElementsFromPaginatedQuery);
         }
 
-        /// <summary>
-        /// Runs once after all tests in this class are executed
-        /// </summary>
         [ClassCleanup]
         public static void TestFixtureTearDown()
         {
             Client.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
         }
-
     }
 }

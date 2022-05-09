@@ -36,35 +36,15 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             _clientProvider = new CosmosClientProvider(TestHelper.DataGatewayConfigMonitor);
             _metadataStoreProvider = new MetadataStoreProviderForTest();
             string jsonString = @"
-type Query {
-    characterList: [Character]
-    characterById (id : ID!): Character
-    planetById (id: ID! = 1): Planet
-    getPlanet(id: ID, name: String): Planet
-    planetList: [Planet]
-    planets(first: Int, after: String): PlanetConnection
+type Character @model {
+        id : ID,
+        name : String,
+        type: String,
+        homePlanet: Int,
+        primaryFunction: String
 }
 
-type Mutation {
-    addPlanet(id: String, name: String): Planet
-    deletePlanet(id: String): Planet
-}
-
-type PlanetConnection {
-    items: [Planet]
-    endCursor: String
-    hasNextPage: Boolean
-}
-
-type Character {
-    id : ID,
-    name : String,
-    type: String,
-    homePlanet: Int,
-    primaryFunction: String
-}
-
-type Planet {
+type Planet @model {
     id : ID,
     name : String
 }";

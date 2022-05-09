@@ -34,6 +34,17 @@ c) update the installed tool:
 dotnet tool update -g --add-source ./nupkg hawaii-cli --version 2.0.0
 ```
 
+NOTE
+ISSUE: If you see any error while while installing the tool due to some class not found. 
+FIX: the gql-engine(hawaii-gql) is probably not linked properly.
+Please update the correct path in .csproj file.
+```
+<ItemGroup>
+	<Reference Include="Azure.DataGateway.Config">
+		<HintPath>..\hawaii-gql\DataGateway.Config\bin\Debug\net6.0\Azure.DataGateway.Config.dll</HintPath>
+	</Reference>
+</ItemGroup>
+```
 
 
 **To generate the config:**

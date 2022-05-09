@@ -32,7 +32,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             JObject jObject;
 
-            if (inputDict != null)
+            if (inputDict != null && inputDict.Count > 0)
             {
                 // TODO: optimize this multiple round of serialization/deserialization
                 string json = JsonConvert.SerializeObject(inputDict);
@@ -75,7 +75,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     break;
                 default:
-                    throw new NotSupportedException($"unsupprted operation type: {resolver.OperationType.ToString()}");
+                    throw new NotSupportedException($"unsupported operation type: {resolver.OperationType.ToString()}");
             }
 
             return response.Resource;

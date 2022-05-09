@@ -43,6 +43,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             return new
             {
                 id = id,
+                name = "test name",
                 myProp = "a value",
                 myIntProp = 4,
                 myBooleanProp = true,

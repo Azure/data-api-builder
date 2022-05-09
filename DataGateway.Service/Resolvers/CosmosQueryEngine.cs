@@ -94,14 +94,14 @@ namespace Azure.DataGateway.Service.Resolvers
                 return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(res.ToString()), null);
             }
 
+            if (firstPage.Count == 0)
+            {
+                return new Tuple<JsonDocument, IMetadata>(null, null);
+            }
+
             static JObject FindFirstItem(IEnumerator<JObject> iterator)
             {
-                JObject firstItem;
-                if (iterator.MoveNext() && (firstItem = iterator.Current) == null)
-                {
-                    return FindFirstItem(iterator);
-                }
-
+                iterator.MoveNext();
                 return iterator.Current;
             }
 
@@ -126,7 +126,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (parameters != null)
             {
-                foreach (KeyValuePair<string, object> parameterEntry in parameters)
+                foreach (KeyValuePair<string, object> parameterEntry in structure.Parameters)
                 {
                     querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
                 }

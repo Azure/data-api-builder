@@ -60,6 +60,7 @@ namespace Azure.DataGateway.Service.Services
                 {
                     Console.Error.WriteLine(error.Exception.Message);
                     Console.Error.WriteLine(error.Exception.StackTrace);
+                    return error.WithMessage(error.Exception!.Message);
                 }
 
                 return error;

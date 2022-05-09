@@ -37,6 +37,14 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             MutationResolvers.Add(mutationResolver.Id, mutationResolver);
         }
 
+        public void RemoveMutationResolver(string mutationResolverId)
+        {
+            if(MutationResolvers.ContainsKey(mutationResolverId))
+            {
+                MutationResolvers.Remove(mutationResolverId);
+            }
+        }
+
         public void StoreGraphQLType(string name, GraphQLType graphQLType)
         {
             GraphQLTypes.Add(name, graphQLType);

@@ -116,6 +116,61 @@ mutation {{
             Assert.IsNull(response.GetProperty("id").GetString());
         }
 
+        [TestMethod]
+        public async Task MutationMissingInputReturnError()
+        {
+            // Run mutation Add planet without any input
+            string mutation = $@"
+mutation {{
+    addPlanet () {{
+        id
+        name
+    }}
+}}";
+            JsonElement response = await ExecuteGraphQLRequestAsync("addPlanet", mutation, new());
+            Assert.AreEqual("inputDict is missing", response[0].GetProperty("message").ToString());
+        }
+
+        [TestMethod]
+        public async Task MutationMissingRequiredIdReturnError()
+        {
+            // Run mutation Add planet without id
+            const string name = "test_name";
+            string mutation = $@"
+mutation {{
+    addPlanet ( name: ""{name}"") {{
+        id
+        name
+    }}
+}}";
+            JsonElement response = await ExecuteGraphQLRequestAsync("addPlanet", mutation, new());
+            Assert.AreEqual("id field is mandatory", response[0].GetProperty("message").ToString());
+        }
+
+        [TestMethod]
+        public async Task InvalidResolverOperationTypeReturnError()
+        {
+            //Register invalid operation type resolver
+            RemoveMutationResolver("addPlanet");
+            RegisterMutationResolver("addPlanet", DATABASE_NAME, _containerName, "None");
+
+            string id = Guid.NewGuid().ToString();
+            const string name = "test_name";
+            string addMutation = $@"
+mutation {{
+    addPlanet (id: ""{id}"", name: ""{name}"") {{
+        id
+        name
+    }}
+}}";
+            JsonElement response = await ExecuteGraphQLRequestAsync("addPlanet", addMutation, new());
+            Assert.AreEqual("unsupported operation type: None", response[0].GetProperty("message").ToString());
+
+            //Register valid mutation resolver back after testing invalid senario
+            RemoveMutationResolver("addPlanet");
+            RegisterMutationResolver("addPlanet", DATABASE_NAME, _containerName);
+        }
+
         /// <summary>
         /// Runs once after all tests in this class are executed
         /// </summary>

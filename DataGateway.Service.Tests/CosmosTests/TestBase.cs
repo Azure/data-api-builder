@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -42,6 +43,8 @@ type Query {
     getPlanet(id: ID, name: String): Planet
     planetList: [Planet]
     planets(first: Int, after: String): PlanetConnection
+    getPlanetListById(id: ID): [Planet]
+    getPlanetByName(name: String): Planet
 }
 
 type Mutation {
@@ -66,7 +69,8 @@ type Character {
 type Planet {
     id : ID,
     name : String
-}";
+}
+";
             _metadataStoreProvider.GraphQLSchema = jsonString;
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
@@ -101,9 +105,11 @@ type Planet {
             HttpRequestMessage request = new();
             MemoryStream stream = new(Encoding.UTF8.GetBytes(data));
             request.Method = HttpMethod.Post;
+            ClaimsPrincipal user = new(new ClaimsIdentity(new Claim[] { new Claim(ClaimTypes.Name, "test@microsoft.com") }, "TestAuthentication"));
             DefaultHttpContext httpContext = new()
             {
-                Request = { Body = stream, ContentLength = stream.Length }
+                Request = { Body = stream, ContentLength = stream.Length },
+                User = user
             };
             return httpContext;
         }
@@ -129,6 +135,15 @@ type Planet {
             }).ToString();
             MutationResolver mutationResolver = JsonConvert.DeserializeObject<MutationResolver>(resolverJson);
             _metadataStoreProvider.StoreMutationResolver(mutationResolver);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="id">name of the mutation</param>
+        internal static void RemoveMutationResolver(string id)
+        {
+            _metadataStoreProvider.RemoveMutationResolver(id);
         }
 
         /// <summary>
@@ -174,7 +189,8 @@ type Planet {
 
             if (graphQLResult.TryGetProperty("errors", out JsonElement errors))
             {
-                Assert.Fail(errors.GetRawText());
+                // to validate expected errors and error message
+                return errors;
             }
 
             return graphQLResult.GetProperty("data").GetProperty(queryName);

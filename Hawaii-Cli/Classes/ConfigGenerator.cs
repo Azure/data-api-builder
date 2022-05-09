@@ -6,7 +6,7 @@ namespace Hawaii.Cli.Classes
 {
     public class ConfigGenerator
     {
-        public static void GenerateConfig(string fileName, string database_type, string connection_string)
+        public static bool GenerateConfig(string fileName, string database_type, string connection_string)
         {
 
             DatabaseType dbType = Enum.Parse<DatabaseType>(database_type);
@@ -24,10 +24,10 @@ namespace Hawaii.Cli.Classes
                 File.Delete(file);
             }
             File.WriteAllText(file, JSONresult);
-
+            return true;
         }
 
-        public static void AddEntitiesToConfig(string fileName, string entity,
+        public static bool AddEntitiesToConfig(string fileName, string entity,
                                              object source, string permissions,
                                              object? rest, object? graphQL, string? fieldsToInclude, string? fieldsToExclude)
         {
@@ -35,14 +35,14 @@ namespace Hawaii.Cli.Classes
 
             if (!File.Exists(file))
             {
-                Console.WriteLine($"Couldn't find config  file: {file}.");
+                Console.WriteLine($"ERROR: Couldn't find config  file: {file}.");
                 Console.WriteLine($"Please do hawaii init <options> to create a new config file.");
-                return;
+                return false;
             }
             string[] permission_array = permissions.Split(":");
             string role = permission_array[0];
             string actions = permission_array[1];
-            PermissionSetting[] permissionSettings = CreatePermissions(role, actions, fieldsToInclude, fieldsToExclude);
+            PermissionSetting[] permissionSettings = new PermissionSetting[]{CreatePermissions(role, actions, fieldsToInclude, fieldsToExclude)};
             Entity entity_details = new Entity(source, GetRestDetails(rest), GetGraphQLDetails(graphQL), permissionSettings, null, null);
 
             
@@ -53,18 +53,18 @@ namespace Hawaii.Cli.Classes
             RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
 
             if(runtimeConfig.Entities.ContainsKey(entity)) {
-                Console.WriteLine($"Entity:{entity} is already present. No new changes are added to Config.");
-                return;
+                Console.WriteLine($"WARNING: Entity-{entity} is already present. No new changes are added to Config.");
+                return false;
             }
 
             runtimeConfig.Entities.Add(entity, entity_details);
 
             string JSONresult = JsonSerializer.Serialize(runtimeConfig, options);
             File.WriteAllText(file, JSONresult);
-
+            return true;
         }
 
-        public static void UpdateEntity(string fileName, string entity,
+        public static bool UpdateEntity(string fileName, string entity,
                                              object? source, string? permissions,
                                              object? rest, object? graphQL, string? fieldsToInclude, string? fieldsToExclude) {
             
@@ -75,7 +75,7 @@ namespace Hawaii.Cli.Classes
             RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
             if(!runtimeConfig.Entities.ContainsKey(entity)) {
                 Console.WriteLine($"Entity:{entity} is not present. No new changes are added to Config.");
-                return;
+                return false;
             }
             
             Entity updatedEntity = runtimeConfig.Entities[entity];
@@ -88,10 +88,31 @@ namespace Hawaii.Cli.Classes
             if(graphQL!=null) {
                 updatedEntity = new Entity(updatedEntity.Source, updatedEntity.Rest, GetGraphQLDetails(graphQL), updatedEntity.Permissions, updatedEntity.Relationships, updatedEntity.Mappings);
             }
+            if(permissions!=null) {
+                string[] permission_array = permissions.Split(":");
+                string role = permission_array[0];
+                string action = permission_array[1]; //TODO: make sure action is a single item here
+                var dict = Array.Find(updatedEntity.Permissions, item => item.Role == role);
+                PermissionSetting[] updatedPermissions;
+                if(dict==null) {
+                    updatedPermissions = UpdatePermissions(updatedEntity.Permissions, role,action, fieldsToInclude, fieldsToExclude);
+                } else {
+                    //TODO: check for different cases like
+                    // if same action is present or not
+                    updatedPermissions = updatedEntity.Permissions; //Need to Update it.
+                }
+                updatedEntity = new Entity(updatedEntity.Source, updatedEntity.Rest, updatedEntity.GraphQL, updatedPermissions, updatedEntity.Relationships, updatedEntity.Mappings);
+            } else {
+                if(fieldsToInclude!=null || fieldsToExclude!=null) {
+                    Console.WriteLine($"please provide the role and action name to apply this update to.");
+                    return true;
+                }
+            }
+            
             runtimeConfig.Entities[entity] = updatedEntity;
             string JSONresult = JsonSerializer.Serialize(runtimeConfig, options);
             File.WriteAllText(file, JSONresult);
-
+            return true;
         }
 
     }

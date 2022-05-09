@@ -26,8 +26,13 @@ namespace Hawaii.Cli.Classes
                 Required options: --database_type, --connection_string");
                 return;
             }
-            ConfigGenerator.GenerateConfig(fileName, databaseType, connectionString);
-            Console.WriteLine($"generating config with file name: {fileName}, database type: {databaseType}, and connectionString: {connectionString}");
+            bool isSuccess = ConfigGenerator.GenerateConfig(fileName, databaseType, connectionString);
+            if(isSuccess) {
+                Console.WriteLine($"Config generated with file name: {fileName}, database type: {databaseType}, and connectionString: {connectionString}");
+                Console.WriteLine($"SUGGESTION: Use 'hawaii add <options>' to add new entities in your config.");
+            } else {
+                Console.WriteLine($"ERROR: Could not generate config with file name: {fileName}, database type: {databaseType}, and connectionString: {connectionString}");
+            }
         }
 
         public static void Add(string entity, CommandLineOptions options)
@@ -47,13 +52,18 @@ namespace Hawaii.Cli.Classes
 
             if (source == null || permissions == null)
             {
-                Console.WriteLine(@"Please check if any required arguments are not missing.
-                                Required options: --source, --permissions");
+                Console.WriteLine(@"Please check if any required arguments are not missing.");
+                Console.WriteLine(@"Required options: --source, --permissions");
                 return;
             }
 
-            ConfigGenerator.AddEntitiesToConfig(fileName, entity, source, permissions, rest, graphQL, fieldsToInclude, fieldsToExclude);
-            Console.WriteLine($"adding source: {source} to config: {fileName} with permissions: {permissions}.");
+            bool isSuccess = ConfigGenerator.AddEntitiesToConfig(fileName, entity, source, permissions, rest, graphQL, fieldsToInclude, fieldsToExclude);
+            if(isSuccess) {
+                Console.WriteLine($"Added new entity:{entity} with source: {source} to config: {fileName} with permissions: {permissions}.");
+                Console.WriteLine($"SUGGESTION: Use 'hawaii update <options>' to update any entities in your config.");
+            } else {
+                Console.WriteLine($"ERROR: Could not add entity:{entity} source: {source} to config: {fileName} with permissions: {permissions}.");
+            }
         }
 
         public static void Update(string entity, CommandLineOptions options)
@@ -70,8 +80,12 @@ namespace Hawaii.Cli.Classes
                 Console.WriteLine("Using default file hawaii-config");
                 fileName = DEFAULT_CONFIG_FILENAME;
             }
-            ConfigGenerator.UpdateEntity(fileName, entity, source, permissions, rest, graphQL, fieldsToInclude, fieldsToExclude);
-            Console.WriteLine($"Updating config.");
+            bool isSuccess = ConfigGenerator.UpdateEntity(fileName, entity, source, permissions, rest, graphQL, fieldsToInclude, fieldsToExclude);
+            if(isSuccess) {
+                Console.WriteLine($"Updated entity:{entity} in the config.");
+            } else {
+                Console.WriteLine($"Could not update entity:{entity}.");
+            }
         }
     }
 }

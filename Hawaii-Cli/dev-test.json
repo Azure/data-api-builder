@@ -1,0 +1,147 @@
+{
+  "$schema": "D:/projects/hawaii-cli/dev-test.json",
+  "data-source": {
+    "database-type": "mysql",
+    "connection-string": "sadasdasdas"
+  },
+  "runtime": {
+    "Rest": {},
+    "GraphQL": {},
+    "Host": {}
+  },
+  "entities": {
+    "todo": {
+      "source": "s001.todo",
+      "rest": {
+        "route": "/todo"
+      },
+      "graphQL": {
+        "type": {
+          "singular": "todo",
+          "plural": "todos"
+        }
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        }
+      ]
+    },
+    "category": {
+      "source": "s001.category",
+      "rest": {
+        "route": "/category"
+      },
+      "graphQL": {
+        "type": {
+          "singular": "category",
+          "plural": "categories"
+        }
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "create",
+            "read",
+            "update"
+          ]
+        }
+      ]
+    },
+    "books": {
+      "source": "s001.books",
+      "rest": {
+        "route": "/books"
+      },
+      "graphQL": {
+        "type": {
+          "singular": "book",
+          "plural": "books"
+        }
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create",
+              "fields": {
+                "include": [
+                  "id",
+                  "type",
+                  "review"
+                ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [
+                  "id",
+                  "type",
+                  "review"
+                ]
+              }
+            },
+            {
+              "action": "update",
+              "fields": {
+                "include": [
+                  "id",
+                  "type",
+                  "review"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "review": {
+      "source": "s001.reviews",
+      "rest": {
+        "route": "/review"
+      },
+      "graphQL": {
+        "type": {
+          "singular": "review",
+          "plural": "reviews"
+        }
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "update",
+              "fields": {
+                "exclude": [
+                  "id",
+                  "time"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "role": "authenticate",
+          "actions": [
+            {
+              "action": "create",
+              "fields": {
+                "include": [
+                  "content",
+                  "rating"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

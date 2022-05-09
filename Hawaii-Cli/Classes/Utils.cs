@@ -52,12 +52,11 @@ namespace Hawaii.Cli.Classes
                 object[] action_elements = actions.Split(",");
                 //#action_items should be 1, if either fieldsTOInclude or fieldsToExclude is not null.
                 if(fieldsToInclude!=null || fieldsToExclude!=null ) {
-                    if(action_elements.Length>1) {
-                        throw new Exception("No. of action_items should be 1, if either fieldsTOInclude or fieldsToExclude is not null.");
-                    } else {
+                    List<object> action_list = new List<object>();
+                    foreach(object action_element in action_elements) {
                         Dictionary<string,object> action_item = new Dictionary<string, object>();
                         Dictionary<string, string[]> fields_dict = new Dictionary<string, string[]>();
-                        action_item.Add("action", action_elements.GetValue(0));
+                        action_item.Add("action", action_element);
                         if(fieldsToInclude!=null) {
                             fields_dict.Add("include", fieldsToInclude.Split(","));
                         }
@@ -65,8 +64,9 @@ namespace Hawaii.Cli.Classes
                             fields_dict.Add("exclude", fieldsToExclude.Split(","));
                         }
                         action_item.Add("fields", fields_dict);
-                        action_items =  new object[] {action_item};
+                        action_list.Add(action_item);
                     }
+                    action_items =  action_list.ToArray();
                 } else {
                     action_items = action_elements;
                 }
@@ -74,14 +74,15 @@ namespace Hawaii.Cli.Classes
             return action_items;
         }
 
-        public static PermissionSetting[] CreatePermissions(string role, string actions, string? fieldsToInclude, string? fieldsToExclude) {
-            PermissionSetting permissionSetting = new PermissionSetting(role, CreateActions(actions, fieldsToInclude, fieldsToExclude));
-            return new PermissionSetting[]{permissionSetting};
+        public static PermissionSetting CreatePermissions(string role, string actions, string? fieldsToInclude, string? fieldsToExclude) {
+            return new PermissionSetting(role, CreateActions(actions, fieldsToInclude, fieldsToExclude));
         }
 
         public static PermissionSetting[] UpdatePermissions(PermissionSetting[] currentPermissions, string role, string actions, string? fieldsToInclude, string? fieldsToExclude) {
-            PermissionSetting permissionSetting = new PermissionSetting(role, CreateActions(actions, fieldsToInclude, fieldsToExclude));
-            return new PermissionSetting[]{permissionSetting};
+            List<PermissionSetting> currentPermissionsList = currentPermissions.ToList();
+            PermissionSetting permissionSetting = CreatePermissions(role, actions, fieldsToInclude, fieldsToExclude);
+            currentPermissionsList.Add(permissionSetting);
+            return currentPermissionsList.ToArray();
         }
 
         public static JsonSerializerOptions GetSerializationOptions() {

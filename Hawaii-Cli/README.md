@@ -23,7 +23,7 @@ dotnet tool install --global --add-source ./nupkg hawaii-cli
 4. after making new changes. do the below steps
 a) update the version in *csproj: 
 ```
-        <PropertyGroup>
+    <PropertyGroup>
 	  <Version>2.0.0</Version>
 	</PropertyGroup>
 ```	
@@ -44,14 +44,23 @@ hawaii init -name <<filename>> --database_type <<db_type>> --connection_string <
 ```
 hawaii add <<entity>> -source <<source.DB>> --rest <<rest_route>> --graphql <<graphql_type>> --permissions <<rules:actions>>
 ```
+**To update entity to the config:**
+```
+hawaii update <<entity>> -source <<new_source.DB>> --rest <<new_rest_route>> --graphql <<new_graphql_type>> --permissions <<rules:actions>> --fields.include <<fields to include>> --fields.exclude <<fields to exclude>>
+```
+
 		
 	
 **example:**
 ```	
 hawaii init -n todo-001 --database_type "mysql" --connection_string "localhost:8000"
 ```	
-The Generated config will be available in ./generatedConfigs/todo-001.json
+The Generated config will be in the current directory as todo-001.json
 ```	
 hawaii add todo --source s001.todo --rest todo --graphql todo --permissions "anonymous:*"
 ```
-Entity will be added to the config with given rest route, graphql type and prermissions.	
+Entity will be added to the config with given rest route, graphql type and prermissions.
+```	
+hawaii update todo --permissions "authenticate:create" --fields.include "id,name,category"
+```
+Entity will be updated in the config with the provided changes.

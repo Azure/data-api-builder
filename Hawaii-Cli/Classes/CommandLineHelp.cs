@@ -61,7 +61,7 @@ namespace Hawaii.Cli.Classes
 
                 default:
                     results.WithNotParsed(errors => CommandLineHelp.DisplayHelp(results, errors));
-                    Console.WriteLine($"Could not execute because the specified command was not found.");
+                    Console.WriteLine($"ERROR: Could not execute because the specified command was not found.");
                     Console.WriteLine("please do init to initialize the config file.");
                     break;
 

@@ -150,6 +150,7 @@ query {{
 
             // Validate results
             Assert.AreEqual(actualElements, totalElementsFromPaginatedQuery);
+            Assert.IsTrue(JArray.DeepEquals(responseTotal, pagedResponse));
         }
 
         /// <summary>

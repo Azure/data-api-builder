@@ -181,11 +181,10 @@ namespace Azure.DataGateway.Service.Services
             // More records exist than requested, we know this by requesting 1 extra record,
             // that extra record is removed here.
             IEnumerable<JsonElement> rootEnumerated = jsonElement.EnumerateArray();
-            JsonElement lastElement = rootEnumerated.Last();
+
             rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
             string after = SqlPaginationUtil.MakeCursorFromJsonElement(
                                element: rootEnumerated.Last(),
-                               nextElement: lastElement,
                                orderByColumns: context.OrderByClauseInUrl,
                                primaryKey: _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey,
                                tableAlias: context.EntityName);

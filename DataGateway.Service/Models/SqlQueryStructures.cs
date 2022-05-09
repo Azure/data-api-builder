@@ -226,6 +226,18 @@ namespace Azure.DataGateway.Service.Models
         {
             return Left.IsPredicate() || Right.IsPredicate();
         }
+
+        /// <summary>
+        /// Make a predicate which will be False
+        /// </summary>
+        public static Predicate MakeFalsePredicate()
+        {
+            return new Predicate(
+                new PredicateOperand("1"),
+                PredicateOperation.NotEqual,
+                new PredicateOperand("1")
+            );
+        }
     }
 
     /// <summary>

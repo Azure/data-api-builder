@@ -105,21 +105,18 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             };
         }
 
-        public static ObjectTypeDefinitionNode AddQueryArgumentsForRelationships(ObjectTypeDefinitionNode node, Entity entity, Dictionary<string, InputObjectTypeDefinitionNode> inputObjects)
+        public static ObjectTypeDefinitionNode AddQueryArgumentsForRelationships(ObjectTypeDefinitionNode node, Dictionary<string, InputObjectTypeDefinitionNode> inputObjects)
         {
-            if (entity.Relationships is null)
-            {
-                return node;
-            }
+            IEnumerable<FieldDefinitionNode> relationshipFields =
+                node.Fields.Where(field => field.Directives.Any(d => d.Name.Value == RelationshipDirectiveType.DirectiveName));
 
-            foreach ((string relationshipName, Relationship relationship) in entity.Relationships)
+            foreach (FieldDefinitionNode field in relationshipFields)
             {
-                if (relationship.Cardinality != Cardinality.Many)
+                DirectiveNode relationshipDirective = field.Directives.First(d => d.Name.Value == RelationshipDirectiveType.DirectiveName);
+                if (RelationshipDirectiveType.Cardinality(field) != "Many")
                 {
                     continue;
                 }
-
-                FieldDefinitionNode field = node.Fields.First(f => f.Name.Value == relationshipName);
 
                 DirectiveNode directive = field.Directives.First(d => d.Name.Value == RelationshipDirectiveType.DirectiveName);
 

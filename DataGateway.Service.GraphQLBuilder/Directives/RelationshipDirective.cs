@@ -36,5 +36,19 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Directives
 
             return (string)arg.Value.Value!;
         }
+
+        public static string Cardinality(FieldDefinitionNode field)
+        {
+            DirectiveNode? directive = field.Directives.FirstOrDefault(d => d.Name.Value == DirectiveName);
+
+            if (directive == null)
+            {
+                return field.Type.NamedType().Name.Value;
+            }
+
+            ArgumentNode arg = directive.Arguments.First(a => a.Name.Value == "cardinality");
+
+            return (string)arg.Value.Value!;
+        }
     }
 }

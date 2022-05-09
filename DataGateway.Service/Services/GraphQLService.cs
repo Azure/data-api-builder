@@ -214,21 +214,9 @@ namespace Azure.DataGateway.Service.Services
             }
 
             // Pass two - Add the arguments to the many-to-* relationship fields
-            foreach ((string entityName, Entity entity) in entities)
+            foreach ((string entityName, ObjectTypeDefinitionNode node) in objectTypes)
             {
-                if (entity.GraphQL is not null)
-                {
-                    if (entity.GraphQL is bool graphql && graphql == false)
-                    {
-                        continue;
-                    }
-
-                    // TODO: Do we need to check the object version of `entity.GraphQL`?
-                }
-
-                ObjectTypeDefinitionNode node = objectTypes[entityName];
-                node = QueryBuilder.AddQueryArgumentsForRelationships(node, entity, inputObjects);
-                objectTypes[entityName] = node;
+                objectTypes[entityName] = QueryBuilder.AddQueryArgumentsForRelationships(node, inputObjects);
             }
 
             List<IDefinitionNode> nodes = new(objectTypes.Values);

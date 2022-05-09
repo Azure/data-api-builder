@@ -39,7 +39,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
 
         public void RemoveMutationResolver(string mutationResolverId)
         {
-            if(MutationResolvers.ContainsKey(mutationResolverId))
+            if (MutationResolvers.ContainsKey(mutationResolverId))
             {
                 MutationResolvers.Remove(mutationResolverId);
             }

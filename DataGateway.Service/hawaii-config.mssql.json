@@ -6,7 +6,7 @@
     "resolver-config-file": "sql-config.json"
   },
   "mssql": {
-    "set-session-context": true
+    "set-session-context": false
   },
   "runtime": {
     "rest": {
@@ -25,7 +25,7 @@
         "allow-credentials": true
       },
       "authentication": {
-        "provider": "",
+        "provider": "EasyAuth",
         "jwt": {
           "audience": "",
           "issuer": "",

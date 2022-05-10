@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
+using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.GraphQLBuilder.Sql;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -79,7 +80,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
 
             FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == columnName);
             Assert.AreEqual(1, field.Directives.Count);
-            Assert.AreEqual(PrimaryKeyDirective.DirectiveName, field.Directives[0].Name.Value);
+            Assert.AreEqual(PrimaryKeyDirectiveType.DirectiveName, field.Directives[0].Name.Value);
         }
 
         [TestMethod]
@@ -99,7 +100,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             foreach (FieldDefinitionNode field in od.Fields)
             {
                 Assert.AreEqual(1, field.Directives.Count);
-                Assert.AreEqual(PrimaryKeyDirective.DirectiveName, field.Directives[0].Name.Value);
+                Assert.AreEqual(PrimaryKeyDirectiveType.DirectiveName, field.Directives[0].Name.Value);
             }
         }
 
@@ -309,103 +310,11 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == relationshipName);
 
             Assert.AreEqual(1, field.Directives.Count);
-            Assert.AreEqual(RelationshipDirective.DirectiveName, field.Directives[0].Name.Value);
+            Assert.AreEqual(RelationshipDirectiveType.DirectiveName, field.Directives[0].Name.Value);
         }
 
         [TestMethod]
-        public void MultipleForeignKeyColumnsStillSingleObjectFieldReference()
-        {
-            TableDefinition table = new();
-
-            string columnName = "columnName";
-            table.Columns.Add(columnName, new ColumnDefinition
-            {
-                SystemType = typeof(string),
-                IsNullable = false,
-            });
-            const string foreignKeyTable = "FkTable";
-
-            table.ForeignKeys.Add("foreign_key", new ForeignKeyDefinition { ReferencedTable = foreignKeyTable, ReferencingColumns = new List<string>() });
-
-            const int refColCount = 5;
-            for (int i = 0; i < refColCount; i++)
-            {
-                string refColName = $"ref_col{i}";
-                table.Columns.Add(refColName, new ColumnDefinition
-                {
-                    SystemType = typeof(long)
-                });
-                table.ForeignKeys["foreign_key"].ReferencingColumns.Add(refColName);
-            }
-
-            Dictionary<string, Relationship> relationships =
-                new()
-                {
-                    {
-                        foreignKeyTable,
-                        new Relationship(
-                          Cardinality.One,
-                          foreignKeyTable,
-                          SourceFields: null,
-                          TargetFields: null,
-                          LinkingObject: null,
-                          LinkingSourceFields: null,
-                          LinkingTargetFields: null)
-                    }
-                };
-            Entity configEntity = GenerateEmptyEntity() with { Relationships = relationships };
-            Entity relationshipEntity = GenerateEmptyEntity();
-
-            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity, new() { { foreignKeyTable, relationshipEntity } });
-
-            Assert.AreEqual(1, od.Fields.Count(f => f.Type.NamedType().Name.Value == foreignKeyTable));
-        }
-
-        [TestMethod]
-        public void CardinalityOfOneWillBeSingleObjectRelationship()
-        {
-            TableDefinition table = new();
-
-            string columnName = "columnName";
-            table.Columns.Add(columnName, new ColumnDefinition
-            {
-                SystemType = typeof(string),
-                IsNullable = false,
-            });
-            const string foreignKeyTable = "FkTable";
-            const string refColName = "ref_col";
-            table.ForeignKeys.Add("foreign_key", new ForeignKeyDefinition { ReferencedTable = foreignKeyTable, ReferencingColumns = new List<string> { refColName } });
-            table.Columns.Add(refColName, new ColumnDefinition
-            {
-                SystemType = typeof(long)
-            });
-
-            Dictionary<string, Relationship> relationships =
-                new()
-                {
-                    {
-                        foreignKeyTable,
-                        new Relationship(
-                          Cardinality.One,
-                          foreignKeyTable,
-                          SourceFields: null,
-                          TargetFields: null,
-                          LinkingObject: null,
-                          LinkingSourceFields: null,
-                          LinkingTargetFields: null)
-                    }
-                };
-            Entity configEntity = GenerateEmptyEntity() with { Relationships = relationships };
-            Entity relationshipEntity = GenerateEmptyEntity();
-
-            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity, new() { { foreignKeyTable, relationshipEntity } });
-
-            FieldDefinitionNode field = od.Fields.First(f => f.Type.NamedType().Name.Value == foreignKeyTable);
-            Assert.IsFalse(field.Type.IsListType());
-        }
-
-        [TestMethod]
-        public void CardinalityOfManyWillBeListRelationship()
+        public void CardinalityOfManyWillBeConnectionRelationship()
         {
             TableDefinition table = new();
 
@@ -443,8 +352,8 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity, new() { { foreignKeyTable, relationshipEntity } });
 
-            FieldDefinitionNode field = od.Fields.First(f => f.Type.NamedType().Name.Value == foreignKeyTable);
-            Assert.IsTrue(field.Type.InnerType().IsListType());
+            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == "fkTable");
+            Assert.IsTrue(QueryBuilder.IsPaginationType(field.Type.NamedType()));
         }
 
         [TestMethod]
@@ -486,6 +395,50 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(entityName, table, configEntity, new());
 
             Assert.AreEqual(expected, od.Name.Value);
+        }
+
+        [TestMethod]
+        public void AutoGeneratedFieldHasDirectiveIndicatingSuch()
+        {
+            TableDefinition table = new();
+            string columnName = "columnName";
+            table.Columns.Add(columnName, new ColumnDefinition
+            {
+                SystemType = typeof(string),
+                IsNullable = false,
+                IsAutoGenerated = true,
+            });
+
+            Entity configEntity = GenerateEmptyEntity();
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("entity", table, configEntity, new());
+
+            Assert.IsTrue(od.Fields[0].Directives.Any(d => d.Name.Value == AutoGeneratedDirectiveType.DirectiveName));
+        }
+
+        [DataTestMethod]
+        [DataRow(1, "int", SyntaxKind.IntValue)]
+        [DataRow("test", "string", SyntaxKind.StringValue)]
+        [DataRow(true, "boolean", SyntaxKind.BooleanValue)]
+        [DataRow(1.2f, "float", SyntaxKind.FloatValue)]
+        public void DefaultValueGetsSetOnDirective(object defaultValue, string fieldName, SyntaxKind kind)
+        {
+            TableDefinition table = new();
+            string columnName = "columnName";
+            table.Columns.Add(columnName, new ColumnDefinition
+            {
+                SystemType = typeof(string),
+                IsNullable = false,
+                DefaultValue = defaultValue
+            });
+
+            Entity configEntity = GenerateEmptyEntity();
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("entity", table, configEntity, new());
+
+            Assert.AreEqual(1, od.Fields[0].Directives.Count);
+            DirectiveNode directive = od.Fields[0].Directives[0];
+            ObjectValueNode value = (ObjectValueNode)directive.Arguments[0].Value;
+            Assert.AreEqual(fieldName, value.Fields[0].Name.Value);
+            Assert.AreEqual(kind, value.Fields[0].Value.Kind);
         }
     }
 }

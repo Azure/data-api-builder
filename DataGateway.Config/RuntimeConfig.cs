@@ -64,48 +64,55 @@ namespace Azure.DataGateway.Config
         public const string RESOLVER_CONFIG_PROPERTY_NAME = "resolver-config-file";
         public const string SCHEMA = "hawaii.draft-01.schema.json";
 
-        public void SetDefaults()
+        /// <summary>
+        /// Pick up the global runtime settings from the dictionary if present
+        /// otherwise initialize with default.
+        /// </summary>
+        public void DetermineGlobalSettings()
         {
+            JsonSerializerOptions options = GetDeserializationOptions();
             foreach (
-                (GlobalSettingsType settingsType, object settings) in RuntimeSettings)
+                (GlobalSettingsType settingsType, object settingsJson) in RuntimeSettings)
             {
                 switch (settingsType)
                 {
                     case GlobalSettingsType.Rest:
-                        if (settings is not RestGlobalSettings)
-                        {
-                            RuntimeSettings[settingsType] = new RestGlobalSettings();
-                        }
-
+                        RestGlobalSettings
+                            = ((JsonElement)settingsJson).Deserialize<RestGlobalSettings>(options)!;
                         break;
                     case GlobalSettingsType.GraphQL:
-                        if (settings is not GraphQLGlobalSettings)
-                        {
-                            RuntimeSettings[settingsType] = new GraphQLGlobalSettings();
-                        }
-
+                        GraphQLGlobalSettings =
+                            ((JsonElement)settingsJson).Deserialize<GraphQLGlobalSettings>(options)!;
                         break;
                     case GlobalSettingsType.Host:
-                        if (settings is not HostGlobalSettings)
-                        {
-                            RuntimeSettings[settingsType] = new HostGlobalSettings();
-                        }
-
+                        HostGlobalSettings =
+                           ((JsonElement)settingsJson).Deserialize<HostGlobalSettings>(options)!;
                         break;
                     default:
                         throw new NotSupportedException("The runtime does not " +
                             " support this global settings type.");
                 }
             }
+
+            if (RestGlobalSettings is null)
+            {
+                RestGlobalSettings = new();
+            }
+
+            if (GraphQLGlobalSettings is null)
+            {
+                GraphQLGlobalSettings = new();
+            }
+
+            if (HostGlobalSettings is null)
+            {
+                HostGlobalSettings = new();
+            }
         }
 
         public static T GetDeserializedConfig<T>(string configJson)
         {
-            JsonSerializerOptions options = new()
-            {
-                PropertyNameCaseInsensitive = true,
-            };
-            options.Converters.Add(new JsonStringEnumConverter());
+            JsonSerializerOptions options = GetDeserializationOptions();
 
             // This feels verbose but it avoids having to make _config nullable - which would result in more
             // down the line issues and null check requirements
@@ -118,15 +125,28 @@ namespace Azure.DataGateway.Config
             return deserializedConfig!;
         }
 
-        public AuthenticationConfig? AuthNConfig
+        public static JsonSerializerOptions GetDeserializationOptions()
         {
-            get
+            // use camel case
+            // convert Enum to strings
+            // case insensitive
+            JsonSerializerOptions options = new()
             {
-                HostGlobalSettings? hostSettings =
-                    RuntimeSettings[GlobalSettingsType.Host] as HostGlobalSettings;
-                return hostSettings != null ? (hostSettings.Authentication) : null;
-            }
+                PropertyNameCaseInsensitive = true,
+                Converters =
+                {
+                    new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+                }
+            };
+
+            return options;
         }
+
+        public RestGlobalSettings? RestGlobalSettings { get; private set; }
+
+        public GraphQLGlobalSettings? GraphQLGlobalSettings { get; private set; }
+
+        public HostGlobalSettings? HostGlobalSettings { get; private set; }
 
         public bool IsEasyAuthAuthenticationProvider()
         {
@@ -148,6 +168,21 @@ namespace Azure.DataGateway.Config
             get
             {
                 return DataSource.ConnectionString;
+            }
+        }
+
+        public AuthenticationConfig? AuthNConfig
+        {
+            get
+            {
+                if (HostGlobalSettings is not null)
+                {
+                    return HostGlobalSettings.Authentication;
+                }
+                else
+                {
+                    return null;
+                }
             }
         }
     }

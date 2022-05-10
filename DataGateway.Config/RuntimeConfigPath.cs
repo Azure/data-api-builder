@@ -32,6 +32,7 @@ namespace Azure.DataGateway.Config
             if (!string.IsNullOrEmpty(runtimeConfigJson))
             {
                 ConfigValue = RuntimeConfig.GetDeserializedConfig<RuntimeConfig>(runtimeConfigJson);
+                ConfigValue.DetermineGlobalSettings();
             }
         }
 

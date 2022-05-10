@@ -16,7 +16,7 @@ namespace Azure.DataGateway.Config
 
         public bool IsEasyAuthAuthenticationProvider()
         {
-            return Provider == EASYAUTH_PROVIDER_NAME;
+            return Provider.Equals(EASYAUTH_PROVIDER_NAME);
         }
     }
 

@@ -340,18 +340,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         public void TestReadingRuntimeConfig()
         {
             string jsonString = File.ReadAllText(RuntimeConfigPath.DefaultName);
-            // use camel case
-            // convert Enum to strings
-            // case insensitive
-            JsonSerializerOptions options = new()
-            {
-                PropertyNameCaseInsensitive = true,
-                Converters =
-                {
-                    new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
-                }
-            };
-
+            JsonSerializerOptions options = RuntimeConfig.GetDeserializationOptions();
             RuntimeConfig runtimeConfig =
                     JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
             Assert.IsNotNull(runtimeConfig.Schema);
@@ -379,13 +368,13 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                     && ((JsonElement)entity.Rest).ValueKind == JsonValueKind.Object)
                 {
                     RestEntitySettings rest =
-                        ((JsonElement)entity.Rest).Deserialize<RestEntitySettings>();
+                        ((JsonElement)entity.Rest).Deserialize<RestEntitySettings>(options);
                     Assert.IsTrue(
                         ((JsonElement)rest.Route).ValueKind == JsonValueKind.String
                         || ((JsonElement)rest.Route).ValueKind == JsonValueKind.Object);
                     if (((JsonElement)rest.Route).ValueKind == JsonValueKind.Object)
                     {
-                        SingularPlural route = ((JsonElement)rest.Route).Deserialize<SingularPlural>();
+                        SingularPlural route = ((JsonElement)rest.Route).Deserialize<SingularPlural>(options);
                     }
                 }
 
@@ -397,13 +386,13 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                     && ((JsonElement)entity.GraphQL).ValueKind == JsonValueKind.Object)
                 {
                     GraphQLEntitySettings graphQL =
-                        ((JsonElement)entity.GraphQL).Deserialize<GraphQLEntitySettings>();
+                        ((JsonElement)entity.GraphQL).Deserialize<GraphQLEntitySettings>(options);
                     Assert.IsTrue(
                         ((JsonElement)graphQL.Type).ValueKind == JsonValueKind.String
                         || ((JsonElement)graphQL.Type).ValueKind == JsonValueKind.Object);
                     if (((JsonElement)graphQL.Type).ValueKind == JsonValueKind.Object)
                     {
-                        SingularPlural route = ((JsonElement)graphQL.Type).Deserialize<SingularPlural>();
+                        SingularPlural route = ((JsonElement)graphQL.Type).Deserialize<SingularPlural>(options);
                     }
                 }
 
@@ -419,7 +408,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                         if (((JsonElement)action).ValueKind == JsonValueKind.Object)
                         {
                             Config.Action configAction =
-                                ((JsonElement)action).Deserialize<Config.Action>();
+                                ((JsonElement)action).Deserialize<Config.Action>(options);
                             Assert.IsTrue(allowedActions.Contains(configAction.Name));
                             Assert.IsTrue(configAction.Policy == null
                                 || configAction.Policy.GetType() == typeof(Policy));
@@ -428,7 +417,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                         }
                         else
                         {
-                            string name = ((JsonElement)action).Deserialize<string>();
+                            string name = ((JsonElement)action).Deserialize<string>(options);
                             Assert.IsTrue(allowedActions.Contains(name));
                         }
                     }

@@ -2066,8 +2066,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     requestBody: string.Empty,
                     exception: true,
                     expectedErrorMessage: "The request is invalid since the primary keys: title requested were not found in the entity definition.",
-                    expectedStatusCode: HttpStatusCode.BadRequest,
-                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
+                    expectedStatusCode: HttpStatusCode.NotFound,
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound.ToString()
                 );
         }
 

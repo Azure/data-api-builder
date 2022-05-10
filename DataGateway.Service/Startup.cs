@@ -312,7 +312,8 @@ namespace Azure.DataGateway.Service
         {
             try
             {
-                // Now that the configuration has been set, perform validation.
+                // Now that the configuration has been set, perform validation of the runtime config
+                // itself.
                 app.ApplicationServices.GetService<RuntimeConfigValidator>()!.ValidateConfig();
 
                 ISqlMetadataProvider? sqlMetadataProvider =
@@ -323,6 +324,7 @@ namespace Azure.DataGateway.Service
                     await sqlMetadataProvider.InitializeAsync();
                 }
 
+                // After initialization of metadata, validate the db specific configuration.
                 app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
                 return true;
             }

@@ -20,18 +20,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     {
         public static IOptionsMonitor<RuntimeConfigPath> LoadConfig(string environment)
         {
-            string overriddenEnvironment = $"{environment}.overrides";
-            string configFileName;
-            string overriddenConfigFileName =
-                RuntimeConfigPath.GetFileNameForEnvironment(overriddenEnvironment);
-            if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), overriddenConfigFileName)))
-            {
-                configFileName = overriddenConfigFileName;
-            }
-            else
-            {
-                configFileName = RuntimeConfigPath.GetFileNameForEnvironment(environment);
-            }
+            string configFileName = RuntimeConfigPath.GetFileNameForEnvironment(environment);
 
             Dictionary<string, string> configFileNameMap = new()
             {

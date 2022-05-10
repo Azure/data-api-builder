@@ -30,7 +30,7 @@ namespace Azure.DataGateway.Service.Services
 
             foreach (string field in context.FieldsToBeReturned)
             {
-                ValidateField(tableDefinition.Columns.Keys, context.MappingFromEntity!, field);
+                ValidateField(tableDefinition.Columns.Keys, context.MappingFromEntity, field);
             }
         }
 
@@ -49,7 +49,7 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="mapping">mappings from this entity</param>
         /// <param name="field">field to be returned</param>
         /// <exception cref="DataGatewayException"></exception>
-        public static void ValidateField(IEnumerable<string> columns, Dictionary<string, string> mapping, string field)
+        public static void ValidateField(IEnumerable<string> columns, Dictionary<string, string>? mapping, string field)
         {
             if (mapping is null && columns.Contains(field))
             {

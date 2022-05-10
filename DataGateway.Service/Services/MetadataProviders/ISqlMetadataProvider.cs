@@ -25,7 +25,7 @@ namespace Azure.DataGateway.Service.Services
         /// to a given entity.
         /// </summary>
         /// <param name="entityName">entity whose map we get.</param>
-        /// <returns>mapping belonging to eneity.</returns>
+        /// <returns>mapping belonging to entity.</returns>
         Dictionary<string, string>? GetMappingForEntity(string entityName);
 
         /// <summary>

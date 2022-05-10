@@ -10,7 +10,7 @@ DataGateway provides a consistent, productive abstraction for building GraphQL a
 
 Clone the repository with your preferred method or locally navigate to where you'd like the repository to be and clone with the following command, make sure you replace `<directory name>`
 
-``` bash
+```bash
 git clone https://github.com/Azure/hawaii-gql.git <directory name>
 ```
 
@@ -35,7 +35,7 @@ Supply a value `connection-string` for the project to be able to connect the ser
 
 Local SQL Server Instance
 
-``` json
+```json
 "data-source": {
   "database-type": "mssql",
   "connection-string": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=USERNAME;Password=PASSWORD;MultipleActiveResultSets=False;Connection Timeout=5;"
@@ -44,7 +44,7 @@ Local SQL Server Instance
 
 LocalDB Instance
 
-``` c#
+```json
 "data-source": {
   "database-type": "mssql",
   "connection-string": "Server=(localdb)\\MSSQLLocalDB;Database=DataGateway;Integrated Security=true"
@@ -53,7 +53,7 @@ LocalDB Instance
 
 #### MySQL
 
-``` c#
+```json
 "data-source": {
   "database-type": "mysql",
   "connection-string": "server=localhost;database=graphql;Allow User variables=true;uid=USERNAME;pwd=PASSWORD"
@@ -62,7 +62,7 @@ LocalDB Instance
 
 #### PostgreSQL
 
-``` c#
+```json
 "data-source": {
   "database-type": "postgresql",
   "connection-string": "Host=localhost;Database=graphql"
@@ -71,7 +71,7 @@ LocalDB Instance
 
 #### CosmosDB
 
-``` c#
+```json
 "data-source": {
   "database-type": "cosmos",
   "connection-string": "AccountEndpoint=https://<REPLACEME>.documents.azure.com:443/;AccountKey=<REPLACEME>"

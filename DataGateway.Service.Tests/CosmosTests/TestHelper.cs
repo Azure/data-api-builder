@@ -20,7 +20,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             {
                 {
                     nameof(RuntimeConfigPath.ConfigFileName),
-                    RuntimeConfigPath.GetFileNameAsPerEnvironment(TestCategory.COSMOS)
+                    RuntimeConfigPath.GetFileNameForEnvironment(TestCategory.COSMOS)
                 }
             };
             IConfigurationRoot config = new ConfigurationBuilder()

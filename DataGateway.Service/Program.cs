@@ -60,7 +60,7 @@ namespace Azure.DataGateway.Service
             configurationBuilder.Sources.Clear();
 
             string configFileName
-                = RuntimeConfigPath.GetFileNameAsPerEnvironment(env.EnvironmentName);
+                = RuntimeConfigPath.GetFileNameForEnvironment(env.EnvironmentName);
             Dictionary<string, string> configFileNameMap = new()
             {
                 {

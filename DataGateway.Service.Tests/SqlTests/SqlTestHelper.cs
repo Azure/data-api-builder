@@ -23,14 +23,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string overriddenEnvironment = $"{environment}.overrides";
             string configFileName;
             string overriddenConfigFileName =
-                RuntimeConfigPath.GetFileNameAsPerEnvironment(overriddenEnvironment);
+                RuntimeConfigPath.GetFileNameForEnvironment(overriddenEnvironment);
             if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), overriddenConfigFileName)))
             {
                 configFileName = overriddenConfigFileName;
             }
             else
             {
-                configFileName = RuntimeConfigPath.GetFileNameAsPerEnvironment(environment);
+                configFileName = RuntimeConfigPath.GetFileNameForEnvironment(environment);
             }
 
             Dictionary<string, string> configFileNameMap = new()

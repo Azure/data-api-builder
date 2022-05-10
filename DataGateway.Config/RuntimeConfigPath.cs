@@ -2,6 +2,12 @@ using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Config
 {
+    /// <summary>
+    /// This class encapsulates the path related properties of the RuntimeConfig.
+    /// The config file name property is provided by either
+    /// the in memory configuration provider, command line configuration provider
+    /// or from the in memory updateable configuration controller.
+    /// </summary>
     public class RuntimeConfigPath
     {
         public const string CONFIGFILE_NAME = "hawaii-config";
@@ -60,7 +66,7 @@ namespace Azure.DataGateway.Config
         /// </summary>
         /// <param name="hostingEnvironmentName">Value of ASPNETCORE_ENVIRONMENT variable</param>
         /// <returns></returns>
-        public static string GetFileNameAsPerEnvironment(string? hostingEnvironmentName)
+        public static string GetFileNameForEnvironment(string? hostingEnvironmentName)
         {
             string configFileNameWithExtension = string.Empty;
             string?[] environmentPrecedence = new[]

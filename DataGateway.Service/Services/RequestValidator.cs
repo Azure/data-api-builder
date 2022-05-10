@@ -74,8 +74,8 @@ namespace Azure.DataGateway.Service.Services
                     message: $"The request is invalid since the primary keys: " +
                         string.Join(", ", missingKeys) +
                         " requested were not found in the entity definition.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        DataGatewayException.SubStatusCodes.BadRequest);
+                        statusCode: HttpStatusCode.NotFound,
+                        DataGatewayException.SubStatusCodes.EntityNotFound);
             }
         }
 

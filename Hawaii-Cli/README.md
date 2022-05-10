@@ -46,6 +46,12 @@ Please update the correct path in .csproj file.
 </ItemGroup>
 ```
 
+TO SHARE THE CHANGES:
+1) Once you create the package (dotnet pack). It's ready to be shared.
+2) Share the latest package (.nupkg file).
+3) To install: `dotnet tool install -g --add-source ./ hawaii-cli --version <<version_number>>`
+
+
 
 **To generate the config:**
 ```

@@ -1,0 +1,8 @@
+{
+  "$schema": "D:/projects/hawaii-cli/todo.json",
+  "data-source": {
+    "database-type": "mssql",
+    "connection-string": "localhost:5000"
+  },
+  "entities": {}
+}

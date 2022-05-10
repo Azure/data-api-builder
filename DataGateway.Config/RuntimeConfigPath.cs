@@ -134,18 +134,4 @@ namespace Azure.DataGateway.Config
             return File.Exists(Path.Combine(currentDir, fileName));
         }
     }
-
-    /// <summary>
-    /// Validate RuntimeConfigPath.
-    /// This happens after post configuration.
-    /// </summary>
-    public class RuntimeConfigPathValidation : IValidateOptions<RuntimeConfigPath>
-    {
-        public ValidateOptionsResult Validate(string name, RuntimeConfigPath options)
-        {
-            return string.IsNullOrWhiteSpace(options.ConfigFileName)
-                ? ValidateOptionsResult.Fail("Invalid runtime config file name.")
-                : ValidateOptionsResult.Success;
-        }
-    }
 }

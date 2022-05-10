@@ -245,9 +245,12 @@ namespace Azure.DataGateway.Service
             {
                 runtimeConfigPath.OnChange(async (newConfig) =>
                 {
-                    runtimeConfigPath.CurrentValue.SetRuntimeConfigValue();
-                    isRuntimeReady =
-                        await PerformOnConfigChangeAsync(app);
+                    if (!string.IsNullOrWhiteSpace(runtimeConfigPath.CurrentValue.ConfigFileName))
+                    {
+                        runtimeConfigPath.CurrentValue.SetRuntimeConfigValue();
+                        isRuntimeReady =
+                            await PerformOnConfigChangeAsync(app);
+                    }
                 });
             }
 

@@ -25,7 +25,7 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
         public string ColumnName { get; set; }
 
-        public Column(string tableSchema, string tableName, string columnName, string tableAlias = "")
+        public Column(string tableSchema, string tableName, string columnName, string? tableAlias = null)
         {
             TableSchema = tableSchema;
             TableName = tableName;
@@ -40,7 +40,7 @@ namespace Azure.DataGateway.Service.Models
     public class OrderByColumn : Column
     {
         public OrderByDir Direction { get; set; }
-        public OrderByColumn(string tableSchema, string tableName, string columnName, string? tableAlias = "", OrderByDir direction = OrderByDir.Asc)
+        public OrderByColumn(string tableSchema, string tableName, string columnName, string? tableAlias = null, OrderByDir direction = OrderByDir.Asc)
             : base(tableSchema, tableName, columnName, tableAlias)
         {
             Direction = direction;
@@ -79,7 +79,7 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
         public string Label { get; }
 
-        public LabelledColumn(string tableSchema, string tableName, string columnName, string label, string tableAlias = "")
+        public LabelledColumn(string tableSchema, string tableName, string columnName, string label, string? tableAlias = null)
             : base(tableSchema, tableName, columnName, tableAlias)
         {
             Label = label;

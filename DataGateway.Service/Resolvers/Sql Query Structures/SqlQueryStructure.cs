@@ -244,7 +244,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 PaginationMetadata.Subqueries.Add("items", PaginationMetadata.MakeEmptyPaginationMetadata());
             }
 
-            SchemaName = sqlMetadataProvider.GetSchemaName(_typeInfo.Table);
+            SchemaName = sqlMetadataProvider.GetSchemaName(_underlyingFieldType.Name);
             TableName = _typeInfo.Table;
             TableAlias = CreateTableAlias();
 

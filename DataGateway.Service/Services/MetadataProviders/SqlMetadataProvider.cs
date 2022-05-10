@@ -153,20 +153,25 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private void GenerateDatabaseObjectForEntities()
         {
+            string schemaName, dbObjectName;
             foreach ((string entityName, Entity entity)
                 in GetEntitiesFromRuntimeConfig())
             {
-                // parse source name into a tuple of (schemaName, databaseObjectName)
-                (string? schemaName, string? dbObjectName) = ParseSchemaAndDbObjectName(entity.GetSourceName())!;
-
-                DatabaseObject databaseObject = new()
+                if (!EntityToDatabaseObject.ContainsKey(entityName))
                 {
-                    SchemaName = schemaName,
-                    Name = dbObjectName!,
-                    TableDefinition = new()
-                };
+                    // parse source name into a tuple of (schemaName, databaseObjectName)
+                    (schemaName, dbObjectName) = ParseSchemaAndDbObjectName(entity.GetSourceName())!;
 
-                EntityToDatabaseObject.Add(entityName, databaseObject);
+                    DatabaseObject databaseObject = new()
+                    {
+                        SchemaName = schemaName!,
+                        Name = dbObjectName!,
+                        TableDefinition = new()
+                    };
+
+                    EntityToDatabaseObject.Add(entityName, databaseObject);
+                }
+                
 
                 if (entity.Relationships != null)
                 {

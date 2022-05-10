@@ -14,6 +14,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
     [TestClass]
     public class AuthorizationResolverUnitTests
     {
+        private const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
+
         /// <summary>
         /// Tests the first stage of authorization: Role Context
         /// X-MS-API-ROLE header is present, Role is in ClaimsPrincipal.Roles
@@ -30,8 +32,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
             Mock<HttpContext> context = new();
-            context.SetupGet(x => x.Request.Headers["X-MS-API-ROLE"]).Returns("Reader");
-            context.Setup(x => x.Request.Headers.ContainsKey("X-MS-API-ROLE")).Returns(true);
+            context.SetupGet(x => x.Request.Headers[CLIENT_ROLE_HEADER]).Returns("Reader");
+            context.Setup(x => x.Request.Headers.ContainsKey(CLIENT_ROLE_HEADER)).Returns(true);
             context.Setup(x => x.User.IsInRole("Reader")).Returns(true);
 
             Assert.IsTrue(authZResolver.IsValidRoleContext(context.Object));
@@ -45,8 +47,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
             Mock<HttpContext> context = new();
-            context.SetupGet(x => x.Request.Headers["X-MS-API-ROLE"]).Returns("Reader");
-            context.Setup(x => x.Request.Headers.ContainsKey("X-MS-API-ROLE")).Returns(true);
+            context.SetupGet(x => x.Request.Headers[CLIENT_ROLE_HEADER]).Returns("Reader");
+            context.Setup(x => x.Request.Headers.ContainsKey(CLIENT_ROLE_HEADER)).Returns(true);
             context.Setup(x => x.User.IsInRole("Reader")).Returns(false);
 
             Assert.IsFalse(authZResolver.IsValidRoleContext(context.Object));
@@ -59,8 +61,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
             Mock<HttpContext> context = new();
-            context.SetupGet(x => x.Request.Headers["X-MS-API-ROLE"]).Returns(string.Empty);
-            context.Setup(x => x.Request.Headers.ContainsKey("X-MS-API-ROLE")).Returns(true);
+            context.SetupGet(x => x.Request.Headers[CLIENT_ROLE_HEADER]).Returns(string.Empty);
+            context.Setup(x => x.Request.Headers.ContainsKey(CLIENT_ROLE_HEADER)).Returns(true);
 
             Assert.IsFalse(authZResolver.IsValidRoleContext(context.Object));
         }
@@ -73,8 +75,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             Mock<HttpContext> context = new();
             StringValues multipleValuesForHeader = new(new string[] { "Reader", "Writer" });
-            context.SetupGet(x => x.Request.Headers["X-MS-API-ROLE"]).Returns(multipleValuesForHeader);
-            context.Setup(x => x.Request.Headers.ContainsKey("X-MS-API-ROLE")).Returns(true);
+            context.SetupGet(x => x.Request.Headers[CLIENT_ROLE_HEADER]).Returns(multipleValuesForHeader);
+            context.Setup(x => x.Request.Headers.ContainsKey(CLIENT_ROLE_HEADER)).Returns(true);
             context.Setup(x => x.User.IsInRole("Reader")).Returns(true);
 
             Assert.IsFalse(authZResolver.IsValidRoleContext(context.Object));
@@ -87,8 +89,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
             Mock<HttpContext> context = new();
-            context.SetupGet(x => x.Request.Headers["X-MS-API-ROLE"]).Returns(StringValues.Empty);
-            context.Setup(x => x.Request.Headers.ContainsKey("X-MS-API-ROLE")).Returns(true);
+            context.SetupGet(x => x.Request.Headers[CLIENT_ROLE_HEADER]).Returns(StringValues.Empty);
+            context.Setup(x => x.Request.Headers.ContainsKey(CLIENT_ROLE_HEADER)).Returns(true);
 
             Assert.IsFalse(authZResolver.IsValidRoleContext(context.Object));
         }
@@ -377,7 +379,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(roleName, entityName, actionName, columns));
         }
 
-        [TestMethod("Wildcard excluded except for some included for action on role")]
+        [TestMethod("Wildcard included except for some excluded for action on role")]
         public void WildcardIncludeColsSomeExcludeDefinedForAction_ColsForActionTest()
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(

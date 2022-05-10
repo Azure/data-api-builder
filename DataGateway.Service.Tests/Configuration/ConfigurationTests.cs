@@ -31,7 +31,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
         [DataTestMethod]
         [DataRow(new string[] { })]
-        [DataRow(new string[] {"--ConfigFileName="})]
+        [DataRow(new string[] { "--ConfigFileName=" })]
         [TestMethod("Validates that queries before runtime is configured returns a 503.")]
         public async Task TestNoConfigReturnsServiceUnavailable(string[] args)
         {

@@ -4,7 +4,6 @@ using System.Text.Json;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Newtonsoft.Json;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Azure.DataGateway.Service.Tests.Configuration

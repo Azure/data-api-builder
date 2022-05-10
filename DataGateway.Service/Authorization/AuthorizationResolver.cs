@@ -85,12 +85,12 @@ namespace Azure.DataGateway.Service.Authorization
         public bool IsRoleDefinedForEntity(string roleName, string entityName)
         {
             //At this point we don't know if entityName and roleName is valid/exists
-            if (!_entityConfigMap.ContainsKey(entityName) || !_entityConfigMap[entityName].RoleToActionMap.ContainsKey(roleName))
+            if(_entityConfigMap.TryGetValue(entityName, out EntityDS? value))
             {
-                return false;
+                return value.RoleToActionMap.ContainsKey(roleName);
             }
 
-            return true;
+            return false;
         }
 
         /// <summary>
@@ -137,8 +137,8 @@ namespace Azure.DataGateway.Service.Authorization
 
             foreach (string column in columns)
             {
-                if ((actionToColumnMap.excluded != null && (actionToColumnMap.excluded.Contains(column) || actionToColumnMap.excluded.Contains("*"))) ||
-                    !(actionToColumnMap.included != null && (actionToColumnMap.included.Contains("*") || actionToColumnMap.included.Contains(column))))
+                if (actionToColumnMap.excluded.Contains(column) || actionToColumnMap.excluded.Contains("*") ||
+                    !(actionToColumnMap.included.Contains("*") || actionToColumnMap.included.Contains(column)))
                 {
                     // If column is present in excluded OR excluded='*'
                     // If column is absent from included and included!=*
@@ -191,7 +191,7 @@ namespace Azure.DataGateway.Service.Authorization
                         if (actionElement.ValueKind == JsonValueKind.String)
                         {
                             actionName = actionElement.ToString();
-                            actionToColumn!.included!.Add("*");
+                            actionToColumn!.included.Add("*");
                         }
                         else if (actionElement.ValueKind == JsonValueKind.Object)
                         {
@@ -206,12 +206,12 @@ namespace Azure.DataGateway.Service.Authorization
 
                             if (actionObj!.Fields!.Include != null)
                             {
-                                actionToColumn.included = AddFieldsToMap(actionObj.Fields.Include);
+                                AddFieldsToSet(actionObj.Fields.Include, actionToColumn.included);
                             }
 
                             if (actionObj!.Fields!.Exclude != null)
                             {
-                                actionToColumn.excluded = AddFieldsToMap(actionObj.Fields.Exclude);
+                                AddFieldsToSet(actionObj.Fields.Exclude, actionToColumn.excluded);
                             }
 
                         }
@@ -234,15 +234,12 @@ namespace Azure.DataGateway.Service.Authorization
         /// </summary>
         /// <param name="columns"></param>
         /// <returns></returns>
-        private static HashSet<string> AddFieldsToMap(string[] columns)
+        private static void AddFieldsToSet(string[] columns,HashSet<string> Fields)
         {
-            HashSet<string> result = new();
             foreach (string column in columns)
             {
-                result.Add(column);
+                Fields.Add(column);
             }
-
-            return result;
         }
         #endregion
     }

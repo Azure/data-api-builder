@@ -17,8 +17,8 @@ namespace Azure.DataGateway.Service.Models.Authorization
 
     class ActionDS
     {
-        public HashSet<string>? included = new();
-        public HashSet<string>? excluded = new();
+        public HashSet<string> included = new();
+        public HashSet<string> excluded = new();
     }
 
     public record AuthorizationMetadata(string? RoleName, string? EntityName, string? ActionName, List<string>? Columns);

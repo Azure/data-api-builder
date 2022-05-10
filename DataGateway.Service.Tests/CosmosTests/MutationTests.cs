@@ -81,7 +81,7 @@ mutation {{
         name
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("addPlanet", mutation, new());
+            JsonElement response = await ExecuteGraphQLRequestAsync("addPlanet", mutation, variables: new());
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
@@ -100,7 +100,7 @@ mutation {{
         name
     }}
 }}";
-            _ = await ExecuteGraphQLRequestAsync("addPlanet", addMutation, new());
+            _ = await ExecuteGraphQLRequestAsync("addPlanet", addMutation, variables: new());
 
             // Run mutation delete item;
             string deleteMutation = $@"
@@ -110,7 +110,7 @@ mutation {{
         name
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanet", deleteMutation, new());
+            JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanet", deleteMutation, variables: new());
 
             // Validate results
             Assert.IsNull(response.GetProperty("id").GetString());
@@ -127,7 +127,7 @@ mutation {{
         name
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("addPlanet", mutation, new());
+            JsonElement response = await ExecuteGraphQLRequestAsync("addPlanet", mutation, variables: new());
             Assert.AreEqual("inputDict is missing", response[0].GetProperty("message").ToString());
         }
 
@@ -143,7 +143,7 @@ mutation {{
         name
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("addPlanet", mutation, new());
+            JsonElement response = await ExecuteGraphQLRequestAsync("addPlanet", mutation, variables: new());
             Assert.AreEqual("id field is mandatory", response[0].GetProperty("message").ToString());
         }
 
@@ -163,7 +163,7 @@ mutation {{
         name
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("addPlanet", addMutation, new());
+            JsonElement response = await ExecuteGraphQLRequestAsync("addPlanet", addMutation, variables: new());
             Assert.AreEqual("unsupported operation type: None", response[0].GetProperty("message").ToString());
 
             //Register valid mutation resolver back after testing invalid senario

@@ -140,7 +140,7 @@ query {{
     }}
 }}";
 
-                JsonElement page = await ExecuteGraphQLRequestAsync("planets", planetConnectionQueryStringFormat, new());
+                JsonElement page = await ExecuteGraphQLRequestAsync("planets", planetConnectionQueryStringFormat, variables: new());
                 JsonElement continuation = page.GetProperty("endCursor");
                 continuationToken = continuation.ToString();
                 totalElementsFromPaginatedQuery += page.GetProperty("items").GetArrayLength();

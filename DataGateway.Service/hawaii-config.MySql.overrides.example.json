@@ -22,7 +22,7 @@
         "allow-credentials": true
       },
       "authentication": {
-        "provider": "",
+        "provider": "EasyAuth",
         "jwt": {
           "audience": "",
           "issuer": "",

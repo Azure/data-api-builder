@@ -5,8 +5,6 @@
     "connection-string": "DO NOT EDIT, look at CONTRIBUTING.md on how to run tests",
     "resolver-config-file": "sql-config.json"
   },
-  "postgresql": {
-  },
   "runtime": {
     "rest": {
       "enabled": true,
@@ -24,7 +22,7 @@
         "allow-credentials": true
       },
       "authentication": {
-        "provider": "",
+        "provider": "EasyAuth",
         "jwt": {
           "audience": "",
           "issuer": "",

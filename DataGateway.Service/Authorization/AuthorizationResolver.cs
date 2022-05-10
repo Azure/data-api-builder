@@ -85,7 +85,7 @@ namespace Azure.DataGateway.Service.Authorization
         public bool IsRoleDefinedForEntity(string roleName, string entityName)
         {
             //At this point we don't know if entityName and roleName is valid/exists
-            if(_entityConfigMap.TryGetValue(entityName, out EntityDS? value))
+            if (_entityConfigMap.TryGetValue(entityName, out EntityDS? value))
             {
                 return value.RoleToActionMap.ContainsKey(roleName);
             }
@@ -191,7 +191,7 @@ namespace Azure.DataGateway.Service.Authorization
                         if (actionElement.ValueKind == JsonValueKind.String)
                         {
                             actionName = actionElement.ToString();
-                            actionToColumn!.included.Add("*");
+                            actionToColumn.included.Add("*");
                         }
                         else if (actionElement.ValueKind == JsonValueKind.Object)
                         {
@@ -234,7 +234,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// </summary>
         /// <param name="columns"></param>
         /// <returns></returns>
-        private static void AddFieldsToSet(string[] columns,HashSet<string> Fields)
+        private static void AddFieldsToSet(string[] columns, HashSet<string> Fields)
         {
             foreach (string column in columns)
             {

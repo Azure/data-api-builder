@@ -75,8 +75,7 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.mysql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<SqlQueryEngine>(serviceProvider);
                     default:
-                        throw new NotSupportedException(string.Format("The provided Database_Type value: {0} is currently not supported." +
-                            "Please check the configuration file.", runtimeConfig.DatabaseType));
+                        throw new NotSupportedException(runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
                 }
             });
 
@@ -95,8 +94,7 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.mysql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<SqlMutationEngine>(serviceProvider);
                     default:
-                        throw new NotSupportedException(string.Format("The provided Database_Type value: {0} is currently not supported." +
-                            "Please check the configuration file.", runtimeConfig.DatabaseType));
+                        throw new NotSupportedException(runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
                 }
             });
 
@@ -115,8 +113,8 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.mysql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<SqlConfigValidator>(serviceProvider);
                     default:
-                        throw new NotSupportedException(string.Format("The provided Database_Type value: {0} is currently not supported." +
-                            "Please check the configuration file.", runtimeConfig.DatabaseType));
+                        throw new NotSupportedException(
+                            runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
                 }
             });
 
@@ -137,8 +135,8 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.mysql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<MySqlConnection>>(serviceProvider);
                     default:
-                        throw new NotSupportedException(string.Format("The provided Database_Type value: {0} is currently not supported." +
-                            "Please check the configuration file.", runtimeConfig.DatabaseType));
+                        throw new NotSupportedException(
+                            runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
                 }
             });
 
@@ -159,8 +157,7 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.mysql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<MySqlQueryBuilder>(serviceProvider);
                     default:
-                        throw new NotSupportedException(string.Format("The provided Database_Type value: {0} is currently not supported." +
-                            "Please check the configuration file.", runtimeConfig.DatabaseType));
+                        throw new NotSupportedException(runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
                 }
             });
 
@@ -181,8 +178,7 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.mysql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<MySqlMetadataProvider>(serviceProvider);
                     default:
-                        throw new NotSupportedException(string.Format("The provided Database_Type value: {0} is currently not supported." +
-                            "Please check the configuration file.", runtimeConfig.DatabaseType));
+                        throw new NotSupportedException(runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
                 }
             });
 
@@ -203,8 +199,7 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.mysql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<MySqlDbExceptionParser>(serviceProvider);
                     default:
-                        throw new NotSupportedException(String.Format("The provided Database_Type value: {0} is currently not supported." +
-                            "Please check the configuration file.", runtimeConfig.DatabaseType));
+                        throw new NotSupportedException(runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
                 }
             });
 

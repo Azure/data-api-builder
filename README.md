@@ -150,7 +150,7 @@ HTTP requests must have the `Authorization` HTTP header set with the value `Bear
 
 #### Which configuration file is used?
 
-1. Hawaii runtime determines the name of the configuration file based on environment values, following the same behavior offered by ASP.NET Core for the `appsettings.json` file. It expects the configuration file in the the same directory as the runtime.
+1. Hawaii runtime determines the name of the configuration file based on environment values, following the same behavior offered by ASP.NET Core for the `appsettings.json` file. It expects the configuration file in the same directory as the runtime.
 
 2. The precedence followed is in the following order from high to low:
 
@@ -164,7 +164,7 @@ HTTP requests must have the `Authorization` HTTP header set with the value `Bear
 
     d. By default, runtime will look for `hawaii-config.json`
 
-3. For any of the configuration file names determined as per the environment, if there is another file with the `.overrides` suffix in the current directory, that overridden file name will instead be picked up.
+3. For any of the configuration file names determined for the environment, if there is another file with the `.overrides` suffix in the current directory, that overridden file name will instead be picked up.
 e.g. if both `hawaii-config.json` and `hawaii-config.overrides.json` are present, precedence will be given to `hawaii-config.overrides.json` - however, the runtime will still follow the above rules of precedence. 
 e.g. When HAWAII_ENVIRONMENT is set as `Development` and if all three config files exist- `hawaii-config.Development.json`, `hawaii-config.json`, `hawaii-config.overrides.json`- the runtime will pick `hawaii-config.Development.json`.
 

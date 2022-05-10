@@ -20,6 +20,12 @@ namespace Azure.DataGateway.Config
         public const string DATABASE_PROPERTY_NAME = "database-type";
         public const string CONNSTRING_PROPERTY_NAME = "connection-string";
         public const string RESOLVER_JSON_PROPERTY_NAME = "resolver-config-file";
+
+        public string GetDatabaseTypeNotSupportedMessage()
+        {
+            return string.Format("The provided database-type value: {0} is currently not supported." +
+                "Please check the configuration file.", DatabaseType);
+        }
     }
 
     /// <summary>

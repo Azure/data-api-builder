@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Options;
-
 namespace Azure.DataGateway.Config
 {
     /// <summary>

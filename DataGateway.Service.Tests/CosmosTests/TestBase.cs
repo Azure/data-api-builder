@@ -6,6 +6,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
@@ -70,12 +71,21 @@ type Planet {
     id : ID,
     name : String,
     character: Character
-}
-";
+}";
+
+            IRuntimeConfigProvider configProvider = new TestRuntimeConfigProvider();
+
             _metadataStoreProvider.GraphQLSchema = jsonString;
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
-            _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider, new DocumentCache(), new Sha256DocumentHashProvider());
+            _graphQLService = new GraphQLService(
+                _queryEngine,
+                _mutationEngine,
+                _metadataStoreProvider,
+                new DocumentCache(),
+                new Sha256DocumentHashProvider(),
+                configProvider,
+                sqlMetadataProvider: null);
             _controller = new GraphQLController(_graphQLService);
             Client = _clientProvider.Client;
         }

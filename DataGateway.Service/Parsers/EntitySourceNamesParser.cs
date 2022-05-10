@@ -25,8 +25,6 @@ namespace Azure.DataGateway.Service.Parsers
                 throw new ArgumentException($"Table is empty for input={input}");
             }
 
-            //TODO log here
-
             return (schemaTable.Item1, schemaTable.Item2);
         }
 
@@ -44,17 +42,16 @@ namespace Azure.DataGateway.Service.Parsers
         /// </exception>
         private static (string?, string?) ParseSchemaAndTableHelper(string input)
         {
-            //TODO log here
-
+            
             if (string.IsNullOrEmpty(input))
             {
-                //TODO log here
+                
                 throw new ArgumentException("Input is null or empty string");
             }
 
             if (input[input.Length - 1] == '.')
             {
-                //TODO log here
+                
                 throw new ArgumentException("Input can not end with '.'");
             }
 
@@ -67,25 +64,22 @@ namespace Azure.DataGateway.Service.Parsers
                 nextToken = tokenAndNextToken.Item2;
 
                 //If there is more than two tokens, it means their input was not valid.
-                //
                 if (tokens.Count > 2)
                 {
-                    //TODO log here
+                    
                     throw new ArgumentException($"Invalid number of tokens for={input}. Number of tokens is=${tokens.Count}");
                 }
             }
 
-            //If there is one token only that means we only parsed the table name. We will use the default schema.
-            //
+            // If there is one token only that means we only parsed the table name. We will use the default schema.
             if (tokens.Count == 1)
             {
-                //TODO log here
+                
                 return (string.Empty, (string?)tokens[0]);
             }
 
-            //If there is we parsed two tokens that means we parsed the schema and table name.
-            //
-            //TODO log here
+            // If there is we parsed two tokens that means we parsed the schema and table name.
+            
             return ((string?)tokens[0], (string?)tokens[1]);
         }
 
@@ -104,20 +98,14 @@ namespace Azure.DataGateway.Service.Parsers
         /// </exception>
         private static (string?, string?) GetTokenAndNextToken(string input, int startIndex = 0)
         {
-            //TODO log here
-
             bool startsWithBracket = input[startIndex] == '[';
             int i = startIndex;
             while (i < input.Length)
             {
-                //TODO log here
-
                 if (!startsWithBracket)
                 {
                     if (input[i] == '.')
                     {
-                        //TODO log here
-
                         // ^ is startIndex and i is current index
                         // Ex: abc.xyz
                         //     ^  i
@@ -128,8 +116,6 @@ namespace Azure.DataGateway.Service.Parsers
 
                     if (input[i] == ']' || input[i] == '[')
                     {
-                        //TODO log here
-
                         // ^ is startIndex and i is current index
                         // Ex: abc]xyz
                         //     ^  i
@@ -142,8 +128,6 @@ namespace Azure.DataGateway.Service.Parsers
                 {
                     if (input[i] == ']' && i + 1 < input.Length && input[i + 1] == '.')
                     {
-                        //TODO log here
-
                         // ^ is startIndex and i is current index
                         // Ex: [ab.c].xyz
                         //     ^    i
@@ -155,31 +139,24 @@ namespace Azure.DataGateway.Service.Parsers
                     {
                         if (i + 2 >= input.Length)
                         {
-                            //TODO log here
-
                             // ^ is startIndex and i is current index
                             // Ex: [abc]]
                             //     ^   i
                             // Return exception because we encountered ]] at the end of the string, and there is no closing "]"
-                            //
                             throw new ArgumentException("Token does not have closing ']'.");
                         }
 
                         // We increase by 2 so that we skip over the escaped "]"
-                        //
                         i += 2;
 
                         continue;
                     }
                     else if (input[i] == ']' && i + 1 < input.Length && input[i + 1] != ']')
                     {
-                        //TODO log here
-
                         // ^ is startIndex and i is current index
                         // Ex: [abc]xyz
                         //     ^   i
                         // Return exception because we encountered "]" and the character after "]" is not a "."
-                        //
                         throw new ArgumentException("Token has invalid character next to ']'. Allowed characters are '.' and ']'.");
                     }
                 }  // close of else of !startsWithBracket
@@ -188,13 +165,10 @@ namespace Azure.DataGateway.Service.Parsers
             }  // close of while loop
 
             // Special cases for parsing tokens at the end of the string.
-
             if (startsWithBracket)
             {
                 if (input[input.Length - 1] != ']')
                 {
-                    //TODO log here
-
                     // ^ is startIndex and i is current index
                     // Ex: [abcdef
                     //     ^   i
@@ -202,9 +176,6 @@ namespace Azure.DataGateway.Service.Parsers
                     //
                     throw new ArgumentException("Token does not have corresponding closing ']'.");
                 }
-
-                //TODO log here
-
                 // ^ is startIndex and i is current index
                 // Ex: xyz.[abc.def]
                 //         ^        i
@@ -214,8 +185,6 @@ namespace Azure.DataGateway.Service.Parsers
             }
             else
             {
-                //TODO log here
-
                 // ^ is startIndex and i is current index
                 // Ex: abc.def
                 //         ^  i

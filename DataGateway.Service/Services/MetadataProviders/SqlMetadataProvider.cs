@@ -153,7 +153,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private void GenerateDatabaseObjectForEntities()
         {
-            string schemaName, dbObjectName;
+            string? schemaName, dbObjectName;
             foreach ((string entityName, Entity entity)
                 in GetEntitiesFromRuntimeConfig())
             {

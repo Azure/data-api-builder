@@ -221,10 +221,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 {
   ""$schema"": ""../../project-hawaii/playground/hawaii.draft-01.schema.json"",
   ""data-source"": {
-    ""database-type"": ""mssql"",
+    ""database-type"": """ + dbType.ToLower() + @""",
     ""connection-string"": """"
   },
-  ""mssql"": {
+  """ + dbType.ToLower() + @""": {
     ""set-session-context"": true
   },
   ""runtime"": {

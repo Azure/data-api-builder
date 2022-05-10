@@ -6,9 +6,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 {
     /// <summary>
     /// Test class for the schema parser. Verifies
-    /// that the schema can parse a wide range of
-    /// formats correctly, and throws exceptions
-    /// when expected.
+    /// that EntitySourceNamesParser.ParseSchemaAndTable()
+    /// can handle a wide range of formats correctly,
+    /// and throws exceptions when expected.
     /// </summary>
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class EntitySourceNamesParserUnitTests

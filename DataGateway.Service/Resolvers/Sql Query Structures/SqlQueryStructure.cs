@@ -244,7 +244,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 PaginationMetadata.Subqueries.Add("items", PaginationMetadata.MakeEmptyPaginationMetadata());
             }
 
-            SchemaName = sqlMetadataProvider.GetSchemaName(_underlyingFieldType.Name);
+            SchemaName = sqlMetadataProvider.GetSchemaName(_typeInfo.Table);
             TableName = _typeInfo.Table;
             TableAlias = CreateTableAlias();
 
@@ -664,7 +664,11 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     string subqueryAlias = $"{subtableAlias}_subq";
                     JoinQueries.Add(subqueryAlias, subquery);
-                    Columns.Add(new LabelledColumn(tableSchema: null, subqueryAlias, DATA_IDENT, fieldName));
+                    Columns.Add(new LabelledColumn(tableSchema: subquery.SchemaName,
+                                                   tableName: subquery.TableName,
+                                                   columnName: DATA_IDENT,
+                                                   label: fieldName,
+                                                   tableAlias: subqueryAlias));
                 }
             }
         }
@@ -738,7 +742,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public bool IsSubqueryColumn(Column column)
         {
-            return column.TableName == null ? false : JoinQueries.ContainsKey(column.TableName);
+            return column.TableAlias == null ? false : JoinQueries.ContainsKey(column.TableAlias);
         }
 
         /// <summary>

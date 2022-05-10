@@ -27,7 +27,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
-        protected override string MakeQueryOn(string table, List<string> queriedColumns, string predicate, string schema = "", List<string> pkColumns = null)
+        /// <summary>
+        /// Gets the default schema for
+        /// MySql.
+        /// </summary>
+        /// <returns></returns>
+        protected override string GetDefaultSchema()
+        {
+            return string.Empty;
+        }
+
+        protected override string MakeQueryOn(string table, List<string> queriedColumns, string predicate, string schema, List<string> pkColumns)
         {
             if (pkColumns == null)
             {

@@ -27,14 +27,24 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
-        protected override string MakeQueryOn(string table, List<string> queriedColumns, string predicate, string schema = "dbo", List<string> pkColumns = null)
+        /// <summary>
+        /// Gets the default schema for
+        /// MsSql.
+        /// </summary>
+        /// <returns></returns>
+        protected override string GetDefaultSchema()
+        {
+            return "dbo";
+        }
+
+        protected override string MakeQueryOn(string table, List<string> queriedColumns, string predicate, string schema, List<string> pkColumns)
         {
             if (pkColumns == null)
             {
                 pkColumns = new() { "id" };
             }
 
-            string schemaAndTable = string.IsNullOrEmpty(schema) ? $"[{table}]" : $"[{schema}].[{table}]";
+            string schemaAndTable = $"[{schema}].[{table}]";
             string orderBy = string.Join(", ", pkColumns.Select(c => $"[table0].[{c}]"));
 
             return @"

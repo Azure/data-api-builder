@@ -137,7 +137,7 @@ namespace Azure.DataGateway.Service.Authorization
 
             foreach (string column in columns)
             {
-                if ((actionToColumnMap.excluded != null && (actionToColumnMap.excluded.Contains(column)|| actionToColumnMap.excluded.Contains("*"))) ||
+                if ((actionToColumnMap.excluded != null && (actionToColumnMap.excluded.Contains(column) || actionToColumnMap.excluded.Contains("*"))) ||
                     !(actionToColumnMap.included != null && (actionToColumnMap.included.Contains("*") || actionToColumnMap.included.Contains(column))))
                 {
                     // If column is present in excluded OR excluded='*'
@@ -173,7 +173,7 @@ namespace Azure.DataGateway.Service.Authorization
         private static Dictionary<string, EntityDS> GetEntityConfigMap(RuntimeConfig? runtimeConfig)
         {
             Dictionary<string, EntityDS> entityConfigMap = new();
-            foreach ((string entityName,Entity entity) in runtimeConfig!.Entities)
+            foreach ((string entityName, Entity entity) in runtimeConfig!.Entities)
             {
                 EntityDS entityToRoleMap = new();
 

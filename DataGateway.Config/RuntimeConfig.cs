@@ -41,8 +41,11 @@ namespace Azure.DataGateway.Config
                 "host": {
                     "authentication": {
                         "provider": "",
-                        "audience": "",
-                        "issuer": ""
+                        "jwt": {
+                            "audience": "",
+                            "issuer": "",
+                            "issuer-key": ""
+                        }
                     }
                 }
             },
@@ -54,9 +57,11 @@ namespace Azure.DataGateway.Config
         [property: JsonPropertyName(DataSource.JSON_PROPERTY_NAME)] DataSource DataSource,
         [property: JsonPropertyName(CosmosDbOptions.JSON_PROPERTY_NAME)]
         CosmosDbOptions? CosmosDb,
-        [property: JsonPropertyName(CosmosDbOptions.JSON_PROPERTY_NAME)]
+        [property: JsonPropertyName(MsSqlOptions.JSON_PROPERTY_NAME)]
         MsSqlOptions? MsSql,
+        [property: JsonPropertyName(PostgreSqlOptions.JSON_PROPERTY_NAME)]
         PostgreSqlOptions? PostgreSql,
+        [property: JsonPropertyName(MySqlOptions.JSON_PROPERTY_NAME)]
         MySqlOptions? MySql,
         [property: JsonPropertyName(GlobalSettings.JSON_PROPERTY_NAME)]
         Dictionary<GlobalSettingsType, object> RuntimeSettings,
@@ -96,6 +101,7 @@ namespace Azure.DataGateway.Config
                 }
             }
 
+            // If the config file does not have these settings, initialize them with defaults.
             if (RestGlobalSettings is null)
             {
                 RestGlobalSettings = new();

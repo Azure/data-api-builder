@@ -101,6 +101,14 @@ namespace Azure.DataGateway.Config
             }
         }
 
+        /// <summary>
+        /// Generates the config file name and a corresponding overridden file name,
+        /// With precedence given to overridden file name, returns that name
+        /// if the file exists in the current directory, else an empty string.
+        /// </summary>
+        /// <param name="environmentValue">Name of the environment to
+        /// generate the config file name for.</param>
+        /// <returns></returns>
         private static string GetFileNameConsideringOverrides(string? environmentValue)
         {
             string configFileName =

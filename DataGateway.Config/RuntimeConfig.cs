@@ -122,7 +122,7 @@ namespace Azure.DataGateway.Config
                 throw new JsonException("Failed to get a deserialized config from the provided config");
             }
 
-            return deserializedConfig!;
+            return deserializedConfig;
         }
 
         public static JsonSerializerOptions GetDeserializationOptions()

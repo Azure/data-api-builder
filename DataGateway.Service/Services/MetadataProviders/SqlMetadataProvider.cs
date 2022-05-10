@@ -242,12 +242,13 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
-        /// The connection string could contain the
-        /// schema, in which case it will be associated
-        /// with the keyword 'SearchPath' and continue
-        /// until the character ';'. If schema exists in
-        /// connection string we save this to schemaName
-        /// otherwise we save schemaName as empty string.
+        /// Only used for PostgreSql.
+        /// The connection string could contain the schema,
+        /// in which case it will be associated with the
+        /// keyword 'SearchPath' and continue until the
+        /// character ';'. If schema exists in the connection
+        /// string we save this to schemaName, otherwise
+        /// we save schemaName as empty string.
         /// </summary>
         /// <param name="schemaName">the schema name we save.</param>
         /// <returns>true if schema in connection string, false otherwise.</returns>
@@ -267,7 +268,7 @@ namespace Azure.DataGateway.Service.Services
                 return string.IsNullOrEmpty(schemaName) ? false : true;
             }
 
-            schemaName = "";
+            schemaName = string.Empty;
             return false;
         }
 

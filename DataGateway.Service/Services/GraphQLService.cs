@@ -31,7 +31,6 @@ namespace Azure.DataGateway.Service.Services
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly IDocumentCache _documentCache;
         private readonly IDocumentHashProvider _documentHashProvider;
-        private readonly bool _useLegacySchema;
 
         public ISchema? Schema { private set; get; }
         public IRequestExecutor? Executor { private set; get; }
@@ -53,20 +52,7 @@ namespace Azure.DataGateway.Service.Services
             _documentCache = documentCache;
             _documentHashProvider = documentHashProvider;
 
-            _useLegacySchema = false;
-
             InitializeSchemaAndResolvers();
-        }
-
-        public void Parse(string data)
-        {
-            Schema = SchemaBuilder.New()
-               .AddDocumentFromString(data)
-               .AddAuthorizeDirectiveType()
-               .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine, _graphQLMetadataProvider))
-               .Create();
-
-            MakeSchemaExecutable();
         }
 
         /// <summary>
@@ -169,33 +155,19 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private void InitializeSchemaAndResolvers()
         {
-            if (_useLegacySchema)
+            DatabaseType databaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
+            Dictionary<string, Entity> entities = _runtimeConfigProvider.GetRuntimeConfig().Entities;
+
+            (DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = databaseType switch
             {
-                // Attempt to get schema from the metadata store.
-                string graphqlSchema = _graphQLMetadataProvider.GetGraphQLSchema();
+                DatabaseType.cosmos => GenerateCosmosGraphQLObjects(),
+                DatabaseType.mssql or
+                DatabaseType.postgresql or
+                DatabaseType.mysql => GenerateSqlGraphQLObjects(entities),
+                _ => throw new NotImplementedException($"This database type {databaseType} is not yet implemented.")
+            };
 
-                // If the schema is available, parse it and attach resolvers.
-                if (!string.IsNullOrEmpty(graphqlSchema))
-                {
-                    Parse(graphqlSchema);
-                }
-            }
-            else if (!_useLegacySchema)
-            {
-                DatabaseType databaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
-                Dictionary<string, Entity> entities = _runtimeConfigProvider.GetRuntimeConfig().Entities;
-
-                (DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = databaseType switch
-                {
-                    DatabaseType.cosmos => GenerateCosmosGraphQLObjects(),
-                    DatabaseType.mssql or
-                    DatabaseType.postgresql or
-                    DatabaseType.mysql => GenerateSqlGraphQLObjects(entities),
-                    _ => throw new NotImplementedException($"This database type {databaseType} is not yet implemented.")
-                };
-
-                Parse(root, inputTypes, entities);
-            }
+            Parse(root, inputTypes, entities);
         }
 
         private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateSqlGraphQLObjects(Dictionary<string, Entity> entities)

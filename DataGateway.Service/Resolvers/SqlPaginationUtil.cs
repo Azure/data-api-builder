@@ -119,8 +119,8 @@ namespace Azure.DataGateway.Service.Resolvers
                                                         List<string> primaryKey,
                                                         JsonElement? nextElement,
                                                         List<OrderByColumn>? orderByColumns,
-                                                        string? schemaName = null,
-                                                        string? tableName = null)
+                                                        string schemaName = "",
+                                                        string tableName = "")
         {
             List<PaginationColumn> cursorJson = new();
             JsonSerializerOptions options = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };

@@ -16,7 +16,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
@@ -208,10 +207,6 @@ namespace Azure.DataGateway.Service
                             "Please check the configuration file.", runtimeConfig.DatabaseType));
                 }
             });
-
-            services.TryAddEnumerable(
-                ServiceDescriptor.Singleton<IValidateOptions<RuntimeConfigPath>,
-                    RuntimeConfigPathValidation>());
 
             services.AddSingleton<IDocumentHashProvider, Sha256DocumentHashProvider>();
             services.AddSingleton<IDocumentCache, DocumentCache>();

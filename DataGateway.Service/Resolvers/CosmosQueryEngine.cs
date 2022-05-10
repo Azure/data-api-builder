@@ -1,6 +1,7 @@
 # nullable disable
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -94,20 +95,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(res.ToString()), null);
             }
 
-            if (firstPage.Count == 0)
-            {
-                return new Tuple<JsonDocument, IMetadata>(null, null);
-            }
-
-            static JObject FindFirstItem(IEnumerator<JObject> iterator)
-            {
-                iterator.MoveNext();
-                return iterator.Current;
-            }
-
-            JObject firstItem = FindFirstItem(firstPage.GetEnumerator());
-
-            JsonDocument jsonDocument = JsonDocument.Parse(firstItem.ToString());
+            JsonDocument jsonDocument = (firstPage.Count == 0) ? null : JsonDocument.Parse(firstPage.FirstOrDefault().ToString());
 
             return new Tuple<JsonDocument, IMetadata>(jsonDocument, null);
         }
@@ -124,12 +112,9 @@ namespace Azure.DataGateway.Service.Resolvers
             Container container = _clientProvider.Client.GetDatabase(structure.Database).GetContainer(structure.Container);
             QueryDefinition querySpec = new(_queryBuilder.Build(structure));
 
-            if (parameters != null)
+            foreach (KeyValuePair<string, object> parameterEntry in structure.Parameters)
             {
-                foreach (KeyValuePair<string, object> parameterEntry in structure.Parameters)
-                {
-                    querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
-                }
+                querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
             }
 
             FeedIterator<JObject> resultSetIterator = container.GetItemQueryIterator<JObject>(querySpec);

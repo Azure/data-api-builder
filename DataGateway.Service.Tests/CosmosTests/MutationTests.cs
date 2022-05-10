@@ -122,7 +122,7 @@ mutation {{
             // Run mutation Add planet without any input
             string mutation = $@"
 mutation {{
-    addPlanet () {{
+    addPlanet {{
         id
         name
     }}

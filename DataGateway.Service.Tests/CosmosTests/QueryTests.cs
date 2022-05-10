@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Service.Tests.CosmosTests
 {
@@ -70,14 +70,14 @@ query ($first: Int!, $after: String) {
             // Run query
             JsonElement response = await ExecuteGraphQLRequestAsync("planetList", PlanetListQuery);
             int actualElements = response.GetArrayLength();
-            JArray responseTotal = new();
-            ConvertJsonElementToJArray(response, responseTotal);
+            List<string> responseTotal = new();
+            ConvertJsonElementToStringList(response, responseTotal);
 
             // Run paginated query
             int totalElementsFromPaginatedQuery = 0;
             string continuationToken = null;
             const int pagesize = 5;
-            JArray pagedResponse = new();
+            List<string> pagedResponse = new();
 
             do
             {
@@ -85,12 +85,12 @@ query ($first: Int!, $after: String) {
                 JsonElement continuation = page.GetProperty("endCursor");
                 continuationToken = continuation.ToString();
                 totalElementsFromPaginatedQuery += page.GetProperty("items").GetArrayLength();
-                ConvertJsonElementToJArray(page.GetProperty("items"), pagedResponse);
+                ConvertJsonElementToStringList(page.GetProperty("items"), pagedResponse);
             } while (!string.IsNullOrEmpty(continuationToken));
 
             // Validate results
             Assert.AreEqual(actualElements, totalElementsFromPaginatedQuery);
-            Assert.IsTrue(JArray.DeepEquals(responseTotal, pagedResponse));
+            Assert.IsTrue(responseTotal.SequenceEqual(pagedResponse));
         }
 
         [TestMethod]
@@ -117,14 +117,14 @@ query {{
             // Run query
             JsonElement response = await ExecuteGraphQLRequestAsync("planetList", PlanetListQuery);
             int actualElements = response.GetArrayLength();
-            JArray responseTotal = new();
-            ConvertJsonElementToJArray(response, responseTotal);
+            List<string> responseTotal = new();
+            ConvertJsonElementToStringList(response, responseTotal);
 
             // Run paginated query
             int totalElementsFromPaginatedQuery = 0;
             string continuationToken = null;
             const int pagesize = 5;
-            JArray pagedResponse = new();
+            List<string> pagedResponse = new();
 
             do
             {
@@ -144,12 +144,12 @@ query {{
                 JsonElement continuation = page.GetProperty("endCursor");
                 continuationToken = continuation.ToString();
                 totalElementsFromPaginatedQuery += page.GetProperty("items").GetArrayLength();
-                ConvertJsonElementToJArray(page.GetProperty("items"), pagedResponse);
+                ConvertJsonElementToStringList(page.GetProperty("items"), pagedResponse);
             } while (!string.IsNullOrEmpty(continuationToken));
 
             // Validate results
             Assert.AreEqual(actualElements, totalElementsFromPaginatedQuery);
-            Assert.IsTrue(JArray.DeepEquals(responseTotal, pagedResponse));
+            Assert.IsTrue(responseTotal.SequenceEqual(pagedResponse));
         }
 
         /// <summary>
@@ -182,7 +182,6 @@ query {{
         [TestMethod]
         public async Task GetByNonePrimaryFieldResultNotFound()
         {
-            //string name = "test name";
             string name = "non-existed name";
             string query = @$"
 query {{
@@ -220,7 +219,33 @@ query {{
             Assert.AreEqual(name, response.GetProperty("name").ToString());
         }
 
-        private static void ConvertJsonElementToJArray(JsonElement ele, JArray jObj)
+        /// <summary>
+        /// Query result with nested object
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task GetByPrimaryKeyWithInnerObject()
+        {
+            // Run query
+            string id = _idList[0];
+            string query = @$"
+query {{
+    planetById (id: ""{id}"") {{
+        id
+        name
+        character {{
+            id
+            name
+        }}
+    }}
+}}";
+            JsonElement response = await ExecuteGraphQLRequestAsync("planetById", query);
+
+            // Validate results
+            Assert.AreEqual(id, response.GetProperty("id").GetString());
+        }
+
+        private static void ConvertJsonElementToStringList(JsonElement ele, List<string> strList)
         {
             if (ele.ValueKind == JsonValueKind.Array)
             {
@@ -229,7 +254,7 @@ query {{
                 while (enumerator.MoveNext())
                 {
                     JsonElement prop = enumerator.Current;
-                    jObj.Add(prop.ToString());
+                    strList.Add(prop.ToString());
                 }
             }
         }

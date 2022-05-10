@@ -68,7 +68,8 @@ type Character {
 
 type Planet {
     id : ID,
-    name : String
+    name : String,
+    character: Character
 }
 ";
             _metadataStoreProvider.GraphQLSchema = jsonString;
@@ -105,7 +106,7 @@ type Planet {
             HttpRequestMessage request = new();
             MemoryStream stream = new(Encoding.UTF8.GetBytes(data));
             request.Method = HttpMethod.Post;
-            ClaimsPrincipal user = new(new ClaimsIdentity(new Claim[] { new Claim(ClaimTypes.Name, "test@microsoft.com") }, "TestAuthentication"));
+            ClaimsPrincipal user = new(new ClaimsIdentity(authenticationType: "Bearer"));
             DefaultHttpContext httpContext = new()
             {
                 Request = { Body = stream, ContentLength = stream.Length },

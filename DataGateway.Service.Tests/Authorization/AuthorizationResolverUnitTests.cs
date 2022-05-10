@@ -231,27 +231,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(roleName, entityName, actionName, columns));
         }
 
-        [TestMethod("Wildcard excluded columns with some included for action on role")]
-        public void WildcardExcludeColsSomeIncludeDefinedForActionSuccess_ColsForActionTest()
-        {
-            RuntimeConfig runtimeConfig = InitRuntimeConfig(
-                entityName: "SampleEntity",
-                roleName: "Writer",
-                actionName: "Create",
-                includedCols: new string[] { "col1", "col2" },
-                excludedCols: new string[] { "*" }
-                );
-            AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
-
-            // Mock Request Values - Query a configured entity/role/action with columns allowed.
-            string entityName = "SampleEntity";
-            string roleName = "Writer";
-            string actionName = "Create";
-            List<string> columns = new(new string[] { "col1", "col2" });
-
-            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(roleName, entityName, actionName, columns));
-        }
-
         [TestMethod("Wildcard excluded columns with some included for action on role success")]
         public void WildcardIncludeColsSomeExcludeDefinedForActionSuccess_ColsForActionTest()
         {
@@ -415,6 +394,27 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string roleName = "Writer";
             string actionName = "Create";
             List<string> columns = new(new string[] { "col3", "col1" });
+
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(roleName, entityName, actionName, columns));
+        }
+
+        [TestMethod("Wildcard excluded columns with some included for action on role")]
+        public void WildcardExcludeColsSomeIncludeDefinedForActionSuccess_ColsForActionTest()
+        {
+            RuntimeConfig runtimeConfig = InitRuntimeConfig(
+                entityName: "SampleEntity",
+                roleName: "Writer",
+                actionName: "Create",
+                includedCols: new string[] { "col1", "col2" },
+                excludedCols: new string[] { "*" }
+                );
+            AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
+
+            // Mock Request Values - Query a configured entity/role/action with columns allowed.
+            string entityName = "SampleEntity";
+            string roleName = "Writer";
+            string actionName = "Create";
+            List<string> columns = new(new string[] { "col1", "col2" });
 
             Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(roleName, entityName, actionName, columns));
         }

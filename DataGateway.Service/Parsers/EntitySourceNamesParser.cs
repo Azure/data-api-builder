@@ -1,5 +1,7 @@
 using System;
 using System.Collections;
+using System.Net;
+using Azure.DataGateway.Service.Exceptions;
 
 namespace Azure.DataGateway.Service.Parsers
 {
@@ -31,7 +33,9 @@ namespace Azure.DataGateway.Service.Parsers
             (string?, string?) schemaTable = ParseSchemaAndTableHelper(input);
             if (string.IsNullOrEmpty(schemaTable.Item2))
             {
-                throw new ArgumentException($"Table is empty for input={input}");
+                throw new DataGatewayException(message: $"Table is empty for input={input}",
+                                               statusCode: HttpStatusCode.ServiceUnavailable,
+                                               subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
             }
 
             return (schemaTable.Item1, schemaTable.Item2);
@@ -55,7 +59,9 @@ namespace Azure.DataGateway.Service.Parsers
             if (string.IsNullOrEmpty(input))
             {
                 
-                throw new ArgumentException("Input is null or empty string");
+                throw new DataGatewayException(message: "Input is null or empty string",
+                                               statusCode: HttpStatusCode.ServiceUnavailable,
+                                               subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
             }
 
             if (input[input.Length - 1] == '.')
@@ -76,7 +82,9 @@ namespace Azure.DataGateway.Service.Parsers
                 if (tokens.Count > 2)
                 {
                     
-                    throw new ArgumentException($"Invalid number of tokens for={input}. Number of tokens is=${tokens.Count}");
+                    throw new DataGatewayException(message: $"Invalid number of tokens for={input}. Number of tokens is=${tokens.Count}",
+                                                   statusCode: HttpStatusCode.ServiceUnavailable,
+                                                   subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
                 }
             }
 
@@ -130,7 +138,9 @@ namespace Azure.DataGateway.Service.Parsers
                         //     ^  i
                         // Return exception because we encountered a ']' or '[',  and the token was not surrounded by "[" and "]".
                         //
-                        throw new ArgumentException("Token is not surrounded by '[' and ']'.");
+                        throw new DataGatewayException(message: "Token is not surrounded by '[' and ']'.",
+                                                       statusCode: HttpStatusCode.ServiceUnavailable,
+                                                       subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
                     }
                 } // close of if of !startsWithBracket
                 else
@@ -152,7 +162,9 @@ namespace Azure.DataGateway.Service.Parsers
                             // Ex: [abc]]
                             //     ^   i
                             // Return exception because we encountered ]] at the end of the string, and there is no closing "]"
-                            throw new ArgumentException("Token does not have closing ']'.");
+                            throw new DataGatewayException(message: "Token does not have closing ']'.",
+                                                           statusCode: HttpStatusCode.ServiceUnavailable,
+                                                           subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
                         }
 
                         // We increase by 2 so that we skip over the escaped "]"
@@ -166,7 +178,9 @@ namespace Azure.DataGateway.Service.Parsers
                         // Ex: [abc]xyz
                         //     ^   i
                         // Return exception because we encountered "]" and the character after "]" is not a "."
-                        throw new ArgumentException("Token has invalid character next to ']'. Allowed characters are '.' and ']'.");
+                        throw new DataGatewayException(message: "Token has invalid character next to ']'. Allowed characters are '.' and ']'.",
+                                                       statusCode: HttpStatusCode.ServiceUnavailable,
+                                                       subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
                     }
                 }  // close of else of !startsWithBracket
 
@@ -183,7 +197,9 @@ namespace Azure.DataGateway.Service.Parsers
                     //     ^   i
                     // Return exception because there is no corresponding closing "]".
                     //
-                    throw new ArgumentException("Token does not have corresponding closing ']'.");
+                    throw new DataGatewayException(message: "Token does not have corresponding closing ']'.",
+                                                   statusCode: HttpStatusCode.ServiceUnavailable,
+                                                   subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
                 }
                 // ^ is startIndex and i is current index
                 // Ex: xyz.[abc.def]

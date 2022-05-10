@@ -29,10 +29,13 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         private const string MYSQL_ENVIRONMENT = TestCategory.MYSQL;
         private const string POSTGRESQL_ENVIRONMENT = TestCategory.POSTGRESQL;
 
+        [DataTestMethod]
+        [DataRow(new string[] { })]
+        [DataRow(new string[] {"--ConfigFileName="})]
         [TestMethod("Validates that queries before runtime is configured returns a 503.")]
-        public async Task TestNoConfigReturnsServiceUnavailable()
+        public async Task TestNoConfigReturnsServiceUnavailable(string[] args)
         {
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostBuilder(args));
             HttpClient httpClient = server.CreateClient();
 
             HttpResponseMessage result = await httpClient.GetAsync("/graphql");
@@ -467,6 +470,9 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             ValidateCosmosDbSetup(server);
         }
 
+        #region NegativeTests
+
+        #endregion
         [TestCleanup]
         public void Cleanup()
         {

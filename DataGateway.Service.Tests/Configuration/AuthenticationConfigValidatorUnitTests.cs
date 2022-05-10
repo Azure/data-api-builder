@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Azure.DataGateway.Service.Tests.Configuration
 {
@@ -130,8 +133,9 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 ResolverConfigFile: DEFAULT_RESOLVER_FILE);
 
             HostGlobalSettings hostGlobal = new(Authentication: authNConfig);
+            JsonElement hostGlobalJson = JsonSerializer.SerializeToElement(hostGlobal);
             Dictionary<GlobalSettingsType, object> runtimeSettings = new();
-            runtimeSettings.TryAdd(GlobalSettingsType.Host, hostGlobal);
+            runtimeSettings.TryAdd(GlobalSettingsType.Host, hostGlobalJson);
             Dictionary<string, Entity> entities = new();
             RuntimeConfig config = new(
                 Schema: RuntimeConfig.SCHEMA,
@@ -143,7 +147,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 RuntimeSettings: runtimeSettings,
                 Entities: entities
             );
-
+            config.DetermineGlobalSettings();
             return config;
         }
         #endregion

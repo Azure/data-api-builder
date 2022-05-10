@@ -13,12 +13,13 @@ namespace Azure.DataGateway.Config
         DatabaseType DatabaseType,
         [property: JsonPropertyName(DataSource.CONNSTRING_PROPERTY_NAME)]
         string ConnectionString,
-        [property: JsonPropertyName(RuntimeConfig.RESOLVER_CONFIG_PROPERTY_NAME)]
+        [property: JsonPropertyName(DataSource.RESOLVER_JSON_PROPERTY_NAME)]
         string? ResolverConfigFile)
     {
-        public const string CONFIG_PROPERTY_NAME = "data-source";
+        public const string JSON_PROPERTY_NAME = "data-source";
         public const string DATABASE_PROPERTY_NAME = "database-type";
         public const string CONNSTRING_PROPERTY_NAME = "connection-string";
+        public const string RESOLVER_JSON_PROPERTY_NAME = "resolver-config-file";
     }
 
     /// <summary>
@@ -26,7 +27,7 @@ namespace Azure.DataGateway.Config
     /// </summary>
     public record CosmosDbOptions(string Database)
     {
-        public const string CONFIG_PROPERTY_NAME = nameof(DatabaseType.cosmos);
+        public const string JSON_PROPERTY_NAME = nameof(DatabaseType.cosmos);
     }
 
     /// <summary>
@@ -36,7 +37,7 @@ namespace Azure.DataGateway.Config
         [property: JsonPropertyName("set-session-context")]
         bool SetSessionContext = true)
     {
-        public const string CONFIG_PROPERTY_NAME = nameof(DatabaseType.mssql);
+        public const string JSON_PROPERTY_NAME = nameof(DatabaseType.mssql);
 
         public MsSqlOptions()
             : this(SetSessionContext: true) { }
@@ -47,7 +48,7 @@ namespace Azure.DataGateway.Config
     /// </summary>
     public record PostgreSqlOptions
     {
-        public const string CONFIG_PROPERTY_NAME = nameof(DatabaseType.postgresql);
+        public const string JSON_PROPERTY_NAME = nameof(DatabaseType.postgresql);
     }
 
     /// <summary>
@@ -55,7 +56,7 @@ namespace Azure.DataGateway.Config
     /// </summary>
     public record MySqlOptions
     {
-        public const string CONFIG_PROPERTY_NAME = nameof(DatabaseType.mysql);
+        public const string JSON_PROPERTY_NAME = nameof(DatabaseType.mysql);
     }
 
     /// <summary>

@@ -33,7 +33,8 @@ namespace Azure.DataGateway.Config
             "$schema": "",
             "data-source": {
                 "database-type": "mssql",
-                "connection-string": ""
+                "connection-string": "",
+                "resolver-config-file": ""
             },
             "mssql": {},
             "runtime": {
@@ -46,22 +47,23 @@ namespace Azure.DataGateway.Config
                 }
             },
             "entities" : {},
-            "resolver-config-file": ""
         }
     */
     public record RuntimeConfig(
         [property: JsonPropertyName(RuntimeConfig.SCHEMA_PROPERTY_NAME)] string Schema,
-        [property: JsonPropertyName(DataSource.CONFIG_PROPERTY_NAME)] DataSource DataSource,
+        [property: JsonPropertyName(DataSource.JSON_PROPERTY_NAME)] DataSource DataSource,
+        [property: JsonPropertyName(CosmosDbOptions.JSON_PROPERTY_NAME)]
         CosmosDbOptions? CosmosDb,
+        [property: JsonPropertyName(CosmosDbOptions.JSON_PROPERTY_NAME)]
         MsSqlOptions? MsSql,
         PostgreSqlOptions? PostgreSql,
         MySqlOptions? MySql,
-        [property: JsonPropertyName(GlobalSettings.CONFIG_PROPERTY_NAME)]
+        [property: JsonPropertyName(GlobalSettings.JSON_PROPERTY_NAME)]
         Dictionary<GlobalSettingsType, object> RuntimeSettings,
+        [property: JsonPropertyName(Entity.JSON_PROPERTY_NAME)]
         Dictionary<string, Entity> Entities)
     {
         public const string SCHEMA_PROPERTY_NAME = "$schema";
-        public const string RESOLVER_CONFIG_PROPERTY_NAME = "resolver-config-file";
         public const string SCHEMA = "hawaii.draft-01.schema.json";
 
         /// <summary>

@@ -7,7 +7,7 @@ namespace Azure.DataGateway.Config
     /// </summary>
     public record GlobalSettings
     {
-        public const string CONFIG_PROPERTY_NAME = "runtime";
+        public const string JSON_PROPERTY_NAME = "runtime";
     }
 
     /// <summary>

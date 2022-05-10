@@ -57,6 +57,7 @@ namespace Azure.DataGateway.Service
                 }
             }
 
+            services.AddSingleton<RuntimeConfigValidator>();
             services.AddSingleton<IGraphQLMetadataProvider, GraphQLFileMetadataProvider>();
             services.AddSingleton<CosmosClientProvider>();
 
@@ -314,7 +315,7 @@ namespace Azure.DataGateway.Service
             try
             {
                 // Now that the configuration has been set, perform validation.
-                app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
+                app.ApplicationServices.GetService<RuntimeConfigValidator>()!.ValidateConfig();
 
                 ISqlMetadataProvider? sqlMetadataProvider =
                     app.ApplicationServices.GetService<ISqlMetadataProvider>();
@@ -324,6 +325,7 @@ namespace Azure.DataGateway.Service
                     await sqlMetadataProvider.InitializeAsync();
                 }
 
+                app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
                 return true;
             }
             catch (Exception ex)

@@ -17,6 +17,11 @@ namespace Azure.DataGateway.Service.Configurations
             _runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue;
         }
 
+        public RuntimeConfigValidator(RuntimeConfig config)
+        {
+            _runtimeConfig = config;
+        }
+
         public void ValidateConfig()
         {
             if (_runtimeConfig is null)

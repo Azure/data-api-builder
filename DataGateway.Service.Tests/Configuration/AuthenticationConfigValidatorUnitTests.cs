@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.Configuration
@@ -18,11 +19,11 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         {
             RuntimeConfig config =
                 CreateRuntimeConfigWithAuthN(new AuthenticationConfig());
-            RuntimeConfigPostConfiguration dgPostConfig = new();
+            RuntimeConfigValidator configValidator = new(config);
 
             try
             {
-                dgPostConfig.PostConfigure(name: string.Empty, options: config);
+                configValidator.ValidateConfig();
             }
             catch (NotSupportedException e)
             {
@@ -42,11 +43,11 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 Jwt: jwt);
             RuntimeConfig config = CreateRuntimeConfigWithAuthN(authNConfig);
 
-            RuntimeConfigPostConfiguration dgPostConfig = new();
+            RuntimeConfigValidator configValidator = new(config);
 
             try
             {
-                dgPostConfig.PostConfigure(name: string.Empty, options: config);
+                configValidator.ValidateConfig();
             }
             catch (NotSupportedException e)
             {
@@ -70,10 +71,10 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
             RuntimeConfig config = CreateRuntimeConfigWithAuthN(authNConfig);
 
-            RuntimeConfigPostConfiguration dgPostConfig = new();
+            RuntimeConfigValidator configValidator = new(config);
             Assert.ThrowsException<NotSupportedException>(() =>
             {
-                dgPostConfig.PostConfigure(name: string.Empty, options: config);
+                configValidator.ValidateConfig();
             });
 
             jwt = new(
@@ -87,7 +88,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
             Assert.ThrowsException<NotSupportedException>(() =>
             {
-                dgPostConfig.PostConfigure(name: string.Empty, options: config);
+                configValidator.ValidateConfig();
             });
         }
 
@@ -100,11 +101,11 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 IssuerKey: string.Empty);
             AuthenticationConfig authNConfig = new(Provider: "EasyAuth", Jwt: jwt);
             RuntimeConfig config = CreateRuntimeConfigWithAuthN(authNConfig);
-            RuntimeConfigPostConfiguration dgPostConfig = new();
+            RuntimeConfigValidator configValidator = new(config);
 
             Assert.ThrowsException<NotSupportedException>(() =>
             {
-                dgPostConfig.PostConfigure(name: string.Empty, options: config);
+                configValidator.ValidateConfig();
             });
 
             jwt = new(
@@ -116,19 +117,17 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
             Assert.ThrowsException<NotSupportedException>(() =>
             {
-                dgPostConfig.PostConfigure(name: string.Empty, options: config);
+                configValidator.ValidateConfig();
             });
         }
         #endregion
         #region Helper Functions
         private static RuntimeConfig CreateRuntimeConfigWithAuthN(AuthenticationConfig authNConfig)
         {
-            DataSource dataSource = new()
-            {
-                DatabaseType = DatabaseType.mssql,
-                ConnectionString = DEFAULT_CONNECTION_STRING,
-                ResolverConfigFile = DEFAULT_RESOLVER_FILE
-            };
+            DataSource dataSource = new(
+                DatabaseType: DatabaseType.mssql,
+                ConnectionString: DEFAULT_CONNECTION_STRING,
+                ResolverConfigFile: DEFAULT_RESOLVER_FILE);
 
             HostGlobalSettings hostGlobal = new(Authentication: authNConfig);
             Dictionary<GlobalSettingsType, object> runtimeSettings = new();

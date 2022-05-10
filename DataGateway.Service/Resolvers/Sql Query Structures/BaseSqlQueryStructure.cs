@@ -86,7 +86,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 else
                 {
                     Predicate predicate = new(
-                        new PredicateOperand(new Column(tableSchema: null, tableName: null, leftoverColumn)),
+                        new PredicateOperand(new Column(tableSchema: SchemaName, tableName: TableName, leftoverColumn)),
                         PredicateOperation.Equal,
                         new PredicateOperand($"@{MakeParamWithValue(value: null)}")
                     );

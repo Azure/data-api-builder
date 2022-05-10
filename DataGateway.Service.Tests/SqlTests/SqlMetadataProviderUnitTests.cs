@@ -20,9 +20,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string expected = string.Empty;
             string actual;
-            string connectionString = "Host = localhost;Database = graphql; SearchPath=";
+            string connectionString = "Host=localhost;Database=graphql;SearchPath=";
 
-            MsSqlMetadataProvider.CheckConnectionStringForSchema(out actual, connectionString);
+            MsSqlMetadataProvider.TryGetSchemaFromConnectionString(out actual, connectionString);
             Assert.IsTrue(expected.Equals(actual));
         }
 
@@ -36,9 +36,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string expected = "foobar";
             string actual;
-            string connectionString = "Host = localhost;Database = graphql; SearchPath=foobar";
+            string connectionString = "Host=localhost;Database=graphql;SearchPath=foobar";
 
-            MsSqlMetadataProvider.CheckConnectionStringForSchema(out actual, connectionString);
+            MsSqlMetadataProvider.TryGetSchemaFromConnectionString(out actual, connectionString);
             Assert.IsTrue(expected.Equals(actual));
         }
 
@@ -52,9 +52,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string expected = "baz";
             string actual;
-            string connectionString = "SearchPath=baz; Host = localhost;Database = graphql";
+            string connectionString = "SearchPath=\"baz\";Host=localhost;Database=graphql";
 
-            MsSqlMetadataProvider.CheckConnectionStringForSchema(out actual, connectionString);
+            MsSqlMetadataProvider.TryGetSchemaFromConnectionString(out actual, connectionString);
             Assert.IsTrue(expected.Equals(actual));
         }
 
@@ -68,9 +68,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string expected = string.Empty;
             string actual;
-            string connectionString = "Host = localhost;Database = graphql";
+            string connectionString = "Host=localhost;Database=graphql";
 
-            MsSqlMetadataProvider.CheckConnectionStringForSchema(out actual, connectionString);
+            MsSqlMetadataProvider.TryGetSchemaFromConnectionString(out actual, connectionString);
             Assert.IsTrue(expected.Equals(actual));
         }
 
@@ -84,9 +84,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string expected = string.Empty;
             string actual;
-            string connectionString = "SearchPath=;Host = localhost;Database = graphql";
+            string connectionString = "SearchPath=;Host=localhost;Database=graphql";
 
-            MsSqlMetadataProvider.CheckConnectionStringForSchema(out actual, connectionString);
+            MsSqlMetadataProvider.TryGetSchemaFromConnectionString(out actual, connectionString);
             Assert.IsTrue(expected.Equals(actual));
         }
     }

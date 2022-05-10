@@ -157,39 +157,12 @@ namespace Azure.DataGateway.Service.Services
                 in GetEntitiesFromRuntimeConfig())
             {
                 // parse source name into a tuple of (schemaName, databaseObjectName)
-                (string, string) names = EntitySourceNamesParser.ParseSchemaAndTable(entity.GetSourceName())!;
-                string schemaName = names.Item1;
-                string dbObjectName = names.Item2;
-
-                // if schemaName is empty we check if the DB type is postgresql
-                // and if the schema name was included in the connection string
-                // as a value associated with the keyword 'SearchPath'.
-                // if the DB type is not postgresql or if the connection string
-                // does not include the schema name, we use the default schema name.
-                // if schemaName is not empty we must check if Database Type is MySql
-                // and in this case we throw an exception since there should be no
-                // schema name in this case.
-                if (string.IsNullOrEmpty(schemaName))
-                {
-                    // if DatabaseType is not postgresql will short circuit and use default
-                    if (DatabaseType is not DatabaseType.postgresql || !CheckConnectionStringForSchema(
-                                                                        out schemaName,
-                                                                        connectionString: _runtimeConfigProvider.GetRuntimeConfig().DataSource.ConnectionString))
-                    {
-                        schemaName = GetDefaultSchemaName();
-                    }
-                }
-                else if (DatabaseType is DatabaseType.mysql)
-                {
-                    throw new DataGatewayException(message: $"Invalid database object name: \"{schemaName}.{dbObjectName}\"",
-                                                   statusCode: System.Net.HttpStatusCode.BadRequest,
-                                                   subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
-                }
+                (string? schemaName, string? dbObjectName) = ParseSchemaAndDbObjectName(entity.GetSourceName())!;
 
                 DatabaseObject databaseObject = new()
                 {
                     SchemaName = schemaName,
-                    Name = dbObjectName,
+                    Name = dbObjectName!,
                     TableDefinition = new()
                 };
 
@@ -204,10 +177,12 @@ namespace Azure.DataGateway.Service.Services
                         if (relationship.LinkingObject != null
                             && !EntityToDatabaseObject.ContainsKey(relationship.LinkingObject))
                         {
+                            // linking object can have its own schema, so we parse and update here
+                            (schemaName, dbObjectName) = ParseSchemaAndDbObjectName(relationship.LinkingObject);
                             DatabaseObject linkingDatabaseObject = new()
                             {
-                                SchemaName = schemaName,
-                                Name = relationship.LinkingObject,
+                                SchemaName = schemaName!,
+                                Name = dbObjectName!,
                                 TableDefinition = new()
                             };
 
@@ -221,6 +196,47 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
+        /// Helper function will parse the schema and database object name
+        /// from the provided and string and sort out if a default schema
+        /// should be used. It then returns the appropriate schema and
+        /// db object name as a tuple of strings.
+        /// </summary>
+        /// <param name="source">source string to parse</param>
+        /// <returns></returns>
+        /// <exception cref="DataGatewayException"></exception>
+        public (string?, string?) ParseSchemaAndDbObjectName(string source)
+        {
+            (string? schemaName, string? dbObjectName) = EntitySourceNamesParser.ParseSchemaAndTable(source)!;
+
+            // if schemaName is empty we check if the DB type is postgresql
+            // and if the schema name was included in the connection string
+            // as a value associated with the keyword 'SearchPath'.
+            // if the DB type is not postgresql or if the connection string
+            // does not include the schema name, we use the default schema name.
+            // if schemaName is not empty we must check if Database Type is MySql
+            // and in this case we throw an exception since there should be no
+            // schema name in this case.
+            if (string.IsNullOrEmpty(schemaName))
+            {
+                // if DatabaseType is not postgresql will short circuit and use default
+                if (DatabaseType is not DatabaseType.postgresql || !TryGetSchemaFromConnectionString(
+                                                                    out schemaName,
+                                                                    connectionString: _runtimeConfigProvider.GetRuntimeConfig().DataSource.ConnectionString))
+                {
+                    schemaName = GetDefaultSchemaName();
+                }
+            }
+            else if (DatabaseType is DatabaseType.mysql)
+            {
+                throw new DataGatewayException(message: $"Invalid database object name: \"{schemaName}.{dbObjectName}\"",
+                                               statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                               subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            return (schemaName, dbObjectName);
+        }
+
+        /// <summary>
         /// The connection string could contain the
         /// schema, in which case it will be associated
         /// with the keyword 'SearchPath' and continue
@@ -230,7 +246,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="schemaName">the schema name we save.</param>
         /// <returns>true if schema in connection string, false otherwise.</returns>
-        public static bool CheckConnectionStringForSchema(out string schemaName, string connectionString)
+        public static bool TryGetSchemaFromConnectionString(out string schemaName, string connectionString)
         {
             // get the index of the first char after 'SearchPath'
             int startIndex = connectionString.IndexOf("SearchPath");
@@ -241,7 +257,8 @@ namespace Azure.DataGateway.Service.Services
                 int endIndex = connectionString.IndexOf(';', startIndex);
                 endIndex = endIndex == -1 ? connectionString.Length : endIndex;
                 // gets the substring bounded by 'SearchPath=' and ';' or the end of the string
-                schemaName = connectionString[startIndex..endIndex];
+                // trim leading and trailing double quotes before returning.
+                schemaName = connectionString[startIndex..endIndex].Trim('"');
                 return string.IsNullOrEmpty(schemaName) ? false : true;
             }
 

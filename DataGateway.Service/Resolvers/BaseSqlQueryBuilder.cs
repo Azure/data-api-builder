@@ -107,35 +107,26 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Build column as
         /// [{tableAlias}].[{ColumnName}]
         /// or if TableAlias is empty, as
-        /// [{schema}.{table}].[{ColumnName}]
+        /// [{schema}].[{table}].[{ColumnName}]
         /// or if schema is empty, as
         /// [{table}].[{ColumnName}]
-        /// or if TableName is null, as
-        /// [{ColumnName}]
         /// </summary>
         protected virtual string Build(Column column)
-        {
-            if (column.TableName != null)
+        {   
+            // If the table alias is not empty, we return [{TableAlias}].[{Column}]
+            if (!string.IsNullOrEmpty(column.TableAlias))
             {
-                // MySql has empty schema so we check if schema is null or empty and then do not append in this case
-                if (!string.IsNullOrEmpty(column.TableSchema))
-                {
-                    // when table alias is not empty we return [{tableAlias}].[{ColumnName}], otherwise [{schema}.{table}].[{ColumnName}]
-                    return !string.IsNullOrEmpty(column.TableAlias) ? $"{QuoteIdentifier(column.TableAlias)}.{QuoteIdentifier(column.ColumnName)}" :
-                           $"{QuoteIdentifier(column.TableSchema)}.{QuoteIdentifier(column.TableName)}.{QuoteIdentifier(column.ColumnName)}";
-                }
-                else
-                {
-                    // schema was empty so we return when table alias is not empty [{tableAlias}].[{ColumnName}] otherwise [{table}].[{ColumnName}]
-                    return !string.IsNullOrEmpty(column.TableAlias) ? $"{QuoteIdentifier(column.TableAlias)}.{QuoteIdentifier(column.ColumnName)}" :
-                           $"{QuoteIdentifier($"{column.TableName}")}.{QuoteIdentifier(column.ColumnName)}";
-                }
+                return $"{QuoteIdentifier(column.TableAlias)}.{QuoteIdentifier(column.ColumnName)}";
             }
+            // If there is no table alias then if the schema is not empty, we return [{TableSchema}].[{TableName}].[{Column}]
+            else if (!string.IsNullOrEmpty(column.TableSchema))
+            {
+                return $"{QuoteIdentifier($"{column.TableSchema}")}.{QuoteIdentifier($"{column.TableName}")}.{QuoteIdentifier(column.ColumnName)}";
+            }
+            // If there is no table alias, and no schema, we return [{TableName}].[{Column}]
             else
             {
-                // when table alias is not empty we return [{tableAlias}].[{ColumnName}] otherwise [{ColumnName}]
-                return !string.IsNullOrEmpty(column.TableAlias) ? $"{QuoteIdentifier(column.TableAlias)}.{QuoteIdentifier(column.ColumnName)}" :
-                       $"{QuoteIdentifier(column.ColumnName)}";
+                return $"{QuoteIdentifier($"{column.TableName}")}.{ QuoteIdentifier(column.ColumnName)}";
             }
         }
 

@@ -37,7 +37,11 @@ namespace Azure.DataGateway.Service.Exceptions
             /// <summary>
             /// Unexpected error.
             /// </summary>,
-            UnexpectedError
+            UnexpectedError,
+            /// <summary>
+            /// Error encountered while initializing.
+            /// </summary>
+            ErrorInInitialization
         }
 
         public HttpStatusCode StatusCode { get; }

@@ -598,6 +598,57 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        /// <summary>
+        /// Passes null to nullable fields and makes sure they are ignored
+        /// </summary>
+        public async Task TestExplicitNullFieldsAreIgnored()
+        {
+            string graphQLQueryName = "getBooks";
+            string gqlQuery = @"{
+                getBooks(_filter: {
+                                    id: {gte: 2 lte: null}
+                                    title: null
+                                    or: null
+                                  })
+                {
+                    id
+                    title
+                }
+            }";
+
+            string dbQuery = MakeQueryOn(
+                "books",
+                new List<string> { "id", "title" },
+                @"id >= 2");
+
+            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Passes null to nullable fields and makes sure they are ignored
+        /// </summary>
+        public async Task TestInputObjectWithOnlyNullFieldsEvaluatesToFalse()
+        {
+            string graphQLQueryName = "getBooks";
+            string gqlQuery = @"{
+                getBooks(_filter: {id: {lte: null}})
+                {
+                    id
+                }
+            }";
+
+            string dbQuery = MakeQueryOn(
+                "books",
+                new List<string> { "id" },
+                @"1 != 1");
+
+            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         /// <remarks>

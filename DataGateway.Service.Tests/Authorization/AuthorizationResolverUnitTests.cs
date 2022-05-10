@@ -90,7 +90,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             Mock<HttpContext> context = new();
             context.SetupGet(x => x.Request.Headers[CLIENT_ROLE_HEADER]).Returns(StringValues.Empty);
-            context.Setup(x => x.Request.Headers.ContainsKey(CLIENT_ROLE_HEADER)).Returns(true);
+            context.Setup(x => x.Request.Headers.ContainsKey(CLIENT_ROLE_HEADER)).Returns(false);
 
             Assert.IsFalse(authZResolver.IsValidRoleContext(context.Object));
         }

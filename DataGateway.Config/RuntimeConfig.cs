@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Config
 {
@@ -136,12 +135,7 @@ namespace Azure.DataGateway.Config
                     : false;
         }
 
-        public bool DoesDatabaseTypeHaveValue()
-        {
-            return DatabaseType.HasValue;
-        }
-
-        public DatabaseType? DatabaseType
+        public DatabaseType DatabaseType
         {
             get
             {
@@ -149,84 +143,12 @@ namespace Azure.DataGateway.Config
             }
         }
 
-        public string? ConnectionString
+        public string ConnectionString
         {
             get
             {
                 return DataSource.ConnectionString;
             }
-        }
-    }
-
-    /// <summary>
-    /// Post configuration processing for RuntimeConfig.
-    /// We check for database connection options.
-    ///
-    /// This inteface is called before IValidateOptions. Hence, we need to do some validation here.
-    /// </summary>
-    public class RuntimeConfigPostConfiguration : IPostConfigureOptions<RuntimeConfig>
-    {
-        public void PostConfigure(string name, RuntimeConfig options)
-        {
-            if (!options.DoesDatabaseTypeHaveValue())
-            {
-                return;
-            }
-
-            if (string.IsNullOrEmpty(options.DataSource.ResolverConfigFile))
-            {
-                throw new NotSupportedException("The ResolverConfigFile should be provided" +
-                    " with the runtime config.");
-            }
-
-            if (string.IsNullOrWhiteSpace(options.DataSource.ConnectionString))
-            {
-                throw new NotSupportedException($"The Connection String should be provided.");
-            }
-
-            ValidateAuthenticationConfig(options);
-        }
-
-        private static void ValidateAuthenticationConfig(RuntimeConfig options)
-        {
-            bool isAudienceSet =
-                options.AuthNConfig != null &&
-                options.AuthNConfig.Jwt != null &&
-                !string.IsNullOrEmpty(options.AuthNConfig.Jwt.Audience);
-            bool isIssuerSet =
-                options.AuthNConfig != null &&
-                options.AuthNConfig.Jwt != null &&
-                !string.IsNullOrEmpty(options.AuthNConfig.Jwt.Issuer);
-            if (!options.IsEasyAuthAuthenticationProvider() && (!isAudienceSet || !isIssuerSet))
-            {
-                throw new NotSupportedException("Audience and Issuer must be set" +
-                    " when not using EasyAuth.");
-            }
-
-            if (options.IsEasyAuthAuthenticationProvider() && (isAudienceSet || isIssuerSet))
-            {
-                throw new NotSupportedException("Audience and Issuer should not be set" +
-                    " and are not used with EasyAuth.");
-            }
-        }
-    }
-
-    /// <summary>
-    /// Validate config.
-    /// This happens after post configuration.
-    /// </summary>
-    public class RuntimeConfigValidation : IValidateOptions<RuntimeConfig>
-    {
-        public ValidateOptionsResult Validate(string name, RuntimeConfig options)
-        {
-            if (!options.DoesDatabaseTypeHaveValue())
-            {
-                return ValidateOptionsResult.Success;
-            }
-
-            return string.IsNullOrWhiteSpace(options.ConnectionString)
-                ? ValidateOptionsResult.Fail("Invalid connection string.")
-                : ValidateOptionsResult.Success;
         }
     }
 }

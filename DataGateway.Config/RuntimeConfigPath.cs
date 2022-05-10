@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Options;
+
 namespace Azure.DataGateway.Config
 {
     public class RuntimeConfigPath
@@ -27,6 +29,23 @@ namespace Azure.DataGateway.Config
             {
                 ConfigValue = RuntimeConfig.GetDeserializedConfig<RuntimeConfig>(runtimeConfigJson);
             }
+        }
+
+        /// <summary>
+        /// Extract the values from the config file.
+        /// Assumes the config value is set and non-null.
+        /// </summary>
+        /// <param name="databaseType"></param>
+        /// <param name="connectionString"></param>
+        /// <param name="entities"></param>
+        public void ExtractConfigValues(
+            out DatabaseType databaseType,
+            out string connectionString,
+            out Dictionary<string, Entity> entities)
+        {
+            databaseType = ConfigValue!.DatabaseType;
+            connectionString = ConfigValue!.ConnectionString;
+            entities = ConfigValue!.Entities;
         }
 
         /// <summary>
@@ -107,6 +126,20 @@ namespace Azure.DataGateway.Config
         {
             string currentDir = Directory.GetCurrentDirectory();
             return File.Exists(Path.Combine(currentDir, fileName));
+        }
+    }
+
+    /// <summary>
+    /// Validate RuntimeConfigPath.
+    /// This happens after post configuration.
+    /// </summary>
+    public class RuntimeConfigPathValidation : IValidateOptions<RuntimeConfigPath>
+    {
+        public ValidateOptionsResult Validate(string name, RuntimeConfigPath options)
+        {
+            return string.IsNullOrWhiteSpace(options.ConfigFileName)
+                ? ValidateOptionsResult.Fail("Invalid runtime config file name.")
+                : ValidateOptionsResult.Success;
         }
     }
 }

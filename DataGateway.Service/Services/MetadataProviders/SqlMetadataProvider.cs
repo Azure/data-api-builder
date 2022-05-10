@@ -53,10 +53,12 @@ namespace Azure.DataGateway.Service.Services
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder)
         {
-            RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
-            ConnectionString = runtimeConfig.ConnectionString!;
-            _databaseType = (DatabaseType)runtimeConfig.DatabaseType!;
-            _entities = runtimeConfig.Entities;
+            runtimeConfigPath.CurrentValue.
+                ExtractConfigValues(
+                    out _databaseType,
+                    out string connectionString,
+                    out _entities);
+            ConnectionString = connectionString;
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;

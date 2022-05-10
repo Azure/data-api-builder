@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes;
@@ -19,6 +18,7 @@ using HotChocolate.Execution.Configuration;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -27,28 +27,34 @@ namespace Azure.DataGateway.Service.Services
         private readonly IQueryEngine _queryEngine;
         private readonly IMutationEngine _mutationEngine;
         private readonly IGraphQLMetadataProvider _graphQLMetadataProvider;
-        private readonly IRuntimeConfigProvider _runtimeConfigProvider;
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly IDocumentCache _documentCache;
         private readonly IDocumentHashProvider _documentHashProvider;
         private readonly bool _useLegacySchema;
+        private readonly DatabaseType _databaseType;
+        private readonly Dictionary<string, Entity> _entities;
 
         public ISchema? Schema { private set; get; }
         public IRequestExecutor? Executor { private set; get; }
 
         public GraphQLService(
+            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
             IGraphQLMetadataProvider graphQLMetadataProvider,
             IDocumentCache documentCache,
             IDocumentHashProvider documentHashProvider,
-            IRuntimeConfigProvider runtimeConfigProvider,
             ISqlMetadataProvider sqlMetadataProvider)
         {
+
+            runtimeConfigPath.CurrentValue.
+                ExtractConfigValues(
+                    out _databaseType,
+                    out _,
+                    out _entities);
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
             _graphQLMetadataProvider = graphQLMetadataProvider;
-            _runtimeConfigProvider = runtimeConfigProvider;
             _sqlMetadataProvider = sqlMetadataProvider;
             _documentCache = documentCache;
             _documentHashProvider = documentHashProvider;
@@ -78,7 +84,6 @@ namespace Azure.DataGateway.Service.Services
         /// <exception cref="DataGatewayException">Error will be raised if no database type is set</exception>
         private void Parse(DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes, Dictionary<string, Entity> entities)
         {
-            DatabaseType databaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
             ISchemaBuilder sb = SchemaBuilder.New()
                 .AddDocument(root)
                 .AddDirectiveType<ModelDirectiveType>()
@@ -87,7 +92,7 @@ namespace Azure.DataGateway.Service.Services
                 .AddDirectiveType<DefaultValueDirectiveType>()
                 .AddType<DefaultValueType>()
                 .AddDocument(QueryBuilder.Build(root, entities, inputTypes))
-                .AddDocument(MutationBuilder.Build(root, databaseType, entities));
+                .AddDocument(MutationBuilder.Build(root, _databaseType, entities));
 
             Schema = sb
                 .AddAuthorizeDirectiveType()
@@ -181,19 +186,16 @@ namespace Azure.DataGateway.Service.Services
             }
             else if (!_useLegacySchema)
             {
-                DatabaseType databaseType = _runtimeConfigProvider.GetRuntimeConfig().DataSource.DatabaseType;
-                Dictionary<string, Entity> entities = _runtimeConfigProvider.GetRuntimeConfig().Entities;
-
-                (DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = databaseType switch
+                (DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = _databaseType switch
                 {
                     DatabaseType.cosmos => GenerateCosmosGraphQLObjects(),
                     DatabaseType.mssql or
                     DatabaseType.postgresql or
-                    DatabaseType.mysql => GenerateSqlGraphQLObjects(entities),
-                    _ => throw new NotImplementedException($"This database type {databaseType} is not yet implemented.")
+                    DatabaseType.mysql => GenerateSqlGraphQLObjects(_entities),
+                    _ => throw new NotImplementedException($"This database type {_databaseType} is not yet implemented.")
                 };
 
-                Parse(root, inputTypes, entities);
+                Parse(root, inputTypes, _entities);
             }
         }
 

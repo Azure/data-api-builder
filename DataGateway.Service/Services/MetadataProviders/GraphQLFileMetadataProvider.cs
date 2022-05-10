@@ -23,29 +23,17 @@ namespace Azure.DataGateway.Service.Services
         public GraphQLFileMetadataProvider(
             IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
         {
-            RuntimeConfig? config = runtimeConfigPath.CurrentValue.ConfigValue;
-            if (config is null)
-            {
-                throw new ArgumentNullException("runtime-config",
-                    "The runtime-config value has not been set yet.");
-            }
+            RuntimeConfig config = runtimeConfigPath.CurrentValue.ConfigValue!;
 
-            if (!config.DoesDatabaseTypeHaveValue())
-            {
-                throw new ArgumentNullException("runtime-config.data-source.database-type",
-                    "The database type should be set before creating a GraphQLFileMetadataProvider");
-            }
-
-            string? resolverConfigJson = null;
-            if (!string.IsNullOrEmpty(config.DataSource.ResolverConfigFile))
-            {
-                resolverConfigJson = File.ReadAllText(config.DataSource.ResolverConfigFile);
-            }
+            // At this point, the validation is done so, ConfigValue and ResolverConfigFile
+            // must not be null.
+            string resolverConfigJson =
+                File.ReadAllText(config.DataSource.ResolverConfigFile!);
 
             if (string.IsNullOrEmpty(resolverConfigJson))
             {
                 throw new ArgumentNullException("runtime-config.data-source.resolver-config-file",
-                    $"The resolver config should be set via ResolverConfigFile: " +
+                    $"The resolver config file contents are empty resolver-config-file: " +
                     $"{config.DataSource.ResolverConfigFile}\n" +
                     $"RuntimeConfigPath: {runtimeConfigPath.CurrentValue.ConfigFileName}");
             }

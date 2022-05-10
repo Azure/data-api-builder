@@ -208,8 +208,9 @@ namespace Azure.DataGateway.Service
                 }
             });
 
-            services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<RuntimeConfig>, RuntimeConfigPostConfiguration>());
-            services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<RuntimeConfig>, RuntimeConfigValidation>());
+            services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IValidateOptions<RuntimeConfigPath>,
+                    RuntimeConfigPathValidation>());
 
             services.AddSingleton<IDocumentHashProvider, Sha256DocumentHashProvider>();
             services.AddSingleton<IDocumentCache, DocumentCache>();
@@ -312,6 +313,9 @@ namespace Azure.DataGateway.Service
         {
             try
             {
+                // Now that the configuration has been set, perform validation.
+                app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
+
                 ISqlMetadataProvider? sqlMetadataProvider =
                     app.ApplicationServices.GetService<ISqlMetadataProvider>();
 
@@ -319,9 +323,6 @@ namespace Azure.DataGateway.Service
                 {
                     await sqlMetadataProvider.InitializeAsync();
                 }
-
-                // Now that the configuration has been set, perform validation.
-                app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
 
                 return true;
             }

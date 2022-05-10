@@ -10,22 +10,15 @@ namespace Azure.DataGateway.Config
     /// will use to connect to the backend database.</param>
     public record DataSource(
         [property: JsonPropertyName(DataSource.DATABASE_PROPERTY_NAME)]
-        DatabaseType? DatabaseType,
+        DatabaseType DatabaseType,
         [property: JsonPropertyName(DataSource.CONNSTRING_PROPERTY_NAME)]
-        string? ConnectionString,
+        string ConnectionString,
         [property: JsonPropertyName(RuntimeConfig.RESOLVER_CONFIG_PROPERTY_NAME)]
         string? ResolverConfigFile)
     {
         public const string CONFIG_PROPERTY_NAME = "data-source";
         public const string DATABASE_PROPERTY_NAME = "database-type";
         public const string CONNSTRING_PROPERTY_NAME = "connection-string";
-
-        public DataSource() :
-            this(
-                DatabaseType: null,
-                ConnectionString: null,
-                ResolverConfigFile: null)
-        { }
     }
 
     /// <summary>

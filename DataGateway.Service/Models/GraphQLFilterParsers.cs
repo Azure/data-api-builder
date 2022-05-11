@@ -72,7 +72,8 @@ namespace Azure.DataGateway.Service.Models
             if (table.Columns.Count > 0)
             {
                 columnType = table.Columns[name].SystemType;
-            } else
+            }
+            else
             {
                 // Trying to get the kind from the field value type instead if there is no table def
                 columnType = GetTypeFromValueKind(fields[0].Value.Kind);

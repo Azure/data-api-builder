@@ -67,15 +67,39 @@ namespace Azure.DataGateway.Service.Models
             Func<object, string> processLiterals)
         {
             Column column = new(tableAlias, name);
-            Type columnType = table.Columns[name].SystemType;
+
+            Type columnType;
+            if (table.Columns.Count > 0)
+            {
+                columnType = table.Columns[name].SystemType;
+            } else
+            {
+                // Trying to get the kind from the field value type instead if there is no table def
+                columnType = GetTypeFromValueKind(fields[0].Value.Kind);
+            }
+
             switch (columnType.ToString())
             {
                 case "System.String":
                     return StringTypeFilterParser.Parse(column, fields, processLiterals);
                 case "System.Int64":
+                case "System.Int32":
                     return IntTypeFilterParser.Parse(column, fields, processLiterals);
                 default:
                     throw new NotSupportedException($"Unexpected system type {columnType} found for column.");
+            }
+        }
+
+        private static Type GetTypeFromValueKind(SyntaxKind kind)
+        {
+            switch (kind)
+            {
+                case SyntaxKind.StringValue:
+                    return typeof(string);
+                case SyntaxKind.IntValue:
+                    return typeof(int);
+                default:
+                    throw new NotSupportedException($"Unexpected syntaxKind {kind}");
             }
         }
 

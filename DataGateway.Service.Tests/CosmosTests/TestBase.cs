@@ -68,7 +68,7 @@ type Planet {
     name : String
 }";
 
-            _metadataStoreProvider.GraphQLSchema = jsonString;
+            _metadataStoreProvider.GraphQLSchema = File.ReadAllText("schema.gql");
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
             _graphQLService = new GraphQLService(

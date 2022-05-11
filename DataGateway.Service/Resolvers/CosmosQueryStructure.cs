@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
@@ -46,38 +47,52 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 if (fieldNode != null)
                 {
-                    Columns.AddRange(fieldNode.SelectionSet!.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.ToString())));
+                    Columns.AddRange(fieldNode.SelectionSet!.Selections.Select(x => new LabelledColumn(_containerAlias, "", ((FieldNode)x).Name.Value)));
                 }
             }
             else
             {
-                Columns.AddRange(selection.SyntaxNode.SelectionSet!.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.ToString())));
+                Columns.AddRange(selection.SyntaxNode.SelectionSet!.Selections.Select(x => new LabelledColumn(_containerAlias, "", ((FieldNode)x).Name.Value)));
             }
 
             Container = graphqlType.ContainerName;
             Database = graphqlType.DatabaseName;
 
-            foreach (KeyValuePair<string, object> parameter in queryParams)
+            // first and after will not be part of query parameters. They will be going into headers instead.
+            // TODO: Revisit 'first' while adding support for TOP queries
+            if (queryParams.ContainsKey("first"))
             {
-                // first and after will not be part of query parameters. They will be going into headers instead.
-                // TODO: Revisit 'first' while adding support for TOP queries
-                if (parameter.Key == "first")
-                {
-                    MaxItemCount = (int)parameter.Value;
-                    continue;
-                }
+                MaxItemCount = (int)queryParams["first"];
+                queryParams.Remove("first");
+            }
 
-                if (parameter.Key == "after")
-                {
-                    Continuation = (string)parameter.Value;
-                    continue;
-                }
+            if (queryParams.ContainsKey("after"))
+            {
+                Continuation = (string)queryParams["after"];
+                queryParams.Remove("after");
+            }
 
-                Predicates.Add(new Predicate(
-                    new PredicateOperand(new Column(_containerAlias, parameter.Key)),
-                    PredicateOperation.Equal,
-                    new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
-                ));
+            if (queryParams.ContainsKey("_filter"))
+            {
+                object? filterObject = queryParams["_filter"];
+
+                if (filterObject != null)
+                {
+                    List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
+                    Predicates.Add(GQLFilterParser.Parse(filterFields, _containerAlias, new TableDefinition(), MakeParamWithValue));
+                }
+            }
+            else
+            {
+
+                foreach (KeyValuePair<string, object> parameter in queryParams)
+                {
+                    Predicates.Add(new Predicate(
+                        new PredicateOperand(new Column(_containerAlias, parameter.Key)),
+                        PredicateOperation.Equal,
+                        new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
+                    ));
+                }
             }
         }
     }

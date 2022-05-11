@@ -44,7 +44,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             {
                 id = id,
                 myProp = "a value",
-                myIntProp = 4,
+                age = 4,
                 myBooleanProp = true,
                 anotherPojo = new
                 {

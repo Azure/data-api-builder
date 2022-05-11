@@ -26,14 +26,14 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <summary>
-        /// Whether X-MS-API-Role Http Request Header is present in httpContext.Identity.Claims.Roles
+        /// Whether client role header defined role is present in httpContext.Identity.Claims.Roles
         /// and if the header is present, whether the authenticated user is a member of the role defined
         /// in the header.
         /// </summary>
         /// <param name="httpContext">Contains request headers and metadata of the authenticated user.</param>
         /// <returns>
-        /// X-MS-API-Role
-        ///     Header not present -> TRUE, request is anonymous
+        /// Client Role HEader
+        ///     Header not present -> FALSE, anonymous request must still provided required header.
         ///     Header present, no value -> FALSE
         ///     Header present, invalid value -> FALSE
         ///     Header present, valid value -> TRUE
@@ -47,8 +47,8 @@ namespace Azure.DataGateway.Service.Authorization
                 return false;
             }
 
-            // Multiple header fields with the same field-name(X-MS-API-ROLE) MAY be present in a message,
-            // but are NOT supported.
+            // Multiple header fields with the same field-name MAY be present in a message,
+            // but are NOT supported, specifically for the client role header.
             // Valid scenario per HTTP Spec: http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
             // Discussion: https://stackoverflow.com/a/3097052/18174950
             if (httpContext.Request.Headers[CLIENT_ROLE_HEADER].Count > 1)

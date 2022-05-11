@@ -19,14 +19,14 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
         /// <summary>
         /// Tests the first stage of authorization: Role Context
-        /// X-MS-API-ROLE header is present, Role is in ClaimsPrincipal.Roles
-        /// X-MS-API-ROLE header is present, Role is NOT in ClaimsPrincipal.Roles
-        /// X-MS-API-ROLE header is present, value is empty
-        /// X-MS-API-ROLE header is present, and header is duplicated(fuzzing catch)
-        /// X-MS-API-ROLE header is NOT present
+        /// Client role header is present, Role is in ClaimsPrincipal.Roles
+        /// Client role header is present, Role is NOT in ClaimsPrincipal.Roles
+        /// Client role header is present, value is empty
+        /// Client role header is present, and header is duplicated(fuzzing catch)
+        /// Client role header is NOT present
         /// </summary>
         #region Positive Role Context Tests
-        [TestMethod("X-MS-API-ROLE header is present, Role is in ClaimsPrincipal.Roles")]
+        [TestMethod("Client role header is present, Role is in ClaimsPrincipal.Roles")]
         public void ValidRole_ContextTest()
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig();
@@ -41,7 +41,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         }
         #endregion
         #region Negative Role Context Tests
-        [TestMethod("X-MS-API-ROLE header is present, Role is NOT in ClaimsPrincipal.Roles")]
+        [TestMethod("Client role header is present, Role is NOT in ClaimsPrincipal.Roles")]
         public void UserNotInRole_RoleContextTest()
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig();
@@ -55,7 +55,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             Assert.IsFalse(authZResolver.IsValidRoleContext(context.Object));
         }
 
-        [TestMethod("X-MS-API-ROLE header is present, value is empty")]
+        [TestMethod("Client role header is present, value is empty")]
         public void RoleHeaderEmpty_RoleContextTest()
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig();
@@ -68,7 +68,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             Assert.IsFalse(authZResolver.IsValidRoleContext(context.Object));
         }
 
-        [TestMethod("X-MS-API-ROLE header is duplicated / has multiple values")]
+        [TestMethod("Client role header is duplicated / has multiple values")]
         public void RoleHeaderDuplicated_RoleContextTest()
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig();
@@ -83,7 +83,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             Assert.IsFalse(authZResolver.IsValidRoleContext(context.Object));
         }
 
-        [TestMethod("X-MS-API-ROLE header is not present.")]
+        [TestMethod("Client role header is not present.")]
         public void NoRoleHeader_RoleContextTest()
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig();

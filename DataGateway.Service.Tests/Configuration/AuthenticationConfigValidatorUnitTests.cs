@@ -128,7 +128,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         {
             DataSource dataSource = new(
                 DatabaseType: DatabaseType.mssql,
-                ConnectionString: DEFAULT_CONNECTION_STRING,
                 ResolverConfigFile: DEFAULT_RESOLVER_FILE);
 
             HostGlobalSettings hostGlobal = new(Authentication: authNConfig);

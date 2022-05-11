@@ -470,9 +470,25 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             ValidateCosmosDbSetup(server);
         }
 
-        #region NegativeTests
+        /// <summary>
+        /// Set the connection string to an invalid value and expect the service to be unavailable
+        // since without this env var, it would be available - guaranteeing this env variable
+        // has highest precedence irrespective of what the connection string is in the config file.
+        /// </summary>
+        [TestMethod("Validates that environment variable HAWAII_CONNSTRING has highest precedence.")]
+        public async Task TestConnectionStringEnvVarHasHighestPrecedence()
+        {
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
+            Environment.SetEnvironmentVariable(
+                $"{RuntimeConfigPath.ENVIRONMENT_PREFIX}_{nameof(RuntimeConfigPath.CONNSTRING)}",
+                "Invalid Connection String");
+            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            HttpClient httpClient = server.CreateClient();
 
-        #endregion
+            HttpResponseMessage result = await httpClient.GetAsync("/graphql");
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, result.StatusCode);
+        }
+
         [TestCleanup]
         public void Cleanup()
         {

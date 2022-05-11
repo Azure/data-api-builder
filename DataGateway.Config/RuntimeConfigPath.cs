@@ -37,7 +37,7 @@ namespace Azure.DataGateway.Config
                 ConfigValue = RuntimeConfig.GetDeserializedConfig<RuntimeConfig>(runtimeConfigJson);
                 ConfigValue.DetermineGlobalSettings();
 
-                if (!string.IsNullOrEmpty(CONNSTRING))
+                if (!string.IsNullOrWhiteSpace(CONNSTRING))
                 {
                     ConfigValue.ConnectionString = CONNSTRING;
                 }

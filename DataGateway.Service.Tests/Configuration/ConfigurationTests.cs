@@ -476,17 +476,22 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         // has highest precedence irrespective of what the connection string is in the config file.
         /// </summary>
         [TestMethod("Validates that environment variable HAWAII_CONNSTRING has highest precedence.")]
-        public async Task TestConnectionStringEnvVarHasHighestPrecedence()
+        public void TestConnectionStringEnvVarHasHighestPrecedence()
         {
-            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
             Environment.SetEnvironmentVariable(
                 $"{RuntimeConfigPath.ENVIRONMENT_PREFIX}{nameof(RuntimeConfigPath.CONNSTRING)}",
                 "Invalid Connection String");
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
-            HttpClient httpClient = server.CreateClient();
+            try
+            {
+                _ = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
+                Assert.Fail($"{RuntimeConfigPath.ENVIRONMENT_PREFIX}{nameof(RuntimeConfigPath.CONNSTRING)} is not given highest precedence");
+            }
+            catch (ArgumentException)
+            {
 
-            HttpResponseMessage result = await httpClient.GetAsync("/graphql");
-            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, result.StatusCode);
+            }
         }
 
         [TestCleanup]

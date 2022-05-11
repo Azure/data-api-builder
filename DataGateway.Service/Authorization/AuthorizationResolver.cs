@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 using Action = Azure.DataGateway.Config.Action;
 
 namespace Azure.DataGateway.Service.Authorization
@@ -16,16 +16,14 @@ namespace Azure.DataGateway.Service.Authorization
     /// </summary>
     public class AuthorizationResolver : IAuthorizationResolver
     {
-        private IRuntimeConfigProvider _runtimeConfigProvider;
+        //private IRuntimeConfigProvider _runtimeConfigProvider;
         private Dictionary<string, EntityDS> _entityConfigMap;
         private const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
 
-        public AuthorizationResolver(IRuntimeConfigProvider runtimeConfigProvider)
+        public AuthorizationResolver(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
         {
-            _runtimeConfigProvider = runtimeConfigProvider;
-
             // Datastructure constructor will pull required properties from metadataprovider.
-            _entityConfigMap = GetEntityConfigMap(_runtimeConfigProvider.GetRuntimeConfig());
+            _entityConfigMap = GetEntityConfigMap(runtimeConfigPath.CurrentValue.ConfigValue!);
         }
 
         /// <summary>

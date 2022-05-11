@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Text.Json;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
-using Azure.DataGateway.Service.Configurations;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -425,8 +425,14 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         #region Helpers
         private static AuthorizationResolver InitAuthZResolver(RuntimeConfig runtimeConfig)
         {
-            Mock<IRuntimeConfigProvider> runtimeConfigProvider = new();
-            runtimeConfigProvider.Setup(x => x.GetRuntimeConfig()).Returns(runtimeConfig);
+            RuntimeConfigPath configPath = new()
+            {
+                ConfigValue = runtimeConfig
+            };
+
+            Mock<IOptionsMonitor<RuntimeConfigPath>> runtimeConfigProvider = new();
+            runtimeConfigProvider.Setup(x => x.CurrentValue).Returns(configPath);
+
             return new AuthorizationResolver(runtimeConfigProvider.Object);
         }
         private static RuntimeConfig InitRuntimeConfig(
@@ -468,8 +474,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 CosmosDb: null,
                 PostgreSql: null,
                 MySql: null,
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql, ConnectionString: "sample"),
-                RuntimeSettings: new Dictionary<GlobalSettingsType, GlobalSettings>(),
+                DataSource: new DataSource(DatabaseType: DatabaseType.mssql, ResolverConfigFile: null),
+                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
                 );
 

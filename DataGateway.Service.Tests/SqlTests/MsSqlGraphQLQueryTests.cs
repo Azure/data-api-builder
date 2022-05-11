@@ -32,12 +32,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             // Setup GraphQL Components
             //
             _graphQLService = new GraphQLService(
+                _runtimeConfigPath,
                 _queryEngine,
                 _mutationEngine,
                 _metadataStoreProvider,
                 new DocumentCache(),
                 new Sha256DocumentHashProvider(),
-                _runtimeConfigProvider,
                 _sqlMetadataProvider);
             _graphQLController = new GraphQLController(_graphQLService);
         }

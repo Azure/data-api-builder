@@ -5,7 +5,10 @@ namespace Azure.DataGateway.Config
     /// <summary>
     /// Indicates the settings are globally applicable.
     /// </summary>
-    public record GlobalSettings;
+    public record GlobalSettings
+    {
+        public const string JSON_PROPERTY_NAME = "runtime";
+    }
 
     /// <summary>
     /// Indicates the settings are for the all the APIs.

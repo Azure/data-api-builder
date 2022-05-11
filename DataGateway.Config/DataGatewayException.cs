@@ -40,7 +40,11 @@ namespace Azure.DataGateway.Service.Exceptions
             /// <summary>
             /// Error mapping database information to GraphQL information
             /// </summary>
-            GraphQLMapping
+            GraphQLMapping,
+            /// <summary>
+            /// Error due to trying to use unsupported feature
+            /// </summary>
+            NotSupported
         }
 
         public HttpStatusCode StatusCode { get; }

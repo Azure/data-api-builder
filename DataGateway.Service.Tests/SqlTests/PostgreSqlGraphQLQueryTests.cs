@@ -726,6 +726,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        /// <summary>
+        /// Tests that orderBy order can be set using variable
+        /// </summary>
+        [TestMethod]
+        public async Task TestSettingOrderByOrderUsingVariable()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"query($order: SortOrder)
+            {
+                getBooks(first: 100 orderBy: {id: $order}) {
+                    id
+                    title
+                }
+            }";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id DESC) as table0 LIMIT 100";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController, new() { { "order", "Desc" } });
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Negative Tests
@@ -758,6 +780,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
+        }
+
+        /// <summary>
+        /// Tests setting complex types using variable shows an appropriate error
+        /// </summary>
+        [TestMethod]
+        public async Task TestSettingComplexArgumentUsingVariables()
+        {
+            string graphQLQueryName = "getBooks";
+            string graphQLQuery = @"query($orderBy: BookOrderByInput)
+            {
+                getBooks(first: 100 orderBy: $orderBy) {
+                    id
+                    title
+                }
+            }";
+
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController, new() { { "orderBy", new { id = "Asc" } } });
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.NotSupported}");
         }
 
         #endregion

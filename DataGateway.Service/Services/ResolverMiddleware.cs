@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using HotChocolate.Execution;
@@ -131,12 +133,28 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         public static object? ArgumentValue(IValueNode value, IVariableValueCollection? variables = null)
         {
-            return value.Kind switch
+            switch (value.Kind)
             {
-                SyntaxKind.IntValue => ((IntValueNode)value).ToInt32(),
-                SyntaxKind.Variable => variables?.GetVariable<object>(((VariableNode)value).Value),
-                _ => value.Value
-            };
+                case SyntaxKind.IntValue:
+                    return ((IntValueNode)value).ToInt32();
+
+                case SyntaxKind.Variable:
+                    VariableNode variable = (VariableNode)value;
+                    if (variables is null)
+                    {
+                        throw new DataGatewayException(
+                            $"Passing variables into the field where variable ${variable.Name.ToString()} is used is not supported. " +
+                            "Only scalar and enum fields are currently supported.",
+                            HttpStatusCode.NotImplemented,
+                            DataGatewayException.SubStatusCodes.NotSupported
+                        );
+                    }
+
+                    return variables.GetVariable<object>(variable.Value);
+
+                default:
+                    return value.Value;
+            }
         }
 
         /// <summary>
@@ -150,11 +168,19 @@ namespace Azure.DataGateway.Service.Services
 
             // Fill the parameters dictionary with the default argument values
             IFieldCollection<IInputField> availableArguments = schema.Arguments;
+            Dictionary<string, bool> canSetWithVariable = new();
             foreach (IInputField argument in availableArguments)
             {
+                // IsLeafType checks for IsScalarType || IsEnumType
+                // https://github.com/ChilliCream/hotchocolate/blob/2ba023b7211fdc6db80a4db55a4629db30d82967/src/HotChocolate/Core/src/Types/Types/Extensions/TypeExtensions.cs#L65-L74
+                // The other types are trickier to parse so for now disallow to pass them as variables
+                canSetWithVariable.Add(argument.Name, argument.Type.IsLeafType());
+
                 if (argument.DefaultValue != null)
                 {
-                    parameters.Add(argument.Name.Value, ArgumentValue(argument.DefaultValue, variables));
+                    parameters.Add(
+                        argument.Name.Value,
+                        ArgumentValue(argument.DefaultValue, canSetWithVariable[argument.Name] ? variables : null));
                 }
             }
 
@@ -164,11 +190,14 @@ namespace Azure.DataGateway.Service.Services
             {
                 if (parameters.ContainsKey(argument.Name.Value))
                 {
-                    parameters[argument.Name.Value] = ArgumentValue(argument.Value, variables);
+                    parameters[argument.Name.Value] =
+                        ArgumentValue(argument.Value, canSetWithVariable[argument.Name.Value] ? variables : null);
                 }
                 else
                 {
-                    parameters.Add(argument.Name.Value, ArgumentValue(argument.Value, variables));
+                    parameters.Add(
+                        argument.Name.Value,
+                        ArgumentValue(argument.Value, canSetWithVariable[argument.Name.Value] ? variables : null));
                 }
             }
 

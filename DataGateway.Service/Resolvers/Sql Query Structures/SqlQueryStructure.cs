@@ -72,7 +72,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// If this query is built because of a GraphQL query (as opposed to
         /// REST), then this is set to the resolver context of that query.
         /// </summary>
-        IResolverContext? _ctx;
+        IMiddlewareContext? _ctx;
 
         /// <summary>
         /// The underlying type of the type returned by this query see, the
@@ -93,7 +93,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Only use as constructor for the outermost queries not subqueries
         /// </summary>
         public SqlQueryStructure(
-            IResolverContext ctx,
+            IMiddlewareContext ctx,
             IDictionary<string, object?> queryParams,
             IGraphQLMetadataProvider metadataStoreProvider,
             ISqlMetadataProvider sqlMetadataProvider)
@@ -191,7 +191,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// request.
         /// </summary>
         private SqlQueryStructure(
-                IResolverContext ctx,
+                IMiddlewareContext ctx,
                 IDictionary<string, object?> queryParams,
                 IGraphQLMetadataProvider metadataStoreProvider,
                 ISqlMetadataProvider sqlMetadataProvider,
@@ -282,7 +282,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (filterObject != null)
                 {
                     List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
-                    Predicates.Add(GQLFilterParser.Parse(filterFields, TableAlias, GetUnderlyingTableDefinition(), MakeParamWithValue));
+                    Predicates.Add(GQLFilterParser.Parse(_ctx, filterFields, TableAlias, GetUnderlyingTableDefinition(), MakeParamWithValue));
                 }
             }
 
@@ -706,6 +706,12 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         private List<OrderByColumn> ProcessGqlOrderByArg(List<ObjectFieldNode> orderByFields)
         {
+            if (_ctx is null)
+            {
+                throw new ArgumentNullException("IMiddlewareContext should be intiliazed before " +
+                                                "trying to parse the orderBy arguement.");
+            }
+
             // Create list of primary key columns
             // we always have the primary keys in
             // the order by statement for the case
@@ -716,7 +722,8 @@ namespace Azure.DataGateway.Service.Resolvers
 
             foreach (ObjectFieldNode field in orderByFields)
             {
-                if (field.Value is NullValueNode)
+                object? fieldValue = ResolverMiddleware.ArgumentValue(field.Value, _ctx.Variables);
+                if (fieldValue is null)
                 {
                     continue;
                 }
@@ -727,9 +734,9 @@ namespace Azure.DataGateway.Service.Resolvers
                 // field in orderBy
                 remainingPkCols.Remove(fieldName);
 
-                EnumValueNode enumValue = (EnumValueNode)field.Value;
+                string enumValue = (string)fieldValue;
 
-                if (enumValue.Value == $"{OrderByDir.Desc}")
+                if (enumValue == $"{OrderByDir.Desc}")
                 {
                     orderByColumnsList.Add(new OrderByColumn(TableAlias, fieldName, OrderByDir.Desc));
                 }

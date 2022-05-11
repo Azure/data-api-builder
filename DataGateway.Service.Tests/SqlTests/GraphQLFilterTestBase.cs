@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -612,6 +614,54 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test passing variable to filter input type fields
+        /// </summary>
+        [TestMethod]
+        public async Task TestPassingVariablesToFilter()
+        {
+            string graphQLQueryName = "getBooks";
+            string gqlQuery = @"query($lteValue: Int!, $gteValue: Int!)
+            {
+                getBooks(_filter: {id: {lte: $lteValue} and: [{id: {gte: $gteValue}}]})
+                {
+                    id
+                }
+            }";
+
+            string dbQuery = MakeQueryOn(
+                "books",
+                new List<string> { "id" },
+                @"id <= 4 AND id >= 2");
+
+            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController, new() { { "lteValue", 4 }, { "gteValue", 2 } });
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        #endregion
+
+        #region Negative Tests
+
+        /// <summary>
+        /// Test passing variable to unsupported filter input type field gives appropriate error
+        /// </summary>
+        [TestMethod]
+        public async Task TestPassingVariablesToUnsupportedField()
+        {
+            string graphQLQueryName = "getBooks";
+            string gqlQuery = @"query($and: [BookFilterInput!])
+            {
+                getBooks(_filter: {and: $and})
+                {
+                    id
+                }
+            }";
+
+            JsonElement result = await GetGraphQLControllerResultAsync(gqlQuery, graphQLQueryName, _graphQLController, new() { { "and", new[] { new { id = new { lt = 3 } } } } });
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.NotSupported}");
         }
 
         #endregion

@@ -13,6 +13,7 @@ using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.Extensions.Options;
+using Npgsql;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -245,31 +246,18 @@ namespace Azure.DataGateway.Service.Services
         /// Only used for PostgreSql.
         /// The connection string could contain the schema,
         /// in which case it will be associated with the
-        /// keyword 'SearchPath' and continue until the
-        /// character ';'. If schema exists in the connection
-        /// string we save this to schemaName, otherwise
-        /// we save schemaName as empty string.
+        /// property 'SearchPath' in the string builder we create.
+        /// If `SearchPath` is null we assign the empty string to the
+        /// the out param schemaName, otherwise we assign the
+        /// value associated with `SearchPath`.
         /// </summary>
         /// <param name="schemaName">the schema name we save.</param>
-        /// <returns>true if schema in connection string, false otherwise.</returns>
+        /// <returns>true if non empty schema in connection string, false otherwise.</returns>
         public static bool TryGetSchemaFromConnectionString(out string schemaName, string connectionString)
         {
-            // get the index of the first char after 'SearchPath'
-            int startIndex = connectionString.IndexOf("SearchPath");
-            if (startIndex != -1)
-            {
-                // first char starts after '='
-                startIndex = connectionString.IndexOf('=', startIndex) + 1;
-                int endIndex = connectionString.IndexOf(';', startIndex);
-                endIndex = endIndex == -1 ? connectionString.Length : endIndex;
-                // gets the substring bounded by 'SearchPath=' and ';' or the end of the string
-                // trim leading and trailing double quotes before returning.
-                schemaName = connectionString[startIndex..endIndex].Trim('"');
-                return string.IsNullOrEmpty(schemaName) ? false : true;
-            }
-
-            schemaName = string.Empty;
-            return false;
+            NpgsqlConnectionStringBuilder connectionStringBuilder = new(connectionString);
+            schemaName = connectionStringBuilder.SearchPath is null ? string.Empty : connectionStringBuilder.SearchPath;
+            return string.IsNullOrEmpty(schemaName) ? false : true;
         }
 
         /// <summary>

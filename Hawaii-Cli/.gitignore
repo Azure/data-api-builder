@@ -10,4 +10,5 @@
 # Local History for Visual Studio
 .localhistory/
 .vs/
-.code-workspace
+*.code-workspace
+/nupkg/*-alpha.nupkg

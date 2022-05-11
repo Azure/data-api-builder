@@ -16,7 +16,9 @@
             // "args": ["add", "category", "-n", "dev-test", "--source", "s001.category", "--rest", "category", "--graphql", "category", "--permissions", "anonymous:create,read,update"],
             // "args": ["add", "books", "-n", "dev-test", "--source", "s001.books", "--rest", "books", "--graphql", "books", "--permissions", "anonymous:create,read,update", "--fields.include", "id,type,review"],
             // "args": ["add", "review", "-n", "dev-test", "--source", "s001.review", "--rest", "true", "--graphql", "review", "--permissions", "anonymous:update", "--fields.exclude", "id,time"],
-            "args": ["update", "review", "-n", "dev-test", "--source", "s001.reviews", "--rest", "review", "--graphql", "review", "--permissions", "authenticate:create", "--fields.include", "content,rating"],
+            // "args": ["update", "review", "-n", "dev-test", "--source", "s001.reviews", "--rest", "review", "--graphql", "review", "--permissions", "authenticate:create", "--fields.include", "content,rating"],
+            // "args": ["update", "books", "-n", "dev-test", "--source", "s001.books", "--rest", "books", "--graphql", "books", "--permissions", "anonymous:update,delete", "--fields.include", "content,rating"],
+            "args": ["update", "books", "-n", "dev-test", "--permissions", "anonymous:update", "--fields.exclude", "id,content,rating"],
             // "args": ["--help"],
             "cwd": "${workspaceFolder}",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console

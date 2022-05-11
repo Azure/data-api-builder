@@ -6,6 +6,50 @@ using System.Runtime.Serialization;
 
 namespace Hawaii.Cli.Classes
 {
+    public class Action {
+        public string? action {get; set;} = null;
+        public Dictionary<string, string[]>? fields {get; set;} = null;
+
+        // public Action(string action, Dictionary<string,string[]> fields) {
+        //     this.action = action;
+        //     this.fields = fields;
+        // }
+        public static Action GetAction(string action, Dictionary<string,string[]> fields) {
+            Action actionObject = new Action();
+            actionObject.action = action;
+            actionObject.fields = fields;
+            return actionObject;
+        }
+        
+        public static Action GetAction(string action, string? fieldsToInclude, string? fieldsToExclude) {
+            Action actionObject = new Action();
+            actionObject.action = action;
+            actionObject.fields = new Dictionary<string, string[]>();
+            if(fieldsToInclude!=null) {
+                actionObject.fields.Add("include", fieldsToInclude.Split(","));
+            }
+            if(fieldsToExclude!=null) {
+                actionObject.fields.Add("exclude", fieldsToExclude.Split(","));
+            }
+            return actionObject;
+        }
+
+        public static Action ToObject(JsonElement element)
+        {
+            if(JsonValueKind.String.Equals(element.ValueKind)) {
+                return Action.GetAction(element.ToString(), null);
+            }
+            var json = element.GetRawText();
+            return JsonSerializer.Deserialize<Action>(json);
+        }
+    }
+
+    public enum CRUD {
+        create,
+        read,
+        update,
+        delete
+    }
     public class Utils
     {
         public static Boolean IsBooleanValue(string str) {
@@ -47,23 +91,14 @@ namespace Hawaii.Cli.Classes
         public static object[] CreateActions(string actions, string? fieldsToInclude, string? fieldsToExclude) {
             object[] action_items;
             if("*".Equals(actions)){
-                action_items =  new string[]{"*"};
+                action_items =  new object[]{Action.GetAction(actions, fieldsToInclude, fieldsToExclude)};
             } else {
-                object[] action_elements = actions.Split(",");
+                string[] action_elements = actions.Split(",");
                 //#action_items should be 1, if either fieldsTOInclude or fieldsToExclude is not null.
                 if(fieldsToInclude!=null || fieldsToExclude!=null ) {
                     List<object> action_list = new List<object>();
-                    foreach(object action_element in action_elements) {
-                        Dictionary<string,object> action_item = new Dictionary<string, object>();
-                        Dictionary<string, string[]> fields_dict = new Dictionary<string, string[]>();
-                        action_item.Add("action", action_element);
-                        if(fieldsToInclude!=null) {
-                            fields_dict.Add("include", fieldsToInclude.Split(","));
-                        }
-                        if(fieldsToExclude!=null) {
-                            fields_dict.Add("exclude", fieldsToExclude.Split(","));
-                        }
-                        action_item.Add("fields", fields_dict);
+                    foreach(string action_element in action_elements) {
+                        Action action_item = Action.GetAction(action_element, fieldsToInclude, fieldsToExclude);
                         action_list.Add(action_item);
                     }
                     action_items =  action_list.ToArray();
@@ -78,7 +113,7 @@ namespace Hawaii.Cli.Classes
             return new PermissionSetting(role, CreateActions(actions, fieldsToInclude, fieldsToExclude));
         }
 
-        public static PermissionSetting[] UpdatePermissions(PermissionSetting[] currentPermissions, string role, string actions, string? fieldsToInclude, string? fieldsToExclude) {
+        public static PermissionSetting[] AddNewPermissions(PermissionSetting[] currentPermissions, string role, string actions, string? fieldsToInclude, string? fieldsToExclude) {
             List<PermissionSetting> currentPermissionsList = currentPermissions.ToList();
             PermissionSetting permissionSetting = CreatePermissions(role, actions, fieldsToInclude, fieldsToExclude);
             currentPermissionsList.Add(permissionSetting);
@@ -101,5 +136,32 @@ namespace Hawaii.Cli.Classes
             Console.WriteLine(new RestGlobalSettings(true, "/api"));
             return runtimeSettings;
         }
+
+        public static string GetCRUDOperation(JsonElement op) {
+            if(JsonValueKind.String.Equals(op.ValueKind)) {
+                return op.ToString();
+            }
+            return (Action.ToObject(op)).action;
+        }
+
+        // public static Boolean IsString(JsonElement action) {
+
+        // }
+
+        // public static Boolean IsOneOfCRUDOperation(JsonElement action) {
+        //     if((JsonValueKind.String.Equals(action.ValueKind)) && ("create".Equals(action.ToString()) || "read".Equals(action.ToString()) || "update".Equals(action.ToString()) || "delete".Equals(action.ToString()))) {
+        //         return true;
+        //     }
+        //     return false;
+        // }
+
+        // public static Action ToObject(JsonElement element)
+        // {
+        //     if(JsonValueKind.String.Equals(element.ValueKind)) {
+        //         return Action.GetAction(element.ToString(), new Dictionary<string, string[]>());
+        //     }
+        //     var json = element.GetRawText();
+        //     return JsonSerializer.Deserialize<Action>(json);
+        // }
     }
 }

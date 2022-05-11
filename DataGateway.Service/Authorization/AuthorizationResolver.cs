@@ -30,6 +30,8 @@ namespace Azure.DataGateway.Service.Authorization
 
         /// <summary>
         /// Whether X-MS-API-Role Http Request Header is present in httpContext.Identity.Claims.Roles
+        /// and if the header is present, whether the authenticated user is a member of the role defined
+        /// in the header.
         /// </summary>
         /// <param name="httpRequestData"></param>
         /// <returns>

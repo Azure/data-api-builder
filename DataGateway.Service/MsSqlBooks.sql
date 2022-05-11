@@ -1,6 +1,7 @@
 DROP VIEW IF EXISTS magazines_view_subset;
 DROP VIEW IF EXISTS stocks_view_subset;
 DROP VIEW IF EXISTS books_publishers_view_composite;
+DROP VIEW IF EXISTS stocks_view_all;
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
@@ -174,3 +175,5 @@ EXEC('CREATE VIEW books_publishers_view_composite as SELECT
      books.id,publishers.name,books.publisher_id
      FROM books,publishers
      where publishers.id = books.publisher_id;');
+
+EXEC('CREATE VIEW stocks_view_all AS SELECT * FROM stocks');

@@ -1,3 +1,7 @@
+DROP VIEW IF EXISTS magazines_view_subset;
+DROP VIEW IF EXISTS stocks_view_subset;
+DROP VIEW IF EXISTS books_publishers_view_composite;
+DROP VIEW IF EXISTS stocks_view_all;
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
@@ -151,3 +155,16 @@ ALTER TABLE publishers AUTO_INCREMENT = 5001;
 ALTER TABLE authors AUTO_INCREMENT = 5001;
 ALTER TABLE reviews AUTO_INCREMENT = 5001;
 ALTER TABLE comics AUTO_INCREMENT = 5001;
+
+prepare stmt1 from  'CREATE VIEW magazines_view_subset AS SELECT id,issue_number FROM magazines';
+prepare stmt2 from 'CREATE VIEW stocks_view_subset AS SELECT categoryid,pieceid,categoryName,piecesAvailable FROM stocks';
+prepare stmt3 from 'CREATE VIEW books_publishers_view_composite as SELECT books.id,
+                    publishers.name,books.publisher_id FROM books,publishers where publishers.id = books.publisher_id';
+prepare stmt4 from 'CREATE VIEW stocks_view_all AS SELECT * from stocks';
+
+execute stmt1;
+execute stmt2;
+execute stmt3;
+execute stmt4;
+
+GRANT ALL PRIVILEGES ON *.* TO root@localhost;

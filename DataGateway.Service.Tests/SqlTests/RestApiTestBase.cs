@@ -31,6 +31,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static readonly string _integrationTieBreakTable = "authors";
         protected static readonly string _simple_subset_mag = "magazines_view_subset";
         protected static readonly string _simple_subset_sto = "stocks_view_subset";
+        protected static readonly string _simple_all_sto = "stocks_view_all";
         public static readonly int _numRecordsReturnedFromTieBreakTable = 2;
 
         public abstract string GetQuery(string key);
@@ -926,7 +927,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 );
 
             //Case F
-            requestBody = @"
+            /*requestBody = @"
             {
                ""categoryName"":""""
             }";
@@ -940,7 +941,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.NoContent
-                );
+                );*/
         }
         /// <summary>
         /// Tests the PutOne functionality with a REST PUT request using
@@ -1134,7 +1135,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
                 );
-
+ 
             //Case C: Successfully executes a PUT INSERT on the view in which
             // a nullable column is missing from the request body.
             requestBody = @"

@@ -1,3 +1,7 @@
+DROP VIEW IF EXISTS magazines_view_subset;
+DROP VIEW IF EXISTS stocks_view_subset;
+DROP VIEW IF EXISTS books_publishers_view_composite;
+DROP VIEW IF EXISTS stocks_view_all;
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
@@ -150,3 +154,15 @@ SELECT setval('book_website_placements_id_seq', 5000);
 SELECT setval('publishers_id_seq', 5000);
 SELECT setval('authors_id_seq', 5000);
 SELECT setval('reviews_id_seq', 5000);
+
+DO $do$
+BEGIN
+EXECUTE('CREATE VIEW magazines_view_subset AS SELECT id,issue_number FROM magazines');
+EXECUTE('CREATE VIEW stocks_view_subset AS SELECT categoryid,pieceid,"categoryName","piecesAvailable" FROM stocks');
+EXECUTE('CREATE VIEW books_publishers_view_composite as SELECT books.id,
+                    publishers.name,books.publisher_id FROM books,publishers where publishers.id = books.publisher_id');
+EXECUTE('CREATE VIEW stocks_view_all AS SELECT * from stocks');
+END
+$do$;
+
+

@@ -649,6 +649,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "PutOne_Update_NonNullableUnselected_View_Test",
+                @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
+                                        'piecesAvailable',piecesAvailable) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _simple_subset_sto + @"
+                        WHERE categoryid = 2 AND pieceid = 1 AND categoryName ='FairyTales' AND piecesAvailable = 2
+                    ) AS subq
+                "
+            },
+            {
+                "PutOne_Update_NullableMissingFromJsonBody_View_Test",
+                @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
+                                        'piecesAvailable',piecesAvailable) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _simple_subset_sto + @"
+                        WHERE categoryid = 2 AND pieceid = 1 AND categoryName ='' AND piecesAvailable is NULL
+                    ) AS subq
+                "
+            },
+            {
                 "PutOne_Update_Nulled_Test",
                 @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
@@ -731,6 +755,43 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         FROM " + _Composite_NonAutoGenPK + @"
                         WHERE categoryid = 4 AND pieceid = 1 AND categoryName ='' AND piecesAvailable = 2
                         AND piecesRequired = 3
+                    ) AS subq
+                "
+            },
+            {
+                "TestingQuery",
+                @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
+                                        'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _simple_all_sto + @"
+                         WHERE categoryid = 3 AND pieceid = 1 AND categoryName ='SciFi' AND piecesAvailable = 2
+                         AND piecesRequired = 3
+                    ) AS subq
+                "
+            },
+            {
+                "PutOne_Insert_NonNullableDefaultUnselected_View_Test",
+                @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
+                                        'piecesAvailable',piecesAvailable) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _simple_subset_sto + @"
+                        WHERE categoryid = 3 AND pieceid = 1 AND categoryName ='SciFi' AND piecesAvailable = 2
+                    ) AS subq
+                "
+            },
+            {
+                "PutOne_Insert_NullableMissingFromJsonBody_View_Test",
+                @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
+                                        'piecesAvailable',piecesAvailable) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _simple_subset_sto + @"
+                        WHERE categoryid = 4 AND pieceid = 1 AND categoryName ='FairyTales' AND piecesAvailable = 0
                     ) AS subq
                 "
             },

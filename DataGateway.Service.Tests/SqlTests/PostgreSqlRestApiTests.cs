@@ -635,6 +635,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "PutOne_Update_NonNullableUnselected_View_Test",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable""
+                        FROM " + _simple_subset_sto + @"
+                        WHERE categoryid = 2 AND pieceid = 1 AND ""categoryName"" = 'FairyTales'
+                            AND ""piecesAvailable"" = 2
+                    ) AS subq
+                "
+            },
+            {
                 "PutOne_Update_Nulled_Test",
                 @"
                     SELECT to_jsonb(subq) AS data
@@ -721,6 +733,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         FROM " + _Composite_NonAutoGenPK + @"
                         WHERE categoryid = 4 AND pieceid = 1 AND ""categoryName"" = ''
                             AND ""piecesAvailable"" = 2 AND ""piecesRequired"" = 3
+                    ) AS subq
+                "
+            },
+            {
+                "PutOne_Insert_NonNullableDefaultUnselected_View_Test",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable""
+                        FROM " + _simple_subset_sto + @"
+                        WHERE categoryid = 3 AND pieceid = 1 AND ""categoryName"" = 'SciFi'
+                            AND ""piecesAvailable"" = 2
+                    ) AS subq
+                "
+            },
+            {
+                "PutOne_Insert_NullableMissingFromJsonBody_View_Test",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable""
+                        FROM " + _simple_subset_sto + @"
+                        WHERE categoryid = 4 AND pieceid = 1 AND ""categoryName"" = 'FairyTales'
+                            AND ""piecesAvailable"" is NULL
                     ) AS subq
                 "
             },

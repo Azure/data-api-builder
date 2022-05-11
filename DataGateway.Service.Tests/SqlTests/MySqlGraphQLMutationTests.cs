@@ -29,7 +29,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await InitializeTestFixture(context, TestCategory.MYSQL);
 
             // Setup GraphQL Components
-            _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider, new DocumentCache(), new Sha256DocumentHashProvider());
+            _graphQLService = new GraphQLService(
+                _queryEngine,
+                _mutationEngine,
+                _metadataStoreProvider,
+                new DocumentCache(),
+                new Sha256DocumentHashProvider(),
+                _runtimeConfigProvider,
+                _sqlMetadataProvider);
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
@@ -73,6 +80,43 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WHERE `id` = 5001
                         AND `title` = 'My New Book'
                         AND `publisher_id` = 1234
+                    ORDER BY `id` LIMIT 1
+                    ) AS `subq`
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Inserts new review with default content for a Review and return its id and content
+        /// <code>Check: </code> If book with the given id is present in the database then
+        /// the mutation query will return the review Id with the content of the review added
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMutationForConstantdefaultValue()
+        {
+            string graphQLMutationName = "insertReview";
+            string graphQLMutation = @"
+                mutation {
+                    insertReview(book_id: 1) {
+                        id
+                        content
+                    }
+                }
+            ";
+
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('id', `subq`.`id`, 'content', `subq`.`content`) AS `data`
+                FROM (
+                    SELECT `table0`.`id` AS `id`,
+                        `table0`.`content` AS `content`
+                    FROM `reviews` AS `table0`
+                    WHERE `id` = 5001
+                        AND `content` = 'Its a classic'
+                        AND `book_id` = 1
                     ORDER BY `id` LIMIT 1
                     ) AS `subq`
             ";

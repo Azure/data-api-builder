@@ -29,7 +29,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await InitializeTestFixture(context, TestCategory.MSSQL);
 
             // Setup GraphQL Components
-            _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider, new DocumentCache(), new Sha256DocumentHashProvider());
+            _graphQLService = new GraphQLService(
+                _queryEngine,
+                _mutationEngine,
+                _metadataStoreProvider,
+                new DocumentCache(),
+                new Sha256DocumentHashProvider(),
+                _runtimeConfigProvider,
+                _sqlMetadataProvider);
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
@@ -71,6 +78,43 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 WHERE [table0].[id] = 5001
                     AND [table0].[title] = 'My New Book'
                     AND [table0].[publisher_id] = 1234
+                ORDER BY [id]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Inserts new review with default content for a Review and return its id and content
+        /// <code>Check: </code> If book with the given id is present in the database then
+        /// the mutation query will return the review Id with the content of the review added
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMutationForConstantdefaultValue()
+        {
+            string graphQLMutationName = "insertReview";
+            string graphQLMutation = @"
+                mutation {
+                    insertReview(book_id: 1) {
+                        id
+                        content
+                    }
+                }
+            ";
+
+            string msSqlQuery = @"
+                SELECT TOP 1 [table0].[id] AS [id],
+                    [table0].[content] AS [content]
+                FROM [reviews] AS [table0]
+                WHERE [table0].[id] = 5001
+                    AND [table0].[content] = 'Its a classic'
+                    AND [table0].[book_id] = 1
                 ORDER BY [id]
                 FOR JSON PATH,
                     INCLUDE_NULL_VALUES,

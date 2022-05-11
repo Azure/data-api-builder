@@ -5,7 +5,7 @@
 
  <!-- Dependency versions -->
  <PropertyGroup>
-    <HotChocolateVersion>12.3.0</HotChocolateVersion>
+    <HotChocolateVersion>12.8.2</HotChocolateVersion>
     <CosmosVersion>3.18.0</CosmosVersion>
     <SqlVersion>3.0.0</SqlVersion>
     <ConfigVersion>6.0.0-preview.3.21201.4</ConfigVersion>

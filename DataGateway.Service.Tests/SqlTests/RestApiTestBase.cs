@@ -1356,7 +1356,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             requestBody = @"
             {
                 ""categoryName"": """"
-                
+
             }";
 
             await SetupAndRunRestApiTest(

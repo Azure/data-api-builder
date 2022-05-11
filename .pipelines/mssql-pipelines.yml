@@ -68,6 +68,10 @@ jobs:
       solution: '**/*.sln'
       buildPlatform: 'Any CPU'
       buildConfiguration: 'Release'
+      # Need to override the connection string set on the pipeline UI
+      # since windows needs a different string.
+      # The variable setting on the pipeline UI sets the connection string
+      # for the linux job above.
       data-source.connection-string: $(ConnectionStringLocalDBVariable)
       InstallerUrl: https://download.microsoft.com/download/7/c/1/7c14e92e-bdcb-4f89-b7cf-93543e7112d1/SqlLocalDB.msi
       SqlVersionCode: '15.0'

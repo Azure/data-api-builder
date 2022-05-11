@@ -6,6 +6,8 @@ type Query {
     planetList: [Planet]
     getPlanetWithFilter(_filter: PlanetFilterInput): Planet
     planets(first: Int, after: String): PlanetConnection
+    getPlanetListById(id: ID): [Planet]
+    getPlanetByName(name: String): Planet
 }
 
 type Mutation {
@@ -30,6 +32,7 @@ type Character {
 type Planet {
     id : ID,
     name : String
+    character: Character
     age : Int
 }
 

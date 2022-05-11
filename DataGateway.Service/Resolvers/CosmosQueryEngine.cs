@@ -98,11 +98,11 @@ namespace Azure.DataGateway.Service.Resolvers
 
                         // This extra deserialize/serialization will be removed after moving to Newtonsoft from System.Text.Json
                         return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(res.ToString()), null);
-                    } 
+                    }
 
                     if (page.Count > 0)
                     {
-                        return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(page.FirstOrDefault().ToString()), null);
+                        return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(page.First().ToString()), null);
                     }
                 }
                 while (query.HasMoreResults);

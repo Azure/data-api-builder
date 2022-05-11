@@ -147,30 +147,6 @@ mutation {{
             Assert.AreEqual("id field is mandatory", response[0].GetProperty("message").ToString());
         }
 
-        [TestMethod]
-        public async Task InvalidResolverOperationTypeReturnError()
-        {
-            //Register invalid operation type resolver
-            RemoveMutationResolver("addPlanet");
-            RegisterMutationResolver("addPlanet", DATABASE_NAME, _containerName, "None");
-
-            string id = Guid.NewGuid().ToString();
-            const string name = "test_name";
-            string addMutation = $@"
-mutation {{
-    addPlanet (id: ""{id}"", name: ""{name}"") {{
-        id
-        name
-    }}
-}}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("addPlanet", addMutation, variables: new());
-            Assert.AreEqual("unsupported operation type: None", response[0].GetProperty("message").ToString());
-
-            //Register valid mutation resolver back after testing invalid senario
-            RemoveMutationResolver("addPlanet");
-            RegisterMutationResolver("addPlanet", DATABASE_NAME, _containerName);
-        }
-
         /// <summary>
         /// Runs once after all tests in this class are executed
         /// </summary>

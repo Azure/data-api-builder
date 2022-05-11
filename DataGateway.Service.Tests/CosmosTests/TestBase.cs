@@ -149,15 +149,6 @@ type Planet {
         }
 
         /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="id">name of the mutation</param>
-        internal static void RemoveMutationResolver(string id)
-        {
-            _metadataStoreProvider.RemoveMutationResolver(id);
-        }
-
-        /// <summary>
         /// Creates and registers a GraphQLType
         /// </summary>
         /// <param name="id">name of the mutation</param>

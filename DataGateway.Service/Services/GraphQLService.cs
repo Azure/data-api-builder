@@ -80,9 +80,8 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="root">Root document containing the GraphQL object and input types</param>
         /// <param name="inputTypes">Reference table of the input types for query lookup</param>
-        /// <param name="entities">Runtime config entities</param>
         /// <exception cref="DataGatewayException">Error will be raised if no database type is set</exception>
-        private void Parse(DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes, Dictionary<string, Entity> entities)
+        private void Parse(DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
         {
             ISchemaBuilder sb = SchemaBuilder.New()
                 .AddDocument(root)
@@ -91,8 +90,8 @@ namespace Azure.DataGateway.Service.Services
                 .AddDirectiveType<PrimaryKeyDirectiveType>()
                 .AddDirectiveType<DefaultValueDirectiveType>()
                 .AddType<DefaultValueType>()
-                .AddDocument(QueryBuilder.Build(root, entities, inputTypes))
-                .AddDocument(MutationBuilder.Build(root, _databaseType, entities));
+                .AddDocument(QueryBuilder.Build(root, _entities, inputTypes))
+                .AddDocument(MutationBuilder.Build(root, _databaseType, _entities));
 
             Schema = sb
                 .AddAuthorizeDirectiveType()
@@ -195,7 +194,7 @@ namespace Azure.DataGateway.Service.Services
                     _ => throw new NotImplementedException($"This database type {_databaseType} is not yet implemented.")
                 };
 
-                Parse(root, inputTypes, _entities);
+                Parse(root, inputTypes);
             }
         }
 

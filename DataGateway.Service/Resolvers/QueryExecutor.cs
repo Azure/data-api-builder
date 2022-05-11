@@ -14,20 +14,16 @@ namespace Azure.DataGateway.Service.Resolvers
     public class QueryExecutor<ConnectionT> : IQueryExecutor
         where ConnectionT : DbConnection, new()
     {
-        private readonly RuntimeConfig _runtimeConfig;
+        private readonly string _connectionString;
         private readonly DbExceptionParserBase _dbExceptionParser;
 
         public QueryExecutor(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath, DbExceptionParserBase dbExceptionParser)
         {
-            if (runtimeConfigPath.CurrentValue.ConfigValue is not null)
-            {
-                _runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue;
-            }
-            else
-            {
-                throw new ArgumentNullException("runtime-config",
-                    "The runtime-config value has not been set yet.");
-            }
+            runtimeConfigPath.CurrentValue.
+                ExtractConfigValues(
+                    out _,
+                    out _connectionString,
+                    out _);
 
             _dbExceptionParser = dbExceptionParser;
         }
@@ -42,7 +38,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             ConnectionT conn = new()
             {
-                ConnectionString = _runtimeConfig.ConnectionString
+                ConnectionString = _connectionString
             };
             await conn.OpenAsync();
             DbCommand cmd = conn.CreateCommand();

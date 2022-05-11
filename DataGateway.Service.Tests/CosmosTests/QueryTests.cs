@@ -198,7 +198,7 @@ query {{
         }
 
         /// <summary>
-        /// Query single item by non-primary key field, found no match
+        /// Query single item by non-primary key field, found record back
         /// </summary>
         /// <returns></returns>
         [TestMethod]

@@ -11,7 +11,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
     [TestClass]
     public class AuthenticationConfigValidatorUnitTests
     {
-        private const string DEFAULT_CONNECTION_STRING = "Server=tcp:127.0.0.1";
         private const string DEFAULT_RESOLVER_FILE = "sql-config.json";
         private const string DEFAULT_ISSUER = "https://login.microsoftonline.com";
 

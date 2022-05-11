@@ -55,18 +55,18 @@ tests locally can be useful to debug a failure.
 The only thing that should different between CI and your own machine is how you
 connect to the database that's used for the tests. You should create a custom
 overrides file with your connection string:
-- `appsettings.MsSqlIntegrationTest.overrides.json` for SQL Server
-- `appsettings.PostgreSqlIntegrationTest.overrides.json` for Postgres
-- `appsettings.MySqlIntegrationTest.overrides.json` for MySql
+- `hawaii-config.MsSql.overrides.json` for SQL Server
+- `hawaii-config.PostgreSql.overrides.json` for Postgres
+- `hawaii-config.MySql.overrides.json` for MySql
 
 There's a template for these files called:
-- `appsettings.MsSqlIntegrationTest.overrides.example.json` for SQL Server
-- `appsettings.PostgreSqlIntegrationTest.overrides.example.json` for Postgres
-- `appsettings.PostgreSqlIntegrationTest.overrides.example.json` for MySql
+- `hawaii-config.MsSql.overrides.example.json` for SQL Server
+- `hawaii-config.PostgreSql.overrides.example.json` for Postgres
+- `hawaii-config.PostgreSql.overrides.example.json` for MySql
 
 If you copy those files to the path without `example` in it and change the
 places where it says `REPLACEME` then you should be able to run the tests
-locally without using the following commands:
+locally using the following commands:
 
 - `dotnet test --filter "TestCategory=MsSql"` for SQL Server
 - `dotnet test --filter "TestCategory=PostgreSql"` for Postgres

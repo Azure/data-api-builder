@@ -202,7 +202,7 @@ query {{
         /// </summary>
         /// <returns></returns>
         [TestMethod]
-        public async Task GetByNonePrimaryFieldReturnsResult()
+        public async Task GetByNonPrimaryFieldReturnsResult()
         {
             string name = "test name";
             string query = @$"

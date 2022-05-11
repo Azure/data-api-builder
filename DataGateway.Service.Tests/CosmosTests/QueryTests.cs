@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -69,10 +70,14 @@ query ($first: Int!, $after: String) {
             // Run query
             JsonElement response = await ExecuteGraphQLRequestAsync("planetList", PlanetListQuery);
             int actualElements = response.GetArrayLength();
+            List<string> responseTotal = new();
+            ConvertJsonElementToStringList(response, responseTotal);
+
             // Run paginated query
             int totalElementsFromPaginatedQuery = 0;
             string continuationToken = null;
             const int pagesize = 5;
+            List<string> pagedResponse = new();
 
             do
             {
@@ -80,10 +85,12 @@ query ($first: Int!, $after: String) {
                 JsonElement continuation = page.GetProperty("endCursor");
                 continuationToken = continuation.ToString();
                 totalElementsFromPaginatedQuery += page.GetProperty("items").GetArrayLength();
+                ConvertJsonElementToStringList(page.GetProperty("items"), pagedResponse);
             } while (!string.IsNullOrEmpty(continuationToken));
 
             // Validate results
             Assert.AreEqual(actualElements, totalElementsFromPaginatedQuery);
+            Assert.IsTrue(responseTotal.SequenceEqual(pagedResponse));
         }
 
         [TestMethod]
@@ -110,10 +117,14 @@ query {{
             // Run query
             JsonElement response = await ExecuteGraphQLRequestAsync("planetList", PlanetListQuery);
             int actualElements = response.GetArrayLength();
+            List<string> responseTotal = new();
+            ConvertJsonElementToStringList(response, responseTotal);
+
             // Run paginated query
             int totalElementsFromPaginatedQuery = 0;
             string continuationToken = null;
             const int pagesize = 5;
+            List<string> pagedResponse = new();
 
             do
             {
@@ -129,14 +140,123 @@ query {{
     }}
 }}";
 
-                JsonElement page = await ExecuteGraphQLRequestAsync("planets", planetConnectionQueryStringFormat, new());
+                JsonElement page = await ExecuteGraphQLRequestAsync("planets", planetConnectionQueryStringFormat, variables: new());
                 JsonElement continuation = page.GetProperty("endCursor");
                 continuationToken = continuation.ToString();
                 totalElementsFromPaginatedQuery += page.GetProperty("items").GetArrayLength();
+                ConvertJsonElementToStringList(page.GetProperty("items"), pagedResponse);
             } while (!string.IsNullOrEmpty(continuationToken));
 
             // Validate results
             Assert.AreEqual(actualElements, totalElementsFromPaginatedQuery);
+            Assert.IsTrue(responseTotal.SequenceEqual(pagedResponse));
+        }
+
+        /// <summary>
+        /// Query List Type with input parameters
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task GetListTypeWithParameters()
+        {
+            string id = _idList[0];
+            string query = @$"
+query {{
+    getPlanetListById (id: ""{id}"") {{
+        id
+        name
+    }}
+}}";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("getPlanetListById", query);
+
+            // Validate results
+            Assert.AreEqual(1, response.GetArrayLength());
+            Assert.AreEqual(id, response[0].GetProperty("id").ToString());
+        }
+
+        /// <summary>
+        /// Query single item by non-primary key field, found no match
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task GetByNonePrimaryFieldResultNotFound()
+        {
+            string name = "non-existed name";
+            string query = @$"
+query {{
+    getPlanetByName (name: ""{name}"") {{
+        id
+        name
+    }}
+}}";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("getPlanetByName", query);
+
+            // Validate results
+            Assert.IsNull(response.Deserialize<string>());
+        }
+
+        /// <summary>
+        /// Query single item by non-primary key field, found record back
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task GetByNonPrimaryFieldReturnsResult()
+        {
+            string name = "test name";
+            string query = @$"
+query {{
+    getPlanetByName (name: ""{name}"") {{
+        id
+        name
+    }}
+}}";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("getPlanetByName", query);
+
+            // Validate results
+            Assert.AreEqual(name, response.GetProperty("name").ToString());
+        }
+
+        /// <summary>
+        /// Query result with nested object
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task GetByPrimaryKeyWithInnerObject()
+        {
+            // Run query
+            string id = _idList[0];
+            string query = @$"
+query {{
+    planetById (id: ""{id}"") {{
+        id
+        name
+        character {{
+            id
+            name
+        }}
+    }}
+}}";
+            JsonElement response = await ExecuteGraphQLRequestAsync("planetById", query);
+
+            // Validate results
+            Assert.AreEqual(id, response.GetProperty("id").GetString());
+        }
+
+        private static void ConvertJsonElementToStringList(JsonElement ele, List<string> strList)
+        {
+            if (ele.ValueKind == JsonValueKind.Array)
+            {
+                JsonElement.ArrayEnumerator enumerator = ele.EnumerateArray();
+
+                while (enumerator.MoveNext())
+                {
+                    JsonElement prop = enumerator.Current;
+                    strList.Add(prop.ToString());
+                }
+            }
         }
 
         /// <summary>

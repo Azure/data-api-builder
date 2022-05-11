@@ -46,12 +46,12 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 if (fieldNode != null)
                 {
-                    Columns.AddRange(fieldNode.SelectionSet!.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.ToString())));
+                    Columns.AddRange(fieldNode.SelectionSet!.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.GetNodes().First().ToString())));
                 }
             }
             else
             {
-                Columns.AddRange(selection.SyntaxNode.SelectionSet!.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.ToString())));
+                Columns.AddRange(selection.SyntaxNode.SelectionSet!.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.GetNodes().First().ToString())));
             }
 
             Container = graphqlType.ContainerName;

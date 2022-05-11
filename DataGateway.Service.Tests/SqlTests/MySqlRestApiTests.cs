@@ -28,6 +28,42 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ) AS subq"
             },
             {
+                "FindViewAll",
+                @"
+                  SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _simple_all_books + @"
+                      WHERE id = 2
+                      ORDER BY id
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
+                "FindViewSelected",
+                @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
+                                        'piecesAvailable',piecesAvailable) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, categoryName,piecesAvailable
+                        FROM " + _simple_subset_stocks + @"
+                        WHERE categoryid = 2 AND pieceid = 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindViewComposite",
+                @"
+                  SELECT JSON_OBJECT('id', id, 'name', name, 'publisher_id', publisher_id) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _composite_subset_bookPub + @"
+                      WHERE id = 2
+                      ORDER BY id
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
                 "FindTestWithQueryStringOneField",
                 @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', `subq1`.`id`)) AS `data`

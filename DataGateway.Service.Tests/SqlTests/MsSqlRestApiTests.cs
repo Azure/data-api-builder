@@ -21,17 +21,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             },
             {
                 "FindViewAll",
-                $"SELECT * FROM { _booksViewAll } " +
+                $"SELECT * FROM { _simple_all_books } " +
                 $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "FindViewSelected",
-                $"SELECT categoryid,pieceid,categoryName,piecesAvailable FROM {_stocksViewSelected} " +
+                $"SELECT categoryid, pieceid, categoryName, piecesAvailable FROM {_simple_subset_stocks} " +
                 $"WHERE categoryid = 2 AND pieceid = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "FindViewComposite",
-                $"SELECT name,id,publisher_id FROM {_booksPublishersCompositeView} " +
+                $"SELECT name ,id, publisher_id FROM {_composite_subset_bookPub} " +
                 $"WHERE id=2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {

@@ -29,9 +29,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static readonly string _Composite_NonAutoGenPK = "stocks";
         protected static readonly string _integrationTableHasColumnWithSpace = "brokers";
         protected static readonly string _integrationTieBreakTable = "authors";
-        protected static readonly string _booksViewAll = "BOOKS_VIEW_ALL";
-        protected static readonly string _stocksViewSelected = "STOCKS_VIEW_SELECTED";
-        protected static readonly string _booksPublishersCompositeView = "BOOKS_PUBLISHERS_VIEW_COMPOSITE";
+        protected static readonly string _simple_all_books = "BOOKS_VIEW_ALL";
+        protected static readonly string _simple_subset_stocks = "STOCKS_VIEW_SELECTED";
+        protected static readonly string _composite_subset_bookPub = "BOOKS_PUBLISHERS_VIEW_COMPOSITE";
         public static readonly int _numRecordsReturnedFromTieBreakTable = 2;
 
         public abstract string GetQuery(string key);
@@ -62,7 +62,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/2",
                 queryString: string.Empty,
-                entity: _booksViewAll,
+                entity: _simple_all_books,
                 sqlQuery: GetQuery("FindViewAll"),
                 controller: _restController
             );
@@ -70,7 +70,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/2/pieceid/1",
                 queryString: string.Empty,
-                entity: _stocksViewSelected,
+                entity: _simple_subset_stocks,
                 sqlQuery: GetQuery("FindViewSelected"),
                 controller: _restController
             );
@@ -78,7 +78,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/2",
                 queryString: string.Empty,
-                entity: _booksPublishersCompositeView,
+                entity: _composite_subset_bookPub,
                 sqlQuery: GetQuery("FindViewComposite"),
                 controller: _restController
             );

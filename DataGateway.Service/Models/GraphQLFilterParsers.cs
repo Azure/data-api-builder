@@ -48,7 +48,7 @@ namespace Azure.DataGateway.Service.Models
                 else
                 {
                     List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)field.Value.Value!;
-                    predicates.Push(new PredicateOperand(ParseScalarType(name, subfields, tableAlias, table, processLiterals)));
+                    predicates.Push(new PredicateOperand(ParseScalarType(name, subfields, tableAlias, processLiterals)));
                 }
             }
 
@@ -57,27 +57,18 @@ namespace Azure.DataGateway.Service.Models
 
         /// <summary>
         /// Calls the appropriate scalar type filter parser based on the type of
-        /// the underlying table column
+        /// the fields
         /// </summary>
         private static Predicate ParseScalarType(
             string name,
             List<ObjectFieldNode> fields,
             string tableAlias,
-            TableDefinition table,
             Func<object, string> processLiterals)
         {
             Column column = new(tableAlias, name);
 
-            Type columnType;
-            if (table.Columns.Count > 0)
-            {
-                columnType = table.Columns[name].SystemType;
-            }
-            else
-            {
-                // Trying to get the kind from the field value type instead if there is no table def
-                columnType = GetTypeFromValueKind(fields[0].Value.Kind);
-            }
+            // Trying to get the kind from the field value type
+            Type columnType = GetTypeFromValueKind(fields[0].Value.Kind);
 
             switch (columnType.ToString())
             {

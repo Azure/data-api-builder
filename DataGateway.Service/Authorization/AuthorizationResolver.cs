@@ -16,7 +16,6 @@ namespace Azure.DataGateway.Service.Authorization
     /// </summary>
     public class AuthorizationResolver : IAuthorizationResolver
     {
-        //private IRuntimeConfigProvider _runtimeConfigProvider;
         private Dictionary<string, EntityDS> _entityConfigMap;
         private const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
 
@@ -74,15 +73,8 @@ namespace Azure.DataGateway.Service.Authorization
             }
         }
 
-        /// <summary>
-        /// Whether X-DG-Role Http Request Header value is present in DeveloperConfig:Entity
-        /// This should fail if entity does not exist. For now: should be 403 Forbidden instead of 404
-        /// to avoid leaking Schema data.
-        /// </summary>
-        /// <param name="roleName"></param>
-        /// <param name="entityName"></param>
-        /// <returns></returns>
-        public bool IsRoleDefinedForEntity(string roleName, string entityName)
+        /// <inheritdoc />
+        public bool IsRoleDefinedForEntity(string entityName, string roleName)
         {
             //At this point we don't know if entityName and roleName is valid/exists
             if (_entityConfigMap.TryGetValue(entityName, out EntityDS? value))
@@ -93,14 +85,8 @@ namespace Azure.DataGateway.Service.Authorization
             return false;
         }
 
-        /// <summary>
-        /// Whether Entity.Role has action defined
-        /// </summary>
-        /// <param name="roleName"></param>
-        /// <param name="entityName"></param>
-        /// <param name="action"></param>
-        /// <returns></returns>
-        public bool IsActionAllowedForRole(string roleName, string entityName, string action)
+        /// <inheritdoc />
+        public bool IsActionAllowedForRole(string entityName, string roleName, string action)
         {
             // At this point we don't know if action is a valid action,
             // in sense that it exists for the given entity/role combination.
@@ -114,16 +100,8 @@ namespace Azure.DataGateway.Service.Authorization
             return false;
         }
 
-        /// <summary>
-        /// Compare columns in request body to columns in entity.Role.Action.AllowedColumns.
-        /// This stage assumes that all provided columns are valid for entity (request validation occurs prior to this check).
-        /// </summary>
-        /// <param name="roleName"></param>
-        /// <param name="entityName"></param>
-        /// <param name="action"></param>
-        /// <param name="columns"></param>
-        /// <returns></returns>
-        public bool AreColumnsAllowedForAction(string roleName, string entityName, string actionName, List<string> columns)
+        /// <inheritdoc />
+        public bool AreColumnsAllowedForAction(string entityName, string roleName, string actionName, List<string> columns)
         {
             ActionDS actionToColumnMap;
             if (_entityConfigMap[entityName].RoleToActionMap[roleName].ActionToColumnMap.ContainsKey("*"))
@@ -150,15 +128,8 @@ namespace Azure.DataGateway.Service.Authorization
             return true;
         }
 
-        /// <summary>
-        /// Processes policies.
-        /// </summary>
-        /// <param name="action"></param>
-        /// <param name="roleName"></param>
-        /// <param name="httpContext"></param>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
-        public bool DidProcessDBPolicy(string action, string roleName, HttpContext httpContext)
+        /// <inheritdoc />
+        public bool DidProcessDBPolicy(string entityName, string roleName, string action, HttpContext httpContext)
         {
             throw new NotImplementedException();
         }

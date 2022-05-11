@@ -147,7 +147,6 @@ namespace Azure.DataGateway.Service.Authorization
                     ActionDS actionToColumn;
                     foreach (JsonElement actionElement in Actions)
                     {
-                        //JsonElement actionElement = JsonSerializer.SerializeToElement(action);
                         string actionName = string.Empty;
                         actionToColumn = new();
                         if (actionElement.ValueKind == JsonValueKind.String)

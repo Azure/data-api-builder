@@ -26,7 +26,7 @@ namespace Azure.DataGateway.Service.Parsers
         /// <returns>
         /// Returns a tuple of the schema and table. 
         /// </returns>
-        /// <exception cref="ArgumentException">If the table or parsed schema is null it will throw this exception.
+        /// <exception cref="DataGatewayException">If the table or parsed schema is null it will throw this exception.
         /// </exception>
         public static (string?, string?) ParseSchemaAndTable(string input)
         {
@@ -51,14 +51,13 @@ namespace Azure.DataGateway.Service.Parsers
         /// <returns>
         /// Returns a tuple of the schema and table. 
         /// </returns>
-        /// <exception cref="ArgumentException">If the table or parsed schema is null it will throw this exception.
+        /// <exception cref="DataGatewayException">If the table or parsed schema is null it will throw this exception.
         /// </exception>
         private static (string?, string?) ParseSchemaAndTableHelper(string input)
         {
             
             if (string.IsNullOrEmpty(input))
             {
-                
                 throw new DataGatewayException(message: "Input is null or empty string",
                                                statusCode: HttpStatusCode.ServiceUnavailable,
                                                subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
@@ -66,8 +65,9 @@ namespace Azure.DataGateway.Service.Parsers
 
             if (input[input.Length - 1] == '.')
             {
-                
-                throw new ArgumentException("Input cannot end with '.'");
+                throw new DataGatewayException(message: "Input cannot end with '.'",
+                                               statusCode: HttpStatusCode.ServiceUnavailable,
+                                               subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
             }
 
             ArrayList tokens = new();
@@ -111,7 +111,7 @@ namespace Azure.DataGateway.Service.Parsers
         /// <returns>
         /// Returns a tuple of the token and the string starting from the next token.
         /// </returns>
-        /// <exception cref="ArgumentException">If the token is unable to be parsed it will throw this exception.
+        /// <exception cref="DataGatewayException">If the token is unable to be parsed it will throw this exception.
         /// </exception>
         private static (string?, string?) GetTokenAndNextToken(string input, int startIndex = 0)
         {

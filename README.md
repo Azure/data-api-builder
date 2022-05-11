@@ -77,6 +77,7 @@ LocalDB Instance
   "connection-string": "AccountEndpoint=https://<REPLACEME>.documents.azure.com:443/;AccountKey=<REPLACEME>"
 }
 ```
+The `connection-string` can also be supplied as the value of the environment variable `HAWAII_CONNSTRING`. If set, it will override the `connection-string` value from the config file.
 
 #### 2.3 Setup Sample Database
 

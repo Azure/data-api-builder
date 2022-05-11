@@ -1,6 +1,5 @@
 using System;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Configurations;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Fluent;
 using Microsoft.Extensions.Options;
@@ -11,30 +10,34 @@ namespace Azure.DataGateway.Service.Resolvers
     {
         private string? _connectionString;
         public CosmosClient? Client { get; private set; }
-        public CosmosClientProvider(IOptionsMonitor<DataGatewayConfig> dataGatewayConfig)
+        public CosmosClientProvider(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
         {
-            dataGatewayConfig.OnChange((newValue) =>
+            runtimeConfigPath.OnChange((newValue) =>
             {
-                InitializeClient(newValue);
+                newValue.SetRuntimeConfigValue();
+                InitializeClient(runtimeConfigPath.CurrentValue.ConfigValue);
             });
 
-            if (dataGatewayConfig.CurrentValue is not null)
-            {
-                InitializeClient(dataGatewayConfig.CurrentValue);
-            }
+            InitializeClient(runtimeConfigPath.CurrentValue.ConfigValue);
         }
 
-        private void InitializeClient(DataGatewayConfig configuration)
+        private void InitializeClient(RuntimeConfig? configuration)
         {
+            if (configuration is null)
+            {
+                throw new ArgumentNullException(nameof(configuration),
+                    "Cannot initialize a CosmosClientProvider without the runtime config.");
+            }
+
             if (configuration.DatabaseType != DatabaseType.cosmos)
             {
                 throw new InvalidOperationException("We shouldn't need a CosmosClientProvider if we're not accessing a CosmosDb");
             }
 
-            if (string.IsNullOrEmpty(_connectionString) || configuration.DatabaseConnection.ConnectionString != _connectionString)
+            if (string.IsNullOrEmpty(_connectionString) || configuration.ConnectionString != _connectionString)
             {
-                _connectionString = configuration.DatabaseConnection.ConnectionString;
-                Client = new CosmosClientBuilder(configuration.DatabaseConnection.ConnectionString).WithContentResponseOnWrite(true).Build();
+                _connectionString = configuration.ConnectionString;
+                Client = new CosmosClientBuilder(configuration.ConnectionString).WithContentResponseOnWrite(true).Build();
             }
         }
     }

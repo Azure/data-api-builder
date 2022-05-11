@@ -30,7 +30,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// and if the header is present, whether the authenticated user is a member of the role defined
         /// in the header.
         /// </summary>
-        /// <param name="httpRequestData"></param>
+        /// <param name="httpContext">Contains request headers and metadata of the authenticated user.</param>
         /// <returns>
         /// X-MS-API-Role
         ///     Header not present -> TRUE, request is anonymous

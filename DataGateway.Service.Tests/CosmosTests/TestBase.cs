@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -77,9 +78,11 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             HttpRequestMessage request = new();
             MemoryStream stream = new(Encoding.UTF8.GetBytes(data));
             request.Method = HttpMethod.Post;
+            ClaimsPrincipal user = new(new ClaimsIdentity(authenticationType: "Bearer"));
             DefaultHttpContext httpContext = new()
             {
-                Request = { Body = stream, ContentLength = stream.Length }
+                Request = { Body = stream, ContentLength = stream.Length },
+                User = user
             };
             return httpContext;
         }
@@ -150,7 +153,8 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
 
             if (graphQLResult.TryGetProperty("errors", out JsonElement errors))
             {
-                Assert.Fail(errors.GetRawText());
+                // to validate expected errors and error message
+                return errors;
             }
 
             return graphQLResult.GetProperty("data").GetProperty(queryName);

@@ -43,6 +43,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             return new
             {
                 id = id,
+                name = "test name",
                 myProp = "a value",
                 age = 4,
                 myBooleanProp = true,
@@ -56,6 +57,14 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
                         lastName = "the last name",
                         zipCode = 784298
                     }
+                },
+                character = new
+                {
+                    id = id,
+                    name = "planet character",
+                    type = "Mars",
+                    homePlanet = 1,
+                    primaryFunction = "test function"
                 }
             };
         }

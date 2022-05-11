@@ -455,9 +455,9 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
         /// <summary>
         /// This function verifies the environment variable HAWAII_RUNTIME
-        /// takes precendence than ASPNET_CORE for the configuration file.
+        /// takes precendence than ASPNETCORE_ENVIRONMENT for the configuration file.
         /// </summary>
-        [TestMethod("Validates precedence is given to HAWAII_RUNTIME environment variable name")]
+        [TestMethod("Validates precedence is given to HAWAII_RUNTIME environment variable name.")]
         public void TestRuntimeEnvironmentVariable()
         {
             Environment.SetEnvironmentVariable(

@@ -146,6 +146,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 RuntimeSettings: runtimeSettings,
                 Entities: entities
             );
+
             config.DetermineGlobalSettings();
             return config;
         }

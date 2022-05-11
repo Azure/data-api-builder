@@ -47,7 +47,7 @@ namespace Azure.DataGateway.Service
             }).UseStartup<Startup>();
 
         /// <summary>
-        /// Add the various configuration providers.
+        /// Adds the various configuration providers.
         /// </summary>
         /// <param name="env">The hosting environment.</param>
         /// <param name="configurationBuilder">The configuration builder.</param>

@@ -11,11 +11,11 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Schema name of the table which owns the column
         /// </summary>
-        public string TableSchema { get; set; }
+        public string TableSchema { get; }
         /// <summary>
         /// Name of the table which owns the column
         /// </summary>
-        public string TableName { get; set; }
+        public string TableName { get; }
         /// <summary>
         /// Name of the alias of the table which owns the column
         /// </summary>
@@ -39,7 +39,7 @@ namespace Azure.DataGateway.Service.Models
     /// </summary>
     public class OrderByColumn : Column
     {
-        public OrderByDir Direction { get; set; }
+        public OrderByDir Direction { get; }
         public OrderByColumn(string tableSchema, string tableName, string columnName, string? tableAlias = null, OrderByDir direction = OrderByDir.Asc)
             : base(tableSchema, tableName, columnName, tableAlias)
         {
@@ -53,7 +53,7 @@ namespace Azure.DataGateway.Service.Models
     /// </summary>
     public class PaginationColumn : OrderByColumn
     {
-        public object? Value { get; set; }
+        public object? Value { get; }
         public string? ParamName { get; set; }
         public PaginationColumn(string tableSchema,
                                 string tableName,

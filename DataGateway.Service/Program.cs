@@ -71,6 +71,8 @@ namespace Azure.DataGateway.Service
 
             configurationBuilder
                 .AddInMemoryCollection(configFileNameMap);
+            configurationBuilder.AddEnvironmentVariables(
+                prefix: RuntimeConfigPath.ENVIRONMENT_PREFIX);
 
             configurationBuilder.AddCommandLine(args);
 

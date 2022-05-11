@@ -12,8 +12,11 @@ namespace Azure.DataGateway.Config
         public const string CONFIG_EXTENSION = ".json";
 
         public const string RUNTIME_ENVIRONMENT_VAR_NAME = "HAWAII_ENVIRONMENT";
+        public const string ENVIRONMENT_PREFIX = "HAWAII_";
 
         public string? ConfigFileName { get; set; }
+
+        public string? CONNSTRING { get; set; }
 
         public RuntimeConfig? ConfigValue { get; set; }
 
@@ -33,6 +36,11 @@ namespace Azure.DataGateway.Config
             {
                 ConfigValue = RuntimeConfig.GetDeserializedConfig<RuntimeConfig>(runtimeConfigJson);
                 ConfigValue.DetermineGlobalSettings();
+
+                if(!string.IsNullOrEmpty(CONNSTRING))
+                {
+                    ConfigValue.ConnectionString = CONNSTRING;
+                }
             }
         }
 

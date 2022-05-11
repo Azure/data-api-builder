@@ -11,8 +11,6 @@ namespace Azure.DataGateway.Config
     public record DataSource(
         [property: JsonPropertyName(DataSource.DATABASE_PROPERTY_NAME)]
         DatabaseType DatabaseType,
-        [property: JsonPropertyName(DataSource.CONNSTRING_PROPERTY_NAME)]
-        string ConnectionString,
         [property: JsonPropertyName(DataSource.RESOLVER_JSON_PROPERTY_NAME)]
         string? ResolverConfigFile)
     {
@@ -26,6 +24,9 @@ namespace Azure.DataGateway.Config
             return string.Format("The provided database-type value: {0} is currently not supported." +
                 "Please check the configuration file.", DatabaseType);
         }
+
+        [property: JsonPropertyName(CONNSTRING_PROPERTY_NAME)]
+        public string ConnectionString { get; set; } = string.Empty;
     }
 
     /// <summary>

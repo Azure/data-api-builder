@@ -177,6 +177,11 @@ namespace Azure.DataGateway.Config
             {
                 return DataSource.ConnectionString;
             }
+
+            set
+            {
+                DataSource.ConnectionString = value;
+            }
         }
 
         public AuthenticationConfig? AuthNConfig

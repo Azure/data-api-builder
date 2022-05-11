@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Parsers;
@@ -238,7 +239,10 @@ namespace Azure.DataGateway.Service.Tests.REST
             string tableName,
             bool isList = false)
         {
-            FindRequestContext context = new(entityName, schemaName, tableName, isList);
+            DatabaseObject dbo = new();
+            dbo.SchemaName = schemaName;
+            dbo.Name = tableName;
+            FindRequestContext context = new(entityName, dbo, isList);
             Mock<SqlQueryStructure> structure = new(context, _metadataStoreProvider, _sqlMetadataProvider);
             return new ODataASTVisitor(structure.Object);
         }

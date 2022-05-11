@@ -32,8 +32,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             try
             {
                 InsertRequestContext context = new(entityName: string.Empty,
-                                                    schemaName: string.Empty,
-                                                    tableName: string.Empty,
+                                                    dbo: new DatabaseObject(),
                                                     insertPayloadRoot: payload,
                                                     httpVerb: verb,
                                                     operationType: Operation.Insert);
@@ -60,8 +59,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             JsonElement payload = JsonSerializer.Deserialize<JsonElement>("null");
             OperationAuthorizationRequirement verb = new();
             InsertRequestContext context = new(entityName: string.Empty,
-                                                schemaName: string.Empty,
-                                                tableName: string.Empty,
+                                                dbo: new DatabaseObject(),
                                                 insertPayloadRoot: payload,
                                                 httpVerb: verb,
                                                 operationType: Operation.Insert);

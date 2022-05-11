@@ -18,12 +18,11 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
         public UpsertRequestContext(
             string entityName,
-            string schemaName,
-            string tableName,
+            DatabaseObject dbo,
             JsonElement insertPayloadRoot,
             OperationAuthorizationRequirement httpVerb,
             Operation operationType)
-            : base(httpVerb, entityName, schemaName, tableName)
+            : base(httpVerb, entityName, dbo)
         {
             FieldsToBeReturned = new();
             PrimaryKeyValuePairs = new();

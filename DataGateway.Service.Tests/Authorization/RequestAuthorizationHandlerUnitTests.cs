@@ -135,7 +135,10 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// <returns></returns>
         private async Task<bool> IsAuthorizationSuccessful(string entityName, string schemaName, string tableName, ClaimsPrincipal user)
         {
-            FindRequestContext request = new(entityName, schemaName, tableName, isList: false);
+            DatabaseObject dbo = new();
+            dbo.SchemaName = schemaName;
+            dbo.Name = tableName;
+            FindRequestContext request = new(entityName, dbo, isList: false);
             AuthorizationHandlerContext context = new(new List<IAuthorizationRequirement> { HttpRestVerbs.GET }, user, request);
             RequestAuthorizationHandler handler =
                 new(_metadataStore.Object,

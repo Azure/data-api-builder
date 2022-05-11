@@ -247,6 +247,7 @@ namespace Azure.DataGateway.Service.Resolvers
             SchemaName = sqlMetadataProvider.GetSchemaName(_typeInfo.Table);
             TableName = _typeInfo.Table;
             TableAlias = CreateTableAlias();
+            string fullName = string.IsNullOrEmpty(SchemaName) ? TableName : $"{SchemaName}.{TableName}";
 
             if (queryField != null && queryField.SelectionSet != null)
             {
@@ -305,7 +306,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     ODataASTVisitor visitor = new(this);
                     FilterParser parser = SqlMetadataProvider.ODataFilterParser;
-                    FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={where}", $"{SchemaName}.{TableName}");
+                    FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={where}", $"{fullName}");
                     FilterPredicates = filterClause.Expression.Accept<string>(visitor);
                 }
             }

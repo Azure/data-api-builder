@@ -918,6 +918,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             return DEFAULT_SCHEMA;
         }
 
+        public override string GetDefaultSchemaIncludeDot()
+        {
+            return $"{DEFAULT_SCHEMA}.";
+        }
+
         public override string GetQuery(string key)
         {
             return _queryMap[key];

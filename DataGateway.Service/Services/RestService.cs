@@ -73,16 +73,14 @@ namespace Azure.DataGateway.Service.Services
             {
                 case Operation.Find:
                     context = new FindRequestContext(entityName,
-                                                     schemaName: dbObject.SchemaName,
-                                                     tableName: dbObject.Name,
+                                                     dbo: dbObject,
                                                      isList: string.IsNullOrEmpty(primaryKeyRoute));
                     break;
                 case Operation.Insert:
                     JsonElement insertPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);
                     context = new InsertRequestContext(
                         entityName,
-                        dbObject.SchemaName,
-                        tableName: dbObject.Name,
+                        dbo: dbObject,
                         insertPayloadRoot,
                         HttpRestVerbs.POST,
                         operationType);
@@ -92,8 +90,7 @@ namespace Azure.DataGateway.Service.Services
                     break;
                 case Operation.Delete:
                     context = new DeleteRequestContext(entityName,
-                                                       schemaName: dbObject.SchemaName,
-                                                       tableName: dbObject.Name,
+                                                       dbo: dbObject,
                                                        isList: false);
                     RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                     break;
@@ -102,7 +99,7 @@ namespace Azure.DataGateway.Service.Services
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
                     JsonElement upsertPayloadRoot = RequestValidator.ValidateUpdateOrUpsertRequest(primaryKeyRoute, requestBody);
-                    context = new UpsertRequestContext(entityName, schemaName: dbObject.SchemaName, tableName: dbObject.Name, upsertPayloadRoot, GetHttpVerb(operationType), operationType);
+                    context = new UpsertRequestContext(entityName, dbo: dbObject , upsertPayloadRoot, GetHttpVerb(operationType), operationType);
                     RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
                     break;
                 default:
@@ -200,8 +197,8 @@ namespace Azure.DataGateway.Service.Services
                                nextElement: lastElement,
                                orderByColumns: context.OrderByClauseInUrl,
                                primaryKey: _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey,
-                               schemaName: context.SchemaName,
-                               tableName: context.TableName);
+                               schemaName: context.DatabaseObject.SchemaName,
+                               tableName: context.DatabaseObject.Name);
 
             // nextLink is the URL needed to get the next page of records using the same query options
             // with $after base64 encoded for opaqueness

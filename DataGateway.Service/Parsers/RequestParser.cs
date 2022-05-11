@@ -100,13 +100,13 @@ namespace Azure.DataGateway.Service.Parsers
                         // save the AST that represents the filter for the query
                         // ?$filter=<filter clause using microsoft api guidelines>
                         string filterQueryString = $"?{FILTER_URL}={context.ParsedQueryString[key]}";
-                        context.FilterClauseInUrl = filterParser.GetFilterClause(filterQueryString, $"{context.SchemaName}.{context.TableName}");
+                        context.FilterClauseInUrl = filterParser.GetFilterClause(filterQueryString, $"{context.DatabaseObject.FullName}");
                         break;
                     case SORT_URL:
                         string sortQueryString = $"?{SORT_URL}={context.ParsedQueryString[key]}";
-                        context.OrderByClauseInUrl = GenerateOrderByList(filterParser.GetOrderByClause(sortQueryString, $"{context.SchemaName}.{context.TableName}"),
-                                                                         context.SchemaName,
-                                                                         context.TableName,
+                        context.OrderByClauseInUrl = GenerateOrderByList(filterParser.GetOrderByClause(sortQueryString, $"{context.DatabaseObject.FullName}"),
+                                                                         context.DatabaseObject.SchemaName,
+                                                                         context.DatabaseObject.Name,
                                                                          primaryKeys);
                         break;
                     case AFTER_URL:

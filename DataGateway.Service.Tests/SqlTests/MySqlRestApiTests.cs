@@ -948,6 +948,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             return DEFAULT_SCHEMA;
         }
 
+        /// <summary>
+        /// MySql does not actually include the dot.
+        /// </summary>
+        /// <returns></returns>
+        public override string GetDefaultSchemaIncludeDot()
+        {
+            return DEFAULT_SCHEMA;
+        }
+
         public override string GetQuery(string key)
         {
             return _queryMap[key];

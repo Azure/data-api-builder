@@ -181,11 +181,11 @@ namespace Azure.DataGateway.Service.Authorization
                 {
                     string role = permission.Role;
                     RoleDS roleToAction = new();
-                    object[] Actions = permission.Actions;
+                    JsonElement[] Actions = permission.Actions;
                     ActionDS actionToColumn;
-                    foreach (object action in Actions)
+                    foreach (JsonElement actionElement in Actions)
                     {
-                        JsonElement actionElement = JsonSerializer.SerializeToElement(action);
+                        //JsonElement actionElement = JsonSerializer.SerializeToElement(action);
                         string actionName = string.Empty;
                         actionToColumn = new();
                         if (actionElement.ValueKind == JsonValueKind.String)

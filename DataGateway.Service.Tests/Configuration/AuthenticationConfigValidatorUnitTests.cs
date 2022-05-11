@@ -11,6 +11,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
     [TestClass]
     public class AuthenticationConfigValidatorUnitTests
     {
+        private const string DEFAULT_CONNECTION_STRING = "Server=tcp:127.0.0.1";
         private const string DEFAULT_RESOLVER_FILE = "sql-config.json";
         private const string DEFAULT_ISSUER = "https://login.microsoftonline.com";
 
@@ -128,7 +129,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             DataSource dataSource = new(
                 DatabaseType: DatabaseType.mssql,
                 ResolverConfigFile: DEFAULT_RESOLVER_FILE);
-
+            dataSource.ConnectionString = DEFAULT_CONNECTION_STRING;
             HostGlobalSettings hostGlobal = new(Authentication: authNConfig);
             JsonElement hostGlobalJson = JsonSerializer.SerializeToElement(hostGlobal);
             Dictionary<GlobalSettingsType, object> runtimeSettings = new();

@@ -480,7 +480,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
             Environment.SetEnvironmentVariable(
-                $"{RuntimeConfigPath.ENVIRONMENT_PREFIX}_{nameof(RuntimeConfigPath.CONNSTRING)}",
+                $"{RuntimeConfigPath.ENVIRONMENT_PREFIX}{nameof(RuntimeConfigPath.CONNSTRING)}",
                 "Invalid Connection String");
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();

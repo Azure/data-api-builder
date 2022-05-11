@@ -30,6 +30,8 @@ namespace Azure.DataGateway.Service.Services
             string resolverConfigJson =
                 File.ReadAllText(config.DataSource.ResolverConfigFile!);
 
+            // Even though the file name may not be null and exist, the check here
+            // guarantees it is not empty.
             if (string.IsNullOrEmpty(resolverConfigJson))
             {
                 throw new ArgumentNullException("runtime-config.data-source.resolver-config-file",

@@ -125,9 +125,9 @@ namespace Azure.DataGateway.Config
             // This feels verbose but it avoids having to make _config nullable - which would result in more
             // down the line issues and null check requirements
             T? deserializedConfig;
-            if ((deserializedConfig = JsonSerializer.Deserialize<T>(configJson, options)) == null)
+            if ((deserializedConfig = JsonSerializer.Deserialize<T>(configJson, options)) is null)
             {
-                throw new JsonException("Failed to get a deserialized config from the provided config");
+                throw new JsonException("Failed to get a deserialized config from the provided config.");
             }
 
             return deserializedConfig;

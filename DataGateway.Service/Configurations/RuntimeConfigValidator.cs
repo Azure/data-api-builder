@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Azure.DataGateway.Config;
 using Microsoft.Extensions.Options;
 
@@ -32,8 +33,7 @@ namespace Azure.DataGateway.Service.Configurations
 
             if (string.IsNullOrWhiteSpace(_runtimeConfig.DatabaseType.ToString()))
             {
-                throw new NotSupportedException("The database-type should be provided" +
-                     " with the runtime config.");
+                throw new NotSupportedException("The database-type should be provided with the runtime config.");
             }
 
             if (string.IsNullOrWhiteSpace(_runtimeConfig.ConnectionString))
@@ -41,10 +41,10 @@ namespace Azure.DataGateway.Service.Configurations
                 throw new NotSupportedException($"The Connection String should be provided.");
             }
 
-            if (string.IsNullOrEmpty(_runtimeConfig.DataSource.ResolverConfigFile))
+            if (string.IsNullOrEmpty(_runtimeConfig.DataSource.ResolverConfigFile)
+                || !File.Exists(_runtimeConfig.DataSource.ResolverConfigFile))
             {
-                throw new NotSupportedException("The resolver-config-file should be provided" +
-                    " with the runtime config.");
+                throw new NotSupportedException("The resolver-config-file should be provided with the runtime config and must exist in the current directory.");
             }
 
             ValidateAuthenticationConfig();
@@ -53,23 +53,21 @@ namespace Azure.DataGateway.Service.Configurations
         private void ValidateAuthenticationConfig()
         {
             bool isAudienceSet =
-                _runtimeConfig!.AuthNConfig != null &&
-                _runtimeConfig!.AuthNConfig.Jwt != null &&
+                _runtimeConfig!.AuthNConfig is not null &&
+                _runtimeConfig!.AuthNConfig.Jwt is not null &&
                 !string.IsNullOrEmpty(_runtimeConfig!.AuthNConfig.Jwt.Audience);
             bool isIssuerSet =
-                _runtimeConfig!.AuthNConfig != null &&
-                _runtimeConfig!.AuthNConfig.Jwt != null &&
+                _runtimeConfig!.AuthNConfig is not null &&
+                _runtimeConfig!.AuthNConfig.Jwt is not null &&
                 !string.IsNullOrEmpty(_runtimeConfig!.AuthNConfig.Jwt.Issuer);
             if (!_runtimeConfig!.IsEasyAuthAuthenticationProvider() && (!isAudienceSet || !isIssuerSet))
             {
-                throw new NotSupportedException("Audience and Issuer must be set" +
-                    " when not using EasyAuth.");
+                throw new NotSupportedException("Audience and Issuer must be set when not using EasyAuth.");
             }
 
             if (_runtimeConfig!.IsEasyAuthAuthenticationProvider() && (isAudienceSet || isIssuerSet))
             {
-                throw new NotSupportedException("Audience and Issuer should not be set" +
-                    " and are not used with EasyAuth.");
+                throw new NotSupportedException("Audience and Issuer should not be set and are not used with EasyAuth.");
             }
         }
     }

@@ -81,7 +81,10 @@ namespace Azure.DataGateway.Config
                 index++)
             {
                 if (!string.IsNullOrWhiteSpace(environmentPrecedence[index])
-                    // The last index is for the default case - the last fallback option.
+                    // The last index is for the default case - the last fallback option
+                    // where environmentPrecedence[index] is string.Empty
+                    // for that case, we still need to get the file name considering overrides
+                    // so need to do an OR on the last index here
                     || index == environmentPrecedence.Length - 1)
                 {
                     configFileNameWithExtension =

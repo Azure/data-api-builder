@@ -23,17 +23,9 @@ namespace Azure.DataGateway.Service.Authorization
         /// </summary>
         /// <param name="entityName">Entity from request</param>
         /// <param name="roleName">Role defined in client role header</param>
-        /// <returns>True, if a matching permission entry is found.</returns>
-        public bool IsRoleDefinedForEntity(string entityName, string roleName);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="entityName">Entity from request</param>
-        /// <param name="roleName">Role defined in client role header</param>
         /// <param name="action">Action type: Create, Read, Update, Delete</param>
-        /// <returns></returns>
-        public bool IsActionAllowedForRole(string entityName, string roleName, string action);
+        /// <returns>True, if a matching permission entry is found.</returns>
+        public bool AreRoleAndActionDefinedForEntity(string entityName, string roleName, string action);
 
         /// <summary>
         /// Any columns referenced in a request's headers, URL(filter/orderby/routes), and/or body

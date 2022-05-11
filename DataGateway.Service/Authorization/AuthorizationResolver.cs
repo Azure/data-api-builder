@@ -74,27 +74,18 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <inheritdoc />
-        public bool IsRoleDefinedForEntity(string entityName, string roleName)
+        public bool AreRoleAndActionDefinedForEntity(string entityName, string roleName, string action)
         {
-            //At this point we don't know if entityName and roleName is valid/exists
             if (_entityConfigMap.TryGetValue(entityName, out EntityDS? value))
             {
-                return value.RoleToActionMap.ContainsKey(roleName);
-            }
-
-            return false;
-        }
-
-        /// <inheritdoc />
-        public bool IsActionAllowedForRole(string entityName, string roleName, string action)
-        {
-            // At this point we don't know if action is a valid action,
-            // in sense that it exists for the given entity/role combination.
-
-            Dictionary<string, ActionDS> actionToColumnMap = _entityConfigMap[entityName].RoleToActionMap[roleName].ActionToColumnMap;
-            if (actionToColumnMap.ContainsKey("*") || actionToColumnMap.ContainsKey(action))
-            {
-                return true;
+                if (value.RoleToActionMap.ContainsKey(roleName))
+                {
+                    Dictionary<string, ActionDS> actionToColumnMap = _entityConfigMap[entityName].RoleToActionMap[roleName].ActionToColumnMap;
+                    if (actionToColumnMap.ContainsKey("*") || actionToColumnMap.ContainsKey(action))
+                    {
+                        return true;
+                    }
+                }
             }
 
             return false;

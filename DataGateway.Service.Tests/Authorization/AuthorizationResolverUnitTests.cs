@@ -101,20 +101,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// Role is defined for entity
         /// Role is not defined for entity
         /// </summary>
-        #region Positve Role Tests
-        [TestMethod("Role is defined for entity")]
-        public void RoleDefinedForEntity_EntityHasRoleTest()
-        {
-            RuntimeConfig runtimeConfig = InitRuntimeConfig(entityName: "SampleEntity", roleName: "Writer");
-            AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
-
-            // Mock Request Values - Query a configured entity with a role that is NOT configured.
-            string entityName = "SampleEntity";
-            string roleName = "Writer";
-
-            Assert.IsTrue(authZResolver.IsRoleDefinedForEntity(roleName, entityName));
-        }
-        #endregion
         #region Negative Role Tests
         [TestMethod("Role is NOT defined for entity")]
         public void RoleNotDefinedForEntity_EntityHasRoleTest()
@@ -126,7 +112,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string entityName = "SampleEntity";
             string roleName = "Reader";
 
-            Assert.IsFalse(authZResolver.IsRoleDefinedForEntity(roleName, entityName));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(entityName, roleName, action: string.Empty));
         }
         #endregion
 
@@ -147,7 +133,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string roleName = "Writer";
             string actionName = "Create";
 
-            Assert.IsTrue(authZResolver.IsActionAllowedForRole(roleName, entityName, actionName));
+            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(entityName, roleName, actionName));
         }
         #endregion
         #region Negative Action Tests
@@ -162,7 +148,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string roleName = "Writer";
             string actionName = "Update";
 
-            Assert.IsFalse(authZResolver.IsActionAllowedForRole(roleName, entityName, actionName));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(entityName, roleName, actionName));
         }
         #endregion
 
@@ -191,7 +177,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string actionName = "Create";
             List<string> columns = new(new string[] { "col1" });
 
-            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(roleName, entityName, actionName, columns));
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
         }
 
         [TestMethod("All Columns allowed for action on role")]
@@ -211,7 +197,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string actionName = "Create";
             List<string> columns = new(new string[] { "col1", "col2", "col3" });
 
-            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(roleName, entityName, actionName, columns));
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
         }
 
         [TestMethod("Wildcard included columns allowed for action on role")]
@@ -231,7 +217,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string actionName = "Create";
             List<string> columns = new(new string[] { "col1", "col2", "col3" });
 
-            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(roleName, entityName, actionName, columns));
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
         }
 
         [TestMethod("Wildcard excluded columns with some included for action on role success")]
@@ -252,7 +238,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string actionName = "Create";
             List<string> columns = new(new string[] { "col3", "col4" });
 
-            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(roleName, entityName, actionName, columns));
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
         }
         #endregion
         #region Negative Column Tests
@@ -273,7 +259,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string actionName = "Create";
             List<string> columns = new(new string[] { "col4" });
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(roleName, entityName, actionName, columns));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
         }
 
         [TestMethod("Columns NOT allowed for action on role - with some valid cols")]
@@ -294,7 +280,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string actionName = "Create";
             List<string> columns = new(new string[] { "col1", "col2", "col3", "col4" });
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(roleName, entityName, actionName, columns));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
         }
 
         [TestMethod("Columns NOT allowed for action on role - definition has inc/excl - req has only excluded cols")]
@@ -315,7 +301,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string actionName = "Create";
             List<string> columns = new(new string[] { "col4", "col5" });
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(roleName, entityName, actionName, columns));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
         }
 
         [TestMethod("Columns NOT allowed for action on role - Mixed allowed/disallowed in req.")]
@@ -336,7 +322,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string actionName = "Create";
             List<string> columns = new(new string[] { "col2", "col5" });
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(roleName, entityName, actionName, columns));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
         }
 
         [TestMethod("Wildcard excluded for action on role")]
@@ -356,7 +342,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string actionName = "Create";
             List<string> columns = new(new string[] { "col1", "col2", "col3" });
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(roleName, entityName, actionName, columns));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
         }
 
         [TestMethod("Wildcard excluded except for some included for action on role")]
@@ -377,7 +363,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string actionName = "Create";
             List<string> columns = new(new string[] { "col1", "col2", "col3" });
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(roleName, entityName, actionName, columns));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
         }
 
         [TestMethod("Wildcard included except for some excluded for action on role")]
@@ -398,7 +384,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string actionName = "Create";
             List<string> columns = new(new string[] { "col3", "col1" });
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(roleName, entityName, actionName, columns));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
         }
 
         [TestMethod("Wildcard excluded columns with some included for action on role")]
@@ -419,7 +405,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string actionName = "Create";
             List<string> columns = new(new string[] { "col1", "col2" });
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(roleName, entityName, actionName, columns));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
         }
         #endregion
         #region Helpers

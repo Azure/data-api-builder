@@ -100,7 +100,6 @@ namespace Azure.DataGateway.Service.Resolvers
                         return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(res.ToString()), null);
                     } 
 
-                    // For non-connection, check if it's an empty page from partition, return first item when non-empty, otherwise getting next page
                     if (page.Count > 0)
                     {
                         return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(page.FirstOrDefault().ToString()), null);

@@ -100,22 +100,6 @@ namespace Azure.DataGateway.Config
                             " support this global settings type.");
                 }
             }
-
-            // If the config file does not have these settings, initialize them with defaults.
-            if (RestGlobalSettings is null)
-            {
-                RestGlobalSettings = new();
-            }
-
-            if (GraphQLGlobalSettings is null)
-            {
-                GraphQLGlobalSettings = new();
-            }
-
-            if (HostGlobalSettings is null)
-            {
-                HostGlobalSettings = new();
-            }
         }
 
         public static T GetDeserializedConfig<T>(string configJson)
@@ -150,11 +134,11 @@ namespace Azure.DataGateway.Config
             return options;
         }
 
-        public RestGlobalSettings? RestGlobalSettings { get; private set; }
+        public RestGlobalSettings RestGlobalSettings { get; private set; } = new();
 
-        public GraphQLGlobalSettings? GraphQLGlobalSettings { get; private set; }
+        public GraphQLGlobalSettings GraphQLGlobalSettings { get; private set; } = new();
 
-        public HostGlobalSettings? HostGlobalSettings { get; private set; }
+        public HostGlobalSettings HostGlobalSettings { get; private set; } = new();
 
         public bool IsEasyAuthAuthenticationProvider()
         {
@@ -188,14 +172,7 @@ namespace Azure.DataGateway.Config
         {
             get
             {
-                if (HostGlobalSettings is not null)
-                {
-                    return HostGlobalSettings.Authentication;
-                }
-                else
-                {
-                    return null;
-                }
+                return HostGlobalSettings.Authentication;
             }
         }
     }

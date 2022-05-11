@@ -37,7 +37,7 @@ namespace Azure.DataGateway.Service.Authorization
 
         /// <summary>
         /// Any columns referenced in a request's headers, URL(filter/orderby/routes), and/or body
-        /// are compared against the inclued/excluded column permission resolved for the entityName->roleName->action
+        /// are compared against the inclued/excluded column permission defined for the entityName->roleName->action
         /// </summary>
         /// <param name="entityName">Entity from request</param>
         /// <param name="roleName">Role defined in client role header</param>

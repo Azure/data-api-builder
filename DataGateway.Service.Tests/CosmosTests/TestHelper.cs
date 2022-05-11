@@ -1,6 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
-using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Config;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -10,32 +11,31 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
     class TestHelper
     {
         public static readonly string DB_NAME = "graphqlTestDb";
-        private static Lazy<IOptions<DataGatewayConfig>> _dataGatewayConfig = new(() => TestHelper.LoadConfig());
+        private static Lazy<IOptionsMonitor<RuntimeConfigPath>>
+            _runtimeConfigPath = new(() => LoadConfig());
 
-        private static IOptions<DataGatewayConfig> LoadConfig()
+        private static IOptionsMonitor<RuntimeConfigPath> LoadConfig()
         {
-            DataGatewayConfig dataGatewayConfig = new();
+            Dictionary<string, string> configFileNameMap = new()
+            {
+                {
+                    nameof(RuntimeConfigPath.ConfigFileName),
+                    RuntimeConfigPath.GetFileNameForEnvironment(TestCategory.COSMOS)
+                }
+            };
             IConfigurationRoot config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile($"appsettings.Cosmos.json")
+                .AddInMemoryCollection(configFileNameMap)
                 .Build();
 
-            config.Bind(nameof(DataGatewayConfig), dataGatewayConfig);
-
-            return Options.Create(dataGatewayConfig);
+            RuntimeConfigPath configPath = config.Get<RuntimeConfigPath>();
+            configPath.SetRuntimeConfigValue();
+            return Mock.Of<IOptionsMonitor<RuntimeConfigPath>>(_ => _.CurrentValue == configPath);
         }
 
-        public static IOptions<DataGatewayConfig> DataGatewayConfig
+        public static IOptionsMonitor<RuntimeConfigPath> ConfigPath
         {
-            get { return _dataGatewayConfig.Value; }
-        }
-
-        public static IOptionsMonitor<DataGatewayConfig> DataGatewayConfigMonitor
-        {
-            get
-            {
-                return Mock.Of<IOptionsMonitor<DataGatewayConfig>>(_ => _.CurrentValue == DataGatewayConfig.Value);
-            }
+            get { return _runtimeConfigPath.Value; }
         }
 
         public static object GetItem(string id)
@@ -43,6 +43,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             return new
             {
                 id = id,
+                name = "test name",
                 myProp = "a value",
                 myIntProp = 4,
                 myBooleanProp = true,
@@ -56,6 +57,14 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
                         lastName = "the last name",
                         zipCode = 784298
                     }
+                },
+                character = new
+                {
+                    id = id,
+                    name = "planet character",
+                    type = "Mars",
+                    homePlanet = 1,
+                    primaryFunction = "test function"
                 }
             };
         }

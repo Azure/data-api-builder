@@ -87,7 +87,7 @@ mutation {{
         name
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", mutation, new());
+            JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
@@ -106,7 +106,7 @@ mutation {{
         name
     }}
 }}";
-            _ = await ExecuteGraphQLRequestAsync("createPlanet", mutation, new());
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
 
             // Run mutation delete item;
             string deleteMutation = $@"
@@ -116,10 +116,41 @@ mutation {{
         name
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanet", deleteMutation, new());
+            JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanet", deleteMutation, variables: new());
 
             // Validate results
             Assert.IsNull(response.GetProperty("id").GetString());
+        }
+
+        [TestMethod]
+        public async Task MutationMissingInputReturnError()
+        {
+            // Run mutation Add planet without any input
+            string mutation = $@"
+mutation {{
+    addPlanet {{
+        id
+        name
+    }}
+}}";
+            JsonElement response = await ExecuteGraphQLRequestAsync("addPlanet", mutation, variables: new());
+            Assert.AreEqual("inputDict is missing", response[0].GetProperty("message").ToString());
+        }
+
+        [TestMethod]
+        public async Task MutationMissingRequiredIdReturnError()
+        {
+            // Run mutation Add planet without id
+            const string name = "test_name";
+            string mutation = $@"
+mutation {{
+    addPlanet ( name: ""{name}"") {{
+        id
+        name
+    }}
+}}";
+            JsonElement response = await ExecuteGraphQLRequestAsync("addPlanet", mutation, variables: new());
+            Assert.AreEqual("id field is mandatory", response[0].GetProperty("message").ToString());
         }
 
         /// <summary>

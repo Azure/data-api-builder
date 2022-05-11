@@ -10,7 +10,7 @@ DataGateway provides a consistent, productive abstraction for building GraphQL a
 
 Clone the repository with your preferred method or locally navigate to where you'd like the repository to be and clone with the following command, make sure you replace `<directory name>`
 
-``` bash
+```bash
 git clone https://github.com/Azure/hawaii-gql.git <directory name>
 ```
 
@@ -23,45 +23,61 @@ You will need to provide a database to run behind DataGateway. DataGateway suppo
 With a local or cloud hosted instance a supported database deployed, ensure that you have an account with the necessary access permissions.
 The account should have access to all entities that are defined in the runtime configuration.
 
-#### 2.2 Supply a Connection String
+#### 2.2 Supply a `connection-string` for the respective `database-type`
 
 Project startup requires a connection string to be defined (**Note:** Dynamic config is out of scope of this initial startup guide).
 
-In your editor of choice, locate template configuration files in the `DataGateway.Service` directory of the form `appsettings.XXX.json`.
+In your editor of choice, locate template configuration files in the `DataGateway.Service` directory of the form `hawaii-config.XXX.json`.
 
-Supply a value `ConnectionString` for the project to be able to connect the service to your database. These connection strings will be specific to the instance of the database that you are running. Example connection strings are provided for assistance.
+Supply a value `connection-string` for the project to be able to connect the service to your database. These connection strings will be specific to the instance of the database that you are running. Example connection strings are provided for assistance.
 
 #### MsSql
 
 Local SQL Server Instance
 
-``` c#
-"ConnectionString": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=USERNAME;Password=PASSWORD;MultipleActiveResultSets=False;Connection Timeout=5;"
+```json
+"data-source": {
+  "database-type": "mssql",
+  "connection-string": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=USERNAME;Password=PASSWORD;MultipleActiveResultSets=False;Connection Timeout=5;"
+}
 ```
 
 LocalDB Instance
 
-``` c#
-"ConnectionString": "Server=(localdb)\\MSSQLLocalDB;Database=DataGateway;Integrated Security=true"
+```json
+"data-source": {
+  "database-type": "mssql",
+  "connection-string": "Server=(localdb)\\MSSQLLocalDB;Database=DataGateway;Integrated Security=true"
+}
 ```
 
 #### MySQL
 
-``` c#
-"ConnectionString": "server=localhost;database=graphql;Allow User variables=true;uid=USERNAME;pwd=PASSWORD"
+```json
+"data-source": {
+  "database-type": "mysql",
+  "connection-string": "server=localhost;database=graphql;Allow User variables=true;uid=USERNAME;pwd=PASSWORD"
+}
 ```
 
 #### PostgreSQL
 
-``` c#
-"ConnectionString": "Host=localhost;Database=graphql"
+```json
+"data-source": {
+  "database-type": "postgresql",
+  "connection-string": "Host=localhost;Database=graphql"
+}
 ```
 
 #### CosmosDB
 
-``` c#
-"ConnectionString": "AccountEndpoint=https://<REPLACEME>.documents.azure.com:443/;AccountKey=<REPLACEME>"
+```json
+"data-source": {
+  "database-type": "cosmos",
+  "connection-string": "AccountEndpoint=https://<REPLACEME>.documents.azure.com:443/;AccountKey=<REPLACEME>"
+}
 ```
+The `connection-string` can also be supplied as the value of the environment variable `HAWAII_CONNSTRING`. If set, it will override the `connection-string` value from the config file.
 
 #### 2.3 Setup Sample Database
 
@@ -73,10 +89,11 @@ Schema and data population files are included that are necessary for running sam
 - PostgreSql `PosgreSqlBooks.sql`
 - MySQL `MySqlBooks.sql`
 
-**Note:** Edits to `.sql` files require matching edits to the GraphQL (.gql)schema file and runtime config.
+**Note:** Edits to `.sql` files require matching edits to the GraphQL (.gql)schema file and the runtime config.
 
-- Runtime config: `sql-config.json`
+- Runtime config: `hawaii-config.json`
 - GraphQL schema file is `books.gql`
+- Resolver config: `sql-config.json`
 
 ### 3. Configure Authentication
 
@@ -87,14 +104,11 @@ The runtime supports authentication through Static Web Apps/App Service's EasyAu
 An example config for Easy Auth sets the **Provider** value:
 
 ```json
-  "DataGatewayConfig": {
-    "DatabaseType": "DB",
-    "ResolverConfigFile": "DB-config.json",
-    "DatabaseConnection": {
-      "ConnectionString": "<ConnectionString>"
-    },
-    "Authentication": {
-      "Provider": "EasyAuth"
+  "runtime": {
+    "host": {
+      "authentication": {
+        "provider": "EasyAuth"
+      }
     }
   }
 ```
@@ -106,16 +120,19 @@ HTTP requests must have the `X-MS-CLIENT-PRINCIPAL` HTTP header set with a JWT v
 Configure **Bearer token authentication** with identity providers like Azure AD.
 
 ```json
-  "DataGatewayConfig": {
-    "DatabaseType": "DB",
-    "ResolverConfigFile": "DB-config.json",
-    "DatabaseConnection": {
-      "ConnectionString": "<ConnectionString>"
-    },
-    "Authentication": {
-      "Type": "AzureAD",
-      "Audience": "<AudienceGUIDfromAppRegistration>",
-      "Issuer": "https://login.microsoftonline.com/<tenantID>/v2.0"
+  "data-source": {
+  "database-type": "cosmos",
+  "connection-string": "AccountEndpoint=https://<REPLACEME>.documents.azure.com:443/;AccountKey=<REPLACEME>"
+  },
+  "runtime": {
+    "host": {
+      "authentication": {
+        "provider": "AzureAD",
+        "jwt": {
+          "audience": "<AudienceGUIDfromAppRegistration>",
+          "issuer": "https://login.microsoftonline.com/<tenantID>/v2.0"
+        }
+      }
     }
   }
 ```
@@ -132,12 +149,39 @@ HTTP requests must have the `Authorization` HTTP header set with the value `Bear
 4. Select **Build Solution** (Do not select rebuild, as any changes to configuration files may not be reflected in the build folder.)
 5. Start runtime
 
+#### Which configuration file is used?
+
+1. Hawaii runtime determines the name of the configuration file based on environment values, following the same behavior offered by ASP.NET Core for the `appsettings.json` file. It expects the configuration file in the same directory as the runtime.
+
+2. The precedence followed is in the following order from high to low:
+
+    a. Command Line Argument e.g. `--ConfigFileName=custom-config.json`
+
+    b. Value of `HAWAII_ENVIRONMENT` suffixed to hawaii-config.
+    e.g. setting `HAWAII_ENVIRONMENT=Development` will prompt the runtime to look for `hawaii-config.Development.json`
+
+    c. Value of `ASPNETCORE_ENVIRONMENT` suffixed to hawaii-config.
+    e.g. setting `ASPNETCORE_ENVIRONMENT=MsSql` will prompt the runtime to look for `hawaii-config.MsSql.json`
+
+    d. By default, runtime will look for `hawaii-config.json`
+
+3. For any of the configuration file names determined for the environment, if there is another file with the `.overrides` suffix in the current directory, that overridden file name will instead be picked up.
+e.g. if both `hawaii-config.json` and `hawaii-config.overrides.json` are present, precedence will be given to `hawaii-config.overrides.json` - however, the runtime will still follow the above rules of precedence. 
+e.g. When HAWAII_ENVIRONMENT is set as `Development` and if all three config files exist- `hawaii-config.Development.json`, `hawaii-config.json`, `hawaii-config.overrides.json`- the runtime will pick `hawaii-config.Development.json`.
+
 #### Command Line
 
-1. Set environment variable `ASPNETCORE_ENVIRONMENT` to database type `MsSql`, `PostgreSql`,`Cosmos`, or `MySql`.
-   1. Example: `ASPNETCORE_ENVIRONMENT=PostgreSql`
-2. Run the command `dotnet watch run --project DataGateway`
-   1. watch flag used to detect configuration change and restart.
+1. Based on your preferred mode of specifying the configuration file name, there are different ways to launch the runtime.
+2. Set the `HAWAII_ENVIRONMENT` or `ASPNETCORE_ENVIRONMENT`, typically using their value to be database type `MsSql`, `PostgreSql`,`Cosmos`, or `MySql`.
+
+    Example: `ASPNETCORE_ENVIRONMENT=PostgreSql`
+
+3. Run the command `dotnet watch run --project DataGateway`
+   - watch flag used to detect configuration change and restart.
+
+4. The runtime config file provided as a command line takes precedence. So, another way of running is:
+
+`dotnet watch run --project DataGateway --ConfigFileName=custom-config.json`
 
 ### 5. Query Execution Tools
 

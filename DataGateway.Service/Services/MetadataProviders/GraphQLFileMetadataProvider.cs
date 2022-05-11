@@ -24,45 +24,41 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private Dictionary<string, MutationResolver> _mutationResolvers;
 
-        public DatabaseType CloudDbType { get; set; }
-
         public GraphQLFileMetadataProvider(
-            IOptions<DataGatewayConfig> dataGatewayConfig)
+            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
         {
-            DataGatewayConfig config = dataGatewayConfig.Value;
-            if (!config.DatabaseType.HasValue)
-            {
-                throw new ArgumentNullException("dataGatewayConfig.DatabaseType",
-                    "The database type should be set before creating a MetadataStoreProvider");
-            }
+            RuntimeConfig config = runtimeConfigPath.CurrentValue.ConfigValue!;
 
-            CloudDbType = config.DatabaseType.Value;
+            // At this point, the validation is done so, ConfigValue and ResolverConfigFile
+            // must not be null.
+            string resolverConfigJson =
+                File.ReadAllText(config.DataSource.ResolverConfigFile!);
 
-            string? resolverConfigJson = config.ResolverConfig;
-            string? graphQLSchema = config.GraphQLSchema;
-
-            if (string.IsNullOrEmpty(resolverConfigJson) && !string.IsNullOrEmpty(config.ResolverConfigFile))
-            {
-                resolverConfigJson = File.ReadAllText(config.ResolverConfigFile);
-            }
-
+            // Even though the file name may not be null and exist, the check here
+            // guarantees it is not empty.
             if (string.IsNullOrEmpty(resolverConfigJson))
             {
-                throw new ArgumentNullException("dataGatewayConfig.ResolverConfig",
-                    "The resolver config should be set either via ResolverConfig or ResolverConfigFile.");
+                throw new ArgumentNullException("runtime-config.data-source.resolver-config-file",
+                    $"The resolver config file contents are empty resolver-config-file: " +
+                    $"{config.DataSource.ResolverConfigFile}\n" +
+                    $"RuntimeConfigPath: {runtimeConfigPath.CurrentValue.ConfigFileName}");
             }
 
             GraphQLResolverConfig =
-                DataGatewayConfig.GetDeserializedConfig<ResolverConfig>(resolverConfigJson);
+                RuntimeConfig.GetDeserializedConfig<ResolverConfig>(resolverConfigJson);
 
             if (string.IsNullOrEmpty(GraphQLResolverConfig.GraphQLSchema))
             {
-                if (string.IsNullOrEmpty(graphQLSchema))
-                {
-                    graphQLSchema = File.ReadAllText(GraphQLResolverConfig.GraphQLSchemaFile ?? "schema.gql");
-                }
-
+                string graphQLSchema = File.ReadAllText(
+                        GraphQLResolverConfig.GraphQLSchemaFile ?? "schema.gql");
                 GraphQLResolverConfig = GraphQLResolverConfig with { GraphQLSchema = graphQLSchema };
+            }
+
+            if (string.IsNullOrEmpty(GraphQLResolverConfig.GraphQLSchema))
+            {
+                throw new ArgumentNullException(
+                    "hawaii-config.data-source.resolver-config-file.graphql-schema",
+                    "GraphQLSchema is required in the resolver-config-file.");
             }
 
             _mutationResolvers = new();
@@ -81,7 +77,6 @@ namespace Azure.DataGateway.Service.Services
         {
             GraphQLResolverConfig = source.GraphQLResolverConfig;
             _mutationResolvers = source._mutationResolvers;
-            CloudDbType = source.CloudDbType;
         }
 
         /// Default Constructor for Mock tests.
@@ -89,7 +84,6 @@ namespace Azure.DataGateway.Service.Services
         {
             GraphQLResolverConfig = new(string.Empty, string.Empty);
             _mutationResolvers = new();
-            CloudDbType = DatabaseType.mssql;
         }
 
         /// <summary>

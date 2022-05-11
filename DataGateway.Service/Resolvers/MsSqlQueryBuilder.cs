@@ -95,7 +95,7 @@ namespace Azure.DataGateway.Service.Resolvers
             }
             else
             {
-                return $"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;BEGIN TRANSACTION; UPDATE { QuoteIdentifier(structure.TableName)} " +
+                return $"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;BEGIN TRANSACTION; UPDATE {QuoteIdentifier(structure.TableName)} " +
                     $"WITH(UPDLOCK) SET {Build(structure.UpdateOperations, ", ")} " +
                     $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
                     $"WHERE {Build(structure.Predicates)} " +

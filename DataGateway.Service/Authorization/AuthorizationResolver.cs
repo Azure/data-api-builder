@@ -63,14 +63,7 @@ namespace Azure.DataGateway.Service.Authorization
 
             string clientRole = httpContext.Request.Headers[CLIENT_ROLE_HEADER].ToString();
 
-            if (httpContext.User.IsInRole(clientRole))
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
+            return httpContext.User.IsInRole(clientRole);
         }
 
         /// <inheritdoc />

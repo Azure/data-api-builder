@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Models;
 using HotChocolate.Language;
 using HotChocolate.Types;
 

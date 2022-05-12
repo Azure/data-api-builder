@@ -127,8 +127,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         private static RuntimeConfig CreateRuntimeConfigWithAuthN(AuthenticationConfig authNConfig)
         {
             DataSource dataSource = new(
-                DatabaseType: DatabaseType.mssql,
-                ResolverConfigFile: DEFAULT_RESOLVER_FILE)
+                DatabaseType: DatabaseType.mssql)
             {
                 ConnectionString = DEFAULT_CONNECTION_STRING
             };

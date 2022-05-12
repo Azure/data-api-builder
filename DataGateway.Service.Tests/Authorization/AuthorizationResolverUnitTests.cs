@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection.Metadata;
 using System.Text.Json;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
@@ -15,140 +16,98 @@ namespace Azure.DataGateway.Service.Tests.Authorization
     [TestClass]
     public class AuthorizationResolverUnitTests
     {
-        private const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
+        private const string TEST_ENTITY = "SampleEntity";
+        private const string TEST_ROLE = "Writer";
+        private const string TEST_ACTION = "Create";
 
+        #region Role Context Tests
         /// <summary>
-        /// Tests the first stage of authorization: Role Context
-        /// Client role header is present, Role is in ClaimsPrincipal.Roles
-        /// Client role header is present, Role is NOT in ClaimsPrincipal.Roles
-        /// Client role header is present, value is empty
-        /// Client role header is present, and header is duplicated(fuzzing catch)
-        /// Client role header is NOT present
+        /// When the client role header is present, validates result when
+        /// Role is in ClaimsPrincipal.Roles -> VALID
+        /// Role is NOT in ClaimsPrincipal.Roles -> INVALID
         /// </summary>
-        #region Positive Role Context Tests
-        [TestMethod("Client role header is present, Role is in ClaimsPrincipal.Roles")]
-        public void ValidRole_ContextTest()
+        [DataTestMethod]
+        [DataRow("Reader", true, true)]
+        [DataRow("Reader", false, false)]
+        public void ValidRoleContext_Simple(string clientRoleHeaderValue, bool userIsInRole, bool expected)
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig();
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
             Mock<HttpContext> context = new();
-            context.SetupGet(x => x.Request.Headers[CLIENT_ROLE_HEADER]).Returns("Reader");
-            context.Setup(x => x.User.IsInRole("Reader")).Returns(true);
+            context.SetupGet(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(clientRoleHeaderValue);
+            context.Setup(x => x.User.IsInRole(clientRoleHeaderValue)).Returns(userIsInRole);
 
-            Assert.IsTrue(authZResolver.IsValidRoleContext(context.Object));
+            Assert.AreEqual(authZResolver.IsValidRoleContext(context.Object), expected);
         }
-        #endregion
-        #region Negative Role Context Tests
-        [TestMethod("Client role header is present, Role is NOT in ClaimsPrincipal.Roles")]
-        public void UserNotInRole_RoleContextTest()
+
+        [TestMethod("Role header has no value")]
+        public void RoleHeaderEmpty()
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig();
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
             Mock<HttpContext> context = new();
-            context.SetupGet(x => x.Request.Headers[CLIENT_ROLE_HEADER]).Returns("Reader");
-            context.Setup(x => x.User.IsInRole("Reader")).Returns(false);
+            context.SetupGet(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(StringValues.Empty);
 
             Assert.IsFalse(authZResolver.IsValidRoleContext(context.Object));
         }
 
-        [TestMethod("Client role header is present, value is empty")]
-        public void RoleHeaderEmpty_RoleContextTest()
-        {
-            RuntimeConfig runtimeConfig = InitRuntimeConfig();
-            AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
-
-            Mock<HttpContext> context = new();
-            context.SetupGet(x => x.Request.Headers[CLIENT_ROLE_HEADER]).Returns(string.Empty);
-
-            Assert.IsFalse(authZResolver.IsValidRoleContext(context.Object));
-        }
-
-        [TestMethod("Client role header is duplicated / has multiple values")]
-        public void RoleHeaderDuplicated_RoleContextTest()
+        [TestMethod("Role header has multiple values")]
+        public void RoleHeaderDuplicated()
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig();
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
             Mock<HttpContext> context = new();
             StringValues multipleValuesForHeader = new(new string[] { "Reader", "Writer" });
-            context.SetupGet(x => x.Request.Headers[CLIENT_ROLE_HEADER]).Returns(multipleValuesForHeader);
+            context.SetupGet(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(multipleValuesForHeader);
             context.Setup(x => x.User.IsInRole("Reader")).Returns(true);
 
             Assert.IsFalse(authZResolver.IsValidRoleContext(context.Object));
         }
 
-        [TestMethod("Client role header is not present.")]
+        [TestMethod("Role header is missing")]
         public void NoRoleHeader_RoleContextTest()
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig();
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
             Mock<HttpContext> context = new();
-            context.SetupGet(x => x.Request.Headers[CLIENT_ROLE_HEADER]).Returns(StringValues.Empty);
+            context.SetupGet(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(StringValues.Empty);
 
             Assert.IsFalse(authZResolver.IsValidRoleContext(context.Object));
         }
         #endregion
+        #region Role and Action on Entity Tests
         /// <summary>
-        /// Tests the second stage of authorization: Role defined for Entity.
-        /// Role is defined for entity
-        /// Role is not defined for entity
+        /// Tests the AreRoleAndActionDefinedForEntity stage of authorization.
+        /// Request Action is defined for role -> VALID
+        /// Request Action not defined for role (role has 0 defined actions)
+        ///     Ensures method short ciruits in circumstances role is not defined -> INVALID
+        /// Request Action does not match an action defined for role (role has >=1 defined action) -> INVALID
         /// </summary>
-        #region Negative Role Tests
-        [TestMethod("Role is NOT defined for entity")]
-        public void RoleNotDefinedForEntity_EntityHasRoleTest()
+        [DataTestMethod]
+        [DataRow("Writer", "Create", "Writer", "Create", true)]
+        [DataRow("Reader", "", "Reader", "Create", false )]
+        [DataRow("Writer", "Create", "Writer", "Update", false)]
+        public void AreRoleAndActionDefinedForEntityTest(
+            string configRole,
+            string configAction,
+            string roleName,
+            string actionName,
+            bool expected)
         {
-            RuntimeConfig runtimeConfig = InitRuntimeConfig(entityName: "SampleEntity", roleName: "Writer");
+            RuntimeConfig runtimeConfig = InitRuntimeConfig(TEST_ENTITY, configRole, configAction);
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
             // Mock Request Values - Query a configured entity with a role that is NOT configured.
-            string entityName = "SampleEntity";
-            string roleName = "Reader";
-
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(entityName, roleName, action: string.Empty));
+            Assert.AreEqual(authZResolver.AreRoleAndActionDefinedForEntity(TEST_ENTITY, roleName, actionName), expected);
         }
         #endregion
 
         /// <summary>
-        /// Tests the third stage of authorization: Action defined for Role on Entity
-        /// Action is defined for role
-        /// Action is not defined for role
-        /// </summary>
-        #region Positive Action Tests
-        [TestMethod("Action is defined for role")]
-        public void ActionDefinedForRole_RoleHasActionTest()
-        {
-            RuntimeConfig runtimeConfig = InitRuntimeConfig(entityName: "SampleEntity", roleName: "Writer", actionName: "Create");
-            AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
-
-            // Mock Request Values - Query a configured entity and role with action that is configured.
-            string entityName = "SampleEntity";
-            string roleName = "Writer";
-            string actionName = "Create";
-
-            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(entityName, roleName, actionName));
-        }
-        #endregion
-        #region Negative Action Tests
-        [TestMethod("Action is NOT defined for role")]
-        public void ActionNotDefinedForRole_RoleHasActionTest()
-        {
-            RuntimeConfig runtimeConfig = InitRuntimeConfig(entityName: "SampleEntity", roleName: "Writer", actionName: "Create");
-            AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
-
-            // Mock Request Values - Query a configured entity and role with action that is NOT configured.
-            string entityName = "SampleEntity";
-            string roleName = "Writer";
-            string actionName = "Update";
-
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(entityName, roleName, actionName));
-        }
-        #endregion
-
-        /// <summary>
-        /// Tests the fourth stage of authorization: Columns defined for Action
+        /// Tests the authorization stage: Columns defined for Action
         /// Columns are allowed for role
         /// Columns are not allowed for role
         /// Wildcard included and/or excluded columns handling
@@ -159,81 +118,69 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         public void ColsDefinedForAction_ColsForActionTest()
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
-                entityName: "SampleEntity",
-                roleName: "Writer",
-                actionName: "Create",
+                TEST_ENTITY,
+                TEST_ROLE,
+                TEST_ACTION,
                 includedCols: new string[] { "col1", "col2", "col3" }
                 );
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
             // Mock Request Values - Query a configured entity/role/action with column allowed.
-            string entityName = "SampleEntity";
-            string roleName = "Writer";
-            string actionName = "Create";
             List<string> columns = new(new string[] { "col1" });
 
-            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns));
         }
 
         [TestMethod("All Columns allowed for action on role")]
         public void ColDefinedForAction_ColsForActionTest()
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
-                entityName: "SampleEntity",
-                roleName: "Writer",
-                actionName: "Create",
+                TEST_ENTITY,
+                TEST_ROLE,
+                TEST_ACTION,
                 includedCols: new string[] { "col1", "col2", "col3" }
                 );
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
             // Mock Request Values - Query a configured entity/role/action with columns allowed.
-            string entityName = "SampleEntity";
-            string roleName = "Writer";
-            string actionName = "Create";
             List<string> columns = new(new string[] { "col1", "col2", "col3" });
 
-            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns));
         }
 
         [TestMethod("Wildcard included columns allowed for action on role")]
         public void WildcardIncludeColDefinedForAction_ColsForActionTest()
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
-                entityName: "SampleEntity",
-                roleName: "Writer",
-                actionName: "Create",
+                TEST_ENTITY,
+                TEST_ROLE,
+                TEST_ACTION,
                 includedCols: new string[] { "*" }
                 );
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
             // Mock Request Values - Query a configured entity/role/action with columns allowed.
-            string entityName = "SampleEntity";
-            string roleName = "Writer";
-            string actionName = "Create";
             List<string> columns = new(new string[] { "col1", "col2", "col3" });
 
-            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns));
         }
 
         [TestMethod("Wildcard excluded columns with some included for action on role success")]
         public void WildcardIncludeColsSomeExcludeDefinedForActionSuccess_ColsForActionTest()
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
-                entityName: "SampleEntity",
-                roleName: "Writer",
-                actionName: "Create",
+                TEST_ENTITY,
+                TEST_ROLE,
+                TEST_ACTION,
                 includedCols: new string[] { "*" },
                 excludedCols: new string[] { "col1", "col2" }
                 );
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
             // Mock Request Values - Query a configured entity/role/action with column allowed.
-            string entityName = "SampleEntity";
-            string roleName = "Writer";
-            string actionName = "Create";
             List<string> columns = new(new string[] { "col3", "col4" });
 
-            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns));
         }
         #endregion
         #region Negative Column Tests
@@ -241,166 +188,144 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         public void ColsNotDefinedForAction_ColsForActionTest()
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
-                entityName: "SampleEntity",
-                roleName: "Writer",
-                actionName: "Create",
+                TEST_ENTITY,
+                TEST_ROLE,
+                TEST_ACTION,
                 includedCols: new string[] { "col1", "col2", "col3" }
                 );
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
             // Mock Request Values - Query a configured entity/role/action with column NOT allowed.
-            string entityName = "SampleEntity";
-            string roleName = "Writer";
-            string actionName = "Create";
             List<string> columns = new(new string[] { "col4" });
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns));
         }
 
         [TestMethod("Columns NOT allowed for action on role - with some valid cols")]
         public void ColsNotDefinedForAction2_ColsForActionTest()
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
-                entityName: "SampleEntity",
-                roleName: "Writer",
-                actionName: "Create",
+                TEST_ENTITY,
+                TEST_ROLE,
+                TEST_ACTION,
                 includedCols: new string[] { "col1", "col2", "col3" }
                 );
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
             // Mock Request Values - Query a configured entity/role/action
             // to match all allowed columns, with one NOT allowed column.
-            string entityName = "SampleEntity";
-            string roleName = "Writer";
-            string actionName = "Create";
             List<string> columns = new(new string[] { "col1", "col2", "col3", "col4" });
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns));
         }
 
         [TestMethod("Columns NOT allowed for action on role - definition has inc/excl - req has only excluded cols")]
         public void ColsNotDefinedForAction3_ColsForActionTest()
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
-                entityName: "SampleEntity",
-                roleName: "Writer",
-                actionName: "Create",
+                TEST_ENTITY,
+                TEST_ROLE,
+                TEST_ACTION,
                 includedCols: new string[] { "col1", "col2", "col3" },
                 excludedCols: new string[] { "col4", "col5", "col6" }
                 );
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
             // Mock Request Values - Query a configured entity/role/action with multiple columns NOT allowed.
-            string entityName = "SampleEntity";
-            string roleName = "Writer";
-            string actionName = "Create";
             List<string> columns = new(new string[] { "col4", "col5" });
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns));
         }
 
         [TestMethod("Columns NOT allowed for action on role - Mixed allowed/disallowed in req.")]
         public void ColsNotDefinedForAction4Mixed_ColsForActionTest()
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
-                entityName: "SampleEntity",
-                roleName: "Writer",
-                actionName: "Create",
+                TEST_ENTITY,
+                TEST_ROLE,
+                TEST_ACTION,
                 includedCols: new string[] { "col1", "col2", "col3" },
                 excludedCols: new string[] { "col4", "col5", "col6" }
                 );
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
             // Mock Request Values - Query a configured entity/role/action with 1 allowed/ 1 disallwed column(s).
-            string entityName = "SampleEntity";
-            string roleName = "Writer";
-            string actionName = "Create";
             List<string> columns = new(new string[] { "col2", "col5" });
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns));
         }
 
         [TestMethod("Wildcard excluded for action on role")]
         public void WildcardExcludeColsDefinedForAction_ColsForActionTest()
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
-                entityName: "SampleEntity",
-                roleName: "Writer",
-                actionName: "Create",
+                TEST_ENTITY,
+                TEST_ROLE,
+                TEST_ACTION,
                 excludedCols: new string[] { "*" }
                 );
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
             // Mock Request Values - Query a configured entity/role/action with columns not allowed.
-            string entityName = "SampleEntity";
-            string roleName = "Writer";
-            string actionName = "Create";
             List<string> columns = new(new string[] { "col1", "col2", "col3" });
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns));
         }
 
-        [TestMethod("Wildcard excluded except for some included for action on role")]
-        public void WildcardExcludeColsSomeIncludeDefinedForAction_ColsForActionTest()
-        {
-            RuntimeConfig runtimeConfig = InitRuntimeConfig(
-                entityName: "SampleEntity",
-                roleName: "Writer",
-                actionName: "Create",
-                includedCols: new string[] { "col1", "col2" },
-                excludedCols: new string[] { "*" }
-                );
-            AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
-
-            // Mock Request Values - Query a configured entity/role/action with two columns allowed, one not.
-            string entityName = "SampleEntity";
-            string roleName = "Writer";
-            string actionName = "Create";
-            List<string> columns = new(new string[] { "col1", "col2", "col3" });
-
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
-        }
-
-        [TestMethod("Wildcard included except for some excluded for action on role")]
+        [TestMethod("Wildcard include all except some columns for action on role")]
         public void WildcardIncludeColsSomeExcludeDefinedForAction_ColsForActionTest()
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
-                entityName: "SampleEntity",
-                roleName: "Writer",
-                actionName: "Create",
+                TEST_ENTITY,
+                TEST_ROLE,
+                TEST_ACTION,
                 includedCols: new string[] { "*" },
                 excludedCols: new string[] { "col1", "col2" }
                 );
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
             // Mock Request Values - Query a configured entity/role/action with column allowed and column not allowed.
-            string entityName = "SampleEntity";
-            string roleName = "Writer";
-            string actionName = "Create";
             List<string> columns = new(new string[] { "col3", "col1" });
+            bool expected = false;
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
+            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns), expected);
         }
 
-        [TestMethod("Wildcard excluded columns with some included for action on role")]
+        [TestMethod("Wildcard exclude all except for some columns for action on role - Request with excluded column")]
+        public void WildcardExcludeColsSomeIncludeDefinedForAction_ColsForActionTest()
+        {
+            RuntimeConfig runtimeConfig = InitRuntimeConfig(
+                TEST_ENTITY,
+                TEST_ROLE,
+                TEST_ACTION,
+                includedCols: new string[] { "col1", "col2" },
+                excludedCols: new string[] { "*" }
+                );
+            AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
+
+            // Mock Request Values - Query a configured entity/role/action with two columns allowed, one not.
+            List<string> columns = new(new string[] { "col1", "col2", "col3" });
+
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns));
+        }
+
+        [TestMethod("Wildcard exclude all except some columns for action on role - Request with all included columns")]
         public void WildcardExcludeColsSomeIncludeDefinedForActionSuccess_ColsForActionTest()
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
-                entityName: "SampleEntity",
-                roleName: "Writer",
-                actionName: "Create",
+                TEST_ENTITY,
+                TEST_ROLE,
+                TEST_ACTION,
                 includedCols: new string[] { "col1", "col2" },
                 excludedCols: new string[] { "*" }
                 );
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
             // Mock Request Values - Query a configured entity/role/action with columns allowed.
-            string entityName = "SampleEntity";
-            string roleName = "Writer";
-            string actionName = "Create";
             List<string> columns = new(new string[] { "col1", "col2" });
+            bool expected = false;
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
+            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns), expected);
         }
         #endregion
         #region Helpers

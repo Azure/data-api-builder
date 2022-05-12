@@ -17,7 +17,7 @@ namespace Azure.DataGateway.Service.Authorization
     public class AuthorizationResolver : IAuthorizationResolver
     {
         private Dictionary<string, EntityDS> _entityPermissionMap = new();
-        private const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
+        public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
 
         public AuthorizationResolver(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
         {

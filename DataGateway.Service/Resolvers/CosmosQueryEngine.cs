@@ -86,20 +86,20 @@ namespace Azure.DataGateway.Service.Resolvers
                             jarray.Add(item);
                         }
 
-                string responseAfterToken = page.ContinuationToken;
-                if (string.IsNullOrEmpty(responseAfterToken))
-                {
-                    responseAfterToken = null;
-                }
+                        string responseAfterToken = page.ContinuationToken;
+                        if (string.IsNullOrEmpty(responseAfterToken))
+                        {
+                            responseAfterToken = null;
+                        }
 
-                JObject res = new(
-                    new JProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME, Base64Encode(responseAfterToken)),
-                    new JProperty(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, responseAfterToken != null),
-                    new JProperty(QueryBuilder.PAGINATION_FIELD_NAME, jarray));
+                        JObject res = new(
+                            new JProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME, Base64Encode(responseAfterToken)),
+                            new JProperty(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, responseAfterToken != null),
+                            new JProperty(QueryBuilder.PAGINATION_FIELD_NAME, jarray));
 
-                // This extra deserialize/serialization will be removed after moving to Newtonsoft from System.Text.Json
-                return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(res.ToString()), null);
-            }
+                        // This extra deserialize/serialization will be removed after moving to Newtonsoft from System.Text.Json
+                        return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(res.ToString()), null);
+                    }
 
                     if (page.Count > 0)
                     {

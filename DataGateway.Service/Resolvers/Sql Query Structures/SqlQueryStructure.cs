@@ -668,22 +668,6 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Get foreign key columns (if no columns select table pk)
-        /// </summary>
-        private static List<string> GetFkColumns(ForeignKeyDefinition fk, TableDefinition table)
-        {
-            return fk.ReferencingColumns.Count > 0 ? fk.ReferencingColumns : table.PrimaryKey;
-        }
-
-        /// <summary>
-        /// Get foreign key referenced columns (if no referenced columns select referenced table pk)
-        /// </summary>
-        private static List<string> GetFkRefColumns(ForeignKeyDefinition fk, TableDefinition refTable)
-        {
-            return fk.ReferencedColumns.Count > 0 ? fk.ReferencedColumns : refTable.PrimaryKey;
-        }
-
-        /// <summary>
         /// The maximum number of results this query should return.
         /// </summary>
         public uint? Limit()

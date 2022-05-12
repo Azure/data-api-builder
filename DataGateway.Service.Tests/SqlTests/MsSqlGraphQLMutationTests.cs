@@ -212,6 +212,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>that the insertion of the entry in the appropriate link table was successful
         /// </summary>
         [TestMethod]
+        // IGNORE FOR NOW, SEE: Issue #285
+        [Ignore]
         public async Task InsertMutationForNonGraphQLTypeTable()
         {
             string graphQLMutationName = "addAuthorToBook";

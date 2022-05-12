@@ -3,7 +3,6 @@
   "data-source": {
     "database-type": "postgresql",
     "connection-string": "DO NOT EDIT, look at CONTRIBUTING.md on how to run tests",
-    "resolver-config-file": "sql-config.json"
   },
   "runtime": {
     "rest": {

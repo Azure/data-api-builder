@@ -81,8 +81,6 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         ObjectType _underlyingFieldType = null!;
 
-        private readonly GraphQLType _typeInfo = null!;
-
         /// <summary>
         /// Used to cache the primary key as a list of OrderByColumn
         /// </summary>
@@ -205,13 +203,7 @@ namespace Azure.DataGateway.Service.Resolvers
             IOutputType outputType = schemaField.Type;
             _underlyingFieldType = UnderlyingType(outputType);
 
-            if (QueryBuilder.IsPaginationType(_underlyingFieldType))
-            {
-                _underlyingFieldType = QueryBuilder.PaginationTypeToModelType(_underlyingFieldType, ctx.Schema.Types);
-            }
-
-            _typeInfo = MetadataStoreProvider.GetGraphQLType(_underlyingFieldType.Name.Value);
-            PaginationMetadata.IsPaginated = _typeInfo.IsPaginationType;
+            PaginationMetadata.IsPaginated = QueryBuilder.IsPaginationType(_underlyingFieldType);
 
             if (PaginationMetadata.IsPaginated)
             {
@@ -228,7 +220,6 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 outputType = schemaField.Type;
                 _underlyingFieldType = UnderlyingType(outputType);
-                _typeInfo = MetadataStoreProvider.GetGraphQLType(_underlyingFieldType.Name);
 
                 // this is required to correctly keep track of which pagination metadata
                 // refers to what section of the json
@@ -243,7 +234,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 PaginationMetadata.Subqueries.Add("items", PaginationMetadata.MakeEmptyPaginationMetadata());
             }
 
-            TableName = _typeInfo.Table;
+            TableName = _underlyingFieldType.Table;
             TableAlias = CreateTableAlias();
 
             if (queryField != null && queryField.SelectionSet != null)

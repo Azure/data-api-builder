@@ -3,7 +3,6 @@
   "data-source": {
     "database-type": "mssql",
     "connection-string": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;",
-    "resolver-config-file": "sql-config.json"
   },
   "mssql": {
     "set-session-context": false

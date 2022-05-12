@@ -34,7 +34,7 @@
     }
   },
   "entities": {
-    "publishers": {
+    "Publisher": {
       "source": "publishers",
       "rest": true,
       "graphql": true,
@@ -55,7 +55,7 @@
         }
       }
     },
-    "stocks": {
+    "Stock": {
       "source": "stocks",
       "rest": true,
       "graphql": true,
@@ -78,7 +78,7 @@
         }
       }
     },
-    "books": {
+    "Book": {
       "source": "books",
       "permissions": [
         {
@@ -107,12 +107,12 @@
           "cardinality": "many",
           "target.entity": "authors",
           "linking.object": "book_author_link",
-          "linking.source.fields": ["book_id"],
-          "linking.target.fields": ["author_id"]
+          "linking.source.fields": [ "book_id" ],
+          "linking.target.fields": [ "author_id" ]
         }
       }
     },
-    "book_website_placements": {
+    "BookWebsitePlacement": {
       "source": "book_website_placements",
       "rest": true,
       "graphql": true,
@@ -132,8 +132,8 @@
                 "database": "@claims.id eq @item.id"
               },
               "fields": {
-                "include": ["*"],
-                "exclude": ["id"]
+                "include": [ "*" ],
+                "exclude": [ "id" ]
               }
             }
           ]
@@ -146,7 +146,7 @@
         }
       }
     },
-    "authors": {
+    "Author": {
       "source": "authors",
       "rest": true,
       "graphql": true,
@@ -164,7 +164,7 @@
         }
       }
     },
-    "reviews": {
+    "Review": {
       "source": "reviews",
       "rest": true,
       "permissions": [
@@ -180,7 +180,7 @@
         }
       }
     },
-    "magazines": {
+    "Magazine": {
       "source": "foo.magazines",
       "graphql": true,
       "permissions": [
@@ -194,15 +194,15 @@
             {
               "action": "*",
               "fields": {
-                "include": ["*"],
-                "exclude": ["issue_number"]
+                "include": [ "*" ],
+                "exclude": [ "issue_number" ]
               }
             }
           ]
         }
       ]
     },
-    "comics": {
+    "Comic": {
       "source": "comics",
       "rest": true,
       "graphql": false,
@@ -217,7 +217,7 @@
         }
       ]
     },
-    "brokers": {
+    "Broker": {
       "source": "brokers",
       "graphql": false,
       "permissions": [
@@ -227,10 +227,10 @@
         }
       ]
     },
-    "website_users": {
+    "WebsiteUser": {
       "source": "website_users",
       "rest": false,
-      "permissions" : []
+      "permissions": []
     }
   }
 }

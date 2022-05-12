@@ -86,7 +86,7 @@ namespace Azure.DataGateway.Service.Resolvers
                             jarray.Add(item);
                         }
 
-                string responseAfterToken = firstPage.ContinuationToken;
+                string responseAfterToken = page.ContinuationToken;
                 if (string.IsNullOrEmpty(responseAfterToken))
                 {
                     responseAfterToken = null;

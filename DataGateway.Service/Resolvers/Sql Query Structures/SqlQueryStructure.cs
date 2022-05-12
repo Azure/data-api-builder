@@ -234,7 +234,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 PaginationMetadata.Subqueries.Add("items", PaginationMetadata.MakeEmptyPaginationMetadata());
             }
 
-            TableName = _underlyingFieldType.Table;
+            TableName = sqlMetadataProvider.GetDatabaseObjectName(_underlyingFieldType.Name);
             TableAlias = CreateTableAlias();
 
             if (queryField != null && queryField.SelectionSet != null)
@@ -558,16 +558,16 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     // explicitly set to null so it is not used later because this value does not reflect the schema of subquery
                     // if the subquery is paginated since it will be overridden with the schema of *Conntion.items
-                    subschemaField = null;
+                    /*subschemaField = null;
 
                     // use the _underlyingType from the subquery which will be overridden appropriately if the query is paginated
                     ObjectType subunderlyingType = subquery._underlyingFieldType;
 
-                    GraphQLType subTypeInfo = MetadataStoreProvider.GetGraphQLType(subunderlyingType.Name);
-                    TableDefinition subTableDefinition = SqlMetadataProvider.GetTableDefinition(subTypeInfo.Table);
+                    TableDefinition subTableDefinition = SqlMetadataProvider.GetTableDefinition(subunderlyingType.Name);
+
+                    // TO DO: The following logic needs to read relationship info from the directives or runtime config file.
                     GraphQLField fieldInfo = _typeInfo.Fields[fieldName];
 
-                    string subtableAlias = subquery.TableAlias;
 
                     ForeignKeyDefinition fk;
                     List<string> columns;
@@ -657,8 +657,9 @@ namespace Azure.DataGateway.Service.Resolvers
                             throw new NotSupportedException("Cannot do a join when there is no relationship");
                         default:
                             throw new NotSupportedException("Relationships type ${fieldInfo.RelationshipType} is not supported.");
-                    }
+                    }*/
 
+                    string subtableAlias = subquery.TableAlias;
                     string subqueryAlias = $"{subtableAlias}_subq";
                     JoinQueries.Add(subqueryAlias, subquery);
                     Columns.Add(new LabelledColumn(subqueryAlias, DATA_IDENT, fieldName));

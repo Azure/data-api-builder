@@ -165,11 +165,11 @@ namespace Azure.DataGateway.Service.Services
                 DatabaseType.cosmos => GenerateCosmosGraphQLObjects(),
                 DatabaseType.mssql or
                 DatabaseType.postgresql or
-                DatabaseType.mysql => GenerateSqlGraphQLObjects(entities),
-                _ => throw new NotImplementedException($"This database type {databaseType} is not yet implemented.")
+                DatabaseType.mysql => GenerateSqlGraphQLObjects(_entities),
+                _ => throw new NotImplementedException($"This database type {_databaseType} is not yet implemented.")
             };
 
-            Parse(root, inputTypes, _entities);
+            Parse(root, inputTypes);
         }
 
         private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateSqlGraphQLObjects(Dictionary<string, Entity> entities)

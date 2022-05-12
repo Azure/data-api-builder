@@ -162,9 +162,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             object queryExecutor = server.Services.GetService(typeof(IQueryExecutor));
             Assert.IsInstanceOfType(queryExecutor, typeof(QueryExecutor<SqlConnection>));
 
-            object graphQLMetadataProvider = server.Services.GetService(typeof(IGraphQLMetadataProvider));
-            Assert.IsInstanceOfType(graphQLMetadataProvider, typeof(GraphQLFileMetadataProvider));
-
             object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
             Assert.IsInstanceOfType(sqlMetadataProvider, typeof(MsSqlMetadataProvider));
         }
@@ -187,9 +184,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             object queryExecutor = server.Services.GetService(typeof(IQueryExecutor));
             Assert.IsInstanceOfType(queryExecutor, typeof(QueryExecutor<NpgsqlConnection>));
 
-            object graphQLMetadataProvider = server.Services.GetService(typeof(IGraphQLMetadataProvider));
-            Assert.IsInstanceOfType(graphQLMetadataProvider, typeof(GraphQLFileMetadataProvider));
-
             object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
             Assert.IsInstanceOfType(sqlMetadataProvider, typeof(PostgreSqlMetadataProvider));
         }
@@ -211,9 +205,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
             object queryExecutor = server.Services.GetService(typeof(IQueryExecutor));
             Assert.IsInstanceOfType(queryExecutor, typeof(QueryExecutor<MySqlConnection>));
-
-            object graphQLMetadataProvider = server.Services.GetService(typeof(IGraphQLMetadataProvider));
-            Assert.IsInstanceOfType(graphQLMetadataProvider, typeof(GraphQLFileMetadataProvider));
 
             object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
             Assert.IsInstanceOfType(sqlMetadataProvider, typeof(MySqlMetadataProvider));

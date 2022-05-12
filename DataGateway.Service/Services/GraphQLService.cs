@@ -26,10 +26,10 @@ namespace Azure.DataGateway.Service.Services
     {
         private readonly IQueryEngine _queryEngine;
         private readonly IMutationEngine _mutationEngine;
-        private readonly IGraphQLMetadataProvider _graphQLMetadataProvider;
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly IDocumentCache _documentCache;
         private readonly IDocumentHashProvider _documentHashProvider;
+        private readonly IGraphQLMetadataProvider? _graphQLMetadataProvider;
         private readonly DatabaseType _databaseType;
         private readonly Dictionary<string, Entity> _entities;
 
@@ -40,7 +40,7 @@ namespace Azure.DataGateway.Service.Services
             IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
-            IGraphQLMetadataProvider graphQLMetadataProvider,
+            IGraphQLMetadataProvider? graphQLMetadataProvider,
             IDocumentCache documentCache,
             IDocumentHashProvider documentHashProvider,
             ISqlMetadataProvider sqlMetadataProvider)
@@ -53,6 +53,12 @@ namespace Azure.DataGateway.Service.Services
                     out _entities);
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
+            if (_databaseType == DatabaseType.cosmos && graphQLMetadataProvider is null)
+            {
+                throw new ArgumentNullException(nameof(GraphQLFileMetadataProvider),
+                    "GraphQLFileMetadataProvider is required when database type is cosmosdb.");
+            }
+
             _graphQLMetadataProvider = graphQLMetadataProvider;
             _sqlMetadataProvider = sqlMetadataProvider;
             _documentCache = documentCache;

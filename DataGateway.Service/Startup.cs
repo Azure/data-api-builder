@@ -57,7 +57,25 @@ namespace Azure.DataGateway.Service
             }
 
             services.AddSingleton<RuntimeConfigValidator>();
-            services.AddSingleton<IGraphQLMetadataProvider, GraphQLFileMetadataProvider>();
+            services.AddSingleton<IGraphQLMetadataProvider>(implementationFactory: (serviceProvider) =>
+            {
+                IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
+                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
+
+                switch (runtimeConfig.DatabaseType)
+                {
+                    case DatabaseType.cosmos:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<GraphQLFileMetadataProvider>(serviceProvider);
+                    case DatabaseType.mssql:
+                    case DatabaseType.postgresql:
+                    case DatabaseType.mysql:
+                        return null!;
+                    default:
+                        throw new NotSupportedException(runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
+                }
+            });
+
             services.AddSingleton<CosmosClientProvider>();
 
             services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>

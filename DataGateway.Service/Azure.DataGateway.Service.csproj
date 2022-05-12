@@ -91,4 +91,7 @@
     <ProjectReference Include="..\DataGateway.Config\Azure.DataGateway.Config.csproj" />
     <ProjectReference Include="..\DataGateway.Service.GraphQLBuilder\Azure.DataGateway.Service.GraphQLBuilder.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Exceptions\" />
+  </ItemGroup>
 </Project>

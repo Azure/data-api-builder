@@ -98,26 +98,6 @@ namespace Azure.DataGateway.Service
                 }
             });
 
-            services.AddSingleton<IConfigValidator>(implementationFactory: (serviceProvider) =>
-            {
-                IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
-                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
-                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
-
-                switch (runtimeConfig.DatabaseType)
-                {
-                    case DatabaseType.cosmos:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<CosmosConfigValidator>(serviceProvider);
-                    case DatabaseType.mssql:
-                    case DatabaseType.postgresql:
-                    case DatabaseType.mysql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<SqlConfigValidator>(serviceProvider);
-                    default:
-                        throw new NotSupportedException(
-                            runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
-                }
-            });
-
             services.AddSingleton<IQueryExecutor>(implementationFactory: (serviceProvider) =>
             {
                 IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
@@ -319,8 +299,6 @@ namespace Azure.DataGateway.Service
                     await sqlMetadataProvider.InitializeAsync();
                 }
 
-                // After initialization of metadata, validate the db specific configuration.
-                app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
                 return true;
             }
             catch (Exception ex)

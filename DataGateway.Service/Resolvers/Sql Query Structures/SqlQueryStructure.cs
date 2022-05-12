@@ -709,7 +709,7 @@ namespace Azure.DataGateway.Service.Resolvers
             if (_ctx is null)
             {
                 throw new ArgumentNullException("IMiddlewareContext should be intiliazed before " +
-                                                "trying to parse the orderBy arguement.");
+                                                "trying to parse the orderBy argument.");
             }
 
             // Create list of primary key columns
@@ -734,9 +734,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 // field in orderBy
                 remainingPkCols.Remove(fieldName);
 
-                string enumValue = (string)fieldValue;
-
-                if (enumValue == $"{OrderByDir.Desc}")
+                if ((string)fieldValue == $"{OrderByDir.Desc}")
                 {
                     orderByColumnsList.Add(new OrderByColumn(TableAlias, fieldName, OrderByDir.Desc));
                 }

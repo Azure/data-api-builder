@@ -131,7 +131,7 @@ namespace Azure.DataGateway.Service.Services
         /// Note that if the node type is Variable, the parameter variables needs to be specified
         /// as well in order to extract the value.
         /// </summary>
-        public static object? ArgumentValue(IValueNode value, IVariableValueCollection? variables = null)
+        public static object? ArgumentValue(IValueNode value, IVariableValueCollection? variableValues = null)
         {
             switch (value.Kind)
             {
@@ -139,18 +139,18 @@ namespace Azure.DataGateway.Service.Services
                     return ((IntValueNode)value).ToInt32();
 
                 case SyntaxKind.Variable:
-                    VariableNode variable = (VariableNode)value;
-                    if (variables is null)
+                    string variableName = ((VariableNode)value).Name.Value;
+                    if (variableValues is null)
                     {
                         throw new DataGatewayException(
-                            $"Passing variables into the field where variable ${variable.Name.ToString()} is used is not supported. " +
+                            $"Passing variables into the field where variable ${variableName} is used is not supported. " +
                             "Only scalar and enum fields are currently supported.",
                             HttpStatusCode.NotImplemented,
                             DataGatewayException.SubStatusCodes.NotSupported
                         );
                     }
 
-                    return variables.GetVariable<object>(variable.Value);
+                    return variableValues.GetVariable<object>(variableName);
 
                 default:
                     return value.Value;

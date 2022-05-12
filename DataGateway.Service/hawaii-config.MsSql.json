@@ -34,7 +34,7 @@
     }
   },
   "entities": {
-    "publishers": {
+    "publisher": {
       "source": "publishers",
       "rest": true,
       "graphql": true,

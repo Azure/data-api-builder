@@ -66,7 +66,7 @@ namespace Azure.DataGateway.Service.Tests.REST
 
             // Setup params to invoke function with
             // Must use valid entity name
-            string entityName = "Books";
+            string entityName = "Book";
             Operation operationType = Operation.None;
             string primaryKeyRoute = string.Empty;
 

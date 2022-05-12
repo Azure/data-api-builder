@@ -27,19 +27,20 @@ namespace Azure.DataGateway.Service.Services
             IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
         {
             RuntimeConfig config = runtimeConfigPath.CurrentValue.ConfigValue!;
+            string resolverConfigFileName = config.CosmosDb!.ResolverConfigFile;
 
             // At this point, the validation is done so, ConfigValue and ResolverConfigFile
-            // must not be null.
+            // must not be null, and this should be CosmosDb only.
             string resolverConfigJson =
-                File.ReadAllText(config.DataSource.ResolverConfigFile!);
+                File.ReadAllText(config.CosmosDb!.ResolverConfigFile);
 
             // Even though the file name may not be null and exist, the check here
             // guarantees it is not empty.
             if (string.IsNullOrEmpty(resolverConfigJson))
             {
-                throw new ArgumentNullException("runtime-config.data-source.resolver-config-file",
+                throw new ArgumentNullException("runtime-config.cosmosdb.resolver-config-file",
                     $"The resolver config file contents are empty resolver-config-file: " +
-                    $"{config.DataSource.ResolverConfigFile}\n" +
+                    $"{resolverConfigFileName}\n" +
                     $"RuntimeConfigPath: {runtimeConfigPath.CurrentValue.ConfigFileName}");
             }
 
@@ -122,7 +123,6 @@ namespace Azure.DataGateway.Service.Services
         {
             if (!GraphQLResolverConfig.GraphQLTypes.TryGetValue(name, out GraphQLType? typeInfo))
             {
-                typeInfo = GraphQLResolverConfig.GraphQLTypes.Values.FirstOrDefault(t => t.Table == name);
                 if (typeInfo is null)
                 {
                     throw new KeyNotFoundException($"Table Definition for {name} does not exist.");

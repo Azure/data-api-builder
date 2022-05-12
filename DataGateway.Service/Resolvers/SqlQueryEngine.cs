@@ -58,7 +58,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _sqlMetadataProvider);
+            SqlQueryStructure structure = new(context, parameters, _sqlMetadataProvider);
 
             if (structure.PaginationMetadata.IsPaginated)
             {
@@ -103,7 +103,7 @@ namespace Azure.DataGateway.Service.Resolvers
         // </summary>
         public async Task<JsonDocument> ExecuteAsync(RestRequestContext context)
         {
-            SqlQueryStructure structure = new(context, _metadataStoreProvider, _sqlMetadataProvider);
+            SqlQueryStructure structure = new(context, _sqlMetadataProvider);
             return await ExecuteAsync(structure);
         }
 

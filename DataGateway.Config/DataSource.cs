@@ -32,7 +32,7 @@ namespace Azure.DataGateway.Config
     public record CosmosDbOptions(
         string Database,
         [property: JsonPropertyName(CosmosDbOptions.RESOLVER_JSON_PROPERTY_NAME)]
-        string? ResolverConfigFile)
+        string ResolverConfigFile)
     {
         public const string RESOLVER_JSON_PROPERTY_NAME = "resolver-config-file";
         public const string JSON_PROPERTY_NAME = nameof(DatabaseType.cosmos);

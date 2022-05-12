@@ -147,18 +147,20 @@ namespace Azure.DataGateway.Service.Authorization
                         else if (actionElement.ValueKind == JsonValueKind.Object)
                         {
                             Action? actionObj = JsonSerializer.Deserialize<Action>(actionElement.ToString(), RuntimeConfig.GetDeserializationOptions());
-                            actionName = actionObj!.Name;
-
-                            if (actionObj!.Fields!.Include is not null)
+                            if (actionObj is not null)
                             {
-                                actionToColumn.included = new(actionObj.Fields.Include);
-                            }
+                                actionName = actionObj.Name;
 
-                            if (actionObj!.Fields!.Exclude is not null)
-                            {
-                                actionToColumn.excluded = new(actionObj.Fields.Exclude);
-                            }
+                                if (actionObj.Fields!.Include is not null)
+                                {
+                                    actionToColumn.included = new(actionObj.Fields.Include);
+                                }
 
+                                if (actionObj.Fields!.Exclude is not null)
+                                {
+                                    actionToColumn.excluded = new(actionObj.Fields.Exclude);
+                                }
+                            }
                         }
 
                         roleToAction.ActionToColumnMap[actionName] = actionToColumn;

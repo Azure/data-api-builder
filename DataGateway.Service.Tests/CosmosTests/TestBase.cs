@@ -45,6 +45,7 @@ type Query {
     planets(first: Int, after: String): PlanetConnection
     getPlanetListById(id: ID): [Planet]
     getPlanetByName(name: String): Planet
+    getPlanetListWithOrderBy(orderBy: PlanetOrderByInput): [Planet]
 }
 
 type Mutation {
@@ -70,6 +71,15 @@ type Planet {
     id : ID,
     name : String,
     character: Character
+}
+
+enum SortOrder {
+    Asc, Desc
+}
+
+input PlanetOrderByInput {
+    id: SortOrder
+    name: SortOrder
 }";
 
             _metadataStoreProvider.GraphQLSchema = jsonString;

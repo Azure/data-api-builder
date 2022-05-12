@@ -31,7 +31,13 @@ query ($first: Int!, $after: String) {
         hasNextPage
     }
 }";
-
+        public static readonly string PlanetListWithOrderBy = @"
+query {
+    getPlanetListWithOrderBy (orderBy: {id: Asc, name: null }) {
+        id
+        name
+    }
+}";
         private static List<string> _idList;
 
         /// <summary>
@@ -243,6 +249,18 @@ query {{
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
+        }
+
+        [TestMethod]
+        public async Task GetWithOrderBy()
+        {
+            JsonElement response = await ExecuteGraphQLRequestAsync("getPlanetListWithOrderBy", PlanetListWithOrderBy);
+            int i = 0;
+            // Check order matches
+            foreach (string id in _idList.OrderBy(x => x))
+            {
+                Assert.AreEqual(id, response[i++].GetProperty("id").GetString());
+            }
         }
 
         private static void ConvertJsonElementToStringList(JsonElement ele, List<string> strList)

@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void CheckConnectionStringParsingTest(string expected, string connectionString)
         {
             MsSqlMetadataProvider.TryGetSchemaFromConnectionString(out string actual, connectionString);
-            Assert.IsTrue(expected.Equals(actual));
+            Assert.AreEqual(expected, actual);
         }
     }
 }

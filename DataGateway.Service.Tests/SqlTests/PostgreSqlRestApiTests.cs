@@ -922,7 +922,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// We include a '.' for the Edm Model
         /// schema to allow both MsSql/PostgreSql
         /// and MySql to share code. MySql does not
-        /// include a '.' bust PostgreSql does so
+        /// include a '.' but PostgreSql does so
         /// we must include here.
         /// </summary>
         /// <returns></returns>

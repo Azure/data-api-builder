@@ -159,14 +159,6 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Gets graphql types from config
-        /// </summmary>
-        private Dictionary<string, GraphQLType> GetGraphQLTypes()
-        {
-            return _resolverConfig.GraphQLTypes;
-        }
-
-        /// <summary>
         /// Get table definition from the entity name
         /// Expects valid entity name and a sql entity.
         /// </summary>
@@ -451,7 +443,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Get the config GraphQLTypes.Fields for a graphql schema type
         /// </summary>
-        private IEnumerable<string> GetConfigFieldsForGqlType(ObjectTypeDefinitionNode type)
+        private static IEnumerable<string> GetConfigFieldsForGqlType(ObjectTypeDefinitionNode type)
         {
             return _resolverConfig.GraphQLTypes[type.Name.Value].Fields.Keys;
         }
@@ -509,7 +501,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Gets mutation resolvers from config
         /// </summary>
-        private List<MutationResolver> GetMutationResolvers()
+        private static List<MutationResolver> GetMutationResolvers()
         {
             return _resolverConfig.MutationResolvers;
         }

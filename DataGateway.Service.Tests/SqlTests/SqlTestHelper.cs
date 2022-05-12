@@ -6,31 +6,40 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
 {
     public class SqlTestHelper
     {
-        public static IOptions<DataGatewayConfig> LoadConfig(string environment)
+        public static IOptionsMonitor<RuntimeConfigPath> LoadConfig(string environment)
         {
+            string configFileName = RuntimeConfigPath.GetFileNameForEnvironment(environment);
 
-            DataGatewayConfig dataGatewayConfig = new();
+            Dictionary<string, string> configFileNameMap = new()
+            {
+                {
+                    nameof(RuntimeConfigPath.ConfigFileName),
+                    configFileName
+                }
+            };
+
             IConfigurationRoot config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile($"appsettings.{environment}.json")
-                .AddJsonFile($"appsettings.{environment}.overrides.json", optional: true)
+                .AddInMemoryCollection(configFileNameMap)
                 .Build();
 
-            config.Bind(nameof(DataGatewayConfig), dataGatewayConfig);
+            RuntimeConfigPath configPath = config.Get<RuntimeConfigPath>();
+            configPath.SetRuntimeConfigValue();
 
-            return Options.Create(dataGatewayConfig);
+            return Mock.Of<IOptionsMonitor<RuntimeConfigPath>>(_ => _.CurrentValue == configPath);
+
         }
 
         /// <summary>

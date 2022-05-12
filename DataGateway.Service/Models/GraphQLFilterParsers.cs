@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 
 namespace Azure.DataGateway.Service.Models
@@ -29,6 +30,11 @@ namespace Azure.DataGateway.Service.Models
 
             foreach (ObjectFieldNode field in fields)
             {
+                if (field.Value is NullValueNode)
+                {
+                    continue;
+                }
+
                 string name = field.Name.ToString();
 
                 bool fieldIsAnd = string.Equals(name, $"{PredicateOperation.AND}", StringComparison.OrdinalIgnoreCase);
@@ -95,11 +101,7 @@ namespace Azure.DataGateway.Service.Models
         {
             if (predicates.Count == 0)
             {
-                return new Predicate(
-                    new PredicateOperand("1"),
-                    PredicateOperation.NotEqual,
-                    new PredicateOperand("1")
-                );
+                return Predicate.MakeFalsePredicate();
             }
 
             List<PredicateOperand> operands = new();
@@ -121,6 +123,11 @@ namespace Azure.DataGateway.Service.Models
             int pos = 0,
             bool addParenthesis = true)
         {
+            if (operands.Count == 0)
+            {
+                return Predicate.MakeFalsePredicate();
+            }
+
             if (pos == operands.Count - 1)
             {
                 return operands[pos].AsPredicate()!;
@@ -157,39 +164,38 @@ namespace Azure.DataGateway.Service.Models
             foreach (ObjectFieldNode field in fields)
             {
                 string name = field.Name.ToString();
-                object value;
+                object? value = ResolverMiddleware.ArgumentValue(field.Value);
                 bool processLiteral = true;
+
+                if (value is null)
+                {
+                    continue;
+                }
 
                 PredicateOperation op;
                 switch (name)
                 {
                     case "eq":
                         op = PredicateOperation.Equal;
-                        value = ((IntValueNode)field.Value).ToInt32();
                         break;
                     case "neq":
                         op = PredicateOperation.NotEqual;
-                        value = ((IntValueNode)field.Value).ToInt32();
                         break;
                     case "lt":
                         op = PredicateOperation.LessThan;
-                        value = ((IntValueNode)field.Value).ToInt32();
                         break;
                     case "gt":
                         op = PredicateOperation.GreaterThan;
-                        value = ((IntValueNode)field.Value).ToInt32();
                         break;
                     case "lte":
                         op = PredicateOperation.LessThanOrEqual;
-                        value = ((IntValueNode)field.Value).ToInt32();
                         break;
                     case "gte":
                         op = PredicateOperation.GreaterThanOrEqual;
-                        value = ((IntValueNode)field.Value).ToInt32();
                         break;
                     case "isNull":
                         processLiteral = false;
-                        bool isNull = ((BooleanValueNode)field.Value).Value;
+                        bool isNull = (bool)value;
                         op = isNull ? PredicateOperation.IS : PredicateOperation.IS_NOT;
                         value = "NULL";
                         break;
@@ -230,8 +236,13 @@ namespace Azure.DataGateway.Service.Models
             foreach (ObjectFieldNode field in fields)
             {
                 string ruleName = field.Name.ToString();
-                string ruleValue;
+                object? ruleValue = ResolverMiddleware.ArgumentValue(field.Value);
                 bool processLiteral = true;
+
+                if (ruleValue is null)
+                {
+                    continue;
+                }
 
                 PredicateOperation op;
 
@@ -239,35 +250,30 @@ namespace Azure.DataGateway.Service.Models
                 {
                     case "eq":
                         op = PredicateOperation.Equal;
-                        ruleValue = ((StringValueNode)field.Value).Value;
                         break;
                     case "neq":
                         op = PredicateOperation.NotEqual;
-                        ruleValue = ((StringValueNode)field.Value).Value;
                         break;
                     case "contains":
                         op = PredicateOperation.LIKE;
-                        ruleValue = ((StringValueNode)field.Value).Value;
-                        ruleValue = $"%{EscapeLikeString(ruleValue)}%";
+                        ruleValue = $"%{EscapeLikeString((string)ruleValue)}%";
                         break;
                     case "notContains":
                         op = PredicateOperation.NOT_LIKE;
-                        ruleValue = ((StringValueNode)field.Value).Value;
-                        ruleValue = $"%{EscapeLikeString(ruleValue)}%";
+                        ruleValue = $"%{EscapeLikeString((string)ruleValue)}%";
                         break;
                     case "startsWith":
                         op = PredicateOperation.LIKE;
-                        ruleValue = ((StringValueNode)field.Value).Value;
-                        ruleValue = $"{EscapeLikeString(ruleValue)}%";
+                        ruleValue = $"{EscapeLikeString((string)ruleValue)}%";
                         break;
                     case "endsWith":
                         op = PredicateOperation.LIKE;
                         ruleValue = ((StringValueNode)field.Value).Value;
-                        ruleValue = $"%{EscapeLikeString(ruleValue)}";
+                        ruleValue = $"%{EscapeLikeString((string)ruleValue)}";
                         break;
                     case "isNull":
                         processLiteral = false;
-                        bool isNull = ((BooleanValueNode)field.Value).Value;
+                        bool isNull = (bool)ruleValue;
                         op = isNull ? PredicateOperation.IS : PredicateOperation.IS_NOT;
                         ruleValue = "NULL";
                         break;
@@ -278,7 +284,7 @@ namespace Azure.DataGateway.Service.Models
                 predicates.Push(new PredicateOperand(new Predicate(
                     new PredicateOperand(column),
                     op,
-                    new PredicateOperand(processLiteral ? $"@{processLiterals(ruleValue)}" : ruleValue)
+                    new PredicateOperand(processLiteral ? $"@{processLiterals((string)ruleValue)}" : (string)ruleValue)
                 )));
             }
 

@@ -131,15 +131,8 @@ namespace Azure.DataGateway.Service.Parsers
         /// <returns>A List<OrderByColumns></returns>
         private static List<OrderByColumn>? GenerateOrderByList(OrderByClause node, string schemaName, string tableName, List<string> primaryKeys)
         {
-            // Create set of primary key columns
-            // we always have the primary keys in
-            // the order by statement for the case
-            // of tie breaking and pagination
-            HashSet<string> remainingKeys = new();
-            foreach (string key in primaryKeys)
-            {
-                remainingKeys.Add(key);
-            }
+            // used for performant Remove operations
+            HashSet<string> remainingKeys = new(primaryKeys);
 
             List<OrderByColumn> orderByList = new();
             // OrderBy AST is in the form of a linked list
@@ -169,9 +162,14 @@ namespace Azure.DataGateway.Service.Parsers
             }
 
             // Remaining primary key columns are added here
-            foreach (string column in remainingKeys)
+            // Note that the values of remainingKeys hashset are not printed
+            // directly because the hashset does not guarantee order
+            foreach (string column in primaryKeys)
             {
-                orderByList.Add(new OrderByColumn(schemaName, tableName, column));
+                if (remainingKeys.Contains(column))
+                {
+                    orderByList.Add(new OrderByColumn(schemaName, tableName, column));
+                }
             }
 
             return orderByList;

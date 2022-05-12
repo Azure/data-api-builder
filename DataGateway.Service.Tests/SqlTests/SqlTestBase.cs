@@ -10,7 +10,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
@@ -41,12 +40,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static IQueryEngine _queryEngine;
         protected static IMutationEngine _mutationEngine;
         protected static GraphQLFileMetadataProvider _metadataStoreProvider;
-        protected static IRuntimeConfigProvider _runtimeConfigProvider;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
         protected static DbExceptionParserBase _dbExceptionParser;
         protected static ISqlMetadataProvider _sqlMetadataProvider;
         protected static string _defaultSchemaName;
+        protected static string _defaultSchemaVersion;
+        protected static IOptionsMonitor<RuntimeConfigPath> _runtimeConfigPath;
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run.
@@ -58,19 +58,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             _testCategory = testCategory;
 
-            IOptions<DataGatewayConfig> config = SqlTestHelper.LoadConfig($"{_testCategory}IntegrationTest");
-            _runtimeConfigProvider = new RuntimeConfigProvider(SqlTestHelper.GetRuntimeConfigJsonString(_testCategory));
+            _runtimeConfigPath = SqlTestHelper.LoadConfig($"{_testCategory}");
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:
                     _queryBuilder = new PostgresQueryBuilder();
                     _defaultSchemaName = "public";
                     _dbExceptionParser = new PostgresDbExceptionParser();
-                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(config, _dbExceptionParser);
+                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(_runtimeConfigPath, _dbExceptionParser);
                     _sqlMetadataProvider =
                         new PostgreSqlMetadataProvider(
-                            config,
-                            _runtimeConfigProvider,
+                            _runtimeConfigPath,
                             _queryExecutor,
                             _queryBuilder);
                     break;
@@ -78,27 +76,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _queryBuilder = new MsSqlQueryBuilder();
                     _defaultSchemaName = "dbo";
                     _dbExceptionParser = new DbExceptionParserBase();
-                    _queryExecutor = new QueryExecutor<SqlConnection>(config, _dbExceptionParser);
+                    _queryExecutor = new QueryExecutor<SqlConnection>(_runtimeConfigPath, _dbExceptionParser);
                     _sqlMetadataProvider = new MsSqlMetadataProvider(
-                        config,
-                        _runtimeConfigProvider,
+                        _runtimeConfigPath,
                         _queryExecutor, _queryBuilder);
                     break;
                 case TestCategory.MYSQL:
                     _queryBuilder = new MySqlQueryBuilder();
                     _defaultSchemaName = "mysql";
                     _dbExceptionParser = new MySqlDbExceptionParser();
-                    _queryExecutor = new QueryExecutor<MySqlConnection>(config, _dbExceptionParser);
+                    _queryExecutor = new QueryExecutor<MySqlConnection>(_runtimeConfigPath, _dbExceptionParser);
                     _sqlMetadataProvider =
                          new MySqlMetadataProvider(
-                             config,
-                             _runtimeConfigProvider,
+                             _runtimeConfigPath,
                              _queryExecutor,
                              _queryBuilder);
                     break;
             }
 
-            _metadataStoreProvider = new GraphQLFileMetadataProvider(config);
+            _metadataStoreProvider = new GraphQLFileMetadataProvider(_runtimeConfigPath);
             // Setup AuthorizationService to always return Authorized.
             _authorizationService = new Mock<IAuthorizationService>();
             _authorizationService.Setup(x => x.AuthorizeAsync(

@@ -5,7 +5,6 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
@@ -26,14 +25,18 @@ namespace Azure.DataGateway.Service.Tests.Configuration
     public class ConfigurationTests
     {
         private const string ASP_NET_CORE_ENVIRONMENT_VAR_NAME = "ASPNETCORE_ENVIRONMENT";
-        private string _cosmosResolverConfig = File.ReadAllText("cosmos-config.json");
-        private string _graphqlSchema = File.ReadAllText("schema.gql");
-        private const string COMSMOS_DEFAULT_CONNECTION_STRING = "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
+        private const string COSMOS_ENVIRONMENT = TestCategory.COSMOS;
+        private const string MSSQL_ENVIRONMENT = TestCategory.MSSQL;
+        private const string MYSQL_ENVIRONMENT = TestCategory.MYSQL;
+        private const string POSTGRESQL_ENVIRONMENT = TestCategory.POSTGRESQL;
 
+        [DataTestMethod]
+        [DataRow(new string[] { })]
+        [DataRow(new string[] { "--ConfigFileName=" })]
         [TestMethod("Validates that queries before runtime is configured returns a 503.")]
-        public async Task TestNoConfigReturnsServiceUnavailable()
+        public async Task TestNoConfigReturnsServiceUnavailable(string[] args)
         {
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostBuilder(args));
             HttpClient httpClient = server.CreateClient();
 
             HttpResponseMessage result = await httpClient.GetAsync("/graphql");
@@ -43,15 +46,15 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("Validates that once the configuration is set, the config controller isn't reachable.")]
         public async Task TestConflictAlreadySetConfiguration()
         {
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             Dictionary<string, string> config = new()
             {
-                { "DataGatewayConfig:DatabaseType", "cosmos" },
-                { "DataGatewayConfig:ResolverConfigFile", "cosmos-config.json" },
-                { "DataGatewayConfig:RuntimeConfigFile", "runtime-config.json" },
-                { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
+                {
+                    $"{nameof(RuntimeConfigPath.ConfigFileName)}",
+                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
+                }
             };
 
             _ = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
@@ -64,7 +67,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("Validates that the config controller returns a conflict when using local configuration.")]
         public async Task TestConflictLocalConfiguration()
         {
-            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "Cosmos");
+            Environment.SetEnvironmentVariable
+                (ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
@@ -72,27 +76,30 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
             Dictionary<string, string> config = new()
             {
-                { "DataGatewayConfig:DatabaseType", "cosmos" },
-                { "DataGatewayConfig:ResolverConfigFile", "cosmos-config.json" },
-                { "DataGatewayConfig:DatabaseConnection:ConnectionString", "Cosmos" }
+                {
+                    $"{nameof(RuntimeConfigPath.ConfigFileName)}",
+                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
+                }
             };
 
-            HttpResponseMessage result = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+            HttpResponseMessage result =
+                await httpClient.PostAsync("/configuration", JsonContent.Create(config));
             Assert.AreEqual(HttpStatusCode.Conflict, result.StatusCode);
         }
 
         [TestMethod("Validates that querying for a config that's not set returns a 404.")]
         public async Task TestGettingNonSetConfigurationReturns404()
         {
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
             Dictionary<string, string> config = new()
             {
-                { "DataGatewayConfig:DatabaseType", "cosmos" },
-                { "DataGatewayConfig:ResolverConfigFile", "cosmos-config.json" },
-                { "DataGatewayConfig:RuntimeConfigFile", "runtime-config.json" },
-                { "DataGatewayConfig:DatabaseConnection:ConnectionString", "Cosmos" }
+                {
+                    $"{nameof(RuntimeConfigPath.ConfigFileName)}",
+                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
+                }
             };
+
             _ = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
 
             HttpResponseMessage result = await httpClient.GetAsync("/configuration?key=test");
@@ -102,22 +109,24 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("Validates that configurations are set and can be retrieved.")]
         public async Task TestSettingConfigurations()
         {
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
-
             Dictionary<string, string> config = new()
             {
-                { "DataGatewayConfig:DatabaseType", "cosmos" },
-                { "DataGatewayConfig:ResolverConfigFile", "cosmos-config.json" },
-                { "DataGatewayConfig:RuntimeConfigFile", "runtime-config.json" },
-                { "DataGatewayConfig:DatabaseConnection:ConnectionString", "Cosmos" }
+                {
+                    $"{nameof(RuntimeConfigPath.ConfigFileName)}",
+                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
+                },
             };
-            HttpResponseMessage postResult = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+
+            HttpResponseMessage postResult =
+                await httpClient.PostAsync("/configuration", JsonContent.Create(config));
             Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
 
             foreach (KeyValuePair<string, string> setting in config)
             {
-                HttpResponseMessage result = await httpClient.GetAsync($"/configuration?key={setting.Key}");
+                HttpResponseMessage result =
+                    await httpClient.GetAsync($"/configuration?key={setting.Key}");
                 Assert.AreEqual(HttpStatusCode.OK, result.StatusCode);
 
                 string text = await result.Content.ReadAsStringAsync();
@@ -128,7 +137,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("Validates that local cosmos settings can be loaded and the correct classes are in the service provider.")]
         public void TestLoadingLocalCosmosSettings()
         {
-            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "Cosmos");
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
             ValidateCosmosDbSetup(server);
@@ -137,7 +146,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("Validates that local MsSql settings can be loaded and the correct classes are in the service provider.")]
         public void TestLoadingLocalMsSqlSettings()
         {
-            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "MsSql");
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
             object queryEngine = server.Services.GetService(typeof(IQueryEngine));
@@ -158,9 +167,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             object graphQLMetadataProvider = server.Services.GetService(typeof(IGraphQLMetadataProvider));
             Assert.IsInstanceOfType(graphQLMetadataProvider, typeof(GraphQLFileMetadataProvider));
 
-            object runtimeConfigProvider = server.Services.GetService(typeof(IRuntimeConfigProvider));
-            Assert.IsInstanceOfType(runtimeConfigProvider, typeof(RuntimeConfigProvider));
-
             object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
             Assert.IsInstanceOfType(sqlMetadataProvider, typeof(MsSqlMetadataProvider));
         }
@@ -168,7 +174,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("Validates that local PostgreSql settings can be loaded and the correct classes are in the service provider.")]
         public void TestLoadingLocalPostgresSettings()
         {
-            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "PostgreSql");
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, POSTGRESQL_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
             object queryEngine = server.Services.GetService(typeof(IQueryEngine));
@@ -189,9 +195,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             object graphQLMetadataProvider = server.Services.GetService(typeof(IGraphQLMetadataProvider));
             Assert.IsInstanceOfType(graphQLMetadataProvider, typeof(GraphQLFileMetadataProvider));
 
-            object runtimeConfigProvider = server.Services.GetService(typeof(IRuntimeConfigProvider));
-            Assert.IsInstanceOfType(runtimeConfigProvider, typeof(RuntimeConfigProvider));
-
             object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
             Assert.IsInstanceOfType(sqlMetadataProvider, typeof(PostgreSqlMetadataProvider));
         }
@@ -199,7 +202,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("Validates that local MySql settings can be loaded and the correct classes are in the service provider.")]
         public void TestLoadingLocalMySqlSettings()
         {
-            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "MySql");
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MYSQL_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
             object queryEngine = server.Services.GetService(typeof(IQueryEngine));
@@ -220,9 +223,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             object graphQLMetadataProvider = server.Services.GetService(typeof(IGraphQLMetadataProvider));
             Assert.IsInstanceOfType(graphQLMetadataProvider, typeof(GraphQLFileMetadataProvider));
 
-            object runtimeConfigProvider = server.Services.GetService(typeof(IRuntimeConfigProvider));
-            Assert.IsInstanceOfType(runtimeConfigProvider, typeof(RuntimeConfigProvider));
-
             object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
             Assert.IsInstanceOfType(sqlMetadataProvider, typeof(MySqlMetadataProvider));
         }
@@ -230,33 +230,36 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("Validates that trying to override configs that are already set fail.")]
         public async Task TestOverridingLocalSettingsFails()
         {
-            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "Cosmos");
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
             HttpClient client = server.CreateClient();
             Dictionary<string, string> config = new()
             {
-                { "Test", "Value" },
-                { "DataGatewayConfig:DatabaseType", "mssql" }
+                {
+                    $"{nameof(RuntimeConfigPath.ConfigFileName)}",
+                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{MSSQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
+                }
             };
 
             HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(config));
             Assert.AreEqual(HttpStatusCode.Conflict, postResult.StatusCode);
             // Since the body of the response when there's a conflict is the conflicting key:value pair, here we
             // expect DatabaseType:mssql.
-            Assert.AreEqual("DataGatewayConfig:DatabaseType:mssql", await postResult.Content.ReadAsStringAsync());
+            Assert.AreEqual($"ConfigFileName:hawaii-config.{MSSQL_ENVIRONMENT}.json",
+                await postResult.Content.ReadAsStringAsync());
         }
 
         [TestMethod("Validates that setting the configuration at runtime will instantiate the proper classes.")]
         public async Task TestSettingConfigurationCreatesCorrectClasses()
         {
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
             HttpClient client = server.CreateClient();
             Dictionary<string, string> config = new()
             {
-                { "DataGatewayConfig:DatabaseType", "cosmos" },
-                { "DataGatewayConfig:ResolverConfigFile", "cosmos-config.json" },
-                { "DataGatewayConfig:RuntimeConfigFile", "runtime-config.json" },
-                { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
+                {
+                    $"{nameof(RuntimeConfigPath.ConfigFileName)}",
+                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
+                }
             };
 
             HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(config));
@@ -265,107 +268,56 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             ValidateCosmosDbSetup(server);
         }
 
-        [TestMethod("Validates setting the resolver config and graphql schema.")]
-        public async Task TestSettingResolverConfigAndSchema()
-        {
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
-            HttpClient client = server.CreateClient();
-            Dictionary<string, string> config = new()
-            {
-                { "DataGatewayConfig:DatabaseType", "cosmos" },
-                { "DataGatewayConfig:ResolverConfig", _cosmosResolverConfig },
-                { "DataGatewayConfig:RuntimeConfigFile", "runtime-config.json" },
-                { "DataGatewayConfig:GraphQLSchema", _graphqlSchema },
-                { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
-            };
-
-            HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(config));
-            Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
-        }
-
-        [TestMethod("Validates that setting the resolver config without setting the schema fails.")]
-        public async Task TestSettingResolverConfigAndNotSchemaFails()
-        {
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
-            HttpClient client = server.CreateClient();
-            Dictionary<string, string> config = new()
-            {
-                { "DataGatewayConfig:DatabaseType", "cosmos" },
-                { "DataGatewayConfig:ResolverConfig", _cosmosResolverConfig },
-                { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
-            };
-
-            await VerifyThrowsException<NotSupportedException>(async () =>
-            {
-                HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(config));
-            });
-        }
-
-        [TestMethod("Validates that setting both the resolver config and the config file fails.")]
-        public async Task TestSettingResolverConfigAndPathFails()
-        {
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
-            HttpClient client = server.CreateClient();
-            Dictionary<string, string> config = new()
-            {
-                { "DataGatewayConfig:DatabaseType", "cosmos" },
-                { "DataGatewayConfig:ResolverConfig", _cosmosResolverConfig },
-                { "DataGatewayConfig:ResolverConfigFile", "cosmos-config.json" },
-                { "DataGatewayConfig:DatabaseConnection:ConnectionString", COMSMOS_DEFAULT_CONNECTION_STRING }
-            };
-
-            await VerifyThrowsException<NotSupportedException>(async () =>
-            {
-                HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(config));
-            });
-        }
-
         [TestMethod("Validates that change notifications are raised by the InMemoryUpdateableConfigurationProvider.")]
         public void TestChangeNotificationsInMemoryUpdateableConfigurationProvider()
         {
             InMemoryUpdateableConfigurationProvider provider = new();
             Dictionary<string, string> config = new()
             {
-                { "DataGatewayConfig:DatabaseType", "cosmos" },
+                {
+                    $"{nameof(RuntimeConfigPath.ConfigFileName)}",
+                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
+                }
             };
+
             provider.SetManyAndReload(config);
 
             IChangeToken token = provider.GetReloadToken();
-            string finalDatabaseType;
-            string finalResolverConfigFile = "";
-            if (!provider.TryGet("DataGatewayConfig:DatabaseType", out finalDatabaseType))
+            string finalConfigFileName;
+            if (!provider.TryGet($"{nameof(RuntimeConfigPath.ConfigFileName)}", out finalConfigFileName))
             {
-                Assert.Fail("DataGatewayConfig:DatabaseType wasn't found in the provider.");
+                Assert.Fail("RuntimeConfig File Name wasn't found in the provider.");
             }
             else
             {
-                Assert.AreEqual("cosmos", finalDatabaseType);
+                Assert.AreEqual(
+                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}",
+                    finalConfigFileName);
             }
 
             token.RegisterChangeCallback((state) =>
             {
-                if (!provider.TryGet("DataGatewayConfig:DatabaseType", out finalDatabaseType))
+                if (!provider.TryGet($"{nameof(RuntimeConfigPath.ConfigFileName)}",
+                    out finalConfigFileName))
                 {
-                    Assert.Fail("DataGatewayConfig:DatabaseType wasn't found in the provider.");
-                }
-
-                if (!provider.TryGet("DataGatewayConfig:ResolverConfigFile", out finalResolverConfigFile))
-                {
-                    Assert.Fail("DataGatewayConfig:ResolverConfigFile wasn't found in the provider.");
+                    Assert.Fail("RuntimeConfig File Name wasn't found in the provider.");
                 }
             }, null);
 
             Dictionary<string, string> toUpdate = new()
             {
-                { "DataGatewayConfig:DatabaseType", "postgresql" },
-                { "DataGatewayConfig:ResolverConfigFile", "some-file.json" }
+                {
+                    $"{nameof(RuntimeConfigPath.ConfigFileName)}",
+                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{POSTGRESQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
+                }
             };
             provider.SetManyAndReload(toUpdate);
-            Assert.AreEqual("postgresql", finalDatabaseType);
-            Assert.AreEqual("some-file.json", finalResolverConfigFile);
+            Assert.AreEqual(
+                $"{RuntimeConfigPath.CONFIGFILE_NAME}.{POSTGRESQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}",
+                finalConfigFileName);
         }
 
-        [TestMethod("Validates that the develeoper config is correctly read and its fields are populated appropriately.")]
+        [TestMethod("Validates that an exception is thrown if there's a null model in filter parser.")]
         public void VerifyExceptionOnNullModelinFilterParser()
         {
             FilterParser parser = new();
@@ -384,25 +336,14 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// This function will attempt to read the runtime-config-test.json
+        /// This function will attempt to read the hawaii-config.json
         /// file into the RuntimeConfig class. It verifies the deserialization succeeds.
         /// </summary>
         [TestMethod("Validates if deserialization of new runtime config format succeeds.")]
         public void TestReadingRuntimeConfig()
         {
-            string jsonString = File.ReadAllText("runtime-config.json");
-            // use camel case
-            // convert Enum to strings
-            // case insensitive
-            JsonSerializerOptions options = new()
-            {
-                PropertyNameCaseInsensitive = true,
-                Converters =
-                {
-                    new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
-                }
-            };
-
+            string jsonString = File.ReadAllText(RuntimeConfigPath.DefaultName);
+            JsonSerializerOptions options = RuntimeConfig.GetDeserializationOptions();
             RuntimeConfig runtimeConfig =
                     JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
             Assert.IsNotNull(runtimeConfig.Schema);
@@ -430,13 +371,13 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                     && ((JsonElement)entity.Rest).ValueKind == JsonValueKind.Object)
                 {
                     RestEntitySettings rest =
-                        ((JsonElement)entity.Rest).Deserialize<RestEntitySettings>();
+                        ((JsonElement)entity.Rest).Deserialize<RestEntitySettings>(options);
                     Assert.IsTrue(
                         ((JsonElement)rest.Route).ValueKind == JsonValueKind.String
                         || ((JsonElement)rest.Route).ValueKind == JsonValueKind.Object);
                     if (((JsonElement)rest.Route).ValueKind == JsonValueKind.Object)
                     {
-                        SingularPlural route = ((JsonElement)rest.Route).Deserialize<SingularPlural>();
+                        SingularPlural route = ((JsonElement)rest.Route).Deserialize<SingularPlural>(options);
                     }
                 }
 
@@ -448,13 +389,13 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                     && ((JsonElement)entity.GraphQL).ValueKind == JsonValueKind.Object)
                 {
                     GraphQLEntitySettings graphQL =
-                        ((JsonElement)entity.GraphQL).Deserialize<GraphQLEntitySettings>();
+                        ((JsonElement)entity.GraphQL).Deserialize<GraphQLEntitySettings>(options);
                     Assert.IsTrue(
                         ((JsonElement)graphQL.Type).ValueKind == JsonValueKind.String
                         || ((JsonElement)graphQL.Type).ValueKind == JsonValueKind.Object);
                     if (((JsonElement)graphQL.Type).ValueKind == JsonValueKind.Object)
                     {
-                        SingularPlural route = ((JsonElement)graphQL.Type).Deserialize<SingularPlural>();
+                        SingularPlural route = ((JsonElement)graphQL.Type).Deserialize<SingularPlural>(options);
                     }
                 }
 
@@ -470,7 +411,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                         if (((JsonElement)action).ValueKind == JsonValueKind.Object)
                         {
                             Config.Action configAction =
-                                ((JsonElement)action).Deserialize<Config.Action>();
+                                ((JsonElement)action).Deserialize<Config.Action>(options);
                             Assert.IsTrue(allowedActions.Contains(configAction.Name));
                             Assert.IsTrue(configAction.Policy == null
                                 || configAction.Policy.GetType() == typeof(Policy));
@@ -479,7 +420,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                         }
                         else
                         {
-                            string name = ((JsonElement)action).Deserialize<string>();
+                            string name = ((JsonElement)action).Deserialize<string>(options);
                             Assert.IsTrue(allowedActions.Contains(name));
                         }
                     }
@@ -494,6 +435,66 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             }
         }
 
+        /// <summary>
+        /// This function verifies command line configuration provider takes higher
+        /// precendence than default configuration file hawaii-config.json
+        /// </summary>
+        [TestMethod("Validates command line configuration provider.")]
+        public void TestCommandLineConfigurationProvider()
+        {
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
+            string[] args = new[]
+            {
+                $"--ConfigFileName={RuntimeConfigPath.CONFIGFILE_NAME}." +
+                $"{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
+            };
+
+            TestServer server = new(Program.CreateWebHostBuilder(args));
+
+            ValidateCosmosDbSetup(server);
+        }
+
+        /// <summary>
+        /// This function verifies the environment variable HAWAII_RUNTIME
+        /// takes precendence than ASPNETCORE_ENVIRONMENT for the configuration file.
+        /// </summary>
+        [TestMethod("Validates precedence is given to HAWAII_RUNTIME environment variable name.")]
+        public void TestRuntimeEnvironmentVariable()
+        {
+            Environment.SetEnvironmentVariable(
+                ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
+            Environment.SetEnvironmentVariable(
+                RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
+
+            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+
+            ValidateCosmosDbSetup(server);
+        }
+
+        /// <summary>
+        /// Set the connection string to an invalid value and expect the service to be unavailable
+        // since without this env var, it would be available - guaranteeing this env variable
+        // has highest precedence irrespective of what the connection string is in the config file.
+        /// </summary>
+        [TestMethod("Validates that environment variable HAWAII_CONNSTRING has highest precedence.")]
+        public void TestConnectionStringEnvVarHasHighestPrecedence()
+        {
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
+            Environment.SetEnvironmentVariable(
+                $"{RuntimeConfigPath.ENVIRONMENT_PREFIX}{nameof(RuntimeConfigPath.CONNSTRING)}",
+                "Invalid Connection String");
+            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            try
+            {
+                _ = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
+                Assert.Fail($"{RuntimeConfigPath.ENVIRONMENT_PREFIX}{nameof(RuntimeConfigPath.CONNSTRING)} is not given highest precedence");
+            }
+            catch (ArgumentException)
+            {
+
+            }
+        }
+
         [TestCleanup]
         public void Cleanup()
         {
@@ -504,9 +505,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         {
             object metadataProvider = server.Services.GetService(typeof(IGraphQLMetadataProvider));
             Assert.IsInstanceOfType(metadataProvider, typeof(GraphQLFileMetadataProvider));
-
-            object runtimeConfigProvider = server.Services.GetService(typeof(IRuntimeConfigProvider));
-            Assert.IsInstanceOfType(runtimeConfigProvider, typeof(RuntimeConfigProvider));
 
             object queryEngine = server.Services.GetService(typeof(IQueryEngine));
             Assert.IsInstanceOfType(queryEngine, typeof(CosmosQueryEngine));
@@ -520,31 +518,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             CosmosClientProvider cosmosClientProvider = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
             Assert.IsNotNull(cosmosClientProvider);
             Assert.IsNotNull(cosmosClientProvider.Client);
-        }
-
-        /// <summary>
-        /// Verifies that an exception of type T is thrown. Also checks AggregateException recursively.
-        /// </summary>
-        /// <typeparam name="T">The expected exception type.</typeparam>
-        /// <param name="func">The function to execute that should throw.</param>
-        private async Task VerifyThrowsException<T>(Func<Task> func) where T : Exception
-        {
-            bool exceptionThrown = false;
-            try
-            {
-                await func();
-            }
-            catch (AggregateException aggregate)
-            {
-                aggregate.Handle(HandleException<T>);
-                exceptionThrown = true;
-            }
-            catch (T)
-            {
-                exceptionThrown = true;
-            }
-
-            Assert.IsTrue(exceptionThrown);
         }
 
         private bool HandleException<T>(Exception e) where T : Exception

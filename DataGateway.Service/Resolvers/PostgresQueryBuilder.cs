@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Text;
-using Azure.DataGateway.Service.Models;
 using Npgsql;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -103,43 +102,6 @@ namespace Azure.DataGateway.Service.Resolvers
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                     $"RETURNING {Build(structure.ReturnColumns)}, " +
                     $"case when xmax::text::int > 0 then '{UPDATE_UPSERT}' else '{INSERT_UPSERT}' end AS {UPSERT_IDENTIFIER_COLUMN_NAME};";
-            }
-        }
-
-        /// <summary>
-        /// Build each column and join by ", " separator
-        /// </summary>
-        protected string Build(List<PaginationColumn> columns)
-        {
-            return string.Join(", ", columns.Select(c => Build(c as Column)));
-        }
-
-        /// <inheritdoc />
-        protected override string Build(KeysetPaginationPredicate? predicate)
-        {
-            if (predicate == null)
-            {
-                return string.Empty;
-            }
-
-            string left = Build(predicate.Columns);
-            string right = string.Empty;
-            foreach (PaginationColumn column in predicate.Columns)
-            {
-                right += $"'{column.Value!.ToString()}'";
-                if (!predicate.Columns.Last().Equals(column))
-                {
-                    right += ", ";
-                }
-            }
-
-            if (predicate.Columns.Count > 1)
-            {
-                return $"({left}) > ({right})";
-            }
-            else
-            {
-                return $"{left} > {right}";
             }
         }
 

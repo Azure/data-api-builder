@@ -1,11 +1,9 @@
 {
   "$schema": "../../project-hawaii/playground/hawaii.draft-01.schema.json",
   "data-source": {
-    "database-type": "mssql",
-    "connection-string": ""
-  },
-  "mssql": {
-    "set-session-context": true
+    "database-type": "mysql",
+    "connection-string": "DO NOT EDIT, look at CONTRIBUTING.md on how to run tests",
+    "resolver-config-file": "sql-config.json"
   },
   "runtime": {
     "rest": {
@@ -24,7 +22,7 @@
         "allow-credentials": true
       },
       "authentication": {
-        "provider": "",
+        "provider": "EasyAuth",
         "jwt": {
           "audience": "",
           "issuer": "",
@@ -34,7 +32,7 @@
     }
   },
   "entities": {
-    "Publisher": {
+    "publishers": {
       "source": "publishers",
       "rest": true,
       "graphql": true,
@@ -55,7 +53,7 @@
         }
       }
     },
-    "Stock": {
+    "stocks": {
       "source": "stocks",
       "rest": true,
       "graphql": true,
@@ -78,7 +76,7 @@
         }
       }
     },
-    "Book": {
+    "books": {
       "source": "books",
       "permissions": [
         {
@@ -112,7 +110,7 @@
         }
       }
     },
-    "BookWebsitePlacement": {
+    "book_website_placements": {
       "source": "book_website_placements",
       "rest": true,
       "graphql": true,
@@ -146,7 +144,7 @@
         }
       }
     },
-    "Author": {
+    "authors": {
       "source": "authors",
       "rest": true,
       "graphql": true,
@@ -164,7 +162,7 @@
         }
       }
     },
-    "Review": {
+    "reviews": {
       "source": "reviews",
       "rest": true,
       "permissions": [
@@ -180,8 +178,8 @@
         }
       }
     },
-    "Magazine": {
-      "source": "foo.magazines",
+    "magazines": {
+      "source": "magazines",
       "graphql": true,
       "permissions": [
         {
@@ -202,7 +200,7 @@
         }
       ]
     },
-    "Comic": {
+    "comics": {
       "source": "comics",
       "rest": true,
       "graphql": false,
@@ -217,7 +215,7 @@
         }
       ]
     },
-    "Broker": {
+    "brokers": {
       "source": "brokers",
       "graphql": false,
       "permissions": [
@@ -227,7 +225,7 @@
         }
       ]
     },
-    "WebsiteUser": {
+    "website_users": {
       "source": "website_users",
       "rest": false,
       "permissions": []

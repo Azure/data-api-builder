@@ -45,7 +45,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Columns to use for sorting.
         /// </summary>
-        public List<OrderByColumn>? OrderByColumns { get; set; }
+        public List<OrderByColumn> OrderByColumns { get; private set; }
 
         /// <summary>
         /// Hold the pagination metadata for the query
@@ -82,7 +82,11 @@ namespace Azure.DataGateway.Service.Resolvers
         ObjectType _underlyingFieldType = null!;
 
         private readonly GraphQLType _typeInfo = null!;
-        private List<Column>? _primaryKey;
+
+        /// <summary>
+        /// Used to cache the primary key as a list of OrderByColumn
+        /// </summary>
+        private List<OrderByColumn>? _primaryKeyAsOrderByColumns;
 
         /// <summary>
         /// Generate the structure for a SQL query based on GraphQL query
@@ -91,7 +95,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public SqlQueryStructure(
             IResolverContext ctx,
-            IDictionary<string, object> queryParams,
+            IDictionary<string, object?> queryParams,
             IGraphQLMetadataProvider metadataStoreProvider,
             ISqlMetadataProvider sqlMetadataProvider)
             // This constructor simply forwards to the more general constructor
@@ -199,7 +203,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         private SqlQueryStructure(
                 IResolverContext ctx,
-                IDictionary<string, object> queryParams,
+                IDictionary<string, object?> queryParams,
                 IGraphQLMetadataProvider metadataStoreProvider,
                 ISqlMetadataProvider sqlMetadataProvider,
                 IObjectField schemaField,
@@ -271,7 +275,6 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 if (firstObject != null)
                 {
-                    // due to the way parameters get resolved,
                     int first = (int)firstObject;
 
                     if (first <= 0)
@@ -302,6 +305,17 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
+            OrderByColumns = PrimaryKeyAsOrderByColumns();
+            if (IsListQuery && queryParams.ContainsKey("orderBy"))
+            {
+                object? orderByObject = queryParams["orderBy"];
+
+                if (orderByObject != null)
+                {
+                    OrderByColumns = ProcessGqlOrderByArg((List<ObjectFieldNode>)orderByObject);
+                }
+            }
+
             if (IsListQuery && queryParams.ContainsKey("_filterOData"))
             {
                 object? whereObject = queryParams["_filterOData"];
@@ -316,8 +330,6 @@ namespace Azure.DataGateway.Service.Resolvers
                     FilterPredicates = filterClause.Expression.Accept<string>(visitor);
                 }
             }
-
-            OrderByColumns = PrimaryKeyAsOrderByColumns();
 
             // need to run after the rest of the query has been processed since it relies on
             // TableName, TableAlias, Columns, and _limit
@@ -368,14 +380,15 @@ namespace Azure.DataGateway.Service.Resolvers
             PaginationMetadata = new(this);
             ColumnLabelToParam = new();
             FilterPredicates = string.Empty;
+            OrderByColumns = new();
         }
 
         ///<summary>
         /// Adds predicates for the primary keys in the paramters of the graphql query
         ///</summary>
-        private void AddPrimaryKeyPredicates(IDictionary<string, object> queryParams)
+        private void AddPrimaryKeyPredicates(IDictionary<string, object?> queryParams)
         {
-            foreach (KeyValuePair<string, object> parameter in queryParams)
+            foreach (KeyValuePair<string, object?> parameter in queryParams)
             {
                 Predicates.Add(new Predicate(
                     new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName,
@@ -548,7 +561,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         throw new DataGatewayException("No GraphQL context exists", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
                     }
 
-                    IDictionary<string, object> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
+                    IDictionary<string, object?> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
 
                     SqlQueryStructure subquery = new(_ctx, subqueryParams, MetadataStoreProvider, SqlMetadataProvider, subschemaField, field, Counter);
 
@@ -716,28 +729,69 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
+        /// Create a list of orderBy columns from the orderBy argument
+        /// passed to the gql query
+        /// </summary>
+        private List<OrderByColumn> ProcessGqlOrderByArg(List<ObjectFieldNode> orderByFields)
+        {
+            // Create list of primary key columns
+            // we always have the primary keys in
+            // the order by statement for the case
+            // of tie breaking and pagination
+            List<OrderByColumn> orderByColumnsList = new();
+
+            List<string> remainingPkCols = new(PrimaryKey());
+
+            foreach (ObjectFieldNode field in orderByFields)
+            {
+                if (field.Value is NullValueNode)
+                {
+                    continue;
+                }
+
+                string fieldName = field.Name.ToString();
+
+                // remove pk column from list if it was specified as a
+                // field in orderBy
+                remainingPkCols.Remove(fieldName);
+
+                EnumValueNode enumValue = (EnumValueNode)field.Value;
+
+                if (enumValue.Value == $"{OrderByDir.Desc}")
+                {
+                    orderByColumnsList.Add(new OrderByColumn(TableAlias, fieldName, OrderByDir.Desc));
+                }
+                else
+                {
+                    orderByColumnsList.Add(new OrderByColumn(TableAlias, fieldName));
+                }
+            }
+
+            foreach (string colName in remainingPkCols)
+            {
+                orderByColumnsList.Add(new OrderByColumn(TableAlias, colName));
+            }
+
+            return orderByColumnsList;
+        }
+
+        /// <summary>
         /// Exposes the primary key of the underlying table of the structure
         /// as a list of OrderByColumn
         /// </summary>
         public List<OrderByColumn> PrimaryKeyAsOrderByColumns()
         {
-            if (_primaryKey == null)
+            if (_primaryKeyAsOrderByColumns == null)
             {
-                _primaryKey = new();
+                _primaryKeyAsOrderByColumns = new();
 
                 foreach (string column in PrimaryKey())
                 {
-                    _primaryKey.Add(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, column, TableAlias));
+                    _primaryKeyAsOrderByColumns.Add(new OrderByColumn(TableAlias, column));
                 }
             }
 
-            List<OrderByColumn> orderByList = new();
-            foreach (Column column in _primaryKey)
-            {
-                orderByList.Add(new OrderByColumn(column.TableSchema, column.TableName, column.ColumnName, column.TableAlias!));
-            }
-
-            return orderByList;
+            return _primaryKeyAsOrderByColumns;
         }
 
         /// <summary>

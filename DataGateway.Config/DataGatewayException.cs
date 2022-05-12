@@ -1,4 +1,3 @@
-using System;
 using System.Net;
 
 namespace Azure.DataGateway.Service.Exceptions
@@ -37,6 +36,11 @@ namespace Azure.DataGateway.Service.Exceptions
             /// <summary>
             /// Unexpected error.
             /// </summary>,
+            UnexpectedError,
+            /// <summary>
+            /// Error mapping database information to GraphQL information
+            /// </summary>
+            GraphQLMapping
             UnexpectedError,
             /// <summary>
             /// Error encountered while initializing.

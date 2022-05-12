@@ -221,12 +221,12 @@ namespace Azure.DataGateway.Service.Configurations
                 ["after"] = new[] { "String" }
             };
 
+            string returnedPaginationType = InnerTypeStr(field.Type);
+            string itemsType = InnerTypeStr(GetTypeFields(returnedPaginationType)["items"].Type);
             Dictionary<string, IEnumerable<string>> optionalArguments = new()
             {
-                ["_filter"] = new[] { "BookFilterInput", "PublisherFilterInput", "AuthorFilterInput", "ReviewFilterInput",
-                                        "MagazineFilterInput",
-                                        "BookFilterInput!", "PublisherFilterInput!", "AuthorFilterInput!", "ReviewFilterInput!",
-                                        "MagazineFilterInput!" },
+                ["_filter"] = new[] { $"{itemsType}FilterInput", $"{itemsType}FilterInput!" },
+                ["orderBy"] = new[] { $"{itemsType}OrderByInput", $"{itemsType}OrderByInput!" },
                 ["_filterOData"] = new[] { "String", "String!" }
             };
 
@@ -246,13 +246,12 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateListTypeFieldArguments(FieldDefinitionNode field)
         {
+            string returnedType = InnerTypeStr(field.Type);
             Dictionary<string, IEnumerable<string>> optionalArguments = new()
             {
                 ["first"] = new[] { "Int", "Int!" },
-                ["_filter"] = new[] { "BookFilterInput", "PublisherFilterInput", "AuthorFilterInput", "ReviewFilterInput",
-                                        "MagazineFilterInput", "WebsiteUserFilterInput",
-                                        "BookFilterInput!", "PublisherFilterInput!", "AuthorFilterInput!", "ReviewFilterInput!",
-                                        "MagazineFilterInput!", "WebsiteUserFilterInput!" },
+                ["_filter"] = new[] { $"{returnedType}FilterInput", $"{returnedType}FilterInput!" },
+                ["orderBy"] = new[] { $"{returnedType}OrderByInput", $"{returnedType}OrderByInput!" },
                 ["_filterOData"] = new[] { "String", "String!" }
             };
 

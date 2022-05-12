@@ -57,19 +57,15 @@
 
 
   <ItemGroup>
-    <Content Remove="runtime-config.json" />
-  </ItemGroup>
-
-
-  <ItemGroup>
-    <Watch Remove="runtime-config.json" />
-  </ItemGroup>
-
-
-  <ItemGroup>
-    <None Include="runtime-config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <Watch Remove="hawaii-config.cosmos.json" />
+    <Watch Remove="hawaii-config.Cosmos.overrides.example.json" />
+    <Watch Remove="hawaii-config.json" />
+    <Watch Remove="hawaii-config.mssql.json" />
+    <Watch Remove="hawaii-config.MsSql.overrides.example.json" />
+    <Watch Remove="hawaii-config.mysql.json" />
+    <Watch Remove="hawaii-config.MySql.overrides.example.json" />
+    <Watch Remove="hawaii-config.postgresql.json" />
+    <Watch Remove="hawaii-config.PostgreSql.overrides.example.json" />
   </ItemGroup>
 
 

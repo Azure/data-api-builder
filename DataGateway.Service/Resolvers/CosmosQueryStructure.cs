@@ -49,7 +49,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     Columns.AddRange(fieldNode.SelectionSet!.Selections.Select(x => new LabelledColumn(tableSchema: string.Empty,
                                                                                                        tableName: _containerAlias,
                                                                                                        columnName: string.Empty,
-                                                                                                       label: x.ToString())));
+                                                                                                       label: x.GetNodes().First().ToString())));
                 }
             }
             else
@@ -57,7 +57,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 Columns.AddRange(selection.SyntaxNode.SelectionSet!.Selections.Select(x => new LabelledColumn(tableSchema: string.Empty,
                                                                                                               tableName: _containerAlias,
                                                                                                               columnName: string.Empty,
-                                                                                                              label: x.ToString())));
+                                                                                                              label: x.GetNodes().First().ToString())));
             }
 
             Container = graphqlType.ContainerName;

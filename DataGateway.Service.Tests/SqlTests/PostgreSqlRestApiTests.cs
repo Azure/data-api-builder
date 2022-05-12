@@ -440,9 +440,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     FROM (
                         SELECT *
                         FROM " + _integrationTieBreakTable + @"
-                        WHERE ((birthdate > '2001-01-01') OR(birthdate = '2001-01-01' AND name > 'Aniruddh') OR 
-                        (birthdate = '2001-01-01' AND name = 'Aniruddh' AND id > 125)) 
-                        ORDER BY birthdate, name, id 
+                        WHERE ((birthdate > '2001-01-01') OR(birthdate = '2001-01-01' AND name > 'Aniruddh') OR
+                        (birthdate = '2001-01-01' AND name = 'Aniruddh' AND id > 125))
+                        ORDER BY birthdate, name, id
                         LIMIT 2
                     ) AS subq
                 "

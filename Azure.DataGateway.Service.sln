@@ -8,16 +8,17 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataGateway.Service.T
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Configs", "Configs", "{EFA9C661-D8FD-469A-9372-284387C4BEFC}"
 	ProjectSection(SolutionItems) = preProject
-		DataGateway.Service\appsettings.Cosmos.json = DataGateway.Service\appsettings.Cosmos.json
-		DataGateway.Service\appsettings.Development.json = DataGateway.Service\appsettings.Development.json
-		DataGateway.Service\appsettings.json = DataGateway.Service\appsettings.json
-		DataGateway.Service\appsettings.MsSql.json = DataGateway.Service\appsettings.MsSql.json
-		DataGateway.Service\appsettings.MsSqlIntegrationTest.json = DataGateway.Service\appsettings.MsSqlIntegrationTest.json
-		DataGateway.Service\appsettings.MsSqlIntegrationTest.overrides.json = DataGateway.Service\appsettings.MsSqlIntegrationTest.overrides.json
-		DataGateway.Service\appsettings.PostgreSql.json = DataGateway.Service\appsettings.PostgreSql.json
-		DataGateway.Service\appsettings.PostgreSqlIntegrationTest.json = DataGateway.Service\appsettings.PostgreSqlIntegrationTest.json
-		DataGateway.Service\appsettings.PostgreSqlIntegrationTest.overrides.json = DataGateway.Service\appsettings.PostgreSqlIntegrationTest.overrides.json
+		DataGateway.Service\books.gql = DataGateway.Service\books.gql
 		DataGateway.Service\cosmos-config.json = DataGateway.Service\cosmos-config.json
+		DataGateway.Service\hawaii-config.json = DataGateway.Service\hawaii-config.json
+		DataGateway.Service\hawaii-config.Cosmos.json = DataGateway.Service\hawaii-config.Cosmos.json
+		DataGateway.Service\hawaii-config.Cosmos.overrides.example.json = DataGateway.Service\hawaii-config.Cosmos.overrides.example.json
+		DataGateway.Service\hawaii-config.MsSql.json = DataGateway.Service\hawaii-config.MsSql.json
+		DataGateway.Service\hawaii-config.MsSql.overrides.example.json = DataGateway.Service\hawaii-config.MsSql.overrides.example.json
+		DataGateway.Service\hawaii-config.MySql.json = DataGateway.Service\hawaii-config.MySql.json
+		DataGateway.Service\hawaii-config.MySql.overrides.example.json = DataGateway.Service\hawaii-config.MySql.overrides.example.json
+		DataGateway.Service\hawaii-config.PostgreSql.json = DataGateway.Service\hawaii-config.PostgreSql.json
+		DataGateway.Service\hawaii-config.PostgreSql.overrides.example.json = DataGateway.Service\hawaii-config.PostgreSql.overrides.example.json
 		DataGateway.Service\schema.gql = DataGateway.Service\schema.gql
 		DataGateway.Service\sql-config.json = DataGateway.Service\sql-config.json
 	EndProjectSection

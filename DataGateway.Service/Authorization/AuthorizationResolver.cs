@@ -93,13 +93,15 @@ namespace Azure.DataGateway.Service.Authorization
         public bool AreColumnsAllowedForAction(string entityName, string roleName, string actionName, List<string> columns)
         {
             ActionDS actionToColumnMap;
-            if (_entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap.ContainsKey("*"))
+            RoleDS roleInEntity = _entityPermissionMap[entityName].RoleToActionMap[roleName];
+
+            try
             {
-                actionToColumnMap = _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap["*"];
+                actionToColumnMap = roleInEntity.ActionToColumnMap["*"];
             }
-            else
+            catch (KeyNotFoundException)
             {
-                actionToColumnMap = _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[actionName];
+                actionToColumnMap = roleInEntity.ActionToColumnMap[actionName];
             }
 
             foreach (string column in columns)

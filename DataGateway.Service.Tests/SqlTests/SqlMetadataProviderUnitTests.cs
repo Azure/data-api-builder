@@ -16,18 +16,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// formats.
         /// </summary>
         [DataTestMethod]
-        [DataRow("", "", "Host=localhost;Database=graphql;SearchPath=\"\"")]
-        [DataRow("", "", "Host=localhost;Database=graphql;SearchPath=")]
-        [DataRow("foobar", "", "Host=localhost;Database=graphql;SearchPath=foobar")]
-        [DataRow("foobar", "", "Host=localhost;Database=graphql;SearchPath=\"foobar\"")]
-        [DataRow("baz", "", "SearchPath=\"baz\";Host=localhost;Database=graphql")]
-        [DataRow("baz", "", "SearchPath=baz;Host=localhost;Database=graphql")]
-        [DataRow("", "", "Host=localhost;Database=graphql")]
-        [DataRow("", "", "SearchPath=;Host=localhost;Database=graphql")]
-        [DataRow("", "", "SearchPath=\"\";Host=localhost;Database=graphql")]
-        public void CheckConnectionStringParsingTest(string expected, string actual, string connectionString)
+        [DataRow("", "Host=localhost;Database=graphql;SearchPath=\"\"")]
+        [DataRow("", "Host=localhost;Database=graphql;SearchPath=")]
+        [DataRow("foobar", "Host=localhost;Database=graphql;SearchPath=foobar")]
+        [DataRow("foobar", "Host=localhost;Database=graphql;SearchPath=\"foobar\"")]
+        [DataRow("baz", "SearchPath=\"baz\";Host=localhost;Database=graphql")]
+        [DataRow("baz", "SearchPath=baz;Host=localhost;Database=graphql")]
+        [DataRow("", "Host=localhost;Database=graphql")]
+        [DataRow("", "SearchPath=;Host=localhost;Database=graphql")]
+        [DataRow("", "SearchPath=\"\";Host=localhost;Database=graphql")]
+        public void CheckConnectionStringParsingTest(string expected, string connectionString)
         {
-            MsSqlMetadataProvider.TryGetSchemaFromConnectionString(out actual, connectionString);
+            MsSqlMetadataProvider.TryGetSchemaFromConnectionString(out string actual, connectionString);
             Assert.IsTrue(expected.Equals(actual));
         }
     }

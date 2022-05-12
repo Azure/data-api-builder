@@ -7,12 +7,12 @@ namespace Azure.DataGateway.Service.Models.Authorization
     /// An entity's top-level permission structure is a collection
     /// of roles.
     /// </summary>
-    class EntityDS
+    class EntityMetadata
     {
         /// <summary>
         /// Given the key (roleName) returns the associated RoleDS object.
         /// </summary>
-        public Dictionary<string, RoleDS> RoleToActionMap = new();
+        public Dictionary<string, RoleMetadata> RoleToActionMap = new();
     }
 
     /// <summary>
@@ -20,12 +20,12 @@ namespace Azure.DataGateway.Service.Models.Authorization
     /// A role's top-level permission structure is a collection of
     /// actions allowed for that role: Create, Read, Update, Delete, * (wildcard)
     /// </summary>
-    class RoleDS
+    class RoleMetadata
     {
         /// <summary>
         /// Given the key (actionName) returns the associated ActionDS object.
         /// </summary>
-        public Dictionary<string, ActionDS> ActionToColumnMap = new();
+        public Dictionary<string, ActionMetadata> ActionToColumnMap = new();
     }
 
     /// <summary>
@@ -33,7 +33,7 @@ namespace Azure.DataGateway.Service.Models.Authorization
     /// An action lists both columns that are included and/or exluded
     /// for that action.
     /// </summary>
-    class ActionDS
+    class ActionMetadata
     {
         public HashSet<string> included = new();
         public HashSet<string> excluded = new();

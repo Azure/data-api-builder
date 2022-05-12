@@ -16,7 +16,7 @@ namespace Azure.DataGateway.Service.Authorization
     /// </summary>
     public class AuthorizationResolver : IAuthorizationResolver
     {
-        private Dictionary<string, EntityDS> _entityPermissionMap = new();
+        private Dictionary<string, EntityMetadata> _entityPermissionMap = new();
         private const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
 
         public AuthorizationResolver(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
@@ -74,9 +74,9 @@ namespace Azure.DataGateway.Service.Authorization
         /// <inheritdoc />
         public bool AreRoleAndActionDefinedForEntity(string entityName, string roleName, string action)
         {
-            if (_entityPermissionMap.TryGetValue(entityName, out EntityDS? valueOfEntityToRole))
+            if (_entityPermissionMap.TryGetValue(entityName, out EntityMetadata? valueOfEntityToRole))
             {
-                if (valueOfEntityToRole.RoleToActionMap.TryGetValue(roleName, out RoleDS? valueOfRoleToAction))
+                if (valueOfEntityToRole.RoleToActionMap.TryGetValue(roleName, out RoleMetadata valueOfRoleToAction))
                 {
                     if (valueOfRoleToAction.ActionToColumnMap.ContainsKey("*") ||
                         valueOfRoleToAction.ActionToColumnMap.ContainsKey(action))
@@ -92,8 +92,8 @@ namespace Azure.DataGateway.Service.Authorization
         /// <inheritdoc />
         public bool AreColumnsAllowedForAction(string entityName, string roleName, string actionName, List<string> columns)
         {
-            ActionDS actionToColumnMap;
-            RoleDS roleInEntity = _entityPermissionMap[entityName].RoleToActionMap[roleName];
+            ActionMetadata actionToColumnMap;
+            RoleMetadata roleInEntity = _entityPermissionMap[entityName].RoleToActionMap[roleName];
 
             try
             {
@@ -136,17 +136,17 @@ namespace Azure.DataGateway.Service.Authorization
         {
             foreach ((string entityName, Entity entity) in runtimeConfig!.Entities)
             {
-                EntityDS entityToRoleMap = new();
+                EntityMetadata entityToRoleMap = new();
 
                 foreach (PermissionSetting permission in entity.Permissions)
                 {
                     string role = permission.Role;
-                    RoleDS roleToAction = new();
+                    RoleMetadata roleToAction = new();
                     JsonElement[] Actions = permission.Actions;
                     foreach (JsonElement actionElement in Actions)
                     {
                         string actionName = string.Empty;
-                        ActionDS actionToColumn = new();
+                        ActionMetadata actionToColumn = new();
                         if (actionElement.ValueKind == JsonValueKind.String)
                         {
                             actionName = actionElement.ToString();

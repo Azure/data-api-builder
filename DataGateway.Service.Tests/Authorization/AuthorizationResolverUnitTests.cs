@@ -91,7 +91,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// </summary>
         [DataTestMethod]
         [DataRow("Writer", "Create", "Writer", "Create", true)]
-        [DataRow("Reader", "Create", "Reader", "", false )]
+        [DataRow("Reader", "Create", "Reader", "", false)]
         [DataRow("Writer", "Create", "Writer", "Update", false)]
         public void AreRoleAndActionDefinedForEntityTest(
             string configRole,
@@ -279,7 +279,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             // Mock Request Values - Query a configured entity/role/action with columns not allowed.
             List<string> columns = new(new string[] { "col1", "col2", "col3" });
             bool expected = false;
-            
+
             Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns), expected);
         }
 

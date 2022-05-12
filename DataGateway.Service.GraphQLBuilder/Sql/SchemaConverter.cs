@@ -111,7 +111,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
         /// </summary>
         public static string GetGraphQLTypeForColumnType(Type type)
         {
-            return Type.GetTypeCode(type) switch {
+            return Type.GetTypeCode(type) switch
+            {
                 TypeCode.String => "String",
                 TypeCode.Int32 => "Int",
                 TypeCode.Double => "Float",

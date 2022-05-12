@@ -954,7 +954,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// return empty string here for this reason.
         /// </summary>
         /// <returns></returns>
-        public override string GetDefaultSchemaIncludeDot()
+        public override string GetDefaultSchemaForEdmModel()
         {
             return string.Empty;
         }

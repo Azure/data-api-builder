@@ -6,6 +6,7 @@ using Azure.DataGateway.Service.Models.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Action = Azure.DataGateway.Config.Action;
 
 namespace Azure.DataGateway.Service.Authorization
@@ -18,6 +19,8 @@ namespace Azure.DataGateway.Service.Authorization
     {
         private Dictionary<string, EntityMetadata> _entityPermissionMap = new();
         private const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
+        private const string WILDCARD = "*";
+        private static readonly HashSet<string> _validActions = new() { "create", "read", "update", "delete"};
 
         public AuthorizationResolver(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
         {
@@ -78,7 +81,7 @@ namespace Azure.DataGateway.Service.Authorization
             {
                 if (valueOfEntityToRole.RoleToActionMap.TryGetValue(roleName, out RoleMetadata valueOfRoleToAction))
                 {
-                    if (valueOfRoleToAction.ActionToColumnMap.ContainsKey("*") ||
+                    if (valueOfRoleToAction.ActionToColumnMap.ContainsKey(WILDCARD) ||
                         valueOfRoleToAction.ActionToColumnMap.ContainsKey(action))
                     {
                         return true;
@@ -97,7 +100,7 @@ namespace Azure.DataGateway.Service.Authorization
 
             try
             {
-                actionToColumnMap = roleInEntity.ActionToColumnMap["*"];
+                actionToColumnMap = roleInEntity.ActionToColumnMap[WILDCARD];
             }
             catch (KeyNotFoundException)
             {
@@ -106,8 +109,8 @@ namespace Azure.DataGateway.Service.Authorization
 
             foreach (string column in columns)
             {
-                if (actionToColumnMap.excluded.Contains(column) || actionToColumnMap.excluded.Contains("*") ||
-                    !(actionToColumnMap.included.Contains("*") || actionToColumnMap.included.Contains(column)))
+                if (actionToColumnMap.excluded.Contains(column) || actionToColumnMap.excluded.Contains(WILDCARD) ||
+                    !(actionToColumnMap.included.Contains(WILDCARD) || actionToColumnMap.included.Contains(column)))
                 {
                     // If column is present in excluded OR excluded='*'
                     // If column is absent from included and included!=*
@@ -150,7 +153,7 @@ namespace Azure.DataGateway.Service.Authorization
                         if (actionElement.ValueKind == JsonValueKind.String)
                         {
                             actionName = actionElement.ToString();
-                            actionToColumn.included.Add("*");
+                            actionToColumn.included.Add(WILDCARD);
                         }
                         else if (actionElement.ValueKind == JsonValueKind.Object)
                         {
@@ -158,6 +161,9 @@ namespace Azure.DataGateway.Service.Authorization
                             if (actionObj is not null)
                             {
                                 actionName = actionObj.Name;
+
+                                //Assert the assumption that the actionName is valid.
+                                Assert.IsTrue(IsValidActionName(actionName));
 
                                 if (actionObj.Fields!.Include is not null)
                                 {
@@ -179,6 +185,16 @@ namespace Azure.DataGateway.Service.Authorization
 
                 _entityPermissionMap[entityName] = entityToRoleMap;
             }
+        }
+
+        private static bool IsValidActionName(string actionName)
+        {
+            if (actionName.Equals(WILDCARD) || _validActions.Contains(actionName))
+            {
+                return true;
+            }
+
+            return false;
         }
         #endregion
     }

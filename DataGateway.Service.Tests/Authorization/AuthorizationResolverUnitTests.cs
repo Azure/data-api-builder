@@ -120,13 +120,13 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         [TestMethod("Action is defined for role")]
         public void ActionDefinedForRole_RoleHasActionTest()
         {
-            RuntimeConfig runtimeConfig = InitRuntimeConfig(entityName: "SampleEntity", roleName: "Writer", actionName: "Create");
+            RuntimeConfig runtimeConfig = InitRuntimeConfig(entityName: "SampleEntity", roleName: "Writer", actionName: "create");
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
             // Mock Request Values - Query a configured entity and role with action that is configured.
             string entityName = "SampleEntity";
             string roleName = "Writer";
-            string actionName = "Create";
+            string actionName = "create";
 
             Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(entityName, roleName, actionName));
         }
@@ -135,13 +135,13 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         [TestMethod("Action is NOT defined for role")]
         public void ActionNotDefinedForRole_RoleHasActionTest()
         {
-            RuntimeConfig runtimeConfig = InitRuntimeConfig(entityName: "SampleEntity", roleName: "Writer", actionName: "Create");
+            RuntimeConfig runtimeConfig = InitRuntimeConfig(entityName: "SampleEntity", roleName: "Writer", actionName: "create");
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
             // Mock Request Values - Query a configured entity and role with action that is NOT configured.
             string entityName = "SampleEntity";
             string roleName = "Writer";
-            string actionName = "Update";
+            string actionName = "update";
 
             Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(entityName, roleName, actionName));
         }
@@ -161,7 +161,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
                 entityName: "SampleEntity",
                 roleName: "Writer",
-                actionName: "Create",
+                actionName: "create",
                 includedCols: new string[] { "col1", "col2", "col3" }
                 );
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
@@ -169,7 +169,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             // Mock Request Values - Query a configured entity/role/action with column allowed.
             string entityName = "SampleEntity";
             string roleName = "Writer";
-            string actionName = "Create";
+            string actionName = "create";
             List<string> columns = new(new string[] { "col1" });
 
             Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
@@ -181,7 +181,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
                 entityName: "SampleEntity",
                 roleName: "Writer",
-                actionName: "Create",
+                actionName: "create",
                 includedCols: new string[] { "col1", "col2", "col3" }
                 );
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
@@ -189,7 +189,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             // Mock Request Values - Query a configured entity/role/action with columns allowed.
             string entityName = "SampleEntity";
             string roleName = "Writer";
-            string actionName = "Create";
+            string actionName = "create";
             List<string> columns = new(new string[] { "col1", "col2", "col3" });
 
             Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
@@ -201,7 +201,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
                 entityName: "SampleEntity",
                 roleName: "Writer",
-                actionName: "Create",
+                actionName: "create",
                 includedCols: new string[] { "*" }
                 );
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
@@ -209,7 +209,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             // Mock Request Values - Query a configured entity/role/action with columns allowed.
             string entityName = "SampleEntity";
             string roleName = "Writer";
-            string actionName = "Create";
+            string actionName = "create";
             List<string> columns = new(new string[] { "col1", "col2", "col3" });
 
             Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
@@ -221,7 +221,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
                 entityName: "SampleEntity",
                 roleName: "Writer",
-                actionName: "Create",
+                actionName: "create",
                 includedCols: new string[] { "*" },
                 excludedCols: new string[] { "col1", "col2" }
                 );
@@ -230,7 +230,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             // Mock Request Values - Query a configured entity/role/action with column allowed.
             string entityName = "SampleEntity";
             string roleName = "Writer";
-            string actionName = "Create";
+            string actionName = "create";
             List<string> columns = new(new string[] { "col3", "col4" });
 
             Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
@@ -243,7 +243,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
                 entityName: "SampleEntity",
                 roleName: "Writer",
-                actionName: "Create",
+                actionName: "create",
                 includedCols: new string[] { "col1", "col2", "col3" }
                 );
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
@@ -251,7 +251,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             // Mock Request Values - Query a configured entity/role/action with column NOT allowed.
             string entityName = "SampleEntity";
             string roleName = "Writer";
-            string actionName = "Create";
+            string actionName = "create";
             List<string> columns = new(new string[] { "col4" });
 
             Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
@@ -263,7 +263,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
                 entityName: "SampleEntity",
                 roleName: "Writer",
-                actionName: "Create",
+                actionName: "create",
                 includedCols: new string[] { "col1", "col2", "col3" }
                 );
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
@@ -272,7 +272,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             // to match all allowed columns, with one NOT allowed column.
             string entityName = "SampleEntity";
             string roleName = "Writer";
-            string actionName = "Create";
+            string actionName = "create";
             List<string> columns = new(new string[] { "col1", "col2", "col3", "col4" });
 
             Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
@@ -284,7 +284,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
                 entityName: "SampleEntity",
                 roleName: "Writer",
-                actionName: "Create",
+                actionName: "create",
                 includedCols: new string[] { "col1", "col2", "col3" },
                 excludedCols: new string[] { "col4", "col5", "col6" }
                 );
@@ -293,7 +293,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             // Mock Request Values - Query a configured entity/role/action with multiple columns NOT allowed.
             string entityName = "SampleEntity";
             string roleName = "Writer";
-            string actionName = "Create";
+            string actionName = "create";
             List<string> columns = new(new string[] { "col4", "col5" });
 
             Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
@@ -305,7 +305,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
                 entityName: "SampleEntity",
                 roleName: "Writer",
-                actionName: "Create",
+                actionName: "create",
                 includedCols: new string[] { "col1", "col2", "col3" },
                 excludedCols: new string[] { "col4", "col5", "col6" }
                 );
@@ -314,7 +314,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             // Mock Request Values - Query a configured entity/role/action with 1 allowed/ 1 disallwed column(s).
             string entityName = "SampleEntity";
             string roleName = "Writer";
-            string actionName = "Create";
+            string actionName = "create";
             List<string> columns = new(new string[] { "col2", "col5" });
 
             Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
@@ -326,7 +326,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
                 entityName: "SampleEntity",
                 roleName: "Writer",
-                actionName: "Create",
+                actionName: "create",
                 excludedCols: new string[] { "*" }
                 );
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
@@ -334,7 +334,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             // Mock Request Values - Query a configured entity/role/action with columns not allowed.
             string entityName = "SampleEntity";
             string roleName = "Writer";
-            string actionName = "Create";
+            string actionName = "create";
             List<string> columns = new(new string[] { "col1", "col2", "col3" });
 
             Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
@@ -346,7 +346,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
                 entityName: "SampleEntity",
                 roleName: "Writer",
-                actionName: "Create",
+                actionName: "create",
                 includedCols: new string[] { "col1", "col2" },
                 excludedCols: new string[] { "*" }
                 );
@@ -355,7 +355,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             // Mock Request Values - Query a configured entity/role/action with two columns allowed, one not.
             string entityName = "SampleEntity";
             string roleName = "Writer";
-            string actionName = "Create";
+            string actionName = "create";
             List<string> columns = new(new string[] { "col1", "col2", "col3" });
 
             Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
@@ -367,7 +367,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
                 entityName: "SampleEntity",
                 roleName: "Writer",
-                actionName: "Create",
+                actionName: "create",
                 includedCols: new string[] { "*" },
                 excludedCols: new string[] { "col1", "col2" }
                 );
@@ -376,7 +376,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             // Mock Request Values - Query a configured entity/role/action with column allowed and column not allowed.
             string entityName = "SampleEntity";
             string roleName = "Writer";
-            string actionName = "Create";
+            string actionName = "create";
             List<string> columns = new(new string[] { "col3", "col1" });
 
             Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
@@ -388,7 +388,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
                 entityName: "SampleEntity",
                 roleName: "Writer",
-                actionName: "Create",
+                actionName: "create",
                 includedCols: new string[] { "col1", "col2" },
                 excludedCols: new string[] { "*" }
                 );
@@ -397,7 +397,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             // Mock Request Values - Query a configured entity/role/action with columns allowed.
             string entityName = "SampleEntity";
             string roleName = "Writer";
-            string actionName = "Create";
+            string actionName = "create";
             List<string> columns = new(new string[] { "col1", "col2" });
 
             Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(entityName, roleName, actionName, columns));
@@ -419,7 +419,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         private static RuntimeConfig InitRuntimeConfig(
             string entityName = "SampleEntity",
             string roleName = "Reader",
-            string actionName = "Create",
+            string actionName = "create",
             string[] includedCols = null,
             string[] excludedCols = null
             )

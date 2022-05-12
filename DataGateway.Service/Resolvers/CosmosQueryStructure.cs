@@ -39,6 +39,7 @@ namespace Azure.DataGateway.Service.Resolvers
             IFieldSelection selection = _context.Selection;
             GraphQLType graphqlType = MetadataStoreProvider.GetGraphQLType(UnderlyingType(selection.Field.Type).Name);
             IsPaginated = graphqlType.IsPaginationType;
+            OrderByColumns = new();
 
             if (IsPaginated)
             {

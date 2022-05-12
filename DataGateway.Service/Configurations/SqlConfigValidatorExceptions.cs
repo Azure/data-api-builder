@@ -384,7 +384,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </remarks>
         private void ValidateTableColumnsMatchScalarFields(string tableName, string typeName, Stack<string> tableColumnPosition)
         {
-            TableDefinition table = GetTableWithName(tableName);
+            TableDefinition table = GetTableWithName(typeName);
             Dictionary<string, ColumnDefinition> tableColumns = table.Columns;
             Dictionary<string, FieldDefinitionNode> scalarFields = GetScalarFields(GetTypeFields(typeName));
 
@@ -423,9 +423,9 @@ namespace Azure.DataGateway.Service.Configurations
         /// <summary>
         /// Validate the scalar fields and table columns that match in name match in type
         /// </summary>
-        private void ValidateTableColumnTypesMatchScalarFieldTypes(string tableName, string typeName, Stack<string> tableColumnPosition)
+        private void ValidateTableColumnTypesMatchScalarFieldTypes(string typeName, Stack<string> tableColumnPosition)
         {
-            TableDefinition table = GetTableWithName(tableName);
+            TableDefinition table = GetTableWithName(typeName);
             Dictionary<string, ColumnDefinition> tableColumns = table.Columns;
             Dictionary<string, FieldDefinitionNode> typeFields = GetTypeFields(typeName);
 
@@ -462,14 +462,13 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateScalarFieldsMatchingTableColumnsHaveNoArgs(
             string typeName,
-            string typeTable,
             Stack<string> tableColumnsPosition
         )
         {
             Dictionary<string, FieldDefinitionNode> scalarFields = GetScalarFields(GetTypeFields(typeName));
             IEnumerable<String> fieldsWithArgs =
                 scalarFields.Keys.Where(fieldName => GetArgumentsFromField(scalarFields[fieldName]).Count > 0)
-                                    .Intersect(GetTableWithName(typeTable).Columns.Keys);
+                                    .Intersect(GetTableWithName(typeName).Columns.Keys);
 
             if (fieldsWithArgs.Any())
             {
@@ -486,7 +485,6 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private void ValidateScalarFieldsMatchingTableColumnsNullability(
             string typeName,
-            string typeTable,
             Stack<string> tableColumnsPosition)
         {
             Dictionary<string, FieldDefinitionNode> scalarFields = GetScalarFields(GetTypeFields(typeName));
@@ -494,7 +492,7 @@ namespace Azure.DataGateway.Service.Configurations
                 scalarFields.Keys.Where(fieldName => IsNullableType(scalarFields[fieldName].Type));
             IEnumerable<string> notNullableScalarFields = scalarFields.Keys.Except(nullableScalarFields);
 
-            TableDefinition table = GetTableWithName(typeTable);
+            TableDefinition table = GetTableWithName(typeName);
             IEnumerable<string> nullableTableColumns =
                 table.Columns.Keys.Where(colName => table.Columns[colName].IsNullable);
             IEnumerable<string> notNullableTableColumns = table.Columns.Keys.Except(nullableTableColumns);
@@ -770,7 +768,7 @@ namespace Azure.DataGateway.Service.Configurations
         private void ValidateLeftForeignKey(GraphQLField field, string type)
         {
             string typeTable = GetTypeTable(type);
-            if (!TableContainsForeignKey(typeTable, field.LeftForeignKey))
+            if (!TableContainsForeignKey(type, field.LeftForeignKey))
             {
                 throw new ConfigValidationException(
                     $"Left foreign key in {field.RelationshipType} field, must be a foreign key " +
@@ -788,7 +786,7 @@ namespace Azure.DataGateway.Service.Configurations
         private void ValidateRightForeignKey(GraphQLField field, string returnedType)
         {
             string returnedTypeTable = GetTypeTable(returnedType);
-            if (!TableContainsForeignKey(returnedTypeTable, field.RightForeignKey))
+            if (!TableContainsForeignKey(returnedType, field.RightForeignKey))
             {
                 throw new ConfigValidationException(
                     $"Right foreign key in {field.RelationshipType} field, must be a foreign key " +

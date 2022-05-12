@@ -601,17 +601,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string expected = @"{
               ""items"": [
                 {
-                  ""pieceid"": 1,
-                  ""categoryid"": 0
+                  ""pieceid"": 99,
+                  ""categoryid"": 100
                 },
                 {
                   ""pieceid"": 1,
-                  ""categoryid"": 1
+                  ""categoryid"": 0
                 }
               ],
               ""endCursor"": """ + SqlPaginationUtil.Base64Encode(
                   "[{\"Value\":1,\"Direction\":1,\"ColumnName\":\"pieceid\"}," +
-                  "{\"Value\":1,\"Direction\":0,\"ColumnName\":\"categoryid\"}]") + @""",
+                  "{\"Value\":0,\"Direction\":0,\"ColumnName\":\"categoryid\"}]") + @""",
               ""hasNextPage"": true
             }";
 

@@ -804,6 +804,45 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        /// Test querying an entity with float and bool fields
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueriesForFloatAndBoolTypes()
+        {
+            string graphQLQueryName = "getStockPrices";
+            string graphQLQuery = @"{
+                getStockPrices {
+                    categoryid
+                    pieceid
+                    instant
+                    price
+                    is_wholesale_price
+                }
+            }";
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('categoryid', `subq1`.`categoryid`, 'pieceid', `subq1`.
+                                `pieceid`, 'instant', `subq1`.`instant`, 'price', `subq1`.`price`,
+                                'is_wholesale_price', CAST(`subq1`.`is_wholesale_price` is true as json))), '[]') AS `data`
+                FROM (
+                    SELECT `table0`.`categoryid` AS `categoryid`,
+                        `table0`.`pieceid` AS `pieceid`,
+                        `table0`.`instant` AS `instant`,
+                        `table0`.`price` AS `price`,
+                        `table0`.`is_wholesale_price` AS `is_wholesale_price`
+                    FROM `stocks_price` AS `table0`
+                    WHERE 1 = 1
+                    ORDER BY `table0`.`categoryid`,
+                        `table0`.`pieceid`,
+                        `table0`.`instant`
+                    ) AS `subq1`
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Negative Tests

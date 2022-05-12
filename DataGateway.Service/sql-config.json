@@ -48,8 +48,18 @@
       "OperationType": "Insert"
     },
     {
+      "Id": "insertStockPrice",
+      "Table": "stocks_price",
+      "OperationType": "Insert"
+    },
+    {
       "Id": "updateMagazine",
       "Table": "magazines",
+      "OperationType": "UpdateIncremental"
+    },
+    {
+      "Id": "updateStockPrice",
+      "Table": "stocks_price",
       "OperationType": "UpdateIncremental"
     }
   ],
@@ -113,7 +123,13 @@
       "Table": "website_users"
     },
     "Stock": {
-      "Table": "stocks"
+      "Table": "stocks",
+      "Fields": {
+        "price": {
+          "RelationshipType": "OneToOne",
+          "RightForeignKey": "stocks_price_stocks_fk"
+        }
+      }
     },
     "Author": {
       "Table": "authors",
@@ -143,6 +159,9 @@
     },
     "Magazine": {
       "Table": "magazines"
+    },
+    "StockPrice": {
+      "Table": "stocks_price"
     },
     "BookConnection": {
       "IsPaginationType": true

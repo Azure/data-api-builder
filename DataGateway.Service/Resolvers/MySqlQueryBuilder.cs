@@ -133,18 +133,18 @@ namespace Azure.DataGateway.Service.Resolvers
             // For MySQL, the view KEY_COLUMN_USAGE provides all the information we need
             // so there is no need to join with any other view.
             string foreignKeyQuery = $@"
-                SELECT 
-                    CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))}, 
-                    TABLE_NAME {QuoteIdentifier(nameof(TableDefinition))}, 
-                    COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencingColumns))}, 
-                    REFERENCED_TABLE_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedTable))}, 
-                    REFERENCED_COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))} 
-                FROM 
-                    INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
-                WHERE 
-                    TABLE_SCHEMA IN (@{tableSchemaParamsForInClause}) 
-                    AND TABLE_NAME IN (@{tableNameParamsForInClause}) 
-                    AND REFERENCED_TABLE_NAME IS NOT NULL 
+                SELECT
+                    CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))},
+                    TABLE_NAME {QuoteIdentifier(nameof(TableDefinition))},
+                    COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencingColumns))},
+                    REFERENCED_TABLE_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedTable))},
+                    REFERENCED_COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))}
+                FROM
+                    INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+                WHERE
+                    TABLE_SCHEMA IN (@{tableSchemaParamsForInClause})
+                    AND TABLE_NAME IN (@{tableNameParamsForInClause})
+                    AND REFERENCED_TABLE_NAME IS NOT NULL
                     AND REFERENCED_COLUMN_NAME IS NOT NULL;";
 
             Console.WriteLine($"Foreign Key Query is : {foreignKeyQuery}");
@@ -183,7 +183,22 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 string cLabel = column.Label;
                 string parametrizedCLabel = structure.ColumnLabelToParam[cLabel];
-                jsonColumns.Add($"{parametrizedCLabel}, {subqueryName}.{QuoteIdentifier(cLabel)}");
+
+                // columns which contain the json of a nested type are called SqlQueryStructure.DATA_IDENT
+                // and they are not actual columns of the underlying table so don't check for column type
+                // in that scenario
+                if (column.ColumnName != SqlQueryStructure.DATA_IDENT &&
+                    structure.GetColumnSystemType(column.ColumnName) == typeof(bool))
+                {
+                    // mysql does not resolve the boolean columns to true/false when converting to json, but to 1/0.
+                    // In order to account for that, explicit casting is used.
+                    // For more refer to: https://stackoverflow.com/questions/49131832/how-to-create-a-json-object-in-mysql-with-a-boolean-value
+                    jsonColumns.Add($"{parametrizedCLabel}, CAST({subqueryName}.{QuoteIdentifier(cLabel)} is true as json)");
+                }
+                else
+                {
+                    jsonColumns.Add($"{parametrizedCLabel}, {subqueryName}.{QuoteIdentifier(cLabel)}");
+                }
             }
 
             return string.Join(", ", jsonColumns);
@@ -191,7 +206,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// Make the SELECT arguments to select the primary key of the last inserted element
-        /// The SELECT clause looks for the inserted columns first, then Primary Key and then the Columns with Default values. 
+        /// The SELECT clause looks for the inserted columns first, then Primary Key and then the Columns with Default values.
         /// For Example:book_id is the inserted column (book_id, id) are primary key, content has default value
         /// SELECT @param1 as `book_id`, last_insert_id() as `id`, @param0 as `content` WHERE @ROWCOUNT > 0;
         /// </summary>

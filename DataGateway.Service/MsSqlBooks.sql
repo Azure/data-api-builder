@@ -16,78 +16,79 @@ DROP TABLE IF EXISTS brokers;
 --Starting with id > 5000 is chosen arbitrarily so that the incremented id-s won't conflict with the manually inserted ids in this script
 
 CREATE TABLE publishers(
-    id bigint IDENTITY(5001, 1) PRIMARY KEY,
+    id int IDENTITY(5001, 1) PRIMARY KEY,
     name varchar(max) NOT NULL
 );
 
 CREATE TABLE books(
-    id bigint IDENTITY(5001, 1) PRIMARY KEY,
+    id int IDENTITY(5001, 1) PRIMARY KEY,
     title varchar(max) NOT NULL,
-    publisher_id bigint NOT NULL
+    publisher_id int NOT NULL
 );
 
 CREATE TABLE book_website_placements(
-    id bigint IDENTITY(5001, 1) PRIMARY KEY,
-    book_id bigint UNIQUE NOT NULL,
-    price bigint NOT NULL
+    id int IDENTITY(5001, 1) PRIMARY KEY,
+    book_id int UNIQUE NOT NULL,
+    price int NOT NULL
 );
 
 CREATE TABLE website_users(
-    id bigint PRIMARY KEY,
+    id int PRIMARY KEY,
     username text NULL
 );
 
 CREATE TABLE authors(
-    id bigint IDENTITY(5001, 1) PRIMARY KEY,
+    id int IDENTITY(5001, 1) PRIMARY KEY,
     name varchar(max) NOT NULL,
     birthdate varchar(max) NOT NULL
 );
 
 CREATE TABLE reviews(
-    book_id bigint,
-    id bigint IDENTITY(5001, 1),
+    book_id int,
+    id int IDENTITY(5001, 1),
     content varchar(max) DEFAULT('Its a classic') NOT NULL,
     PRIMARY KEY(book_id, id)
 );
 
 CREATE TABLE book_author_link(
-    book_id bigint NOT NULL,
-    author_id bigint NOT NULL,
+    book_id int NOT NULL,
+    author_id int NOT NULL,
     PRIMARY KEY(book_id, author_id)
 );
 
 CREATE TABLE magazines(
-    id bigint PRIMARY KEY,
+    id int PRIMARY KEY,
     title varchar(max) NOT NULL,
-    issue_number bigint NULL
+    issue_number int NULL
 );
 
 CREATE TABLE comics(
-    id bigint PRIMARY KEY,
+    id int PRIMARY KEY,
     title varchar(max) NOT NULL,
-    volume bigint IDENTITY(5001,1),
+    volume int IDENTITY(5001,1),
     categoryName varchar(100) NOT NULL UNIQUE
 );
 
 CREATE TABLE stocks(
-    categoryid bigint NOT NULL,
-    pieceid bigint NOT NULL,
+    categoryid int NOT NULL,
+    pieceid int NOT NULL,
     categoryName varchar(100) NOT NULL,
-    piecesAvailable bigint DEFAULT 0,
-    piecesRequired bigint DEFAULT 0 NOT NULL,
+    piecesAvailable int DEFAULT 0,
+    piecesRequired int DEFAULT 0 NOT NULL,
     PRIMARY KEY(categoryid,pieceid)
 );
 
 CREATE TABLE stocks_price(
-    categoryid bigint NOT NULL,
-    pieceid bigint NOT NULL,
-    instant char(10) NOT NULL,
+    categoryid int NOT NULL,
+    pieceid int NOT NULL,
+    instant varchar(10) NOT NULL,
     price float,
+    is_wholesale_price bit,
     PRIMARY KEY(categoryid, pieceid, instant)
 );
 
 CREATE TABLE brokers(
-    [ID Number] BIGINT PRIMARY KEY,
+    [ID Number] int PRIMARY KEY,
     [First Name] varchar(max) NOT NULL,
     [Last Name] varchar(max) NOT NULL
 );
@@ -159,5 +160,6 @@ SET IDENTITY_INSERT reviews OFF
 INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95'), (5, 'null');
 INSERT INTO magazines(id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);
 INSERT INTO brokers([ID Number], [First Name], [Last Name]) VALUES (1, 'Michael', 'Burry'), (2, 'Jordan', 'Belfort');
-INSERT INTO comics(id, title, categoryName) VALUES (1, 'Star Trek', 'SciFi'), (2, 'Cinderella', 'FairyTales'),(3,'Unknown','');
-INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2, 1, 'FairyTales'),(0,1,'');
+INSERT INTO comics(id, title, categoryName) VALUES (1, 'Star Trek', 'SciFi'), (2, 'Cinderella', 'FairyTales'), (3,'Unknown',''), (4, 'Alexander the Great', 'Historical');
+INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2, 1, 'FairyTales'), (0,1,''), (100, 99, 'Historical');
+INSERT INTO stocks_price(categoryid, pieceid, instant, price, is_wholesale_price) VALUES (2, 1, 'instant1', 100.57, 1), (1, 1, 'instant2', 42.75, 0);

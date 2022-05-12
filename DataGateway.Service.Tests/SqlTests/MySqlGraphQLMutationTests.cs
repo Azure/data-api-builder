@@ -469,6 +469,190 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        /// <summary>
+        /// Test inserting a type with float and bool fields
+        /// </summary>
+        [TestMethod]
+        public async Task TestInsertingTypeWithFloatAndBoolFields()
+        {
+            string graphQLMutationName = "insertStockPrice";
+            string graphQLMutation = @"
+                mutation {
+                    insertStockPrice(categoryid: 100 pieceid: 99 instant: ""9999"" price: 22.5 is_wholesale_price: false) {
+                        categoryid
+                        pieceid
+                        instant
+                        price
+                        is_wholesale_price
+                    }
+                }
+            ";
+
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('categoryid', `subq`.`categoryid`, 'pieceid', `subq`.`pieceid`, 'instant', `subq`.
+                        `instant`, 'price', `subq`.`price`, 'is_wholesale_price', CAST(`subq`.`is_wholesale_price` IS true
+                            AS json)) AS `data`
+                FROM (
+                    SELECT `table0`.`categoryid` AS `categoryid`,
+                        `table0`.`pieceid` AS `pieceid`,
+                        `table0`.`instant` AS `instant`,
+                        `table0`.`price` AS `price`,
+                        `table0`.`is_wholesale_price` AS `is_wholesale_price`
+                    FROM `stocks_price` AS `table0`
+                    WHERE `categoryid` = 100
+                        AND `pieceid` = 99
+                        AND `instant` = '9999'
+                    ORDER BY `categoryid`,
+                        `pieceid`,
+                        `instant` LIMIT 1
+                    ) AS `subq`
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test inserting a type with null float and bool fields
+        /// </summary>
+        [TestMethod]
+        public async Task TestInsertingTypeWithNullFloatAndBoolFields()
+        {
+            string graphQLMutationName = "insertStockPrice";
+            string graphQLMutation = @"
+                mutation {
+                    insertStockPrice(categoryid: 100 pieceid: 99 instant: ""9999"") {
+                        categoryid
+                        pieceid
+                        instant
+                        price
+                        is_wholesale_price
+                    }
+                }
+            ";
+
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('categoryid', `subq`.`categoryid`, 'pieceid', `subq`.`pieceid`, 'instant', `subq`.
+                        `instant`, 'price', `subq`.`price`, 'is_wholesale_price', CAST(`subq`.`is_wholesale_price` IS true
+                            AS json)) AS `data`
+                FROM (
+                    SELECT `table0`.`categoryid` AS `categoryid`,
+                        `table0`.`pieceid` AS `pieceid`,
+                        `table0`.`instant` AS `instant`,
+                        `table0`.`price` AS `price`,
+                        `table0`.`is_wholesale_price` AS `is_wholesale_price`
+                    FROM `stocks_price` AS `table0`
+                    WHERE `categoryid` = 100
+                        AND `pieceid` = 99
+                        AND `instant` = '9999'
+                    ORDER BY `categoryid`,
+                        `pieceid`,
+                        `instant` LIMIT 1
+                    ) AS `subq`
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test updating float and bool fields
+        /// </summary>
+        [TestMethod]
+        public async Task TestUpdatingFloatAndBoolFields()
+        {
+            string graphQLMutationName = "updateStockPrice";
+            string graphQLMutation = @"
+                mutation {
+                    updateStockPrice(categoryid: 2 pieceid: 1 instant: ""instant1"" price: 19.5 is_wholesale_price: false) {
+                        categoryid
+                        pieceid
+                        instant
+                        price
+                        is_wholesale_price
+                    }
+                }
+            ";
+
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('categoryid', `subq`.`categoryid`, 'pieceid', `subq`.`pieceid`, 'instant', `subq`.
+                        `instant`, 'price', `subq`.`price`, 'is_wholesale_price', CAST(`subq`.`is_wholesale_price` IS true
+                            AS json)) AS `data`
+                FROM (
+                    SELECT `table0`.`categoryid` AS `categoryid`,
+                        `table0`.`pieceid` AS `pieceid`,
+                        `table0`.`instant` AS `instant`,
+                        `table0`.`price` AS `price`,
+                        `table0`.`is_wholesale_price` AS `is_wholesale_price`
+                    FROM `stocks_price` AS `table0`
+                    WHERE `categoryid` = 2
+                        AND `pieceid` = 1
+                        AND `instant` = 'instant1'
+                        AND `price` = 19.5
+                        AND `is_wholesale_price` IS FALSE
+                    ORDER BY `categoryid`,
+                        `pieceid`,
+                        `instant` LIMIT 1
+                    ) AS `subq`
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test updating float and bool fields to null
+        /// </summary>
+        [TestMethod]
+        public async Task TestUpdatingFloatAndBoolFieldsToNull()
+        {
+            string graphQLMutationName = "updateStockPrice";
+            string graphQLMutation = @"
+                mutation {
+                    updateStockPrice(categoryid: 2 pieceid: 1 instant: ""instant1"" price: null is_wholesale_price: null) {
+                        categoryid
+                        pieceid
+                        instant
+                        price
+                        is_wholesale_price
+                    }
+                }
+            ";
+
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('categoryid', `subq`.`categoryid`, 'pieceid', `subq`.`pieceid`, 'instant', `subq`.
+                        `instant`, 'price', `subq`.`price`, 'is_wholesale_price', CAST(`subq`.`is_wholesale_price` IS true
+                            AS json)) AS `data`
+                FROM (
+                    SELECT `table0`.`categoryid` AS `categoryid`,
+                        `table0`.`pieceid` AS `pieceid`,
+                        `table0`.`instant` AS `instant`,
+                        `table0`.`price` AS `price`,
+                        `table0`.`is_wholesale_price` AS `is_wholesale_price`
+                    FROM `stocks_price` AS `table0`
+                    WHERE `categoryid` = 2
+                        AND `pieceid` = 1
+                        AND `instant` = 'instant1'
+                        AND `price` IS NULL
+                        AND `is_wholesale_price` IS NULL
+                    ORDER BY `categoryid`,
+                        `pieceid`,
+                        `instant` LIMIT 1
+                    ) AS `subq`
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Negative Tests

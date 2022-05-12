@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.GraphQLBuilder.Sql;
 using Azure.DataGateway.Service.Models;
 using HotChocolate.Language;
 using HotChocolate.Types;
@@ -410,24 +411,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         private static bool GraphQLTypeEqualsColumnType(ITypeNode gqlType, Type columnType)
         {
-            return GetGraphQLTypeForColumnType(columnType) == gqlType.NullableType().ToString();
-        }
-
-        /// <summary>
-        /// Get the GraphQL type equivalent from ColumnType
-        /// </summary>
-        private static string GetGraphQLTypeForColumnType(Type type)
-        {
-            switch (Type.GetTypeCode(type))
-            {
-                case TypeCode.String:
-                    return "String";
-                case TypeCode.Int64:
-                    return "Int";
-                default:
-                    throw new ArgumentException($"ColumnType {type} not handled by case. Please add a case resolving " +
-                                                $"{type} to the appropriate GraphQL type");
-            }
+            return SchemaConverter.GetGraphQLTypeForColumnType(columnType) == gqlType.NullableType().ToString();
         }
 
         /// <summary>

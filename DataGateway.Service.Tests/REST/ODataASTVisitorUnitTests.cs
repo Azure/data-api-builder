@@ -110,7 +110,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         [TestMethod]
         public void InvalidValueTypeTest()
         {
-            ConstantNode nodeIn = CreateConstantNode(constantValue: string.Empty, literalText: "text", EdmPrimitiveTypeKind.Int64);
+            ConstantNode nodeIn = CreateConstantNode(constantValue: string.Empty, literalText: "text", EdmPrimitiveTypeKind.Int32);
             ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY);
             Assert.ThrowsException<ArgumentException>(() => visitor.Visit(nodeIn));
         }

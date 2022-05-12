@@ -9,16 +9,19 @@ type Query {
     books(first: Int, after: String, _filter: BookFilterInput, _filterOData: String, orderBy: BookOrderByInput): BookConnection!
     reviews(first: Int, after: String, _filter: ReviewFilterInput, _filterOData: String, orderBy: ReviewOrderByInput): ReviewConnection!
     stocks(first: Int, after: String, _filter: StockFilterInput, _filterOData: String, orderBy: StockOrderByInput): StockConnection!
+    getStockPrices: [StockPrice!]!
 }
 
 type Mutation {
     editBook(id: Int!, title: String, publisher_id: Int): Book
     updateMagazine(id: Int!, title: String, issue_number: Int): Magazine
+    updateStockPrice(categoryid: Int!, pieceid: Int!, instant: String!, price: Float, is_wholesale_price: Boolean): StockPrice
     insertBook(title: String!, publisher_id: Int!): Book
     insertReview(book_id: Int!, content: String! = "Its a classic"): Review
     insertMagazine(id: Int!, title: String!, issue_number: Int): Magazine
     insertWebsiteUser(id: Int!, username: String): WebsiteUser
     insertWebsitePlacement(book_id: Int!, price: Int!): BookWebsitePlacement
+    insertStockPrice(categoryid: Int!, pieceid: Int!, instant: String!, price: Float, is_wholesale_price: Boolean): StockPrice
     addAuthorToBook(author_id: Int!, book_id: Int!): Boolean
     deleteBook(id: Int!): Book
     deleteReview(id: Int!, book_id: Int!): Review
@@ -75,6 +78,15 @@ type Stock {
     categoryName: String!
     piecesAvailable: Int
     piecesRequired: Int!
+    price: StockPrice
+}
+
+type StockPrice {
+    categoryid: Int!
+    pieceid: Int!
+    instant: String!
+    price: Float,
+    is_wholesale_price: Boolean
 }
 
 type Magazine {

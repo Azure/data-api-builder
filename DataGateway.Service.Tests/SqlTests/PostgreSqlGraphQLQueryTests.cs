@@ -726,6 +726,43 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        /// Test querying an entity with float and bool fields
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueriesForFloatAndBoolTypes()
+        {
+            string graphQLQueryName = "getStockPrices";
+            string graphQLQuery = @"{
+                getStockPrices {
+                    categoryid
+                    pieceid
+                    instant
+                    price
+                    is_wholesale_price
+                }
+            }";
+
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0))
+                FROM
+                  (SELECT categoryid,
+                          pieceid,
+                          instant,
+                          price,
+                          is_wholesale_price
+                   FROM stocks_price
+                   ORDER BY categoryid,
+                            pieceid,
+                            instant) AS table0
+                LIMIT 100
+            ";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Negative Tests

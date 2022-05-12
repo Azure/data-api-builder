@@ -68,11 +68,11 @@ namespace Azure.DataGateway.Service.Models
         {
             Column column = new(tableAlias, name);
             Type columnType = table.Columns[name].SystemType;
-            switch (columnType.ToString())
+            switch (Type.GetTypeCode(columnType))
             {
-                case "System.String":
+                case TypeCode.String:
                     return StringTypeFilterParser.Parse(column, fields, processLiterals);
-                case "System.Int64":
+                case TypeCode.Int32:
                     return IntTypeFilterParser.Parse(column, fields, processLiterals);
                 default:
                     throw new NotSupportedException($"Unexpected system type {columnType} found for column.");

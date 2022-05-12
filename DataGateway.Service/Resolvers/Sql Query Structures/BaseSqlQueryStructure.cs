@@ -132,12 +132,16 @@ namespace Azure.DataGateway.Service.Resolvers
             Type systemType = GetColumnSystemType(columnName);
             try
             {
-                switch (systemType.Name)
+                switch (Type.GetTypeCode(systemType))
                 {
-                    case "String":
+                    case TypeCode.String:
                         return param;
-                    case "Int64":
-                        return long.Parse(param);
+                    case TypeCode.Int32:
+                        return int.Parse(param);
+                    case TypeCode.Double:
+                        return double.Parse(param);
+                    case TypeCode.Boolean:
+                        return Boolean.Parse(param);
                     default:
                         // should never happen due to the config being validated for correct types
                         throw new NotSupportedException($"{systemType.Name} is not supported");

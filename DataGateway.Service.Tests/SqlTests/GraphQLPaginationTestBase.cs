@@ -609,8 +609,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
               ],
               ""endCursor"": """ + SqlPaginationUtil.Base64Encode(
-                  "[{\"Value\":1,\"Direction\":1,\"ColumnName\":\"pieceid\"}," +
-                  "{\"Value\":1,\"Direction\":0,\"ColumnName\":\"categoryid\"}]") + @""",
+                  "[{\"Value\":1,\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"pieceid\"}," +
+                  "{\"Value\":1,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"categoryid\"}]") + @""",
               ""hasNextPage"": true
             }";
 
@@ -640,9 +640,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string actual1 = await GetGraphQLResultAsync(graphQLQuery1, graphQLQueryName, _graphQLController);
 
             string expectedAfter1 = SqlPaginationUtil.Base64Encode(
-                  "[{\"Value\":\"Time to Eat\",\"Direction\":1,\"ColumnName\":\"title\"}," +
-                  "{\"Value\":2324,\"Direction\":0,\"ColumnName\":\"publisher_id\"}," +
-                  "{\"Value\":8,\"Direction\":1,\"ColumnName\":\"id\"}]");
+                  "[{\"Value\":\"Time to Eat\",\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"title\"}," +
+                  "{\"Value\":2324,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"publisher_id\"}," +
+                  "{\"Value\":8,\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]");
 
             string expected1 = @"{
               ""items"": [
@@ -678,9 +678,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string actual2 = await GetGraphQLResultAsync(graphQLQuery2, graphQLQueryName, _graphQLController);
 
             string expectedAfter2 = SqlPaginationUtil.Base64Encode(
-                  "[{\"Value\":\"The Groovy Bar\",\"Direction\":1,\"ColumnName\":\"title\"}," +
-                  "{\"Value\":2324,\"Direction\":0,\"ColumnName\":\"publisher_id\"}," +
-                  "{\"Value\":7,\"Direction\":1,\"ColumnName\":\"id\"}]");
+                  "[{\"Value\":\"The Groovy Bar\",\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"title\"}," +
+                  "{\"Value\":2324,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"publisher_id\"}," +
+                  "{\"Value\":7,\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]");
 
             string expected2 = @"{
               ""items"": [
@@ -724,8 +724,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string actual1 = await GetGraphQLResultAsync(graphQLQuery1, graphQLQueryName, _graphQLController);
 
             string expectedAfter1 = SqlPaginationUtil.Base64Encode(
-                  "[{\"Value\":2324,\"Direction\":1,\"ColumnName\":\"publisher_id\"}," +
-                  "{\"Value\":7,\"Direction\":0,\"ColumnName\":\"id\"}]");
+                  "[{\"Value\":2324,\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"publisher_id\"}," +
+                  "{\"Value\":7,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]");
 
             string expected1 = @"{
               ""items"": [
@@ -766,8 +766,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string actual2 = await GetGraphQLResultAsync(graphQLQuery2, graphQLQueryName, _graphQLController);
 
             string expectedAfter2 = SqlPaginationUtil.Base64Encode(
-                  "[{\"Value\":2323,\"Direction\":1,\"ColumnName\":\"publisher_id\"}," +
-                  "{\"Value\":5,\"Direction\":0,\"ColumnName\":\"id\"}]");
+                  "[{\"Value\":2323,\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"publisher_id\"}," +
+                  "{\"Value\":5,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]");
 
             string expected2 = @"{
               ""items"": [

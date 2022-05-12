@@ -111,7 +111,7 @@ namespace Azure.DataGateway.Service.Models
                 // should be impossible
                 if (predicateValue is null)
                 {
-                    throw new ArgumentNullException("Gql Schema should not allow nullable and/or list members.");
+                    throw new ArgumentNullException("GraphQL Schema should not allow nullable and/or list members.");
                 }
 
                 List<ObjectFieldNode> fields = (List<ObjectFieldNode>)predicateValue;

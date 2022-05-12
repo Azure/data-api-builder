@@ -98,42 +98,6 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate that config fields are matched to a schema field and that
-        /// there is no non scalar schema field not matched to a config field
-        /// </summary>
-        private void ValidateConfigFieldsMatchSchemaFields(
-            Dictionary<string, GraphQLField> configFields,
-            Dictionary<string, FieldDefinitionNode> schemaFields)
-        {
-            IEnumerable<string> unmatchedConfigFields = configFields.Keys.Except(schemaFields.Keys);
-
-            // note that scalar fields can be matched to table columns so they don't
-            // need to match a config field
-            Dictionary<string, FieldDefinitionNode> nonScalarFields = GetNonScalarFields(schemaFields);
-            IEnumerable<string> unmatchedNonScalarSchemaFields = nonScalarFields.Keys.Except(configFields.Keys);
-
-            if (unmatchedConfigFields.Any() || unmatchedNonScalarSchemaFields.Any())
-            {
-                string unmatchedConFieldsMessage =
-                    unmatchedConfigFields.Any() ?
-                    $"[{string.Join(", ", unmatchedConfigFields)}] fields don't match any field in the schema. "
-                    : string.Empty;
-                string unmatchedSchFieldsMessage =
-                    unmatchedNonScalarSchemaFields.Any() ?
-                    $"[{string.Join(", ", unmatchedNonScalarSchemaFields)}] schema fields are not matched by any config fields."
-                    : string.Empty;
-
-                throw new ConfigValidationException(
-                    "Mismatch between fields and the schema fields in " +
-                    PrettyPrintValidationStack(_schemaValidationStack) + ". " +
-                    unmatchedConFieldsMessage +
-                    unmatchedSchFieldsMessage,
-                    _configValidationStack
-                );
-            }
-        }
-
-        /// <summary>
         /// Validate that the fields of a schema type no have invalid return types
         /// </summary>
         /// <remarks>
@@ -288,34 +252,6 @@ namespace Azure.DataGateway.Service.Configurations
                 throw new ConfigValidationException(
                     $"Pagination type on \"{paginationUnderlyingType}\" must be called \"{expectedTypeName}\".",
                     _schemaValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Validate graphQLType has table
-        /// </summary>
-        private void ValidateGraphQLTypeHasTable(GraphQLType type)
-        {
-            if (string.IsNullOrEmpty(type.Table))
-            {
-                throw new ConfigValidationException(
-                    "This type must contain a non empty string \"Table\" element.",
-                    _configValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Validate that type does not share an underlying table with any other type
-        /// </summary>
-        private void ValidateGQLTypeTableIsUnique(GraphQLType type, Dictionary<string, string> tableToType)
-        {
-            if (tableToType.ContainsKey(type.Table))
-            {
-                throw new ConfigValidationException(
-                    $"SystemType shares underlying table \"{type.Table}\" with other type " +
-                    $"\"{tableToType[type.Table]}\". All underlying type tables must be unique.",
-                    _configValidationStack
-                );
             }
         }
 
@@ -556,20 +492,6 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate that the field has a valid relationship type
-        /// </summary>
-        private void ValidateRelationshipType(GraphQLField field, List<GraphQLRelationshipType> validRelationshipTypes)
-        {
-            if (!validRelationshipTypes.Contains(field.RelationshipType))
-            {
-                throw new ConfigValidationException(
-                    $"{field.RelationshipType} is not a valid/supported relationship type.",
-                    _configValidationStack
-                );
-            }
-        }
-
-        /// <summary>
         /// Validate the nullability of the return type of the field
         /// </summary>
         private void ValidateReturnTypeNullability(FieldDefinitionNode field, bool returnsNullable)
@@ -580,21 +502,6 @@ namespace Azure.DataGateway.Service.Configurations
                 throw new ConfigValidationException(
                     $"The type returned from this field must be {label}.",
                     _schemaValidationStack
-                );
-            }
-        }
-
-        /// <summary>
-        /// Validate that field does return a pagination type
-        /// </summary>
-        private void ValidateReturnTypeNotPagination(GraphQLField field, FieldDefinitionNode fieldDefinition)
-        {
-            if (IsPaginationType(fieldDefinition.Type))
-            {
-                throw new ConfigValidationException(
-                    $"{field.RelationshipType} field must not return a pagination " +
-                    $"type \"{fieldDefinition.Type.ToString()}\".",
-                    _configValidationStack
                 );
             }
         }
@@ -638,121 +545,6 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Make sure the field has no association table
-        /// </summary>
-        private void ValidateNoAssociationTable(GraphQLField field)
-        {
-            if (!string.IsNullOrEmpty(field.AssociativeTable))
-            {
-                throw new ConfigValidationException(
-                    $"Cannot have Associative Table in {field.RelationshipType} field.",
-                    _configValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Make sure the field has an association table
-        /// </summary>
-        private void ValidateHasAssociationTable(GraphQLField field)
-        {
-            if (string.IsNullOrEmpty(field.AssociativeTable))
-            {
-                throw new ConfigValidationException(
-                    $"Must have a non empty string Associative Table in {field.RelationshipType} field.",
-                    _configValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Validates that field has only left foreign key
-        /// </summary>
-        private void ValidateHasOnlyLeftForeignKey(GraphQLField field)
-        {
-            if (!HasLeftForeignKey(field) || HasRightForeignKey(field))
-            {
-                throw new ConfigValidationException(
-                    $"{field.RelationshipType} field must have only left foreign key.",
-                    _configValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Validates that field has only right foreign key
-        /// </summary>
-        private void ValidateHasOnlyRightForeignKey(GraphQLField field)
-        {
-            if (HasLeftForeignKey(field) || !HasRightForeignKey(field))
-            {
-                throw new ConfigValidationException(
-                    $"{field.RelationshipType} field must have only right foreign key.",
-                    _configValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Validates that field has left foreign key or right foreign key
-        /// </summary>
-        private void ValidateHasLeftOrRightForeignKey(GraphQLField field)
-        {
-            if (!(HasLeftForeignKey(field) || HasRightForeignKey(field)))
-            {
-                throw new ConfigValidationException(
-                    $"{field.RelationshipType} field must have a left foreign key or right foreign key.",
-                    _configValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Validates that the field has both left and right foreign keys
-        /// </summary>
-        private void ValidateHasBothLeftAndRightFK(GraphQLField field)
-        {
-            if (!HasLeftForeignKey(field) || !HasRightForeignKey(field))
-            {
-                throw new ConfigValidationException(
-                    $"{field.RelationshipType} field must have both left and right foreign keys.",
-                    _configValidationStack
-                );
-            }
-        }
-
-        /// <summary>
-        /// Validate that the left foreign key of the field is a foreign key of the
-        /// table of the type that this field belongs to
-        /// </summary>
-        private void ValidateLeftForeignKey(GraphQLField field, string type)
-        {
-            string typeTable = GetTypeTable(type);
-            if (!TableContainsForeignKey(typeTable, field.LeftForeignKey))
-            {
-                throw new ConfigValidationException(
-                    $"Left foreign key in {field.RelationshipType} field, must be a foreign key " +
-                    $"of the table \"{typeTable}\", which is the underlying table of the type \"{type}\" " +
-                    "that contains this field.",
-                    _configValidationStack
-                );
-            }
-        }
-
-        /// <summary>
-        /// Validate that the right foreign key of the field is a foreign key of the
-        /// table of the type that this field returns
-        /// </summary>
-        private void ValidateRightForeignKey(GraphQLField field, string returnedType)
-        {
-            string returnedTypeTable = GetTypeTable(returnedType);
-            if (!TableContainsForeignKey(returnedTypeTable, field.RightForeignKey))
-            {
-                throw new ConfigValidationException(
-                    $"Right foreign key in {field.RelationshipType} field, must be a foreign key " +
-                    $"of the table \"{returnedTypeTable}\", which is the underlying table of the type " +
-                    $"\"{returnedType}\" that this field returns.",
-                    _configValidationStack
-                );
-            }
-        }
-
-        /// <summary>
         /// Validate that the reference table of the right foreign key refers to type table
         /// </summary>
         private void ValidateRightFkRefTableIsTypeTable(ForeignKeyDefinition rightFk, string type)
@@ -779,22 +571,6 @@ namespace Azure.DataGateway.Service.Configurations
                 throw new ConfigValidationException(
                     $"Left foreign key's referenced table \"{rightFk.ReferencedTable}\" does not refer " +
                     $"to the type table \"{returnedTypeTable}\" of the returned type \"{returnedTypeTable}\".",
-                    _configValidationStack
-                );
-            }
-        }
-
-        /// <summary>
-        /// Validate the left and right foreign keys for many to many field
-        /// </summary>
-        private void ValidateLeftAndRightFkForM2MField(GraphQLField field)
-        {
-            if (!TableContainsForeignKey(field.AssociativeTable, field.LeftForeignKey) ||
-                !TableContainsForeignKey(field.AssociativeTable, field.RightForeignKey))
-            {
-                throw new ConfigValidationException(
-                    $"Both the left and right foreign key in {field.RelationshipType} field " +
-                    $"must be foreign keys of the field's associative table \"{field.AssociativeTable}\".",
                     _configValidationStack
                 );
             }

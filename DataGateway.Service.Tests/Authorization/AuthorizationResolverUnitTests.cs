@@ -49,8 +49,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             Mock<HttpContext> context = new();
             context.SetupGet(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(StringValues.Empty);
+            bool expected = false;
 
-            Assert.IsFalse(authZResolver.IsValidRoleContext(context.Object));
+            Assert.AreEqual(authZResolver.IsValidRoleContext(context.Object), expected);
         }
 
         [TestMethod("Role header has multiple values")]
@@ -63,8 +64,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             StringValues multipleValuesForHeader = new(new string[] { "Reader", "Writer" });
             context.SetupGet(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(multipleValuesForHeader);
             context.Setup(x => x.User.IsInRole("Reader")).Returns(true);
+            bool expected = false;
 
-            Assert.IsFalse(authZResolver.IsValidRoleContext(context.Object));
+            Assert.AreEqual(authZResolver.IsValidRoleContext(context.Object), expected);
         }
 
         [TestMethod("Role header is missing")]
@@ -75,8 +77,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             Mock<HttpContext> context = new();
             context.SetupGet(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(StringValues.Empty);
+            bool expected = false;
 
-            Assert.IsFalse(authZResolver.IsValidRoleContext(context.Object));
+            Assert.AreEqual(authZResolver.IsValidRoleContext(context.Object), expected);
         }
         #endregion
         #region Role and Action on Entity Tests
@@ -127,8 +130,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             // Mock Request Values - Query a configured entity/role/action with column allowed.
             List<string> columns = new(new string[] { "col1" });
+            bool expected = true;
 
-            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns));
+            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns), expected);
         }
 
         [TestMethod("All Columns allowed for action on role")]
@@ -144,8 +148,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             // Mock Request Values - Query a configured entity/role/action with columns allowed.
             List<string> columns = new(new string[] { "col1", "col2", "col3" });
+            bool expected = true;
 
-            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns));
+            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns), expected);
         }
 
         [TestMethod("Wildcard included columns allowed for action on role")]
@@ -161,8 +166,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             // Mock Request Values - Query a configured entity/role/action with columns allowed.
             List<string> columns = new(new string[] { "col1", "col2", "col3" });
+            bool expected = true;
 
-            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns));
+            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns), expected);
         }
 
         [TestMethod("Wildcard excluded columns with some included for action on role success")]
@@ -179,8 +185,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             // Mock Request Values - Query a configured entity/role/action with column allowed.
             List<string> columns = new(new string[] { "col3", "col4" });
+            bool expected = true;
 
-            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns));
+            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns), expected);
         }
         #endregion
         #region Negative Column Tests
@@ -197,8 +204,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             // Mock Request Values - Query a configured entity/role/action with column NOT allowed.
             List<string> columns = new(new string[] { "col4" });
+            bool expected = false;
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns));
+            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns), expected);
         }
 
         [TestMethod("Columns NOT allowed for action on role - with some valid cols")]
@@ -215,8 +223,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             // Mock Request Values - Query a configured entity/role/action
             // to match all allowed columns, with one NOT allowed column.
             List<string> columns = new(new string[] { "col1", "col2", "col3", "col4" });
+            bool expected = false;
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns));
+            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns), expected);
         }
 
         [TestMethod("Columns NOT allowed for action on role - definition has inc/excl - req has only excluded cols")]
@@ -233,8 +242,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             // Mock Request Values - Query a configured entity/role/action with multiple columns NOT allowed.
             List<string> columns = new(new string[] { "col4", "col5" });
+            bool expected = false;
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns));
+            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns), expected);
         }
 
         [TestMethod("Columns NOT allowed for action on role - Mixed allowed/disallowed in req.")]
@@ -251,8 +261,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             // Mock Request Values - Query a configured entity/role/action with 1 allowed/ 1 disallwed column(s).
             List<string> columns = new(new string[] { "col2", "col5" });
+            bool expected = false;
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns));
+            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns), expected);
         }
 
         [TestMethod("Wildcard excluded for action on role")]
@@ -268,8 +279,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             // Mock Request Values - Query a configured entity/role/action with columns not allowed.
             List<string> columns = new(new string[] { "col1", "col2", "col3" });
-
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns));
+            bool expected = false;
+            
+            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns), expected);
         }
 
         [TestMethod("Wildcard include all except some columns for action on role")]
@@ -305,8 +317,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             // Mock Request Values - Query a configured entity/role/action with two columns allowed, one not.
             List<string> columns = new(new string[] { "col1", "col2", "col3" });
+            bool expected = false;
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns));
+            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns), expected);
         }
 
         [TestMethod("Wildcard exclude all except some columns for action on role - Request with all included columns")]

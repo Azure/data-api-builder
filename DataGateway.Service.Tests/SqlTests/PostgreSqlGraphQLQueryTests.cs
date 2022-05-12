@@ -33,7 +33,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _runtimeConfigPath,
                 _queryEngine,
                 _mutationEngine,
-                _metadataStoreProvider,
+                graphQLMetadataProvider: null,
                 new DocumentCache(),
                 new Sha256DocumentHashProvider(),
                 _sqlMetadataProvider);
@@ -47,7 +47,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public void TestConfigIsValid()
         {
-            IConfigValidator configValidator = new SqlConfigValidator(_metadataStoreProvider, _graphQLService, _sqlMetadataProvider);
+            IConfigValidator configValidator = new SqlConfigValidator(_graphQLService, _sqlMetadataProvider);
             configValidator.ValidateConfig();
         }
 

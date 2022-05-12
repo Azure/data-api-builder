@@ -98,55 +98,6 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate that the fields of a schema type no have invalid return types
-        /// </summary>
-        /// <remarks>
-        /// Nested list types and lists of *Connection types are considered invalid
-        /// </remarks>
-        private void ValidateSchemaFieldsReturnTypes(Dictionary<string, FieldDefinitionNode> fieldDefinitions)
-        {
-            List<string> nestedListFields = new();
-            List<string> listOfPgTypeFields = new();
-
-            foreach (KeyValuePair<string, FieldDefinitionNode> nameFieldPair in fieldDefinitions)
-            {
-                string fieldName = nameFieldPair.Key;
-                FieldDefinitionNode field = nameFieldPair.Value;
-
-                if (IsNestedListType(field.Type))
-                {
-                    nestedListFields.Add(fieldName);
-                }
-                else if (IsListOfPaginationType(field.Type))
-                {
-                    listOfPgTypeFields.Add(fieldName);
-                }
-            }
-
-            if (nestedListFields.Any() || listOfPgTypeFields.Any())
-            {
-                string nestedListMessage =
-                    nestedListFields.Any() ?
-                    $"Fields [{string.Join(", ", nestedListFields)}] must not have a nested " +
-                    "list as a return type. "
-                    : string.Empty;
-
-                string listOfPgTypeMessage =
-                    listOfPgTypeFields.Any() ?
-                    $"Fields [{string.Join(", ", listOfPgTypeFields)}] must have a list of " +
-                    "*Connection types as a return type."
-                    : string.Empty;
-
-                throw new ConfigValidationException(
-                    "Found fields with invalid return types. " +
-                    nestedListMessage +
-                    listOfPgTypeMessage,
-                    _schemaValidationStack
-                );
-            }
-        }
-
-        /// <summary>
         /// Validate pagination type has required fields
         /// </summary>
         private void ValidatePaginationTypeHasRequiredFields(
@@ -184,25 +135,6 @@ namespace Azure.DataGateway.Service.Configurations
             {
                 throw new ConfigValidationException(
                     $"[{string.Join(", ", fieldsWithArguments)}] field of a pagination type must not have arguments.",
-                    _schemaValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Validate the type of "items" field in a Pagination type
-        /// </summary>
-        private void ValidateItemsFieldType(FieldDefinitionNode itemsField)
-        {
-            ITypeNode itemsType = itemsField.Type;
-            if (!IsListType(itemsType) ||
-                !IsInnerTypeCustom(itemsType) ||
-                IsNullableType(itemsType) ||
-                AreListElementsNullable(itemsType) ||
-                IsPaginationType(InnerType(itemsType)))
-            {
-                throw new ConfigValidationException(
-                    "\"items\" must return a non nullable list type of non nullable custom type " +
-                    "\"[CustomType!]!\" where CustomType is not a pagination type.",
                     _schemaValidationStack);
             }
         }
@@ -252,60 +184,6 @@ namespace Azure.DataGateway.Service.Configurations
                 throw new ConfigValidationException(
                     $"Pagination type on \"{paginationUnderlyingType}\" must be called \"{expectedTypeName}\".",
                     _schemaValidationStack);
-            }
-        }
-
-        /// <summary>
-        /// Validate the scalar fields and table columns match one to one
-        /// </summary>
-        /// <remarks>
-        /// Each table column and scalar field should serve a purpouse
-        /// So each table column should either:
-        /// <list type="bullet">
-        /// <item> match in name and type to a field </item>
-        /// <item> be part of the primary or foreign key </item>
-        /// </list>
-        /// Each scalar field should either:
-        /// <list type="bullet">
-        /// <item> match a table column in name and type </item>
-        /// <item> match a GraphQLType.Field </item>
-        /// </list>
-        /// </remarks>
-        private void ValidateTableColumnsMatchScalarFields(string tableName, string typeName, Stack<string> tableColumnPosition)
-        {
-            TableDefinition table = GetTableWithName(tableName);
-            Dictionary<string, ColumnDefinition> tableColumns = table.Columns;
-            Dictionary<string, FieldDefinitionNode> scalarFields = GetScalarFields(GetTypeFields(typeName));
-
-            IEnumerable<string> unmatchedTableColumns = tableColumns.Keys
-                                                            .Except(scalarFields.Keys)
-                                                            .Except(GetPkAndFkColumns(table));
-
-            IEnumerable<string> unmatchedScalarFields = scalarFields.Keys
-                                                            .Except(tableColumns.Keys)
-                                                            .Except(GetConfigFieldsForGqlType(_types[typeName]));
-
-            if (unmatchedTableColumns.Any() || unmatchedScalarFields.Any())
-            {
-                string unmatchedFieldsMessage =
-                    unmatchedScalarFields.Any() ?
-                    $"Fields [{string.Join(", ", unmatchedScalarFields)}] are neither matched to columns nor " +
-                    $"match to type fields in the config. " :
-                    string.Empty;
-
-                string unmatchedColumnsMessage =
-                    unmatchedTableColumns.Any() ?
-                    $"Columns [{string.Join(", ", unmatchedTableColumns)}] are neither matched to fields nor " +
-                    $"serve as primary key or foreign key columns in table \"{tableName}\"." :
-                    string.Empty;
-
-                throw new ConfigValidationException(
-                    "Mismatch between scalar fields and table columns in " +
-                    $"{PrettyPrintValidationStack(tableColumnPosition)}. " +
-                    unmatchedColumnsMessage +
-                    unmatchedFieldsMessage,
-                    _schemaValidationStack
-                );
             }
         }
 
@@ -545,38 +423,6 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Validate that the reference table of the right foreign key refers to type table
-        /// </summary>
-        private void ValidateRightFkRefTableIsTypeTable(ForeignKeyDefinition rightFk, string type)
-        {
-            string typeTable = GetTypeTable(type);
-            if (rightFk.ReferencedTable != typeTable)
-            {
-                throw new ConfigValidationException(
-                    $"Right foreign key's referenced table \"{rightFk.ReferencedTable}\" does not " +
-                    $"refer to the type table \"{typeTable}\" of type \"{typeTable}\".",
-                    _configValidationStack
-                );
-            }
-        }
-
-        /// <summary>
-        /// Validate that the reference table of the left foreign key refers to the returned type's table
-        /// </summary>
-        private void ValidateLeftFkRefTableIsReturnedTypeTable(ForeignKeyDefinition rightFk, string returnedType)
-        {
-            string returnedTypeTable = GetTypeTable(returnedType);
-            if (rightFk.ReferencedTable != returnedTypeTable)
-            {
-                throw new ConfigValidationException(
-                    $"Left foreign key's referenced table \"{rightFk.ReferencedTable}\" does not refer " +
-                    $"to the type table \"{returnedTypeTable}\" of the returned type \"{returnedTypeTable}\".",
-                    _configValidationStack
-                );
-            }
-        }
-
-        /// <summary>
         /// Validate that Config.GraphQLTypes has already been validated
         /// </summary>
         private void ValidateGraphQLTypesIsValidated()
@@ -689,20 +535,6 @@ namespace Azure.DataGateway.Service.Configurations
                     "Mutation must not return a list type.",
                     _schemaValidationStack
                 );
-            }
-        }
-
-        /// <summary>
-        /// Validate the return type of the mutation matches the mutation resolver table
-        /// </summary>
-        private void ValidateMutReturnTypeMatchesTable(string resolverTable, FieldDefinitionNode mutation)
-        {
-            if (resolverTable != GetTypeTable(InnerTypeStr(mutation.Type)))
-            {
-                throw new ConfigValidationException(
-                    $"Mutation return type {mutation.Type.ToString()} does not match the type " +
-                    $"associated with this mutation's resolver table \"{resolverTable}\".",
-                    _schemaValidationStack);
             }
         }
 

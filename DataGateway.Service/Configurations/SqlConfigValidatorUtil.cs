@@ -194,14 +194,6 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Checks if config type has fields
-        /// </summary>
-        private static bool TypeHasFields(GraphQLType type)
-        {
-            return type.Fields != null;
-        }
-
-        /// <summary>
         /// A more readable version of !type.IsNonNullType
         /// </summary>
         private static bool IsNullableType(ITypeNode type)
@@ -216,38 +208,6 @@ namespace Azure.DataGateway.Service.Configurations
         private static bool IsNestedListType(ITypeNode type)
         {
             return IsListType(InnerType(type));
-        }
-
-        /// <summary>
-        /// Checks if the type is a list of pagination type
-        /// e.g.
-        /// [BookConnection] -> true
-        /// [[BookConnection]] -> false (list of lists, not list of pagination type)
-        /// </summary>
-        private bool IsListOfPaginationType(ITypeNode type)
-        {
-            return IsListType(type) && IsPaginationType(InnerType(type));
-        }
-
-        /// <summary>
-        /// Checks if the given type name is the name of a pagination type
-        /// </summary>
-        private bool IsPaginationTypeName(string typeName)
-        {
-            if (_resolverConfig.GraphQLTypes.TryGetValue(typeName, out GraphQLType? type))
-            {
-                return type.IsPaginationType;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Returns if type is a pagination type or not
-        /// </summary>
-        private bool IsPaginationType(ITypeNode type)
-        {
-            return IsPaginationTypeName(type.NullableType().ToString());
         }
 
         /// <summary>
@@ -441,39 +401,6 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Get the config GraphQLTypes.Fields for a graphql schema type
-        /// </summary>
-        private static IEnumerable<string> GetConfigFieldsForGqlType(ObjectTypeDefinitionNode type)
-        {
-            return _resolverConfig.GraphQLTypes[type.Name.Value].Fields.Keys;
-        }
-
-        /// <summary>
-        /// Check that GraphQLType.Field has only a left foreign key
-        /// </summary>
-        private static bool HasLeftForeignKey(GraphQLField field)
-        {
-            return !string.IsNullOrEmpty(field.LeftForeignKey);
-        }
-
-        /// <summary>
-        /// Check that GraphQLType.Field has only a right foreign key
-        /// </summary>
-        private static bool HasRightForeignKey(GraphQLField field)
-        {
-            return !string.IsNullOrEmpty(field.RightForeignKey);
-        }
-
-        /// <summary>
-        /// Get the db table underlying the GraphQL type
-        /// Assumes type is valid throws KeyNotFoundException otherwise
-        /// </summary>
-        private string GetTypeTable(string type)
-        {
-            return GetGraphQLTypes()[type].Table;
-        }
-
-        /// <summary>
         /// Whether a table contains a foreign key by the given name
         /// ArgumentException on invalid tableName
         /// </summary>
@@ -496,23 +423,6 @@ namespace Azure.DataGateway.Service.Configurations
         private ForeignKeyDefinition GetFkFromTable(string entityName, string fkName)
         {
             return _sqlMetadataProvider.GetTableDefinition(entityName).ForeignKeys[fkName];
-        }
-
-        /// <summary>
-        /// Gets mutation resolvers from config
-        /// </summary>
-        private static List<MutationResolver> GetMutationResolvers()
-        {
-            return _resolverConfig.MutationResolvers;
-        }
-
-        /// <summary>
-        /// Get mutation resolver ids
-        /// May contain null for resolvers without ids
-        /// </summary>
-        private IEnumerable<string> GetMutationResolverIds()
-        {
-            return GetMutationResolvers().Select(resolver => resolver.Id);
         }
 
         /// <summary>

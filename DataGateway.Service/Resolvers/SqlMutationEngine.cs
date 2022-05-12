@@ -59,7 +59,7 @@ namespace Azure.DataGateway.Service.Resolvers
             string graphqlMutationName = context.Selection.Field.Name.Value;
             MutationResolver mutationResolver = _metadataStoreProvider.GetMutationResolver(graphqlMutationName);
 
-            string tableName = mutationResolver.Table;
+            string entityName = context.Selection.Field.Type.TypeName();
 
             Tuple<JsonDocument, IMetadata>? result = null;
 
@@ -71,13 +71,13 @@ namespace Azure.DataGateway.Service.Resolvers
 
             using DbDataReader dbDataReader =
                 await PerformMutationOperation(
-                    tableName,
+                    entityName,
                     mutationResolver.OperationType,
                     parameters);
 
             if (!context.Selection.Type.IsScalarType() && mutationResolver.OperationType != Operation.Delete)
             {
-                TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(tableName);
+                TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
 
                 // only extract pk columns
                 // since non pk columns can be null

@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service.Parsers
         /// </returns>
         /// <exception cref="DataGatewayException">If the table or parsed schema is null it will throw this exception.
         /// </exception>
-        public static (string?, string?) ParseSchemaAndTable(string input)
+        public static (string?, string) ParseSchemaAndTable(string input)
         {
             (string?, string?) schemaTable = ParseSchemaAndTableHelper(input);
             if (string.IsNullOrEmpty(schemaTable.Item2))
@@ -63,7 +63,7 @@ namespace Azure.DataGateway.Service.Parsers
                                                subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
             }
 
-            if (input[input.Length - 1] == '.')
+            if (input.EndsWith('.'))
             {
                 throw new DataGatewayException(message: "Input cannot end with '.'",
                                                statusCode: HttpStatusCode.ServiceUnavailable,
@@ -190,7 +190,7 @@ namespace Azure.DataGateway.Service.Parsers
             // Special cases for parsing tokens at the end of the string.
             if (startsWithBracket)
             {
-                if (input[input.Length - 1] != ']')
+                if (!input.EndsWith(']'))
                 {
                     // ^ is startIndex and i is current index
                     // Ex: [abcdef

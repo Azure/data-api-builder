@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection.Metadata;
 using System.Text.Json;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
@@ -92,7 +91,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// </summary>
         [DataTestMethod]
         [DataRow("Writer", "Create", "Writer", "Create", true)]
-        [DataRow("Reader", "", "Reader", "Create", false )]
+        [DataRow("Reader", "Create", "Reader", "", false )]
         [DataRow("Writer", "Create", "Writer", "Update", false)]
         public void AreRoleAndActionDefinedForEntityTest(
             string configRole,
@@ -104,7 +103,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = InitRuntimeConfig(TEST_ENTITY, configRole, configAction);
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
-            // Mock Request Values - Query a configured entity with a role that is NOT configured.
+            // Mock Request Values
             Assert.AreEqual(authZResolver.AreRoleAndActionDefinedForEntity(TEST_ENTITY, roleName, actionName), expected);
         }
         #endregion

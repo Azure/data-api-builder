@@ -1,3 +1,4 @@
+using System.Globalization;
 using Azure.DataGateway.Config;
 using HotChocolate.Language;
 using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLNaming;
@@ -32,6 +33,24 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             };
             definitionNodes.AddRange(inputs.Values);
             return new(definitionNodes);
+        }
+
+        public static Operation DetermineMutationOperationTypeBasedOnInputType(string inputTypeName)
+        {
+            Operation operationType = Operation.Delete;
+            if(inputTypeName.StartsWith(
+                $"{Operation.Create}", StringComparison.OrdinalIgnoreCase))
+            {
+                operationType = Operation.Create;
+            }
+
+            if (inputTypeName.StartsWith(
+                $"{Operation.Update}", StringComparison.OrdinalIgnoreCase))
+            {
+                operationType = Operation.Update;
+            }
+
+            return operationType;
         }
     }
 }

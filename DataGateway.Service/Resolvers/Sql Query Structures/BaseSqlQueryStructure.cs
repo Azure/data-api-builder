@@ -18,8 +18,6 @@ namespace Azure.DataGateway.Service.Resolvers
     {
         protected ISqlMetadataProvider SqlMetadataProvider { get; }
 
-        protected IGraphQLMetadataProvider MetadataStoreProvider { get; }
-
         /// <summary>
         /// The name of the main table to be queried.
         /// </summary>
@@ -37,13 +35,11 @@ namespace Azure.DataGateway.Service.Resolvers
         public string? FilterPredicates { get; set; }
 
         public BaseSqlQueryStructure(
-            IGraphQLMetadataProvider metadataStoreProvider,
             ISqlMetadataProvider sqlMetadataProvider,
             IncrementingInteger? counter = null,
             string tableName = "")
             : base(counter)
         {
-            MetadataStoreProvider = metadataStoreProvider;
             SqlMetadataProvider = sqlMetadataProvider;
             TableName = tableName;
             // Default the alias to the table name

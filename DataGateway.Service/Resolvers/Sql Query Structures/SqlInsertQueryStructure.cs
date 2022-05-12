@@ -31,10 +31,9 @@ namespace Azure.DataGateway.Service.Resolvers
 
         public SqlInsertStructure(
             string tableName,
-            IGraphQLMetadataProvider metadataStoreProvider,
             ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams)
-        : base(metadataStoreProvider, sqlMetadataProvider, tableName: tableName)
+        : base(sqlMetadataProvider, tableName: tableName)
         {
             InsertColumns = new();
             Values = new();

@@ -46,7 +46,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public void TestConfigIsValid()
         {
-            IConfigValidator configValidator = new SqlConfigValidator(_metadataStoreProvider, _graphQLService, _sqlMetadataProvider);
+            IConfigValidator configValidator = new SqlConfigValidator(_graphQLService, _sqlMetadataProvider);
             configValidator.ValidateConfig();
         }
 

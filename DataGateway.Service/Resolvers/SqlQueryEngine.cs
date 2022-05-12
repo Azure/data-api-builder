@@ -17,7 +17,6 @@ namespace Azure.DataGateway.Service.Resolvers
     //</summary>
     public class SqlQueryEngine : IQueryEngine
     {
-        private readonly IGraphQLMetadataProvider _metadataStoreProvider;
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly IQueryExecutor _queryExecutor;
         private readonly IQueryBuilder _queryBuilder;
@@ -26,12 +25,10 @@ namespace Azure.DataGateway.Service.Resolvers
         // Constructor.
         // </summary>
         public SqlQueryEngine(
-            IGraphQLMetadataProvider metadataStoreProvider,
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder,
             ISqlMetadataProvider sqlMetadataProvider)
         {
-            _metadataStoreProvider = metadataStoreProvider;
             _queryExecutor = queryExecutor;
             _queryBuilder = queryBuilder;
             _sqlMetadataProvider = sqlMetadataProvider;
@@ -83,7 +80,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _sqlMetadataProvider);
+            SqlQueryStructure structure = new(context, parameters, _sqlMetadataProvider);
             string queryString = _queryBuilder.Build(structure);
             Console.WriteLine(queryString);
             using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, structure.Parameters);

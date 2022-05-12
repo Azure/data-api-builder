@@ -39,7 +39,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static IQueryBuilder _queryBuilder;
         protected static IQueryEngine _queryEngine;
         protected static IMutationEngine _mutationEngine;
-        protected static GraphQLFileMetadataProvider _metadataStoreProvider;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
         protected static DbExceptionParserBase _dbExceptionParser;
@@ -94,7 +93,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     break;
             }
 
-            _metadataStoreProvider = new GraphQLFileMetadataProvider(_runtimeConfigPath);
             // Setup AuthorizationService to always return Authorized.
             _authorizationService = new Mock<IAuthorizationService>();
             _authorizationService.Setup(x => x.AuthorizeAsync(
@@ -108,14 +106,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
 
             _queryEngine = new SqlQueryEngine(
-                _metadataStoreProvider,
                 _queryExecutor,
                 _queryBuilder,
                 _sqlMetadataProvider);
             _mutationEngine =
                 new SqlMutationEngine(
                 _queryEngine,
-                _metadataStoreProvider,
                 _queryExecutor,
                 _queryBuilder,
                 _sqlMetadataProvider);

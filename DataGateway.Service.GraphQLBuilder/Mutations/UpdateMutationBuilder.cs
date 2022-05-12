@@ -137,7 +137,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
         private static NameNode GenerateInputTypeName(string typeName, Entity entity)
         {
-            return new($"Update{FormatNameForObject(typeName, entity)}Input");
+            return new($"{Operation.Update}{FormatNameForObject(typeName, entity)}Input");
         }
 
         /// <summary>

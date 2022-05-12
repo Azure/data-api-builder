@@ -19,7 +19,6 @@ namespace Azure.DataGateway.Service.Configurations
     /// Each function checks for only one thing and throws only one exception.
     public partial class SqlConfigValidator : IConfigValidator
     {
-        private ResolverConfig _resolverConfig;
         private ISchema? _schema;
         private ISqlMetadataProvider _sqlMetadataProvider;
         private Stack<string> _configValidationStack;
@@ -33,7 +32,6 @@ namespace Azure.DataGateway.Service.Configurations
         /// Sets the config and schema for the validator
         /// </summary>
         public SqlConfigValidator(
-            IGraphQLMetadataProvider metadataStoreProvider,
             GraphQLService graphQLService,
             ISqlMetadataProvider sqlMetadataProvider)
         {
@@ -44,7 +42,6 @@ namespace Azure.DataGateway.Service.Configurations
             _queries = new();
             _graphQLTypesAreValidated = false;
 
-            _resolverConfig = metadataStoreProvider.GetResolvedConfig();
             _sqlMetadataProvider = sqlMetadataProvider;
             _schema = graphQLService.Schema;
 
@@ -68,51 +65,6 @@ namespace Azure.DataGateway.Service.Configurations
                         }
                     }
                 }
-            }
-        }
-
-        /// <summary>
-        /// Validate that config has a GraphQLTypes element
-        /// </summary>
-        private void ValidateConfigHasGraphQLTypes()
-        {
-            if (_resolverConfig.GraphQLTypes == null || _resolverConfig.GraphQLTypes.Count == 0)
-            {
-                throw new ConfigValidationException(
-                    $"Config must have a non empty \"GraphQLTypes\" element.",
-                    _configValidationStack
-                );
-            }
-        }
-
-        /// <summary>
-        /// Validate that config has a MutationResolvers element
-        /// if the GraphQL schema has a mutations
-        /// </summary>
-        private void ValidateConfigHasMutationResolvers()
-        {
-            if (_resolverConfig.MutationResolvers == null || _resolverConfig.MutationResolvers.Count == 0)
-            {
-                throw new ConfigValidationException(
-                    $"Config must have a non empty \"MutationResolvers\" element to resolve " +
-                    "GraphQL mutations.",
-                    _configValidationStack
-                );
-            }
-        }
-
-        /// <summary>
-        /// Validate that the config has "MutationResolvers" element
-        /// Called when there are no mutations in the schema
-        /// </summary>
-        private void ValidateNoMutationResolvers()
-        {
-            if (_resolverConfig.MutationResolvers != null)
-            {
-                throw new ConfigValidationException(
-                    "Config doesn't need a \"MutationResolvers\" element. No mutations in the schema.",
-                    _configValidationStack
-                );
             }
         }
 

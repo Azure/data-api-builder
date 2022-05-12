@@ -1,11 +1,9 @@
 {
   "$schema": "../../project-hawaii/playground/hawaii.draft-01.schema.json",
   "data-source": {
-    "database-type": "mssql",
-    "connection-string": ""
-  },
-  "mssql": {
-    "set-session-context": true
+    "database-type": "mysql",
+    "connection-string": "DO NOT EDIT, look at CONTRIBUTING.md on how to run tests",
+    "resolver-config-file": "sql-config.json"
   },
   "runtime": {
     "rest": {
@@ -24,7 +22,7 @@
         "allow-credentials": true
       },
       "authentication": {
-        "provider": "",
+        "provider": "EasyAuth",
         "jwt": {
           "audience": "",
           "issuer": "",
@@ -76,57 +74,6 @@
           "source.fields": [ "categoryName" ],
           "target.fields": [ "categoryName" ]
         }
-      }
-    },
-    "BOOKS_VIEW_ALL": {
-      "source": "BOOKS_VIEW_ALL",
-      "rest": true,
-      "graphql": true,
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [ "read" ]
-        },
-        {
-          "role": "authenticated",
-          "actions": [ "read" ]
-        }
-      ],
-      "relationships": {
-      }
-    },
-    "STOCKS_VIEW_SELECTED": {
-      "source": "STOCKS_VIEW_SELECTED",
-      "rest": true,
-      "graphql": true,
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [ "read" ]
-        },
-        {
-          "role": "authenticated",
-          "actions": [ "read" ]
-        }
-      ],
-      "relationships": {
-      }
-    },
-    "BOOKS_PUBLISHERS_VIEW_COMPOSITE": {
-      "source": "BOOKS_PUBLISHERS_VIEW_COMPOSITE",
-      "rest": true,
-      "graphql": true,
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [ "read" ]
-        },
-        {
-          "role": "authenticated",
-          "actions": [ "read" ]
-        }
-      ],
-      "relationships": {
       }
     },
     "books": {

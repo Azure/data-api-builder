@@ -1,0 +1,285 @@
+{
+  "$schema": "../../project-hawaii/playground/hawaii.draft-01.schema.json",
+  "data-source": {
+    "database-type": "mssql",
+    "connection-string": "",
+    "resolver-config-file": "sql-config.json"
+  },
+  "runtime": {
+    "rest": {
+      "enabled": true,
+      "path": "/api"
+    },
+    "graphql": {
+      "enabled": true,
+      "path": "/graphql",
+      "allow-introspection": true
+    },
+    "host": {
+      "mode": "Development",
+      "cors": {
+        "origins": [ "1", "2" ],
+        "allow-credentials": true
+      },
+      "authentication": {
+        "provider": "",
+        "jwt": {
+          "audience": "",
+          "issuer": "",
+          "issuer-key": ""
+        }
+      }
+    }
+  },
+  "entities": {
+    "publishers": {
+      "source": "publishers",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "relationships": {
+        "books": {
+          "cardinality": "many",
+          "target.entity": "books"
+        }
+      }
+    },
+    "stocks": {
+      "source": "stocks",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update" ]
+        }
+      ],
+      "relationships": {
+        "comics": {
+          "cardinality": "many",
+          "target.entity": "comics",
+          "source.fields": [ "categoryName" ],
+          "target.fields": [ "categoryName" ]
+        }
+      }
+    },
+    "BOOKS_VIEW_ALL": {
+      "source": "BOOKS_VIEW_ALL",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "read" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
+    "STOCKS_VIEW_SELECTED": {
+      "source": "STOCKS_VIEW_SELECTED",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "read" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
+    "BOOKS_PUBLISHERS_VIEW_COMPOSITE": {
+      "source": "BOOKS_PUBLISHERS_VIEW_COMPOSITE",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "read" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
+    "books": {
+      "source": "books",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "update", "delete" ]
+        }
+      ],
+      "relationships": {
+        "publisher": {
+          "cardinality": "one",
+          "target.entity": "publisher"
+        },
+        "websiteplacement": {
+          "cardinality": "one",
+          "target.entity": "book_website_placements"
+        },
+        "reviews": {
+          "cardinality": "many",
+          "target.entity": "reviews"
+        },
+        "authors": {
+          "cardinality": "many",
+          "target.entity": "authors",
+          "linking.object": "book_author_link",
+          "linking.source.fields": [ "book_id" ],
+          "linking.target.fields": [ "author_id" ]
+        }
+      }
+    },
+    "book_website_placements": {
+      "source": "book_website_placements",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "update",
+            {
+              "action": "delete",
+              "policy": {
+                "database": "@claims.id eq @item.id"
+              },
+              "fields": {
+                "include": [ "*" ],
+                "exclude": [ "id" ]
+              }
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "book_website_placements": {
+          "cardinality": "one",
+          "target.entity": "books"
+        }
+      }
+    },
+    "authors": {
+      "source": "authors",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        }
+      ],
+      "relationships": {
+        "books": {
+          "cardinality": "many",
+          "target.entity": "books",
+          "linking.object": "book_author_link"
+        }
+      }
+    },
+    "reviews": {
+      "source": "reviews",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        }
+      ],
+      "relationships": {
+        "books": {
+          "cardinality": "one",
+          "target.entity": "books"
+        }
+      }
+    },
+    "magazines": {
+      "source": "magazines",
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "*",
+              "fields": {
+                "include": [ "*" ],
+                "exclude": [ "issue_number" ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "comics": {
+      "source": "comics",
+      "rest": true,
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "delete" ]
+        }
+      ]
+    },
+    "brokers": {
+      "source": "brokers",
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        }
+      ]
+    },
+    "website_users": {
+      "source": "website_users",
+      "rest": false,
+      "permissions": []
+    }
+  }
+}

@@ -70,7 +70,7 @@ namespace Azure.DataGateway.Service.Authorization
         {
             if (_entityPermissionMap.TryGetValue(entityName, out EntityDS? valueOfEntityToRole))
             {
-                if (valueOfEntityToRole.RoleToActionMap.TryGetValue(roleName,out RoleDS? valueOfRoleToAction))
+                if (valueOfEntityToRole.RoleToActionMap.TryGetValue(roleName, out RoleDS? valueOfRoleToAction))
                 {
                     if (valueOfRoleToAction.ActionToColumnMap.ContainsKey("*") ||
                         valueOfRoleToAction.ActionToColumnMap.ContainsKey(action))

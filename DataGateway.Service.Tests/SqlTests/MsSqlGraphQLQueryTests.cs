@@ -45,14 +45,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         #endregion
 
         #region Tests
-
-        [TestMethod]
-        public void TestConfigIsValid()
-        {
-            IConfigValidator configValidator = new SqlConfigValidator(_graphQLService, _sqlMetadataProvider);
-            configValidator.ValidateConfig();
-        }
-
         /// <summary>
         /// Gets array of results for querying more than one item.
         /// </summary>

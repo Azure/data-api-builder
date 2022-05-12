@@ -136,7 +136,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             IHeaderDictionary headers = null,
             string bodyData = null)
         {
-
             DefaultHttpContext httpContext;
             if (headers is not null)
             {

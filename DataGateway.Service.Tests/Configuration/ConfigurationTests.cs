@@ -11,8 +11,10 @@ using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MySqlConnector;
@@ -154,9 +156,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             object mutationEngine = server.Services.GetService(typeof(IMutationEngine));
             Assert.IsInstanceOfType(mutationEngine, typeof(SqlMutationEngine));
 
-            object configValidator = server.Services.GetService(typeof(IConfigValidator));
-            Assert.IsInstanceOfType(configValidator, typeof(SqlConfigValidator));
-
             object queryBuilder = server.Services.GetService(typeof(IQueryBuilder));
             Assert.IsInstanceOfType(queryBuilder, typeof(MsSqlQueryBuilder));
 
@@ -182,9 +181,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             object mutationEngine = server.Services.GetService(typeof(IMutationEngine));
             Assert.IsInstanceOfType(mutationEngine, typeof(SqlMutationEngine));
 
-            object configValidator = server.Services.GetService(typeof(IConfigValidator));
-            Assert.IsInstanceOfType(configValidator, typeof(SqlConfigValidator));
-
             object queryBuilder = server.Services.GetService(typeof(IQueryBuilder));
             Assert.IsInstanceOfType(queryBuilder, typeof(PostgresQueryBuilder));
 
@@ -209,9 +205,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
             object mutationEngine = server.Services.GetService(typeof(IMutationEngine));
             Assert.IsInstanceOfType(mutationEngine, typeof(SqlMutationEngine));
-
-            object configValidator = server.Services.GetService(typeof(IConfigValidator));
-            Assert.IsInstanceOfType(configValidator, typeof(SqlConfigValidator));
 
             object queryBuilder = server.Services.GetService(typeof(IQueryBuilder));
             Assert.IsInstanceOfType(queryBuilder, typeof(MySqlQueryBuilder));
@@ -470,6 +463,15 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             ValidateCosmosDbSetup(server);
         }
 
+        [TestMethod("Validates the runtime configuration file.")]
+        public void TestConfigIsValid()
+        {
+            IOptionsMonitor<RuntimeConfigPath> configPath =
+                SqlTestHelper.LoadConfig(MSSQL_ENVIRONMENT);
+            IConfigValidator configValidator = new RuntimeConfigValidator(configPath);
+            configValidator.ValidateConfig();
+        }
+
         /// <summary>
         /// Set the connection string to an invalid value and expect the service to be unavailable
         // since without this env var, it would be available - guaranteeing this env variable
@@ -510,9 +512,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
             object mutationEngine = server.Services.GetService(typeof(IMutationEngine));
             Assert.IsInstanceOfType(mutationEngine, typeof(CosmosMutationEngine));
-
-            object configValidator = server.Services.GetService(typeof(IConfigValidator));
-            Assert.IsInstanceOfType(configValidator, typeof(CosmosConfigValidator));
 
             CosmosClientProvider cosmosClientProvider = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
             Assert.IsNotNull(cosmosClientProvider);

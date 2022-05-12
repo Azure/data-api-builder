@@ -43,13 +43,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         #region Tests
 
         [TestMethod]
-        public void TestConfigIsValid()
-        {
-            IConfigValidator configValidator = new SqlConfigValidator(_graphQLService, _sqlMetadataProvider);
-            configValidator.ValidateConfig();
-        }
-
-        [TestMethod]
         public async Task MultipleResultQuery()
         {
             string graphQLQueryName = "books";

@@ -21,7 +21,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string schemaTable = "table";
             (string, string) expected = ("", "table");
             (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.IsTrue(expected.Equals(actual));
+            Assert.AreEqual(expected, actual);
         }
 
         [TestMethod]
@@ -30,7 +30,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string schemaTable = "schema.table";
             (string, string) expected = ("schema", "table");
             (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.IsTrue(expected.Equals(actual));
+            Assert.AreEqual(expected, actual);
         }
 
         [TestMethod]
@@ -39,7 +39,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string schemaTable = "[schema].table";
             (string, string) expected = ("schema", "table");
             (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.IsTrue(expected.Equals(actual));
+            Assert.AreEqual(expected, actual);
         }
 
         [TestMethod]
@@ -48,7 +48,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string schemaTable = "schema.[tabl.]";
             (string, string) expected = ("schema", "tabl.");
             (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.IsTrue(expected.Equals(actual));
+            Assert.AreEqual(expected, actual);
         }
 
         [TestMethod]
@@ -57,7 +57,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string schemaTable = "schema.[tabl.]]]";
             (string, string) expected = ("schema", "tabl.]]");
             (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.IsTrue(expected.Equals(actual));
+            Assert.AreEqual(expected, actual);
         }
 
         [TestMethod]
@@ -66,7 +66,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string schemaTable = "[[sche]].abc].table";
             (string, string) expected = ("[sche]].abc", "table");
             (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.IsTrue(expected.Equals(actual));
+            Assert.AreEqual(expected, actual);
         }
 
         [TestMethod]
@@ -75,7 +75,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string schemaTable = "[[sche.ma].table";
             (string, string) expected = ("[sche.ma", "table");
             (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.IsTrue(expected.Equals(actual));
+            Assert.AreEqual(expected, actual);
         }
 
         [TestMethod]
@@ -84,7 +84,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string schemaTable = "[[sche.ma]]].[table]]]";
             (string, string) expected = ("[sche.ma]]", "table]]");
             (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.IsTrue(expected.Equals(actual));
+            Assert.AreEqual(expected, actual);
         }
 
         [TestMethod]
@@ -93,7 +93,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string schemaTable = "[[schema]].[ta[ble]]]";
             (string, string) expected = ("", "[schema]].[ta[ble]]");
             (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.IsTrue(expected.Equals(actual));
+            Assert.AreEqual(expected, actual);
         }
 
         [TestMethod]
@@ -102,7 +102,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string schemaTable = "[].[a]";
             (string, string) expected = ("", "a");
             (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.IsTrue(expected.Equals(actual));
+            Assert.AreEqual(expected, actual);
         }
 
         [TestMethod]
@@ -111,7 +111,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string schemaTable = "[sche]]].abc";
             (string, string) expected = ("sche]]", "abc");
             (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.IsTrue(expected.Equals(actual));
+            Assert.AreEqual(expected, actual);
         }
 
         [TestMethod]
@@ -120,7 +120,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string schemaTable = "[schem]].]].a].[tabl.]]]";
             (string, string) expected = ("schem]].]].a", "tabl.]]");
             (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.IsTrue(expected.Equals(actual));
+            Assert.AreEqual(expected, actual);
         }
 
         [TestMethod]

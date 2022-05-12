@@ -45,7 +45,7 @@ type Query {
     planets(first: Int, after: String): PlanetConnection
     getPlanetListById(id: ID): [Planet]
     getPlanetByName(name: String): Planet
-    getPlanetListWithOrderBy(orderBy: PlanetOrderByInput): [Planet]
+    getPlanetsWithOrderBy(first: Int, after: String, orderBy: PlanetOrderByInput): PlanetConnection
 }
 
 type Mutation {

@@ -6,7 +6,7 @@ type Query {
     planetList: [Planet]
     planets(first: Int, after: String): PlanetConnection
     getPlanetWithOrderBy(orderBy: PlanetOrderByInput): Planet
-    getPlanetListWithOrderBy(orderBy: PlanetOrderByInput): [Planet]
+    getPlanetsWithOrderBy(first: Int, after: String, orderBy: PlanetOrderByInput): PlanetConnection
 }
 
 type Mutation {

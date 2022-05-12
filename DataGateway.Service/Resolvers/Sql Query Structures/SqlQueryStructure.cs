@@ -759,17 +759,27 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 if (enumValue.Value == $"{OrderByDir.Desc}")
                 {
-                    orderByColumnsList.Add(new OrderByColumn(TableAlias, fieldName, OrderByDir.Desc));
+                    orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
+                                                             tableName: DatabaseObject.Name,
+                                                             columnName: fieldName,
+                                                             tableAlias: TableAlias,
+                                                             direction: OrderByDir.Desc));
                 }
                 else
                 {
-                    orderByColumnsList.Add(new OrderByColumn(TableAlias, fieldName));
+                    orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
+                                                             tableName: DatabaseObject.Name,
+                                                             columnName: fieldName,
+                                                             tableAlias: TableAlias));
                 }
             }
 
             foreach (string colName in remainingPkCols)
             {
-                orderByColumnsList.Add(new OrderByColumn(TableAlias, colName));
+                orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
+                                                         tableName: DatabaseObject.Name,
+                                                         columnName: colName,
+                                                         tableAlias: TableAlias));
             }
 
             return orderByColumnsList;
@@ -787,7 +797,10 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 foreach (string column in PrimaryKey())
                 {
-                    _primaryKeyAsOrderByColumns.Add(new OrderByColumn(TableAlias, column));
+                    _primaryKeyAsOrderByColumns.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
+                                                                      tableName: DatabaseObject.Name,
+                                                                      columnName: column,
+                                                                      tableAlias: TableAlias));
                 }
             }
 

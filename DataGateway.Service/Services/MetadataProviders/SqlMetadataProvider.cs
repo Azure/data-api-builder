@@ -25,8 +25,6 @@ namespace Azure.DataGateway.Service.Services
         where DataAdapterT : DbDataAdapter, new()
         where CommandT : DbCommand, new()
     {
-        private readonly IRuntimeConfigProvider _runtimeConfigProvider;
-
         public FilterParser ODataFilterParser { get; } = new();
         private FilterParser _oDataFilterParser = new();
 
@@ -232,7 +230,7 @@ namespace Azure.DataGateway.Service.Services
                 // if DatabaseType is not postgresql will short circuit and use default
                 if (DatabaseType is not DatabaseType.postgresql || !TryGetSchemaFromConnectionString(
                                                                     out schemaName,
-                                                                    connectionString: _runtimeConfigProvider.GetRuntimeConfig().DataSource.ConnectionString))
+                                                                    connectionString: ConnectionString))
                 {
                     schemaName = GetDefaultSchemaName();
                 }

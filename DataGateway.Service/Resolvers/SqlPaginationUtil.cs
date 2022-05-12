@@ -111,7 +111,6 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public static string MakeCursorFromJsonElement(JsonElement element,
                                                         List<string> primaryKey,
-                                                        JsonElement? nextElement,
                                                         List<OrderByColumn>? orderByColumns,
                                                         string schemaName = "",
                                                         string tableName = "")

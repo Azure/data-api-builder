@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service.Models
         /// The database object associated with the target entity.
         /// </summary>
         public DatabaseObject DatabaseObject { get; }
-        
+
         /// <summary>
         /// Field names of the entity that are queried in the request.
         /// </summary>

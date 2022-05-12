@@ -71,7 +71,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                       }
                     ]
                 }";
-            
+
             JsonSerializerOptions options = new()
             {
                 PropertyNameCaseInsensitive = true,

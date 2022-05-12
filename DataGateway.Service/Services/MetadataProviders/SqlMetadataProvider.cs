@@ -175,7 +175,6 @@ namespace Azure.DataGateway.Service.Services
 
                     EntityToDatabaseObject.Add(entityName, databaseObject);
                 }
-                
 
                 if (entity.Relationships != null)
                 {

@@ -112,7 +112,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// [{table}].[{ColumnName}]
         /// </summary>
         protected virtual string Build(Column column)
-        {   
+        {
             // If the table alias is not empty, we return [{TableAlias}].[{Column}]
             if (!string.IsNullOrEmpty(column.TableAlias))
             {

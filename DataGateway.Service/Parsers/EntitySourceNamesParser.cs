@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Net;
 using Azure.DataGateway.Service.Exceptions;
@@ -55,7 +54,6 @@ namespace Azure.DataGateway.Service.Parsers
         /// </exception>
         private static (string?, string?) ParseSchemaAndTableHelper(string input)
         {
-            
             if (string.IsNullOrEmpty(input))
             {
                 throw new DataGatewayException(message: "Input is null or empty string",
@@ -81,7 +79,6 @@ namespace Azure.DataGateway.Service.Parsers
                 //If there is more than two tokens, it means their input was not valid.
                 if (tokens.Count > 2)
                 {
-                    
                     throw new DataGatewayException(message: $"Invalid number of tokens for={input}. Number of tokens is=${tokens.Count}",
                                                    statusCode: HttpStatusCode.ServiceUnavailable,
                                                    subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
@@ -95,8 +92,7 @@ namespace Azure.DataGateway.Service.Parsers
                 return (string.Empty, (string?)tokens[0]);
             }
 
-            // If there is we parsed two tokens that means we parsed the schema and table name.
-            
+            // If there is we parsed two tokens that means we parsed the schema and table name.            
             return ((string?)tokens[0], (string?)tokens[1]);
         }
 

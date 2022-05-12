@@ -36,7 +36,6 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             return Mock.Of<IOptionsMonitor<RuntimeConfigPath>>(_ => _.CurrentValue == configPath);
         }
 
-
         /// <summary>
         /// Temporary Helper function to ensure that in testing we have an entity
         /// that can have a custom schema. We create a new entity of 'Magazine' with

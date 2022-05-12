@@ -239,9 +239,11 @@ namespace Azure.DataGateway.Service.Tests.REST
             string tableName,
             bool isList = false)
         {
-            DatabaseObject dbo = new();
-            dbo.SchemaName = schemaName;
-            dbo.Name = tableName;
+            DatabaseObject dbo = new()
+            {
+                SchemaName = schemaName,
+                Name = tableName
+            };
             FindRequestContext context = new(entityName, dbo, isList);
             Mock<SqlQueryStructure> structure = new(context, _metadataStoreProvider, _sqlMetadataProvider);
             return new ODataASTVisitor(structure.Object);

@@ -345,7 +345,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             {
                 SchemaName = schema,
                 Name = name
-            };            
+            };
         }
     }
 }

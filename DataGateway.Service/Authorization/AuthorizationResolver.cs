@@ -16,13 +16,13 @@ namespace Azure.DataGateway.Service.Authorization
     /// </summary>
     public class AuthorizationResolver : IAuthorizationResolver
     {
-        private Dictionary<string, EntityDS> _entityConfigMap;
+        private Dictionary<string, EntityDS> _entityPermissionMap;
         private const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
 
         public AuthorizationResolver(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
         {
             // Datastructure constructor will pull required properties from metadataprovider.
-            _entityConfigMap = GetEntityConfigMap(runtimeConfigPath.CurrentValue.ConfigValue!);
+            _entityPermissionMap = GetEntityConfigMap(runtimeConfigPath.CurrentValue.ConfigValue!);
         }
 
         /// <summary>
@@ -32,8 +32,8 @@ namespace Azure.DataGateway.Service.Authorization
         /// </summary>
         /// <param name="httpContext">Contains request headers and metadata of the authenticated user.</param>
         /// <returns>
-        /// Client Role HEader
-        ///     Header not present -> FALSE, anonymous request must still provided required header.
+        /// Client Role Header
+        ///     Header not present -> FALSE, anonymous request must still provide required header.
         ///     Header present, no value -> FALSE
         ///     Header present, invalid value -> FALSE
         ///     Header present, valid value -> TRUE
@@ -69,11 +69,11 @@ namespace Azure.DataGateway.Service.Authorization
         /// <inheritdoc />
         public bool AreRoleAndActionDefinedForEntity(string entityName, string roleName, string action)
         {
-            if (_entityConfigMap.TryGetValue(entityName, out EntityDS? value))
+            if (_entityPermissionMap.TryGetValue(entityName, out EntityDS? valueOfEntityToRole))
             {
-                if (value.RoleToActionMap.ContainsKey(roleName))
+                if (valueOfEntityToRole.RoleToActionMap.TryGetValue(roleName,out RoleDS? valueOfRoleToAction))
                 {
-                    Dictionary<string, ActionDS> actionToColumnMap = _entityConfigMap[entityName].RoleToActionMap[roleName].ActionToColumnMap;
+                    Dictionary<string, ActionDS> actionToColumnMap = valueOfRoleToAction.ActionToColumnMap;
                     if (actionToColumnMap.ContainsKey("*") || actionToColumnMap.ContainsKey(action))
                     {
                         return true;
@@ -88,13 +88,13 @@ namespace Azure.DataGateway.Service.Authorization
         public bool AreColumnsAllowedForAction(string entityName, string roleName, string actionName, List<string> columns)
         {
             ActionDS actionToColumnMap;
-            if (_entityConfigMap[entityName].RoleToActionMap[roleName].ActionToColumnMap.ContainsKey("*"))
+            if (_entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap.ContainsKey("*"))
             {
-                actionToColumnMap = _entityConfigMap[entityName].RoleToActionMap[roleName].ActionToColumnMap["*"];
+                actionToColumnMap = _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap["*"];
             }
             else
             {
-                actionToColumnMap = _entityConfigMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[actionName];
+                actionToColumnMap = _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[actionName];
             }
 
             foreach (string column in columns)
@@ -137,11 +137,10 @@ namespace Azure.DataGateway.Service.Authorization
                     string role = permission.Role;
                     RoleDS roleToAction = new();
                     JsonElement[] Actions = permission.Actions;
-                    ActionDS actionToColumn;
                     foreach (JsonElement actionElement in Actions)
                     {
                         string actionName = string.Empty;
-                        actionToColumn = new();
+                        ActionDS actionToColumn = new();
                         if (actionElement.ValueKind == JsonValueKind.String)
                         {
                             actionName = actionElement.ToString();
@@ -158,14 +157,14 @@ namespace Azure.DataGateway.Service.Authorization
                             Action? actionObj = JsonSerializer.Deserialize<Action>(actionElement.ToString(), options);
                             actionName = actionObj!.Name;
 
-                            if (actionObj!.Fields!.Include != null)
+                            if (actionObj!.Fields!.Include is not null)
                             {
-                                AddFieldsToSet(actionObj.Fields.Include, actionToColumn.included);
+                                actionToColumn.included = new(actionObj.Fields.Include);
                             }
 
-                            if (actionObj!.Fields!.Exclude != null)
+                            if (actionObj!.Fields!.Exclude is not null)
                             {
-                                AddFieldsToSet(actionObj.Fields.Exclude, actionToColumn.excluded);
+                                actionToColumn.excluded = new(actionObj.Fields.Exclude);
                             }
 
                         }
@@ -180,20 +179,6 @@ namespace Azure.DataGateway.Service.Authorization
             }
 
             return entityConfigMap;
-        }
-
-        /// <summary>
-        /// Parses runtime config Included and Excluded columns into
-        /// key/value store for use in the entityConfigMap.
-        /// </summary>
-        /// <param name="columns"></param>
-        /// <returns></returns>
-        private static void AddFieldsToSet(string[] columns, HashSet<string> Fields)
-        {
-            foreach (string column in columns)
-            {
-                Fields.Add(column);
-            }
         }
         #endregion
     }

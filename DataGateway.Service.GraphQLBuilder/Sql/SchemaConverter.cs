@@ -111,22 +111,16 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
         /// </summary>
         public static string GetGraphQLTypeForColumnType(Type type)
         {
-            switch (Type.GetTypeCode(type))
-            {
-                case TypeCode.String:
-                    return "String";
-                case TypeCode.Int32:
-                    return "Int";
-                case TypeCode.Double:
-                    return "Float";
-                case TypeCode.Boolean:
-                    return "Boolean";
-                default:
-                    throw new DataGatewayException(
+            return Type.GetTypeCode(type) switch {
+                TypeCode.String => "String",
+                TypeCode.Int32 => "Int",
+                TypeCode.Double => "Float",
+                TypeCode.Boolean => "Boolean",
+                _ => throw new DataGatewayException(
                         $"Column type {type} not handled by case. Please add a case resolving {type} to the appropriate GraphQL type",
                         HttpStatusCode.InternalServerError,
-                        DataGatewayException.SubStatusCodes.GraphQLMapping);
-            }
+                        DataGatewayException.SubStatusCodes.GraphQLMapping)
+            };
         }
     }
 }

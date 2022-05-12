@@ -121,14 +121,14 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
 
         [DataTestMethod]
         [DataRow(typeof(string), "String")]
-        [DataRow(typeof(long), "Int")]
+        [DataRow(typeof(int), "Int")]
+        [DataRow(typeof(double), "Float")]
+        [DataRow(typeof(bool), "Boolean")]
         // TODO: Uncomment these once we have more GraphQL type support - https://github.com/Azure/hawaii-gql/issues/247
         //[DataRow(typeof(int), "Int")]
         //[DataRow(typeof(short), "Int")]
         //[DataRow(typeof(float), "Float")]
         //[DataRow(typeof(decimal), "Float")]
-        //[DataRow(typeof(double), "Float")]
-        //[DataRow(typeof(bool), "Boolean")]
         public void SystemTypeMapsToCorrectGraphQLType(Type systemType, string graphQLType)
         {
             TableDefinition table = new();
@@ -197,7 +197,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             table.ForeignKeys.Add("forign_key", new ForeignKeyDefinition { ReferencedTable = foreignKeyTable, ReferencingColumns = new List<string> { refColName } });
             table.Columns.Add(refColName, new ColumnDefinition
             {
-                SystemType = typeof(long)
+                SystemType = typeof(int)
             });
 
             Dictionary<string, Relationship> relationships =
@@ -239,7 +239,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             table.ForeignKeys.Add("foreign_key", new ForeignKeyDefinition { ReferencedTable = foreignKeyTable, ReferencingColumns = new List<string> { refColName } });
             table.Columns.Add(refColName, new ColumnDefinition
             {
-                SystemType = typeof(long)
+                SystemType = typeof(int)
             });
 
             Dictionary<string, Relationship> relationships =
@@ -284,7 +284,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             table.ForeignKeys.Add("foreign_key", new ForeignKeyDefinition { ReferencedTable = foreignKeyTable, ReferencingColumns = new List<string> { refColName } });
             table.Columns.Add(refColName, new ColumnDefinition
             {
-                SystemType = typeof(long)
+                SystemType = typeof(int)
             });
             string relationshipName = "otherTable";
             Dictionary<string, Relationship> relationships =
@@ -329,7 +329,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             table.ForeignKeys.Add("foreign_key", new ForeignKeyDefinition { ReferencedTable = foreignKeyTable, ReferencingColumns = new List<string> { refColName } });
             table.Columns.Add(refColName, new ColumnDefinition
             {
-                SystemType = typeof(long)
+                SystemType = typeof(int)
             });
 
             Dictionary<string, Relationship> relationships =
@@ -372,7 +372,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             table.ForeignKeys.Add("foreign_key", new ForeignKeyDefinition { ReferencedTable = foreignKeyTable, ReferencingColumns = new List<string> { refColName } });
             table.Columns.Add(refColName, new ColumnDefinition
             {
-                SystemType = typeof(long)
+                SystemType = typeof(int)
             });
 
             Entity configEntity = GenerateEmptyEntity() with { Relationships = new() };

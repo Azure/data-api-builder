@@ -44,7 +44,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 else if (param.Value == null)
                 {
                     predicate = new(
-                        new PredicateOperand(new Column(tableSchema: SchemaName, tableName: TableName, param.Key)),
+                        new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, param.Key)),
                         PredicateOperation.Equal,
                         new PredicateOperand($"@{MakeParamWithValue(null)}")
                     );
@@ -52,7 +52,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 else
                 {
                     predicate = new(
-                        new PredicateOperand(new Column(tableSchema: SchemaName, tableName: TableName, param.Key)),
+                        new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, param.Key)),
                         PredicateOperation.Equal,
                         new PredicateOperand($"@{MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, param.Key))}")
                     );

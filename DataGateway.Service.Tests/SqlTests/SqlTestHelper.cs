@@ -254,7 +254,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     }
   },
   ""entities"": {
-    ""publishers"": {
+    ""Publisher"": {
       ""source"": ""publishers"",
       ""rest"": true,
       ""graphql"": true,
@@ -275,7 +275,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
       }
     },
-    ""stocks"": {
+    ""Stock"": {
       ""source"": ""stocks"",
       ""rest"": true,
       ""graphql"": true,
@@ -298,7 +298,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
       }
     },
-    ""books"": {
+    ""Book"": {
       ""source"": ""books"",
       ""permissions"": [
         {
@@ -332,7 +332,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
       }
     },
-    ""book_website_placements"": {
+    ""BookWebsitePlacement"": {
       ""source"": ""book_website_placements"",
       ""rest"": true,
       ""graphql"": true,
@@ -366,7 +366,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
           }
         }
       },
-    ""authors"": {
+    ""Author"": {
       ""source"": ""authors"",
       ""rest"": true,
       ""graphql"": true,
@@ -384,7 +384,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
          }
        }
      },
-    ""reviews"": {
+    ""Review"": {
       ""source"": ""reviews"",
       ""rest"": true,
       ""permissions"": [
@@ -400,7 +400,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
          }
        }
      },
-    ""magazines"": {
+    ""Magazine"": {
       ""source"": " + magazinesSource + @",
       ""graphql"": true,
       ""permissions"": [
@@ -422,7 +422,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
       ]
     },
-    ""comics"": {
+    ""Comic"": {
       ""source"": ""comics"",
       ""rest"": true,
       ""graphql"": false,
@@ -437,7 +437,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
       ]
     },
-    ""brokers"": {
+    ""Broker"": {
       ""source"": ""brokers"",
       ""graphql"": false,
       ""permissions"": [
@@ -447,7 +447,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
       ]
     },
-    ""website_users"": {
+    ""WebsiteUser"": {
       ""source"": ""website_users"",
       ""rest"": false,
       ""permissions"" : []

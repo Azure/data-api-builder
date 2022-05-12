@@ -37,7 +37,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (primaryKeys.Contains(param.Key))
                 {
                     Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(SchemaName, TableName, param.Key)),
+                        new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, param.Key)),
                         PredicateOperation.Equal,
                         new PredicateOperand($"@{MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, param.Key))}")
                     ));

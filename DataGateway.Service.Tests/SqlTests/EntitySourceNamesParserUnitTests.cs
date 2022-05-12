@@ -1,4 +1,5 @@
 using System;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Parsers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -126,7 +127,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException1()
         {
             string schemaTable = "abc.abc[abc]";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
 
         }
 
@@ -134,7 +135,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException2()
         {
             string schemaTable = "abc.abc]";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
 
         }
 
@@ -142,7 +143,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException3()
         {
             string schemaTable = "[abc.abc";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
 
         }
 
@@ -150,7 +151,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException4()
         {
             string schemaTable = "a.[]";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
 
         }
 
@@ -158,7 +159,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException5()
         {
             string schemaTable = "[].[]";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
 
         }
 
@@ -166,7 +167,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException6()
         {
             string schemaTable = "[a].[]";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
 
         }
 
@@ -174,7 +175,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException8()
         {
             string schemaTable = "a.";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
 
         }
 
@@ -182,7 +183,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException9()
         {
             string schemaTable = "[";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
 
         }
 
@@ -190,7 +191,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException10()
         {
             string schemaTable = "]";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
 
         }
 
@@ -198,7 +199,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException11()
         {
             string schemaTable = ".";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
 
         }
 
@@ -206,7 +207,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException12()
         {
             string schemaTable = "]]";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
 
         }
 
@@ -214,7 +215,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException13()
         {
             string schemaTable = "].";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
 
         }
 
@@ -222,7 +223,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException14()
         {
             string schemaTable = ".";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
 
         }
 
@@ -230,7 +231,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException15()
         {
             string schemaTable = ".].].].].]";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
 
         }
 
@@ -238,7 +239,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException16()
         {
             string schemaTable = "[[]]]]]]]][";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
 
         }
 
@@ -246,7 +247,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException17()
         {
             string schemaTable = "a].[abc]";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
 
         }
 
@@ -254,7 +255,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException18()
         {
             string schemaTable = "a.a[b]c";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
 
         }
 
@@ -262,7 +263,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException20()
         {
             string schemaTable = null;
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
 
         }
 
@@ -270,7 +271,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException21()
         {
             string schemaTable = "[abc].";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
 
         }
 
@@ -278,7 +279,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException22()
         {
             string schemaTable = "[abc.]abc.table";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
 
         }
 
@@ -286,7 +287,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException23()
         {
             string schemaTable = "[abc.].[abc";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
 
         }
 
@@ -294,7 +295,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException24()
         {
             string schemaTable = "abc.[tabl.].[extratoken]";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
 
         }
 
@@ -302,49 +303,49 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseException25()
         {
             string schemaTable = "[abc]...";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
         }
 
         [TestMethod]
         public void ParseException26()
         {
             string schemaTable = "[sche.ma].[tab]]";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
         }
 
         [TestMethod]
         public void ParseException27()
         {
             string schemaTable = "[";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
         }
 
         [TestMethod]
         public void ParseException28()
         {
             string schemaTable = "...f";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
         }
 
         [TestMethod]
         public void ParseException29()
         {
             string schemaTable = "[abc].fda[";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
         }
 
         [TestMethod]
         public void ParseException30()
         {
             string schemaTable = "[abc.fda";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
         }
 
         [TestMethod]
         public void ParseException31()
         {
             string schemaTable = "ab[c].fda";
-            Assert.ThrowsException<ArgumentException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
         }
     }
 }

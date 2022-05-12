@@ -19,13 +19,15 @@ namespace Azure.DataGateway.Service.Resolvers
         protected IGraphQLMetadataProvider MetadataStoreProvider { get; }
 
         /// <summary>
-        /// The name of the main table to be queried.
+        /// The Entity associated with this query.
         /// </summary>
-        public string TableName { get; protected set; }
+        public string EntityName { get; protected set; }
+
         /// <summary>
-        /// The schema name of the main table to be queried.
+        /// The DatabaseObject associated with the entity, represents the
+        /// databse object to be queried.
         /// </summary>
-        public string SchemaName { get; protected set; }
+        public DatabaseObject DatabaseObject { get; }
 
         /// <summary>
         /// The alias of the main table to be queried.
@@ -50,16 +52,19 @@ namespace Azure.DataGateway.Service.Resolvers
             SqlMetadataProvider = sqlMetadataProvider;
             if (!string.IsNullOrEmpty(entityName))
             {
-                TableName = sqlMetadataProvider.EntityToDatabaseObject[entityName].Name;
-                SchemaName = sqlMetadataProvider.EntityToDatabaseObject[entityName].SchemaName;
+                EntityName = entityName;
+                DatabaseObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
             }
             else
             {
-                TableName = string.Empty;
-                SchemaName = string.Empty;
+                EntityName = string.Empty;
+                DatabaseObject = new();
             }
 
-            // Default the alias to the empty string
+            // Default the alias to the empty string since this base construtor
+            // is called for requests other than Find operations. We only use
+            // TableAlias for Find, so we leave empty here and then populate
+            // in the Find specific contructor.
             TableAlias = string.Empty;
         }
 
@@ -86,7 +91,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 else
                 {
                     Predicate predicate = new(
-                        new PredicateOperand(new Column(tableSchema: SchemaName, tableName: TableName, leftoverColumn)),
+                        new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, leftoverColumn)),
                         PredicateOperation.Equal,
                         new PredicateOperand($"@{MakeParamWithValue(value: null)}")
                     );
@@ -107,7 +112,7 @@ namespace Azure.DataGateway.Service.Resolvers
             }
             else
             {
-                throw new ArgumentException($"{columnName} is not a valid column of {TableName}");
+                throw new ArgumentException($"{columnName} is not a valid column of {DatabaseObject.Name}");
             }
         }
 
@@ -116,7 +121,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         protected TableDefinition GetUnderlyingTableDefinition()
         {
-            return SqlMetadataProvider.GetTableDefinition(TableName);
+            return SqlMetadataProvider.GetTableDefinition(EntityName);
         }
 
         /// <summary>

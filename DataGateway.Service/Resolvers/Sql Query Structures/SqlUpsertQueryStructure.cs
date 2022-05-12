@@ -120,7 +120,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     // Create a predicate for UPDATE Operation.
                     Predicate predicate = new(
-                        new PredicateOperand(new Column(tableSchema: SchemaName, tableName: TableName, columnName: param.Key)),
+                        new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, columnName: param.Key)),
                         PredicateOperation.Equal,
                         new PredicateOperand($"@{paramIdentifier}")
                     );

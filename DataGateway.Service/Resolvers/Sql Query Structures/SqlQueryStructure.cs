@@ -93,8 +93,7 @@ namespace Azure.DataGateway.Service.Resolvers
             IResolverContext ctx,
             IDictionary<string, object> queryParams,
             IGraphQLMetadataProvider metadataStoreProvider,
-            ISqlMetadataProvider sqlMetadataProvider,
-            string entityName = "")
+            ISqlMetadataProvider sqlMetadataProvider)
             // This constructor simply forwards to the more general constructor
             // that is used to create GraphQL queries. We give it some values
             // that make sense for the outermost query.
@@ -107,8 +106,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 // The outermost query is where we start, so this can define
                 // create the IncrementingInteger that will be shared between
                 // all subqueries in this query.
-                new IncrementingInteger(),
-                entityName: entityName)
+                new IncrementingInteger())
         {
             // support identification of entities by primary key when query is non list type nor paginated
             // only perform this action for the outermost query as subqueries shouldn't provide primary key search
@@ -128,10 +126,11 @@ namespace Azure.DataGateway.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider) :
             this(metadataStoreProvider,
                 sqlMetadataProvider,
-                new IncrementingInteger(), entityName: context.EntityName)
+                new IncrementingInteger(),
+                entityName: context.EntityName)
         {
             IsListQuery = context.IsMany;
-            TableAlias = $"{SchemaName}_{TableName}";
+            TableAlias = $"{DatabaseObject.SchemaName}_{DatabaseObject.Name}";
             context.FieldsToBeReturned.ForEach(fieldName => AddColumn(fieldName));
             if (Columns.Count == 0)
             {
@@ -152,7 +151,9 @@ namespace Azure.DataGateway.Service.Resolvers
                 PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
             }
 
-            // OrderByColumns may lack TableAlias 
+            // context.OrderByColumnsInUrl will lack TableAlias because it is created in RequestParser
+            // which may be called for any type of operation. To avoid coupling the OrderByClauseInUrl
+            // to only Find, we populate the TableAlias in this constructor where we know we have a Find operation.
             OrderByColumns = context.OrderByClauseInUrl is not null ? context.OrderByClauseInUrl : PrimaryKeyAsOrderByColumns();
             foreach (OrderByColumn column in OrderByColumns)
             {
@@ -211,7 +212,7 @@ namespace Azure.DataGateway.Service.Resolvers
             IOutputType outputType = schemaField.Type;
             _underlyingFieldType = UnderlyingType(outputType);
 
-            _typeInfo = MetadataStoreProvider.GetGraphQLType(_underlyingFieldType.Name);
+            _typeInfo = MetadataStoreProvider.GetGraphQLType(_underlyingFieldType.Name); // _underlyingFieldType.Name is entity name, will update DBO (in base use this instead of schema and table) fields using entity in this contructor
             PaginationMetadata.IsPaginated = _typeInfo.IsPaginationType;
 
             if (PaginationMetadata.IsPaginated)
@@ -244,10 +245,10 @@ namespace Azure.DataGateway.Service.Resolvers
                 PaginationMetadata.Subqueries.Add("items", PaginationMetadata.MakeEmptyPaginationMetadata());
             }
 
-            SchemaName = sqlMetadataProvider.GetSchemaName(_typeInfo.Table);
-            TableName = _typeInfo.Table;
+            EntityName = _underlyingFieldType.Name;
+            DatabaseObject.SchemaName = sqlMetadataProvider.GetSchemaName(EntityName);
+            DatabaseObject.Name = sqlMetadataProvider.GetDatabaseObjectName(EntityName);
             TableAlias = CreateTableAlias();
-            string fullName = string.IsNullOrEmpty(SchemaName) ? TableName : $"{SchemaName}.{TableName}";
 
             if (queryField != null && queryField.SelectionSet != null)
             {
@@ -292,7 +293,12 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (filterObject != null)
                 {
                     List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
-                    Predicates.Add(GQLFilterParser.Parse(filterFields, SchemaName, TableName, TableAlias, GetUnderlyingTableDefinition(), MakeParamWithValue));
+                    Predicates.Add(GQLFilterParser.Parse(fields: filterFields,
+                                                         schemaName: DatabaseObject.SchemaName,
+                                                         tableName: DatabaseObject.Name,
+                                                         tableAlias: TableAlias,
+                                                         table: GetUnderlyingTableDefinition(),
+                                                         processLiterals: MakeParamWithValue));
                 }
             }
 
@@ -306,7 +312,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     ODataASTVisitor visitor = new(this);
                     FilterParser parser = SqlMetadataProvider.ODataFilterParser;
-                    FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={where}", $"{fullName}");
+                    FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={where}", $"{DatabaseObject.FullName}");
                     FilterPredicates = filterClause.Expression.Accept<string>(visitor);
                 }
             }
@@ -372,7 +378,10 @@ namespace Azure.DataGateway.Service.Resolvers
             foreach (KeyValuePair<string, object> parameter in queryParams)
             {
                 Predicates.Add(new Predicate(
-                    new PredicateOperand(new Column(SchemaName, TableName, parameter.Key, TableAlias)),
+                    new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName,
+                                                    tableName: DatabaseObject.Name,
+                                                    columnName: parameter.Key,
+                                                    tableAlias: TableAlias)),
                     PredicateOperation.Equal,
                     new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
                 ));
@@ -427,7 +436,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     parameterName = MakeParamWithValue(
                         GetParamAsColumnSystemType(value.ToString()!, field));
                     Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(SchemaName, TableName, field, TableAlias)),
+                        new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, field, TableAlias)),
                         op,
                         new PredicateOperand($"@{parameterName}")));
                 }
@@ -463,8 +472,9 @@ namespace Azure.DataGateway.Service.Resolvers
             return leftColumnNames.Zip(rightColumnNames,
                     (leftColumnName, rightColumnName) =>
                     {
-                        Column leftColumn = new(tableSchema: null, tableName: null, leftColumnName, leftTableAlias);
-                        Column rightColumn = new(tableSchema: null, tableName: null, rightColumnName, rightTableAlias);
+                        // no table name or schema here is needed because this is a subquery that joins on table alias
+                        Column leftColumn = new(tableSchema: string.Empty, tableName: string.Empty, leftColumnName, leftTableAlias);
+                        Column rightColumn = new(tableSchema: string.Empty, tableName: string.Empty, rightColumnName, rightTableAlias);
                         return new Predicate(
                             new PredicateOperand(leftColumn),
                             PredicateOperation.Equal,
@@ -568,7 +578,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     ObjectType subunderlyingType = subquery._underlyingFieldType;
 
                     GraphQLType subTypeInfo = MetadataStoreProvider.GetGraphQLType(subunderlyingType.Name);
-                    TableDefinition subTableDefinition = SqlMetadataProvider.GetTableDefinition(subTypeInfo.Table);
+                    TableDefinition subTableDefinition = SqlMetadataProvider.GetTableDefinition(subquery.EntityName);
                     GraphQLField fieldInfo = _typeInfo.Fields[fieldName];
 
                     string subtableAlias = subquery.TableAlias;
@@ -665,8 +675,8 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     string subqueryAlias = $"{subtableAlias}_subq";
                     JoinQueries.Add(subqueryAlias, subquery);
-                    Columns.Add(new LabelledColumn(tableSchema: subquery.SchemaName,
-                                                   tableName: subquery.TableName,
+                    Columns.Add(new LabelledColumn(tableSchema: subquery.DatabaseObject.SchemaName,
+                                                   tableName: subquery.DatabaseObject.Name,
                                                    columnName: DATA_IDENT,
                                                    label: fieldName,
                                                    tableAlias: subqueryAlias));
@@ -717,7 +727,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 foreach (string column in PrimaryKey())
                 {
-                    _primaryKey.Add(new Column(SchemaName, TableName, column, TableAlias));
+                    _primaryKey.Add(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, column, TableAlias));
                 }
             }
 
@@ -735,7 +745,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         protected void AddColumn(string columnName)
         {
-            Columns.Add(new LabelledColumn(SchemaName, TableName, columnName, label: columnName, TableAlias));
+            Columns.Add(new LabelledColumn(DatabaseObject.SchemaName, DatabaseObject.Name, columnName, label: columnName, TableAlias));
         }
 
         /// <summary>

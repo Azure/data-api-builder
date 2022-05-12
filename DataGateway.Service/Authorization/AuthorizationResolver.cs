@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Models.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -16,13 +15,13 @@ namespace Azure.DataGateway.Service.Authorization
     /// </summary>
     public class AuthorizationResolver : IAuthorizationResolver
     {
-        private Dictionary<string, EntityDS> _entityPermissionMap;
+        private Dictionary<string, EntityDS> _entityPermissionMap = new();
         private const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
 
         public AuthorizationResolver(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
         {
             // Datastructure constructor will pull required properties from metadataprovider.
-            _entityPermissionMap = GetEntityConfigMap(runtimeConfigPath.CurrentValue.ConfigValue!);
+            SetEntityPermissionMap(runtimeConfigPath.CurrentValue.ConfigValue!);
         }
 
         /// <summary>
@@ -73,8 +72,8 @@ namespace Azure.DataGateway.Service.Authorization
             {
                 if (valueOfEntityToRole.RoleToActionMap.TryGetValue(roleName,out RoleDS? valueOfRoleToAction))
                 {
-                    Dictionary<string, ActionDS> actionToColumnMap = valueOfRoleToAction.ActionToColumnMap;
-                    if (actionToColumnMap.ContainsKey("*") || actionToColumnMap.ContainsKey(action))
+                    if (valueOfRoleToAction.ActionToColumnMap.ContainsKey("*") ||
+                        valueOfRoleToAction.ActionToColumnMap.ContainsKey(action))
                     {
                         return true;
                     }
@@ -125,9 +124,8 @@ namespace Azure.DataGateway.Service.Authorization
         /// </summary>
         /// <param name="runtimeConfig"></param>
         /// <returns></returns>
-        private static Dictionary<string, EntityDS> GetEntityConfigMap(RuntimeConfig? runtimeConfig)
+        public void SetEntityPermissionMap(RuntimeConfig? runtimeConfig)
         {
-            Dictionary<string, EntityDS> entityConfigMap = new();
             foreach ((string entityName, Entity entity) in runtimeConfig!.Entities)
             {
                 EntityDS entityToRoleMap = new();
@@ -148,13 +146,7 @@ namespace Azure.DataGateway.Service.Authorization
                         }
                         else if (actionElement.ValueKind == JsonValueKind.Object)
                         {
-                            JsonSerializerOptions options = new()
-                            {
-                                PropertyNameCaseInsensitive = true,
-                                Converters = { new JsonStringEnumConverter() }
-                            };
-
-                            Action? actionObj = JsonSerializer.Deserialize<Action>(actionElement.ToString(), options);
+                            Action? actionObj = JsonSerializer.Deserialize<Action>(actionElement.ToString(), RuntimeConfig.GetDeserializationOptions());
                             actionName = actionObj!.Name;
 
                             if (actionObj!.Fields!.Include is not null)
@@ -175,10 +167,8 @@ namespace Azure.DataGateway.Service.Authorization
                     entityToRoleMap.RoleToActionMap[role] = roleToAction;
                 }
 
-                entityConfigMap[entityName] = entityToRoleMap;
+                _entityPermissionMap[entityName] = entityToRoleMap;
             }
-
-            return entityConfigMap;
         }
         #endregion
     }

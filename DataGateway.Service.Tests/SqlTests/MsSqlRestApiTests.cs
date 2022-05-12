@@ -563,7 +563,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             return DEFAULT_SCHEMA;
         }
 
-        public override string GetDefaultSchemaIncludeDot()
+        /// <summary>
+        /// We include a '.' for the Edm Model
+        /// schema to allow both MsSql/PostgreSql
+        /// and MySql to share code. MySql does not
+        /// include a '.' bust MsSql does so
+        /// we must include here.
+        /// </summary>
+        /// <returns></returns>
+        public override string GetDefaultSchemaForEdmModel()
         {
             return $"{DEFAULT_SCHEMA}.";
         }

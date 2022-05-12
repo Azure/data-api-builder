@@ -20,7 +20,7 @@ namespace Azure.DataGateway.Service.Tests.REST
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class ODataASTVisitorUnitTests : SqlTestBase
     {
-        private const string DEFAULT_ENTITY = "books";
+        private const string DEFAULT_ENTITY = "Book";
         private const string DEFAULT_SCHEMA_NAME = "dbo";
         private const string DEFAULT_TABLE_NAME = "books";
 
@@ -221,7 +221,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             string expected)
         {
             FilterClause ast = _sqlMetadataProvider.ODataFilterParser.
-                GetFilterClause(filterString, $"{schemaName}.{entityName}");
+                GetFilterClause(filterString, $"{schemaName}.{tableName}");
             ODataASTVisitor visitor = CreateVisitor(entityName, schemaName, tableName);
             string actual = ast.Expression.Accept(visitor);
             Assert.AreEqual(expected, actual);

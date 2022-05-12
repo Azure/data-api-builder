@@ -114,8 +114,8 @@ namespace Azure.DataGateway.Service.Tests.REST
             PerformTest(findRequestContext,
                 _mockMetadataStore.Object,
                 expectsException: true,
-                statusCode: HttpStatusCode.BadRequest,
-                subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                statusCode: HttpStatusCode.NotFound,
+                subStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound);
         }
 
         /// <summary>
@@ -178,7 +178,10 @@ namespace Azure.DataGateway.Service.Tests.REST
             string primaryKeyRoute = "id/12345/name/2";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
-            PerformTest(findRequestContext, _mockMetadataStore.Object, expectsException: true);
+            PerformTest(findRequestContext, _mockMetadataStore.Object,
+                        expectsException: true,
+                        statusCode: HttpStatusCode.NotFound,
+                        subStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound);
         }
 
         /// <summary>
@@ -338,10 +341,11 @@ namespace Azure.DataGateway.Service.Tests.REST
         /// <returns></returns>
         public static DatabaseObject GetDbo(string schema, string name)
         {
-            DatabaseObject dbo = new();
-            dbo.SchemaName = schema;
-            dbo.Name = name;
-            return dbo;
+            return new DatabaseObject()
+            {
+                SchemaName = schema,
+                Name = name
+            };            
         }
     }
 }

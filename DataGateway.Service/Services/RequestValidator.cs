@@ -308,8 +308,8 @@ namespace Azure.DataGateway.Service.Services
             {
                 throw new DataGatewayException(
                     message: $"{entityName} is not a valid entity.",
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                    statusCode: HttpStatusCode.NotFound,
+                    subStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound);
             }
         }
 

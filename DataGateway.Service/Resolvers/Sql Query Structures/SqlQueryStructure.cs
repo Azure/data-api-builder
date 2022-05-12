@@ -212,7 +212,7 @@ namespace Azure.DataGateway.Service.Resolvers
             IOutputType outputType = schemaField.Type;
             _underlyingFieldType = UnderlyingType(outputType);
 
-            _typeInfo = MetadataStoreProvider.GetGraphQLType(_underlyingFieldType.Name); // _underlyingFieldType.Name is entity name, will update DBO (in base use this instead of schema and table) fields using entity in this contructor
+            _typeInfo = MetadataStoreProvider.GetGraphQLType(_underlyingFieldType.Name);
             PaginationMetadata.IsPaginated = _typeInfo.IsPaginationType;
 
             if (PaginationMetadata.IsPaginated)

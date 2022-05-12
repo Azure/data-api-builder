@@ -10,7 +10,7 @@ namespace Azure.DataGateway.Service.Parsers
     /// Source that is associated with a given Entity. The
     /// Source contains the schema name and table name in string
     /// format with the separation between the two names handled by
-    /// a ".", this parser, when its parsing function is invokded,
+    /// a ".", this parser, when its parsing function is invoked,
     /// will return these values as individual strings, if they exist,
     /// as a tuple (string, string)
     /// </summary>

@@ -39,7 +39,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public static readonly int _numRecordsReturnedFromTieBreakTable = 2;
 
         public abstract string GetDefaultSchema();
-        public abstract string GetDefaultSchemaIncludeDot();
+        public abstract string GetDefaultSchemaForEdmModel();
         public abstract string GetQuery(string key);
 
         #region Positive Tests
@@ -2191,7 +2191,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: $"Could not find a property named 'Pinecone' on type 'default_namespace.{GetDefaultSchemaIncludeDot()}books'.",
+                expectedErrorMessage: $"Could not find a property named 'Pinecone' on type 'default_namespace.{GetDefaultSchemaForEdmModel()}books'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

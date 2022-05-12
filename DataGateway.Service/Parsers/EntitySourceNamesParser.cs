@@ -88,7 +88,6 @@ namespace Azure.DataGateway.Service.Parsers
             // If there is one token only that means we only parsed the table name. We will use the default schema.
             if (tokens.Count == 1)
             {
-                
                 return (string.Empty, (string?)tokens[0]);
             }
 

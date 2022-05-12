@@ -126,7 +126,7 @@ namespace Azure.DataGateway.Service.Resolvers
             // If there is no table alias, and no schema, we return [{TableName}].[{Column}]
             else
             {
-                return $"{QuoteIdentifier($"{column.TableName}")}.{ QuoteIdentifier(column.ColumnName)}";
+                return $"{QuoteIdentifier($"{column.TableName}")}.{QuoteIdentifier(column.ColumnName)}";
             }
         }
 

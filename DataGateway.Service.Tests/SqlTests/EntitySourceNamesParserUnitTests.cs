@@ -1,4 +1,3 @@
-using System;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Parsers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;

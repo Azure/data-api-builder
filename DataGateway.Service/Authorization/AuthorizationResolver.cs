@@ -5,6 +5,7 @@ using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Models.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 using Action = Azure.DataGateway.Config.Action;
 
 namespace Azure.DataGateway.Service.Authorization
@@ -40,8 +41,12 @@ namespace Azure.DataGateway.Service.Authorization
         /// <exception cref="NotImplementedException"></exception>
         public bool IsValidRoleContext(HttpContext httpContext)
         {
-            // Anonymous requests must specifically set the Anonymous role.
-            if (!httpContext.Request.Headers.ContainsKey(CLIENT_ROLE_HEADER))
+            StringValues clientRoleHeader = httpContext.Request.Headers[CLIENT_ROLE_HEADER];
+
+            // The clientRoleHeader must be present on requests.
+            // Consequentially, anonymous requests must specifically set
+            // the clientRoleHeader value to Anonymous.
+            if (clientRoleHeader.Count == 0)
             {
                 return false;
             }
@@ -50,19 +55,20 @@ namespace Azure.DataGateway.Service.Authorization
             // but are NOT supported, specifically for the client role header.
             // Valid scenario per HTTP Spec: http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
             // Discussion: https://stackoverflow.com/a/3097052/18174950
-            if (httpContext.Request.Headers[CLIENT_ROLE_HEADER].Count > 1)
+            if (clientRoleHeader.Count > 1)
             {
                 return false;
             }
 
-            if (httpContext.Request.Headers[CLIENT_ROLE_HEADER].ToString().Length == 0)
+            string clientRoleHeaderValue = clientRoleHeader.ToString();
+
+            // The clientRoleHeader must have a value.
+            if (clientRoleHeaderValue.Length == 0)
             {
                 return false;
             }
 
-            string clientRole = httpContext.Request.Headers[CLIENT_ROLE_HEADER].ToString();
-
-            return httpContext.User.IsInRole(clientRole);
+            return httpContext.User.IsInRole(clientRoleHeaderValue);
         }
 
         /// <inheritdoc />

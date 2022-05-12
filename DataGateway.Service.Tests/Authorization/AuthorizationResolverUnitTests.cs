@@ -34,7 +34,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             Mock<HttpContext> context = new();
             context.SetupGet(x => x.Request.Headers[CLIENT_ROLE_HEADER]).Returns("Reader");
-            context.Setup(x => x.Request.Headers.ContainsKey(CLIENT_ROLE_HEADER)).Returns(true);
             context.Setup(x => x.User.IsInRole("Reader")).Returns(true);
 
             Assert.IsTrue(authZResolver.IsValidRoleContext(context.Object));
@@ -49,7 +48,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             Mock<HttpContext> context = new();
             context.SetupGet(x => x.Request.Headers[CLIENT_ROLE_HEADER]).Returns("Reader");
-            context.Setup(x => x.Request.Headers.ContainsKey(CLIENT_ROLE_HEADER)).Returns(true);
             context.Setup(x => x.User.IsInRole("Reader")).Returns(false);
 
             Assert.IsFalse(authZResolver.IsValidRoleContext(context.Object));
@@ -63,7 +61,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             Mock<HttpContext> context = new();
             context.SetupGet(x => x.Request.Headers[CLIENT_ROLE_HEADER]).Returns(string.Empty);
-            context.Setup(x => x.Request.Headers.ContainsKey(CLIENT_ROLE_HEADER)).Returns(true);
 
             Assert.IsFalse(authZResolver.IsValidRoleContext(context.Object));
         }
@@ -77,7 +74,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             Mock<HttpContext> context = new();
             StringValues multipleValuesForHeader = new(new string[] { "Reader", "Writer" });
             context.SetupGet(x => x.Request.Headers[CLIENT_ROLE_HEADER]).Returns(multipleValuesForHeader);
-            context.Setup(x => x.Request.Headers.ContainsKey(CLIENT_ROLE_HEADER)).Returns(true);
             context.Setup(x => x.User.IsInRole("Reader")).Returns(true);
 
             Assert.IsFalse(authZResolver.IsValidRoleContext(context.Object));
@@ -91,7 +87,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             Mock<HttpContext> context = new();
             context.SetupGet(x => x.Request.Headers[CLIENT_ROLE_HEADER]).Returns(StringValues.Empty);
-            context.Setup(x => x.Request.Headers.ContainsKey(CLIENT_ROLE_HEADER)).Returns(false);
 
             Assert.IsFalse(authZResolver.IsValidRoleContext(context.Object));
         }

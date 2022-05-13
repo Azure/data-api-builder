@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
@@ -70,13 +71,13 @@ namespace Azure.DataGateway.Service.Resolvers
             // TODO: Revisit 'first' while adding support for TOP queries
             if (queryParams.ContainsKey("first"))
             {
-                MaxItemCount = (int)queryParams["first"];
+                MaxItemCount = (int)queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME];
                 queryParams.Remove("first");
             }
 
             if (queryParams.ContainsKey("after"))
             {
-                Continuation = (string)queryParams["after"];
+                Continuation = (string)queryParams[QueryBuilder.PAGINATION_TOKEN_FIELD_NAME];
                 queryParams.Remove("after");
             }
 

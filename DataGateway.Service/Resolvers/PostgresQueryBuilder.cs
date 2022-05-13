@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Text;
+using Azure.DataGateway.Service.Models;
 using Npgsql;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -102,6 +103,26 @@ namespace Azure.DataGateway.Service.Resolvers
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                     $"RETURNING {Build(structure.ReturnColumns)}, " +
                     $"case when xmax::text::int > 0 then '{UPDATE_UPSERT}' else '{INSERT_UPSERT}' end AS {UPSERT_IDENTIFIER_COLUMN_NAME};";
+            }
+        }
+
+        /// <summary>
+        /// Build column as
+        /// [{tableAlias}].[{ColumnName}]
+        /// or if TableAlias is empty, as
+        /// [{ColumnName}]
+        /// </summary>
+        protected override string Build(Column column)
+        {
+            // If the table alias is not empty, we return [{TableAlias}].[{Column}]
+            if (!string.IsNullOrEmpty(column.TableAlias))
+            {
+                return $"{QuoteIdentifier(column.TableAlias)}.{QuoteIdentifier(column.ColumnName)}";
+            }
+            // If there is no table alias we return [{Column}]
+            else 
+            {
+                return $"{QuoteIdentifier(column.ColumnName)}";
             }
         }
 

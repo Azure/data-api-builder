@@ -64,6 +64,62 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ) AS subq"
             },
             {
+                "FindTestWithFilterQueryOneGeFilterOnView",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _simple_all_books + @"
+                      WHERE id >= 4
+                      ORDER BY id
+                  ) AS subq"
+            },
+            {
+                "FindByIdTestWithQueryStringFieldsOnView",
+                @"
+                  SELECT JSON_OBJECT('id', id, 'title', title) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _simple_all_books + @"
+                      WHERE id = 1
+                      ORDER BY id
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFilterQueryStringOneEqFilterOnView",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid,
+                                        'categoryName', categoryName, 'piecesAvailable',piecesAvailable)) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, categoryName,piecesAvailable
+                        FROM " + _simple_subset_stocks + @"
+                        WHERE pieceid = 1
+                    ) AS subq"
+            },
+            {
+                "FindTestWithFilterQueryOneNotFilterOnView",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid,
+                                        'categoryName', categoryName, 'piecesAvailable',piecesAvailable)) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, categoryName,piecesAvailable
+                        FROM " + _simple_subset_stocks + @"
+                        WHERE NOT(categoryid > 1)
+                    ) AS subq"
+            },
+            {
+                "FindTestWithFilterQueryOneLtFilterOnView",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('name', name, 'id', id, 'publisher_id', publisher_id)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _composite_subset_bookPub + @"
+                      WHERE id < 5
+                      ORDER BY id
+                  ) AS subq"
+            },
+            {
                 "FindTestWithQueryStringOneField",
                 @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', `subq1`.`id`)) AS `data`

@@ -53,8 +53,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         ///<summary>
-        /// Tests the Rest Api for GET operations on Database Views
-        /// , either simple or composite.
+        /// Tests the Rest Api for GET operations on Database Views,
+        /// either simple or composite.
         ///</summary>
         [TestMethod]
         public virtual async Task FindOnViews()
@@ -82,6 +82,50 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: GetQuery("FindViewComposite"),
                 controller: _restController
             );
+        }
+
+        ///<summary>
+        /// Tests the Rest Api for GET operations on Database Views,
+        /// either simple or composite,having filter clause.
+        ///</summary>
+        [TestMethod]
+        public virtual async Task FindTestWithQueryStringOnViews()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id ge 4",
+                entity: _simple_all_books,
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneGeFilterOnView"),
+                controller: _restController);
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: "?$f=id,title",
+                entity: _simple_all_books,
+                sqlQuery: GetQuery("FindByIdTestWithQueryStringFieldsOnView"),
+                controller: _restController
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=pieceid eq 1",
+                entity: _simple_subset_stocks,
+                sqlQuery: GetQuery("FindTestWithFilterQueryStringOneEqFilterOnView"),
+                controller: _restController);
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=not (categoryid gt 1)",
+                entity: _simple_subset_stocks,
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneNotFilterOnView"),
+                controller: _restController);
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter= id lt 5",
+                entity: _composite_subset_bookPub,
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneLtFilterOnView"),
+                controller: _restController);
         }
 
         /// <summary>
@@ -1483,6 +1527,43 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             );
         }
 
+        [TestMethod]
+        public virtual async Task FindTestWithInvalidFieldsInQueryStringOnViews()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=pq ge 4",
+                entity: _simple_all_books,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "Could not find a property named 'pq' on type 'default_namespace.books_view_all'.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+                );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=pq le 4",
+                entity: _simple_subset_stocks,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "Could not find a property named 'pq' on type 'default_namespace.stocks_view_selected'.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+                );
+
+            //"?$filter=not (categoryid gt 1)",
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=not (pq gt 1)",
+                entity: _composite_subset_bookPub,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "Could not find a property named 'pq' on type 'default_namespace.books_publishers_view_composite'.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+                );
+        }
         /// <summary>
         /// Tests the InsertOne functionality with disallowed URL composition: contains Query String.
         /// </summary>

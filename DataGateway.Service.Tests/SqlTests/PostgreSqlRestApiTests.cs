@@ -26,41 +26,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ) AS subq"
             },
             {
-                "FindViewAll",
-                @"
-                  SELECT to_jsonb(subq) AS data
-                  FROM (
-                      SELECT *
-                      FROM " + _simple_all_books + @"
-                      WHERE id = 2
-                      ORDER BY id
-                      LIMIT 1
-                  ) AS subq"
-            },
-            {
-                "FindViewSelected",
-                @"
-                    SELECT to_jsonb(subq) AS data
-                    FROM (
-                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable""
-                        FROM " + _simple_subset_stocks + @"
-                        WHERE categoryid = 2 AND pieceid = 1
-                    ) AS subq
-                "
-            },
-            {
-                "FindViewComposite",
-                @"
-                  SELECT to_jsonb(subq) AS data
-                  FROM (
-                      SELECT name, id, publisher_id
-                      FROM " + _composite_subset_bookPub + @"
-                      WHERE id = 2
-                      ORDER BY id
-                      LIMIT 1
-                  ) AS subq"
-            },
-            {
                 "FindTestWithQueryStringOneField",
                 @"
                   SELECT json_agg(to_jsonb(subq)) AS data
@@ -951,6 +916,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         [Ignore]
         public override Task FindOnViews()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task FindTestWithQueryStringOnViews()
         {
             throw new NotImplementedException();
         }

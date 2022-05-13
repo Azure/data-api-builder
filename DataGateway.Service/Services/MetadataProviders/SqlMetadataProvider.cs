@@ -30,7 +30,6 @@ namespace Azure.DataGateway.Service.Services
         public FilterParser ODataFilterParser { get; } = new();
         private FilterParser _oDataFilterParser = new();
 
-        public DatabaseType DatabaseType { get; }
         private readonly DatabaseType _databaseType;
 
         private readonly Dictionary<string, Entity> _entities;
@@ -68,6 +67,15 @@ namespace Azure.DataGateway.Service.Services
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;
+        }
+
+        /// <summary>
+        /// Obtains the underlying database type.
+        /// </summary>
+        /// <returns></returns>
+        public DatabaseType GetDatabaseType()
+        {
+            return _databaseType;
         }
 
         /// <summary>
@@ -229,14 +237,14 @@ namespace Azure.DataGateway.Service.Services
             if (string.IsNullOrEmpty(schemaName))
             {
                 // if DatabaseType is not postgresql will short circuit and use default
-                if (DatabaseType is not DatabaseType.postgresql || !TryGetSchemaFromConnectionString(
+                if (_databaseType is not DatabaseType.postgresql || !TryGetSchemaFromConnectionString(
                                                                     out schemaName,
                                                                     connectionString: ConnectionString))
                 {
                     schemaName = GetDefaultSchemaName();
                 }
             }
-            else if (DatabaseType is DatabaseType.mysql)
+            else if (_databaseType is DatabaseType.mysql)
             {
                 throw new DataGatewayException(message: $"Invalid database object name: \"{schemaName}.{dbObjectName}\"",
                                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
@@ -272,7 +280,7 @@ namespace Azure.DataGateway.Service.Services
         protected virtual string GetDefaultSchemaName()
         {
             throw new NotSupportedException($"Cannot get default schema " +
-                $"name for database type {DatabaseType}");
+                $"name for database type {_databaseType}");
         }
 
         /// <summary>

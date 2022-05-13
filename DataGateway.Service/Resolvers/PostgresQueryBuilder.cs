@@ -120,7 +120,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 return $"{QuoteIdentifier(column.TableAlias)}.{QuoteIdentifier(column.ColumnName)}";
             }
             // If there is no table alias we return [{Column}]
-            else 
+            else
             {
                 return $"{QuoteIdentifier(column.ColumnName)}";
             }

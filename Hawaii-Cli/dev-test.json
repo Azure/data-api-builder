@@ -1,9 +1,0 @@
-{
-  "$schema": "D:/projects/hawaii-cli/dev-test.json",
-  "data-source": {
-    "database-type": "mysql",
-    "resolver-config-file": "sadasdasdas",
-    "connection-string": ""
-  },
-  "entities": {}
-}

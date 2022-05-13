@@ -10,10 +10,6 @@ namespace Hawaii.Cli.Classes
         public string? action {get; set;} = null;
         public Dictionary<string, string[]>? fields {get; set;} = null;
 
-        // public Action(string action, Dictionary<string,string[]> fields) {
-        //     this.action = action;
-        //     this.fields = fields;
-        // }
         public static Action GetAction(string action, Dictionary<string,string[]> fields) {
             Action actionObject = new Action();
             actionObject.action = action;

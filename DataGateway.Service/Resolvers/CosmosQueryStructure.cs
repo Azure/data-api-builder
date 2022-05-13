@@ -69,16 +69,16 @@ namespace Azure.DataGateway.Service.Resolvers
 
             // first and after will not be part of query parameters. They will be going into headers instead.
             // TODO: Revisit 'first' while adding support for TOP queries
-            if (queryParams.ContainsKey("first"))
+            if (queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
             {
                 MaxItemCount = (int)queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME];
-                queryParams.Remove("first");
+                queryParams.Remove(QueryBuilder.PAGE_START_ARGUMENT_NAME);
             }
 
-            if (queryParams.ContainsKey("after"))
+            if (queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
             {
                 Continuation = (string)queryParams[QueryBuilder.PAGINATION_TOKEN_FIELD_NAME];
-                queryParams.Remove("after");
+                queryParams.Remove(QueryBuilder.PAGE_START_ARGUMENT_NAME);
             }
 
             if (queryParams.ContainsKey("orderBy"))

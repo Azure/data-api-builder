@@ -6,6 +6,8 @@ type Query {
     planetList: [Planet]
     getPlanetsWithFilter(first: Int, after: String, _filter: PlanetFilterInput): PlanetConnection
     planets(first: Int, after: String): PlanetConnection
+    getPlanetWithOrderBy(orderBy: PlanetOrderByInput): Planet
+    getPlanetsWithOrderBy(first: Int, after: String, orderBy: PlanetOrderByInput): PlanetConnection
     getPlanetListById(id: ID): [Planet]
     getPlanetByName(name: String): Planet
 }
@@ -66,5 +68,13 @@ input PlanetFilterInput {
   dimension: StringFilterInput
 }
 
+enum SortOrder {
+    Asc, Desc
+}
+
+input PlanetOrderByInput {
+    id: SortOrder
+    name: SortOrder
+}
 
 

@@ -19,6 +19,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public string Database { get; internal set; }
         public string? Continuation { get; internal set; }
         public int MaxItemCount { get; internal set; }
+        public List<OrderByColumn> OrderByColumns { get; internal set; }
 
         protected IGraphQLMetadataProvider MetadataStoreProvider { get; }
 
@@ -39,6 +40,7 @@ namespace Azure.DataGateway.Service.Resolvers
             IFieldSelection selection = _context.Selection;
             GraphQLType graphqlType = MetadataStoreProvider.GetGraphQLType(UnderlyingType(selection.Field.Type).Name);
             IsPaginated = graphqlType.IsPaginationType;
+            OrderByColumns = new();
 
             if (IsPaginated)
             {
@@ -47,12 +49,18 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 if (fieldNode != null)
                 {
-                    Columns.AddRange(fieldNode.SelectionSet!.Selections.Select(x => new LabelledColumn(_containerAlias, "", ((FieldNode)x).Name.Value)));
+                    Columns.AddRange(fieldNode.SelectionSet!.Selections.Select(x => new LabelledColumn(tableSchema: string.Empty,
+                                                                                                       tableName: _containerAlias,
+                                                                                                       columnName: string.Empty,
+                                                                                                       label: x.GetNodes().First().ToString())));
                 }
             }
             else
             {
-                Columns.AddRange(selection.SyntaxNode.SelectionSet!.Selections.Select(x => new LabelledColumn(_containerAlias, "", ((FieldNode)x).Name.Value)));
+                Columns.AddRange(selection.SyntaxNode.SelectionSet!.Selections.Select(x => new LabelledColumn(tableSchema: string.Empty,
+                                                                                                              tableName: _containerAlias,
+                                                                                                              columnName: string.Empty,
+                                                                                                              label: x.GetNodes().First().ToString())));
             }
 
             Container = graphqlType.ContainerName;
@@ -72,6 +80,16 @@ namespace Azure.DataGateway.Service.Resolvers
                 queryParams.Remove("after");
             }
 
+            if (queryParams.ContainsKey("orderBy"))
+            {
+                object? orderByObject = queryParams["orderBy"];
+
+                if (orderByObject != null)
+                {
+                    OrderByColumns = ProcessGqlOrderByArg((List<ObjectFieldNode>)orderByObject);
+                }
+            }
+
             if (queryParams.ContainsKey("_filter"))
             {
                 object? filterObject = queryParams["_filter"];
@@ -79,21 +97,63 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (filterObject != null)
                 {
                     List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
-                    Predicates.Add(GQLFilterParser.Parse(filterFields, _containerAlias, new TableDefinition(), MakeParamWithValue));
+                    Predicates.Add(GQLFilterParser.Parse(fields: filterFields,
+                        schemaName: string.Empty,
+                        tableName: _containerAlias,
+                        tableAlias: _containerAlias,
+                        table: new TableDefinition(),
+                        processLiterals: MakeParamWithValue));
                 }
             }
+
             else
             {
 
                 foreach (KeyValuePair<string, object> parameter in queryParams)
                 {
                     Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(_containerAlias, parameter.Key)),
+                        new PredicateOperand(new Column(tableSchema: string.Empty, _containerAlias, parameter.Key)),
                         PredicateOperation.Equal,
                         new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
                     ));
                 }
             }
+        }
+
+        /// <summary>
+        /// Create a list of orderBy columns from the orderBy argument
+        /// passed to the gql query
+        /// </summary>
+        private List<OrderByColumn> ProcessGqlOrderByArg(List<ObjectFieldNode> orderByFields)
+        {
+            // Create list of primary key columns
+            // we always have the primary keys in
+            // the order by statement for the case
+            // of tie breaking and pagination
+            List<OrderByColumn> orderByColumnsList = new();
+
+            foreach (ObjectFieldNode field in orderByFields)
+            {
+                if (field.Value is NullValueNode)
+                {
+                    continue;
+                }
+
+                string fieldName = field.Name.ToString();
+
+                EnumValueNode enumValue = (EnumValueNode)field.Value;
+
+                if (enumValue.Value == $"{OrderByDir.Desc}")
+                {
+                    orderByColumnsList.Add(new OrderByColumn(tableSchema: string.Empty, _containerAlias, fieldName, direction: OrderByDir.Desc));
+                }
+                else
+                {
+                    orderByColumnsList.Add(new OrderByColumn(tableSchema: string.Empty, _containerAlias, fieldName));
+                }
+            }
+
+            return orderByColumnsList;
         }
     }
 }

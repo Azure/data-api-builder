@@ -16,7 +16,8 @@ namespace Hawaii.Cli.Classes
 
             string schema = Directory.GetCurrentDirectory().Replace("\\", "/") + "/" + file;
 
-            RuntimeConfig runtimeConfig = new RuntimeConfig(schema, dataSource, null, null, null, null, null, new Dictionary<string, Entity>());
+            
+            RuntimeConfig runtimeConfig = new RuntimeConfig(schema, dataSource, null, null, null, null, GetDefaultGlobalSettings(), new Dictionary<string, Entity>());
 
             string JSONresult = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
 
@@ -28,10 +29,11 @@ namespace Hawaii.Cli.Classes
         }
 
         public static bool AddEntitiesToConfig(string fileName, string entity,
-                                             object source, string permissions,
-                                             object? rest, object? graphQL, string? fieldsToInclude, string? fieldsToExclude)
+                                            object source, string permissions,
+                                            object? rest, object? graphQL,
+                                            string? fieldsToInclude, string? fieldsToExclude)
         {
-            string file = fileName + ".json";
+            string file = $"{fileName}.json";
 
             if (!File.Exists(file))
             {
@@ -56,15 +58,17 @@ namespace Hawaii.Cli.Classes
             }
 
             runtimeConfig.Entities.Add(entity, entity_details);
-            Console.WriteLine(runtimeConfig.ToString());
             string JSONresult = JsonSerializer.Serialize(runtimeConfig, options);
             File.WriteAllText(file, JSONresult);
             return true;
         }
 
         public static bool UpdateEntity(string fileName, string entity,
-                                             object? source, string? permissions,
-                                             object? rest, object? graphQL, string? fieldsToInclude, string? fieldsToExclude) {
+                                            object? source, string? permissions,
+                                            object? rest, object? graphQL,
+                                            string? fieldsToInclude, string? fieldsToExclude,
+                                            string? relationship, string? targetEntity,
+                                            string? cardinality, string? mappingFields) {
             
             string file = fileName + ".json";
             string jsonString = File.ReadAllText(file);
@@ -89,7 +93,7 @@ namespace Hawaii.Cli.Classes
             if(permissions!=null) {
                 string[] permission_array = permissions.Split(":");
                 string new_role = permission_array[0];
-                string new_action = permission_array[1]; //TODO: make sure action is a single item here
+                string new_action = permission_array[1];
                 var dict = Array.Find(updatedEntity.Permissions, item => item.Role == new_role);
                 PermissionSetting[] updatedPermissions;
                 List<PermissionSetting> permissionSettingsList = new List<PermissionSetting>();
@@ -137,9 +141,6 @@ namespace Hawaii.Cli.Classes
                                         if(new_action_element.Equals(operation)) {
                                             action_list.Add(Action.GetAction(operation, fieldsToInclude, fieldsToExclude));
                                         } else {
-                                            // if(JsonValueKind.String.Equals(action_element.ValueKind)) {
-                                            //     return Action.GetAction(element.ToString(), null);
-                                            // }
                                             action_list.Add(action_element);
                                         }
                                     }
@@ -157,6 +158,82 @@ namespace Hawaii.Cli.Classes
                 if(fieldsToInclude!=null || fieldsToExclude!=null) {
                     Console.WriteLine($"please provide the role and action name to apply this update to.");
                     return true;
+                }
+            }
+            if(relationship!=null) {
+                //if it's an existing relation
+                if(updatedEntity.Relationships!=null && updatedEntity.Relationships.ContainsKey(relationship)) {
+                    Relationship currentRelationship = updatedEntity.Relationships[relationship];
+                    Dictionary<string, Relationship> relationship_mapping = new Dictionary<string, Relationship>();
+                    Relationship updatedRelationship = currentRelationship;
+                    if(cardinality!=null) {
+                        Cardinality cardinalityType;
+                        try
+                        {
+                            cardinalityType = GetCardinalityTypeFromString(cardinality);
+                        }
+                        catch (System.NotSupportedException)
+                        {
+                            Console.WriteLine($"Given Cardinality: {cardinality} not supported. Currently supported options: one or many.");
+                            return false;
+                        }
+                        updatedRelationship = new Relationship(cardinalityType, updatedRelationship.TargetEntity, updatedRelationship.SourceFields, updatedRelationship.TargetFields, updatedRelationship.LinkingObject, updatedRelationship.LinkingSourceFields, updatedRelationship.LinkingTargetFields);
+                    }
+                    if(targetEntity!=null) {
+                        updatedRelationship = new Relationship(updatedRelationship.Cardinality, targetEntity, updatedRelationship.SourceFields, updatedRelationship.TargetFields, updatedRelationship.LinkingObject, updatedRelationship.LinkingSourceFields, updatedRelationship.LinkingTargetFields);
+                    }
+                    if(mappingFields!=null) {
+                        string[]? sourceAndTargetFields = null;
+                        string[]? sourceFields = null;
+                        string[]? targetFields = null;
+                        try
+                        {
+                            sourceAndTargetFields = mappingFields.Split(":");
+                            sourceFields = sourceAndTargetFields[0].Split(",");
+                            targetFields = sourceAndTargetFields[1].Split(",");
+                        }
+                        catch (System.Exception)
+                        {
+                            Console.WriteLine($"ERROR: Please use correct format for --mappings.fields, It should be \"<<source.fields>>:<<target.fields>>\".");
+                            return false;
+                        }
+                        updatedRelationship = new Relationship(updatedRelationship.Cardinality, updatedRelationship.TargetEntity, sourceFields, targetFields, updatedRelationship.LinkingObject, updatedRelationship.LinkingSourceFields, updatedRelationship.LinkingTargetFields);
+                        updatedEntity.Relationships[relationship] = updatedRelationship;
+                    }
+                } else {    // if it's a new relationship
+                    if(cardinality!=null && targetEntity!=null && mappingFields!=null) {
+                        Dictionary<string, Relationship> relationship_mapping = updatedEntity.Relationships==null ? new Dictionary<string, Relationship>(): updatedEntity.Relationships;
+                        Cardinality cardinalityType;
+                        try
+                        {
+                            cardinalityType = GetCardinalityTypeFromString(cardinality);
+                        }
+                        catch (System.NotSupportedException)
+                        {
+                            Console.WriteLine($"Given Cardinality: {cardinality} not supported. Currently supported options: one or many.");
+                            return false;
+                        }
+                        string[]? sourceAndTargetFields = null;
+                        string[]? sourceFields = null;
+                        string[]? targetFields = null;
+                        try
+                        {
+                            sourceAndTargetFields = mappingFields.Split(":");
+                            sourceFields = sourceAndTargetFields[0].Split(",");
+                            targetFields = sourceAndTargetFields[1].Split(",");
+                        }
+                        catch (System.Exception)
+                        {
+                            Console.WriteLine($"ERROR: Please use correct format for --mappings.fields, It should be \"<<source.fields>>:<<target.fields>>\".");
+                            return false;
+                        }
+                        
+                        relationship_mapping.Add(relationship, new Relationship(cardinalityType, targetEntity, sourceFields, targetFields, null, null, null));
+                        updatedEntity = new Entity(updatedEntity.Source, updatedEntity.Rest, updatedEntity.GraphQL, updatedEntity.Permissions, relationship_mapping, updatedEntity.Mappings);
+                    } else {
+                        Console.WriteLine($"ERROR: For adding a new relationship following options are mandatory: --relationship, --cardinality, --target.entity, --mappings.field.");
+                        return false;
+                    }
                 }
             }
             

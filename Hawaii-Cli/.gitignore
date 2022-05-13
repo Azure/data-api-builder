@@ -11,4 +11,6 @@
 .localhistory/
 .vs/
 *.code-workspace
-/nupkg/*-alpha.nupkg
+
+# Nuget package
+/nupkg

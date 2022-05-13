@@ -23,7 +23,7 @@ namespace Hawaii.Cli.Classes
             if (databaseType == null || connectionString == null)
             {
                 Console.WriteLine(@"Please check if any required arguments are not missing.
-                Required options: --database_type, --connection_string");
+                Required options: --database-type, --connection-string");
                 return;
             }
             bool isSuccess = ConfigGenerator.GenerateConfig(fileName, databaseType, connectionString);
@@ -41,7 +41,7 @@ namespace Hawaii.Cli.Classes
             var source = options.source;
             var rest = options.restRoute;
             var graphQL = options.graphQLType;
-            var permissions = options.permissions;
+            var permissions = options.permission;
             var fieldsToInclude = options.fieldsToInclude;
             var fieldsToExclude = options.fieldsToExclude;
 
@@ -72,15 +72,19 @@ namespace Hawaii.Cli.Classes
             var source = options.source;
             var rest = options.restRoute;
             var graphQL = options.graphQLType;
-            var permissions = options.permissions;
+            var permission = options.permission;
             var fieldsToInclude = options.fieldsToInclude;
             var fieldsToExclude = options.fieldsToExclude;
+            var relationship = options.relationship;
+            var targetEntity = options.targetEntity;
+            var cardinality = options.cardinality;
+            var mappingFields = options.mappingFields;
 
             if(fileName == null) {
                 Console.WriteLine("Using default file hawaii-config");
                 fileName = DEFAULT_CONFIG_FILENAME;
             }
-            bool isSuccess = ConfigGenerator.UpdateEntity(fileName, entity, source, permissions, rest, graphQL, fieldsToInclude, fieldsToExclude);
+            bool isSuccess = ConfigGenerator.UpdateEntity(fileName, entity, source, permission, rest, graphQL, fieldsToInclude, fieldsToExclude, relationship, targetEntity, cardinality, mappingFields);
             if(isSuccess) {
                 Console.WriteLine($"Updated entity:{entity} in the config.");
             } else {

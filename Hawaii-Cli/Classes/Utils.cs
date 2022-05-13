@@ -90,6 +90,9 @@ namespace Hawaii.Cli.Classes
 
         public static object[] CreateActions(string actions, string? fieldsToInclude, string? fieldsToExclude) {
             object[] action_items;
+            if(fieldsToInclude==null && fieldsToExclude==null) {
+                return actions.Split(",");
+            }
             if("*".Equals(actions)){
                 action_items =  new object[]{Action.GetAction(actions, fieldsToInclude, fieldsToExclude)};
             } else {
@@ -123,6 +126,7 @@ namespace Hawaii.Cli.Classes
         public static JsonSerializerOptions GetSerializationOptions() {
             JsonSerializerOptions options = new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
             options.Converters.Add(new JsonStringEnumConverter());
+            // options.Converters.Add(new )
 
             return options;
         }
@@ -144,24 +148,20 @@ namespace Hawaii.Cli.Classes
             return (Action.ToObject(op)).action;
         }
 
-        // public static Boolean IsString(JsonElement action) {
+        public static Cardinality GetCardinalityTypeFromString(string cardinality) {
+            if("one".Equals(cardinality, StringComparison.OrdinalIgnoreCase)) return Cardinality.One;
+            else if("many".Equals(cardinality, StringComparison.OrdinalIgnoreCase)) return Cardinality.Many;
+            else {
+                throw new NotSupportedException();
+            }
+        }
 
-        // }
-
-        // public static Boolean IsOneOfCRUDOperation(JsonElement action) {
-        //     if((JsonValueKind.String.Equals(action.ValueKind)) && ("create".Equals(action.ToString()) || "read".Equals(action.ToString()) || "update".Equals(action.ToString()) || "delete".Equals(action.ToString()))) {
-        //         return true;
-        //     }
-        //     return false;
-        // }
-
-        // public static Action ToObject(JsonElement element)
-        // {
-        //     if(JsonValueKind.String.Equals(element.ValueKind)) {
-        //         return Action.GetAction(element.ToString(), new Dictionary<string, string[]>());
-        //     }
-        //     var json = element.GetRawText();
-        //     return JsonSerializer.Deserialize<Action>(json);
-        // }
+        public static Dictionary<GlobalSettingsType, object> GetDefaultGlobalSettings() {
+            Dictionary<GlobalSettingsType, object> defaultGlobalSettings = new ();
+            defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings());
+            defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings());
+            defaultGlobalSettings.Add(GlobalSettingsType.Host, new HostGlobalSettings());
+            return defaultGlobalSettings;
+        }
     }
 }

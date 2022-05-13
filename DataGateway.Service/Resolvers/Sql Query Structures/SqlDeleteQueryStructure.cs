@@ -1,4 +1,7 @@
 using System.Collections.Generic;
+using System.Net;
+using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 
@@ -9,17 +12,25 @@ namespace Azure.DataGateway.Service.Resolvers
     ///</summary>
     public class SqlDeleteStructure : BaseSqlQueryStructure
     {
-        public SqlDeleteStructure(string tableName, IMetadataStoreProvider metadataStore, IDictionary<string, object> mutationParams)
-        : base(metadataStore, tableName: tableName)
+        public SqlDeleteStructure(
+            string tableName,
+            IGraphQLMetadataProvider metadataStoreProvider,
+            ISqlMetadataProvider sqlMetadataProvider,
+            IDictionary<string, object?> mutationParams)
+        : base(metadataStoreProvider, sqlMetadataProvider, tableName: tableName)
         {
-            TableDefinition tableDefinition = GetTableDefinition();
+            TableDefinition tableDefinition = GetUnderlyingTableDefinition();
 
             List<string> primaryKeys = tableDefinition.PrimaryKey;
-            foreach (KeyValuePair<string, object> param in mutationParams)
+            foreach (KeyValuePair<string, object?> param in mutationParams)
             {
                 if (param.Value == null)
                 {
-                    continue;
+                    // Should never happen since delete mutations expect non nullable pk params
+                    throw new DataGatewayException(
+                        $"Unexpected {param.Key} null argument.",
+                        HttpStatusCode.BadRequest,
+                        DataGatewayException.SubStatusCodes.BadRequest);
                 }
 
                 // primary keys used as predicates

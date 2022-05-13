@@ -1,35 +1,45 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
 {
     public class SqlTestHelper
     {
-        public static IOptions<DataGatewayConfig> LoadConfig(string environment)
+        public static IOptionsMonitor<RuntimeConfigPath> LoadConfig(string environment)
         {
+            string configFileName = RuntimeConfigPath.GetFileNameForEnvironment(environment);
 
-            DataGatewayConfig dataGatewayConfig = new();
+            Dictionary<string, string> configFileNameMap = new()
+            {
+                {
+                    nameof(RuntimeConfigPath.ConfigFileName),
+                    configFileName
+                }
+            };
+
             IConfigurationRoot config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile($"appsettings.{environment}.json")
-                .AddJsonFile($"appsettings.{environment}.overrides.json", optional: true)
+                .AddInMemoryCollection(configFileNameMap)
                 .Build();
 
-            config.Bind(nameof(DataGatewayConfig), dataGatewayConfig);
+            RuntimeConfigPath configPath = config.Get<RuntimeConfigPath>();
+            configPath.SetRuntimeConfigValue();
 
-            return Options.Create(dataGatewayConfig);
+            return Mock.Of<IOptionsMonitor<RuntimeConfigPath>>(_ => _.CurrentValue == configPath);
+
         }
 
         /// <summary>
@@ -72,6 +82,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             if (message != null)
             {
+                Console.WriteLine(response);
                 Assert.IsTrue(response.Contains(message), $"Message \"{message}\" not found in error");
             }
 
@@ -108,9 +119,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case Operation.Delete:
                     actionResult = await controller.Delete(entityName, primaryKeyRoute);
                     break;
+                case Operation.Update:
                 case Operation.Upsert:
                     actionResult = await controller.Upsert(entityName, primaryKeyRoute);
                     break;
+                case Operation.UpdateIncremental:
                 case Operation.UpsertIncremental:
                     actionResult = await controller.UpsertIncremental(entityName, primaryKeyRoute);
                     break;
@@ -134,7 +147,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string expected,
             HttpStatusCode expectedStatusCode,
             string expectedLocationHeader,
-            bool isJson = false)
+            bool isJson = false,
+            int verifyNumRecords = -1)
         {
             JsonSerializerOptions options = new()
             {
@@ -146,6 +160,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case OkObjectResult okResult:
                     Assert.AreEqual((int)expectedStatusCode, okResult.StatusCode);
                     actual = JsonSerializer.Serialize(okResult.Value, options);
+                    // if verifyNumRecords is positive we want to compare its value to
+                    // the number of elements associated with "value" in the actual result.
+                    // because the okResult.Value is an annonymous type we use the serialized
+                    // json string, actual, to easily get the inner array and get its length.
+                    if (verifyNumRecords >= 0)
+                    {
+                        Dictionary<string, JsonElement[]> actualAsDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(actual);
+                        Assert.AreEqual(actualAsDict["value"].Length, verifyNumRecords);
+                    }
+
                     break;
                 case CreatedResult createdResult:
                     Assert.AreEqual((int)expectedStatusCode, createdResult.StatusCode);
@@ -163,7 +187,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     break;
                 default:
                     JsonResult actualResult = (JsonResult)actionResult;
-                    actual = JsonSerializer.Serialize(actualResult.Value);
+                    actual = JsonSerializer.Serialize(actualResult.Value, options);
                     break;
             }
 
@@ -174,7 +198,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }
             else
             {
-                Assert.AreEqual(expected, actual);
+                Assert.AreEqual(expected, actual, ignoreCase: true);
             }
         }
     }

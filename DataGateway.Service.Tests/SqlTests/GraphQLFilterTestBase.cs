@@ -33,7 +33,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
-            string dbQuery = MakeQueryOnBooks(
+            string dbQuery = MakeQueryOn(
+                "books",
                 new List<string> { "title" },
                 "title = 'Awesome book'");
 
@@ -56,7 +57,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
-            string dbQuery = MakeQueryOnBooks(
+            string dbQuery = MakeQueryOn(
+                "books",
                 new List<string> { "title" },
                 "title != 'Awesome book'");
 
@@ -79,7 +81,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
-            string dbQuery = MakeQueryOnBooks(
+            string dbQuery = MakeQueryOn(
+                "books",
                 new List<string> { "title" },
                 "title LIKE 'Awe%'");
 
@@ -102,7 +105,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
-            string dbQuery = MakeQueryOnBooks(
+            string dbQuery = MakeQueryOn(
+                "books",
                 new List<string> { "title" },
                 "title LIKE '%book'");
 
@@ -125,7 +129,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
-            string dbQuery = MakeQueryOnBooks(
+            string dbQuery = MakeQueryOn(
+                "books",
                 new List<string> { "title" },
                 "title LIKE '%some%'");
 
@@ -148,7 +153,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
-            string dbQuery = MakeQueryOnBooks(
+            string dbQuery = MakeQueryOn(
+                "books",
                 new List<string> { "title" },
                 "title NOT LIKE '%book%'");
 
@@ -189,7 +195,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
-            string dbQuery = MakeQueryOnBooks(
+            string dbQuery = MakeQueryOn(
+                "books",
                 new List<string> { "id" },
                 @"id = 2");
 
@@ -212,7 +219,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
-            string dbQuery = MakeQueryOnBooks(
+            string dbQuery = MakeQueryOn(
+                "books",
                 new List<string> { "id" },
                 @"id != 2");
 
@@ -235,7 +243,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
-            string dbQuery = MakeQueryOnBooks(
+            string dbQuery = MakeQueryOn(
+                "books",
                 new List<string> { "id" },
                 @"(id > 2 AND id < 4)");
 
@@ -258,7 +267,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
-            string dbQuery = MakeQueryOnBooks(
+            string dbQuery = MakeQueryOn(
+                "books",
                 new List<string> { "id" },
                 @"(id >= 2 AND id <= 4)");
 
@@ -295,7 +305,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
-            string dbQuery = MakeQueryOnBooks(
+            string dbQuery = MakeQueryOn(
+                "books",
                 new List<string> { "id", "title" },
                 @"(title LIKE '%book%' AND ((id > 2 AND id < 4) OR id >= 4))");
 
@@ -331,7 +342,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
-            string dbQuery = MakeQueryOnBooks(
+            string dbQuery = MakeQueryOn(
+                "books",
                 new List<string> { "id", "title" },
                 @"((id > 2 AND id < 4) OR (id >= 4 AND title LIKE '%book%'))");
 
@@ -376,7 +388,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
-            string dbQuery = MakeQueryOnBooks(
+            string dbQuery = MakeQueryOn(
+                "books",
                 new List<string> { "id", "title", "publisher_id" },
                 @"((id >= 2 AND title NOT LIKE '%book%') AND
                   (id < 1000 AND title LIKE 'US%') AND
@@ -438,9 +451,163 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
-            string dbQuery = MakeQueryOnBooks(
+            string dbQuery = MakeQueryOn(
+                "books",
                 new List<string> { "id" },
                 "id >= 2 AND id < 4");
+
+            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test filtering null integer fields
+        /// </summary>
+        [TestMethod]
+        public async Task TestGetNullIntFields()
+        {
+            string graphQLQueryName = "getMagazines";
+            string gqlQuery = @"{
+                getMagazines(_filter: {issue_number: {isNull: true}})
+                {
+                    id
+                    title
+                    issue_number
+                }
+            }";
+
+            string dbQuery = MakeQueryOn(
+                "magazines",
+                new List<string> { "id", "title", "issue_number" },
+                "issue_number IS NULL");
+
+            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test filtering non null integer fields
+        /// </summary>
+        [TestMethod]
+        public async Task TestGetNonNullIntFields()
+        {
+            string graphQLQueryName = "getMagazines";
+            string gqlQuery = @"{
+                getMagazines(_filter: {issue_number: {isNull: false}})
+                {
+                    id
+                    title
+                    issue_number
+                }
+            }";
+
+            string dbQuery = MakeQueryOn(
+                "magazines",
+                new List<string> { "id", "title", "issue_number" },
+                "issue_number IS NOT NULL");
+
+            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test filtering null string fields
+        /// </summary>
+        [TestMethod]
+        public async Task TestGetNullStringFields()
+        {
+            string graphQLQueryName = "getWebsiteUsers";
+            string gqlQuery = @"{
+                getWebsiteUsers(_filter: {username: {isNull: true}})
+                {
+                    id
+                    username
+                }
+            }";
+
+            string dbQuery = MakeQueryOn(
+                "website_users",
+                new List<string> { "id", "username" },
+                "username IS NULL");
+
+            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test filtering not null string fields
+        /// </summary>
+        [TestMethod]
+        public async Task TestGetNonNullStringFields()
+        {
+            string graphQLQueryName = "getWebsiteUsers";
+            string gqlQuery = @"{
+                getWebsiteUsers(_filter: {username: {isNull: false}})
+                {
+                    id
+                    username
+                }
+            }";
+
+            string dbQuery = MakeQueryOn(
+                "website_users",
+                new List<string> { "id", "username" },
+                "username IS NOT NULL");
+
+            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Passes null to nullable fields and makes sure they are ignored
+        /// </summary>
+        public async Task TestExplicitNullFieldsAreIgnored()
+        {
+            string graphQLQueryName = "getBooks";
+            string gqlQuery = @"{
+                getBooks(_filter: {
+                                    id: {gte: 2 lte: null}
+                                    title: null
+                                    or: null
+                                  })
+                {
+                    id
+                    title
+                }
+            }";
+
+            string dbQuery = MakeQueryOn(
+                "books",
+                new List<string> { "id", "title" },
+                @"id >= 2");
+
+            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Passes null to nullable fields and makes sure they are ignored
+        /// </summary>
+        public async Task TestInputObjectWithOnlyNullFieldsEvaluatesToFalse()
+        {
+            string graphQLQueryName = "getBooks";
+            string gqlQuery = @"{
+                getBooks(_filter: {id: {lte: null}})
+                {
+                    id
+                }
+            }";
+
+            string dbQuery = MakeQueryOn(
+                "books",
+                new List<string> { "id" },
+                @"1 != 1");
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -452,6 +619,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <remarks>
         /// This function does not escape special characters from column names so those might lead to errors
         /// </remarks>
-        protected abstract string MakeQueryOnBooks(List<string> queriedColumns, string predicate);
+        protected abstract string MakeQueryOn(
+            string table,
+            List<string> queriedColumns,
+            string predicate,
+            List<string> pkColumns = null);
     }
 }

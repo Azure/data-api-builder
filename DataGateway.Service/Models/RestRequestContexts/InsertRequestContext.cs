@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 
@@ -31,7 +32,7 @@ namespace Azure.DataGateway.Service.Models
             {
                 try
                 {
-                    Dictionary<string, object>? fieldValuePairs = JsonSerializer.Deserialize<Dictionary<string, object>>(payload);
+                    Dictionary<string, object?>? fieldValuePairs = JsonSerializer.Deserialize<Dictionary<string, object?>>(payload);
                     if (fieldValuePairs != null)
                     {
                         FieldValuePairsInBody = fieldValuePairs;

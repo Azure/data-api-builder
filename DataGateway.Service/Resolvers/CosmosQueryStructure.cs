@@ -8,7 +8,7 @@ using HotChocolate.Resolvers;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
-    public class CosmosQueryStructure : BaseSqlQueryStructure
+    public class CosmosQueryStructure : BaseQueryStructure
     {
         private IMiddlewareContext _context;
         public bool IsPaginated { get; internal set; }
@@ -17,12 +17,17 @@ namespace Azure.DataGateway.Service.Resolvers
         public string Container { get; internal set; }
         public string Database { get; internal set; }
         public string? Continuation { get; internal set; }
-        public long MaxItemCount { get; internal set; }
+        public int MaxItemCount { get; internal set; }
+        public List<OrderByColumn> OrderByColumns { get; internal set; }
+
+        protected IGraphQLMetadataProvider MetadataStoreProvider { get; }
 
         public CosmosQueryStructure(IMiddlewareContext context,
             IDictionary<string, object> parameters,
-            IMetadataStoreProvider metadataStoreProvider) : base(metadataStoreProvider)
+            IGraphQLMetadataProvider metadataStoreProvider)
+            : base()
         {
+            MetadataStoreProvider = metadataStoreProvider;
             _context = context;
             Init(parameters);
         }
@@ -34,6 +39,7 @@ namespace Azure.DataGateway.Service.Resolvers
             IFieldSelection selection = _context.Selection;
             GraphQLType graphqlType = MetadataStoreProvider.GetGraphQLType(UnderlyingType(selection.Field.Type).Name);
             IsPaginated = graphqlType.IsPaginationType;
+            OrderByColumns = new();
 
             if (IsPaginated)
             {
@@ -42,39 +48,88 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 if (fieldNode != null)
                 {
-                    Columns.AddRange(fieldNode.SelectionSet!.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.ToString())));
+                    Columns.AddRange(fieldNode.SelectionSet!.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.GetNodes().First().ToString())));
                 }
             }
             else
             {
-                Columns.AddRange(selection.SyntaxNode.SelectionSet!.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.ToString())));
+                Columns.AddRange(selection.SyntaxNode.SelectionSet!.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.GetNodes().First().ToString())));
             }
 
             Container = graphqlType.ContainerName;
             Database = graphqlType.DatabaseName;
 
-            foreach (KeyValuePair<string, object> parameter in queryParams)
+            // first and after will not be part of query parameters. They will be going into headers instead.
+            // TODO: Revisit 'first' while adding support for TOP queries
+            if (queryParams.ContainsKey("first"))
             {
-                // first and after will not be part of query parameters. They will be going into headers instead.
-                // TODO: Revisit 'first' while adding support for TOP queries
-                if (parameter.Key == "first")
-                {
-                    MaxItemCount = (long)parameter.Value;
-                    continue;
-                }
-
-                if (parameter.Key == "after")
-                {
-                    Continuation = (string)parameter.Value;
-                    continue;
-                }
-
-                Predicates.Add(new Predicate(
-                    new PredicateOperand(new Column(_containerAlias, parameter.Key)),
-                    PredicateOperation.Equal,
-                    new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
-                ));
+                MaxItemCount = (int)queryParams["first"];
+                queryParams.Remove("first");
             }
+
+            if (queryParams.ContainsKey("after"))
+            {
+                Continuation = (string)queryParams["after"];
+                queryParams.Remove("after");
+            }
+
+            if (queryParams.ContainsKey("orderBy"))
+            {
+                object? orderByObject = queryParams["orderBy"];
+
+                if (orderByObject != null)
+                {
+                    OrderByColumns = ProcessGqlOrderByArg((List<ObjectFieldNode>)orderByObject);
+                }
+            }
+            else
+            {
+
+                foreach (KeyValuePair<string, object> parameter in queryParams)
+                {
+                    Predicates.Add(new Predicate(
+                        new PredicateOperand(new Column(_containerAlias, parameter.Key)),
+                        PredicateOperation.Equal,
+                        new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
+                    ));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Create a list of orderBy columns from the orderBy argument
+        /// passed to the gql query
+        /// </summary>
+        private List<OrderByColumn> ProcessGqlOrderByArg(List<ObjectFieldNode> orderByFields)
+        {
+            // Create list of primary key columns
+            // we always have the primary keys in
+            // the order by statement for the case
+            // of tie breaking and pagination
+            List<OrderByColumn> orderByColumnsList = new();
+
+            foreach (ObjectFieldNode field in orderByFields)
+            {
+                if (field.Value is NullValueNode)
+                {
+                    continue;
+                }
+
+                string fieldName = field.Name.ToString();
+
+                EnumValueNode enumValue = (EnumValueNode)field.Value;
+
+                if (enumValue.Value == $"{OrderByDir.Desc}")
+                {
+                    orderByColumnsList.Add(new OrderByColumn(_containerAlias, fieldName, OrderByDir.Desc));
+                }
+                else
+                {
+                    orderByColumnsList.Add(new OrderByColumn(_containerAlias, fieldName));
+                }
+            }
+
+            return orderByColumnsList;
         }
     }
 }

@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 
 namespace Azure.DataGateway.Service.Models
@@ -26,6 +28,11 @@ namespace Azure.DataGateway.Service.Models
 
             foreach (ObjectFieldNode field in fields)
             {
+                if (field.Value is NullValueNode)
+                {
+                    continue;
+                }
+
                 string name = field.Name.ToString();
 
                 bool fieldIsAnd = string.Equals(name, $"{PredicateOperation.AND}", StringComparison.OrdinalIgnoreCase);
@@ -60,7 +67,7 @@ namespace Azure.DataGateway.Service.Models
             Func<object, string> processLiterals)
         {
             Column column = new(tableAlias, name);
-            Type columnType = ColumnDefinition.ResolveColumnTypeToSystemType(table.Columns[name].Type);
+            Type columnType = table.Columns[name].SystemType;
             switch (columnType.ToString())
             {
                 case "System.String":
@@ -88,11 +95,7 @@ namespace Azure.DataGateway.Service.Models
         {
             if (predicates.Count == 0)
             {
-                return new Predicate(
-                    new PredicateOperand("1"),
-                    PredicateOperation.NotEqual,
-                    new PredicateOperand("1")
-                );
+                return Predicate.MakeFalsePredicate();
             }
 
             List<PredicateOperand> operands = new();
@@ -114,6 +117,11 @@ namespace Azure.DataGateway.Service.Models
             int pos = 0,
             bool addParenthesis = true)
         {
+            if (operands.Count == 0)
+            {
+                return Predicate.MakeFalsePredicate();
+            }
+
             if (pos == operands.Count - 1)
             {
                 return operands[pos].AsPredicate()!;
@@ -150,7 +158,13 @@ namespace Azure.DataGateway.Service.Models
             foreach (ObjectFieldNode field in fields)
             {
                 string name = field.Name.ToString();
-                int value = ((IntValueNode)field.Value).ToInt32();
+                object? value = ResolverMiddleware.ArgumentValue(field.Value);
+                bool processLiteral = true;
+
+                if (value is null)
+                {
+                    continue;
+                }
 
                 PredicateOperation op;
                 switch (name)
@@ -173,6 +187,12 @@ namespace Azure.DataGateway.Service.Models
                     case "gte":
                         op = PredicateOperation.GreaterThanOrEqual;
                         break;
+                    case "isNull":
+                        processLiteral = false;
+                        bool isNull = (bool)value;
+                        op = isNull ? PredicateOperation.IS : PredicateOperation.IS_NOT;
+                        value = "NULL";
+                        break;
                     default:
                         throw new NotSupportedException($"Operation {name} on int type not supported.");
                 }
@@ -180,8 +200,8 @@ namespace Azure.DataGateway.Service.Models
                 predicates.Push(new PredicateOperand(new Predicate(
                     new PredicateOperand(column),
                     op,
-                    new PredicateOperand($"@{processLiterals(value)}")
-                )));
+                    new PredicateOperand(processLiteral ? $"@{processLiterals(value)}" : value.ToString()))
+                ));
             }
 
             return GQLFilterParser.MakeChainPredicate(predicates, PredicateOperation.AND);
@@ -210,7 +230,13 @@ namespace Azure.DataGateway.Service.Models
             foreach (ObjectFieldNode field in fields)
             {
                 string ruleName = field.Name.ToString();
-                string ruleValue = ((StringValueNode)field.Value).Value;
+                object? ruleValue = ResolverMiddleware.ArgumentValue(field.Value);
+                bool processLiteral = true;
+
+                if (ruleValue is null)
+                {
+                    continue;
+                }
 
                 PredicateOperation op;
 
@@ -224,19 +250,26 @@ namespace Azure.DataGateway.Service.Models
                         break;
                     case "contains":
                         op = PredicateOperation.LIKE;
-                        ruleValue = $"%{EscapeLikeString(ruleValue)}%";
+                        ruleValue = $"%{EscapeLikeString((string)ruleValue)}%";
                         break;
                     case "notContains":
                         op = PredicateOperation.NOT_LIKE;
-                        ruleValue = $"%{EscapeLikeString(ruleValue)}%";
+                        ruleValue = $"%{EscapeLikeString((string)ruleValue)}%";
                         break;
                     case "startsWith":
                         op = PredicateOperation.LIKE;
-                        ruleValue = $"{EscapeLikeString(ruleValue)}%";
+                        ruleValue = $"{EscapeLikeString((string)ruleValue)}%";
                         break;
                     case "endsWith":
                         op = PredicateOperation.LIKE;
-                        ruleValue = $"%{EscapeLikeString(ruleValue)}";
+                        ruleValue = ((StringValueNode)field.Value).Value;
+                        ruleValue = $"%{EscapeLikeString((string)ruleValue)}";
+                        break;
+                    case "isNull":
+                        processLiteral = false;
+                        bool isNull = (bool)ruleValue;
+                        op = isNull ? PredicateOperation.IS : PredicateOperation.IS_NOT;
+                        ruleValue = "NULL";
                         break;
                     default:
                         throw new NotSupportedException($"Operation {ruleName} on string type not supported.");
@@ -245,7 +278,7 @@ namespace Azure.DataGateway.Service.Models
                 predicates.Push(new PredicateOperand(new Predicate(
                     new PredicateOperand(column),
                     op,
-                    new PredicateOperand($"@{processLiterals(ruleValue)}")
+                    new PredicateOperand(processLiteral ? $"@{processLiterals((string)ruleValue)}" : (string)ruleValue)
                 )));
             }
 

@@ -1,8 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
+using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using static Azure.DataGateway.Service.Exceptions.DataGatewayException;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -12,6 +16,9 @@ namespace Azure.DataGateway.Service.Resolvers
     /// </summary>
     public abstract class BaseSqlQueryBuilder
     {
+        public const string SCHEMA_NAME_PARAM = "schemaName";
+        public const string TABLE_NAME_PARAM = "tableName";
+
         /// <summary>
         /// Adds database specific quotes to string identifier
         /// </summary>
@@ -27,45 +34,44 @@ namespace Azure.DataGateway.Service.Resolvers
                 return string.Empty;
             }
 
-            if (predicate.PrimaryKey.Count > 1)
+            if (predicate.Columns.Count > 1)
             {
                 StringBuilder result = new("(");
-                for (int i = 0; i < predicate.PrimaryKey.Count; i++)
+                for (int i = 0; i < predicate.Columns.Count; i++)
                 {
                     if (i > 0)
                     {
                         result.Append(" OR ");
                     }
 
-                    result.Append($"({MakePaginationInequality(predicate.PrimaryKey, predicate.Values, i)})");
+                    result.Append($"({MakePaginationInequality(predicate.Columns, untilIndex: i)})");
                 }
 
                 result.Append(")");
-
                 return result.ToString();
             }
             else
             {
-                return MakePaginationInequality(predicate.PrimaryKey, predicate.Values, 0);
+                return MakePaginationInequality(predicate.Columns, untilIndex: 0);
             }
         }
 
         /// <summary>
-        /// Create an inequality where all primary key columns up to untilIndex are equilized to the
-        /// respective pkValue, and the primary key colum at untilIndex has to be greater than its pkValue
+        /// Create an inequality where all columns up to untilIndex are equilized to the
+        /// respective values, and the column at untilIndex has to be compared to its Value
         /// E.g. for
         /// primaryKey: [a, b, c, d, e, f]
         /// pkValues: [A, B, C, D, E, F]
         /// untilIndex: 2
         /// generate <c>a = A AND b = B AND c > C</c>
         /// </summary>
-        private string MakePaginationInequality(List<Column> primaryKey, List<string> pkValues, int untilIndex)
+        private string MakePaginationInequality(List<PaginationColumn> columns, int untilIndex)
         {
             StringBuilder result = new();
             for (int i = 0; i <= untilIndex; i++)
             {
-                string op = i == untilIndex ? ">" : "=";
-                result.Append($"{Build(primaryKey[i])} {op} {pkValues[i]}");
+                string op = i == untilIndex ? GetComparisonFromDirection(columns[i].Direction) : "=";
+                result.Append($"{Build(columns[i], printDirection: false)} {op} {columns[i].ParamName}");
 
                 if (i < untilIndex)
                 {
@@ -74,6 +80,27 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return result.ToString();
+        }
+
+        /// <summary>
+        /// Helper function returns the comparison operator appropriate
+        /// for the given direction.
+        /// </summary>
+        /// <param name="direction">String represents direction.</param>
+        /// <returns>Correct comparison operator.</returns>
+        private static string GetComparisonFromDirection(OrderByDir direction)
+        {
+            switch (direction)
+            {
+                case OrderByDir.Asc:
+                    return ">";
+                case OrderByDir.Desc:
+                    return "<";
+                default:
+                    throw new DataGatewayException(message: $"Invalid sorting direction for pagination: {direction}",
+                                                   statusCode: HttpStatusCode.BadRequest,
+                                                   subStatusCode: SubStatusCodes.BadRequest);
+            }
         }
 
         /// <summary>
@@ -92,6 +119,19 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 return QuoteIdentifier(column.ColumnName);
             }
+        }
+
+        /// <summary>
+        /// Build orderby column as
+        /// {TableAlias}.{ColumnName} {direction}
+        /// If TableAlias is null
+        /// {ColumnName} {direction}
+        /// </summary>
+        protected virtual string Build(OrderByColumn column, bool printDirection = true)
+        {
+            StringBuilder builder = new();
+            builder.Append(Build(column as Column));
+            return printDirection ? builder.Append(" " + column.Direction).ToString() : builder.ToString();
         }
 
         /// <summary>
@@ -115,6 +155,14 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Build each labelled column and join by ", " separator
         /// </summary>
         protected string Build(List<LabelledColumn> columns)
+        {
+            return string.Join(", ", columns.Select(c => Build(c)));
+        }
+
+        /// <summary>
+        /// Build each OrderByColumn and join by ", " separator
+        /// </summary>
+        protected string Build(List<OrderByColumn> columns)
         {
             return string.Join(", ", columns.Select(c => Build(c)));
         }
@@ -177,6 +225,10 @@ namespace Azure.DataGateway.Service.Resolvers
                     return "LIKE";
                 case PredicateOperation.NOT_LIKE:
                     return "NOT LIKE";
+                case PredicateOperation.IS:
+                    return "IS";
+                case PredicateOperation.IS_NOT:
+                    return "IS NOT";
                 default:
                     throw new ArgumentException($"Cannot build unknown predicate operation {op}.");
             }
@@ -258,6 +310,64 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return string.Join(" AND ", validPredicates);
+        }
+
+        /// <inheritdoc />
+        public virtual string BuildForeignKeyInfoQuery(int numberOfParameters)
+        {
+            string[] schemaNameParams =
+                CreateParams(kindOfParam: SCHEMA_NAME_PARAM, numberOfParameters);
+
+            string[] tableNameParams =
+                CreateParams(kindOfParam: TABLE_NAME_PARAM, numberOfParameters);
+            string tableSchemaParamsForInClause = string.Join(", @", schemaNameParams);
+            string tableNameParamsForInClause = string.Join(", @", tableNameParams);
+
+            // The view REFERENTIAL_CONSTRAINTS has a row for each referential key CONSTRAINT_NAME and
+            // its corresponding UNIQUE_CONSTRAINT_NAME to which it references.
+            // These are only constraint names so we need to join with the view KEY_COLUMN_USAGE to get the
+            // constraint columns - one inner join for the columns from the 'Referencing table'
+            // and the other join for the columns from the 'Referenced Table'.
+            string foreignKeyQuery = $@"
+                SELECT 
+                    ReferentialConstraints.CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))}, 
+                    ReferencingColumnUsage.TABLE_NAME {QuoteIdentifier(nameof(TableDefinition))}, 
+                    ReferencingColumnUsage.COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencingColumns))}, 
+                    ReferencedColumnUsage.TABLE_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedTable))}, 
+                    ReferencedColumnUsage.COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))} 
+                FROM 
+                    INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS ReferentialConstraints 
+                    INNER JOIN 
+                    INFORMATION_SCHEMA.KEY_COLUMN_USAGE ReferencingColumnUsage 
+                        ON ReferentialConstraints.CONSTRAINT_CATALOG = ReferencingColumnUsage.CONSTRAINT_CATALOG 
+                        AND ReferentialConstraints.CONSTRAINT_SCHEMA = ReferencingColumnUsage.CONSTRAINT_SCHEMA 
+                        AND ReferentialConstraints.CONSTRAINT_NAME = ReferencingColumnUsage.CONSTRAINT_NAME 
+                    INNER JOIN 
+                        INFORMATION_SCHEMA.KEY_COLUMN_USAGE ReferencedColumnUsage 
+                        ON ReferentialConstraints.UNIQUE_CONSTRAINT_CATALOG = ReferencedColumnUsage.CONSTRAINT_CATALOG 
+                        AND ReferentialConstraints.UNIQUE_CONSTRAINT_SCHEMA = ReferencedColumnUsage.CONSTRAINT_SCHEMA 
+                        AND ReferentialConstraints.UNIQUE_CONSTRAINT_NAME = ReferencedColumnUsage.CONSTRAINT_NAME 
+                        AND ReferencingColumnUsage.ORDINAL_POSITION = ReferencedColumnUsage.ORDINAL_POSITION 
+                WHERE 
+                    ReferencingColumnUsage.TABLE_SCHEMA IN (@{tableSchemaParamsForInClause})
+                    AND ReferencingColumnUsage.TABLE_NAME IN (@{tableNameParamsForInClause})";
+
+            Console.WriteLine($"Foreign Key Query: {foreignKeyQuery}");
+            return foreignKeyQuery;
+        }
+
+        /// <summary>
+        /// Creates a list of named parameters with incremental suffixes
+        /// starting from 0 to numberOfParameters - 1.
+        /// e.g. tableName0, tableName1
+        /// </summary>
+        /// <param name="kindOfParam">The kind of parameter being created acting
+        /// as the prefix common to all parameters.</param>
+        /// <param name="numberOfParameters">The number of parameters to create.</param>
+        /// <returns>The created list</returns>
+        public static string[] CreateParams(string kindOfParam, int numberOfParameters)
+        {
+            return Enumerable.Range(0, numberOfParameters).Select(i => kindOfParam + i).ToArray();
         }
     }
 }

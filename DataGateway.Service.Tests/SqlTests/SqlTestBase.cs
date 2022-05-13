@@ -5,16 +5,18 @@ using System.IO;
 using System.Net;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Configurations;
+using System.Web;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
@@ -37,11 +39,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static IQueryBuilder _queryBuilder;
         protected static IQueryEngine _queryEngine;
         protected static IMutationEngine _mutationEngine;
-        protected static IMetadataStoreProvider _metadataStoreProvider;
+        protected static GraphQLFileMetadataProvider _metadataStoreProvider;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
-        protected static IMetadataStoreProvider _sqlMetadataProvider;
+        protected static DbExceptionParserBase _dbExceptionParser;
+        protected static ISqlMetadataProvider _sqlMetadataProvider;
         protected static string _defaultSchemaName;
+        protected static string _defaultSchemaVersion;
+        protected static IOptionsMonitor<RuntimeConfigPath> _runtimeConfigPath;
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run.
@@ -53,34 +58,43 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             _testCategory = testCategory;
 
-            IOptions<DataGatewayConfig> config = SqlTestHelper.LoadConfig($"{_testCategory}IntegrationTest");
-            string connectionString = config.Value.DatabaseConnection.ConnectionString;
-
+            _runtimeConfigPath = SqlTestHelper.LoadConfig($"{_testCategory}");
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:
-                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(config);
                     _queryBuilder = new PostgresQueryBuilder();
-                    _sqlMetadataProvider =
-                       new SqlMetadataProvider<NpgsqlConnection, NpgsqlDataAdapter, NpgsqlCommand>(connectionString);
                     _defaultSchemaName = "public";
+                    _dbExceptionParser = new PostgresDbExceptionParser();
+                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(_runtimeConfigPath, _dbExceptionParser);
+                    _sqlMetadataProvider =
+                        new PostgreSqlMetadataProvider(
+                            _runtimeConfigPath,
+                            _queryExecutor,
+                            _queryBuilder);
                     break;
                 case TestCategory.MSSQL:
-                    _queryExecutor = new QueryExecutor<SqlConnection>(config);
                     _queryBuilder = new MsSqlQueryBuilder();
-                    _sqlMetadataProvider =
-                      new SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand>(connectionString);
                     _defaultSchemaName = "dbo";
+                    _dbExceptionParser = new DbExceptionParserBase();
+                    _queryExecutor = new QueryExecutor<SqlConnection>(_runtimeConfigPath, _dbExceptionParser);
+                    _sqlMetadataProvider = new MsSqlMetadataProvider(
+                        _runtimeConfigPath,
+                        _queryExecutor, _queryBuilder);
                     break;
                 case TestCategory.MYSQL:
-                    _queryExecutor = new QueryExecutor<MySqlConnection>(config);
                     _queryBuilder = new MySqlQueryBuilder();
-                    _sqlMetadataProvider =
-                        new MySqlMetadataProvider(connectionString);
                     _defaultSchemaName = "mysql";
+                    _dbExceptionParser = new MySqlDbExceptionParser();
+                    _queryExecutor = new QueryExecutor<MySqlConnection>(_runtimeConfigPath, _dbExceptionParser);
+                    _sqlMetadataProvider =
+                         new MySqlMetadataProvider(
+                             _runtimeConfigPath,
+                             _queryExecutor,
+                             _queryBuilder);
                     break;
             }
 
+            _metadataStoreProvider = new GraphQLFileMetadataProvider(_runtimeConfigPath);
             // Setup AuthorizationService to always return Authorized.
             _authorizationService = new Mock<IAuthorizationService>();
             _authorizationService.Setup(x => x.AuthorizeAsync(
@@ -93,14 +107,20 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _httpContextAccessor = new Mock<IHttpContextAccessor>();
             _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
 
-            _metadataStoreProvider = new FileMetadataStoreProvider(
-                "sql-config.json",
-                config.Value.DatabaseType,
-                config.Value.DatabaseConnection.ConnectionString);
-            _queryEngine = new SqlQueryEngine(_metadataStoreProvider, _queryExecutor, _queryBuilder);
-            _mutationEngine = new SqlMutationEngine(_queryEngine, _metadataStoreProvider, _queryExecutor, _queryBuilder);
-
+            _queryEngine = new SqlQueryEngine(
+                _metadataStoreProvider,
+                _queryExecutor,
+                _queryBuilder,
+                _sqlMetadataProvider);
+            _mutationEngine =
+                new SqlMutationEngine(
+                _queryEngine,
+                _metadataStoreProvider,
+                _queryExecutor,
+                _queryBuilder,
+                _sqlMetadataProvider);
             await ResetDbStateAsync();
+            await _sqlMetadataProvider.InitializeAsync();
         }
 
         protected static async Task ResetDbStateAsync()
@@ -117,9 +137,24 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// and request body (if any) as a stream of utf-8 bytes.</returns>
         protected static DefaultHttpContext GetRequestHttpContext(
             string queryStringUrl = null,
+            IHeaderDictionary headers = null,
             string bodyData = null)
         {
-            DefaultHttpContext httpContext = new();
+
+            DefaultHttpContext httpContext;
+            if (headers is not null)
+            {
+                IFeatureCollection features = new FeatureCollection();
+                features.Set<IHttpRequestFeature>(new HttpRequestFeature { Headers = headers });
+                features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(new MemoryStream()));
+                // set Response StatusCode here to avoid null reference when returning exception in test with supplied headers
+                features.Set<IHttpResponseFeature>(new HttpResponseFeature { StatusCode = 200 });
+                httpContext = new(features);
+            }
+            else
+            {
+                httpContext = new();
+            }
 
             if (!string.IsNullOrEmpty(queryStringUrl))
             {
@@ -158,7 +193,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }
             else
             {
-                using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader));
+                using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader, _queryExecutor));
                 result = sqlResult.RootElement.ToString();
             }
 
@@ -190,6 +225,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string sqlQuery,
             RestController controller,
             Operation operationType = Operation.Find,
+            IHeaderDictionary headers = null,
             string requestBody = null,
             bool exception = false,
             string expectedErrorMessage = "",
@@ -197,11 +233,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string expectedSubStatusCode = "BadRequest",
             string expectedLocationHeader = null,
             string expectedAfterQueryString = "",
-            bool paginated = false)
+            bool paginated = false,
+            int verifyNumRecords = -1)
         {
             ConfigureRestController(
                 controller,
                 queryString,
+                headers,
                 requestBody);
             string baseUrl = UriHelper.GetEncodedUrl(controller.HttpContext.Request);
             if (expectedLocationHeader != null)
@@ -223,18 +261,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             // Initial DELETE request results in 204 no content, no exception thrown.
             // Subsequent DELETE requests result in 404, which result in an exception.
             string expected;
-            if ((operationType == Operation.Delete || operationType == Operation.Upsert || operationType == Operation.UpsertIncremental)
+            if ((operationType == Operation.Delete ||
+                 operationType == Operation.Upsert ||
+                 operationType == Operation.UpsertIncremental ||
+                 operationType == Operation.Update ||
+                 operationType == Operation.UpdateIncremental)
                 && actionResult is NoContentResult)
             {
                 expected = null;
             }
             else
             {
+                JsonSerializerOptions options = new()
+                {
+                    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                };
                 expected = exception ?
                     JsonSerializer.Serialize(RestController.ErrorResponse(
                         expectedSubStatusCode.ToString(),
-                        expectedErrorMessage, expectedStatusCode).Value) :
-                    $"{{\"value\":{FormatExpectedValue(await GetDatabaseResultAsync(sqlQuery))}{ExpectedNextLinkIfAny(paginated, baseUrl, $"{expectedAfterQueryString}")}}}";
+                        expectedErrorMessage,
+                        expectedStatusCode).Value,
+                        options) :
+                    $"{{\"value\":{FormatExpectedValue(await GetDatabaseResultAsync(sqlQuery))}{ExpectedNextLinkIfAny(paginated, EncodeQueryString(baseUrl), $"{expectedAfterQueryString}")}}}";
             }
 
             SqlTestHelper.VerifyResult(
@@ -242,7 +290,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expected,
                 expectedStatusCode,
                 expectedLocationHeader,
-                !exception);
+                !exception,
+                verifyNumRecords);
+        }
+
+        /// <summary>
+        /// Helper function encodes the url with query string into the correct
+        /// format. We utilize the toString() of the HttpValueCollection
+        /// which is used by the NameValueCollection returned from
+        /// ParseQueryString to avoid writing this ourselves.
+        /// </summary>
+        /// <param name="fullUrl">Url to be encoded as query string.</param>
+        /// <returns>query string encoded url.</returns>
+        private static string EncodeQueryString(string fullUrl)
+        {
+            return HttpUtility.ParseQueryString(fullUrl).ToString();
         }
 
         /// <summary>
@@ -252,12 +314,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <returns>Formatted expected response.</returns>
         private static string FormatExpectedValue(string expected)
         {
-            if (!string.Equals(expected[0], '['))
-            {
-                expected = $"[{expected}]";
-            }
-
-            return expected;
+            return string.IsNullOrWhiteSpace(expected) ? string.Empty : (!Equals(expected[0], '[')) ? $"[{expected}]" : expected;
         }
 
         /// <summary>
@@ -282,11 +339,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static void ConfigureRestController(
             RestController restController,
             string queryString,
+            IHeaderDictionary headers = null,
             string requestBody = null)
         {
             restController.ControllerContext.HttpContext =
                 GetRequestHttpContext(
                     queryString,
+                    headers,
                     bodyData: requestBody);
 
             // Set the mock context accessor's request same as the controller's request.
@@ -299,10 +358,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="graphQLQuery"></param>
         /// <param name="graphQLQueryName"></param>
         /// <param name="graphQLController"></param>
+        /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
         /// <returns>string in JSON format</returns>
-        protected static async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController)
+        protected static async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController, Dictionary<string, object> variables = null)
         {
-            JsonElement graphQLResult = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, graphQLController);
+            JsonElement graphQLResult = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, graphQLController, variables);
             Console.WriteLine(graphQLResult.ToString());
             JsonElement graphQLResultData = graphQLResult.GetProperty("data").GetProperty(graphQLQueryName);
 
@@ -314,16 +374,20 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Sends graphQL query through graphQL service, consisting of gql engine processing (resolvers, object serialization)
         /// returning the result as a JsonDocument
         /// </summary>
-        /// <param name="graphQLQuery"></param>
+        /// <param name="query"></param>
         /// <param name="graphQLQueryName"></param>
         /// <param name="graphQLController"></param>
+        /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
         /// <returns>JsonDocument</returns>
-        protected static async Task<JsonElement> GetGraphQLControllerResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController)
+        protected static async Task<JsonElement> GetGraphQLControllerResultAsync(string query, string graphQLQueryName, GraphQLController graphQLController, Dictionary<string, object> variables = null)
         {
-            string graphqlQueryJson = JObject.FromObject(new
-            {
-                query = graphQLQuery
-            }).ToString();
+            string graphqlQueryJson = variables == null ?
+                JObject.FromObject(new { query }).ToString() :
+                JObject.FromObject(new
+                {
+                    query,
+                    variables
+                }).ToString();
 
             Console.WriteLine(graphqlQueryJson);
 

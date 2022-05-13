@@ -31,7 +31,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task RequestFullConnection()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode("{\"id\":1}");
+            string after = SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"id\"}]");
             string graphQLQuery = @"{
                 books(first: 2," + $"after: \"{after}\")" + @"{
                     items {
@@ -61,7 +61,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   }
                 }
               ],
-              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":3}") + @""",
+              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("[{\"Value\":3,\"Direction\":0,\"ColumnName\":\"id\"}]") + @""",
               ""hasNextPage"": true
             }";
 
@@ -123,7 +123,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ""title"": ""Time to Eat""
                 }
               ],
-              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":8}") + @""",
+              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("[{\"Value\":8,\"Direction\":0,\"ColumnName\":\"id\"}]") + @""",
               ""hasNextPage"": false
             }";
 
@@ -137,7 +137,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task RequestItemsOnly()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode("{\"id\":1}");
+            string after = SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"id\"}]");
             string graphQLQuery = @"{
                 books(first: 2," + $"after: \"{after}\")" + @"{
                     items {
@@ -175,7 +175,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task RequestEndCursorOnly()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode("{\"id\":1}");
+            string after = SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"id\"}]");
             string graphQLQuery = @"{
                 books(first: 2," + $"after: \"{after}\")" + @"{
                     endCursor
@@ -185,7 +185,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             JsonElement root = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
             root = root.GetProperty("data").GetProperty(graphQLQueryName);
             string actual = SqlPaginationUtil.Base64Decode(root.GetProperty("endCursor").GetString());
-            string expected = "{\"id\":3}";
+            string expected = "[{\"Value\":3,\"Direction\":0,\"ColumnName\":\"id\"}]";
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
@@ -201,7 +201,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task RequestHasNextPageOnly()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode("{\"id\":1}");
+            string after = SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"id\"}]");
             string graphQLQuery = @"{
                 books(first: 2," + $"after: \"{after}\")" + @"{
                     hasNextPage
@@ -222,7 +222,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task RequestEmptyPage()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode("{ \"id\": 1000000 }");
+            string after = SqlPaginationUtil.Base64Encode("[{\"Value\":1000000,\"Direction\":0,\"ColumnName\":\"id\"}]");
             string graphQLQuery = @"{
                  books(first: 2," + $"after: \"{after}\")" + @"{
                     items {
@@ -248,7 +248,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task RequestNestedPaginationQueries()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode("{\"id\":1}");
+            string after = SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"id\"}]");
             string graphQLQuery = @"{
                  books(first: 2," + $"after: \"{after}\")" + @"{
                     items {
@@ -284,7 +284,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                           ""title"": ""Also Awesome book""
                         }
                       ],
-                      ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":2}") + @""",
+                      ""endCursor"": """ + SqlPaginationUtil.Base64Encode("[{\"Value\":2,\"Direction\":0,\"ColumnName\":\"id\"}]") + @""",
                       ""hasNextPage"": false
                     }
                   }
@@ -304,13 +304,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                           ""title"": ""US history in a nutshell""
                         }
                       ],
-                      ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":4}") + @""",
+                      ""endCursor"": """ + SqlPaginationUtil.Base64Encode("[{\"Value\":4,\"Direction\":0,\"ColumnName\":\"id\"}]") + @""",
                       ""hasNextPage"": false
                     }
                   }
                 }
               ],
-              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":3}") + @""",
+              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("[{\"Value\":3,\"Direction\":0,\"ColumnName\":\"id\"}]") + @""",
               ""hasNextPage"": true
             }";
 
@@ -324,7 +324,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task RequestPaginatedQueryFromMutationResult()
         {
             string graphQLMutationName = "insertBook";
-            string after = SqlPaginationUtil.Base64Encode("{\"id\":1}");
+            string after = SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"id\"}]");
             string graphQLMutation = @"
                 mutation {
                     insertBook(title: ""Books, Pages, and Pagination. The Book"", publisher_id: 1234) {
@@ -356,7 +356,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                       ""title"": ""Books, Pages, and Pagination. The Book""
                     }
                   ],
-                  ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":5001}") + @""",
+                  ""endCursor"": """ + SqlPaginationUtil.Base64Encode("[{\"Value\":5001,\"Direction\":0,\"ColumnName\":\"id\"}]") + @""",
                   ""hasNextPage"": false
                 }
               }
@@ -408,6 +408,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
+            string after = "[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"book_id\"}," +
+                            "{\"Value\":568,\"Direction\":0,\"ColumnName\":\"id\"}]";
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
             string expected = @"{
               ""items"": [
@@ -438,7 +440,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                   ""content"": ""I loved it""
                                 }
                               ],
-                              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"book_id\":1,\"id\":568}") + @""",
+                              ""endCursor"": """ + SqlPaginationUtil.Base64Encode(after) + @""",
                               ""hasNextPage"": true
                             }
                           },
@@ -453,7 +455,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                           }
                         ],
                         ""hasNextPage"": true,
-                        ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":3}") + @"""
+                        ""endCursor"": """ + SqlPaginationUtil.Base64Encode("[{\"Value\":3,\"Direction\":0,\"ColumnName\":\"id\"}]") + @"""
                       }
                     }
                   ]
@@ -485,14 +487,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                           }
                         ],
                         ""hasNextPage"": true,
-                        ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":3}") + @"""
+                        ""endCursor"": """ + SqlPaginationUtil.Base64Encode("[{\"Value\":3,\"Direction\":0,\"ColumnName\":\"id\"}]") + @"""
                       }
                     }
                   ]
                 }
               ],
               ""hasNextPage"": true,
-              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":2}") + @"""
+              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("[{\"Value\":2,\"Direction\":0,\"ColumnName\":\"id\"}]") + @"""
             }";
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
@@ -505,7 +507,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task PaginateCompositePkTable()
         {
             string graphQLQueryName = "reviews";
-            string after = SqlPaginationUtil.Base64Encode("{\"book_id\":1,\"id\":567}");
+            string after = SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"book_id\"}," +
+                                                           "{\"Value\":567,\"Direction\":0,\"ColumnName\":\"id\"}]");
             string graphQLQuery = @"{
                 reviews(first: 2, after: """ + after + @""") {
                     items {
@@ -517,6 +520,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
+            after = SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"book_id\"}," +
+                                                    "{\"Value\":569,\"Direction\":0,\"ColumnName\":\"id\"}]");
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
             string expected = @"{
               ""items"": [
@@ -530,7 +535,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
               ],
               ""hasNextPage"": false,
-              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"book_id\":1,\"id\":569}") + @"""
+              ""endCursor"": """ + after + @"""
             }";
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
@@ -543,7 +548,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task PaginationWithFilterArgument()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode("{\"id\":1}");
+            string after = SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"id\"}]");
             string graphQLQuery = @"{
                 books(first: 2, after: """ + after + @""", _filter: {publisher_id: {eq: 2345}}) {
                     items {
@@ -567,11 +572,220 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ""publisher_id"": 2345
                 }
               ],
-              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("{\"id\":4}") + @""",
+              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("[{\"Value\":4,\"Direction\":0,\"ColumnName\":\"id\"}]") + @""",
               ""hasNextPage"": false
             }";
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Test paginating while ordering by a subset of columns of a composite pk
+        /// </summary>
+        [TestMethod]
+        public async Task TestPaginationWithOrderByWithPartialPk()
+        {
+            string graphQLQueryName = "stocks";
+            string graphQLQuery = @"{
+                stocks(first: 2 orderBy: {pieceid: Desc}) {
+                    items {
+                        pieceid
+                        categoryid
+                    }
+                    endCursor
+                    hasNextPage
+                }
+            }";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = @"{
+              ""items"": [
+                {
+                  ""pieceid"": 1,
+                  ""categoryid"": 0
+                },
+                {
+                  ""pieceid"": 1,
+                  ""categoryid"": 1
+                }
+              ],
+              ""endCursor"": """ + SqlPaginationUtil.Base64Encode(
+                  "[{\"Value\":1,\"Direction\":1,\"ColumnName\":\"pieceid\"}," +
+                  "{\"Value\":1,\"Direction\":0,\"ColumnName\":\"categoryid\"}]") + @""",
+              ""hasNextPage"": true
+            }";
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
+        /// <summary>
+        /// Paginate first two entries then paginate again with the returned after token.
+        /// Verify both pagination query results
+        /// </summary>
+        [TestMethod]
+        public async Task TestCallingPaginationTwiceWithOrderBy()
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery1 = @"{
+                books(first: 2 orderBy: {title: Desc publisher_id: Asc id: Desc}) {
+                    items {
+                        id
+                        title
+                        publisher_id
+                    }
+                    endCursor
+                    hasNextPage
+                }
+            }";
+
+            string actual1 = await GetGraphQLResultAsync(graphQLQuery1, graphQLQueryName, _graphQLController);
+
+            string expectedAfter1 = SqlPaginationUtil.Base64Encode(
+                  "[{\"Value\":\"Time to Eat\",\"Direction\":1,\"ColumnName\":\"title\"}," +
+                  "{\"Value\":2324,\"Direction\":0,\"ColumnName\":\"publisher_id\"}," +
+                  "{\"Value\":8,\"Direction\":1,\"ColumnName\":\"id\"}]");
+
+            string expected1 = @"{
+              ""items"": [
+                {
+                  ""id"": 4,
+                  ""title"": ""US history in a nutshell"",
+                  ""publisher_id"": 2345
+                },
+                {
+                  ""id"": 8,
+                  ""title"": ""Time to Eat"",
+                  ""publisher_id"": 2324
+                }
+              ],
+              ""endCursor"": """ + expectedAfter1 + @""",
+              ""hasNextPage"": true
+            }";
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected1, actual1);
+
+            string graphQLQuery2 = @"{
+                books(first: 2, after: """ + expectedAfter1 + @""" orderBy: {title: Desc publisher_id: Asc id: Desc}) {
+                    items {
+                        id
+                        title
+                        publisher_id
+                    }
+                    endCursor
+                    hasNextPage
+                }
+            }";
+
+            string actual2 = await GetGraphQLResultAsync(graphQLQuery2, graphQLQueryName, _graphQLController);
+
+            string expectedAfter2 = SqlPaginationUtil.Base64Encode(
+                  "[{\"Value\":\"The Groovy Bar\",\"Direction\":1,\"ColumnName\":\"title\"}," +
+                  "{\"Value\":2324,\"Direction\":0,\"ColumnName\":\"publisher_id\"}," +
+                  "{\"Value\":7,\"Direction\":1,\"ColumnName\":\"id\"}]");
+
+            string expected2 = @"{
+              ""items"": [
+                {
+                  ""id"": 6,
+                  ""title"": ""The Palace Door"",
+                  ""publisher_id"": 2324
+                },
+                {
+                  ""id"": 7,
+                  ""title"": ""The Groovy Bar"",
+                  ""publisher_id"": 2324
+                }
+              ],
+              ""endCursor"": """ + expectedAfter2 + @""",
+              ""hasNextPage"": true
+            }";
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected2, actual2);
+        }
+
+        /// <summary>
+        /// Paginate ordering with a column for which multiple entries
+        /// have the same value, and check that the column tie break is resolved properly
+        /// </summary>
+        [TestMethod]
+        public async Task TestColumnTieBreak()
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery1 = @"{
+                books(first: 4 orderBy: {publisher_id: Desc}) {
+                    items {
+                        id
+                        publisher_id
+                    }
+                    endCursor
+                    hasNextPage
+                }
+            }";
+
+            string actual1 = await GetGraphQLResultAsync(graphQLQuery1, graphQLQueryName, _graphQLController);
+
+            string expectedAfter1 = SqlPaginationUtil.Base64Encode(
+                  "[{\"Value\":2324,\"Direction\":1,\"ColumnName\":\"publisher_id\"}," +
+                  "{\"Value\":7,\"Direction\":0,\"ColumnName\":\"id\"}]");
+
+            string expected1 = @"{
+              ""items"": [
+                {
+                  ""id"": 3,
+                  ""publisher_id"": 2345
+                },
+                {
+                  ""id"": 4,
+                  ""publisher_id"": 2345
+                },
+                {
+                  ""id"": 6,
+                  ""publisher_id"": 2324
+                },
+                {
+                  ""id"": 7,
+                  ""publisher_id"": 2324
+                }
+              ],
+              ""endCursor"": """ + expectedAfter1 + @""",
+              ""hasNextPage"": true
+            }";
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected1, actual1);
+
+            string graphQLQuery2 = @"{
+                books(first: 2, after: """ + expectedAfter1 + @""" orderBy: {publisher_id: Desc}) {
+                    items {
+                        id
+                        publisher_id
+                    }
+                    endCursor
+                    hasNextPage
+                }
+            }";
+
+            string actual2 = await GetGraphQLResultAsync(graphQLQuery2, graphQLQueryName, _graphQLController);
+
+            string expectedAfter2 = SqlPaginationUtil.Base64Encode(
+                  "[{\"Value\":2323,\"Direction\":1,\"ColumnName\":\"publisher_id\"}," +
+                  "{\"Value\":5,\"Direction\":0,\"ColumnName\":\"id\"}]");
+
+            string expected2 = @"{
+              ""items"": [
+                {
+                  ""id"": 8,
+                  ""publisher_id"": 2324
+                },
+                {
+                  ""id"": 5,
+                  ""publisher_id"": 2323
+                }
+              ],
+              ""endCursor"": """ + expectedAfter2 + @""",
+              ""hasNextPage"": true
+            }";
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected2, actual2);
         }
 
         #endregion
@@ -587,6 +801,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
                 books(first: -1) {
+                    items {
+                        id
+                    }
+                }
+            }";
+
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
+        }
+
+        /// <summary>
+        /// Request zero entries for a pagination page
+        /// </summary>
+        [TestMethod]
+        public async Task RequestInvalidZeroFirst()
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"{
+                books(first: 0) {
                     items {
                         id
                     }
@@ -617,13 +850,32 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Supply a null after parameter
+        /// </summary>
+        [TestMethod]
+        public async Task RequestInvalidAfterNull()
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"{
+                books(after: ""null"") {
+                    items {
+                        id
+                    }
+                }
+            }";
+
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
+        }
+
+        /// <summary>
         /// Supply an invalid key to the after JSON
         /// </summary>
         [TestMethod]
         public async Task RequestInvalidAfterWithIncorrectKeys()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode("{ \"title\": \"Great Book\" }");
+            string after = SqlPaginationUtil.Base64Encode("[{\"Value\":\"Great Book\",\"Direction\":0,\"ColumnName\":\"title\"}]");
             string graphQLQuery = @"{
                  books(" + $"after: \"{after}\")" + @"{
                     items {
@@ -643,10 +895,78 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task RequestInvalidAfterWithIncorrectType()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode("{ \"id\": \"1\" }");
+            // note that the current implementation will accept "2" as
+            // a valid value for id since it can be parsed to an int
+            string after = SqlPaginationUtil.Base64Encode("[{\"Value\":\"two\",\"Direction\":0,\"ColumnName\":\"id\"}]");
             string graphQLQuery = @"{
                  books(" + $"after: \"{after}\")" + @"{
                     items {
+                        title
+                    }
+                }
+            }";
+
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
+        }
+
+        /// <summary>
+        /// Test with after which does not include all orderBy columns
+        /// </summary>
+        [TestMethod]
+        public async Task RequestInvalidAfterWithUnmatchingOrderByColumns1()
+        {
+            string graphQLQueryName = "books";
+            string after = SqlPaginationUtil.Base64Encode("[{\"Value\":2,\"Direction\":0,\"ColumnName\":\"id\"}]");
+            string graphQLQuery = @"{
+                 books(" + $"after: \"{after}\"" + @" orderBy: {id: Asc title: Desc}) {
+                    items {
+                        id
+                        title
+                    }
+                }
+            }";
+
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
+        }
+
+        /// <summary>
+        /// Test with after which has unnecessary columns
+        /// </summary>
+        [TestMethod]
+        public async Task RequestInvalidAfterWithUnmatchingOrderByColumns2()
+        {
+            string graphQLQueryName = "books";
+            string after = SqlPaginationUtil.Base64Encode(
+                "[{\"Value\":2,\"Direction\":0,\"ColumnName\":\"id\"}," +
+                "{\"Value\":1234,\"Direction\":1,\"ColumnName\":\"publisher_id\"}]");
+            string graphQLQuery = @"{
+                 books(" + $"after: \"{after}\"" + @" orderBy: {id: Asc title: Desc}) {
+                    items {
+                        id
+                        title
+                    }
+                }
+            }";
+
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
+        }
+
+        /// <summary>
+        /// Test with after which has columns which don't match the direction of
+        /// orderby columns
+        /// </summary>
+        [TestMethod]
+        public async Task RequestInvalidAfterWithUnmatchingOrderByColumns3()
+        {
+            string graphQLQueryName = "books";
+            string after = SqlPaginationUtil.Base64Encode("[{\"Value\":2,\"Direction\":0,\"ColumnName\":\"id\"}]");
+            string graphQLQuery = @"{
+                 books(" + $"after: \"{after}\"" + @" orderBy: {id: Desc}) {
+                    items {
+                        id
                         title
                     }
                 }

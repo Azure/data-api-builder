@@ -1,7 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.Models;
 using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
@@ -14,12 +15,14 @@ namespace Azure.DataGateway.Service.Services
     /// </summary>
     public class FilterParser
     {
-        private IEdmModel _model;
+        private IEdmModel? _model;
 
-        public FilterParser(DatabaseSchema schema)
+        public FilterParser() { }
+
+        public void BuildModel(IEnumerable<DatabaseObject> databaseObjects)
         {
             EdmModelBuilder builder = new();
-            _model = builder.BuildModel(schema).GetModel();
+            _model = builder.BuildModel(databaseObjects).GetModel();
         }
 
         /// <summary>
@@ -30,11 +33,34 @@ namespace Azure.DataGateway.Service.Services
         /// <returns>An AST FilterClause that represents the filter portion of the WHERE clause.</returns>
         public FilterClause GetFilterClause(string filterQueryString, string resourcePath)
         {
+            if (_model == null)
+            {
+
+                throw new DataGatewayException(
+                    message: "The runtime has not been initialized with an Edm model.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
+            }
+
             try
             {
                 Uri relativeUri = new(resourcePath + '/' + filterQueryString, UriKind.Relative);
-                ODataUriParser parser = new(_model, relativeUri);
+                ODataUriParser parser = new(_model!, relativeUri);
                 return parser.ParseFilter();
+            }
+            catch (ODataException e)
+            {
+                throw new DataGatewayException(e.Message, HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
+            }
+        }
+
+        public OrderByClause GetOrderByClause(string sortQueryString, string path)
+        {
+            try
+            {
+                Uri relativeUri = new(path + '/' + sortQueryString, UriKind.Relative);
+                ODataUriParser parser = new(_model, relativeUri);
+                return parser.ParseOrderBy();
             }
             catch (ODataException e)
             {

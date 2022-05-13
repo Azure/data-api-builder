@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Config;
 using Microsoft.OData.Edm;
 
 namespace Azure.DataGateway.Service.Services
@@ -25,48 +25,64 @@ namespace Azure.DataGateway.Service.Services
         /// <summary>
         /// Build the model from the provided schema.
         /// </summary>
-        /// <param name="schema">DatabaseSchema that reresents the relevant schema.</param>
+        /// <param name="databaseObjects">All the database objects to build the model for.</param>
         /// <returns>An EdmModelBuilder that can be used to get a model.</returns>
-        public EdmModelBuilder BuildModel(DatabaseSchema schema)
+        public EdmModelBuilder BuildModel(IEnumerable<DatabaseObject> databaseObjects)
         {
-            return BuildEntityTypes(schema).BuildEntitySets(schema);
+            return BuildEntityTypes(databaseObjects)
+                .BuildEntitySets(databaseObjects);
         }
 
         /// <summary>
         /// Add the entity types found in the schema to the model
         /// </summary>
-        /// <param name="schema">Schema represents the Database Schema</param>
+        /// <param name="databaseEntities">All the exposed sql database entities
+        /// with their table definitions.</param>
         /// <returns>this model builder</returns>
-        private EdmModelBuilder BuildEntityTypes(DatabaseSchema schema)
+        private EdmModelBuilder BuildEntityTypes(
+            IEnumerable<DatabaseObject> databaseObjects)
         {
-            foreach (string entityName in schema.Tables.Keys)
+            foreach (DatabaseObject dbObject in databaseObjects)
             {
-                EdmEntityType newEntity = new(DEFAULT_NAMESPACE, entityName);
-                string newEntityKey = DEFAULT_NAMESPACE + entityName;
+                string entitySourceName = dbObject.Name;
+                TableDefinition tableDefinition = dbObject.TableDefinition;
+                EdmEntityType newEntity = new(DEFAULT_NAMESPACE, entitySourceName);
+                string newEntityKey = DEFAULT_NAMESPACE + entitySourceName;
                 _entities.Add(newEntityKey, newEntity);
 
                 // each column represents a property of the current entity we are adding
-                foreach (string column in schema.Tables[entityName].Columns.Keys)
+                foreach (string column in
+                    tableDefinition.Columns.Keys)
                 {
-                    // need to convert our column type to an Edm type
-                    ColumnType columnType = schema.Tables[entityName].Columns[column].Type;
-                    string systemTypeName = ColumnDefinition.ResolveColumnTypeToSystemType(columnType).Name;
+                    // need to convert our column system type to an Edm type
+                    Type columnSystemType = tableDefinition.Columns[column].SystemType;
                     EdmPrimitiveTypeKind type = EdmPrimitiveTypeKind.None;
-                    if (systemTypeName == typeof(string).Name)
+                    if (columnSystemType.IsArray)
                     {
-                        type = EdmPrimitiveTypeKind.String;
+                        columnSystemType = columnSystemType.GetElementType()!;
                     }
-                    else if (systemTypeName == typeof(Int64).Name)
+
+                    switch (Type.GetTypeCode(columnSystemType))
                     {
-                        type = EdmPrimitiveTypeKind.Int64;
-                    }
-                    else
-                    {
-                        throw new ArgumentException($"No resolver for column type {columnType}");
+                        case TypeCode.String:
+                            type = EdmPrimitiveTypeKind.String;
+                            break;
+                        case TypeCode.Int64:
+                            type = EdmPrimitiveTypeKind.Int64;
+                            break;
+                        case TypeCode.Single:
+                            type = EdmPrimitiveTypeKind.Single;
+                            break;
+                        case TypeCode.Double:
+                            type = EdmPrimitiveTypeKind.Double;
+                            break;
+                        default:
+                            throw new ArgumentException($"Column type" +
+                                $" {columnSystemType.Name} not yet supported.");
                     }
 
                     // if column is in our list of keys we add as a key to entity
-                    if (schema.Tables[entityName].PrimaryKey.Contains(column))
+                    if (tableDefinition.PrimaryKey.Contains(column))
                     {
                         newEntity.AddKeys(newEntity.AddStructuralProperty(column, type, isNullable: false));
                     }
@@ -88,17 +104,18 @@ namespace Azure.DataGateway.Service.Services
         /// <summary>
         /// Add the entity sets contained within the schema to container.
         /// </summary>
-        /// <param name="schema">Schema represents the Database Schema</param>
+        /// <param name="sqlEntities">All the sql entities with their table definitions.</param>
         /// <returns>this model builder</returns>
-        private EdmModelBuilder BuildEntitySets(DatabaseSchema schema)
+        private EdmModelBuilder BuildEntitySets(IEnumerable<DatabaseObject> databaseObjects)
         {
             EdmEntityContainer container = new(DEFAULT_NAMESPACE, DEFAULT_CONTAINER_NAME);
             _model.AddElement(container);
 
             // Entity set is a collection of the same entity, if we think of an entity as a row of data
             // that has a key, then an entity set can be thought of as a table made up of those rows
-            foreach (string entityName in schema.Tables.Keys)
+            foreach (DatabaseObject dbObject in databaseObjects)
             {
+                string entityName = dbObject.Name;
                 container.AddEntitySet(name: entityName, _entities[DEFAULT_NAMESPACE + entityName]);
             }
 

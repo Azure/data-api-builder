@@ -19,7 +19,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result and a metadata object required to resolve the result</returns>
         public Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context,
-            IDictionary<string, object> parameters);
+            IDictionary<string, object?> parameters);
 
         /// <summary>
         /// Executes the mutation query and returns result as JSON object asynchronously.

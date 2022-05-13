@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -17,26 +18,45 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<Predicate> UpdateOperations { get; }
 
-        public SqlUpdateStructure(string tableName, IMetadataStoreProvider metadataStore, IDictionary<string, object> mutationParams)
-        : base(metadataStore, tableName: tableName)
+        public SqlUpdateStructure(
+            string tableName,
+            IGraphQLMetadataProvider metadataStoreProvider,
+            ISqlMetadataProvider sqlMetadataProvider,
+            IDictionary<string, object?> mutationParams,
+            bool isIncrementalUpdate)
+        : base(metadataStoreProvider, sqlMetadataProvider, tableName: tableName)
         {
             UpdateOperations = new();
-            TableDefinition tableDefinition = GetTableDefinition();
+            TableDefinition tableDefinition = GetUnderlyingTableDefinition();
 
             List<string> primaryKeys = tableDefinition.PrimaryKey;
             List<string> columns = tableDefinition.Columns.Keys.ToList();
-            foreach (KeyValuePair<string, object> param in mutationParams)
+            foreach (KeyValuePair<string, object?> param in mutationParams)
             {
-                if (param.Value == null)
+                Predicate predicate;
+                if (param.Value == null && !tableDefinition.Columns[param.Key].IsNullable)
                 {
-                    continue;
+                    throw new DataGatewayException(
+                        $"Cannot set argument {param.Key} to null.",
+                        HttpStatusCode.BadRequest,
+                        DataGatewayException.SubStatusCodes.BadRequest);
                 }
-
-                Predicate predicate = new(
-                    new PredicateOperand(new Column(null, param.Key)),
-                    PredicateOperation.Equal,
-                    new PredicateOperand($"@{MakeParamWithValue(param.Value)}")
-                );
+                else if (param.Value == null)
+                {
+                    predicate = new(
+                        new PredicateOperand(new Column(tableAlias: null, param.Key)),
+                        PredicateOperation.Equal,
+                        new PredicateOperand($"@{MakeParamWithValue(null)}")
+                    );
+                }
+                else
+                {
+                    predicate = new(
+                        new PredicateOperand(new Column(null, param.Key)),
+                        PredicateOperation.Equal,
+                        new PredicateOperand($"@{MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, param.Key))}")
+                    );
+                }
 
                 // primary keys used as predicates
                 if (primaryKeys.Contains(param.Key))
@@ -48,6 +68,13 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     UpdateOperations.Add(predicate);
                 }
+
+                columns.Remove(param.Key);
+            }
+
+            if (!isIncrementalUpdate)
+            {
+                AddNullifiedUnspecifiedFields(columns, UpdateOperations, tableDefinition);
             }
 
             if (UpdateOperations.Count == 0)

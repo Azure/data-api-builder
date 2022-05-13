@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using HotChocolate.Language;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.Cosmos;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -23,7 +25,6 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         internal static GraphQLService _graphQLService;
         internal static CosmosClientProvider _clientProvider;
         internal static MetadataStoreProviderForTest _metadataStoreProvider;
-        internal static IMetadataStoreProvider _metaStoreProvider;
         internal static CosmosQueryEngine _queryEngine;
         internal static CosmosMutationEngine _mutationEngine;
         internal static GraphQLController _controller;
@@ -32,13 +33,66 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         [ClassInitialize]
         public static void Init(TestContext context)
         {
-            _clientProvider = new CosmosClientProvider(TestHelper.DataGatewayConfig);
+            _clientProvider = new CosmosClientProvider(TestHelper.ConfigPath);
             _metadataStoreProvider = new MetadataStoreProviderForTest();
-            string jsonString = File.ReadAllText("schema.gql");
+            string jsonString = @"
+type Query {
+    characterList: [Character]
+    characterById (id : ID!): Character
+    planetById (id: ID! = 1): Planet
+    getPlanet(id: ID, name: String): Planet
+    planetList: [Planet]
+    planets(first: Int, after: String): PlanetConnection
+    getPlanetListById(id: ID): [Planet]
+    getPlanetByName(name: String): Planet
+    getPlanetsWithOrderBy(first: Int, after: String, orderBy: PlanetOrderByInput): PlanetConnection
+}
+
+type Mutation {
+    addPlanet(id: String, name: String): Planet
+    deletePlanet(id: String): Planet
+}
+
+type PlanetConnection {
+    items: [Planet]
+    endCursor: String
+    hasNextPage: Boolean
+}
+
+type Character {
+    id : ID,
+    name : String,
+    type: String,
+    homePlanet: Int,
+    primaryFunction: String
+}
+
+type Planet {
+    id : ID,
+    name : String,
+    character: Character
+}
+
+enum SortOrder {
+    Asc, Desc
+}
+
+input PlanetOrderByInput {
+    id: SortOrder
+    name: SortOrder
+}";
+
             _metadataStoreProvider.GraphQLSchema = jsonString;
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
-            _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider);
+            _graphQLService = new GraphQLService(
+                TestHelper.ConfigPath,
+                _queryEngine,
+                _mutationEngine,
+                _metadataStoreProvider,
+                new DocumentCache(),
+                new Sha256DocumentHashProvider(),
+                sqlMetadataProvider: null);
             _controller = new GraphQLController(_graphQLService);
             Client = _clientProvider.Client;
         }
@@ -69,9 +123,11 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             HttpRequestMessage request = new();
             MemoryStream stream = new(Encoding.UTF8.GetBytes(data));
             request.Method = HttpMethod.Post;
+            ClaimsPrincipal user = new(new ClaimsIdentity(authenticationType: "Bearer"));
             DefaultHttpContext httpContext = new()
             {
-                Request = { Body = stream, ContentLength = stream.Length }
+                Request = { Body = stream, ContentLength = stream.Length },
+                User = user
             };
             return httpContext;
         }
@@ -125,18 +181,28 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         /// Executes the GraphQL request and returns the results
         /// </summary>
         /// <param name="queryName"> Name of the GraphQL query/mutation</param>
-        /// <param name="graphQLQuery"> The GraphQL query/mutation</param>
+        /// <param name="query"> The GraphQL query/mutation</param>
+        /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
         /// <returns></returns>
-        internal static async Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string graphQLQuery)
+        internal static async Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string query, Dictionary<string, object> variables = null)
         {
-            string queryJson = JObject.FromObject(new
-            {
-                query = graphQLQuery
-            }).ToString();
+            string queryJson = variables == null ?
+                JObject.FromObject(new { query }).ToString() :
+                JObject.FromObject(new
+                {
+                    query,
+                    variables
+                }).ToString();
             _controller.ControllerContext.HttpContext = GetHttpContextWithBody(queryJson);
             JsonElement graphQLResult = await _controller.PostAsync();
+
+            if (graphQLResult.TryGetProperty("errors", out JsonElement errors))
+            {
+                // to validate expected errors and error message
+                return errors;
+            }
+
             return graphQLResult.GetProperty("data").GetProperty(queryName);
         }
-
     }
 }

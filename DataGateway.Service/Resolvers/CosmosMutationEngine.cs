@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
@@ -16,22 +17,22 @@ namespace Azure.DataGateway.Service.Resolvers
     {
         private readonly CosmosClientProvider _clientProvider;
 
-        private readonly IMetadataStoreProvider _metadataStoreProvider;
+        private readonly IGraphQLMetadataProvider _metadataStoreProvider;
 
-        public CosmosMutationEngine(CosmosClientProvider clientProvider, IMetadataStoreProvider metadataStoreProvider)
+        public CosmosMutationEngine(CosmosClientProvider clientProvider, IGraphQLMetadataProvider metadataStoreProvider)
         {
             _clientProvider = clientProvider;
             _metadataStoreProvider = metadataStoreProvider;
         }
 
-        private async Task<JObject> ExecuteAsync(IDictionary<string, object> inputDict, MutationResolver resolver)
+        private async Task<JObject> ExecuteAsync(IDictionary<string, object?> inputDict, MutationResolver resolver)
         {
             // TODO: add support for all mutation types
             // we only support CreateOrUpdate (Upsert) for now
 
             JObject jObject;
 
-            if (inputDict != null)
+            if (inputDict != null && inputDict.Count > 0)
             {
                 // TODO: optimize this multiple round of serialization/deserialization
                 string json = JsonConvert.SerializeObject(inputDict);
@@ -74,7 +75,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     break;
                 default:
-                    throw new NotSupportedException($"unsupprted operation type: {resolver.OperationType.ToString()}");
+                    throw new NotSupportedException($"unsupported operation type: {resolver.OperationType.ToString()}");
             }
 
             return response.Resource;
@@ -87,7 +88,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result</returns>
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context,
-            IDictionary<string, object> parameters)
+            IDictionary<string, object?> parameters)
         {
             string graphQLMutationName = context.Selection.Field.Name.Value;
             MutationResolver resolver = _metadataStoreProvider.GetMutationResolver(graphQLMutationName);

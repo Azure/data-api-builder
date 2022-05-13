@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -41,6 +42,11 @@ namespace Azure.DataGateway.Service.Resolvers
         public bool IsListQuery { get; set; }
 
         /// <summary>
+        /// Columns to use for sorting.
+        /// </summary>
+        public List<OrderByColumn> OrderByColumns { get; private set; }
+
+        /// <summary>
         /// Hold the pagination metadata for the query
         /// </summary>
         public PaginationMetadata PaginationMetadata { get; set; }
@@ -75,20 +81,29 @@ namespace Azure.DataGateway.Service.Resolvers
         ObjectType _underlyingFieldType = null!;
 
         private readonly GraphQLType _typeInfo = null!;
-        private List<Column>? _primaryKey;
+
+        /// <summary>
+        /// Used to cache the primary key as a list of OrderByColumn
+        /// </summary>
+        private List<OrderByColumn>? _primaryKeyAsOrderByColumns;
 
         /// <summary>
         /// Generate the structure for a SQL query based on GraphQL query
         /// information.
         /// Only use as constructor for the outermost queries not subqueries
         /// </summary>
-        public SqlQueryStructure(IResolverContext ctx, IDictionary<string, object> queryParams, IMetadataStoreProvider metadataStoreProvider)
+        public SqlQueryStructure(
+            IResolverContext ctx,
+            IDictionary<string, object?> queryParams,
+            IGraphQLMetadataProvider metadataStoreProvider,
+            ISqlMetadataProvider sqlMetadataProvider)
             // This constructor simply forwards to the more general constructor
             // that is used to create GraphQL queries. We give it some values
             // that make sense for the outermost query.
             : this(ctx,
                 queryParams,
                 metadataStoreProvider,
+                sqlMetadataProvider,
                 ctx.Selection.Field,
                 ctx.Selection.SyntaxNode,
                 // The outermost query is where we start, so this can define
@@ -108,8 +123,13 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Generate the structure for a SQL query based on FindRequestContext,
         /// which is created by a FindById or FindMany REST request.
         /// </summary>
-        public SqlQueryStructure(RestRequestContext context, IMetadataStoreProvider metadataStoreProvider) :
-            this(metadataStoreProvider, new IncrementingInteger(), tableName: context.EntityName)
+        public SqlQueryStructure(
+            RestRequestContext context,
+            IGraphQLMetadataProvider metadataStoreProvider,
+            ISqlMetadataProvider sqlMetadataProvider) :
+            this(metadataStoreProvider,
+                sqlMetadataProvider,
+                new IncrementingInteger(), tableName: context.EntityName)
         {
             TableAlias = TableName;
             IsListQuery = context.IsMany;
@@ -117,7 +137,7 @@ namespace Azure.DataGateway.Service.Resolvers
             context.FieldsToBeReturned.ForEach(fieldName => AddColumn(fieldName));
             if (Columns.Count == 0)
             {
-                TableDefinition tableDefinition = GetTableDefinition();
+                TableDefinition tableDefinition = GetUnderlyingTableDefinition();
                 foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
                 {
                     AddColumn(column.Key);
@@ -129,10 +149,12 @@ namespace Azure.DataGateway.Service.Resolvers
                 PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
             }
 
-            foreach (KeyValuePair<string, object> predicate in context.FieldValuePairsInBody)
+            foreach (KeyValuePair<string, object?> predicate in context.FieldValuePairsInBody)
             {
                 PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
             }
+
+            OrderByColumns = context.OrderByClauseInUrl is not null ? context.OrderByClauseInUrl : PrimaryKeyAsOrderByColumns();
 
             if (context.FilterClauseInUrl is not null)
             {
@@ -142,7 +164,16 @@ namespace Azure.DataGateway.Service.Resolvers
                 // call the visit function for that node types, and we process the AST
                 // based on what type of node we are currently traversing.
                 ODataASTVisitor visitor = new(this);
-                FilterPredicates = context.FilterClauseInUrl.Expression.Accept<string>(visitor);
+                try
+                {
+                    FilterPredicates = context.FilterClauseInUrl.Expression.Accept<string>(visitor);
+                }
+                catch
+                {
+                    throw new DataGatewayException(message: "$filter query parameter is not well formed.",
+                                                   statusCode: HttpStatusCode.BadRequest,
+                                                   subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(context.After))
@@ -161,12 +192,13 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         private SqlQueryStructure(
                 IResolverContext ctx,
-                IDictionary<string, object> queryParams,
-                IMetadataStoreProvider metadataStoreProvider,
+                IDictionary<string, object?> queryParams,
+                IGraphQLMetadataProvider metadataStoreProvider,
+                ISqlMetadataProvider sqlMetadataProvider,
                 IObjectField schemaField,
                 FieldNode? queryField,
                 IncrementingInteger counter
-        ) : this(metadataStoreProvider, counter, tableName: string.Empty)
+        ) : this(metadataStoreProvider, sqlMetadataProvider, counter, tableName: string.Empty)
         {
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
@@ -229,12 +261,14 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 if (firstObject != null)
                 {
-                    // due to the way parameters get resolved,
-                    long first = (long)firstObject;
+                    int first = (int)firstObject;
 
                     if (first <= 0)
                     {
-                        throw new DataGatewayException($"first must be a positive integer for {schemaField.Name}", HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
+                        throw new DataGatewayException(
+                        message: $"Invalid number of items requested, $first must be an integer greater than 0 for {schemaField.Name}. Actual value: {first.ToString()}",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }
 
                     _limit = (uint)first;
@@ -248,7 +282,18 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (filterObject != null)
                 {
                     List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
-                    Predicates.Add(GQLFilterParser.Parse(filterFields, TableAlias, GetTableDefinition(), MakeParamWithValue));
+                    Predicates.Add(GQLFilterParser.Parse(filterFields, TableAlias, GetUnderlyingTableDefinition(), MakeParamWithValue));
+                }
+            }
+
+            OrderByColumns = PrimaryKeyAsOrderByColumns();
+            if (IsListQuery && queryParams.ContainsKey("orderBy"))
+            {
+                object? orderByObject = queryParams["orderBy"];
+
+                if (orderByObject != null)
+                {
+                    OrderByColumns = ProcessGqlOrderByArg((List<ObjectFieldNode>)orderByObject);
                 }
             }
 
@@ -261,7 +306,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     string where = (string)whereObject;
 
                     ODataASTVisitor visitor = new(this);
-                    FilterParser parser = MetadataStoreProvider.GetFilterParser();
+                    FilterParser parser = SqlMetadataProvider.GetOdataFilterParser();
                     FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={where}", TableName);
                     FilterPredicates = filterClause.Expression.Accept<string>(visitor);
                 }
@@ -271,8 +316,7 @@ namespace Azure.DataGateway.Service.Resolvers
             // TableName, TableAlias, Columns, and _limit
             if (PaginationMetadata.IsPaginated)
             {
-                IDictionary<string, object>? afterJsonValues = SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata);
-                AddPaginationPredicate(afterJsonValues);
+                AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata));
 
                 if (PaginationMetadata.RequestedEndCursor)
                 {
@@ -305,22 +349,27 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Private constructor that is used as a base by all public
         /// constructors.
         /// </summary>
-        private SqlQueryStructure(IMetadataStoreProvider metadataStoreProvider, IncrementingInteger counter, string tableName = "")
-            : base(metadataStoreProvider, counter: counter, tableName: tableName)
+        private SqlQueryStructure(
+            IGraphQLMetadataProvider metadataStoreProvider,
+            ISqlMetadataProvider sqlMetadataProvider,
+            IncrementingInteger counter,
+            string tableName = "")
+            : base(metadataStoreProvider, sqlMetadataProvider, counter: counter, tableName: tableName)
         {
             JoinQueries = new();
             Joins = new();
             PaginationMetadata = new(this);
             ColumnLabelToParam = new();
             FilterPredicates = string.Empty;
+            OrderByColumns = new();
         }
 
         ///<summary>
         /// Adds predicates for the primary keys in the paramters of the graphql query
         ///</summary>
-        private void AddPrimaryKeyPredicates(IDictionary<string, object> queryParams)
+        private void AddPrimaryKeyPredicates(IDictionary<string, object?> queryParams)
         {
-            foreach (KeyValuePair<string, object> parameter in queryParams)
+            foreach (KeyValuePair<string, object?> parameter in queryParams)
             {
                 Predicates.Add(new Predicate(
                     new PredicateOperand(new Column(TableAlias, parameter.Key)),
@@ -333,7 +382,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Add the predicates associated with the "after" parameter of paginated queries
         /// </summary>
-        void AddPaginationPredicate(IDictionary<string, object> afterJsonValues)
+        public void AddPaginationPredicate(List<PaginationColumn> afterJsonValues)
         {
             if (!afterJsonValues.Any())
             {
@@ -341,14 +390,23 @@ namespace Azure.DataGateway.Service.Resolvers
                 return;
             }
 
-            List<Column> primaryKey = PrimaryKeyAsColumns();
-            List<string> pkValues = new();
-            foreach (Column column in primaryKey)
+            try
             {
-                pkValues.Add($"@{MakeParamWithValue(afterJsonValues[column.ColumnName])}");
+                foreach (PaginationColumn column in afterJsonValues)
+                {
+                    column.ParamName = "@" + MakeParamWithValue(
+                            GetParamAsColumnSystemType(column.Value!.ToString()!, column.ColumnName));
+                }
+            }
+            catch (ArgumentException ex)
+            {
+                throw new DataGatewayException(
+                  message: ex.Message,
+                  statusCode: HttpStatusCode.BadRequest,
+                  subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
 
-            PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(primaryKey, pkValues);
+            PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(afterJsonValues);
         }
 
         /// <summary>
@@ -358,7 +416,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="field">The string representing a field.</param>
         /// <param name="value">The value associated with a given field.</param>
         /// <param name="op">The predicate operation representing the comparison between field and value.</param>
-        private void PopulateParamsAndPredicates(string field, object value, PredicateOperation op = PredicateOperation.Equal)
+        private void PopulateParamsAndPredicates(string field, object? value, PredicateOperation op = PredicateOperation.Equal)
         {
             try
             {
@@ -474,13 +532,14 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     IObjectField? subschemaField = _underlyingFieldType.Fields[fieldName];
 
-                    IDictionary<string, object> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field);
                     if (_ctx == null)
                     {
-                        throw new InvalidOperationException("No GraphQL context exists");
+                        throw new DataGatewayException("No GraphQL context exists", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
                     }
 
-                    SqlQueryStructure subquery = new(_ctx, subqueryParams, MetadataStoreProvider, subschemaField, field, Counter);
+                    IDictionary<string, object?> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
+
+                    SqlQueryStructure subquery = new(_ctx, subqueryParams, MetadataStoreProvider, SqlMetadataProvider, subschemaField, field, Counter);
 
                     if (PaginationMetadata.IsPaginated)
                     {
@@ -508,39 +567,80 @@ namespace Azure.DataGateway.Service.Resolvers
                     ObjectType subunderlyingType = subquery._underlyingFieldType;
 
                     GraphQLType subTypeInfo = MetadataStoreProvider.GetGraphQLType(subunderlyingType.Name);
-                    TableDefinition subTableDefinition = MetadataStoreProvider.GetTableDefinition(subTypeInfo.Table);
+                    TableDefinition subTableDefinition = SqlMetadataProvider.GetTableDefinition(subTypeInfo.Table);
                     GraphQLField fieldInfo = _typeInfo.Fields[fieldName];
 
                     string subtableAlias = subquery.TableAlias;
 
+                    ForeignKeyDefinition fk;
+                    List<string> columns;
+                    List<string> subTableColumns;
+
                     switch (fieldInfo.RelationshipType)
                     {
-                        case GraphQLRelationshipType.ManyToOne:
+                        case GraphQLRelationshipType.OneToOne:
+                            if (!string.IsNullOrEmpty(fieldInfo.LeftForeignKey))
+                            {
+                                fk = GetUnderlyingTableDefinition().ForeignKeys[fieldInfo.LeftForeignKey];
+                                columns = GetFkColumns(fk, GetUnderlyingTableDefinition());
+                                subTableColumns = GetFkRefColumns(fk, subTableDefinition);
+                            }
+                            else
+                            {
+                                fk = subTableDefinition.ForeignKeys[fieldInfo.RightForeignKey];
+                                columns = GetFkRefColumns(fk, GetUnderlyingTableDefinition());
+                                subTableColumns = GetFkColumns(fk, subTableDefinition);
+                            }
+
                             subquery.Predicates.AddRange(CreateJoinPredicates(
                                 TableAlias,
-                                GetTableDefinition().ForeignKeys[fieldInfo.LeftForeignKey].Columns,
+                                columns,
                                 subtableAlias,
-                                subTableDefinition.PrimaryKey
+                                subTableColumns
+                            ));
+                            break;
+                        case GraphQLRelationshipType.ManyToOne:
+                            fk = GetUnderlyingTableDefinition().ForeignKeys[fieldInfo.LeftForeignKey];
+                            columns = GetFkColumns(fk, GetUnderlyingTableDefinition());
+                            subTableColumns = GetFkRefColumns(fk, subTableDefinition);
+
+                            subquery.Predicates.AddRange(CreateJoinPredicates(
+                                TableAlias,
+                                columns,
+                                subtableAlias,
+                                subTableColumns
                             ));
                             break;
                         case GraphQLRelationshipType.OneToMany:
+                            fk = subTableDefinition.ForeignKeys[fieldInfo.RightForeignKey];
+                            columns = GetFkRefColumns(fk, GetUnderlyingTableDefinition());
+                            subTableColumns = GetFkColumns(fk, subTableDefinition);
+
                             subquery.Predicates.AddRange(CreateJoinPredicates(
                                 TableAlias,
-                                PrimaryKey(),
+                                columns,
                                 subtableAlias,
-                                subTableDefinition.ForeignKeys[fieldInfo.RightForeignKey].Columns
+                                subTableColumns
                             ));
                             break;
                         case GraphQLRelationshipType.ManyToMany:
                             string associativeTableName = fieldInfo.AssociativeTable;
                             string associativeTableAlias = CreateTableAlias();
+                            TableDefinition associativeTableDefinition = SqlMetadataProvider.GetTableDefinition(associativeTableName);
 
-                            TableDefinition associativeTableDefinition = MetadataStoreProvider.GetTableDefinition(associativeTableName);
+                            ForeignKeyDefinition fkLeft = associativeTableDefinition.ForeignKeys[fieldInfo.LeftForeignKey];
+                            List<string> columnsLeft = GetFkRefColumns(fkLeft, GetUnderlyingTableDefinition());
+                            List<string> subTableColumnsLeft = GetFkColumns(fkLeft, associativeTableDefinition);
+
+                            ForeignKeyDefinition fkRight = associativeTableDefinition.ForeignKeys[fieldInfo.RightForeignKey];
+                            List<string> columnsRight = GetFkColumns(fkRight, associativeTableDefinition);
+                            List<string> subTableColumnsRight = GetFkRefColumns(fkRight, subTableDefinition);
+
                             subquery.Predicates.AddRange(CreateJoinPredicates(
                                 TableAlias,
-                                PrimaryKey(),
+                                columnsLeft,
                                 associativeTableAlias,
-                                associativeTableDefinition.ForeignKeys[fieldInfo.LeftForeignKey].Columns
+                                subTableColumnsLeft
                             ));
 
                             subquery.Joins.Add(new SqlJoinStructure
@@ -549,18 +649,17 @@ namespace Azure.DataGateway.Service.Resolvers
                                 associativeTableAlias,
                                 CreateJoinPredicates(
                                         associativeTableAlias,
-                                        associativeTableDefinition.ForeignKeys[fieldInfo.RightForeignKey].Columns,
+                                        columnsRight,
                                         subtableAlias,
-                                        subTableDefinition.PrimaryKey
+                                        subTableColumnsRight
                                     ).ToList()
                             ));
-
                             break;
 
                         case GraphQLRelationshipType.None:
                             throw new NotSupportedException("Cannot do a join when there is no relationship");
                         default:
-                            throw new NotImplementedException("OneToOne and ManyToMany relationships are not yet implemented");
+                            throw new NotSupportedException("Relationships type ${fieldInfo.RelationshipType} is not supported.");
                     }
 
                     string subqueryAlias = $"{subtableAlias}_subq";
@@ -568,6 +667,22 @@ namespace Azure.DataGateway.Service.Resolvers
                     Columns.Add(new LabelledColumn(subqueryAlias, DATA_IDENT, fieldName));
                 }
             }
+        }
+
+        /// <summary>
+        /// Get foreign key columns (if no columns select table pk)
+        /// </summary>
+        private static List<string> GetFkColumns(ForeignKeyDefinition fk, TableDefinition table)
+        {
+            return fk.ReferencingColumns.Count > 0 ? fk.ReferencingColumns : table.PrimaryKey;
+        }
+
+        /// <summary>
+        /// Get foreign key referenced columns (if no referenced columns select referenced table pk)
+        /// </summary>
+        private static List<string> GetFkRefColumns(ForeignKeyDefinition fk, TableDefinition refTable)
+        {
+            return fk.ReferencedColumns.Count > 0 ? fk.ReferencedColumns : refTable.PrimaryKey;
         }
 
         /// <summary>
@@ -586,22 +701,69 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Exposes the primary key of the underlying table of the structure
-        /// as a list of Column
+        /// Create a list of orderBy columns from the orderBy argument
+        /// passed to the gql query
         /// </summary>
-        public List<Column> PrimaryKeyAsColumns()
+        private List<OrderByColumn> ProcessGqlOrderByArg(List<ObjectFieldNode> orderByFields)
         {
-            if (_primaryKey == null)
-            {
-                _primaryKey = new();
+            // Create list of primary key columns
+            // we always have the primary keys in
+            // the order by statement for the case
+            // of tie breaking and pagination
+            List<OrderByColumn> orderByColumnsList = new();
 
-                foreach (string column in PrimaryKey())
+            List<string> remainingPkCols = new(PrimaryKey());
+
+            foreach (ObjectFieldNode field in orderByFields)
+            {
+                if (field.Value is NullValueNode)
                 {
-                    _primaryKey.Add(new Column(TableAlias, column));
+                    continue;
+                }
+
+                string fieldName = field.Name.ToString();
+
+                // remove pk column from list if it was specified as a
+                // field in orderBy
+                remainingPkCols.Remove(fieldName);
+
+                EnumValueNode enumValue = (EnumValueNode)field.Value;
+
+                if (enumValue.Value == $"{OrderByDir.Desc}")
+                {
+                    orderByColumnsList.Add(new OrderByColumn(TableAlias, fieldName, OrderByDir.Desc));
+                }
+                else
+                {
+                    orderByColumnsList.Add(new OrderByColumn(TableAlias, fieldName));
                 }
             }
 
-            return _primaryKey;
+            foreach (string colName in remainingPkCols)
+            {
+                orderByColumnsList.Add(new OrderByColumn(TableAlias, colName));
+            }
+
+            return orderByColumnsList;
+        }
+
+        /// <summary>
+        /// Exposes the primary key of the underlying table of the structure
+        /// as a list of OrderByColumn
+        /// </summary>
+        public List<OrderByColumn> PrimaryKeyAsOrderByColumns()
+        {
+            if (_primaryKeyAsOrderByColumns == null)
+            {
+                _primaryKeyAsOrderByColumns = new();
+
+                foreach (string column in PrimaryKey())
+                {
+                    _primaryKeyAsOrderByColumns.Add(new OrderByColumn(TableAlias, column));
+                }
+            }
+
+            return _primaryKeyAsOrderByColumns;
         }
 
         /// <summary>

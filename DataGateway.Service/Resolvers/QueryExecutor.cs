@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Config;
 using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -14,11 +14,18 @@ namespace Azure.DataGateway.Service.Resolvers
     public class QueryExecutor<ConnectionT> : IQueryExecutor
         where ConnectionT : DbConnection, new()
     {
-        private readonly DataGatewayConfig _dataGatewayConfig;
+        private readonly string _connectionString;
+        private readonly DbExceptionParserBase _dbExceptionParser;
 
-        public QueryExecutor(IOptions<DataGatewayConfig> dataGatewayConfig)
+        public QueryExecutor(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath, DbExceptionParserBase dbExceptionParser)
         {
-            _dataGatewayConfig = dataGatewayConfig.Value;
+            runtimeConfigPath.CurrentValue.
+                ExtractConfigValues(
+                    out _,
+                    out _connectionString,
+                    out _);
+
+            _dbExceptionParser = dbExceptionParser;
         }
 
         /// <summary>
@@ -29,8 +36,10 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>DbDataReader object for reading the result set.</returns>
         public async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object?> parameters)
         {
-            ConnectionT conn = new();
-            conn.ConnectionString = _dataGatewayConfig.DatabaseConnection.ConnectionString;
+            ConnectionT conn = new()
+            {
+                ConnectionString = _connectionString
+            };
             await conn.OpenAsync();
             DbCommand cmd = conn.CreateCommand();
             cmd.CommandText = sqltext;
@@ -46,7 +55,74 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            return await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
+            try
+            {
+                return await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
+            }
+            catch (DbException e)
+            {
+                Console.Error.WriteLine(e);
+                throw _dbExceptionParser.Parse(e);
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<bool> ReadAsync(DbDataReader reader)
+        {
+            try
+            {
+                return await reader.ReadAsync();
+            }
+            catch (DbException e)
+            {
+                Console.Error.WriteLine(e);
+                throw _dbExceptionParser.Parse(e);
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<Dictionary<string, object?>?> ExtractRowFromDbDataReader(DbDataReader dbDataReader, List<string>? onlyExtract = null)
+        {
+            Dictionary<string, object?> row = new();
+
+            if (await ReadAsync(dbDataReader))
+            {
+                if (dbDataReader.HasRows)
+                {
+                    DataTable? schemaTable = dbDataReader.GetSchemaTable();
+
+                    if (schemaTable != null)
+                    {
+                        foreach (DataRow schemaRow in schemaTable.Rows)
+                        {
+                            string columnName = (string)schemaRow["ColumnName"];
+
+                            if (onlyExtract != null && !onlyExtract.Contains(columnName))
+                            {
+                                continue;
+                            }
+
+                            int colIndex = dbDataReader.GetOrdinal(columnName);
+                            if (!dbDataReader.IsDBNull(colIndex))
+                            {
+                                row.Add(columnName, dbDataReader[columnName]);
+                            }
+                            else
+                            {
+                                row.Add(columnName, value: null);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // no row was read
+            if (row.Count == 0)
+            {
+                return null;
+            }
+
+            return row;
         }
     }
 }

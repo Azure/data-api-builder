@@ -1,84 +1,225 @@
 # Project
 
 ## Introduction
-DataGateway provides a consistent, productive abstraction for building GraphQL and REST API applications with data. Powered by Azure Databases, DataGateway provides modern access patterns to the database, allowing developers to use REST or GraphQL and providing developer experiences that meet developers where they are. 
 
-## Configure and Run
+DataGateway provides a consistent, productive abstraction for building GraphQL and REST API applications with data. Powered by Azure Databases, DataGateway provides modern access patterns to the database, allowing developers to use REST or GraphQL and providing developer experiences that meet developers where they are.
 
-Clone the repository with your prefered method or locally navigate to where you'd like the repository to be and clone with the following command, make sure you replace `<directory name>` 
+## Setup
 
-```
+### 1. Clone Repository
+
+Clone the repository with your preferred method or locally navigate to where you'd like the repository to be and clone with the following command, make sure you replace `<directory name>`
+
+```bash
 git clone https://github.com/Azure/hawaii-gql.git <directory name>
 ```
 
-Once you have the respository cloned locally, you will need a database in order to make use of the project. One option is a local instance of SQL Server.
+### 2. Configure Database Engine
 
-If you have a local instance of SQL Server running, you will need to ensure that your account has permissions on the server. You can add permissions by running the following SQL. Replace DOMAIN\username with your domain and username.
+You will need to provide a database to run behind DataGateway. DataGateway supports SQL Server, CosmosDB, PostgreSQL, and MySQL.
 
-```sql
-    CREATE LOGIN [DOMAIN\username] FROM WINDOWS WITH DEFAULT_DATABASE=[master]
-    ALTER SERVER ROLE [sysadmin] ADD MEMBER [DOMAIN\username]
-```
+#### 2.1 Configure Database Account
 
-In order to properly connect to your database you will need to modify the connection string used in the project. Open the project with Visual Studio, or the editor of your choice, and find the files in the `DataGateway.Service` directory of the form `appsettings.XXX.json`
+With a local or cloud hosted instance a supported database deployed, ensure that you have an account with the necessary access permissions.
+The account should have access to all entities that are defined in the runtime configuration.
 
-In these files you need to modify the value for `ConnectionString` for the project to be able to connect the service to your database. These connection strings will be specific to the instance of the database that you are running. Example connection strings are provided for assistance.
+#### 2.2 Supply a `connection-string` for the respective `database-type`
 
-#### CosmosDB
-```
-"ConnectionString": "AccountEndpoint=https://cosmostest.documents.azure.com:443/;AccountKey=REPLACEME"
-```
+Project startup requires a connection string to be defined (**Note:** Dynamic config is out of scope of this initial startup guide).
+
+In your editor of choice, locate template configuration files in the `DataGateway.Service` directory of the form `hawaii-config.XXX.json`.
+
+Supply a value `connection-string` for the project to be able to connect the service to your database. These connection strings will be specific to the instance of the database that you are running. Example connection strings are provided for assistance.
 
 #### MsSql
+
+Local SQL Server Instance
+
+```json
+"data-source": {
+  "database-type": "mssql",
+  "connection-string": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=USERNAME;Password=PASSWORD;MultipleActiveResultSets=False;Connection Timeout=5;"
+}
 ```
-"ConnectionString": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=USERNAME;Password=PASSWORD;MultipleActiveResultSets=False;Connection Timeout=5;"
+
+LocalDB Instance
+
+```json
+"data-source": {
+  "database-type": "mssql",
+  "connection-string": "Server=(localdb)\\MSSQLLocalDB;Database=DataGateway;Integrated Security=true"
+}
 ```
 
 #### MySQL
+
+```json
+"data-source": {
+  "database-type": "mysql",
+  "connection-string": "server=localhost;database=graphql;Allow User variables=true;uid=USERNAME;pwd=PASSWORD"
+}
 ```
-"ConnectionString": "server=localhost;database=graphql;Allow User variables=true;uid=USERNAME;pwd=PASSWORD"
+
+#### PostgreSQL
+
+```json
+"data-source": {
+  "database-type": "postgresql",
+  "connection-string": "Host=localhost;Database=graphql"
+}
 ```
 
-#### PostresSQL
+#### CosmosDB
+
+```json
+"data-source": {
+  "database-type": "cosmos",
+  "connection-string": "AccountEndpoint=https://<REPLACEME>.documents.azure.com:443/;AccountKey=<REPLACEME>"
+}
 ```
-"ConnectionString": "Host=localhost;Database=graphql"
+The `connection-string` can also be supplied as the value of the environment variable `HAWAII_CONNSTRING`. If set, it will override the `connection-string` value from the config file.
+
+#### 2.3 Setup Sample Database
+
+Schema and data population files are included that are necessary for running sample queries and unit/integration tests.
+
+**Execute the setup script(s)** located in the `DataGateway.Service` directory for each DB engine installed locally:
+
+- SQL Server/LocalDB `MsSqlBooks.sql`
+- PostgreSql `PosgreSqlBooks.sql`
+- MySQL `MySqlBooks.sql`
+
+**Note:** Edits to `.sql` files require matching edits to the GraphQL (.gql)schema file and the runtime config.
+
+- Runtime config: `hawaii-config.json`
+- GraphQL schema file is `books.gql`
+- Resolver config: `sql-config.json`
+
+### 3. Configure Authentication
+
+#### Easy Auth
+
+The runtime supports authentication through Static Web Apps/App Service's EasyAuth feature.
+
+An example config for Easy Auth sets the **Provider** value:
+
+```json
+  "runtime": {
+    "host": {
+      "authentication": {
+        "provider": "EasyAuth"
+      }
+    }
+  }
 ```
 
-Once you have your connection strings properly formatted you can build and run the project. In Visul Studio this can be done by selecting the type of database you wish to connect when you run build and run the project from within Visual Studio.
+HTTP requests must have the `X-MS-CLIENT-PRINCIPAL` HTTP header set with a JWT value. An example value can be found in [this PR #97 Description](https://github.com/Azure/hawaii-gql/pull/97).
 
-To build and run the project from the command line you need to set the Database Type, and then can use the dotnet run command. For example `ASPNETCORE_ENVIRONMENT=PostgreSql dotnet watch run --project DataGateway.Service` would build and run the project for PostregreSql.
+#### JWT(Bearer) Authentication
 
-When the project finishes building and starts to run there should be a browser that opens with Banana Cake Pop running. You will need to provide the endpoint uri on the left side of the window, which is `https://localhost:5001/graphql` 
+Configure **Bearer token authentication** with identity providers like Azure AD.
 
-If the service is running successfully you should see a green dot on that same side of the window with the endpoint's address. From this window you can create and execute queries using GraphQL. For more information on using Bana Cake Pop to test GraphQL queries, please see `https://chillicream.com/docs/bananacakepop`
+```json
+  "data-source": {
+  "database-type": "cosmos",
+  "connection-string": "AccountEndpoint=https://<REPLACEME>.documents.azure.com:443/;AccountKey=<REPLACEME>"
+  },
+  "runtime": {
+    "host": {
+      "authentication": {
+        "provider": "AzureAD",
+        "jwt": {
+          "audience": "<AudienceGUIDfromAppRegistration>",
+          "issuer": "https://login.microsoftonline.com/<tenantID>/v2.0"
+        }
+      }
+    }
+  }
+```
 
-Likewise, once the project is running you can test the API with a tool like postman (https://www.postman.com/). Files are included that will automatically populate your database with useful tables. The tests that are built into the project use these tables for validation as well. To do so, execute the SQL contained in `MsSqlBooks.sql` located in the `DataGateway.Service` directory.
+HTTP requests must have the `Authorization` HTTP header set with the value `Bearer <JWT TOKEN>`. The token must be issued and signed for the DataGateway runtime.
 
-Please note that if you edit the `MsSqlBooks.sql`file, you need to edit the runtime configuration and graphql schema files accordingly. The runtime configuration file is `sql-config.json` and the GraphQL schema file is `books.gql`
+### 4. Build and Run
 
+#### Visual Studio
 
-When testing out the API, take note of the service root uri displayed in the window that pops up, ie: `Now listening on: https://localhost:5001`
+1. Select the **Startup Project** `Azure.DataGateway.Service`.
+2. Select a **debug profile** for database type: `MsSql`, `PostgreSql`,`Cosmos`, or `MySql`.
+3. Select **Clean Solution**
+4. Select **Build Solution** (Do not select rebuild, as any changes to configuration files may not be reflected in the build folder.)
+5. Start runtime
 
-When manually testing the API with postman, this is the beginning of the uri that will contain your request. You must also include the route, and any desired query strings (for more information on the formatting guidelines we conform to see: https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md).
+#### Which configuration file is used?
 
-For example, to invoke a FindMany on the Table "Books" and retrieve the "id" and "title" we would have do a GET request on uri `https://localhost:5001/books/?_f=id,title`
+1. Hawaii runtime determines the name of the configuration file based on environment values, following the same behavior offered by ASP.NET Core for the `appsettings.json` file. It expects the configuration file in the same directory as the runtime.
 
-To see how the code flows, set a breakpoint in the controller which is associated with the particular DatabaseType that you are using, ie: after line 75 in `RestController.cs`
+2. The precedence followed is in the following order from high to low:
 
-This is a good entry point for debugging if you are not sure where in the service your problem is located.
+    a. Command Line Argument e.g. `--ConfigFileName=custom-config.json`
+
+    b. Value of `HAWAII_ENVIRONMENT` suffixed to hawaii-config.
+    e.g. setting `HAWAII_ENVIRONMENT=Development` will prompt the runtime to look for `hawaii-config.Development.json`
+
+    c. Value of `ASPNETCORE_ENVIRONMENT` suffixed to hawaii-config.
+    e.g. setting `ASPNETCORE_ENVIRONMENT=MsSql` will prompt the runtime to look for `hawaii-config.MsSql.json`
+
+    d. By default, runtime will look for `hawaii-config.json`
+
+3. For any of the configuration file names determined for the environment, if there is another file with the `.overrides` suffix in the current directory, that overridden file name will instead be picked up.
+e.g. if both `hawaii-config.json` and `hawaii-config.overrides.json` are present, precedence will be given to `hawaii-config.overrides.json` - however, the runtime will still follow the above rules of precedence. 
+e.g. When HAWAII_ENVIRONMENT is set as `Development` and if all three config files exist- `hawaii-config.Development.json`, `hawaii-config.json`, `hawaii-config.overrides.json`- the runtime will pick `hawaii-config.Development.json`.
+
+#### Command Line
+
+1. Based on your preferred mode of specifying the configuration file name, there are different ways to launch the runtime.
+2. Set the `HAWAII_ENVIRONMENT` or `ASPNETCORE_ENVIRONMENT`, typically using their value to be database type `MsSql`, `PostgreSql`,`Cosmos`, or `MySql`.
+
+    Example: `ASPNETCORE_ENVIRONMENT=PostgreSql`
+
+3. Run the command `dotnet watch run --project DataGateway`
+   - watch flag used to detect configuration change and restart.
+
+4. The runtime config file provided as a command line takes precedence. So, another way of running is:
+
+`dotnet watch run --project DataGateway --ConfigFileName=custom-config.json`
+
+### 5. Query Execution Tools
+
+#### Banana Cake Pop for GraphQL
+
+After startup, a browser window opens with Banana Cake Pop (BCP), the GraphQL request GUI.
+
+- Provide the endpoint URI `https://localhost:5001/graphql`  so the GraphQL schema is read.
+  - A green dot in the URI text box will confirm schema detection.
+
+For more information on using Banana Cake Pop to test GraphQL queries, please see `https://chillicream.com/docs/bananacakepop`
+
+#### Postman for REST
+
+You can test the REST API with [Postman](https://www.postman.com/).
+
+When testing out the API, take note of the service root URI displayed in the window that pops up, ie: `Now listening on: https://localhost:5001`
+
+When manually testing the API with postman, this is the beginning of the uri that will contain your request. You must also include the route, and any desired query strings. Request expectations can be found in [Microsoft REST API Guidelines]( https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md).
+
+- For example, to invoke a FindMany on the Table "Books" and retrieve the "id" and "title" we would have do a GET request on uri `https://localhost:5001/books/?_f=id,title`
+
+#### Debugging
+
+To see code execution flow, the first place to start would be to set breakpoints in either `GraphQLController.cs` or `RestController.cs`. Those controllers represent the entry point of a GraphQL and REST request, respectively.
 
 ## Using Docker Containers
+
 Instructions for using Docker containers can be found under [docs/GetStarted.md](https://github.com/Azure/hawaii-gql/blob/main/docs/GetStarted.md)
 
 ### Contributing
 
 If you wish to contribute to this project please see [Contributing.md](https://github.com/Azure/hawaii-gql/blob/main/CONTRIBUTING.md)
 
-
 ## Trademarks
 
 This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft
 trademarks or logos is subject to and must follow
-[Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general).
+[Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/legal/intellectualproperty/trademarks/usage/general).
 Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship.
 Any use of third-party trademarks or logos are subject to those third-party's policies.

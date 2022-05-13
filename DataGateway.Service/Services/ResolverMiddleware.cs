@@ -1,10 +1,10 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
+using HotChocolate.Execution;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
@@ -21,12 +21,12 @@ namespace Azure.DataGateway.Service.Services
         internal readonly FieldDelegate _next;
         internal readonly IQueryEngine _queryEngine;
         internal readonly IMutationEngine _mutationEngine;
-        internal readonly IMetadataStoreProvider _metadataStoreProvider;
+        internal readonly IGraphQLMetadataProvider _metadataStoreProvider;
 
         public ResolverMiddleware(FieldDelegate next,
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
-            IMetadataStoreProvider metadataStoreProvider)
+            IGraphQLMetadataProvider metadataStoreProvider)
         {
             _next = next;
             _queryEngine = queryEngine;
@@ -40,7 +40,7 @@ namespace Azure.DataGateway.Service.Services
 
             if (context.Selection.Field.Coordinate.TypeName.Value == "Mutation")
             {
-                IDictionary<string, object> parameters = GetParametersFromContext(context);
+                IDictionary<string, object?> parameters = GetParametersFromContext(context);
 
                 Tuple<JsonDocument, IMetadata> result = await _mutationEngine.ExecuteAsync(context, parameters);
                 context.Result = result.Item1;
@@ -48,7 +48,7 @@ namespace Azure.DataGateway.Service.Services
             }
             else if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
             {
-                IDictionary<string, object> parameters = GetParametersFromContext(context);
+                IDictionary<string, object?> parameters = GetParametersFromContext(context);
 
                 if (context.Selection.Type.IsListType())
                 {
@@ -69,7 +69,7 @@ namespace Azure.DataGateway.Service.Services
                 // anything for it.
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
-                    context.Result = jsonElement.ToString();
+                    context.Result = RepresentsNullValue(jsonElement) ? null : jsonElement.ToString();
                 }
             }
             else if (IsInnerObject(context))
@@ -102,6 +102,11 @@ namespace Azure.DataGateway.Service.Services
             await _next(context);
         }
 
+        public static bool RepresentsNullValue(JsonElement element)
+        {
+            return string.IsNullOrEmpty(element.ToString()) && element.GetRawText() == "null";
+        }
+
         protected static bool TryGetPropertyFromParent(IMiddlewareContext context, out JsonElement jsonElement)
         {
             JsonDocument result = context.Parent<JsonDocument>();
@@ -119,17 +124,19 @@ namespace Azure.DataGateway.Service.Services
             return context.Selection.Field.Type.IsObjectType() && context.Parent<JsonDocument>() != default;
         }
 
-        static private object ArgumentValue(IValueNode value)
+        /// <summary>
+        /// Extract the value from a IValueNode
+        /// Note that if the node type is Variable, the parameter variables needs to be specified
+        /// as well in order to extract the value.
+        /// </summary>
+        public static object? ArgumentValue(IValueNode value, IVariableValueCollection? variables = null)
         {
-            if (value.Kind == SyntaxKind.IntValue)
+            return value.Kind switch
             {
-                IntValueNode intValue = (IntValueNode)value;
-                return intValue.ToInt64();
-            }
-            else
-            {
-                return value.Value;
-            }
+                SyntaxKind.IntValue => ((IntValueNode)value).ToInt32(),
+                SyntaxKind.Variable => variables?.GetVariable<object>(((VariableNode)value).Value),
+                _ => value.Value
+            };
         }
 
         /// <summary>
@@ -137,21 +144,17 @@ namespace Azure.DataGateway.Service.Services
         /// Extracts defualt parameter values from the schema or null if no default
         /// Overrides default values with actual values of parameters provided
         /// </summary>
-        public static IDictionary<string, object> GetParametersFromSchemaAndQueryFields(IObjectField schema, FieldNode query)
+        public static IDictionary<string, object?> GetParametersFromSchemaAndQueryFields(IObjectField schema, FieldNode query, IVariableValueCollection variables)
         {
-            IDictionary<string, object> parameters = new Dictionary<string, object>();
+            IDictionary<string, object?> parameters = new Dictionary<string, object?>();
 
             // Fill the parameters dictionary with the default argument values
             IFieldCollection<IInputField> availableArguments = schema.Arguments;
             foreach (IInputField argument in availableArguments)
             {
-                if (argument.DefaultValue == null)
+                if (argument.DefaultValue != null)
                 {
-                    parameters.Add(argument.Name.Value, null);
-                }
-                else
-                {
-                    parameters.Add(argument.Name.Value, ArgumentValue(argument.DefaultValue));
+                    parameters.Add(argument.Name.Value, ArgumentValue(argument.DefaultValue, variables));
                 }
             }
 
@@ -159,15 +162,22 @@ namespace Azure.DataGateway.Service.Services
             IReadOnlyList<ArgumentNode> passedArguments = query.Arguments;
             foreach (ArgumentNode argument in passedArguments)
             {
-                parameters[argument.Name.Value] = ArgumentValue(argument.Value);
+                if (parameters.ContainsKey(argument.Name.Value))
+                {
+                    parameters[argument.Name.Value] = ArgumentValue(argument.Value, variables);
+                }
+                else
+                {
+                    parameters.Add(argument.Name.Value, ArgumentValue(argument.Value, variables));
+                }
             }
 
             return parameters;
         }
 
-        protected static IDictionary<string, object> GetParametersFromContext(IMiddlewareContext context)
+        protected static IDictionary<string, object?> GetParametersFromContext(IMiddlewareContext context)
         {
-            return GetParametersFromSchemaAndQueryFields(context.Selection.Field, context.Selection.SyntaxNode);
+            return GetParametersFromSchemaAndQueryFields(context.Selection.Field, context.Selection.SyntaxNode, context.Variables);
         }
 
         /// <summary>
@@ -175,7 +185,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private static IMetadata GetMetadata(IMiddlewareContext context)
         {
-            return (IMetadata)context.ScopedContextData[_contextMetadata];
+            return (IMetadata)context.ScopedContextData[_contextMetadata]!;
         }
 
         /// <summary>

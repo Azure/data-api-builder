@@ -1,17 +1,24 @@
 using System;
+using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.AuthenticationHelpers;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using HotChocolate.Language;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 using MySqlConnector;
 using Npgsql;
 
@@ -25,76 +32,188 @@ namespace Azure.DataGateway.Service
         }
 
         public IConfiguration Configuration { get; }
+        private IChangeToken? _inMemoryConfigChangeToken;
+
+        private void OnConfigurationChanged(object state)
+        {
+            RuntimeConfigPath runtimeConfigPath = new();
+            Configuration.Bind(runtimeConfigPath);
+            runtimeConfigPath.SetRuntimeConfigValue();
+        }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            DoConfigureServices(services, Configuration);
-            services.AddControllers();
-        }
+            services.Configure<RuntimeConfigPath>(Configuration);
 
-        /// <summary>
-        /// This method adds services that are used when running this project or the
-        /// functions project. Any services that are required should be added here, unless
-        /// it is only required for one or the other.
-        /// </summary>
-        /// <param name="services">The service collection to which services will be added.</param>
-        /// <param name="config">The applications configuration.</param>
-        public static void DoConfigureServices(IServiceCollection services, IConfiguration config)
-        {
-            services.Configure<DataGatewayConfig>(config.GetSection(nameof(DataGatewayConfig)));
-            services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<DataGatewayConfig>, DataGatewayConfigPostConfiguration>());
-            services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<DataGatewayConfig>, DataGatewayConfigValidation>());
-
-            // Read configuration and use it locally.
-            DataGatewayConfig dataGatewayConfig = new();
-            config.Bind(nameof(DataGatewayConfig), dataGatewayConfig);
-
-            switch (dataGatewayConfig.DatabaseType)
+            if (Configuration is IConfigurationRoot root)
             {
-                case DatabaseType.Cosmos:
-                    services.AddSingleton<CosmosClientProvider, CosmosClientProvider>();
-                    services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
-                    services.AddSingleton<IQueryEngine, CosmosQueryEngine>();
-                    services.AddSingleton<IMutationEngine, CosmosMutationEngine>();
-                    services.AddSingleton<IConfigValidator, CosmosConfigValidator>();
-                    break;
-                case DatabaseType.MsSql:
-                    services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
-                    services.AddSingleton<IQueryExecutor, QueryExecutor<SqlConnection>>();
-                    services.AddSingleton<IQueryBuilder, MsSqlQueryBuilder>();
-                    services.AddSingleton<IQueryEngine, SqlQueryEngine>();
-                    services.AddSingleton<IMutationEngine, SqlMutationEngine>();
-                    services.AddSingleton<IConfigValidator, SqlConfigValidator>();
-                    break;
-                case DatabaseType.PostgreSql:
-                    services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
-                    services.AddSingleton<IQueryExecutor, QueryExecutor<NpgsqlConnection>>();
-                    services.AddSingleton<IQueryBuilder, PostgresQueryBuilder>();
-                    services.AddSingleton<IQueryEngine, SqlQueryEngine>();
-                    services.AddSingleton<IMutationEngine, SqlMutationEngine>();
-                    services.AddSingleton<IConfigValidator, SqlConfigValidator>();
-                    break;
-                case DatabaseType.MySql:
-                    services.AddSingleton<IMetadataStoreProvider, FileMetadataStoreProvider>();
-                    services.AddSingleton<IQueryExecutor, QueryExecutor<MySqlConnection>>();
-                    services.AddSingleton<IQueryBuilder, MySqlQueryBuilder>();
-                    services.AddSingleton<IQueryEngine, SqlQueryEngine>();
-                    services.AddSingleton<IMutationEngine, SqlMutationEngine>();
-                    services.AddSingleton<IConfigValidator, SqlConfigValidator>();
-                    break;
-                default:
-                    throw new NotSupportedException(String.Format("The provided DatabaseType value: {0} is currently not supported." +
-                        "Please check the configuration file.", dataGatewayConfig.DatabaseType));
+                if (root.Providers.First(prov => prov is InMemoryUpdateableConfigurationProvider) is InMemoryUpdateableConfigurationProvider provider)
+                {
+                    services.AddSingleton(provider);
+                    _inMemoryConfigChangeToken = provider.GetReloadToken();
+                    _inMemoryConfigChangeToken.RegisterChangeCallback(new Action<object>(OnConfigurationChanged), provider);
+                }
             }
 
-            services.AddSingleton<GraphQLService, GraphQLService>();
-            services.AddSingleton<RestService, RestService>();
+            services.AddSingleton<RuntimeConfigValidator>();
+            services.AddSingleton<IGraphQLMetadataProvider, GraphQLFileMetadataProvider>();
+            services.AddSingleton<CosmosClientProvider>();
+
+            services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
+            {
+                IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
+                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
+
+                switch (runtimeConfig.DatabaseType)
+                {
+                    case DatabaseType.cosmos:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<CosmosQueryEngine>(serviceProvider);
+                    case DatabaseType.mssql:
+                    case DatabaseType.postgresql:
+                    case DatabaseType.mysql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<SqlQueryEngine>(serviceProvider);
+                    default:
+                        throw new NotSupportedException(runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
+                }
+            });
+
+            services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
+            {
+                IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
+                   = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
+
+                switch (runtimeConfig.DatabaseType)
+                {
+                    case DatabaseType.cosmos:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<CosmosMutationEngine>(serviceProvider);
+                    case DatabaseType.mssql:
+                    case DatabaseType.postgresql:
+                    case DatabaseType.mysql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<SqlMutationEngine>(serviceProvider);
+                    default:
+                        throw new NotSupportedException(runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
+                }
+            });
+
+            services.AddSingleton<IConfigValidator>(implementationFactory: (serviceProvider) =>
+            {
+                IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
+                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
+
+                switch (runtimeConfig.DatabaseType)
+                {
+                    case DatabaseType.cosmos:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<CosmosConfigValidator>(serviceProvider);
+                    case DatabaseType.mssql:
+                    case DatabaseType.postgresql:
+                    case DatabaseType.mysql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<SqlConfigValidator>(serviceProvider);
+                    default:
+                        throw new NotSupportedException(
+                            runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
+                }
+            });
+
+            services.AddSingleton<IQueryExecutor>(implementationFactory: (serviceProvider) =>
+            {
+                IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
+                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
+
+                switch (runtimeConfig.DatabaseType)
+                {
+                    case DatabaseType.cosmos:
+                        return null!;
+                    case DatabaseType.mssql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<SqlConnection>>(serviceProvider);
+                    case DatabaseType.postgresql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<NpgsqlConnection>>(serviceProvider);
+                    case DatabaseType.mysql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<MySqlConnection>>(serviceProvider);
+                    default:
+                        throw new NotSupportedException(
+                            runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
+                }
+            });
+
+            services.AddSingleton<IQueryBuilder>(implementationFactory: (serviceProvider) =>
+            {
+                IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
+                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
+
+                switch (runtimeConfig.DatabaseType)
+                {
+                    case DatabaseType.cosmos:
+                        return null!;
+                    case DatabaseType.mssql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlQueryBuilder>(serviceProvider);
+                    case DatabaseType.postgresql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<PostgresQueryBuilder>(serviceProvider);
+                    case DatabaseType.mysql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<MySqlQueryBuilder>(serviceProvider);
+                    default:
+                        throw new NotSupportedException(runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
+                }
+            });
+
+            services.AddSingleton<ISqlMetadataProvider>(implementationFactory: (serviceProvider) =>
+            {
+                IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
+                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
+
+                switch (runtimeConfig.DatabaseType)
+                {
+                    case DatabaseType.cosmos:
+                        return null!;
+                    case DatabaseType.mssql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlMetadataProvider>(serviceProvider);
+                    case DatabaseType.postgresql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlMetadataProvider>(serviceProvider);
+                    case DatabaseType.mysql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<MySqlMetadataProvider>(serviceProvider);
+                    default:
+                        throw new NotSupportedException(runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
+                }
+            });
+
+            services.AddSingleton(implementationFactory: (serviceProvider) =>
+            {
+                IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
+                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
+
+                switch (runtimeConfig.DatabaseType)
+                {
+                    case DatabaseType.cosmos:
+                        return null!;
+                    case DatabaseType.mssql:
+                        return new DbExceptionParserBase();
+                    case DatabaseType.postgresql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<PostgresDbExceptionParser>(serviceProvider);
+                    case DatabaseType.mysql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<MySqlDbExceptionParser>(serviceProvider);
+                    default:
+                        throw new NotSupportedException(runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
+                }
+            });
+
+            services.AddSingleton<IDocumentHashProvider, Sha256DocumentHashProvider>();
+            services.AddSingleton<IDocumentCache, DocumentCache>();
+            services.AddSingleton<GraphQLService>();
+            services.AddSingleton<RestService>();
 
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
-            services.AddAuthorization();
 
+            ConfigureAuthentication(services);
+
+            services.AddAuthorization();
             services.AddSingleton<IAuthorizationHandler, RequestAuthorizationHandler>();
             services.AddControllers();
         }
@@ -102,9 +221,28 @@ namespace Azure.DataGateway.Service
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            // validate the configuration after the services have been built
-            // but before the application is built
-            app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
+            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
+                = app.ApplicationServices.GetService<IOptionsMonitor<RuntimeConfigPath>>()!;
+            runtimeConfigPath.CurrentValue.SetRuntimeConfigValue();
+            RuntimeConfig? runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue;
+            bool isRuntimeReady = false;
+            if (runtimeConfig is not null)
+            {
+                isRuntimeReady =
+                    PerformOnConfigChangeAsync(app).Result;
+            }
+            else
+            {
+                runtimeConfigPath.OnChange(async (newConfig) =>
+                {
+                    if (!string.IsNullOrWhiteSpace(runtimeConfigPath.CurrentValue.ConfigFileName))
+                    {
+                        runtimeConfigPath.CurrentValue.SetRuntimeConfigValue();
+                        isRuntimeReady =
+                            await PerformOnConfigChangeAsync(app);
+                    }
+                });
+            }
 
             if (env.IsDevelopment())
             {
@@ -114,8 +252,42 @@ namespace Azure.DataGateway.Service
             //app.UseHttpsRedirection();
 
             app.UseRouting();
-
+            app.Use(async (context, next) =>
+            {
+                bool isSettingConfig = context.Request.Path.StartsWithSegments("/configuration")
+                    && context.Request.Method == HttpMethod.Post.Method;
+                if (isRuntimeReady)
+                {
+                    await next.Invoke();
+                }
+                else if (isSettingConfig)
+                {
+                    if (isRuntimeReady)
+                    {
+                        context.Response.StatusCode = StatusCodes.Status409Conflict;
+                    }
+                    else
+                    {
+                        await next.Invoke();
+                    }
+                }
+                else
+                {
+                    context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+                }
+            });
             app.UseAuthentication();
+
+            // Conditionally add EasyAuth middleware if no JwtAuth configuration supplied.
+            if (runtimeConfig is not null && runtimeConfig.IsEasyAuthAuthenticationProvider())
+            {
+                app.UseEasyAuthMiddleware();
+            }
+            else
+            {
+                app.UseJwtAuthenticationMiddleware();
+            }
+
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
@@ -123,6 +295,63 @@ namespace Azure.DataGateway.Service
                 endpoints.MapControllers();
                 endpoints.MapBananaCakePop("/graphql");
             });
+        }
+
+        /// <summary>
+        /// Perform these additional steps once the configuration has been bound
+        /// to a particular database type.
+        /// </summary>
+        /// <param name="app"></param>
+        /// <returns>Indicates if the runtime is ready to accept requests.</returns>
+        private static async Task<bool> PerformOnConfigChangeAsync(IApplicationBuilder app)
+        {
+            try
+            {
+                // Now that the configuration has been set, perform validation of the runtime config
+                // itself.
+                app.ApplicationServices.GetService<RuntimeConfigValidator>()!.ValidateConfig();
+
+                ISqlMetadataProvider? sqlMetadataProvider =
+                    app.ApplicationServices.GetService<ISqlMetadataProvider>();
+
+                if (sqlMetadataProvider is not null)
+                {
+                    await sqlMetadataProvider.InitializeAsync();
+                }
+
+                // After initialization of metadata, validate the db specific configuration.
+                app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Unable to complete runtime " +
+                    $"intialization operations due to: {ex.Message}.");
+                return false;
+            }
+        }
+
+        private void ConfigureAuthentication(IServiceCollection services)
+        {
+            // Read configuration and use it locally.
+            RuntimeConfigPath runtimeConfigPath = Configuration.Get<RuntimeConfigPath>();
+            runtimeConfigPath.SetRuntimeConfigValue();
+            RuntimeConfig? runtimeConfig = runtimeConfigPath.ConfigValue;
+
+            // Parameterless AddAuthentication() , i.e. No defaultScheme, allows the custom JWT middleware
+            // to manually call JwtBearerHandler.HandleAuthenticateAsync() and populate the User if successful.
+            // This also enables the custom middleware to send the AuthN failure reason in the challenge header.
+            if (runtimeConfig != null &&
+                runtimeConfig.AuthNConfig != null &&
+                !runtimeConfig.IsEasyAuthAuthenticationProvider())
+            {
+                services.AddAuthentication()
+                .AddJwtBearer(options =>
+                {
+                    options.Audience = runtimeConfig.AuthNConfig.Jwt!.Audience;
+                    options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
+                });
+            }
         }
     }
 }

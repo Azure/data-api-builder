@@ -42,7 +42,7 @@ namespace Azure.DataGateway.Service.Resolvers
             string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)}"
                 + $" FROM {fromSql}"
                 + $" WHERE {predicates}"
-                + $" ORDER BY {Build(structure.PrimaryKeyAsColumns())}";
+                + $" ORDER BY {Build(structure.OrderByColumns)}";
 
             query += FOR_JSON_SUFFIX;
             if (!structure.IsListQuery)
@@ -86,16 +86,27 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns></returns>
         public string Build(SqlUpsertQueryStructure structure)
         {
-            return $"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;BEGIN TRANSACTION; UPDATE { QuoteIdentifier(structure.TableName)} " +
-                $"WITH(UPDLOCK) SET {Build(structure.UpdateOperations, ", ")} " +
-                $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
-                $"WHERE {Build(structure.Predicates)} " +
-                $"IF @@ROWCOUNT = 0 " +
-                $"BEGIN; " +
-                $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
-                $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
-                $"VALUES ({string.Join(", ", structure.Values)}) " +
-                $"END; COMMIT TRANSACTION";
+            if (structure.IsFallbackToUpdate)
+            {
+                return $"UPDATE {QuoteIdentifier(structure.TableName)} " +
+                    $"SET {Build(structure.UpdateOperations, ", ")} " +
+                    $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
+                    $"WHERE {Build(structure.Predicates)};";
+            }
+            else
+            {
+                return $"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;BEGIN TRANSACTION; UPDATE {QuoteIdentifier(structure.TableName)} " +
+                    $"WITH(UPDLOCK) SET {Build(structure.UpdateOperations, ", ")} " +
+                    $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
+                    $"WHERE {Build(structure.Predicates)} " +
+                    $"IF @@ROWCOUNT = 0 " +
+                    $"BEGIN; " +
+                    $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
+                    $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
+                    $"VALUES ({string.Join(", ", structure.Values)}) " +
+                    $"END; COMMIT TRANSACTION";
+            }
+
         }
 
         /// <summary>

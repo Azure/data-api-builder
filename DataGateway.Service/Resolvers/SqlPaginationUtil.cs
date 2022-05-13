@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 
@@ -70,7 +71,10 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (returnedElemNo > 0)
                 {
                     JsonElement lastElemInRoot = rootEnumerated.ElementAtOrDefault(returnedElemNo - 1);
-                    connectionJson.Add("endCursor", MakeCursorFromJsonElement(lastElemInRoot, paginationMetadata.Structure!.PrimaryKey()));
+                    connectionJson.Add("endCursor", MakeCursorFromJsonElement(
+                        lastElemInRoot,
+                        paginationMetadata.Structure!.PrimaryKey(),
+                        paginationMetadata.Structure!.OrderByColumns));
                 }
             }
 
@@ -101,29 +105,74 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Extracts the primary keys from the json elem, puts them in a string in json format and base64 encodes it
+        /// Extracts the columns from the json element needed for pagination, represents them as a string in json format and base64 encodes.
         /// The JSON is encoded in base64 for opaqueness. The cursor should function as a token that the user copies and pastes
-        /// and doesn't need to know how it works
+        /// without needing to understand how it works.
         /// </summary>
-        public static string MakeCursorFromJsonElement(JsonElement element, List<string> primaryKey)
+        public static string MakeCursorFromJsonElement(
+            JsonElement element,
+            List<string> primaryKey,
+            List<OrderByColumn>? orderByColumns = null,
+            string? tableAlias = null)
         {
-            Dictionary<string, object> cursorJson = new();
-
-            foreach (string column in primaryKey)
+            List<PaginationColumn> cursorJson = new();
+            JsonSerializerOptions options = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
+            // Hash set is used here to maintain linear runtime
+            // in the worst case for this function. If list is used
+            // we will have in the worst case quadratic runtime.
+            HashSet<string> remainingKeys = new();
+            foreach (string key in primaryKey)
             {
-                cursorJson.Add(column, ResolveJsonElementToScalarVariable(element.GetProperty(column)));
+                remainingKeys.Add(key);
             }
 
-            return Base64Encode(JsonSerializer.Serialize(cursorJson));
+            // must include all orderByColumns to maintain
+            // correct pagination with sorting
+            if (orderByColumns is not null)
+            {
+                foreach (OrderByColumn column in orderByColumns)
+                {
+                    object value = ResolveJsonElementToScalarVariable(element.GetProperty(column.ColumnName));
+                    cursorJson.Add(new PaginationColumn(tableAlias: tableAlias, column.ColumnName, value, column.Direction));
+                    remainingKeys.Remove(column.ColumnName);
+                }
+            }
+
+            // primary key columns are used in ordering
+            // for tie-breaking and must be included.
+            // iterate through primary key list and check if
+            // each column is in the set of remaining primary
+            // keys, add to cursor any columns that are in the
+            // set of remaining primary keys and then remove that
+            // column from this remaining key set. This way we
+            // iterate in the same order as the ordering of the
+            // primary key columns, and verify all primary key
+            // columns have been added to the cursor.
+            foreach (string column in primaryKey)
+            {
+                if (remainingKeys.Contains(column))
+                {
+                    cursorJson.Add(new PaginationColumn(tableAlias: tableAlias, column, ResolveJsonElementToScalarVariable(element.GetProperty(column)), OrderByDir.Asc));
+                    remainingKeys.Remove(column);
+                }
+
+            }
+
+            return Base64Encode(JsonSerializer.Serialize(cursorJson, options));
         }
 
         /// <summary>
         /// Parse the value of "after" parameter from query parameters, validate it, and return the json object it stores
         /// </summary>
-        public static IDictionary<string, object> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
+        public static List<PaginationColumn> ParseAfterFromQueryParams(IDictionary<string, object?> queryParams, PaginationMetadata paginationMetadata)
         {
-            Dictionary<string, object> after = new();
-            object afterObject = queryParams["after"];
+            List<PaginationColumn> after = new();
+            object? afterObject = null;
+
+            if (queryParams.ContainsKey("after"))
+            {
+                afterObject = queryParams["after"];
+            }
 
             if (afterObject != null)
             {
@@ -136,37 +185,64 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Validate the value associated with $after, and return the json object it stores
+        /// Validate the value associated with $after, and return list of orderby columns
+        /// it represents.
         /// </summary>
-        public static Dictionary<string, object> ParseAfterFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
+        public static List<PaginationColumn> ParseAfterFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
         {
-            Dictionary<string, object> after = new();
-            List<string> primaryKey = paginationMetadata.Structure!.PrimaryKey();
-
+            List<PaginationColumn>? after;
             try
             {
                 afterJsonString = Base64Decode(afterJsonString);
-                Dictionary<string, JsonElement> afterDeserialized = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(afterJsonString)!;
+                after = JsonSerializer.Deserialize<List<PaginationColumn>>(afterJsonString);
 
-                if (!ListsAreEqual(afterDeserialized.Keys.ToList(), primaryKey))
+                if (after is null)
                 {
-                    string incorrectValues = $"Parameter \"after\" with values {afterJsonString} does not contain all the required" +
-                                                $"values <{string.Join(", ", primaryKey.Select(c => $"\"{c}\""))}>";
-
-                    throw new ArgumentException(incorrectValues);
+                    throw new ArgumentNullException(nameof(after));
                 }
 
-                foreach (KeyValuePair<string, JsonElement> keyValuePair in afterDeserialized)
+                Dictionary<string, PaginationColumn> afterDict = new();
+                foreach (PaginationColumn column in after)
                 {
-                    object value = ResolveJsonElementToScalarVariable(keyValuePair.Value);
+                    afterDict.Add(column.ColumnName, column);
+                }
 
-                    ColumnType columnType = paginationMetadata.Structure.GetColumnType(keyValuePair.Key);
-                    if (value.GetType() != ColumnDefinition.ResolveColumnTypeToSystemType(columnType))
+                // verify that primary keys is a sub set of after's column names
+                // if any primary keys are not contained in after's column names we throw exception
+                List<string> primaryKeys = paginationMetadata.Structure!.PrimaryKey();
+
+                foreach (string pk in primaryKeys)
+                {
+                    if (!afterDict.ContainsKey(pk))
                     {
-                        throw new ArgumentException($"After param has incorrect type {value.GetType()} for primary key column {keyValuePair.Key} with type {columnType}.");
+                        throw new ArgumentException($"Cursor for Pagination Predicates is not well formed, missing primary key column: {pk}");
+                    }
+                }
+
+                // verify that orderby columns for the structure and the after columns
+                // match in name and direction
+                int orderByColumnCount = 0;
+                SqlQueryStructure structure = paginationMetadata.Structure!;
+                foreach (OrderByColumn column in structure.OrderByColumns)
+                {
+                    string columnName = column.ColumnName;
+
+                    if (!afterDict.ContainsKey(columnName) ||
+                        afterDict[columnName].Direction != column.Direction)
+                    {
+                        throw new ArgumentException(
+                            $"Could not match order by column {columnName} with a column in the pagination token " +
+                            "with the same name and direction.");
                     }
 
-                    after.Add(keyValuePair.Key, value);
+                    orderByColumnCount++;
+                }
+
+                // the check above validates that all orderby columns are matched with after columns
+                // also validate that there are no extra after columns
+                if (afterDict.Count != orderByColumnCount)
+                {
+                    throw new ArgumentException("After token contains extra columns not present in order by columns.");
                 }
             }
             catch (Exception e)
@@ -177,6 +253,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 // afterJsonString cannot be deserialized
                 // keys of afterDeserialized do not correspond to the primary key
                 // values given for the primary keys are of incorrect format
+                // duplicate column names in the after token and / or the orderby columns
 
                 if (e is InvalidCastException ||
                     e is ArgumentException ||
@@ -187,8 +264,11 @@ namespace Azure.DataGateway.Service.Resolvers
                     e is NotSupportedException
                     )
                 {
+                    // print the actual error for the dev
+                    // but return a generic error to the user to maintain
+                    // consistency in using the pagination token opaquely
                     Console.Error.WriteLine(e);
-                    string notValidString = $"Parameter after with value {afterJsonString} is not a valid pagination token.";
+                    string notValidString = $"{afterJsonString} is not a valid pagination token.";
                     throw new DataGatewayException(notValidString, HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
                 }
                 else
@@ -204,7 +284,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Resolves a JsonElement representing a variable to the appropriate type
         /// </summary>
         /// <exception cref="ArgumentException" />
-        private static object ResolveJsonElementToScalarVariable(JsonElement element)
+        public static object ResolveJsonElementToScalarVariable(JsonElement element)
         {
             switch (element.ValueKind)
             {
@@ -237,17 +317,6 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             byte[] base64EncodedBytes = System.Convert.FromBase64String(base64EncodedData);
             return System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
-        }
-
-        /// <summary>
-        /// Does set-like compare for two string lists.
-        /// <summary>
-        private static bool ListsAreEqual(List<string> list1, List<string> list2)
-        {
-            IEnumerable<string> inList1NotInList2 = list1.Except(list2);
-            IEnumerable<string> inList2NotInList1 = list2.Except(list1);
-
-            return !inList1NotInList2.Any() && !inList2NotInList1.Any();
         }
 
         /// <summary>

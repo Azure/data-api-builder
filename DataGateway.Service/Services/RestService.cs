@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
@@ -26,20 +27,21 @@ namespace Azure.DataGateway.Service.Services
         private readonly IMutationEngine _mutationEngine;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationService _authorizationService;
-        public IMetadataStoreProvider MetadataStoreProvider { get; }
+        private readonly ISqlMetadataProvider _sqlMetadataProvider;
+
         public RestService(
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
-            IMetadataStoreProvider metadataStoreProvider,
+            ISqlMetadataProvider sqlMetadataProvider,
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationService authorizationService
             )
         {
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
-            MetadataStoreProvider = metadataStoreProvider;
             _httpContextAccessor = httpContextAccessor;
             _authorizationService = authorizationService;
+            _sqlMetadataProvider = sqlMetadataProvider;
         }
 
         /// <summary>
@@ -77,20 +79,24 @@ namespace Azure.DataGateway.Service.Services
                         operationType);
                     RequestValidator.ValidateInsertRequestContext(
                         (InsertRequestContext)context,
-                        MetadataStoreProvider);
+                        _sqlMetadataProvider);
                     break;
                 case Operation.Delete:
                     context = new DeleteRequestContext(entityName, isList: false);
                     RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                     break;
+                case Operation.Update:
+                case Operation.UpdateIncremental:
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
-                    JsonElement upsertPayloadRoot = RequestValidator.ValidateUpsertRequest(primaryKeyRoute, requestBody);
+                    JsonElement upsertPayloadRoot = RequestValidator.ValidateUpdateOrUpsertRequest(primaryKeyRoute, requestBody);
                     context = new UpsertRequestContext(entityName, upsertPayloadRoot, GetHttpVerb(operationType), operationType);
-                    RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, MetadataStoreProvider);
+                    RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
                     break;
                 default:
-                    throw new NotSupportedException("This operation is not yet supported.");
+                    throw new DataGatewayException(message: "This operation is not supported.",
+                                                   statusCode: HttpStatusCode.BadRequest,
+                                                   subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
 
             if (!string.IsNullOrEmpty(primaryKeyRoute))
@@ -98,17 +104,20 @@ namespace Azure.DataGateway.Service.Services
                 // After parsing primary key, the Context will be populated with the
                 // correct PrimaryKeyValuePairs.
                 RequestParser.ParsePrimaryKey(primaryKeyRoute, context);
-                RequestValidator.ValidatePrimaryKey(context, MetadataStoreProvider);
+                RequestValidator.ValidatePrimaryKey(context, _sqlMetadataProvider);
             }
 
             if (!string.IsNullOrWhiteSpace(queryString))
             {
                 context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
-                RequestParser.ParseQueryString(context, MetadataStoreProvider.GetFilterParser());
+                RequestParser.ParseQueryString(
+                    context,
+                    _sqlMetadataProvider.GetOdataFilterParser(),
+                    _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey);
             }
 
-            // At this point for DELETE, the primary key should be populated in the Request Context. 
-            RequestValidator.ValidateRequestContext(context, MetadataStoreProvider);
+            // At this point for DELETE, the primary key should be populated in the Request Context.
+            RequestValidator.ValidateRequestContext(context, _sqlMetadataProvider);
 
             // RestRequestContext is finalized for QueryBuilding and QueryExecution.
             // Perform Authorization check prior to moving forward in request pipeline.
@@ -126,6 +135,8 @@ namespace Azure.DataGateway.Service.Services
                         return FormatFindResult(await _queryEngine.ExecuteAsync(context), (FindRequestContext)context);
                     case Operation.Insert:
                     case Operation.Delete:
+                    case Operation.Update:
+                    case Operation.UpdateIncremental:
                     case Operation.Upsert:
                     case Operation.UpsertIncremental:
                         return await _mutationEngine.ExecuteAsync(context);
@@ -136,8 +147,8 @@ namespace Azure.DataGateway.Service.Services
             else
             {
                 throw new DataGatewayException(
-                    message: "Unauthorized",
-                    statusCode: HttpStatusCode.Unauthorized,
+                    message: "Forbidden",
+                    statusCode: HttpStatusCode.Forbidden,
                     subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
                 );
             }
@@ -170,17 +181,13 @@ namespace Azure.DataGateway.Service.Services
             // More records exist than requested, we know this by requesting 1 extra record,
             // that extra record is removed here.
             IEnumerable<JsonElement> rootEnumerated = jsonElement.EnumerateArray();
-            rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
-            string after = string.Empty;
 
-            // If there are more records after we remove the extra that means limit was > 0,
-            // so nextLink will need after value
-            if (rootEnumerated.Count() > 0)
-            {
-                after = SqlPaginationUtil.MakeCursorFromJsonElement(
+            rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
+            string after = SqlPaginationUtil.MakeCursorFromJsonElement(
                                element: rootEnumerated.Last(),
-                               primaryKey: MetadataStoreProvider.GetTableDefinition(context.EntityName).PrimaryKey);
-            }
+                               orderByColumns: context.OrderByClauseInUrl,
+                               primaryKey: _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey,
+                               tableAlias: context.EntityName);
 
             // nextLink is the URL needed to get the next page of records using the same query options
             // with $after base64 encoded for opaqueness
@@ -205,7 +212,7 @@ namespace Azure.DataGateway.Service.Services
         /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
         public string ConstructPrimaryKeyRoute(string entityName, JsonElement entity)
         {
-            TableDefinition tableDefinition = MetadataStoreProvider.GetTableDefinition(entityName);
+            TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
             StringBuilder newPrimaryKeyRoute = new();
 
             foreach (string primaryKey in tableDefinition.PrimaryKey)
@@ -231,8 +238,10 @@ namespace Azure.DataGateway.Service.Services
         {
             switch (operation)
             {
+                case Operation.Update:
                 case Operation.Upsert:
                     return HttpRestVerbs.PUT;
+                case Operation.UpdateIncremental:
                 case Operation.UpsertIncremental:
                     return HttpRestVerbs.PATCH;
                 case Operation.Delete:

@@ -24,6 +24,11 @@ namespace Azure.DataGateway.Service.Resolvers
                 queryStringBuilder.Append($" WHERE {predicateString}");
             }
 
+            if (structure.OrderByColumns.Count > 0)
+            {
+                queryStringBuilder.Append($" ORDER BY {Build(structure.OrderByColumns)}");
+            }
+
             return queryStringBuilder.ToString();
         }
 

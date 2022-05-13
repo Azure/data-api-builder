@@ -12,16 +12,22 @@ namespace Azure.DataGateway.Service.Models
     /// </summary>
     public abstract class RestRequestContext
     {
-        protected RestRequestContext(OperationAuthorizationRequirement httpVerb, string entityName)
+        protected RestRequestContext(OperationAuthorizationRequirement httpVerb, string entityName, Dictionary<string, string>? mapping = null)
         {
             HttpVerb = httpVerb;
             EntityName = entityName;
+            MappingFromEntity = mapping;
         }
 
         /// <summary>
         /// The target Entity on which the request needs to be operated upon.
         /// </summary>
         public string EntityName { get; set; }
+
+        /// <summary>
+        /// Mapping of database object names to request/response names.
+        /// </summary>
+        public Dictionary<string, string>? MappingFromEntity { get; }
 
         /// <summary>
         /// Field names of the entity that are queried in the request.

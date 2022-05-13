@@ -69,7 +69,7 @@ namespace Azure.DataGateway.Service.Services
             switch (operationType)
             {
                 case Operation.Find:
-                    context = new FindRequestContext(entityName, isList: string.IsNullOrEmpty(primaryKeyRoute));
+                    context = new FindRequestContext(entityName, isList: string.IsNullOrEmpty(primaryKeyRoute), mapping: _sqlMetadataProvider.GetMappingForEntity(entityName));
                     break;
                 case Operation.Insert:
                     JsonElement insertPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Azure.DataGateway.Config;
 
 namespace Azure.DataGateway.Service.Models
@@ -12,8 +13,8 @@ namespace Azure.DataGateway.Service.Models
         /// Constructor.
         /// </summary>
 
-        public FindRequestContext(string entityName, bool isList)
-            : base(HttpRestVerbs.GET, entityName)
+        public FindRequestContext(string entityName, bool isList, Dictionary<string, string>? mapping = null)
+            : base(HttpRestVerbs.GET, entityName, mapping)
         {
             FieldsToBeReturned = new();
             PrimaryKeyValuePairs = new();

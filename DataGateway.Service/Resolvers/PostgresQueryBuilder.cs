@@ -108,9 +108,9 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// Build column as
-        /// [{tableAlias}].[{ColumnName}]
+        /// "{tableAlias}"."{ColumnName}"
         /// or if TableAlias is empty, as
-        /// [{ColumnName}]
+        /// "{ColumnName}"
         /// </summary>
         protected override string Build(Column column)
         {

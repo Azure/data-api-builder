@@ -91,7 +91,7 @@ namespace Azure.DataGateway.Service.Parsers
                 return (string.Empty, (string?)tokens[0]);
             }
 
-            // If there is we parsed two tokens that means we parsed the schema and table name.            
+            // If we parsed two tokens that means we parsed the schema and table name.
             return ((string?)tokens[0], (string?)tokens[1]);
         }
 

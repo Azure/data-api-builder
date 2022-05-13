@@ -436,9 +436,10 @@ namespace Azure.DataGateway.Service.Services
                 Connection = conn
             };
             StringBuilder tablePrefix = new(conn.Database);
-            tablePrefix = QuoteTablePrefix(tablePrefix.ToString());
+            tablePrefix = new StringBuilder(QuoteTablePrefix(tablePrefix.ToString()));
             if (!string.IsNullOrEmpty(schemaName))
             {
+                schemaName = QuoteTablePrefix(schemaName);
                 tablePrefix.Append($".{schemaName}");
             }
 
@@ -455,7 +456,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="prefix"></param>
         /// <returns></returns>
-        private StringBuilder QuoteTablePrefix(string prefix)
+        private string QuoteTablePrefix(string prefix)
         {
             DbCommandBuilder builder;
             switch (_databaseType)
@@ -474,7 +475,7 @@ namespace Azure.DataGateway.Service.Services
                     break;
             }
 
-            return new StringBuilder(prefix);
+            return prefix;
         }
 
         /// <summary>

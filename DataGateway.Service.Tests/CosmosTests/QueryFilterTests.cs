@@ -58,10 +58,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
 
             Assert.IsNotNull(expected);
             Assert.IsNotNull(actual);
-            string expectedJson = expected.ToString().Replace("\r\n", "").Replace(" ", "");
-            Console.WriteLine(actual);
-            Console.WriteLine(expectedJson);
-            Assert.IsTrue(JToken.DeepEquals(actual.ToString(), expectedJson));
+            Assert.IsTrue(JToken.DeepEquals(JToken.Parse(actual.ToString()), JToken.Parse(expected.ToString())));
         }
 
         /// <summary>

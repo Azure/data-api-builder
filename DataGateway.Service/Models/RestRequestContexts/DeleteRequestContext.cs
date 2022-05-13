@@ -11,8 +11,8 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Constructor.
         /// </summary>
-        public DeleteRequestContext(string entityName, bool isList)
-            : base(HttpRestVerbs.DELETE, entityName)
+        public DeleteRequestContext(string entityName, DatabaseObject dbo, bool isList)
+            : base(HttpRestVerbs.DELETE, entityName, dbo)
         {
             FieldsToBeReturned = new();
             PrimaryKeyValuePairs = new();

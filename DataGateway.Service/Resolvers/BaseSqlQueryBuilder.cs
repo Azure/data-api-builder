@@ -105,19 +105,28 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// Build column as
-        /// {TableAlias}.{ColumnName}
-        /// If TableAlias is null
-        /// {ColumnName}
+        /// [{tableAlias}].[{ColumnName}]
+        /// or if TableAlias is empty, as
+        /// [{schema}].[{table}].[{ColumnName}]
+        /// or if schema is empty, as
+        /// [{table}].[{ColumnName}]
         /// </summary>
         protected virtual string Build(Column column)
         {
-            if (column.TableAlias != null)
+            // If the table alias is not empty, we return [{TableAlias}].[{Column}]
+            if (!string.IsNullOrEmpty(column.TableAlias))
             {
-                return QuoteIdentifier(column.TableAlias) + "." + QuoteIdentifier(column.ColumnName);
+                return $"{QuoteIdentifier(column.TableAlias)}.{QuoteIdentifier(column.ColumnName)}";
             }
+            // If there is no table alias then if the schema is not empty, we return [{TableSchema}].[{TableName}].[{Column}]
+            else if (!string.IsNullOrEmpty(column.TableSchema))
+            {
+                return $"{QuoteIdentifier($"{column.TableSchema}")}.{QuoteIdentifier($"{column.TableName}")}.{QuoteIdentifier(column.ColumnName)}";
+            }
+            // If there is no table alias, and no schema, we return [{TableName}].[{Column}]
             else
             {
-                return QuoteIdentifier(column.ColumnName);
+                return $"{QuoteIdentifier($"{column.TableName}")}.{QuoteIdentifier(column.ColumnName)}";
             }
         }
 

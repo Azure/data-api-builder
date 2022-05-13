@@ -55,12 +55,12 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="mutationParams"></param>
         /// <exception cref="DataGatewayException"></exception>
         public SqlUpsertQueryStructure(
-            string tableName,
+            string entityName,
             IGraphQLMetadataProvider metadataStoreProvider,
             ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams,
             bool incrementalUpdate)
-        : base(metadataStoreProvider, sqlMetadataProvider, tableName: tableName)
+        : base(metadataStoreProvider, sqlMetadataProvider, entityName: entityName)
         {
             UpdateOperations = new();
             InsertColumns = new();
@@ -120,7 +120,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     // Create a predicate for UPDATE Operation.
                     Predicate predicate = new(
-                        new PredicateOperand(new Column(null, param.Key)),
+                        new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, columnName: param.Key)),
                         PredicateOperation.Equal,
                         new PredicateOperand($"@{paramIdentifier}")
                     );

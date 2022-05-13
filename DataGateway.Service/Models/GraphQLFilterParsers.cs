@@ -20,6 +20,8 @@ namespace Azure.DataGateway.Service.Models
         /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
         public static Predicate Parse(
             List<ObjectFieldNode> fields,
+            string schemaName,
+            string tableName,
             string tableAlias,
             TableDefinition table,
             Func<object, string> processLiterals)
@@ -43,12 +45,12 @@ namespace Azure.DataGateway.Service.Models
                     PredicateOperation op = fieldIsAnd ? PredicateOperation.AND : PredicateOperation.OR;
 
                     List<IValueNode> otherPredicates = (List<IValueNode>)field.Value.Value!;
-                    predicates.Push(new PredicateOperand(ParseAndOr(otherPredicates, tableAlias, table, op, processLiterals)));
+                    predicates.Push(new PredicateOperand(ParseAndOr(otherPredicates, schemaName, tableName, tableAlias, table, op, processLiterals)));
                 }
                 else
                 {
                     List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)field.Value.Value!;
-                    predicates.Push(new PredicateOperand(ParseScalarType(name, subfields, tableAlias, table, processLiterals)));
+                    predicates.Push(new PredicateOperand(ParseScalarType(name, subfields, schemaName, tableName, tableAlias, table, processLiterals)));
                 }
             }
 
@@ -62,11 +64,13 @@ namespace Azure.DataGateway.Service.Models
         private static Predicate ParseScalarType(
             string name,
             List<ObjectFieldNode> fields,
+            string schemaName,
+            string tableName,
             string tableAlias,
             TableDefinition table,
             Func<object, string> processLiterals)
         {
-            Column column = new(tableAlias, name);
+            Column column = new(schemaName, tableName, columnName: name, tableAlias);
             Type columnType = table.Columns[name].SystemType;
             switch (columnType.ToString())
             {
@@ -88,6 +92,8 @@ namespace Azure.DataGateway.Service.Models
         /// </returns>
         private static Predicate ParseAndOr(
             List<IValueNode> predicates,
+            string schemaName,
+            string tableName,
             string tableAlias,
             TableDefinition table,
             PredicateOperation op,
@@ -102,7 +108,7 @@ namespace Azure.DataGateway.Service.Models
             foreach (IValueNode predicate in predicates)
             {
                 List<ObjectFieldNode> fields = (List<ObjectFieldNode>)predicate.Value!;
-                operands.Add(new PredicateOperand(Parse(fields, tableAlias, table, processLiterals)));
+                operands.Add(new PredicateOperand(Parse(fields, schemaName, tableName, tableAlias, table, processLiterals)));
             }
 
             return MakeChainPredicate(operands, op);

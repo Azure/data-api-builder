@@ -109,11 +109,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// The JSON is encoded in base64 for opaqueness. The cursor should function as a token that the user copies and pastes
         /// without needing to understand how it works.
         /// </summary>
-        public static string MakeCursorFromJsonElement(
-            JsonElement element,
-            List<string> primaryKey,
-            List<OrderByColumn>? orderByColumns = null,
-            string? tableAlias = null)
+        public static string MakeCursorFromJsonElement(JsonElement element,
+                                                        List<string> primaryKey,
+                                                        List<OrderByColumn>? orderByColumns,
+                                                        string schemaName = "",
+                                                        string tableName = "")
         {
             List<PaginationColumn> cursorJson = new();
             JsonSerializerOptions options = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
@@ -133,7 +133,12 @@ namespace Azure.DataGateway.Service.Resolvers
                 foreach (OrderByColumn column in orderByColumns)
                 {
                     object value = ResolveJsonElementToScalarVariable(element.GetProperty(column.ColumnName));
-                    cursorJson.Add(new PaginationColumn(tableAlias: tableAlias, column.ColumnName, value, column.Direction));
+                    cursorJson.Add(new PaginationColumn(tableSchema: schemaName,
+                                                        tableName: tableName,
+                                                        column.ColumnName,
+                                                        value,
+                                                        tableAlias: null,
+                                                        direction: column.Direction));
                     remainingKeys.Remove(column.ColumnName);
                 }
             }
@@ -152,7 +157,11 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 if (remainingKeys.Contains(column))
                 {
-                    cursorJson.Add(new PaginationColumn(tableAlias: tableAlias, column, ResolveJsonElementToScalarVariable(element.GetProperty(column)), OrderByDir.Asc));
+                    cursorJson.Add(new PaginationColumn(tableSchema: schemaName,
+                                                        tableName: tableName,
+                                                        column,
+                                                        ResolveJsonElementToScalarVariable(element.GetProperty(column)),
+                                                        direction: OrderByDir.Asc));
                     remainingKeys.Remove(column);
                 }
 

@@ -48,12 +48,18 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 if (fieldNode != null)
                 {
-                    Columns.AddRange(fieldNode.SelectionSet!.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.GetNodes().First().ToString())));
+                    Columns.AddRange(fieldNode.SelectionSet!.Selections.Select(x => new LabelledColumn(tableSchema: string.Empty,
+                                                                                                       tableName: _containerAlias,
+                                                                                                       columnName: string.Empty,
+                                                                                                       label: x.GetNodes().First().ToString())));
                 }
             }
             else
             {
-                Columns.AddRange(selection.SyntaxNode.SelectionSet!.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.GetNodes().First().ToString())));
+                Columns.AddRange(selection.SyntaxNode.SelectionSet!.Selections.Select(x => new LabelledColumn(tableSchema: string.Empty,
+                                                                                                              tableName: _containerAlias,
+                                                                                                              columnName: string.Empty,
+                                                                                                              label: x.GetNodes().First().ToString())));
             }
 
             Container = graphqlType.ContainerName;
@@ -88,7 +94,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 foreach (KeyValuePair<string, object> parameter in queryParams)
                 {
                     Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(_containerAlias, parameter.Key)),
+                        new PredicateOperand(new Column(tableSchema: string.Empty, _containerAlias, parameter.Key)),
                         PredicateOperation.Equal,
                         new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
                     ));
@@ -121,11 +127,11 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 if (enumValue.Value == $"{OrderByDir.Desc}")
                 {
-                    orderByColumnsList.Add(new OrderByColumn(_containerAlias, fieldName, OrderByDir.Desc));
+                    orderByColumnsList.Add(new OrderByColumn(tableSchema: string.Empty, _containerAlias, fieldName, direction: OrderByDir.Desc));
                 }
                 else
                 {
-                    orderByColumnsList.Add(new OrderByColumn(_containerAlias, fieldName));
+                    orderByColumnsList.Add(new OrderByColumn(tableSchema: string.Empty, _containerAlias, fieldName));
                 }
             }
 

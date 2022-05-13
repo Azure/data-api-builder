@@ -55,12 +55,12 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
 
         private static void ValidateResults(JsonElement actual, JsonElement expected)
         {
-            Console.WriteLine(actual);
-            Console.WriteLine(expected);
+
             Assert.IsNotNull(expected);
             Assert.IsNotNull(actual);
             string expectedJson = expected.ToString().Replace("\r\n", "").Replace(" ", "");
-            //            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            Console.WriteLine(actual);
+            Console.WriteLine(expectedJson);
             Assert.IsTrue(JToken.DeepEquals(actual.ToString(), expectedJson));
         }
 

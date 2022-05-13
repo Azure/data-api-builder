@@ -29,9 +29,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static readonly string _Composite_NonAutoGenPK = "stocks";
         protected static readonly string _integrationTableHasColumnWithSpace = "brokers";
         protected static readonly string _integrationTieBreakTable = "authors";
-        protected static readonly string _simple_all_books = "BOOKS_VIEW_ALL";
-        protected static readonly string _simple_subset_stocks = "STOCKS_VIEW_SELECTED";
-        protected static readonly string _composite_subset_bookPub = "BOOKS_PUBLISHERS_VIEW_COMPOSITE";
+        protected static readonly string _simple_all_books = "books_view_all";
+        protected static readonly string _simple_subset_stocks = "stocks_view_selected";
+        protected static readonly string _composite_subset_bookPub = "books_publishers_view_composite";
         public static readonly int _numRecordsReturnedFromTieBreakTable = 2;
 
         public abstract string GetQuery(string key);

@@ -1,6 +1,6 @@
-DROP VIEW IF EXISTS BOOKS_VIEW_ALL;
-DROP VIEW IF EXISTS STOCKS_VIEW_SELECTED;
-DROP VIEW IF EXISTS BOOKS_PUBLISHERS_VIEW_COMPOSITE;
+DROP VIEW IF EXISTS books_view_all;
+DROP VIEW IF EXISTS stocks_view_selected;
+DROP VIEW IF EXISTS books_publishers_view_composite;
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
@@ -155,13 +155,13 @@ ALTER TABLE authors AUTO_INCREMENT = 5001;
 ALTER TABLE reviews AUTO_INCREMENT = 5001;
 ALTER TABLE comics AUTO_INCREMENT = 5001;
 
-prepare stmt1 from  'CREATE VIEW BOOKS_VIEW_ALL AS SELECT * FROM books';
+prepare stmt1 from  'CREATE VIEW books_view_all AS SELECT * FROM books';
 
-prepare stmt2 from 'CREATE VIEW STOCKS_VIEW_SELECTED AS SELECT
+prepare stmt2 from 'CREATE VIEW stocks_view_selected AS SELECT
                     categoryid,pieceid,categoryName,piecesAvailable
                     FROM stocks';
 
-prepare stmt3 from 'CREATE VIEW BOOKS_PUBLISHERS_VIEW_COMPOSITE as SELECT
+prepare stmt3 from 'CREATE VIEW books_publishers_view_composite as SELECT
                     publishers.name,books.id,books.publisher_id
                     FROM books,publishers
                     where publishers.id = books.publisher_id';

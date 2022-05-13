@@ -165,11 +165,11 @@ INSERT INTO brokers([ID Number], [First Name], [Last Name]) VALUES (1, 'Michael'
 INSERT INTO comics(id, title, categoryName) VALUES (1, 'Star Trek', 'SciFi'), (2, 'Cinderella', 'FairyTales'),(3,'Unknown','');
 INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2, 1, 'FairyTales'),(0,1,'');
 
-EXEC('CREATE VIEW BOOKS_VIEW_ALL AS SELECT * FROM dbo.books');
-EXEC('CREATE VIEW STOCKS_VIEW_SELECTED AS SELECT
+EXEC('CREATE VIEW books_view_all AS SELECT * FROM dbo.books');
+EXEC('CREATE VIEW stocks_view_selected AS SELECT
       categoryid,pieceid,categoryName,piecesAvailable
       FROM dbo.stocks');
-EXEC('CREATE VIEW BOOKS_PUBLISHERS_VIEW_COMPOSITE as SELECT
+EXEC('CREATE VIEW books_publishers_view_composite as SELECT
       publishers.name,books.id,books.publisher_id
       FROM dbo.books,dbo.publishers
       where publishers.id = books.publisher_id');

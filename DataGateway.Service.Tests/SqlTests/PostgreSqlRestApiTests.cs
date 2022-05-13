@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
@@ -19,6 +20,41 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   FROM (
                       SELECT *
                       FROM " + _integrationTableName + @"
+                      WHERE id = 2
+                      ORDER BY id
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
+                "FindViewAll",
+                @"
+                  SELECT to_jsonb(subq) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _simple_all_books + @"
+                      WHERE id = 2
+                      ORDER BY id
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
+                "FindViewSelected",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable""
+                        FROM " + _simple_subset_stocks + @"
+                        WHERE categoryid = 2 AND pieceid = 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindViewComposite",
+                @"
+                  SELECT to_jsonb(subq) AS data
+                  FROM (
+                      SELECT name, id, publisher_id
+                      FROM " + _composite_subset_bookPub + @"
                       WHERE id = 2
                       ORDER BY id
                       LIMIT 1
@@ -912,6 +948,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await ResetDbStateAsync();
         }
 
+        [TestMethod]
+        [Ignore]
+        public override Task FindOnViews()
+        {
+            throw new NotImplementedException();
+        }
         public override string GetQuery(string key)
         {
             return _queryMap[key];

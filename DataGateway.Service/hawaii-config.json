@@ -76,8 +76,8 @@
         }
       }
     },
-    "BOOKS_VIEW_ALL": {
-      "source": "BOOKS_VIEW_ALL",
+    "books_view_all": {
+      "source": "books_view_all",
       "rest": true,
       "graphql": true,
       "permissions": [
@@ -93,8 +93,8 @@
       "relationships": {
       }
     },
-    "STOCKS_VIEW_SELECTED": {
-      "source": "STOCKS_VIEW_SELECTED",
+    "stocks_view_selected": {
+      "source": "stocks_view_selected",
       "rest": true,
       "graphql": true,
       "permissions": [
@@ -110,8 +110,8 @@
       "relationships": {
       }
     },
-    "BOOKS_PUBLISHERS_VIEW_COMPOSITE": {
-      "source": "BOOKS_PUBLISHERS_VIEW_COMPOSITE",
+    "books_publishers_view_composite": {
+      "source": "books_publishers_view_composite",
       "rest": true,
       "graphql": true,
       "permissions": [

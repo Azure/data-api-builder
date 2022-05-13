@@ -1,33 +1,108 @@
-# Project
+# hawaii-cli
+CLi tool for hawaii
+Language: C#
+Framework: dotnet 6.0
 
-> This repo has been populated by an initial template to help get you started. Please
-> make sure to update the content to build a great experience for community-building.
+**Below are the steps to install the tool in your local machine**
 
-As the maintainer of this project, please make a few updates:
+1. To update the cli tool trigger name from hawaii to anyother, goto csProj file and update the ToolCommandName accordingly:
+```
+<PackAsTool>true</PackAsTool>
+<ToolCommandName>hawaii</ToolCommandName>
+<PackageOutputPath>./nupkg</PackageOutputPath>
+```
 
-- Improving this README.MD file to provide a great experience
-- Updating SUPPORT.MD with content about this project's support experience
-- Understanding the security reporting process in SECURITY.MD
-- Remove this section from the README
+2. goto your project directory and pack it up.
+```
+dotnet pack
+```
 
-## Contributing
+3. Install the tool
+```
+dotnet tool install --global --add-source ./nupkg hawaii-cli
+```
 
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.
+4. after making new changes. do the below steps
+a) update the version in *csproj: 
+```
+    <PropertyGroup>
+	  <Version>2.0.0</Version>
+	</PropertyGroup>
+```	
+b) pack the project : `dotnet pack`
 
-When you submit a pull request, a CLA bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
+c) update the installed tool: 
+```
+dotnet tool update -g --add-source ./nupkg hawaii-cli --version 2.0.0
+```
 
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+NOTE
+ISSUE: If you see any error while while installing the tool due to some class not found. 
+FIX: the gql-engine(hawaii-gql) is probably not linked properly.
+Please update the correct path in .csproj file.
+```
+<ItemGroup>
+	<Reference Include="Azure.DataGateway.Config">
+		<HintPath>..\hawaii-gql\DataGateway.Config\bin\Debug\net6.0\Azure.DataGateway.Config.dll</HintPath>
+	</Reference>
+</ItemGroup>
+```
 
-## Trademarks
+TO SHARE THE CHANGES:
+1) Once you create the package (dotnet pack). It's ready to be shared.
+2) Share the latest package (.nupkg file).
+3) To install: `dotnet tool install -g --add-source ./ hawaii-cli --version <<version_number>>`
 
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft 
-trademarks or logos is subject to and must follow 
-[Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general).
-Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship.
-Any use of third-party trademarks or logos are subject to those third-party's policies.
+
+
+**To generate the config:**
+```
+hawaii init -name <<filename>> --database_type <<db_type>> --connection_string <<connection_string>>
+```
+**To add entity to the config:**
+```
+hawaii add <<entity>> -source <<source.DB>> --rest <<rest_route>> --graphql <<graphql_type>> --permission <<rules:actions>>
+```
+**To update entity to the config:**
+```
+hawaii update <<entity>> -source <<new_source.DB>> --rest <<new_rest_route>> --graphql <<new_graphql_type>> --permissions <<rules:actions>> --fields.include <<fields to include>> --fields.exclude <<fields to exclude>>
+```
+
+		
+	
+**example:**
+```	
+hawaii init -n todo-001 --database_type "mysql" --connection_string "localhost:8000"
+```	
+The Generated config will be in the current directory as todo-001.json
+```	
+hawaii add todo --source s001.todo --rest todo --graphql todo --permission "anonymous:*"
+```
+Entity will be added to the config with given rest route, graphql type and prermissions.
+```	
+hawaii update todo --permission "authenticate:create" --fields.include "id,name,category"
+```
+Entity will be updated in the config with the provided changes.
+
+Generate config with some permissions and relationship
+```
+hawaii init --name todo-005 --database-type mssql --connection-string ""
+
+hawaii add todo --name todo-005 --source s005.todos --permission "authenticated:*" 
+
+hawaii add user --name todo-005 --source s005.users --permission "authenticated:*" 
+
+hawaii add category --name todo-005 --source s005.categories  --permission "authenticated:read"
+
+hawaii update category --name todo-005 --graphql category
+
+hawaii update category --name todo-005 --relationship todos --target.entity todo --cardinality many --mapping.fields "id:category_id" 
+
+hawaii update todo --name todo-005 --relationship category --target.entity category --cardinality one --mapping.fields "category_id:id" 
+
+hawaii update user --name todo-005 --relationship owns --target.entity todo --cardinality many --mapping.fields "id:owner_id" 
+
+hawaii update todo --name todo-005 --relationship owner --target.entity user --cardinality one --mapping.fields "owner_id:id"
+ 
+```
+

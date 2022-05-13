@@ -20,13 +20,6 @@ query ($id: ID) {
     }
 }";
 
-        public static readonly string PlanetFilterQueryFormat = @"
-query {
-    getPlanetWithFilter (_filter: {age: { gt: 1} and: [{age: {lte: 6}}]}) {
-        id
-        name
-    }
-}";
         public static readonly string PlanetListQuery = @"{planetList{ id, name}}";
         public static readonly string PlanetConnectionQueryStringFormat = @"
 query ($first: Int!, $after: String) {
@@ -63,17 +56,6 @@ query ($first: Int!, $after: String) {
             // Run query
             string id = _idList[0];
             JsonElement response = await ExecuteGraphQLRequestAsync("planetById", PlanetByIdQueryFormat, new() { { "id", id } });
-
-            // Validate results
-            Assert.AreEqual(id, response.GetProperty("id").GetString());
-        }
-
-        [TestMethod]
-        public async Task GetWithFilter()
-        {
-            // Run query
-            string id = _idList[0];
-            JsonElement response = await ExecuteGraphQLRequestAsync("getPlanetWithFilter", PlanetFilterQueryFormat);
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
@@ -223,7 +205,7 @@ query {{
         [TestMethod]
         public async Task GetByNonPrimaryFieldReturnsResult()
         {
-            string name = "test name";
+            string name = "Earth";
             string query = @$"
 query {{
     getPlanetByName (name: ""{name}"") {{

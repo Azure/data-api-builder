@@ -1555,12 +1555,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             //"?$filter=not (categoryid gt 1)",
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$filter=not (pq gt 1)",
+                queryString: "?$filter=not (title gt 1)",
                 entity: _composite_subset_bookPub,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: "Could not find a property named 'pq' on type 'default_namespace.books_publishers_view_composite'.",
+                expectedErrorMessage: "Could not find a property named 'title' on type 'default_namespace.books_publishers_view_composite'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
         }

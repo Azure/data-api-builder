@@ -11,7 +11,9 @@ using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
+using MySqlConnector;
 using Npgsql;
 
 namespace Azure.DataGateway.Service.Services
@@ -426,6 +428,7 @@ namespace Azure.DataGateway.Service.Services
                 Connection = conn
             };
             StringBuilder tablePrefix = new(conn.Database);
+            tablePrefix = QuoteTablePrefix(tablePrefix.ToString());
             if (!string.IsNullOrEmpty(schemaName))
             {
                 tablePrefix.Append($".{schemaName}");
@@ -436,6 +439,34 @@ namespace Azure.DataGateway.Service.Services
 
             DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableName);
             return dataTable[0];
+        }
+
+        /// <summary>
+        /// Helper function quotes the table prefix as appropriate
+        /// for each DatabaseType.
+        /// </summary>
+        /// <param name="prefix"></param>
+        /// <returns></returns>
+        private StringBuilder QuoteTablePrefix(string prefix)
+        {
+            DbCommandBuilder builder;
+            switch (_databaseType)
+            {
+                case DatabaseType.mssql:
+                    builder = new SqlCommandBuilder();
+                    prefix = builder.QuoteIdentifier(prefix);
+                    break;
+                case DatabaseType.mysql:
+                    builder = new MySqlCommandBuilder();
+                    prefix = builder.QuoteIdentifier(prefix);
+                    break;
+                case DatabaseType.postgresql:
+                    builder = new NpgsqlCommandBuilder();
+                    prefix = builder.QuoteIdentifier(prefix);
+                    break;
+            }
+
+            return new StringBuilder(prefix);
         }
 
         /// <summary>

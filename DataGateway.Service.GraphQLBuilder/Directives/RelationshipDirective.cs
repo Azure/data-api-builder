@@ -49,7 +49,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Directives
         /// <param name="field">The field that has a relationship directive defined.</param>
         /// <returns>Relationship cardinality</returns>
         /// <exception cref="ArgumentException">Thrown if the field does not have a defined relationship.</exception>
-        public static Cardinality Cardinality(FieldDefinitionNode field)
+        public static Cardinality Cardinality(NamedSyntaxNode field)
         {
             DirectiveNode? directive = field.Directives.FirstOrDefault(d => d.Name.Value == DirectiveName);
 
@@ -61,6 +61,27 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Directives
             ArgumentNode arg = directive.Arguments.First(a => a.Name.Value == "cardinality");
 
             return Enum.Parse<Cardinality>((string)arg.Value.Value!);
+        }
+
+        /// <summary>
+        /// Gets the name of the underlying database object of the referenced entity
+        /// which is the target of the relationship directive.
+        /// </summary>
+        /// <param name="field">The field that has a relationship directive defined.</param>
+        /// <returns>The underlying database object name of the target entity.</returns>
+        /// <exception cref="ArgumentException">Thrown if the field does not have a defined relationship.</exception>
+        public static string DatabaseObjectUnderlyingTargetEntity(NamedSyntaxNode field)
+        {
+            DirectiveNode? directive = field.Directives.FirstOrDefault(d => d.Name.Value == DirectiveName);
+
+            if (directive == null)
+            {
+                throw new ArgumentException("The specified field does not have a relationship directive defined.");
+            }
+
+            ArgumentNode arg = directive.Arguments.First(a => a.Name.Value == "dbobject");
+
+            return (string)arg.Value.Value!;
         }
     }
 }

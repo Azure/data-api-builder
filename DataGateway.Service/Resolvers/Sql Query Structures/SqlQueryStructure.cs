@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -182,7 +183,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// Private constructor that is used for recursive query generation,
-        /// for each subquery that's necassery to resolve a nested GraphQL
+        /// for each subquery that's necessary to resolve a nested GraphQL
         /// request.
         /// </summary>
         private SqlQueryStructure(
@@ -552,106 +553,125 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     // explicitly set to null so it is not used later because this value does not reflect the schema of subquery
                     // if the subquery is paginated since it will be overridden with the schema of *Conntion.items
-                    /*subschemaField = null;
+                    subschemaField = null;
 
                     // use the _underlyingType from the subquery which will be overridden appropriately if the query is paginated
                     ObjectType subunderlyingType = subquery._underlyingFieldType;
 
                     TableDefinition subTableDefinition = SqlMetadataProvider.GetTableDefinition(subunderlyingType.Name);
 
-                    // TO DO: The following logic needs to read relationship info from the directives or runtime config file.
-                    GraphQLField fieldInfo = _typeInfo.Fields[fieldName];
-
-
                     ForeignKeyDefinition fk;
                     List<string> columns;
                     List<string> subTableColumns;
 
-                    switch (fieldInfo.RelationshipType)
+                    if ()
                     {
-                        case GraphQLRelationshipType.OneToOne:
-                            if (!string.IsNullOrEmpty(fieldInfo.LeftForeignKey))
-                            {
+    
+                        switch (RelationshipDirectiveType.Cardinality(field))
+                        {
+                            case Cardinality.One:
+                                string underlyingDbObject =
+                                    RelationshipDirectiveType.DatabaseObjectUnderlyingTargetEntity(field);
+
+                                IEnumerable<ForeignKeyDefinition>? foreignKeys =
+                                    subTableDefinition.ForeignKeys.Values.Where(r => r.ReferencedTable == underlyingDbObject);
+
+                                if (foreignKeys is null)
+                                {
+                                    throw new NotSupportedException("Cannot do a join when there are no foreign keys.");
+                                }
+
+                                foreach (ForeignKeyDefinition foreignKey in foreignKeys)
+                                {
+                                    // set the columns to be primary key columns
+                                    // and subTableColumns = those referenced columns when the Referencing columns match the primary keys of the outer table.
+                                    foreignKey.ReferencingColumns
+                                }
+
+                                // Also check for foreign key in the outer table.
+                                // this covers both ManyToOne/OneToOne joins
+                                if (!string.IsNullOrEmpty(fieldInfo.LeftForeignKey))
+                                {
+                                    fk = GetUnderlyingTableDefinition().ForeignKeys[fieldInfo.LeftForeignKey];
+                                    columns = GetFkColumns(fk, GetUnderlyingTableDefinition());
+                                    subTableColumns = GetFkRefColumns(fk, subTableDefinition);
+                                }
+                                else
+                                {
+                                    fk = subTableDefinition.ForeignKeys[fieldInfo.RightForeignKey];
+                                    columns = GetFkRefColumns(fk, GetUnderlyingTableDefinition());
+                                    subTableColumns = GetFkColumns(fk, subTableDefinition);
+                                }
+
+                                subquery.Predicates.AddRange(CreateJoinPredicates(
+                                    TableAlias,
+                                    columns,
+                                    subtableAlias,
+                                    subTableColumns
+                                ));
+                                break;
+                            case GraphQLRelationshipType.ManyToOne:
                                 fk = GetUnderlyingTableDefinition().ForeignKeys[fieldInfo.LeftForeignKey];
                                 columns = GetFkColumns(fk, GetUnderlyingTableDefinition());
                                 subTableColumns = GetFkRefColumns(fk, subTableDefinition);
-                            }
-                            else
-                            {
+
+                                subquery.Predicates.AddRange(CreateJoinPredicates(
+                                    TableAlias,
+                                    columns,
+                                    subtableAlias,
+                                    subTableColumns
+                                ));
+                                break;
+                            case GraphQLRelationshipType.OneToMany:
                                 fk = subTableDefinition.ForeignKeys[fieldInfo.RightForeignKey];
                                 columns = GetFkRefColumns(fk, GetUnderlyingTableDefinition());
                                 subTableColumns = GetFkColumns(fk, subTableDefinition);
-                            }
 
-                            subquery.Predicates.AddRange(CreateJoinPredicates(
-                                TableAlias,
-                                columns,
-                                subtableAlias,
-                                subTableColumns
-                            ));
-                            break;
-                        case GraphQLRelationshipType.ManyToOne:
-                            fk = GetUnderlyingTableDefinition().ForeignKeys[fieldInfo.LeftForeignKey];
-                            columns = GetFkColumns(fk, GetUnderlyingTableDefinition());
-                            subTableColumns = GetFkRefColumns(fk, subTableDefinition);
+                                subquery.Predicates.AddRange(CreateJoinPredicates(
+                                    TableAlias,
+                                    columns,
+                                    subtableAlias,
+                                    subTableColumns
+                                ));
+                                break;
+                            case GraphQLRelationshipType.ManyToMany:
+                                string associativeTableName = fieldInfo.AssociativeTable;
+                                string associativeTableAlias = CreateTableAlias();
+                                TableDefinition associativeTableDefinition = SqlMetadataProvider.GetTableDefinition(associativeTableName);
 
-                            subquery.Predicates.AddRange(CreateJoinPredicates(
-                                TableAlias,
-                                columns,
-                                subtableAlias,
-                                subTableColumns
-                            ));
-                            break;
-                        case GraphQLRelationshipType.OneToMany:
-                            fk = subTableDefinition.ForeignKeys[fieldInfo.RightForeignKey];
-                            columns = GetFkRefColumns(fk, GetUnderlyingTableDefinition());
-                            subTableColumns = GetFkColumns(fk, subTableDefinition);
+                                ForeignKeyDefinition fkLeft = associativeTableDefinition.ForeignKeys[fieldInfo.LeftForeignKey];
+                                List<string> columnsLeft = GetFkRefColumns(fkLeft, GetUnderlyingTableDefinition());
+                                List<string> subTableColumnsLeft = GetFkColumns(fkLeft, associativeTableDefinition);
 
-                            subquery.Predicates.AddRange(CreateJoinPredicates(
-                                TableAlias,
-                                columns,
-                                subtableAlias,
-                                subTableColumns
-                            ));
-                            break;
-                        case GraphQLRelationshipType.ManyToMany:
-                            string associativeTableName = fieldInfo.AssociativeTable;
-                            string associativeTableAlias = CreateTableAlias();
-                            TableDefinition associativeTableDefinition = SqlMetadataProvider.GetTableDefinition(associativeTableName);
+                                ForeignKeyDefinition fkRight = associativeTableDefinition.ForeignKeys[fieldInfo.RightForeignKey];
+                                List<string> columnsRight = GetFkColumns(fkRight, associativeTableDefinition);
+                                List<string> subTableColumnsRight = GetFkRefColumns(fkRight, subTableDefinition);
 
-                            ForeignKeyDefinition fkLeft = associativeTableDefinition.ForeignKeys[fieldInfo.LeftForeignKey];
-                            List<string> columnsLeft = GetFkRefColumns(fkLeft, GetUnderlyingTableDefinition());
-                            List<string> subTableColumnsLeft = GetFkColumns(fkLeft, associativeTableDefinition);
+                                subquery.Predicates.AddRange(CreateJoinPredicates(
+                                    TableAlias,
+                                    columnsLeft,
+                                    associativeTableAlias,
+                                    subTableColumnsLeft
+                                ));
 
-                            ForeignKeyDefinition fkRight = associativeTableDefinition.ForeignKeys[fieldInfo.RightForeignKey];
-                            List<string> columnsRight = GetFkColumns(fkRight, associativeTableDefinition);
-                            List<string> subTableColumnsRight = GetFkRefColumns(fkRight, subTableDefinition);
+                                subquery.Joins.Add(new SqlJoinStructure
+                                (
+                                    associativeTableName,
+                                    associativeTableAlias,
+                                    CreateJoinPredicates(
+                                            associativeTableAlias,
+                                            columnsRight,
+                                            subtableAlias,
+                                            subTableColumnsRight
+                                        ).ToList()
+                                ));
+                                break;
 
-                            subquery.Predicates.AddRange(CreateJoinPredicates(
-                                TableAlias,
-                                columnsLeft,
-                                associativeTableAlias,
-                                subTableColumnsLeft
-                            ));
-
-                            subquery.Joins.Add(new SqlJoinStructure
-                            (
-                                associativeTableName,
-                                associativeTableAlias,
-                                CreateJoinPredicates(
-                                        associativeTableAlias,
-                                        columnsRight,
-                                        subtableAlias,
-                                        subTableColumnsRight
-                                    ).ToList()
-                            ));
-                            break;
-
-                        case GraphQLRelationshipType.None:
-                            throw new NotSupportedException("Cannot do a join when there is no relationship");
-                        default:
-                            throw new NotSupportedException("Relationships type ${fieldInfo.RelationshipType} is not supported.");
-                    }*/
+                                throw new NotSupportedException("Cannot do a join when there is no relationship");
+                            default:
+                                throw new NotSupportedException("Relationships type ${fieldInfo.RelationshipType} is not supported.");
+                        }
+                    }
 
                     string subtableAlias = subquery.TableAlias;
                     string subqueryAlias = $"{subtableAlias}_subq";

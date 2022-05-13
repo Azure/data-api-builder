@@ -352,7 +352,6 @@ namespace Azure.DataGateway.Service.Resolvers
                     ReferencingColumnUsage.TABLE_SCHEMA IN (@{tableSchemaParamsForInClause})
                     AND ReferencingColumnUsage.TABLE_NAME IN (@{tableNameParamsForInClause})";
 
-            Console.WriteLine($"Foreign Key Query: {foreignKeyQuery}");
             return foreignKeyQuery;
         }
 

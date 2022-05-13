@@ -7,7 +7,6 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
@@ -24,11 +23,11 @@ namespace Azure.DataGateway.Service.Services
         where DataAdapterT : DbDataAdapter, new()
         where CommandT : DbCommand, new()
     {
-        private readonly IRuntimeConfigProvider _runtimeConfigProvider;
-
         private FilterParser _oDataFilterParser = new();
 
-        private DatabaseType _databaseType;
+        private readonly DatabaseType _databaseType;
+
+        private readonly Dictionary<string, Entity> _entities;
 
         // nullable since Mock tests do not need it.
         // TODO: Refactor the Mock tests to remove the nullability here
@@ -50,17 +49,19 @@ namespace Azure.DataGateway.Service.Services
             new(StringComparer.InvariantCultureIgnoreCase);
 
         public SqlMetadataProvider(
-            IOptions<DataGatewayConfig> dataGatewayConfig,
-            IRuntimeConfigProvider runtimeConfigProvider,
+            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder)
         {
-            ConnectionString = dataGatewayConfig.Value.DatabaseConnection.ConnectionString;
-            _databaseType = (DatabaseType)dataGatewayConfig.Value.DatabaseType!;
+            runtimeConfigPath.CurrentValue.
+                ExtractConfigValues(
+                    out _databaseType,
+                    out string connectionString,
+                    out _entities);
+            ConnectionString = connectionString;
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;
-            _runtimeConfigProvider = runtimeConfigProvider;
         }
 
         public FilterParser GetOdataFilterParser()
@@ -163,7 +164,7 @@ namespace Azure.DataGateway.Service.Services
         private void GenerateDatabaseObjectForEntities()
         {
             foreach ((string entityName, Entity entity)
-                in GetEntitiesFromRuntimeConfig())
+                in _entities)
             {
                 if (!EntityToDatabaseObject.ContainsKey(entityName))
                 {
@@ -237,16 +238,10 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private void ProcessEntityPermissions()
         {
-            Dictionary<string, Entity> entities = GetEntitiesFromRuntimeConfig();
-            foreach ((string entityName, Entity entity) in entities)
+            foreach ((string entityName, Entity entity) in _entities)
             {
                 DetermineHttpVerbPermissions(entityName, entity.Permissions);
             }
-        }
-
-        private Dictionary<string, Entity> GetEntitiesFromRuntimeConfig()
-        {
-            return _runtimeConfigProvider.GetRuntimeConfig().Entities;
         }
 
         private void InitFilterParser()
@@ -279,7 +274,7 @@ namespace Azure.DataGateway.Service.Services
 
                     OperationAuthorizationRequirement restVerb
                             = HttpRestVerbs.GetVerb(actionName);
-                    if (!tableDefinition.HttpVerbs.ContainsKey(restVerb.ToString()!))
+                    if (!tableDefinition.HttpVerbs.ContainsKey(restVerb.Name.ToString()!))
                     {
                         AuthorizationRule rule = new()
                         {
@@ -288,7 +283,7 @@ namespace Azure.DataGateway.Service.Services
                                   typeof(AuthorizationType), permission.Role, ignoreCase: true)
                         };
 
-                        tableDefinition.HttpVerbs.Add(restVerb.ToString()!, rule);
+                        tableDefinition.HttpVerbs.Add(restVerb.Name.ToString()!, rule);
                     }
                 }
             }

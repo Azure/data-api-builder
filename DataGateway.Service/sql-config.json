@@ -82,7 +82,7 @@
           "RelationshipType": "OneToMany",
           "RightForeignKey": "review_book_fk"
         },
-        "paginatedReviews":{
+        "paginatedReviews": {
           "RelationshipType": "OneToMany",
           "RightForeignKey": "review_book_fk"
         },
@@ -111,6 +111,9 @@
     },
     "WebsiteUser": {
       "Table": "website_users"
+    },
+    "Stock": {
+      "Table": "stocks"
     },
     "Author": {
       "Table": "authors",
@@ -142,13 +145,16 @@
       "Table": "magazines"
     },
     "BookConnection": {
-     "IsPaginationType": true
+      "IsPaginationType": true
     },
     "AuthorConnection": {
-    "IsPaginationType": true
+      "IsPaginationType": true
     },
     "ReviewConnection": {
-    "IsPaginationType": true
+      "IsPaginationType": true
+    },
+    "StockConnection": {
+      "IsPaginationType": true
     }
   }
 }

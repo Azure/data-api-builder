@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Azure.DataGateway.Config
@@ -25,49 +26,153 @@ namespace Azure.DataGateway.Config
     /// By default, the entity names instruct the runtime
     /// to expose GraphQL types with that name and a REST endpoint reachable
     /// via an /entity-name url path.</param>
+    /*
+        * This is an example of the configuration format
+        *
+        {
+            "$schema": "",
+            "data-source": {
+                "database-type": "mssql",
+                "connection-string": "",
+                "resolver-config-file": ""
+            },
+            "mssql": {},
+            "runtime": {
+                "host": {
+                    "authentication": {
+                        "provider": "",
+                        "jwt": {
+                            "audience": "",
+                            "issuer": "",
+                            "issuer-key": ""
+                        }
+                    }
+                }
+            },
+            "entities" : {},
+        }
+    */
     public record RuntimeConfig(
-        [property: JsonPropertyName("$schema")] string Schema,
-        [property: JsonPropertyName("data-source")] DataSource DataSource,
+        [property: JsonPropertyName(RuntimeConfig.SCHEMA_PROPERTY_NAME)] string Schema,
+        [property: JsonPropertyName(DataSource.JSON_PROPERTY_NAME)] DataSource DataSource,
+        [property: JsonPropertyName(CosmosDbOptions.JSON_PROPERTY_NAME)]
         CosmosDbOptions? CosmosDb,
+        [property: JsonPropertyName(MsSqlOptions.JSON_PROPERTY_NAME)]
         MsSqlOptions? MsSql,
+        [property: JsonPropertyName(PostgreSqlOptions.JSON_PROPERTY_NAME)]
         PostgreSqlOptions? PostgreSql,
+        [property: JsonPropertyName(MySqlOptions.JSON_PROPERTY_NAME)]
         MySqlOptions? MySql,
-        [property: JsonPropertyName("runtime")]
-        Dictionary<GlobalSettingsType, GlobalSettings> RuntimeSettings,
+        [property: JsonPropertyName(GlobalSettings.JSON_PROPERTY_NAME)]
+        Dictionary<GlobalSettingsType, object> RuntimeSettings,
+        [property: JsonPropertyName(Entity.JSON_PROPERTY_NAME)]
         Dictionary<string, Entity> Entities)
     {
-        public void SetDefaults()
+        public const string SCHEMA_PROPERTY_NAME = "$schema";
+        public const string SCHEMA = "hawaii.draft-01.schema.json";
+
+        /// <summary>
+        /// Pick up the global runtime settings from the dictionary if present
+        /// otherwise initialize with default.
+        /// </summary>
+        public void DetermineGlobalSettings()
         {
+            JsonSerializerOptions options = GetDeserializationOptions();
             foreach (
-                (GlobalSettingsType settingsType, GlobalSettings settings) in RuntimeSettings)
+                (GlobalSettingsType settingsType, object settingsJson) in RuntimeSettings)
             {
                 switch (settingsType)
                 {
                     case GlobalSettingsType.Rest:
-                        if (settings is not RestGlobalSettings)
-                        {
-                            RuntimeSettings[settingsType] = new RestGlobalSettings();
-                        }
-
+                        RestGlobalSettings
+                            = ((JsonElement)settingsJson).Deserialize<RestGlobalSettings>(options)!;
                         break;
                     case GlobalSettingsType.GraphQL:
-                        if (settings is not GraphQLGlobalSettings)
-                        {
-                            RuntimeSettings[settingsType] = new GraphQLGlobalSettings();
-                        }
-
+                        GraphQLGlobalSettings =
+                            ((JsonElement)settingsJson).Deserialize<GraphQLGlobalSettings>(options)!;
                         break;
                     case GlobalSettingsType.Host:
-                        if (settings is not HostGlobalSettings)
-                        {
-                            RuntimeSettings[settingsType] = new HostGlobalSettings();
-                        }
-
+                        HostGlobalSettings =
+                           ((JsonElement)settingsJson).Deserialize<HostGlobalSettings>(options)!;
                         break;
                     default:
                         throw new NotSupportedException("The runtime does not " +
                             " support this global settings type.");
                 }
+            }
+        }
+
+        public static T GetDeserializedConfig<T>(string configJson)
+        {
+            JsonSerializerOptions options = GetDeserializationOptions();
+
+            // This feels verbose but it avoids having to make _config nullable - which would result in more
+            // down the line issues and null check requirements
+            T? deserializedConfig;
+            if ((deserializedConfig = JsonSerializer.Deserialize<T>(configJson, options)) is null)
+            {
+                throw new JsonException("Failed to get a deserialized config from the provided config.");
+            }
+
+            return deserializedConfig;
+        }
+
+        public static JsonSerializerOptions GetDeserializationOptions()
+        {
+            // use camel case
+            // convert Enum to strings
+            // case insensitive
+            JsonSerializerOptions options = new()
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters =
+                {
+                    new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+                }
+            };
+
+            return options;
+        }
+
+        public RestGlobalSettings RestGlobalSettings { get; private set; } = new();
+
+        public GraphQLGlobalSettings GraphQLGlobalSettings { get; private set; } = new();
+
+        public HostGlobalSettings HostGlobalSettings { get; private set; } = new();
+
+        public bool IsEasyAuthAuthenticationProvider()
+        {
+            return AuthNConfig != null
+                   ? AuthNConfig.IsEasyAuthAuthenticationProvider()
+                    : false;
+        }
+
+        public DatabaseType DatabaseType
+        {
+            get
+            {
+                return DataSource.DatabaseType;
+            }
+        }
+
+        public string ConnectionString
+        {
+            get
+            {
+                return DataSource.ConnectionString;
+            }
+
+            set
+            {
+                DataSource.ConnectionString = value;
+            }
+        }
+
+        public AuthenticationConfig? AuthNConfig
+        {
+            get
+            {
+                return HostGlobalSettings.Authentication;
             }
         }
     }

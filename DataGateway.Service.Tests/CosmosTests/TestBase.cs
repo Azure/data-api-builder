@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -32,7 +33,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         [ClassInitialize]
         public static void Init(TestContext context)
         {
-            _clientProvider = new CosmosClientProvider(TestHelper.DataGatewayConfigMonitor);
+            _clientProvider = new CosmosClientProvider(TestHelper.ConfigPath);
             _metadataStoreProvider = new MetadataStoreProviderForTest();
             string jsonString = @"
 type Query {
@@ -42,6 +43,9 @@ type Query {
     getPlanet(id: ID, name: String): Planet
     planetList: [Planet]
     planets(first: Int, after: String): PlanetConnection
+    getPlanetListById(id: ID): [Planet]
+    getPlanetByName(name: String): Planet
+    getPlanetsWithOrderBy(first: Int, after: String, orderBy: PlanetOrderByInput): PlanetConnection
 }
 
 type Mutation {
@@ -65,12 +69,30 @@ type Character {
 
 type Planet {
     id : ID,
-    name : String
+    name : String,
+    character: Character
+}
+
+enum SortOrder {
+    Asc, Desc
+}
+
+input PlanetOrderByInput {
+    id: SortOrder
+    name: SortOrder
 }";
+
             _metadataStoreProvider.GraphQLSchema = jsonString;
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
-            _graphQLService = new GraphQLService(_queryEngine, _mutationEngine, _metadataStoreProvider, new DocumentCache(), new Sha256DocumentHashProvider());
+            _graphQLService = new GraphQLService(
+                TestHelper.ConfigPath,
+                _queryEngine,
+                _mutationEngine,
+                _metadataStoreProvider,
+                new DocumentCache(),
+                new Sha256DocumentHashProvider(),
+                sqlMetadataProvider: null);
             _controller = new GraphQLController(_graphQLService);
             Client = _clientProvider.Client;
         }
@@ -101,9 +123,11 @@ type Planet {
             HttpRequestMessage request = new();
             MemoryStream stream = new(Encoding.UTF8.GetBytes(data));
             request.Method = HttpMethod.Post;
+            ClaimsPrincipal user = new(new ClaimsIdentity(authenticationType: "Bearer"));
             DefaultHttpContext httpContext = new()
             {
-                Request = { Body = stream, ContentLength = stream.Length }
+                Request = { Body = stream, ContentLength = stream.Length },
+                User = user
             };
             return httpContext;
         }
@@ -174,7 +198,8 @@ type Planet {
 
             if (graphQLResult.TryGetProperty("errors", out JsonElement errors))
             {
-                Assert.Fail(errors.GetRawText());
+                // to validate expected errors and error message
+                return errors;
             }
 
             return graphQLResult.GetProperty("data").GetProperty(queryName);

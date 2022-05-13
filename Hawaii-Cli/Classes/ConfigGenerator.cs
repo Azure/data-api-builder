@@ -14,7 +14,7 @@ namespace Hawaii.Cli.Classes
 
             string file = fileName + ".json";
 
-            string schema = Directory.GetCurrentDirectory().Replace("\\", "/") + "/" + file;
+            string schema = "hawaii.draft-01.schema.json"; //TODO: update it later with correct values
 
             
             RuntimeConfig runtimeConfig = new RuntimeConfig(schema, dataSource, null, null, null, null, GetDefaultGlobalSettings(), new Dictionary<string, Entity>());

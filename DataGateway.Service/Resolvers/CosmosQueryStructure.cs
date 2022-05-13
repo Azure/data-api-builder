@@ -94,7 +94,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 foreach (KeyValuePair<string, object> parameter in queryParams)
                 {
                     Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(tableSchema: null, _containerAlias, parameter.Key)),
+                        new PredicateOperand(new Column(tableSchema: string.Empty, _containerAlias, parameter.Key)),
                         PredicateOperation.Equal,
                         new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
                     ));
@@ -127,11 +127,11 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 if (enumValue.Value == $"{OrderByDir.Desc}")
                 {
-                    orderByColumnsList.Add(new OrderByColumn(_containerAlias, fieldName, OrderByDir.Desc));
+                    orderByColumnsList.Add(new OrderByColumn(tableSchema: string.Empty, _containerAlias, fieldName, direction: OrderByDir.Desc));
                 }
                 else
                 {
-                    orderByColumnsList.Add(new OrderByColumn(_containerAlias, fieldName));
+                    orderByColumnsList.Add(new OrderByColumn(tableSchema: string.Empty, _containerAlias, fieldName));
                 }
             }
 

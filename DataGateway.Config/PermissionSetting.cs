@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace Azure.DataGateway.Config
 {
     /// <summary>
@@ -11,5 +13,5 @@ namespace Azure.DataGateway.Config
     /// The wildcard * can be used to mean all the actions.</param>
     public record PermissionSetting(
         string Role,
-        object[] Actions);
+        JsonElement[] Actions);
 }

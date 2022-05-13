@@ -88,6 +88,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     OrderByColumns = ProcessGqlOrderByArg((List<ObjectFieldNode>)orderByObject);
                 }
+
+                queryParams.Remove("orderBy");
             }
 
             if (queryParams.ContainsKey("_filter"))
@@ -105,7 +107,6 @@ namespace Azure.DataGateway.Service.Resolvers
                         processLiterals: MakeParamWithValue));
                 }
             }
-
             else
             {
 

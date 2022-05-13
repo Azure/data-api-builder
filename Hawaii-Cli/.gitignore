@@ -10,7 +10,7 @@
 # Local History for Visual Studio
 .localhistory/
 .vs/
-.vscode
+/.vscode
 *.code-workspace
 
 # Nuget package

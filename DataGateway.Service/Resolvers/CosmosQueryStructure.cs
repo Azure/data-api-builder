@@ -75,10 +75,10 @@ namespace Azure.DataGateway.Service.Resolvers
                 queryParams.Remove(QueryBuilder.PAGE_START_ARGUMENT_NAME);
             }
 
-            if (queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
+            if (queryParams.ContainsKey(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME))
             {
                 Continuation = (string)queryParams[QueryBuilder.PAGINATION_TOKEN_FIELD_NAME];
-                queryParams.Remove(QueryBuilder.PAGE_START_ARGUMENT_NAME);
+                queryParams.Remove(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME);
             }
 
             if (queryParams.ContainsKey("orderBy"))

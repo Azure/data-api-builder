@@ -210,7 +210,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Resolves a predicate operation enum to string
         /// </summary>
-        protected string Build(PredicateOperation op)
+        protected virtual string Build(PredicateOperation op)
         {
             switch (op)
             {
@@ -247,7 +247,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Build left and right predicate operand and resolve the predicate operator into
         /// {OperandLeft} {Operator} {OperandRight}
         /// </summary>
-        protected string Build(Predicate? predicate)
+        protected virtual string Build(Predicate? predicate)
         {
             if (predicate is null)
             {

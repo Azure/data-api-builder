@@ -83,14 +83,14 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             get { return _runtimeConfigPath.Value; }
         }
 
-        public static object GetItem(string id)
+        public static object GetItem(string id, string name = null, int numericVal = 4)
         {
             return new
             {
                 id = id,
-                name = "test name",
-                myProp = "a value",
-                myIntProp = 4,
+                name = string.IsNullOrEmpty(name) ? "test name" : name,
+                dimension = "space",
+                age = numericVal,
                 myBooleanProp = true,
                 anotherPojo = new
                 {

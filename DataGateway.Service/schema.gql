@@ -4,9 +4,12 @@ type Query {
     planetById (id: ID! = 1): Planet
     getPlanet(id: ID, name: String): Planet
     planetList: [Planet]
+    getPlanetsWithFilter(first: Int, after: String, _filter: PlanetFilterInput): PlanetConnection
     planets(first: Int, after: String): PlanetConnection
     getPlanetWithOrderBy(orderBy: PlanetOrderByInput): Planet
     getPlanetsWithOrderBy(first: Int, after: String, orderBy: PlanetOrderByInput): PlanetConnection
+    getPlanetListById(id: ID): [Planet]
+    getPlanetByName(name: String): Planet
 }
 
 type Mutation {
@@ -15,22 +18,54 @@ type Mutation {
 }
 
 type PlanetConnection {
-        items: [Planet]
-        endCursor: String
-        hasNextPage: Boolean
+    items: [Planet]
+    endCursor: String
+    hasNextPage: Boolean
 }
 
 type Character {
-        id : ID,
-        name : String,
-        type: String,
-        homePlanet: Int,
-        primaryFunction: String
+    id : ID,
+    name : String,
+    type: String,
+    homePlanet: Int,
+    primaryFunction: String
 }
 
 type Planet {
     id : ID,
     name : String
+    character: Character
+    age : Int
+    dimension : String
+}
+
+input IntFilterInput {
+  eq: Int
+  neq: Int
+  lt: Int
+  gt: Int
+  lte: Int
+  gte: Int
+  isNull: Boolean
+}
+
+input StringFilterInput {
+  eq: String
+  neq: String
+  contains: String
+  notContains: String
+  startsWith: String
+  endsWith: String
+  isNull: Boolean
+}
+
+input PlanetFilterInput {
+  and: [PlanetFilterInput]
+  or: [PlanetFilterInput]
+  id: StringFilterInput
+  name: StringFilterInput
+  age: IntFilterInput
+  dimension: StringFilterInput
 }
 
 enum SortOrder {
@@ -41,3 +76,5 @@ input PlanetOrderByInput {
     id: SortOrder
     name: SortOrder
 }
+
+

@@ -163,43 +163,174 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private void GenerateDatabaseObjectForEntities()
         {
+            Dictionary<string, DatabaseObject> sourceObjects = new();
             foreach ((string entityName, Entity entity)
                 in _entities)
             {
                 if (!EntityToDatabaseObject.ContainsKey(entityName))
                 {
-                    DatabaseObject databaseObject = new()
+                    if (!sourceObjects.TryGetValue(entity.GetSourceName(), out DatabaseObject? sourceObject))
                     {
-                        SchemaName = GetDefaultSchemaName(),
-                        Name = entity.GetSourceName(),
-                        TableDefinition = new()
-                    };
-
-                    EntityToDatabaseObject.Add(entityName, databaseObject);
-
-                    if (entity.Relationships != null)
-                    {
-                        // Add all the linking objects as well - so that we can infer
-                        // their metadata too.
-                        foreach (Relationship relationship in entity.Relationships.Values)
+                        sourceObject = new()
                         {
-                            if (relationship.LinkingObject != null
-                                && !EntityToDatabaseObject.ContainsKey(relationship.LinkingObject))
-                            {
-                                DatabaseObject linkingDatabaseObject = new()
-                                {
-                                    SchemaName = GetDefaultSchemaName(),
-                                    Name = relationship.LinkingObject,
-                                    TableDefinition = new()
-                                };
+                            SchemaName = GetDefaultSchemaName(),
+                            Name = entity.GetSourceName(),
+                            TableDefinition = new()
+                        };
+                    }
 
-                                EntityToDatabaseObject.Add(
-                                    relationship.LinkingObject,
-                                    linkingDatabaseObject);
-                            }
-                        }
+                    EntityToDatabaseObject.Add(entityName, sourceObject);
+
+                    if (entity.Relationships is not null)
+                    {
+                        AddForeignKeysForRelationships(entityName, entity, sourceObject);
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// Adds a foreign key definition for each of the nested entities
+        /// specified in the relationships section of this entity
+        /// to gather the referencing and referenced columns from the database at a later stage.
+        /// Sets the referencing and referenced tables based on the kind of relationship.
+        /// If encounter a linking object, use that as the referencing table
+        /// for the foreign key definition.
+        /// There may not be a foreign key defined on the backend in which case
+        /// the relationship.source.fields and relationship.target fields are mandatory.
+        /// Initializing a definition here is an indication to find the foreign key
+        /// between the referencing and referenced tables.
+        /// </summary>
+        /// <param name="entityName"></param>
+        /// <param name="entity"></param>
+        /// <param name="databaseObject"></param>
+        /// <exception cref="InvalidOperationException"></exception>
+        private void AddForeignKeysForRelationships(
+            string entityName,
+            Entity entity,
+            DatabaseObject databaseObject)
+        {
+            RelationshipMetadata? relationshipData;
+            if (!databaseObject.TableDefinition.SourceEntityRelationshipMap
+                .TryGetValue(entityName, out relationshipData))
+            {
+                relationshipData = new();
+                databaseObject.TableDefinition
+                    .SourceEntityRelationshipMap[entityName] = relationshipData;
+            }
+
+            foreach (Relationship relationship in entity.Relationships!.Values)
+            {
+                string targetEntityName = relationship.TargetEntity;
+
+                if (!_entities.TryGetValue(targetEntityName, out Entity? targetEntity))
+                {
+                    throw new InvalidOperationException("Target Entity should be one of the exposed entities.");
+                }
+
+                // If a linking object is specified,
+                // give that higher preference and add two foreign keys for this targetEntity.
+                if (relationship.LinkingObject is not null)
+                {
+                    AddForeignKeyForTargetEntity(
+                        targetEntityName,
+                        referencingTableName: relationship.LinkingObject,
+                        referencedTableName: entity.GetSourceName(),
+                        referencingColumns: relationship.LinkingSourceFields,
+                        referencedColumns: relationship.SourceFields,
+                        relationshipData);
+
+                    AddForeignKeyForTargetEntity(
+                        targetEntityName,
+                        referencingTableName: relationship.LinkingObject,
+                        referencedTableName: targetEntity.GetSourceName(),
+                        referencingColumns: relationship.LinkingSourceFields,
+                        referencedColumns: relationship.TargetFields,
+                        relationshipData);
+                }
+                else if (relationship.Cardinality == Cardinality.One)
+                {
+                    // Adding this foreign key in the hopes of finding a foreign key
+                    // in the underlying database object of the source entity referencing
+                    // the target entity.
+                    // This foreign key may not exist for either of the following reasons:
+                    // a. this source entity is related to the target entity in an One-to-One relationship
+                    // but the foreign key was added to the target entity's underlying source
+                    // OR
+                    // b. no foreign keys were defined at all.
+                    AddForeignKeyForTargetEntity(
+                        targetEntityName,
+                        referencingTableName: entity.GetSourceName(),
+                        referencedTableName: targetEntity!.GetSourceName(),
+                        referencingColumns: relationship.SourceFields,
+                        referencedColumns: relationship.TargetFields,
+                        relationshipData);
+
+                    // Adds another foreign key defintion with targetEntity.GetSourceName()
+                    // as the referencingTableName - in the situation of a One-to-One relationship
+                    // and the foreign key is defined in the source of targetEntity.
+                    AddForeignKeyForTargetEntity(
+                        targetEntityName,
+                        referencingTableName: targetEntity.GetSourceName(),
+                        referencedTableName: entity.GetSourceName(),
+                        referencingColumns: relationship.TargetFields,
+                        referencedColumns: relationship.SourceFields,
+                        relationshipData);
+                }
+                else if (relationship.Cardinality is Cardinality.Many)
+                {
+                    // Case of publisher(One)-books(Many) where books doesnt have a relationship on publisher yet
+                    // we would need to obtain the foreign key information from the books table
+                    // about the publisher id so we can do the join.
+                    // so, the referencingTable is the source of the target entity.
+                    AddForeignKeyForTargetEntity(
+                        targetEntityName,
+                        referencingTableName: targetEntity.GetSourceName(),
+                        referencedTableName: entity.GetSourceName(),
+                        referencingColumns: relationship.TargetFields,
+                        referencedColumns: relationship.SourceFields,
+                        relationshipData);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Adds a new foreign key definition for the target entity
+        /// in the relationship metadata.
+        /// </summary>
+        private static void AddForeignKeyForTargetEntity(
+            string targetEntityName,
+            string referencingTableName,
+            string referencedTableName,
+            string[]? referencingColumns,
+            string[]? referencedColumns,
+            RelationshipMetadata relationshipData)
+        {
+            ForeignKeyDefinition foreignKeyDefinition = new()
+            {
+                Pair = new(referencingTableName, referencedTableName)
+            };
+
+            if (referencingColumns is not null)
+            {
+                foreignKeyDefinition.ReferencingColumns.AddRange(referencingColumns);
+            }
+
+            if (referencedColumns is not null)
+            {
+                foreignKeyDefinition.ReferencedColumns.AddRange(referencedColumns);
+            }
+
+            if (relationshipData
+                .ForeignKeys.TryGetValue(targetEntityName, out List<ForeignKeyDefinition>? foreignKeys))
+            {
+                foreignKeys.Add(foreignKeyDefinition);
+            }
+            else
+            {
+                relationshipData.ForeignKeys
+                    .Add(targetEntityName,
+                        new List<ForeignKeyDefinition>() { foreignKeyDefinition });
             }
         }
 
@@ -229,7 +360,7 @@ namespace Azure.DataGateway.Service.Services
                     GetTableDefinition(entityName));
             }
 
-            await PopulateForeignKeyDefinitionAsync(EntityToDatabaseObject.Values);
+            await PopulateForeignKeyDefinitionAsync();
 
         }
 
@@ -441,22 +572,19 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="schemaName">Name of the default schema.</param>
         /// <param name="tables">Dictionary of all tables.</param>
-        private async Task PopulateForeignKeyDefinitionAsync(IEnumerable<DatabaseObject> databaseObjects)
+        private async Task PopulateForeignKeyDefinitionAsync()
         {
-            // Build the query required to get the foreign key information.
-            string queryForForeignKeyInfo =
-                ((BaseSqlQueryBuilder)SqlQueryBuilder).BuildForeignKeyInfoQuery(databaseObjects.Count());
-
-            // Build the array storing all the schemaNames, for now the defaultSchemaName.
+            // For each database object, that has a relationship metadata,
+            // build the array storing all the schemaNames(for now the defaultSchemaName)
+            // and the array for all tableNames
             List<string> schemaNames = new();
             List<string> tableNames = new();
-            Dictionary<string, TableDefinition> sourceNameToTableDefinition = new();
-            foreach (DatabaseObject dbObject in databaseObjects)
-            {
-                schemaNames.Add(dbObject.SchemaName);
-                tableNames.Add(dbObject.Name);
-                sourceNameToTableDefinition.Add(dbObject.Name, dbObject.TableDefinition);
-            }
+            IEnumerable<TableDefinition> tablesToBePopulatedWithFK =
+                FindAllTablesWhoseForeignKeyIsToBeRetrieved(schemaNames, tableNames);
+
+            // Build the query required to get the foreign key information.
+            string queryForForeignKeyInfo =
+                ((BaseSqlQueryBuilder)SqlQueryBuilder).BuildForeignKeyInfoQuery(tableNames.Count());
 
             // Build the parameters dictionary for the foreign key info query
             // consisting of all schema names and table names.
@@ -465,6 +593,77 @@ namespace Azure.DataGateway.Service.Services
                     schemaNames.ToArray(),
                     tableNames.ToArray());
 
+            // Gather all the referencing and referenced columns for each pair
+            // of referencing and referenced tables.
+            Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition
+                = await ExecuteAndSummarizeFkMetadata(queryForForeignKeyInfo, parameters);
+
+            FillInferredFkInfo(pairToFkDefinition, tablesToBePopulatedWithFK);
+
+            ValidateAllFkHaveBeenInferred(tablesToBePopulatedWithFK);
+        }
+
+        private IEnumerable<TableDefinition>
+            FindAllTablesWhoseForeignKeyIsToBeRetrieved(
+                List<string> schemaNames,
+                List<string> tableNames)
+        {
+            Dictionary<string, TableDefinition> sourceNameToTableDefinition = new();
+            foreach ((_, DatabaseObject dbObject) in EntityToDatabaseObject)
+            {
+                if (!sourceNameToTableDefinition.ContainsKey(dbObject.Name))
+                {
+                    foreach ((_, RelationshipMetadata relationshipData)
+                        in dbObject.TableDefinition.SourceEntityRelationshipMap)
+                    {
+                        IEnumerable<List<ForeignKeyDefinition>> foreignKeys = relationshipData.ForeignKeys.Values;
+                        // if any of the added foreign keys, don't have any reference columns,
+                        // it means metadata is missing and we need to find that information from the db.
+                        if (foreignKeys.Any(fkList => fkList.Any(fk => fk.ReferencingColumns.Count() == 0)))
+                        {
+                            schemaNames.Add(dbObject.SchemaName);
+                            tableNames.Add(dbObject.Name);
+                            sourceNameToTableDefinition.Add(dbObject.Name, dbObject.TableDefinition);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return sourceNameToTableDefinition.Values;
+        }
+
+        private static void ValidateAllFkHaveBeenInferred(
+            IEnumerable<TableDefinition> tablesToBePopulatedWithFK)
+        {
+            foreach(TableDefinition tableDefinition in tablesToBePopulatedWithFK)
+            {
+                foreach ((string sourceEntityName, RelationshipMetadata relationshipData)
+                        in tableDefinition.SourceEntityRelationshipMap)
+                {
+                    IEnumerable<List<ForeignKeyDefinition>> foreignKeys = relationshipData.ForeignKeys.Values;
+                    // If none of the inferred foreign keys have the referencing columns,
+                    // it means metadata is still missing fail the bootstrap.
+                    if (!foreignKeys.Any(fkList => fkList.Any(fk => fk.ReferencingColumns.Count() != 0)))
+                    {
+                        throw new NotSupportedException($"Some of the relationship information missing and could not be inferred for {sourceEntityName}.");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Executes the given foreign key query with parameters
+        /// and summarizes the results for each referencing and referenced table pair.
+        /// </summary>
+        /// <param name="queryForForeignKeyInfo"></param>
+        /// <param name="parameters"></param>
+        /// <returns></returns>
+        private async Task<Dictionary<RelationShipPair, ForeignKeyDefinition>>
+            ExecuteAndSummarizeFkMetadata(
+                string queryForForeignKeyInfo,
+                Dictionary<string, object?> parameters)
+        {
             // Execute the foreign key info query.
             using DbDataReader reader =
                 await _queryExecutor!.ExecuteQueryAsync(queryForForeignKeyInfo, parameters);
@@ -473,45 +672,80 @@ namespace Azure.DataGateway.Service.Services
             Dictionary<string, object?>? foreignKeyInfo =
                 await _queryExecutor!.ExtractRowFromDbDataReader(reader);
 
-            // While the result is not null
-            // keep populating the table definition for all tables with all foreign keys.
+            Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition = new();
             while (foreignKeyInfo != null)
             {
-                string tableName = (string)foreignKeyInfo[nameof(TableDefinition)]!;
-                TableDefinition? tableDefinition;
-                string foreignKeyName = (string)foreignKeyInfo[nameof(ForeignKeyDefinition)]!;
-                ForeignKeyDefinition? foreignKeyDefinition;
-
-                if (sourceNameToTableDefinition.TryGetValue(tableName, out tableDefinition))
+                string referencingTableName = (string)foreignKeyInfo[nameof(TableDefinition)]!;
+                string referencedTableName = (string)foreignKeyInfo[nameof(ForeignKeyDefinition.Pair.ReferencedTable)]!;
+                RelationShipPair pair = new(referencingTableName, referencedTableName);
+                if (!pairToFkDefinition.TryGetValue(pair, out ForeignKeyDefinition? foreignKeyDefinition))
                 {
-                    if (!tableDefinition.ForeignKeys.TryGetValue(foreignKeyName, out foreignKeyDefinition))
+                    foreignKeyDefinition = new()
                     {
-                        // If this is the first column in this foreign key for this table,
-                        // add the referenced table to the tableDefinition.
-                        foreignKeyDefinition = new()
-                        {
-                            ReferencedTable =
-                            (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencedTable)]!
-                        };
-                        tableDefinition.ForeignKeys.Add(foreignKeyName, foreignKeyDefinition);
-                    }
-
-                    // add the referenced and referencing columns to the foreign key definition.
-                    foreignKeyDefinition.ReferencedColumns.Add(
-                        (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencedColumns)]!);
-                    foreignKeyDefinition.ReferencingColumns.Add(
-                        (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencingColumns)]!);
+                        Pair = pair
+                    };
+                    pairToFkDefinition.Add(pair, foreignKeyDefinition);
                 }
-                else
-                {
-                    // This should not happen.
-                    throw new DataGatewayException(
-                        message: "Foreign key information is retrieved for a table that is not to be exposed.",
-                        statusCode: System.Net.HttpStatusCode.InternalServerError,
-                        subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
-                }
+                // add the referenced and referencing columns to the foreign key definition.
+                foreignKeyDefinition.ReferencedColumns.Add(
+                    (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencedColumns)]!);
+                foreignKeyDefinition.ReferencingColumns.Add(
+                    (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencingColumns)]!);
 
                 foreignKeyInfo = await _queryExecutor.ExtractRowFromDbDataReader(reader);
+            }
+
+            return pairToFkDefinition;
+        }
+
+        /// <summary>
+        /// Fills the table definition with the inferred foreign key metadata
+        /// about the referencing and referenced columns.
+        /// </summary>
+        /// <param name="pairToFkDefinition"></param>
+        /// <param name="tablesToBePopulatedWithFK"></param>
+        private static void FillInferredFkInfo(
+            Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition,
+            IEnumerable<TableDefinition> tablesToBePopulatedWithFK)
+        {
+            // For each table definition that has to be populated with the inferred
+            // foreign key information.
+            foreach (TableDefinition tableDefinition in tablesToBePopulatedWithFK)
+            {
+                // For each source entities, which maps to this table definition
+                // and has a relationship metadata to be filled.
+                foreach ((_, RelationshipMetadata relationshipData)
+                       in tableDefinition.SourceEntityRelationshipMap)
+                {
+                    // Enumerate all the foreign keys required for all the target entities
+                    // that this source is related to.
+                    IEnumerable<List<ForeignKeyDefinition>> foreignKeysForAllTargetEntities =
+                        relationshipData.ForeignKeys.Values;
+                    // For each target, loop through each foreign key
+                    foreach (List<ForeignKeyDefinition> foreignKeysForTarget in foreignKeysForAllTargetEntities)
+                    {
+                        // For each foreign key between this pair of source and target entities
+                        // which needs the referencing columns,
+                        // find the fk inferred for this pair the backend and
+                        // equate the referencing columns and referenced columns.
+                        foreach (ForeignKeyDefinition fk in foreignKeysForTarget)
+                        {
+                            // if the referencing columns count > 0, we have already gathered this information.
+                            if (fk.ReferencingColumns.Count > 0)
+                            {
+                                continue;
+                            }
+
+                            // Add the referencing and referenced columns for this foreign key definition
+                            // for the target.
+                            if (pairToFkDefinition.TryGetValue(fk.Pair, out ForeignKeyDefinition? inferredDefinition))
+                            {
+                                fk.ReferencingColumns.AddRange(inferredDefinition.ReferencingColumns);
+                                fk.ReferencedColumns.AddRange(inferredDefinition.ReferencedColumns);
+                            }
+                        }
+                    }
+                }
             }
         }
     }

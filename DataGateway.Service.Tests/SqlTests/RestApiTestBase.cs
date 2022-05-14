@@ -1552,7 +1552,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: "Could not find a property named 'pq' on type 'default_namespace.books_view_all'.",
+                expectedErrorMessage: $"Could not find a property named 'pq' on type 'default_namespace.{GetDefaultSchemaForEdmModel()}books_view_all'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
 
@@ -1563,7 +1563,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: "Could not find a property named 'pq' on type 'default_namespace.stocks_view_selected'.",
+                expectedErrorMessage: $"Could not find a property named 'pq' on type 'default_namespace.{GetDefaultSchemaForEdmModel()}stocks_view_selected'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
 
@@ -1575,7 +1575,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: "Could not find a property named 'title' on type 'default_namespace.books_publishers_view_composite'.",
+                expectedErrorMessage: $"Could not find a property named 'title' on type 'default_namespace.{GetDefaultSchemaForEdmModel()}books_publishers_view_composite'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
         }

@@ -21,6 +21,51 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "FindViewAll",
+                $"SELECT * FROM { _simple_all_books } " +
+                $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindViewSelected",
+                $"SELECT categoryid, pieceid, categoryName, piecesAvailable FROM {_simple_subset_stocks} " +
+                $"WHERE categoryid = 2 AND pieceid = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindViewComposite",
+                $"SELECT name ,id, publisher_id FROM {_composite_subset_bookPub} " +
+                $"WHERE id=2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindTestWithFilterQueryOneGeFilterOnView",
+                $"SELECT * FROM { _simple_all_books } " +
+                $"WHERE id >= 4 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindByIdTestWithQueryStringFieldsOnView",
+                $"SELECT[id], [title] FROM { _simple_all_books } " +
+                $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindTestWithFilterQueryStringOneEqFilterOnView",
+                $"SELECT [categoryid],[pieceid],[categoryName],[piecesAvailable] " +
+                $"FROM { _simple_subset_stocks } " +
+                $"WHERE [pieceid] = 1 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFilterQueryOneNotFilterOnView",
+                $"SELECT [categoryid],[pieceid],[categoryName],[piecesAvailable] " +
+                $"FROM { _simple_subset_stocks } " +
+                $"WHERE NOT([categoryid] > 1)" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFilterQueryOneLtFilterOnView",
+                $"SELECT[id], [name],[publisher_id] FROM { _composite_subset_bookPub } " +
+                $"WHERE id < 5 FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindByIdTestWithQueryStringFields",
                 $"SELECT[id], [title] FROM { _integrationTableName } " +
                 $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"

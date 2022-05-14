@@ -333,7 +333,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     ReferentialConstraints.CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))}, 
                     ReferencingColumnUsage.TABLE_NAME {QuoteIdentifier(nameof(TableDefinition))}, 
                     ReferencingColumnUsage.COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencingColumns))}, 
-                    ReferencedColumnUsage.TABLE_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedTable))}, 
+                    ReferencedColumnUsage.TABLE_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.Pair.ReferencedTable))}, 
                     ReferencedColumnUsage.COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))} 
                 FROM 
                     INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS ReferentialConstraints 

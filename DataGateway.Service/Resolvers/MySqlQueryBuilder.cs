@@ -137,7 +137,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))}, 
                     TABLE_NAME {QuoteIdentifier(nameof(TableDefinition))}, 
                     COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencingColumns))}, 
-                    REFERENCED_TABLE_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedTable))}, 
+                    REFERENCED_TABLE_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.Pair.ReferencedTable))}, 
                     REFERENCED_COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))} 
                 FROM 
                     INFORMATION_SCHEMA.KEY_COLUMN_USAGE 

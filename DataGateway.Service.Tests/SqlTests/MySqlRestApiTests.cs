@@ -13,6 +13,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     [TestClass, TestCategory(TestCategory.MYSQL)]
     public class MySqlRestApiTests : RestApiTestBase
     {
+        protected static string DEFAULT_SCHEMA = string.Empty;
         protected static Dictionary<string, string> _queryMap = new()
         {
             {
@@ -625,7 +626,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
-                        FROM " + _Composite_NonAutoGenPK + @"
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 5 AND pieceid = 2 AND categoryName ='FairyTales' AND piecesAvailable = 0
                         AND piecesRequired = 0
                     ) AS subq
@@ -708,7 +709,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
-                        FROM " + _Composite_NonAutoGenPK + @"
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 2 AND pieceid = 1 AND categoryName ='SciFi' AND piecesAvailable = 10
                         AND piecesRequired = 5
                     ) AS subq
@@ -721,7 +722,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
-                        FROM " + _Composite_NonAutoGenPK + @"
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 1 AND pieceid = 1 AND categoryName ='SciFi' AND piecesAvailable is NULL
                         AND piecesRequired = 5
                     ) AS subq
@@ -734,7 +735,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
-                        FROM " + _Composite_NonAutoGenPK + @"
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 2 AND pieceid = 1 AND categoryName ='' AND piecesAvailable = 2
                         AND piecesRequired = 3
                     ) AS subq
@@ -747,7 +748,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
-                        FROM " + _Composite_NonAutoGenPK + @"
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 2 AND pieceid = 1 AND categoryName ='FairyTales' AND piecesAvailable is NULL 
                         AND piecesRequired = 4
                     ) AS subq
@@ -794,7 +795,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
-                        FROM " + _Composite_NonAutoGenPK + @"
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 3 AND pieceid = 1 AND categoryName ='SciFi' AND piecesAvailable = 2
                         AND piecesRequired = 1
                     ) AS subq
@@ -807,7 +808,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
-                        FROM " + _Composite_NonAutoGenPK + @"
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 8 AND pieceid = 1 AND categoryName ='SciFi' AND piecesAvailable = 0
                         AND piecesRequired = 0
                     ) AS subq
@@ -820,7 +821,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
-                        FROM " + _Composite_NonAutoGenPK + @"
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 4 AND pieceid = 1 AND categoryName ='' AND piecesAvailable = 2
                         AND piecesRequired = 3
                     ) AS subq
@@ -833,7 +834,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
-                        FROM " + _Composite_NonAutoGenPK + @"
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 4 AND pieceid = 1 AND categoryName ='SciFi' AND piecesAvailable is NULL
                         AND piecesRequired = 4
                     ) AS subq
@@ -857,7 +858,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
-                        FROM " + _Composite_NonAutoGenPK + @"
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 4 AND pieceid = 1 AND categoryName ='FairyTales' AND piecesAvailable = 5
                         AND piecesRequired = 4
                     ) AS subq
@@ -870,7 +871,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
-                        FROM " + _Composite_NonAutoGenPK + @"
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 5 AND pieceid = 1 AND categoryName ='' AND piecesAvailable = 5
                         AND piecesRequired = 4
                     ) AS subq
@@ -883,7 +884,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
-                        FROM " + _Composite_NonAutoGenPK + @"
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 7 AND pieceid = 1 AND categoryName ='SciFi' AND piecesAvailable = 0
                         AND piecesRequired = 0
                     ) AS subq
@@ -896,7 +897,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
-                        FROM " + _Composite_NonAutoGenPK + @"
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 3 AND pieceid = 1 AND categoryName ='SciFi' AND piecesAvailable is NULL
                         AND piecesRequired = 4
                     ) AS subq
@@ -944,7 +945,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
-                        FROM " + _Composite_NonAutoGenPK + @"
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 1 AND pieceid = 1 AND categoryName ='SciFi' AND piecesAvailable = 10
                         AND piecesRequired = 0
                     ) AS subq
@@ -957,7 +958,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
-                        FROM " + _Composite_NonAutoGenPK + @"
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 1 AND pieceid = 1 AND categoryName ='' AND piecesAvailable = 10
                         AND piecesRequired = 0
                     ) AS subq
@@ -970,7 +971,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
-                        FROM " + _Composite_NonAutoGenPK + @"
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 1 AND pieceid = 1 AND categoryName ='books' AND piecesAvailable is NULL 
                         AND piecesRequired = 0
                     ) AS subq
@@ -983,7 +984,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
-                        FROM " + _Composite_NonAutoGenPK + @"
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 3 AND pieceid = 1 AND categoryName ='SciFi' AND piecesAvailable is NULL
                         AND piecesRequired = 1
                     ) AS subq
@@ -1034,6 +1035,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         #endregion
 
+        public override string GetDefaultSchema()
+        {
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// MySql does not a schema so it lacks
+        /// the '.' between schema and table, we
+        /// return empty string here for this reason.
+        /// </summary>
+        /// <returns></returns>
+        public override string GetDefaultSchemaForEdmModel()
+        {
+            return string.Empty;
+        }
+
         public override string GetQuery(string key)
         {
             return _queryMap[key];
@@ -1049,7 +1066,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/1/pieceid/1",
                 queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK,
+                entity: _Composite_NonAutoGenPK_EntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Upsert,

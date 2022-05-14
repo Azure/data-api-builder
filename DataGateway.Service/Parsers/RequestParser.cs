@@ -4,9 +4,10 @@ using System.Linq;
 using System.Net;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Services;
 using Microsoft.OData.UriParser;
 
-namespace Azure.DataGateway.Service.Services
+namespace Azure.DataGateway.Service.Parsers
 {
     /// <summary>
     /// Class providing parsing logic for different portions of the request url.
@@ -99,11 +100,14 @@ namespace Azure.DataGateway.Service.Services
                         // save the AST that represents the filter for the query
                         // ?$filter=<filter clause using microsoft api guidelines>
                         string filterQueryString = $"?{FILTER_URL}={context.ParsedQueryString[key]}";
-                        context.FilterClauseInUrl = filterParser.GetFilterClause(filterQueryString, context.EntityName);
+                        context.FilterClauseInUrl = filterParser.GetFilterClause(filterQueryString, $"{context.DatabaseObject.FullName}");
                         break;
                     case SORT_URL:
                         string sortQueryString = $"?{SORT_URL}={context.ParsedQueryString[key]}";
-                        context.OrderByClauseInUrl = GenerateOrderByList(filterParser.GetOrderByClause(sortQueryString, context.EntityName), context.EntityName, primaryKeys);
+                        context.OrderByClauseInUrl = GenerateOrderByList(filterParser.GetOrderByClause(sortQueryString, $"{context.DatabaseObject.FullName}"),
+                                                                         context.DatabaseObject.SchemaName,
+                                                                         context.DatabaseObject.Name,
+                                                                         primaryKeys);
                         break;
                     case AFTER_URL:
                         context.After = context.ParsedQueryString[key];
@@ -125,7 +129,7 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="tableAlias">The name of the Table the columns are from.</param>
         /// <paramref name="primaryKeys">A list of the primaryKeys of the given table.</paramref>/>
         /// <returns>A List<OrderByColumns></returns>
-        private static List<OrderByColumn> GenerateOrderByList(OrderByClause node, string tableAlias, List<string> primaryKeys)
+        private static List<OrderByColumn>? GenerateOrderByList(OrderByClause node, string schemaName, string tableName, List<string> primaryKeys)
         {
             // used for performant Remove operations
             HashSet<string> remainingKeys = new(primaryKeys);
@@ -152,7 +156,7 @@ namespace Azure.DataGateway.Service.Services
                 // We convert to an Enum of our own that matches the SQL text we want
                 Models.OrderByDir direction = GetDirection(node.Direction);
                 // Add OrderByColumn and remove any matching columns from our primary key set
-                orderByList.Add(new OrderByColumn(tableAlias, columnName, direction));
+                orderByList.Add(new OrderByColumn(schemaName, tableName, columnName, direction: direction));
                 remainingKeys.Remove(columnName);
                 node = node.ThenBy;
             }
@@ -164,7 +168,7 @@ namespace Azure.DataGateway.Service.Services
             {
                 if (remainingKeys.Contains(column))
                 {
-                    orderByList.Add(new OrderByColumn(tableAlias, column));
+                    orderByList.Add(new OrderByColumn(schemaName, tableName, column));
                 }
             }
 

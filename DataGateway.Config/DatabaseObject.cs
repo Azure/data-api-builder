@@ -38,7 +38,8 @@ namespace Azure.DataGateway.Config
         /// All these entities share this table definition
         /// as their underlying database object 
         /// </summary>
-        public Dictionary<string, RelationshipMetadata> SourceEntityRelationshipMap { get; set; } = new();
+        public Dictionary<string, RelationshipMetadata> SourceEntityRelationshipMap { get; set; } =
+            new(StringComparer.InvariantCultureIgnoreCase);
 
         public Dictionary<string, AuthorizationRule> HttpVerbs { get; set; } = new();
     }
@@ -51,7 +52,8 @@ namespace Azure.DataGateway.Config
         /// <summary>
         /// Dictionary of target entity name to ForeignKeyDefinition.
         /// </summary>
-        public Dictionary<string, List<ForeignKeyDefinition>> TargetEntityToFkDefinitionMap { get; set; } = new();
+        public Dictionary<string, List<ForeignKeyDefinition>> TargetEntityToFkDefinitionMap { get; set; }
+            = new(StringComparer.InvariantCultureIgnoreCase);
     }
 
     public class ColumnDefinition

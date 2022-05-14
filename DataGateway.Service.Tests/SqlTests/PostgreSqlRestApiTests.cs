@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
@@ -911,6 +912,20 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task TestCleanup()
         {
             await ResetDbStateAsync();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task FindOnViews()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task FindTestWithQueryStringOnViews()
+        {
+            throw new NotImplementedException();
         }
 
         public override string GetDefaultSchema()

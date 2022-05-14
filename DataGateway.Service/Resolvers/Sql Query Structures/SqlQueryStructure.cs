@@ -561,31 +561,47 @@ namespace Azure.DataGateway.Service.Resolvers
                         && relationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
                             out List<ForeignKeyDefinition>? foreignKeyDefinitions))
                     {
+                        Dictionary<string, string> associativeTableAndAliases = new();
                         foreach (ForeignKeyDefinition foreignKeyDefinition in foreignKeyDefinitions)
                         {
-                            if (foreignKeyDefinition.Pair.ReferencingTable.Equals(TableName)
-                               && foreignKeyDefinition.ReferencingColumns.Count() > 0)
+                            if (foreignKeyDefinition.Pair.ReferencingTable.Equals(TableName))
                             {
-                                subquery.Predicates.AddRange(CreateJoinPredicates(
+                                if (foreignKeyDefinition.ReferencingColumns.Count() > 0)
+                                {
+                                    subquery.Predicates.AddRange(CreateJoinPredicates(
                                         TableAlias,
                                         foreignKeyDefinition.ReferencingColumns,
                                         subtableAlias,
                                         foreignKeyDefinition.ReferencedColumns));
+                                }
                             }
-                            else if (foreignKeyDefinition.Pair.ReferencingTable.Equals(subquery.TableName)
-                                && foreignKeyDefinition.ReferencingColumns.Count() > 0)
+                            else if (foreignKeyDefinition.Pair.ReferencingTable.Equals(subquery.TableName))
                             {
-                                subquery.Predicates.AddRange(CreateJoinPredicates(
-                                    subtableAlias,
-                                    foreignKeyDefinition.ReferencingColumns,
-                                    TableAlias,
-                                    foreignKeyDefinition.ReferencedColumns));
+                                if (foreignKeyDefinition.ReferencingColumns.Count() > 0)
+                                {
+                                    subquery.Predicates.AddRange(CreateJoinPredicates(
+                                        subtableAlias,
+                                        foreignKeyDefinition.ReferencingColumns,
+                                        TableAlias,
+                                        foreignKeyDefinition.ReferencedColumns));
+                                }
                             }
                             else
                             {
-                                // Case when the linking object is the referencing table.
-                                string associativeTableName = foreignKeyDefinition.Pair.ReferencingTable;
-                                string associativeTableAlias = CreateTableAlias();
+                                string associativeTableName =
+                                    foreignKeyDefinition.Pair.ReferencingTable;
+                                // Case when the linking object is the referencing table
+                                if (!associativeTableAndAliases.TryGetValue(
+                                        associativeTableName,
+                                        out string? associativeTableAlias))
+                                {
+                                    // this is the first fk definition found for this associative table.
+                                    // create an alias for it and store for later lookup.
+                                    associativeTableAlias = CreateTableAlias();
+                                    associativeTableAndAliases.Add(associativeTableName, associativeTableAlias);
+                                    ;
+                                }
+
                                 if (foreignKeyDefinition.Pair.ReferencedTable.Equals(TableName))
                                 {
                                     subquery.Predicates.AddRange(CreateJoinPredicates(

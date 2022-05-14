@@ -244,7 +244,7 @@ namespace Azure.DataGateway.Service.Services
                         targetEntityName,
                         referencingTableName: relationship.LinkingObject,
                         referencedTableName: targetEntity.GetSourceName(),
-                        referencingColumns: relationship.LinkingSourceFields,
+                        referencingColumns: relationship.LinkingTargetFields,
                         referencedColumns: relationship.TargetFields,
                         relationshipData);
 
@@ -263,12 +263,21 @@ namespace Azure.DataGateway.Service.Services
                 }
                 else if (relationship.Cardinality == Cardinality.One)
                 {
+                    // For Many-One OR One-One Relationships, optimistically
+                    // add foreign keys from either sides in the hopes of finding their metadata
+                    // at a later stage when we query the database about foreign keys.
+                    // Both or either of these may be present if its a One-One relationship,
+                    // The second fk would not be present if its a Many-One relationship.
+                    // When the configuration file doesn't specify how to relate these entities,
+                    // at least 1 of the following foreign keys should be present.
+
                     // Adding this foreign key in the hopes of finding a foreign key
                     // in the underlying database object of the source entity referencing
                     // the target entity.
-                    // This foreign key may not exist for either of the following reasons:
+                    // This foreign key may NOT exist for either of the following reasons:
                     // a. this source entity is related to the target entity in an One-to-One relationship
                     // but the foreign key was added to the target entity's underlying source
+                    // This is covered by the foreign key below.
                     // OR
                     // b. no foreign keys were defined at all.
                     AddForeignKeyForTargetEntity(
@@ -282,6 +291,7 @@ namespace Azure.DataGateway.Service.Services
                     // Adds another foreign key defintion with targetEntity.GetSourceName()
                     // as the referencingTableName - in the situation of a One-to-One relationship
                     // and the foreign key is defined in the source of targetEntity.
+                    // This foreign key WILL NOT exist if its a Many-One relationship.
                     AddForeignKeyForTargetEntity(
                         targetEntityName,
                         referencingTableName: targetEntity.GetSourceName(),
@@ -292,7 +302,7 @@ namespace Azure.DataGateway.Service.Services
                 }
                 else if (relationship.Cardinality is Cardinality.Many)
                 {
-                    // Case of publisher(One)-books(Many) where books doesnt have a relationship on publisher yet
+                    // Case of publisher(One)-books(Many)
                     // we would need to obtain the foreign key information from the books table
                     // about the publisher id so we can do the join.
                     // so, the referencingTable is the source of the target entity.
@@ -629,12 +639,12 @@ namespace Azure.DataGateway.Service.Services
                     foreach ((_, RelationshipMetadata relationshipData)
                         in dbObject.TableDefinition.SourceEntityRelationshipMap)
                     {
-                        IEnumerable<List<ForeignKeyDefinition>> foreignKeys = relationshipData.TargetEntityToFkDefinitionMap.Values;
-                        // if any of the added foreign keys, don't have any reference columns,
-                        // it means metadata is missing and we need to find that information from the db.
-                        foreach (List<ForeignKeyDefinition> fkDefinitions in foreignKeys)
+                        IEnumerable<List<ForeignKeyDefinition>> foreignKeysForAllTargetEntities
+                            = relationshipData.TargetEntityToFkDefinitionMap.Values;
+                        foreach (List<ForeignKeyDefinition> fkDefinitionsForTargetEntity
+                            in foreignKeysForAllTargetEntities)
                         {
-                            foreach (ForeignKeyDefinition fk in fkDefinitions)
+                            foreach (ForeignKeyDefinition fk in fkDefinitionsForTargetEntity)
                             {
                                 schemaNames.Add(dbObject.SchemaName);
                                 tableNames.Add(fk.Pair.ReferencingTable);
@@ -745,8 +755,9 @@ namespace Azure.DataGateway.Service.Services
                         // equate the referencing columns and referenced columns.
                         foreach (ForeignKeyDefinition fk in foreignKeysForTarget)
                         {
-                            // if the referencing columns count > 0, we have already gathered this information.
-                            if (fk.ReferencingColumns.Count > 0)
+                            // if the referencing and referenced columns count > 0,
+                            // we have already gathered this information from the runtime config.
+                            if (fk.ReferencingColumns.Count > 0 && fk.ReferencedColumns.Count > 0)
                             {
                                 continue;
                             }
@@ -756,8 +767,19 @@ namespace Azure.DataGateway.Service.Services
                             if (pairToFkDefinition.TryGetValue(
                                     fk.Pair, out ForeignKeyDefinition? inferredDefinition))
                             {
-                                fk.ReferencingColumns.AddRange(inferredDefinition.ReferencingColumns);
-                                fk.ReferencedColumns.AddRange(inferredDefinition.ReferencedColumns);
+                                // Only add the referencing columns if they have not been
+                                // specified in the configuration file.
+                                if (fk.ReferencingColumns.Count == 0)
+                                {
+                                    fk.ReferencingColumns.AddRange(inferredDefinition.ReferencingColumns);
+                                }
+
+                                // Only add the referenced columns if they have not been
+                                // specified in the configuration file.
+                                if (fk.ReferencedColumns.Count == 0)
+                                {
+                                    fk.ReferencedColumns.AddRange(inferredDefinition.ReferencedColumns);
+                                }
                             }
                         }
                     }

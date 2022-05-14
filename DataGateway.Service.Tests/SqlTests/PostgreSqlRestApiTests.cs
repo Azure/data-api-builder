@@ -913,7 +913,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             await ResetDbStateAsync();
         }
-        
+
         [TestMethod]
         [Ignore]
         public override Task FindOnViews()
@@ -927,7 +927,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             throw new NotImplementedException();
         }
-        
+
         public override string GetDefaultSchema()
         {
             return DEFAULT_SCHEMA;

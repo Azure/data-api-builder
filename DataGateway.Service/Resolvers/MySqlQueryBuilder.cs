@@ -133,19 +133,21 @@ namespace Azure.DataGateway.Service.Resolvers
             // For MySQL, the view KEY_COLUMN_USAGE provides all the information we need
             // so there is no need to join with any other view.
             string foreignKeyQuery = $@"
-                SELECT 
-                    CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))}, 
-                    TABLE_NAME {QuoteIdentifier(nameof(TableDefinition))}, 
-                    COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencingColumns))}, 
-                    REFERENCED_TABLE_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.Pair.ReferencedTable))}, 
-                    REFERENCED_COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))} 
-                FROM 
-                    INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
-                WHERE 
-                    TABLE_SCHEMA IN (@{tableSchemaParamsForInClause}) 
-                    AND TABLE_NAME IN (@{tableNameParamsForInClause}) 
-                    AND REFERENCED_TABLE_NAME IS NOT NULL 
-                    AND REFERENCED_COLUMN_NAME IS NOT NULL;";
+SELECT 
+    CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))}, 
+    TABLE_NAME {QuoteIdentifier(nameof(TableDefinition))}, 
+    COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencingColumns))}, 
+    REFERENCED_TABLE_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.Pair.ReferencedTable))}, 
+    REFERENCED_COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))} 
+FROM 
+    INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
+WHERE 
+    (TABLE_SCHEMA IN (@{tableSchemaParamsForInClause}) 
+    AND TABLE_NAME IN (@{tableNameParamsForInClause}) 
+    AND REFERENCED_TABLE_NAME IS NOT NULL 
+    AND REFERENCED_COLUMN_NAME IS NOT NULL) OR
+    (REFERENCED_SCHEMA_NAME IN (@{tableSchemaParamsForInClause})
+    REFERENCED_TABLE_NAME IN (@{tableNameParamsForInClause}))";
 
             Console.WriteLine($"Foreign Key Query is : {foreignKeyQuery}");
             return foreignKeyQuery;

@@ -92,8 +92,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                         new List<DirectiveNode> {
                             new(RelationshipDirectiveType.DirectiveName,
                                 new ArgumentNode("target", FormatNameForObject(targetEntityName, referencedEntity)),
-                                new ArgumentNode("cardinality", relationship.Cardinality.ToString()),
-                                new ArgumentNode("dbobject", referencedEntity.GetSourceName()))
+                                new ArgumentNode("cardinality", relationship.Cardinality.ToString()))
                         });
 
                     fields.Add(relationshipField.Name.Value, relationshipField);

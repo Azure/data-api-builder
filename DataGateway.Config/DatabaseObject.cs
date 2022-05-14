@@ -49,9 +49,9 @@ namespace Azure.DataGateway.Config
     public class RelationshipMetadata
     {
         /// <summary>
-        /// Dictionary of TargetEntity to ForeignKeyDefinition.
+        /// Dictionary of target entity name to ForeignKeyDefinition.
         /// </summary>
-        public Dictionary<string, List<ForeignKeyDefinition>> ForeignKeys { get; set; } = new();
+        public Dictionary<string, List<ForeignKeyDefinition>> TargetEntityToFkDefinitionMap { get; set; } = new();
     }
 
     public class ColumnDefinition

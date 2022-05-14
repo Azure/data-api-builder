@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -559,7 +558,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     TableDefinition tableDefinition = GetUnderlyingTableDefinition();
                     if (tableDefinition.SourceEntityRelationshipMap.TryGetValue(
                         _underlyingFieldType.Name, out RelationshipMetadata? relationshipMetadata)
-                        && relationshipMetadata.ForeignKeys.TryGetValue(targetEntityName,
+                        && relationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
                             out List<ForeignKeyDefinition>? foreignKeyDefinitions))
                     {
                         foreach(ForeignKeyDefinition foreignKeyDefinition in foreignKeyDefinitions)
@@ -609,7 +608,6 @@ namespace Azure.DataGateway.Service.Resolvers
                                             ).ToList()
                                     ));
                                 }
-
                             }
                         }
                     }

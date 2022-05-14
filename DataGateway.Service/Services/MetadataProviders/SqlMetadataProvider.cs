@@ -169,6 +169,7 @@ namespace Azure.DataGateway.Service.Services
             {
                 if (!EntityToDatabaseObject.ContainsKey(entityName))
                 {
+                    // Reuse the same Database object for multiple entities if they share the same source.
                     if (!sourceObjects.TryGetValue(entity.GetSourceName(), out DatabaseObject? sourceObject))
                     {
                         sourceObject = new()
@@ -247,6 +248,19 @@ namespace Azure.DataGateway.Service.Services
                         referencingColumns: relationship.LinkingSourceFields,
                         referencedColumns: relationship.TargetFields,
                         relationshipData);
+
+                    // Add the linking object as an entity for which we need to infer metadata.
+                    /*if (!EntityToDatabaseObject.ContainsKey(relationship.LinkingObject))
+                    {
+                        DatabaseObject linkingDbObject = new()
+                        {
+                            SchemaName = GetDefaultSchemaName(),
+                            Name = relationship.LinkingObject,
+                            TableDefinition = new()
+                        };
+
+                        EntityToDatabaseObject.Add(relationship.LinkingObject, linkingDbObject);
+                    }*/
                 }
                 else if (relationship.Cardinality == Cardinality.One)
                 {
@@ -322,13 +336,13 @@ namespace Azure.DataGateway.Service.Services
             }
 
             if (relationshipData
-                .ForeignKeys.TryGetValue(targetEntityName, out List<ForeignKeyDefinition>? foreignKeys))
+                .TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName, out List<ForeignKeyDefinition>? foreignKeys))
             {
                 foreignKeys.Add(foreignKeyDefinition);
             }
             else
             {
-                relationshipData.ForeignKeys
+                relationshipData.TargetEntityToFkDefinitionMap
                     .Add(targetEntityName,
                         new List<ForeignKeyDefinition>() { foreignKeyDefinition });
             }
@@ -616,15 +630,17 @@ namespace Azure.DataGateway.Service.Services
                     foreach ((_, RelationshipMetadata relationshipData)
                         in dbObject.TableDefinition.SourceEntityRelationshipMap)
                     {
-                        IEnumerable<List<ForeignKeyDefinition>> foreignKeys = relationshipData.ForeignKeys.Values;
+                        IEnumerable<List<ForeignKeyDefinition>> foreignKeys = relationshipData.TargetEntityToFkDefinitionMap.Values;
                         // if any of the added foreign keys, don't have any reference columns,
                         // it means metadata is missing and we need to find that information from the db.
-                        if (foreignKeys.Any(fkList => fkList.Any(fk => fk.ReferencingColumns.Count() == 0)))
+                        foreach (List<ForeignKeyDefinition> fkDefinitions in foreignKeys)
                         {
-                            schemaNames.Add(dbObject.SchemaName);
-                            tableNames.Add(dbObject.Name);
-                            sourceNameToTableDefinition.Add(dbObject.Name, dbObject.TableDefinition);
-                            break;
+                            foreach(ForeignKeyDefinition fk in fkDefinitions)
+                            {
+                                schemaNames.Add(dbObject.SchemaName);
+                                tableNames.Add(fk.Pair.ReferencingTable);
+                                sourceNameToTableDefinition.TryAdd(dbObject.Name, dbObject.TableDefinition);
+                            }
                         }
                     }
                 }
@@ -641,7 +657,7 @@ namespace Azure.DataGateway.Service.Services
                 foreach ((string sourceEntityName, RelationshipMetadata relationshipData)
                         in tableDefinition.SourceEntityRelationshipMap)
                 {
-                    IEnumerable<List<ForeignKeyDefinition>> foreignKeys = relationshipData.ForeignKeys.Values;
+                    IEnumerable<List<ForeignKeyDefinition>> foreignKeys = relationshipData.TargetEntityToFkDefinitionMap.Values;
                     // If none of the inferred foreign keys have the referencing columns,
                     // it means metadata is still missing fail the bootstrap.
                     if (!foreignKeys.Any(fkList => fkList.Any(fk => fk.ReferencingColumns.Count() != 0)))
@@ -720,7 +736,7 @@ namespace Azure.DataGateway.Service.Services
                     // Enumerate all the foreign keys required for all the target entities
                     // that this source is related to.
                     IEnumerable<List<ForeignKeyDefinition>> foreignKeysForAllTargetEntities =
-                        relationshipData.ForeignKeys.Values;
+                        relationshipData.TargetEntityToFkDefinitionMap.Values;
                     // For each target, loop through each foreign key
                     foreach (List<ForeignKeyDefinition> foreignKeysForTarget in foreignKeysForAllTargetEntities)
                     {
@@ -738,7 +754,8 @@ namespace Azure.DataGateway.Service.Services
 
                             // Add the referencing and referenced columns for this foreign key definition
                             // for the target.
-                            if (pairToFkDefinition.TryGetValue(fk.Pair, out ForeignKeyDefinition? inferredDefinition))
+                            if (pairToFkDefinition.TryGetValue(
+                                    fk.Pair, out ForeignKeyDefinition? inferredDefinition))
                             {
                                 fk.ReferencingColumns.AddRange(inferredDefinition.ReferencingColumns);
                                 fk.ReferencedColumns.AddRange(inferredDefinition.ReferencedColumns);

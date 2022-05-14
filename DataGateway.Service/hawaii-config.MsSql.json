@@ -34,7 +34,7 @@
     }
   },
   "entities": {
-    "publisher": {
+    "publishers": {
       "source": "publishers",
       "rest": true,
       "graphql": true,
@@ -93,7 +93,7 @@
       "relationships": {
         "publisher": {
           "cardinality": "one",
-          "target.entity": "publisher"
+          "target.entity": "publishers"
         },
         "websiteplacement": {
           "cardinality": "one",

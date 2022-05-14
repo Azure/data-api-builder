@@ -508,7 +508,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// to the result set, but also adding any subqueries or joins that are
         /// required to fetch nested data.
         /// </summary>
-        void AddGraphQLFields(IReadOnlyList<ISelectionNode> Selections)
+        private void AddGraphQLFields(IReadOnlyList<ISelectionNode> Selections)
         {
             foreach (ISelectionNode node in Selections)
             {
@@ -555,78 +555,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     string targetEntityName = subunderlyingType.Name;
                     string subtableAlias = subquery.TableAlias;
 
-                    TableDefinition tableDefinition = GetUnderlyingTableDefinition();
-                    if (tableDefinition.SourceEntityRelationshipMap.TryGetValue(
-                        _underlyingFieldType.Name, out RelationshipMetadata? relationshipMetadata)
-                        && relationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
-                            out List<ForeignKeyDefinition>? foreignKeyDefinitions))
-                    {
-                        Dictionary<string, string> associativeTableAndAliases = new();
-                        foreach (ForeignKeyDefinition foreignKeyDefinition in foreignKeyDefinitions)
-                        {
-                            if (foreignKeyDefinition.Pair.ReferencingTable.Equals(TableName))
-                            {
-                                if (foreignKeyDefinition.ReferencingColumns.Count() > 0)
-                                {
-                                    subquery.Predicates.AddRange(CreateJoinPredicates(
-                                        TableAlias,
-                                        foreignKeyDefinition.ReferencingColumns,
-                                        subtableAlias,
-                                        foreignKeyDefinition.ReferencedColumns));
-                                }
-                            }
-                            else if (foreignKeyDefinition.Pair.ReferencingTable.Equals(subquery.TableName))
-                            {
-                                if (foreignKeyDefinition.ReferencingColumns.Count() > 0)
-                                {
-                                    subquery.Predicates.AddRange(CreateJoinPredicates(
-                                        subtableAlias,
-                                        foreignKeyDefinition.ReferencingColumns,
-                                        TableAlias,
-                                        foreignKeyDefinition.ReferencedColumns));
-                                }
-                            }
-                            else
-                            {
-                                string associativeTableName =
-                                    foreignKeyDefinition.Pair.ReferencingTable;
-                                // Case when the linking object is the referencing table
-                                if (!associativeTableAndAliases.TryGetValue(
-                                        associativeTableName,
-                                        out string? associativeTableAlias))
-                                {
-                                    // this is the first fk definition found for this associative table.
-                                    // create an alias for it and store for later lookup.
-                                    associativeTableAlias = CreateTableAlias();
-                                    associativeTableAndAliases.Add(associativeTableName, associativeTableAlias);
-                                    ;
-                                }
-
-                                if (foreignKeyDefinition.Pair.ReferencedTable.Equals(TableName))
-                                {
-                                    subquery.Predicates.AddRange(CreateJoinPredicates(
-                                        associativeTableAlias,
-                                        foreignKeyDefinition.ReferencingColumns,
-                                        TableAlias,
-                                        foreignKeyDefinition.ReferencedColumns));
-                                }
-                                else
-                                {
-                                    subquery.Joins.Add(new SqlJoinStructure
-                                    (
-                                        associativeTableName,
-                                        associativeTableAlias,
-                                        CreateJoinPredicates(
-                                            associativeTableAlias,
-                                            foreignKeyDefinition.ReferencingColumns,
-                                            subtableAlias,
-                                            foreignKeyDefinition.ReferencedColumns
-                                            ).ToList()
-                                    ));
-                                }
-                            }
-                        }
-                    }
+                    AddJoinPredicatesForSubQuery(targetEntityName, subtableAlias, subquery);
 
                     string subqueryAlias = $"{subtableAlias}_subq";
                     JoinQueries.Add(subqueryAlias, subquery);
@@ -647,6 +576,108 @@ namespace Azure.DataGateway.Service.Resolvers
             else
             {
                 return 1;
+            }
+        }
+
+        /// <summary>
+        /// Based on the relationship metadata involving foreign key referenced and
+        /// referencing columns, add the join predicates to the subquery Query structure
+        /// created for the given target entity Name and sub table alias.
+        /// There are only a couple of options for the foreign key - we only use the
+        /// valid foreign key definition. It is guaranteed at least one fk definition
+        /// will be valid since the SqlMetadataProvider.ValidateAllFkHaveBeenInferred.
+        /// </summary>
+        /// <param name="targetEntityName"></param>
+        /// <param name="subtableAlias"></param>
+        /// <param name="subQuery"></param>
+        private void AddJoinPredicatesForSubQuery(
+            string targetEntityName,
+            string subtableAlias,
+            SqlQueryStructure subQuery)
+        {
+            TableDefinition tableDefinition = GetUnderlyingTableDefinition();
+            if (tableDefinition.SourceEntityRelationshipMap.TryGetValue(
+                _underlyingFieldType.Name, out RelationshipMetadata? relationshipMetadata)
+                && relationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
+                    out List<ForeignKeyDefinition>? foreignKeyDefinitions))
+            {
+                Dictionary<string, string> associativeTableAndAliases = new();
+                // For One-One and One-Many, not all fk definitions would be valid
+                // but at least 1 will be.
+                // Identify the side of the relationship first, then check if its valid
+                // by ensuring the referencing and referenced column count > 0
+                // before adding the predicates.
+                foreach (ForeignKeyDefinition foreignKeyDefinition in foreignKeyDefinitions)
+                {
+                    // First identify which side of the relationship, this fk definition
+                    // is looking at.
+                    if (foreignKeyDefinition.Pair.ReferencingTable.Equals(TableName))
+                    {
+                        // Case where fk in parent entity references the nested entity.
+                        // Verify this is a valid fk definition before adding the join predicate.
+                        if (foreignKeyDefinition.ReferencingColumns.Count() > 0
+                            && foreignKeyDefinition.ReferencedColumns.Count() > 0)
+                        {
+                            subQuery.Predicates.AddRange(CreateJoinPredicates(
+                                TableAlias,
+                                foreignKeyDefinition.ReferencingColumns,
+                                subtableAlias,
+                                foreignKeyDefinition.ReferencedColumns));
+                        }
+                    }
+                    else if (foreignKeyDefinition.Pair.ReferencingTable.Equals(subQuery.TableName))
+                    {
+                        // Case where fk in nested entity references the parent entity.
+                        if (foreignKeyDefinition.ReferencingColumns.Count() > 0
+                            && foreignKeyDefinition.ReferencedColumns.Count() > 0)
+                        {
+                            subQuery.Predicates.AddRange(CreateJoinPredicates(
+                                subtableAlias,
+                                foreignKeyDefinition.ReferencingColumns,
+                                TableAlias,
+                                foreignKeyDefinition.ReferencedColumns));
+                        }
+                    }
+                    else
+                    {
+                        string associativeTableName =
+                            foreignKeyDefinition.Pair.ReferencingTable;
+                        // Case when the linking object is the referencing table
+                        if (!associativeTableAndAliases.TryGetValue(
+                                associativeTableName,
+                                out string? associativeTableAlias))
+                        {
+                            // this is the first fk definition found for this associative table.
+                            // create an alias for it and store for later lookup.
+                            associativeTableAlias = CreateTableAlias();
+                            associativeTableAndAliases.Add(associativeTableName, associativeTableAlias);
+                            ;
+                        }
+
+                        if (foreignKeyDefinition.Pair.ReferencedTable.Equals(TableName))
+                        {
+                            subQuery.Predicates.AddRange(CreateJoinPredicates(
+                                associativeTableAlias,
+                                foreignKeyDefinition.ReferencingColumns,
+                                TableAlias,
+                                foreignKeyDefinition.ReferencedColumns));
+                        }
+                        else
+                        {
+                            subQuery.Joins.Add(new SqlJoinStructure
+                            (
+                                associativeTableName,
+                                associativeTableAlias,
+                                CreateJoinPredicates(
+                                    associativeTableAlias,
+                                    foreignKeyDefinition.ReferencingColumns,
+                                    subtableAlias,
+                                    foreignKeyDefinition.ReferencedColumns
+                                    ).ToList()
+                            ));
+                        }
+                    }
+                }
             }
         }
 

@@ -561,7 +561,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         && relationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
                             out List<ForeignKeyDefinition>? foreignKeyDefinitions))
                     {
-                        foreach(ForeignKeyDefinition foreignKeyDefinition in foreignKeyDefinitions)
+                        foreach (ForeignKeyDefinition foreignKeyDefinition in foreignKeyDefinitions)
                         {
                             if (foreignKeyDefinition.Pair.ReferencingTable.Equals(TableName)
                                && foreignKeyDefinition.ReferencingColumns.Count() > 0)

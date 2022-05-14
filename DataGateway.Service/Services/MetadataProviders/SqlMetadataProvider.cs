@@ -7,7 +7,6 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.Extensions.Options;
@@ -635,7 +634,7 @@ namespace Azure.DataGateway.Service.Services
                         // it means metadata is missing and we need to find that information from the db.
                         foreach (List<ForeignKeyDefinition> fkDefinitions in foreignKeys)
                         {
-                            foreach(ForeignKeyDefinition fk in fkDefinitions)
+                            foreach (ForeignKeyDefinition fk in fkDefinitions)
                             {
                                 schemaNames.Add(dbObject.SchemaName);
                                 tableNames.Add(fk.Pair.ReferencingTable);
@@ -652,7 +651,7 @@ namespace Azure.DataGateway.Service.Services
         private static void ValidateAllFkHaveBeenInferred(
             IEnumerable<TableDefinition> tablesToBePopulatedWithFK)
         {
-            foreach(TableDefinition tableDefinition in tablesToBePopulatedWithFK)
+            foreach (TableDefinition tableDefinition in tablesToBePopulatedWithFK)
             {
                 foreach ((string sourceEntityName, RelationshipMetadata relationshipData)
                         in tableDefinition.SourceEntityRelationshipMap)

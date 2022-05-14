@@ -38,7 +38,7 @@ namespace Azure.DataGateway.Config
         /// All these entities share this table definition
         /// as their underlying database object 
         /// </summary>
-        public Dictionary<string, RelationshipMetadata> SourceEntityRelationshipMap{ get; set; } = new();
+        public Dictionary<string, RelationshipMetadata> SourceEntityRelationshipMap { get; set; } = new();
 
         public Dictionary<string, AuthorizationRule> HttpVerbs { get; set; } = new();
     }

@@ -374,7 +374,7 @@ namespace Azure.DataGateway.Service.Services
 
             List<DataColumn> primaryKeys = new(dataTable.PrimaryKey);
 
-            if(primaryKeys.Count == 0)
+            if (primaryKeys.Count == 0)
             {
                 throw new DataGatewayException(
                        message: $"Primary key not configured on the given database object {tableName}",

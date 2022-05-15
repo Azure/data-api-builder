@@ -24,7 +24,7 @@ namespace Azure.DataGateway.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams,
             bool isIncrementalUpdate)
-        : base(sqlMetadataProvider,entityName: entityName)
+        : base(sqlMetadataProvider, entityName: entityName)
         {
             UpdateOperations = new();
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();

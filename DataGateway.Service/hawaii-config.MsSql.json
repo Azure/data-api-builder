@@ -51,7 +51,7 @@
       "relationships": {
         "books": {
           "cardinality": "many",
-          "target.entity": "books"
+          "target.entity": "Book"
         }
       }
     },
@@ -72,7 +72,7 @@
       "relationships": {
         "comics": {
           "cardinality": "many",
-          "target.entity": "comics",
+          "target.entity": "Comic",
           "source.fields": [ "categoryName" ],
           "target.fields": [ "categoryName" ]
         }
@@ -93,19 +93,19 @@
       "relationships": {
         "publishers": {
           "cardinality": "one",
-          "target.entity": "publishers"
+          "target.entity": "Publisher"
         },
         "websiteplacement": {
           "cardinality": "one",
-          "target.entity": "book_website_placements"
+          "target.entity": "BookWebsitePlacement"
         },
         "reviews": {
           "cardinality": "many",
-          "target.entity": "reviews"
+          "target.entity": "Review"
         },
         "authors": {
           "cardinality": "many",
-          "target.entity": "authors",
+          "target.entity": "Author",
           "linking.object": "book_author_link",
           "linking.source.fields": [ "book_id" ],
           "linking.target.fields": [ "author_id" ]
@@ -142,7 +142,7 @@
       "relationships": {
         "books": {
           "cardinality": "one",
-          "target.entity": "books"
+          "target.entity": "Book"
         }
       }
     },
@@ -159,7 +159,7 @@
       "relationships": {
         "books": {
           "cardinality": "many",
-          "target.entity": "books",
+          "target.entity": "Book",
           "linking.object": "book_author_link"
         }
       }
@@ -176,7 +176,7 @@
       "relationships": {
         "books": {
           "cardinality": "one",
-          "target.entity": "books"
+          "target.entity": "Book"
         }
       }
     },

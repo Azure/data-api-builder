@@ -247,6 +247,7 @@ query {{
             Assert.AreEqual(id, response.GetProperty("id").GetString());
         }
 
+        [Ignore]
         [TestMethod]
         public async Task GetWithOrderBy()
         {

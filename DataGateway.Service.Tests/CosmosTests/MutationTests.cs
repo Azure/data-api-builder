@@ -128,12 +128,12 @@ mutation {{
             // Run mutation Add planet without any input
             string mutation = $@"
 mutation {{
-    addPlanet {{
+    createPlanet {{
         id
         name
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("addPlanet", mutation, variables: new());
+            JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
             Assert.AreEqual("inputDict is missing", response[0].GetProperty("message").ToString());
         }
 
@@ -144,12 +144,12 @@ mutation {{
             const string name = "test_name";
             string mutation = $@"
 mutation {{
-    addPlanet ( name: ""{name}"") {{
+    createPlanet ( name: ""{name}"") {{
         id
         name
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("addPlanet", mutation, variables: new());
+            JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
             Assert.AreEqual("id field is mandatory", response[0].GetProperty("message").ToString());
         }
 

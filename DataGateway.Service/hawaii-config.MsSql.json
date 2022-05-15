@@ -91,7 +91,7 @@
         }
       ],
       "relationships": {
-        "publisher": {
+        "publishers": {
           "cardinality": "one",
           "target.entity": "publishers"
         },
@@ -140,7 +140,7 @@
         }
       ],
       "relationships": {
-        "book_website_placements": {
+        "books": {
           "cardinality": "one",
           "target.entity": "books"
         }

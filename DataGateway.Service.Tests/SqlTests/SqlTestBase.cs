@@ -373,13 +373,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         /// <summary>
         /// Sends graphQL query through graphQL service, consisting of gql engine processing (resolvers, object serialization)
-        /// returning the result as a JsonDocument
+        /// returning the result as a JsonElement - the root of the JsonDocument.
         /// </summary>
         /// <param name="query"></param>
         /// <param name="graphQLQueryName"></param>
         /// <param name="graphQLController"></param>
         /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
-        /// <returns>JsonDocument</returns>
+        /// <returns>JsonElement</returns>
         protected static async Task<JsonElement> GetGraphQLControllerResultAsync(string query, string graphQLQueryName, GraphQLController graphQLController, Dictionary<string, object> variables = null)
         {
             string graphqlQueryJson = variables == null ?

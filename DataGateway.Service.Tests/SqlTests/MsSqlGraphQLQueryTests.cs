@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -303,14 +304,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "books_by_pk";
             string graphQLQuery = @"query {
                 books_by_pk(id: 1) {
+                  id
+                  websiteplacement {
                     id
-                    websiteplacement {
-                        id
-                        price
-                        book {
-                            id
-                        }
+                    price
+                    book {
+                      id
                     }
+                  }
                 }
             }";
 
@@ -371,91 +372,34 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQuery = @"{
               books(first: 100) {
                 items {
-                    title
-                    publishers {
-                      name
-                      books(first: 100) {
-                        items {
-                            title
-                            publishers {
-                            name
-                            books(first: 100) {
-                                items {
-                                    title
-                                    publishers {
-                                    name
-                                    }
-                                }
+                  title
+                  publishers {
+                    name
+                    books(first: 100) {
+                      items {
+                        title
+                        publishers {
+                          name
+                          books(first: 100) {
+                            items {
+                              title
+                              publishers {
+                                name
+                              }
                             }
                           }
-                       }
+                        }
+                      }
                     }
                   }
                 }
               }
             }";
 
-            string msSqlQuery = @"
-                SELECT TOP 100 [table0].[title] AS [title],
-                    JSON_QUERY([table1_subq].[data]) AS [publisher]
-                FROM [books] AS [table0]
-                OUTER APPLY (
-                    SELECT TOP 1 [table1].[name] AS [name],
-                        JSON_QUERY(COALESCE([table2_subq].[data], '[]')) AS [books]
-                    FROM [publishers] AS [table1]
-                    OUTER APPLY (
-                        SELECT TOP 100 [table2].[title] AS [title],
-                            JSON_QUERY([table3_subq].[data]) AS [publisher]
-                        FROM [books] AS [table2]
-                        OUTER APPLY (
-                            SELECT TOP 1 [table3].[name] AS [name],
-                                JSON_QUERY(COALESCE([table4_subq].[data], '[]')) AS [books]
-                            FROM [publishers] AS [table3]
-                            OUTER APPLY (
-                                SELECT TOP 100 [table4].[title] AS [title],
-                                    JSON_QUERY([table5_subq].[data]) AS [publisher]
-                                FROM [books] AS [table4]
-                                OUTER APPLY (
-                                    SELECT TOP 1 [table5].[name] AS [name]
-                                    FROM [publishers] AS [table5]
-                                    WHERE [table4].[publisher_id] = [table5].[id]
-                                    ORDER BY [id]
-                                    FOR JSON PATH,
-                                        INCLUDE_NULL_VALUES,
-                                        WITHOUT_ARRAY_WRAPPER
-                                    ) AS [table5_subq]([data])
-                                WHERE [table3].[id] = [table4].[publisher_id]
-                                ORDER BY [id]
-                                FOR JSON PATH,
-                                    INCLUDE_NULL_VALUES
-                                ) AS [table4_subq]([data])
-                            WHERE [table2].[publisher_id] = [table3].[id]
-                            ORDER BY [id]
-                            FOR JSON PATH,
-                                INCLUDE_NULL_VALUES,
-                                WITHOUT_ARRAY_WRAPPER
-                            ) AS [table3_subq]([data])
-                        WHERE [table1].[id] = [table2].[publisher_id]
-                        ORDER BY [id]
-                        FOR JSON PATH,
-                            INCLUDE_NULL_VALUES
-                        ) AS [table2_subq]([data])
-                    WHERE [table0].[publisher_id] = [table1].[id]
-                    ORDER BY [id]
-                    FOR JSON PATH,
-                        INCLUDE_NULL_VALUES,
-                        WITHOUT_ARRAY_WRAPPER
-                    ) AS [table1_subq]([data])
-                WHERE 1 = 1
-                ORDER BY [id]
-                FOR JSON PATH,
-                    INCLUDE_NULL_VALUES
-            ";
-
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            // Too big of a result to check for the exact contents.
+            // For correctness of results, we use different tests.
+            // This test is only to validate we can handle deeply nested graphql queries.
+            await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
         }
 
         /// <summary>
@@ -473,11 +417,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         items {
             title
             authors(first: 100) {
-                name
-                books(first: 100) {
-                    title
-                    authors(first: 100) {
-                        name
+                items {
+                    name
+                    books(first: 100) {
+                        items {
+                            title
+                            authors(first: 100) {
+                               items {
+                                    name
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -485,49 +435,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     }
 }";
 
-            string msSqlQuery = @"
-                SELECT TOP 100 [table0].[title] AS [title],
-                    JSON_QUERY(COALESCE([table6_subq].[data], '[]')) AS [authors]
-                FROM [books] AS [table0]
-                OUTER APPLY (
-                    SELECT TOP 100 [table6].[name] AS [name],
-                        JSON_QUERY(COALESCE([table7_subq].[data], '[]')) AS [books]
-                    FROM [authors] AS [table6]
-                    INNER JOIN [book_author_link] AS [table11] ON [table11].[author_id] = [table6].[id]
-                    OUTER APPLY (
-                        SELECT TOP 100 [table7].[title] AS [title],
-                            JSON_QUERY(COALESCE([table8_subq].[data], '[]')) AS [authors]
-                        FROM [books] AS [table7]
-                        INNER JOIN [book_author_link] AS [table10] ON [table10].[book_id] = [table7].[id]
-                        OUTER APPLY (
-                            SELECT TOP 100 [table8].[name] AS [name]
-                            FROM [authors] AS [table8]
-                            INNER JOIN [book_author_link] AS [table9] ON [table9].[author_id] = [table8].[id]
-                            WHERE [table7].[id] = [table9].[book_id]
-                            ORDER BY [id]
-                            FOR JSON PATH,
-                                INCLUDE_NULL_VALUES
-                            ) AS [table8_subq]([data])
-                        WHERE [table6].[id] = [table10].[author_id]
-                        ORDER BY [id]
-                        FOR JSON PATH,
-                            INCLUDE_NULL_VALUES
-                        ) AS [table7_subq]([data])
-                    WHERE [table0].[id] = [table11].[book_id]
-                    ORDER BY [id]
-                    FOR JSON PATH,
-                        INCLUDE_NULL_VALUES
-                    ) AS [table6_subq]([data])
-                WHERE 1 = 1
-                ORDER BY [id]
-                FOR JSON PATH,
-                    INCLUDE_NULL_VALUES
-            ";
-
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
         }
 
         /// <summary>
@@ -545,11 +453,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     items {
                         title
                         authors(first: $first) {
-                            name
-                            books(first: $first) {
-                                title
-                                authors(first: $first) {
-                                    name
+                            items {
+                                name
+                                books(first: $first) {
+                                    items {
+                                        title
+                                        authors(first: $first) {
+                                          items {
+                                            name
+                                          }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -557,49 +471,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
-            string msSqlQuery = @"
-                SELECT TOP 100 [table0].[title] AS [title],
-                    JSON_QUERY(COALESCE([table6_subq].[data], '[]')) AS [authors]
-                FROM [books] AS [table0]
-                OUTER APPLY (
-                    SELECT TOP 100 [table6].[name] AS [name],
-                        JSON_QUERY(COALESCE([table7_subq].[data], '[]')) AS [books]
-                    FROM [authors] AS [table6]
-                    INNER JOIN [book_author_link] AS [table11] ON [table11].[author_id] = [table6].[id]
-                    OUTER APPLY (
-                        SELECT TOP 100 [table7].[title] AS [title],
-                            JSON_QUERY(COALESCE([table8_subq].[data], '[]')) AS [authors]
-                        FROM [books] AS [table7]
-                        INNER JOIN [book_author_link] AS [table10] ON [table10].[book_id] = [table7].[id]
-                        OUTER APPLY (
-                            SELECT TOP 100 [table8].[name] AS [name]
-                            FROM [authors] AS [table8]
-                            INNER JOIN [book_author_link] AS [table9] ON [table9].[author_id] = [table8].[id]
-                            WHERE [table7].[id] = [table9].[book_id]
-                            ORDER BY [id]
-                            FOR JSON PATH,
-                                INCLUDE_NULL_VALUES
-                            ) AS [table8_subq]([data])
-                        WHERE [table6].[id] = [table10].[author_id]
-                        ORDER BY [id]
-                        FOR JSON PATH,
-                            INCLUDE_NULL_VALUES
-                        ) AS [table7_subq]([data])
-                    WHERE [table0].[id] = [table11].[book_id]
-                    ORDER BY [id]
-                    FOR JSON PATH,
-                        INCLUDE_NULL_VALUES
-                    ) AS [table6_subq]([data])
-                WHERE 1 = 1
-                ORDER BY [id]
-                FOR JSON PATH,
-                    INCLUDE_NULL_VALUES
-            ";
+            await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController,
+                new() { { "first", 100 } });
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController, new() { { "first", 100 } });
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
         [TestMethod]

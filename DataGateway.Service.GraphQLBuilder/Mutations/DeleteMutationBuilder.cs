@@ -18,7 +18,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             }
             else
             {
-                description = "The ID of the item being deleted."
+                description = "The ID of the item being deleted.";
             }
 
             List<InputValueDefinitionNode> inputValues = new();

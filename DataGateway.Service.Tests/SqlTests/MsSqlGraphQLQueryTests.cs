@@ -103,65 +103,192 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         id
                         title
                         publisher_id
-                        publisher {
+                        publishers {
                             id
                             name
                         }
                         reviews(first: 100) {
-                            id
-                            content
+                            items {
+                                id
+                                content
+                            }
                         }
                         authors(first: 100) {
-                            id
-                            name
+                            items {
+                                id
+                                name
+                            }
                         }
                     }
                 }
             }";
-            string msSqlQuery = @"
-                SELECT TOP 100 [table0].[id] AS [id],
-                    [table0].[title] AS [title],
-                    [table0].[publisher_id] AS [publisher_id],
-                    JSON_QUERY([table1_subq].[data]) AS [publisher],
-                    JSON_QUERY(COALESCE([table2_subq].[data], '[]')) AS [reviews],
-                    JSON_QUERY(COALESCE([table3_subq].[data], '[]')) AS [authors]
-                FROM [books] AS [table0]
-                OUTER APPLY (
-                    SELECT TOP 1 [table1].[id] AS [id],
-                        [table1].[name] AS [name]
-                    FROM [publishers] AS [table1]
-                    WHERE [table0].[publisher_id] = [table1].[id]
-                    ORDER BY [id]
-                    FOR JSON PATH,
-                        INCLUDE_NULL_VALUES,
-                        WITHOUT_ARRAY_WRAPPER
-                    ) AS [table1_subq]([data])
-                OUTER APPLY (
-                    SELECT TOP 100 [table2].[id] AS [id],
-                        [table2].[content] AS [content]
-                    FROM [reviews] AS [table2]
-                    WHERE [table0].[id] = [table2].[book_id]
-                    ORDER BY [id]
-                    FOR JSON PATH,
-                        INCLUDE_NULL_VALUES
-                    ) AS [table2_subq]([data])
-                OUTER APPLY (
-                    SELECT TOP 100 [table3].[id] AS [id],
-                        [table3].[name] AS [name]
-                    FROM [authors] AS [table3]
-                    INNER JOIN [book_author_link] AS [table4] ON [table4].[author_id] = [table3].[id]
-                    WHERE [table0].[id] = [table4].[book_id]
-                    ORDER BY [id]
-                    FOR JSON PATH,
-                        INCLUDE_NULL_VALUES
-                    ) AS [table3_subq]([data])
-                WHERE 1 = 1
-                ORDER BY [id]
-                FOR JSON PATH,
-                    INCLUDE_NULL_VALUES";
+
+            string expected = @"
+[
+  {
+    ""id"": 1,
+    ""title"": ""Awesome book"",
+    ""publisher_id"": 1234,
+    ""publishers"": {
+                ""id"": 1234,
+      ""name"": ""Big Company""
+    },
+    ""reviews"": {
+                ""items"": [
+                  {
+                    ""id"": 567,
+          ""content"": ""Indeed a great book""
+                  },
+        {
+                    ""id"": 568,
+          ""content"": ""I loved it""
+        },
+        {
+                    ""id"": 569,
+          ""content"": ""best book I read in years""
+        }
+      ]
+    },
+    ""authors"": {
+                ""items"": [
+                  {
+                    ""id"": 123,
+          ""name"": ""Jelte""
+                  }
+      ]
+    }
+        },
+  {
+    ""id"": 2,
+    ""title"": ""Also Awesome book"",
+    ""publisher_id"": 1234,
+    ""publishers"": {
+      ""id"": 1234,
+      ""name"": ""Big Company""
+    },
+    ""reviews"": {
+      ""items"": []
+    },
+    ""authors"": {
+      ""items"": [
+        {
+          ""id"": 124,
+          ""name"": ""Aniruddh""
+        }
+      ]
+    }
+  },
+  {
+    ""id"": 3,
+    ""title"": ""Great wall of china explained"",
+    ""publisher_id"": 2345,
+    ""publishers"": {
+        ""id"": 2345,
+      ""name"": ""Small Town Publisher""
+    },
+    ""reviews"": {
+        ""items"": []
+    },
+    ""authors"": {
+        ""items"": [
+          {
+            ""id"": 123,
+          ""name"": ""Jelte""
+          },
+        {
+            ""id"": 124,
+          ""name"": ""Aniruddh""
+        }
+      ]
+    }
+},
+  {
+    ""id"": 4,
+    ""title"": ""US history in a nutshell"",
+    ""publisher_id"": 2345,
+    ""publishers"": {
+        ""id"": 2345,
+      ""name"": ""Small Town Publisher""
+    },
+    ""reviews"": {
+        ""items"": []
+    },
+    ""authors"": {
+        ""items"": [
+          {
+            ""id"": 123,
+          ""name"": ""Jelte""
+          },
+        {
+            ""id"": 124,
+          ""name"": ""Aniruddh""
+        }
+      ]
+    }
+},
+  {
+    ""id"": 5,
+    ""title"": ""Chernobyl Diaries"",
+    ""publisher_id"": 2323,
+    ""publishers"": {
+        ""id"": 2323,
+      ""name"": ""TBD Publishing One""
+    },
+    ""reviews"": {
+        ""items"": []
+    },
+    ""authors"": {
+        ""items"": []
+    }
+},
+  {
+    ""id"": 6,
+    ""title"": ""The Palace Door"",
+    ""publisher_id"": 2324,
+    ""publishers"": {
+        ""id"": 2324,
+      ""name"": ""TBD Publishing Two Ltd""
+    },
+    ""reviews"": {
+        ""items"": []
+    },
+    ""authors"": {
+        ""items"": []
+    }
+},
+  {
+    ""id"": 7,
+    ""title"": ""The Groovy Bar"",
+    ""publisher_id"": 2324,
+    ""publishers"": {
+        ""id"": 2324,
+      ""name"": ""TBD Publishing Two Ltd""
+    },
+    ""reviews"": {
+        ""items"": []
+    },
+    ""authors"": {
+        ""items"": []
+    }
+},
+  {
+    ""id"": 8,
+    ""title"": ""Time to Eat"",
+    ""publisher_id"": 2324,
+    ""publishers"": {
+        ""id"": 2324,
+      ""name"": ""TBD Publishing Two Ltd""
+    },
+    ""reviews"": {
+        ""items"": []
+    },
+    ""authors"": {
+        ""items"": []
+    }
+}
+]";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
@@ -173,11 +300,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task OneToOneJoinQuery()
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "books_by_pk";
             string graphQLQuery = @"query {
-                books {
+                books_by_pk(id: 1) {
                     id
-                    website_placement {
+                    websiteplacement {
                         id
                         price
                         book {
@@ -188,36 +315,45 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }";
 
             string msSqlQuery = @"
-                SELECT TOP 100 [table0].[id] AS [id],
-                    JSON_QUERY([table1_subq].[data]) AS [website_placement]
-                FROM [books] AS [table0]
-                OUTER APPLY (
-                    SELECT TOP 1 [table1].[id] AS [id],
-                        [table1].[price] AS [price],
-                        JSON_QUERY([table2_subq].[data]) AS [book]
-                    FROM [book_website_placements] AS [table1]
-                    OUTER APPLY (
-                        SELECT TOP 1 [table2].[id] AS [id]
-                        FROM [books] AS [table2]
-                        WHERE [table1].[book_id] = [table2].[id]
-                        ORDER BY [table2].[id]
-                        FOR JSON PATH,
-                            INCLUDE_NULL_VALUES,
-                            WITHOUT_ARRAY_WRAPPER
-                        ) AS [table2_subq]([data])
-                    WHERE [table0].[id] = [table1].[book_id]
-                    ORDER BY [table1].[id]
-                    FOR JSON PATH,
-                        INCLUDE_NULL_VALUES,
-                        WITHOUT_ARRAY_WRAPPER
-                    ) AS [table1_subq]([data])
-                WHERE 1 = 1
-                ORDER BY [table0].[id]
-                FOR JSON PATH,
-                    INCLUDE_NULL_VALUES
-            ";
+                SELECT
+                  TOP 1 [table0].[id] AS [id],
+                  JSON_QUERY ([table1_subq].[data]) AS [websiteplacement]
+                FROM
+                  [books] AS [table0]
+                  OUTER APPLY (
+                    SELECT
+                      TOP 1 [table1].[id] AS [id],
+                      [table1].[price] AS [price],
+                      JSON_QUERY ([table2_subq].[data]) AS [book]
+                    FROM
+                      [book_website_placements] AS [table1]
+                      OUTER APPLY (
+                        SELECT
+                          TOP 1 [table2].[id] AS [id]
+                        FROM
+                          [books] AS [table2]
+                        WHERE
+                          [table1].[book_id] = [table2].[id]
+                        ORDER BY
+                          [table2].[id] Asc FOR JSON PATH,
+                          INCLUDE_NULL_VALUES,
+                          WITHOUT_ARRAY_WRAPPER
+                      ) AS [table2_subq]([data])
+                    WHERE
+                      [table1].[book_id] = [table0].[id]
+                    ORDER BY
+                      [table1].[id] Asc FOR JSON PATH,
+                      INCLUDE_NULL_VALUES,
+                      WITHOUT_ARRAY_WRAPPER
+                  ) AS [table1_subq]([data])
+                WHERE
+                  [table0].[id] = 1
+                ORDER BY
+                  [table0].[id] Asc FOR JSON PATH,
+                  INCLUDE_NULL_VALUES,
+                  WITHOUT_ARRAY_WRAPPER";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string actual = await base.GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(msSqlQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
@@ -236,19 +372,23 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
               books(first: 100) {
                 items {
                     title
-                    publisher {
+                    publishers {
                       name
                       books(first: 100) {
-                        title
-                        publisher {
-                          name
-                          books(first: 100) {
+                        items {
                             title
-                            publisher {
-                              name
+                            publishers {
+                            name
+                            books(first: 100) {
+                                items {
+                                    title
+                                    publishers {
+                                    name
+                                    }
+                                }
                             }
                           }
-                        }
+                       }
                     }
                   }
                 }
@@ -586,7 +726,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 books(_filter: {id: {gte: 1} and: [{id: {lte: 4}}]}) {
                     items {
                         id
-                        publisher {
+                        publishers {
                             books(first: 3, _filterOData: ""id ne 2"") {
                                 items {
                                     id
@@ -597,40 +737,65 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
-            string msSqlQuery = @"
-                SELECT TOP 100 [table0].[id] AS [id],
-                    JSON_QUERY([table1_subq].[data]) AS [publisher]
-                FROM [books] AS [table0]
-                OUTER APPLY (
-                    SELECT TOP 1 JSON_QUERY(COALESCE([table2_subq].[data], '[]')) AS [books]
-                    FROM [publishers] AS [table1]
-                    OUTER APPLY (
-                        SELECT TOP 3 [table2].[id] AS [id]
-                        FROM [books] AS [table2]
-                        WHERE (id != 2)
-                            AND [table1].[id] = [table2].[publisher_id]
-                        ORDER BY [table2].[id]
-                        FOR JSON PATH,
-                            INCLUDE_NULL_VALUES
-                        ) AS [table2_subq]([data])
-                    WHERE [table0].[publisher_id] = [table1].[id]
-                    ORDER BY [table1].[id]
-                    FOR JSON PATH,
-                        INCLUDE_NULL_VALUES,
-                        WITHOUT_ARRAY_WRAPPER
-                    ) AS [table1_subq]([data])
-                WHERE (
-                        (id >= 1)
-                        AND (id <= 4)
-                        )
-                ORDER BY [table0].[id]
-                FOR JSON PATH,
-                    INCLUDE_NULL_VALUES
-            ";
+            string expected = @"
+[
+  {
+    ""id"": 1,
+    ""publishers"": {
+                ""books"": {
+                    ""items"": [
+                      {
+                        ""id"": 1
+                      }
+        ]
+      }
+            }
+        },
+  {
+    ""id"": 2,
+    ""publishers"": {
+      ""books"": {
+        ""items"": [
+          {
+            ""id"": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    ""id"": 3,
+    ""publishers"": {
+        ""books"": {
+            ""items"": [
+              {
+                ""id"": 3
+              },
+          {
+                ""id"": 4
+          }
+        ]
+      }
+    }
+},
+  {
+    ""id"": 4,
+    ""publishers"": {
+        ""books"": {
+            ""items"": [
+              {
+                ""id"": 3
+              },
+          {
+                ""id"": 4
+          }
+        ]
+      }
+    }
+}
+]";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
-
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 

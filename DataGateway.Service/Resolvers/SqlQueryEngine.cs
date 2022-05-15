@@ -154,7 +154,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 // Make sure to get the complete json string in case of large document.
                 jsonDocument =
-                    JsonSerializer.Deserialize <JsonDocument>(
+                    JsonSerializer.Deserialize<JsonDocument>(
                         await GetJsonStringFromDbReader(dbDataReader, _queryExecutor));
             }
             else

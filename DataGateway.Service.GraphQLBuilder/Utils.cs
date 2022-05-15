@@ -42,7 +42,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
                     node.Fields.FirstOrDefault(f => f.Name.Value == "id");
                 if (fieldDefinitionNode is not null)
                 {
-                    fieldDefinitionNodes = new [] { fieldDefinitionNode };
+                    fieldDefinitionNodes = new[] { fieldDefinitionNode };
                 }
             }
 

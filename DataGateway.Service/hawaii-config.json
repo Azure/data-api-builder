@@ -31,7 +31,7 @@
     }
   },
   "entities": {
-    "publishers": {
+    "Publisher": {
       "source": "publishers",
       "rest": true,
       "graphql": true,
@@ -52,7 +52,7 @@
         }
       }
     },
-    "stocks": {
+    "Stock": {
       "source": "stocks",
       "rest": true,
       "graphql": true,
@@ -75,7 +75,7 @@
         }
       }
     },
-    "books": {
+    "Book": {
       "source": "books",
       "permissions": [
         {
@@ -109,7 +109,7 @@
         }
       }
     },
-    "book_website_placements": {
+    "BookWebsitePlacement": {
       "source": "book_website_placements",
       "rest": true,
       "graphql": true,
@@ -143,7 +143,7 @@
         }
       }
     },
-    "authors": {
+    "Author": {
       "source": "authors",
       "rest": true,
       "graphql": true,
@@ -161,7 +161,7 @@
         }
       }
     },
-    "reviews": {
+    "Review": {
       "source": "reviews",
       "rest": true,
       "permissions": [
@@ -177,8 +177,8 @@
         }
       }
     },
-    "magazines": {
-      "source": "magazines",
+    "Magazine": {
+      "source": "foo.magazines",
       "graphql": true,
       "permissions": [
         {
@@ -199,7 +199,7 @@
         }
       ]
     },
-    "comics": {
+    "Comic": {
       "source": "comics",
       "rest": true,
       "graphql": false,
@@ -214,7 +214,7 @@
         }
       ]
     },
-    "brokers": {
+    "Broker": {
       "source": "brokers",
       "graphql": false,
       "permissions": [
@@ -224,7 +224,7 @@
         }
       ]
     },
-    "website_users": {
+    "WebsiteUser": {
       "source": "website_users",
       "rest": false,
       "permissions": []

@@ -65,6 +65,9 @@ type Planet @model {
             Client = _clientProvider.Client;
         }
 
+        private static string[] _planets = { "Earth", "Mars", "Jupiter",
+            "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial"};
+
         /// <summary>
         /// Creates items on the specified container
         /// </summary>
@@ -78,7 +81,7 @@ type Planet @model {
             {
                 string uid = Guid.NewGuid().ToString();
                 idList.Add(uid);
-                dynamic sourceItem = TestHelper.GetItem(uid);
+                dynamic sourceItem = TestHelper.GetItem(uid, _planets[i % (_planets.Length)], i);
                 Client.GetContainer(dbName, containerName)
                     .CreateItemAsync(sourceItem, new PartitionKey(uid)).Wait();
             }
@@ -172,5 +175,28 @@ type Planet @model {
 
             return graphQLResult.GetProperty("data").GetProperty(queryName);
         }
+
+        internal static async Task<JsonDocument> ExecuteCosmosRequestAsync(string query, int pagesize, string continuationToken, string containerName)
+        {
+            QueryRequestOptions options = new()
+            {
+                MaxItemCount = pagesize,
+            };
+            Container c = Client.GetContainer(DATABASE_NAME, containerName);
+            QueryDefinition queryDef = new(query);
+            FeedIterator<JObject> resultSetIterator = c.GetItemQueryIterator<JObject>(queryDef, continuationToken, options);
+            FeedResponse<JObject> firstPage = await resultSetIterator.ReadNextAsync();
+            JArray jarray = new();
+            IEnumerator<JObject> enumerator = firstPage.GetEnumerator();
+            while (enumerator.MoveNext())
+            {
+                JObject item = enumerator.Current;
+                jarray.Add(item);
+            }
+
+            return JsonDocument.Parse(jarray.ToString().Trim());
+
+        }
+
     }
 }

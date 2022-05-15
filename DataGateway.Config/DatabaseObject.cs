@@ -15,8 +15,26 @@ namespace Azure.DataGateway.Config
         {
             get
             {
-                return $"{SchemaName}.{Name}";
+                return string.IsNullOrEmpty(SchemaName) ? Name : $"{SchemaName}.{Name}";
             }
+        }
+
+        public override bool Equals(object? other)
+        {
+            return Equals(other as DatabaseObject);
+        }
+
+        public bool Equals(DatabaseObject? other)
+        {
+            return other != null &&
+                   SchemaName.Equals(other.SchemaName) &&
+                   Name.Equals(other.Name);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(
+                    SchemaName, Name);
         }
     }
 
@@ -114,16 +132,16 @@ namespace Azure.DataGateway.Config
         public RelationShipPair() { }
 
         public RelationShipPair(
-            string referencingTable,
-            string referencedTable)
+            DatabaseObject referencingDbObject,
+            DatabaseObject referencedDbObject)
         {
-            ReferencingTable = referencingTable;
-            ReferencedTable = referencedTable;
+            ReferencingDbObject = referencingDbObject;
+            ReferencedDbObject = referencedDbObject;
         }
 
-        public string ReferencingTable { get; set; } = string.Empty;
+        public DatabaseObject ReferencingDbObject { get; set; } = new();
 
-        public string ReferencedTable { get; set; } = string.Empty;
+        public DatabaseObject ReferencedDbObject { get; set; } = new();
 
         public override bool Equals(object? other)
         {
@@ -133,14 +151,14 @@ namespace Azure.DataGateway.Config
         public bool Equals(RelationShipPair? other)
         {
             return other != null &&
-                   ReferencedTable.Equals(other.ReferencedTable) &&
-                   ReferencingTable.Equals(other.ReferencingTable);
+                   ReferencedDbObject.Equals(other.ReferencedDbObject) &&
+                   ReferencingDbObject.Equals(other.ReferencingDbObject);
         }
 
         public override int GetHashCode()
         {
             return HashCode.Combine(
-                    ReferencedTable, ReferencingTable);
+                    ReferencedDbObject, ReferencingDbObject);
         }
     }
 

@@ -12,6 +12,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     [TestClass, TestCategory(TestCategory.MYSQL)]
     public class MySqlGQLFilterTests : GraphQLFilterTestBase
     {
+        protected static string DEFAULT_SCHEMA = string.Empty;
+
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
         /// MSTest decorator.
@@ -34,7 +36,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
-        protected override string MakeQueryOn(string table, List<string> queriedColumns, string predicate, List<string> pkColumns = null)
+        /// <summary>
+        /// Gets the default schema for
+        /// MySql.
+        /// </summary>
+        /// <returns></returns>
+        protected override string GetDefaultSchema()
+        {
+            return DEFAULT_SCHEMA;
+        }
+
+        protected override string MakeQueryOn(string table, List<string> queriedColumns, string predicate, string schema, List<string> pkColumns)
         {
             if (pkColumns == null)
             {

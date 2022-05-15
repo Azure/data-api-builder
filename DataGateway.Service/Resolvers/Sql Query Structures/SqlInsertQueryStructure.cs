@@ -30,10 +30,10 @@ namespace Azure.DataGateway.Service.Resolvers
         public List<string> ReturnColumns { get; }
 
         public SqlInsertStructure(
-            string tableName,
+            string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams)
-        : base(sqlMetadataProvider, tableName: tableName)
+        : base(sqlMetadataProvider, entityName: entityName)
         {
             InsertColumns = new();
             Values = new();

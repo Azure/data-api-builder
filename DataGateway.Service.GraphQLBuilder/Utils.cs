@@ -31,23 +31,23 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
 
         public static IEnumerable<FieldDefinitionNode> FindPrimaryKeyFields(ObjectTypeDefinitionNode node)
         {
-            IEnumerable<FieldDefinitionNode>? fieldDefinitionNodes =
-                node.Fields.Where(f => f.Directives.Any(d => d.Name.Value == PrimaryKeyDirectiveType.DirectiveName));
+            List<FieldDefinitionNode> fieldDefinitionNodes =
+                new(node.Fields.Where(f => f.Directives.Any(d => d.Name.Value == PrimaryKeyDirectiveType.DirectiveName)));
 
             // By convention we look for a `@primaryKey` directive, if that didn't exist
             // fallback to using an expected field name on the GraphQL object
-            if (fieldDefinitionNodes is null)
+            if (fieldDefinitionNodes.Count == 0)
             {
                 FieldDefinitionNode? fieldDefinitionNode =
                     node.Fields.FirstOrDefault(f => f.Name.Value == "id");
                 if (fieldDefinitionNode is not null)
                 {
-                    fieldDefinitionNodes = new[] { fieldDefinitionNode };
+                    fieldDefinitionNodes.Add(fieldDefinitionNode);
                 }
             }
 
             // Nothing explicitly defined nor could we find anything using our conventions, fail out
-            if (fieldDefinitionNodes is null)
+            if (fieldDefinitionNodes.Count == 0)
             {
                 // TODO: Proper exception type
                 throw new Exception("No primary key defined and conventions couldn't locate a fallback");

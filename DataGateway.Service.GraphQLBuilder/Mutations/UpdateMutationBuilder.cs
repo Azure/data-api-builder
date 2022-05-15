@@ -170,13 +170,6 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             }
 
             List<InputValueDefinitionNode> inputValues = new();
-            inputValues.Add(new InputValueDefinitionNode(
-                    location: null,
-                    new NameNode(INPUT_ARGUMENT_NAME),
-                    new StringValueNode($"Input representing all the fields for updating {name}"),
-                    new NonNullTypeNode(new NamedTypeNode(input.Name)),
-                    defaultValue: null,
-                    new List<DirectiveNode>()));
             foreach (FieldDefinitionNode idField in idFields)
             {
                 inputValues.Add(new InputValueDefinitionNode(
@@ -187,6 +180,14 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                     defaultValue: null,
                     new List<DirectiveNode>()));
             }
+
+            inputValues.Add(new InputValueDefinitionNode(
+                    location: null,
+                    new NameNode(INPUT_ARGUMENT_NAME),
+                    new StringValueNode($"Input representing all the fields for updating {name}"),
+                    new NonNullTypeNode(new NamedTypeNode(input.Name)),
+                    defaultValue: null,
+                    new List<DirectiveNode>()));
 
             return new(
                 location: null,

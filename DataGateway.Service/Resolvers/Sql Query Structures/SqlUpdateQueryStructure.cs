@@ -24,7 +24,7 @@ namespace Azure.DataGateway.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams,
             bool isIncrementalUpdate)
-        : base(sqlMetadataProvider, tableName: tableName)
+        : base(sqlMetadataProvider,entityName: entityName)
         {
             UpdateOperations = new();
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
@@ -33,30 +33,7 @@ namespace Azure.DataGateway.Service.Resolvers
             List<string> columns = tableDefinition.Columns.Keys.ToList();
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
-                Predicate predicate;
-                if (param.Value == null && !tableDefinition.Columns[param.Key].IsNullable)
-                {
-                    throw new DataGatewayException(
-                        $"Cannot set argument {param.Key} to null.",
-                        HttpStatusCode.BadRequest,
-                        DataGatewayException.SubStatusCodes.BadRequest);
-                }
-                else if (param.Value == null)
-                {
-                    predicate = new(
-                        new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, param.Key)),
-                        PredicateOperation.Equal,
-                        new PredicateOperand($"@{MakeParamWithValue(null)}")
-                    );
-                }
-                else
-                {
-                    predicate = new(
-                        new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, param.Key)),
-                        PredicateOperation.Equal,
-                        new PredicateOperand($"@{MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, param.Key))}")
-                    );
-                }
+                Predicate predicate = CreatePredicateForParam(param);
 
                 // primary keys used as predicates
                 if (primaryKeys.Contains(param.Key))
@@ -91,10 +68,10 @@ namespace Azure.DataGateway.Service.Resolvers
         /// as one of the mutation params.
         /// </summary>
         public SqlUpdateStructure(
-            string tableName,
+            string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams)
-            : base(sqlMetadataProvider, tableName: tableName)
+            : base(sqlMetadataProvider, entityName: entityName)
         {
             UpdateOperations = new();
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
@@ -106,11 +83,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 // primary keys used as predicates
                 if (primaryKeys.Contains(param.Key))
                 {
-                    Predicates.Add(new(
-                        new PredicateOperand(new Column(null, param.Key)),
-                        PredicateOperation.Equal,
-                        new PredicateOperand($"@{MakeParamWithValue(param.Value)}")
-                    ));
+                    Predicates.Add(CreatePredicateForParam(param));
                 }
                 else // Unpack the input argument type as columns to update
                 if (param.Key == UpdateMutationBuilder.INPUT_ARGUMENT_NAME)
@@ -122,11 +95,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     {
                         if (columns.Contains(field.Key))
                         {
-                            UpdateOperations.Add(new(
-                                new PredicateOperand(new Column(null, field.Key)),
-                                PredicateOperation.Equal,
-                                new PredicateOperand($"@{MakeParamWithValue(field.Value)}")
-                            ));
+                            UpdateOperations.Add(CreatePredicateForParam(param));
                         }
                     }
                 }
@@ -139,6 +108,38 @@ namespace Azure.DataGateway.Service.Resolvers
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
+        }
+
+        private Predicate CreatePredicateForParam(KeyValuePair<string, object?> param)
+        {
+            TableDefinition tableDefinition = GetUnderlyingTableDefinition();
+            Predicate predicate;
+            if (param.Value == null && !tableDefinition.Columns[param.Key].IsNullable)
+            {
+                throw new DataGatewayException(
+                    $"Cannot set argument {param.Key} to null.",
+                    HttpStatusCode.BadRequest,
+                    DataGatewayException.SubStatusCodes.BadRequest);
+            }
+            else if (param.Value == null)
+            {
+                predicate = new(
+                    new PredicateOperand(
+                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, param.Key)),
+                    PredicateOperation.Equal,
+                    new PredicateOperand($"@{MakeParamWithValue(null)}")
+                );
+            }
+            else
+            {
+                predicate = new(
+                    new PredicateOperand(
+                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, param.Key)),
+                    PredicateOperation.Equal,
+                    new PredicateOperand($"@{MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, param.Key))}"));
+            }
+
+            return predicate;
         }
     }
 }

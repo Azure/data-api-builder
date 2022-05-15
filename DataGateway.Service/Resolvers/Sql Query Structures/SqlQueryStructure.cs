@@ -329,7 +329,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata));
 
-                if (PaginationMetadata.RequestedAfterToken)
+                if (PaginationMetadata.RequestedEndCursor)
                 {
                     // add the primary keys in the selected columns if they are missing
                     IEnumerable<string> extraNeededColumns = PrimaryKey().Except(Columns.Select(c => c.Label));
@@ -516,7 +516,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         PaginationMetadata.RequestedItems = true;
                         break;
                     case QueryBuilder.PAGINATION_TOKEN_FIELD_NAME:
-                        PaginationMetadata.RequestedAfterToken = true;
+                        PaginationMetadata.RequestedEndCursor = true;
                         break;
                     case QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME:
                         PaginationMetadata.RequestedHasNextPage = true;
@@ -629,7 +629,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 && relationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
                     out List<ForeignKeyDefinition>? foreignKeyDefinitions))
             {
-                Dictionary<string, string> associativeTableAndAliases = new();
+                Dictionary<DatabaseObject, string> associativeTableAndAliases = new();
                 // For One-One and One-Many, not all fk definitions would be valid
                 // but at least 1 will be.
                 // Identify the side of the relationship first, then check if its valid
@@ -639,7 +639,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     // First identify which side of the relationship, this fk definition
                     // is looking at.
-                    if (foreignKeyDefinition.Pair.ReferencingDbObject.Equals(TableName))
+                    if (foreignKeyDefinition.Pair.ReferencingDbObject.Equals(DatabaseObject))
                     {
                         // Case where fk in parent entity references the nested entity.
                         // Verify this is a valid fk definition before adding the join predicate.
@@ -653,7 +653,7 @@ namespace Azure.DataGateway.Service.Resolvers
                                 foreignKeyDefinition.ReferencedColumns));
                         }
                     }
-                    else if (foreignKeyDefinition.Pair.ReferencingDbObject.Equals(subQuery.TableName))
+                    else if (foreignKeyDefinition.Pair.ReferencingDbObject.Equals(subQuery.DatabaseObject))
                     {
                         // Case where fk in nested entity references the parent entity.
                         if (foreignKeyDefinition.ReferencingColumns.Count() > 0
@@ -668,17 +668,17 @@ namespace Azure.DataGateway.Service.Resolvers
                     }
                     else
                     {
-                        string associativeTableName =
+                        DatabaseObject associativeTableDbObject =
                             foreignKeyDefinition.Pair.ReferencingDbObject;
                         // Case when the linking object is the referencing table
                         if (!associativeTableAndAliases.TryGetValue(
-                                associativeTableName,
+                                associativeTableDbObject,
                                 out string? associativeTableAlias))
                         {
                             // this is the first fk definition found for this associative table.
                             // create an alias for it and store for later lookup.
                             associativeTableAlias = CreateTableAlias();
-                            associativeTableAndAliases.Add(associativeTableName, associativeTableAlias);
+                            associativeTableAndAliases.Add(associativeTableDbObject, associativeTableAlias);
                             ;
                         }
 
@@ -694,7 +694,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         {
                             subQuery.Joins.Add(new SqlJoinStructure
                             (
-                                associativeTableName,
+                                associativeTableDbObject,
                                 associativeTableAlias,
                                 CreateJoinPredicates(
                                     associativeTableAlias,

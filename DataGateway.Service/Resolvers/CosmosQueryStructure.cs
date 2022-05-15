@@ -18,7 +18,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private readonly string _containerAlias = "c";
         public string Container { get; internal set; }
         public string Database { get; internal set; }
-        public string? After { get; internal set; }
+        public string? Continuation { get; internal set; }
         public int MaxItemCount { get; internal set; }
         public List<OrderByColumn> OrderByColumns { get; internal set; }
 

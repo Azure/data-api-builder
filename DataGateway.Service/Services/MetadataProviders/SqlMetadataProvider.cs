@@ -190,14 +190,14 @@ namespace Azure.DataGateway.Service.Services
                     {
                         // parse source name into a tuple of (schemaName, databaseObjectName)
                         (schemaName, dbObjectName) = ParseSchemaAndDbObjectName(entity.GetSourceName())!;
-                        DatabaseObject sourceObject = new()
+                        sourceObject = new()
                         {
                             SchemaName = schemaName!,
                             Name = dbObjectName!,
                             TableDefinition = new()
                         };
 
-                        sourceObjects.Add(sourceObject);
+                        sourceObjects.Add(entity.GetSourceName(), sourceObject);
                     }
 
                     EntityToDatabaseObject.Add(entityName, sourceObject);
@@ -240,6 +240,7 @@ namespace Azure.DataGateway.Service.Services
                     .SourceEntityRelationshipMap[entityName] = relationshipData;
             }
 
+            string? targetSchemaName, targetDbObjectName, linkingObjectSchema, linkingObjectName;
             foreach (Relationship relationship in entity.Relationships!.Values)
             {
                 string targetEntityName = relationship.TargetEntity;
@@ -249,22 +250,26 @@ namespace Azure.DataGateway.Service.Services
                     throw new InvalidOperationException("Target Entity should be one of the exposed entities.");
                 }
 
+                (targetSchemaName, targetDbObjectName) = ParseSchemaAndDbObjectName(targetEntity.GetSourceName())!;
+                DatabaseObject targetDbObject = new(targetSchemaName, targetDbObjectName);
                 // If a linking object is specified,
                 // give that higher preference and add two foreign keys for this targetEntity.
                 if (relationship.LinkingObject is not null)
                 {
+                    (linkingObjectSchema, linkingObjectName) = ParseSchemaAndDbObjectName(relationship.LinkingObject)!;
+                    DatabaseObject linkingDbObject = new(linkingObjectSchema, linkingObjectName);
                     AddForeignKeyForTargetEntity(
                         targetEntityName,
-                        referencingTableName: relationship.LinkingObject,
-                        referencedTableName: entity.GetSourceName(),
+                        referencingDbObject: linkingDbObject,
+                        referencedDbObject: databaseObject,
                         referencingColumns: relationship.LinkingSourceFields,
                         referencedColumns: relationship.SourceFields,
                         relationshipData);
 
                     AddForeignKeyForTargetEntity(
                         targetEntityName,
-                        referencingTableName: relationship.LinkingObject,
-                        referencedTableName: targetEntity.GetSourceName(),
+                        referencingDbObject: linkingDbObject,
+                        referencedDbObject: targetDbObject,
                         referencingColumns: relationship.LinkingTargetFields,
                         referencedColumns: relationship.TargetFields,
                         relationshipData);
@@ -290,8 +295,8 @@ namespace Azure.DataGateway.Service.Services
                     // b. no foreign keys were defined at all.
                     AddForeignKeyForTargetEntity(
                         targetEntityName,
-                        referencingTableName: entity.GetSourceName(),
-                        referencedTableName: targetEntity!.GetSourceName(),
+                        referencingDbObject: databaseObject,
+                        referencedDbObject: targetDbObject,
                         referencingColumns: relationship.SourceFields,
                         referencedColumns: relationship.TargetFields,
                         relationshipData);
@@ -302,8 +307,8 @@ namespace Azure.DataGateway.Service.Services
                     // This foreign key WILL NOT exist if its a Many-One relationship.
                     AddForeignKeyForTargetEntity(
                         targetEntityName,
-                        referencingTableName: targetEntity.GetSourceName(),
-                        referencedTableName: entity.GetSourceName(),
+                        referencingDbObject: targetDbObject,
+                        referencedDbObject: databaseObject,
                         referencingColumns: relationship.TargetFields,
                         referencedColumns: relationship.SourceFields,
                         relationshipData);
@@ -316,8 +321,8 @@ namespace Azure.DataGateway.Service.Services
                     // so, the referencingTable is the source of the target entity.
                     AddForeignKeyForTargetEntity(
                         targetEntityName,
-                        referencingTableName: targetEntity.GetSourceName(),
-                        referencedTableName: entity.GetSourceName(),
+                        referencingDbObject: targetDbObject,
+                        referencedDbObject: databaseObject,
                         referencingColumns: relationship.TargetFields,
                         referencedColumns: relationship.SourceFields,
                         relationshipData);
@@ -331,15 +336,19 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private static void AddForeignKeyForTargetEntity(
             string targetEntityName,
-            string referencingTableName,
-            string referencedTableName,
+            DatabaseObject referencingDbObject,
+            DatabaseObject referencedDbObject,
             string[]? referencingColumns,
             string[]? referencedColumns,
             RelationshipMetadata relationshipData)
         {
             ForeignKeyDefinition foreignKeyDefinition = new()
             {
-                Pair = new(referencingTableName, referencedTableName)
+                Pair = new()
+                {
+                    ReferencingDbObject = referencingDbObject,
+                    ReferencedDbObject = referencedDbObject
+                }
             };
 
             if (referencingColumns is not null)
@@ -732,8 +741,8 @@ namespace Azure.DataGateway.Service.Services
                         {
                             foreach (ForeignKeyDefinition fk in fkDefinitionsForTargetEntity)
                             {
-                                schemaNames.Add(dbObject.SchemaName);
-                                tableNames.Add(fk.Pair.ReferencingTable);
+                                schemaNames.Add(fk.Pair.ReferencingDbObject.SchemaName);
+                                tableNames.Add(fk.Pair.ReferencedDbObject.Name);
                                 sourceNameToTableDefinition.TryAdd(dbObject.Name, dbObject.TableDefinition);
                             }
                         }
@@ -786,9 +795,16 @@ namespace Azure.DataGateway.Service.Services
             Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition = new();
             while (foreignKeyInfo != null)
             {
+                string referencingSchemaName =
+                    (string)foreignKeyInfo[$"Referencing{nameof(DatabaseObject.SchemaName)}"]!;
                 string referencingTableName = (string)foreignKeyInfo[nameof(TableDefinition)]!;
-                string referencedTableName = (string)foreignKeyInfo[nameof(ForeignKeyDefinition.Pair.ReferencedTable)]!;
-                RelationShipPair pair = new(referencingTableName, referencedTableName);
+                string referencedSchemaName =
+                    (string)foreignKeyInfo[$"Referenced{nameof(DatabaseObject.SchemaName)}"]!;
+                string referencedTableName = (string)foreignKeyInfo[nameof(ForeignKeyDefinition.Pair.ReferencedDbObject)]!;
+
+                DatabaseObject referencingDbObject = new(referencingSchemaName, referencingTableName);
+                DatabaseObject referencedDbObject = new(referencedSchemaName, referencedTableName);
+                RelationShipPair pair = new(referencingDbObject, referencedDbObject);
                 if (!pairToFkDefinition.TryGetValue(pair, out ForeignKeyDefinition? foreignKeyDefinition))
                 {
                     foreignKeyDefinition = new()

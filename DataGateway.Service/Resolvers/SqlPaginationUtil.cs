@@ -65,14 +65,18 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            if (paginationMetadata.RequestedAfterToken)
+            if (paginationMetadata.RequestedEndCursor)
             {
-                // parse *Connection.after if there are no elements
+                // parse *Connection.endCursor if there are no elements
                 // if no after is added, but it has been requested HotChocolate will report it as null
                 if (returnedElemNo > 0)
                 {
                     JsonElement lastElemInRoot = rootEnumerated.ElementAtOrDefault(returnedElemNo - 1);
-                    connectionJson.Add(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME, MakeCursorFromJsonElement(lastElemInRoot, paginationMetadata.Structure!.PrimaryKey()));
+                    connectionJson.Add(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME,
+                        MakeCursorFromJsonElement(
+                            lastElemInRoot,
+                            paginationMetadata.Structure!.PrimaryKey(),
+                            paginationMetadata.Structure!.OrderByColumns));
                 }
             }
 

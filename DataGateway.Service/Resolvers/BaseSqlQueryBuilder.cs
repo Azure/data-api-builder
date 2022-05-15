@@ -284,9 +284,18 @@ namespace Azure.DataGateway.Service.Resolvers
                 throw new ArgumentNullException(nameof(join));
             }
 
-            return $" INNER JOIN {QuoteIdentifier(join.TableName)}"
-                        + $" AS {QuoteIdentifier(join.TableAlias)}"
-                        + $" ON {Build(join.Predicates)}";
+            if (!string.IsNullOrWhiteSpace(join.DbObject.SchemaName))
+            {
+                return $@" INNER JOIN {QuoteIdentifier(join.DbObject.SchemaName)}.{QuoteIdentifier(join.DbObject.Name)}
+                           AS {QuoteIdentifier(join.TableAlias)}
+                           ON {Build(join.Predicates)}";
+            }
+            else
+            {
+                return $@" INNER JOIN {QuoteIdentifier(join.DbObject.Name)}
+                           AS {QuoteIdentifier(join.TableAlias)}
+                           ON {Build(join.Predicates)}";
+            }
         }
 
         /// <summary>
@@ -339,25 +348,29 @@ namespace Azure.DataGateway.Service.Resolvers
             // and the other join for the columns from the 'Referenced Table'.
             string foreignKeyQuery = $@"
 SELECT 
-    ReferentialConstraints.CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))}, 
-    ReferencingColumnUsage.TABLE_NAME {QuoteIdentifier(nameof(TableDefinition))}, 
-    ReferencingColumnUsage.COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencingColumns))}, 
-    ReferencedColumnUsage.TABLE_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.Pair.ReferencedDbObject))}, 
-    ReferencedColumnUsage.COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))} 
+    ReferentialConstraints.CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))},
+    ReferencingColumnUsage.SCHEMA_NAME
+        {QuoteIdentifier($"Referencing{nameof(DatabaseObject.SchemaName)}")},
+    ReferencingColumnUsage.TABLE_NAME {QuoteIdentifier($"Referencing{nameof(TableDefinition)}")},
+    ReferencingColumnUsage.COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencingColumns))},
+    ReferencedColumnUsage.SCHEMA_NAME
+        {QuoteIdentifier($"Referenced{nameof(DatabaseObject.SchemaName)}")},
+    ReferencedColumnUsage.TABLE_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.Pair.ReferencedDbObject))},
+    ReferencedColumnUsage.COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))}
 FROM 
-    INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS ReferentialConstraints 
+    INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS ReferentialConstraints
     INNER JOIN 
-    INFORMATION_SCHEMA.KEY_COLUMN_USAGE ReferencingColumnUsage 
-        ON ReferentialConstraints.CONSTRAINT_CATALOG = ReferencingColumnUsage.CONSTRAINT_CATALOG 
-        AND ReferentialConstraints.CONSTRAINT_SCHEMA = ReferencingColumnUsage.CONSTRAINT_SCHEMA 
-        AND ReferentialConstraints.CONSTRAINT_NAME = ReferencingColumnUsage.CONSTRAINT_NAME 
-    INNER JOIN 
-        INFORMATION_SCHEMA.KEY_COLUMN_USAGE ReferencedColumnUsage 
-        ON ReferentialConstraints.UNIQUE_CONSTRAINT_CATALOG = ReferencedColumnUsage.CONSTRAINT_CATALOG 
-        AND ReferentialConstraints.UNIQUE_CONSTRAINT_SCHEMA = ReferencedColumnUsage.CONSTRAINT_SCHEMA 
-        AND ReferentialConstraints.UNIQUE_CONSTRAINT_NAME = ReferencedColumnUsage.CONSTRAINT_NAME 
-        AND ReferencingColumnUsage.ORDINAL_POSITION = ReferencedColumnUsage.ORDINAL_POSITION 
-WHERE 
+    INFORMATION_SCHEMA.KEY_COLUMN_USAGE ReferencingColumnUsage
+        ON ReferentialConstraints.CONSTRAINT_CATALOG = ReferencingColumnUsage.CONSTRAINT_CATALOG
+        AND ReferentialConstraints.CONSTRAINT_SCHEMA = ReferencingColumnUsage.CONSTRAINT_SCHEMA
+        AND ReferentialConstraints.CONSTRAINT_NAME = ReferencingColumnUsage.CONSTRAINT_NAME
+    INNER JOIN
+        INFORMATION_SCHEMA.KEY_COLUMN_USAGE ReferencedColumnUsage
+        ON ReferentialConstraints.UNIQUE_CONSTRAINT_CATALOG = ReferencedColumnUsage.CONSTRAINT_CATALOG
+        AND ReferentialConstraints.UNIQUE_CONSTRAINT_SCHEMA = ReferencedColumnUsage.CONSTRAINT_SCHEMA
+        AND ReferentialConstraints.UNIQUE_CONSTRAINT_NAME = ReferencedColumnUsage.CONSTRAINT_NAME
+        AND ReferencingColumnUsage.ORDINAL_POSITION = ReferencedColumnUsage.ORDINAL_POSITION
+WHERE
     ReferencingColumnUsage.TABLE_SCHEMA IN (@{tableSchemaParamsForInClause})
     AND ReferencingColumnUsage.TABLE_NAME IN (@{tableNameParamsForInClause})";
             Console.WriteLine($"Foreign Key Query is : {foreignKeyQuery}");

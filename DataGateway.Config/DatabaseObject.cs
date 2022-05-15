@@ -11,6 +11,14 @@ namespace Azure.DataGateway.Config
 
         public TableDefinition TableDefinition { get; set; } = null!;
 
+        public DatabaseObject(string? schemaName, string? tableName)
+        {
+            SchemaName = schemaName!;
+            Name = tableName!;
+        }
+
+        public DatabaseObject() { }
+
         public string FullName
         {
             get

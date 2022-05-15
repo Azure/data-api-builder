@@ -66,7 +66,7 @@ namespace Azure.DataGateway.Service.Resolvers
             if (structure.IsPaginated)
             {
                 queryRequestOptions.MaxItemCount = (int?)structure.MaxItemCount;
-                requestAfterField = Base64Decode(structure.After);
+                requestAfterField = Base64Decode(structure.Continuation);
             }
 
             using (FeedIterator<JObject> query = container.GetItemQueryIterator<JObject>(querySpec, requestAfterField, queryRequestOptions))

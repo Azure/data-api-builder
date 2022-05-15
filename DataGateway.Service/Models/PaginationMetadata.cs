@@ -24,7 +24,7 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Shows if <c>after</c> is requested from the pagination result
         /// </summary>
-        public bool RequestedAfterToken { get; set; } = DEFAULT_PAGINATION_FLAGS_VALUE;
+        public bool RequestedEndCursor { get; set; } = DEFAULT_PAGINATION_FLAGS_VALUE;
 
         /// <summary>
         /// Shows if <c>hasNextPage</c> is requested from the pagination result

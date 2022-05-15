@@ -572,9 +572,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestGetNullStringFields()
         {
-            string graphQLQueryName = "website_users";
+            string graphQLQueryName = "websiteUsers";
             string gqlQuery = @"{
-                website_users(_filter: {username: {isNull: true}}) {
+                websiteUsers(_filter: {username: {isNull: true}}) {
                     items {
                         id
                         username
@@ -599,9 +599,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestGetNonNullStringFields()
         {
-            string graphQLQueryName = "website_users";
+            string graphQLQueryName = "websiteUsers";
             string gqlQuery = @"{
-                website_users(_filter: {username: {isNull: false}}) {
+                websiteUsers(_filter: {username: {isNull: false}}) {
                     items {
                         id
                         username
@@ -625,9 +625,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </summary>
         public async Task TestExplicitNullFieldsAreIgnored()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"{
-                getBooks(_filter: {
+                books(_filter: {
                                     id: {gte: 2 lte: null}
                                     title: null
                                     or: null

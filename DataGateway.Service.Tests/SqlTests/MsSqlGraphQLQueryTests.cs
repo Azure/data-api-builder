@@ -300,14 +300,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task OneToOneJoinQuery()
         {
-            string graphQLQueryName = "books_by_pk";
+            string graphQLQueryName = "book_by_pk";
             string graphQLQuery = @"query {
-                books_by_pk(id: 1) {
+                book_by_pk(id: 1) {
                   id
                   websiteplacement {
                     id
                     price
-                    book {
+                    books {
                       id
                     }
                   }
@@ -324,7 +324,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     SELECT
                       TOP 1 [table1].[id] AS [id],
                       [table1].[price] AS [price],
-                      JSON_QUERY ([table2_subq].[data]) AS [book]
+                      JSON_QUERY ([table2_subq].[data]) AS [books]
                     FROM
                       [book_website_placements] AS [table1]
                       OUTER APPLY (
@@ -478,9 +478,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task QueryWithSingleColumnPrimaryKey()
         {
-            string graphQLQueryName = "books_by_pk";
+            string graphQLQueryName = "book_by_pk";
             string graphQLQuery = @"{
-                books_by_pk(id: 2) {
+                book_by_pk(id: 2) {
                     title
                 }
             }";
@@ -499,9 +499,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task QueryWithMultileColumnPrimaryKey()
         {
-            string graphQLQueryName = "reviews_by_pk";
+            string graphQLQueryName = "review_by_pk";
             string graphQLQuery = @"{
-                reviews_by_pk(id: 568, book_id: 1) {
+                review_by_pk(id: 568, book_id: 1) {
                     content
                 }
             }";
@@ -519,9 +519,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task QueryWithNullResult()
         {
-            string graphQLQueryName = "books_by_pk";
+            string graphQLQueryName = "book_by_pk";
             string graphQLQuery = @"{
-                books_by_pk(id: -9999) {
+                book_by_pk(id: -9999) {
                     title
                 }
             }";
@@ -693,9 +693,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestQueryingTypeWithNullableStringFields()
         {
-            string graphQLQueryName = "website_users";
+            string graphQLQueryName = "websiteUsers";
             string graphQLQuery = @"{
-                website_users {
+                websiteUsers {
                     items {
                         id
                         username

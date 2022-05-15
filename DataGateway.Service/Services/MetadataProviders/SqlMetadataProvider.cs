@@ -123,6 +123,17 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
+        /// Returns the default schema name. Throws exception here since
+        /// each derived class should override this method.
+        /// </summary>
+        /// <exception cref="NotSupportedException"></exception>
+        protected virtual string GetDefaultSchemaName()
+        {
+            throw new NotSupportedException($"Cannot get default schema " +
+                $"name for database type {_databaseType}");
+        }
+
+        /// <summary>
         /// Builds the dictionary of parameters and their values required for the
         /// foreign key query.
         /// </summary>
@@ -247,19 +258,6 @@ namespace Azure.DataGateway.Service.Services
                         referencingColumns: relationship.LinkingTargetFields,
                         referencedColumns: relationship.TargetFields,
                         relationshipData);
-
-                    // Add the linking object as an entity for which we need to infer metadata.
-                    /*if (!EntityToDatabaseObject.ContainsKey(relationship.LinkingObject))
-                    {
-                        DatabaseObject linkingDbObject = new()
-                        {
-                            SchemaName = GetDefaultSchemaName(),
-                            Name = relationship.LinkingObject,
-                            TableDefinition = new()
-                        };
-
-                        EntityToDatabaseObject.Add(relationship.LinkingObject, linkingDbObject);
-                    }*/
                 }
                 else if (relationship.Cardinality == Cardinality.One)
                 {
@@ -355,17 +353,6 @@ namespace Azure.DataGateway.Service.Services
                     .Add(targetEntityName,
                         new List<ForeignKeyDefinition>() { foreignKeyDefinition });
             }
-        }
-
-        /// <summary>
-        /// Returns the default schema name. Throws exception here since
-        /// each derived class should override this method.
-        /// </summary>
-        /// <exception cref="NotSupportedException"></exception>
-        protected virtual string GetDefaultSchemaName()
-        {
-            throw new NotSupportedException($"Cannot get default schema " +
-                $"name for database type {_databaseType}");
         }
 
         /// <summary>

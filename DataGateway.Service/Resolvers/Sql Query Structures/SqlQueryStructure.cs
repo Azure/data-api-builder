@@ -584,10 +584,10 @@ namespace Azure.DataGateway.Service.Resolvers
                     string subqueryAlias = $"{subtableAlias}_subq";
                     JoinQueries.Add(subqueryAlias, subquery);
                     Columns.Add(new LabelledColumn(tableSchema: subquery.DatabaseObject.SchemaName,
-                                                  tableName: subquery.DatabaseObject.Name,
-                                                  columnName: DATA_IDENT,
-                                                  label: fieldName,
-                                                  tableAlias: subqueryAlias));
+                              tableName: subquery.DatabaseObject.Name,
+                              columnName: DATA_IDENT,
+                              label: fieldName,
+                              tableAlias: subqueryAlias));
                 }
             }
         }
@@ -679,10 +679,9 @@ namespace Azure.DataGateway.Service.Resolvers
                             // create an alias for it and store for later lookup.
                             associativeTableAlias = CreateTableAlias();
                             associativeTableAndAliases.Add(associativeTableDbObject, associativeTableAlias);
-                            ;
                         }
 
-                        if (foreignKeyDefinition.Pair.ReferencedDbObject.Equals(subQuery))
+                        if (foreignKeyDefinition.Pair.ReferencedDbObject.Equals(DatabaseObject))
                         {
                             subQuery.Predicates.AddRange(CreateJoinPredicates(
                                 associativeTableAlias,
@@ -705,9 +704,6 @@ namespace Azure.DataGateway.Service.Resolvers
                             ));
                         }
                     }
-
-                    string subqueryAlias = $"{subtableAlias}_subq";
-                    JoinQueries.Add(subqueryAlias, subQuery);
                 }
             }
         }

@@ -246,7 +246,7 @@ namespace Azure.DataGateway.Service.Services
                 string targetEntityName = relationship.TargetEntity;
                 if (!_entities.TryGetValue(targetEntityName, out Entity? targetEntity))
                 {
-                    throw new InvalidOperationException("Target Entity should be one of the exposed entities.");
+                    throw new InvalidOperationException($"Target Entity {targetEntityName} should be one of the exposed entities.");
                 }
 
                 (targetSchemaName, targetDbObjectName) = ParseSchemaAndDbObjectName(targetEntity.GetSourceName())!;
@@ -741,7 +741,7 @@ namespace Azure.DataGateway.Service.Services
                             foreach (ForeignKeyDefinition fk in fkDefinitionsForTargetEntity)
                             {
                                 schemaNames.Add(fk.Pair.ReferencingDbObject.SchemaName);
-                                tableNames.Add(fk.Pair.ReferencedDbObject.Name);
+                                tableNames.Add(fk.Pair.ReferencingDbObject.Name);
                                 sourceNameToTableDefinition.TryAdd(dbObject.Name, dbObject.TableDefinition);
                             }
                         }
@@ -812,6 +812,7 @@ namespace Azure.DataGateway.Service.Services
                     };
                     pairToFkDefinition.Add(pair, foreignKeyDefinition);
                 }
+
                 // add the referenced and referencing columns to the foreign key definition.
                 foreignKeyDefinition.ReferencedColumns.Add(
                     (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencedColumns)]!);

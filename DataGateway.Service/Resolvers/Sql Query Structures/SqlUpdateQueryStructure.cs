@@ -95,7 +95,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     {
                         if (columns.Contains(field.Key))
                         {
-                            UpdateOperations.Add(CreatePredicateForParam(param));
+                            UpdateOperations.Add(CreatePredicateForParam(field));
                         }
                     }
                 }

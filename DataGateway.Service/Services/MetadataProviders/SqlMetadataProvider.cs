@@ -374,12 +374,12 @@ namespace Azure.DataGateway.Service.Services
 
             List<DataColumn> primaryKeys = new(dataTable.PrimaryKey);
 
-            if (primaryKeys.Count == 0 && !(this.GetType() == typeof(PostgreSqlMetadataProvider)))
+            if (primaryKeys.Count == 0)
             {
                 throw new DataGatewayException(
                        message: $"Primary key not configured on the given database object {tableName}",
-                       statusCode: System.Net.HttpStatusCode.BadRequest,
-                       subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
+                       statusCode: System.Net.HttpStatusCode.NotImplemented,
+                       subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
             }
 
             tableDefinition.PrimaryKey = new(primaryKeys.Select(primaryKey => primaryKey.ColumnName));

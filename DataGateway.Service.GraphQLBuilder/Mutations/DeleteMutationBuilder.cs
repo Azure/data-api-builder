@@ -10,20 +10,34 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
     {
         public static FieldDefinitionNode Build(NameNode name, ObjectTypeDefinitionNode objectTypeDefinitionNode, Entity configEntity)
         {
-            FieldDefinitionNode idField = FindPrimaryKeyField(objectTypeDefinitionNode);
+            IEnumerable<FieldDefinitionNode> idFields = FindPrimaryKeyFields(objectTypeDefinitionNode);
+            string description;
+            if (idFields.Count() > 1)
+            {
+                description = "One of the ids of the item being deleted.";
+            }
+            else
+            {
+                description = "The ID of the item being deleted."
+            }
+
+            List<InputValueDefinitionNode> inputValues = new();
+            foreach (FieldDefinitionNode idField in idFields)
+            {
+                inputValues.Add(new InputValueDefinitionNode(
+                    location: null,
+                    idField.Name,
+                    new StringValueNode(description),
+                    new NonNullTypeNode(idField.Type.NamedType()),
+                    defaultValue: null,
+                    new List<DirectiveNode>()));
+            }
+
             return new(
                 null,
                 new NameNode($"delete{FormatNameForObject(name, configEntity)}"),
                 new StringValueNode($"Delete a {name}"),
-                new List<InputValueDefinitionNode> {
-                new InputValueDefinitionNode(
-                    null,
-                    idField.Name,
-                    new StringValueNode($"Id of the item to delete"),
-                    new NonNullTypeNode(idField.Type.NamedType()),
-                    null,
-                    new List<DirectiveNode>())
-                },
+                inputValues,
                 new NamedTypeNode(FormatNameForObject(name, configEntity)),
                 new List<DirectiveNode>()
             );

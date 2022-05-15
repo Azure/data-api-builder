@@ -48,20 +48,26 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
         private static FieldDefinitionNode GenerateByPKQuery(ObjectTypeDefinitionNode objectTypeDefinitionNode, NameNode name)
         {
-            FieldDefinitionNode primaryKeyField = FindPrimaryKeyField(objectTypeDefinitionNode);
-            return new(
-                location: null,
-                new NameNode($"{FormatNameForField(name)}_by_pk"),
-                new StringValueNode($"Get a {name} from the database by its ID/primary key"),
-                new List<InputValueDefinitionNode> {
-                new InputValueDefinitionNode(
-                    location : null,
+            IEnumerable<FieldDefinitionNode> primaryKeyFields =
+                FindPrimaryKeyFields(objectTypeDefinitionNode);
+            List<InputValueDefinitionNode> inputValues = new();
+
+            foreach (FieldDefinitionNode primaryKeyField in primaryKeyFields)
+            {
+                inputValues.Add(new InputValueDefinitionNode(
+                    location: null,
                     primaryKeyField.Name,
                     description: null,
                     primaryKeyField.Type,
                     defaultValue: null,
-                    new List<DirectiveNode>())
-                },
+                    new List<DirectiveNode>()));
+            }
+
+            return new(
+                location: null,
+                new NameNode($"{FormatNameForField(name)}_by_pk"),
+                new StringValueNode($"Get a {name} from the database by its ID/primary key"),
+                inputValues,
                 new NamedTypeNode(name),
                 new List<DirectiveNode>()
             );

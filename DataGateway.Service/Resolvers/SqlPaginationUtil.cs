@@ -164,9 +164,9 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public static IEnumerable<PaginationColumn> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
         {
-            if (queryParams.TryGetValue(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME, out object? conitainuationObject))
+            if (queryParams.TryGetValue(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME, out object? continuationObject))
             {
-                string afterPlainText = (string)conitainuationObject;
+                string afterPlainText = (string)continuationObject;
                 return ParseAfterFromJsonString(afterPlainText, paginationMetadata);
             }
 

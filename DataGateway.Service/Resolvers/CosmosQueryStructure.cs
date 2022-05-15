@@ -68,7 +68,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     continue;
                 }
 
-                if (parameter.Key == QueryBuilder.PAGINATION_TOKEN_FIELD_NAME)
+                if (parameter.Key == QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME)
                 {
                     After = (string)parameter.Value;
                     continue;

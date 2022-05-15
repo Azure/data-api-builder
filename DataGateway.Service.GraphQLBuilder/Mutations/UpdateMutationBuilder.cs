@@ -158,7 +158,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             DatabaseType databaseType)
         {
             InputObjectTypeDefinitionNode input = GenerateUpdateInputType(inputs, objectTypeDefinitionNode, name, root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>(), entity, databaseType);
-            IEnumerable<FieldDefinitionNode> idFields = FindPrimaryKeyFields(objectTypeDefinitionNode);
+            List<FieldDefinitionNode> idFields = FindPrimaryKeyFields(objectTypeDefinitionNode);
             string description;
             if (idFields.Count() > 1)
             {

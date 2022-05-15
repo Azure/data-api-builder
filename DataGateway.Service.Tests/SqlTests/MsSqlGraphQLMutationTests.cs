@@ -413,7 +413,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLMutationName = "updateMagazine";
             string graphQLMutation = @"
                 mutation {
-                    updateMagazine(item: {id: 1, title: ""Newest Magazine""}, id: 1) {
+                    updateMagazine(id: 1, item: {id: 1, title: ""Newest Magazine""}) {
                         id
                         title
                         issue_number

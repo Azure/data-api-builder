@@ -10,7 +10,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
     {
         public static FieldDefinitionNode Build(NameNode name, ObjectTypeDefinitionNode objectTypeDefinitionNode, Entity configEntity)
         {
-            IEnumerable<FieldDefinitionNode> idFields = FindPrimaryKeyFields(objectTypeDefinitionNode);
+            List<FieldDefinitionNode> idFields = FindPrimaryKeyFields(objectTypeDefinitionNode);
             string description;
             if (idFields.Count() > 1)
             {

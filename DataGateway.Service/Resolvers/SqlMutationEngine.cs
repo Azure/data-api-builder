@@ -59,8 +59,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             Tuple<JsonDocument, IMetadata>? result = null;
             Operation mutationOperation =
-                MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(
-                    context.Selection.Field.Arguments.FirstOrDefault()!.Type.TypeName());
+                MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
             if (mutationOperation == Operation.Delete)
             {
                 // compute the mutation result before removing the element

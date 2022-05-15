@@ -29,7 +29,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             return false;
         }
 
-        public static IEnumerable<FieldDefinitionNode> FindPrimaryKeyFields(ObjectTypeDefinitionNode node)
+        public static List<FieldDefinitionNode> FindPrimaryKeyFields(ObjectTypeDefinitionNode node)
         {
             List<FieldDefinitionNode> fieldDefinitionNodes =
                 new(node.Fields.Where(f => f.Directives.Any(d => d.Name.Value == PrimaryKeyDirectiveType.DirectiveName)));

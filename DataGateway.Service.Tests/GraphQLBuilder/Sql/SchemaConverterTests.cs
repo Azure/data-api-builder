@@ -14,6 +14,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
     [TestCategory("GraphQL Schema Builder")]
     public class SchemaConverterTests
     {
+        const string SCHEMA_NAME = "dbo";
         const string TABLE_NAME = "tableName";
         const string COLUMN_NAME = "columnName";
         const string REF_COLNAME = "ref_col_in_source";
@@ -345,8 +346,11 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             List<ForeignKeyDefinition> fkDefinitions = new();
             fkDefinitions.Add(new ForeignKeyDefinition()
             {
-                Pair = new(referencingTable: TABLE_NAME,
-                         referencedTable: REFERENCED_TABLE),
+                Pair = new()
+                {
+                    ReferencingDbObject = new(SCHEMA_NAME, TABLE_NAME),
+                    ReferencedDbObject = new(SCHEMA_NAME, REFERENCED_TABLE)
+                },
                 ReferencingColumns = new List<string> { REF_COLNAME },
                 ReferencedColumns = new List<string> { REFD_COLNAME }
             });

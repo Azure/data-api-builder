@@ -150,9 +150,12 @@ namespace Azure.DataGateway.Service.Resolvers
 
             // Parse Results into Json and return
             //
-            if (await _queryExecutor.ReadAsync(dbDataReader))
+            if (dbDataReader.HasRows)
             {
-                jsonDocument = JsonDocument.Parse(dbDataReader.GetString(0));
+                // Make sure to get the complete json string in case of large document.
+                jsonDocument =
+                    JsonSerializer.Deserialize <JsonDocument>(
+                        await GetJsonStringFromDbReader(dbDataReader, _queryExecutor));
             }
             else
             {

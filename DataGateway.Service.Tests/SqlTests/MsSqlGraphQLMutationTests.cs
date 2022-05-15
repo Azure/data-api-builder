@@ -61,10 +61,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task InsertMutation()
         {
-            string graphQLMutationName = "insertBook";
+            string graphQLMutationName = "createBooks";
             string graphQLMutation = @"
                 mutation {
-                    insertBook(title: ""My New Book"", publisher_id: 1234) {
+                    createBooks(item: { title: ""My New Book"", publisher_id: 1234 }) {
                         id
                         title
                     }
@@ -98,10 +98,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task InsertMutationForConstantdefaultValue()
         {
-            string graphQLMutationName = "insertReview";
+            string graphQLMutationName = "createReviews";
             string graphQLMutation = @"
                 mutation {
-                    insertReview(book_id: 1) {
+                    createReviews(item: { book_id: 1 }) {
                         id
                         content
                     }
@@ -135,10 +135,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task UpdateMutation()
         {
-            string graphQLMutationName = "editBook";
+            string graphQLMutationName = "updateBooks";
             string graphQLMutation = @"
                 mutation {
-                    editBook(id: 1, title: ""Even Better Title"", publisher_id: 2345) {
+                    updateBooks(id: 1, item: { title: ""Even Better Title"", publisher_id: 2345} ) {
                         title
                         publisher_id
                     }
@@ -171,10 +171,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task DeleteMutation()
         {
-            string graphQLMutationName = "deleteBook";
+            string graphQLMutationName = "deleteBooks";
             string graphQLMutation = @"
                 mutation {
-                    deleteBook(id: 1) {
+                    deleteBooks(id: 1) {
                         title
                         publisher_id
                     }
@@ -252,13 +252,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task NestedQueryingInMutation()
         {
-            string graphQLMutationName = "insertBook";
+            string graphQLMutationName = "createBooks";
             string graphQLMutation = @"
                 mutation {
-                    insertBook(title: ""My New Book"", publisher_id: 1234) {
+                    createBooks(item: {title: ""My New Book"", publisher_id: 1234}) {
                         id
                         title
-                        publisher {
+                        publishers {
                             name
                         }
                     }
@@ -268,7 +268,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string msSqlQuery = @"
                 SELECT TOP 1 [table0].[id] AS [id],
                     [table0].[title] AS [title],
-                    JSON_QUERY([table1_subq].[data]) AS [publisher]
+                    JSON_QUERY([table1_subq].[data]) AS [publishers]
                 FROM [books] AS [table0]
                 OUTER APPLY (
                     SELECT TOP 1 [table1].[name] AS [name]
@@ -300,10 +300,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestExplicitNullInsert()
         {
-            string graphQLMutationName = "insertMagazine";
+            string graphQLMutationName = "createMagazines";
             string graphQLMutation = @"
                 mutation {
-                    insertMagazine(id: 800, title: ""New Magazine"", issue_number: null) {
+                    createMagazines(item: { id: 800, title: ""New Magazine"", issue_number: null }) {
                         id
                         title
                         issue_number
@@ -337,10 +337,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestImplicitNullInsert()
         {
-            string graphQLMutationName = "insertMagazine";
+            string graphQLMutationName = "createMagazines";
             string graphQLMutation = @"
                 mutation {
-                    insertMagazine(id: 801, title: ""New Magazine 2"") {
+                    createMagazines(item: {id: 801, title: ""New Magazine 2""}) {
                         id
                         title
                         issue_number
@@ -374,10 +374,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestUpdateColumnToNull()
         {
-            string graphQLMutationName = "updateMagazine";
+            string graphQLMutationName = "updateMagazines";
             string graphQLMutation = @"
                 mutation {
-                    updateMagazine(id: 1, issue_number: null) {
+                    updateMagazines(id: 1, item: { issue_number: null} ) {
                         id
                         issue_number
                     }
@@ -408,10 +408,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestMissingColumnNotUpdatedToNull()
         {
-            string graphQLMutationName = "updateMagazine";
+            string graphQLMutationName = "updateMagazines";
             string graphQLMutation = @"
                 mutation {
-                    updateMagazine(id: 1, title: ""Newest Magazine"") {
+                    updateMagazines(item: {id: 1, title: ""Newest Magazine""}, id: 1) {
                         id
                         title
                         issue_number
@@ -447,10 +447,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestAliasSupportForGraphQLMutationQueryFields()
         {
-            string graphQLMutationName = "insertBook";
+            string graphQLMutationName = "createBooks";
             string graphQLMutation = @"
                 mutation {
-                    insertBook(title: ""My New Book"", publisher_id: 1234) {
+                    createBooks(item: { title: ""My New Book"", publisher_id: 1234 }) {
                         book_id: id
                         book_title: title
                     }
@@ -487,10 +487,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task InsertWithInvalidForeignKey()
         {
-            string graphQLMutationName = "insertBook";
+            string graphQLMutationName = "createBooks";
             string graphQLMutation = @"
                 mutation {
-                    insertBook(title: ""My New Book"", publisher_id: -1) {
+                    createBooks(item: { title: ""My New Book"", publisher_id: -1}) {
                         id
                         title
                     }
@@ -526,10 +526,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task UpdateWithInvalidForeignKey()
         {
-            string graphQLMutationName = "editBook";
+            string graphQLMutationName = "updateBooks";
             string graphQLMutation = @"
                 mutation {
-                    editBook(id: 1, publisher_id: -1) {
+                    updateBooks(id: 1, item: {publisher_id: -1 }) {
                         id
                         title
                     }
@@ -608,10 +608,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestViolatingOneToOneRelashionShip()
         {
-            string graphQLMutationName = "insertWebsitePlacement";
+            string graphQLMutationName = "createBook_website_placements";
             string graphQLMutation = @"
                 mutation {
-                    insertWebsitePlacement(book_id: 1, price: 25) {
+                    createBook_website_placements(item: {book_id: 1, price: 25 }) {
                         id
                     }
                 }

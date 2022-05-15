@@ -216,6 +216,7 @@ namespace Azure.DataGateway.Service.Resolvers
             switch (operationType)
             {
                 case Operation.Insert:
+                case Operation.Create:
                     SqlInsertStructure insertQueryStruct =
                         new(entityName,
                         _sqlMetadataProvider,
@@ -240,6 +241,14 @@ namespace Azure.DataGateway.Service.Resolvers
                         isIncrementalUpdate: true);
                     queryString = _queryBuilder.Build(updateIncrementalStructure);
                     queryParameters = updateIncrementalStructure.Parameters;
+                    break;
+                case Operation.UpdateGraphQL:
+                    SqlUpdateStructure updateGraphQLStructure =
+                        new(entityName,
+                        _sqlMetadataProvider,
+                        parameters);
+                    queryString = _queryBuilder.Build(updateGraphQLStructure);
+                    queryParameters = updateGraphQLStructure.Parameters;
                     break;
                 case Operation.Delete:
                     SqlDeleteStructure deleteStructure =

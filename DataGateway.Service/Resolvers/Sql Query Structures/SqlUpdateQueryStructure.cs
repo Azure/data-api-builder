@@ -61,29 +61,12 @@ namespace Azure.DataGateway.Service.Resolvers
                 // primary keys used as predicates
                 if (primaryKeys.Contains(param.Key))
                 {
-                    Predicates.Add(new(
-                        new PredicateOperand(new Column(null, param.Key)),
-                        PredicateOperation.Equal,
-                        new PredicateOperand($"@{MakeParamWithValue(param.Value)}")
-                    ));
+                    Predicates.Add(predicate);
                 }
-                // Unpack the input argument type as columns to update
-                else if (param.Key == UpdateMutationBuilder.INPUT_ARGUMENT_NAME)
+                // use columns to determine values to edit
+                else if (columns.Contains(param.Key))
                 {
-                    IDictionary<string, object?> updateFields = ArgumentToDictionary(mutationParams, UpdateMutationBuilder.INPUT_ARGUMENT_NAME);
-
-                    foreach (KeyValuePair<string, object?> field in updateFields)
-                    {
-                        if (columns.Contains(field.Key))
-                        {
-                            UpdateOperations.Add(new(
-                                new PredicateOperand(new Column(null, field.Key)),
-                                PredicateOperation.Equal,
-                                new PredicateOperand($"@{MakeParamWithValue(field.Value)}")
-                            ));
-                        }
-                    }
-
+                    UpdateOperations.Add(predicate);
                 }
 
                 columns.Remove(param.Key);
@@ -100,6 +83,50 @@ namespace Azure.DataGateway.Service.Resolvers
                     message: "Update mutation does not update any values",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+            }
+        }
+
+        public SqlUpdateStructure(
+            string tableName,
+            ISqlMetadataProvider sqlMetadataProvider,
+            IDictionary<string, object?> mutationParams)
+            : base(sqlMetadataProvider, tableName: tableName)
+        {
+            UpdateOperations = new();
+            TableDefinition tableDefinition = GetUnderlyingTableDefinition();
+
+            List<string> primaryKeys = tableDefinition.PrimaryKey;
+            List<string> columns = tableDefinition.Columns.Keys.ToList();
+            foreach (KeyValuePair<string, object?> param in mutationParams)
+            {
+                // primary keys used as predicates
+                if (primaryKeys.Contains(param.Key))
+                {
+                    Predicates.Add(new(
+                        new PredicateOperand(new Column(null, param.Key)),
+                        PredicateOperation.Equal,
+                        new PredicateOperand($"@{MakeParamWithValue(param.Value)}")
+                    ));
+                }
+                else
+                // Unpack the input argument type as columns to update
+                if (param.Key == UpdateMutationBuilder.INPUT_ARGUMENT_NAME)
+                {
+                    IDictionary<string, object?> updateFields =
+                        ArgumentToDictionary(mutationParams, UpdateMutationBuilder.INPUT_ARGUMENT_NAME);
+
+                    foreach (KeyValuePair<string, object?> field in updateFields)
+                    {
+                        if (columns.Contains(field.Key))
+                        {
+                            UpdateOperations.Add(new(
+                                new PredicateOperand(new Column(null, field.Key)),
+                                PredicateOperation.Equal,
+                                new PredicateOperand($"@{MakeParamWithValue(field.Value)}")
+                            ));
+                        }
+                    }
+                }
             }
         }
     }

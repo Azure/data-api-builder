@@ -155,12 +155,14 @@ namespace Azure.DataGateway.Service.Resolvers
             }
         }
 
-        internal static IDictionary<string, object?> ArgumentToDictionary(IDictionary<string, object> mutationParams, string argumentName)
+        internal static IDictionary<string, object?> ArgumentToDictionary(
+            IDictionary<string, object?> mutationParams, string argumentName)
         {
             if (mutationParams.TryGetValue(argumentName, out object? item))
             {
                 Dictionary<string, object?> createInput;
                 // An inline argument was set
+                // TODO: This assumes the input was NOT nullable.
                 if (item is List<ObjectFieldNode> createInputRaw)
                 {
                     createInput = new Dictionary<string, object?>();

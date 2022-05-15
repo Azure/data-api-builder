@@ -46,7 +46,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             if (inputTypeName.StartsWith(
                 $"{Operation.Update}", StringComparison.OrdinalIgnoreCase))
             {
-                operationType = Operation.Update;
+                operationType = Operation.UpdateGraphQL;
             }
 
             return operationType;

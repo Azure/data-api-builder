@@ -542,7 +542,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 books(first: 1) {
                     items {
                         title
-                        publisher {
+                        publishers {
                             name
                             books(first: 3) {
                                 items {
@@ -554,37 +554,27 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
-            string msSqlQuery = @"
-                SELECT TOP 1 [table0].[title] AS [title],
-                    JSON_QUERY([table1_subq].[data]) AS [publisher]
-                FROM [books] AS [table0]
-                OUTER APPLY (
-                    SELECT TOP 1 [table1].[name] AS [name],
-                        JSON_QUERY(COALESCE([table2_subq].[data], '[]')) AS [books]
-                    FROM [publishers] AS [table1]
-                    OUTER APPLY (
-                        SELECT TOP 3 [table2].[title] AS [title]
-                        FROM [books] AS [table2]
-                        WHERE [table1].[id] = [table2].[publisher_id]
-                        ORDER BY [id]
-                        FOR JSON PATH,
-                            INCLUDE_NULL_VALUES
-                        ) AS [table2_subq]([data])
-                    WHERE [table0].[publisher_id] = [table1].[id]
-                    ORDER BY [id]
-                    FOR JSON PATH,
-                        INCLUDE_NULL_VALUES,
-                        WITHOUT_ARRAY_WRAPPER
-                    ) AS [table1_subq]([data])
-                WHERE 1 = 1
-                ORDER BY [id]
-                FOR JSON PATH,
-                    INCLUDE_NULL_VALUES
-            ";
+            string expected = @"
+[
+  {
+    ""title"": ""Awesome book"",
+    ""publishers"": {
+                ""name"": ""Big Company"",
+      ""books"": {
+                    ""items"": [
+                      {
+                        ""title"": ""Awesome book""
+                      },
+          {
+                        ""title"": ""Also Awesome book""
+          }
+        ]
+      }
+            }
+        }
+]";
 
             string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
-
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 

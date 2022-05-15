@@ -10,7 +10,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
     public static class QueryBuilder
     {
         public const string PAGINATION_FIELD_NAME = "items";
-        public const string PAGINATION_TOKEN_FIELD_NAME = "after";
+        public const string PAGINATION_TOKEN_FIELD_NAME = "endCursor";
+        public const string PAGINATION_TOKEN_ARGUMENT_NAME = "after";
         public const string HAS_NEXT_PAGE_FIELD_NAME = "hasNextPage";
         public const string PAGE_START_ARGUMENT_NAME = "first";
         public const string PAGINATION_OBJECT_TYPE_SUFFIX = "Connection";
@@ -105,7 +106,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             return new()
             {
                 new(location: null, new NameNode(PAGE_START_ARGUMENT_NAME), description: new StringValueNode("The number of items to return from the page start point"), new IntType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
-                new(location: null, new NameNode(PAGINATION_TOKEN_FIELD_NAME), new StringValueNode("A pagination token from a previous query to continue through a paginated list"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
+                new(location: null, new NameNode(PAGINATION_TOKEN_ARGUMENT_NAME), new StringValueNode("A pagination token from a previous query to continue through a paginated list"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
                 new(location: null, new NameNode(FILTER_FIELD_NAME), new StringValueNode("Filter options for query"), new NamedTypeNode(filterInputName), defaultValue: null, new List<DirectiveNode>()),
                 new(location: null, new NameNode(ODATA_FILTER_FIELD_NAME), new StringValueNode("Filter options for query expressed as OData query language"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>())
             };

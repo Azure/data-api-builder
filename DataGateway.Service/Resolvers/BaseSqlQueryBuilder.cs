@@ -349,13 +349,13 @@ namespace Azure.DataGateway.Service.Resolvers
             string foreignKeyQuery = $@"
 SELECT 
     ReferentialConstraints.CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))},
-    ReferencingColumnUsage.SCHEMA_NAME
+    ReferencingColumnUsage.TABLE_SCHEMA
         {QuoteIdentifier($"Referencing{nameof(DatabaseObject.SchemaName)}")},
     ReferencingColumnUsage.TABLE_NAME {QuoteIdentifier($"Referencing{nameof(TableDefinition)}")},
     ReferencingColumnUsage.COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencingColumns))},
-    ReferencedColumnUsage.SCHEMA_NAME
+    ReferencedColumnUsage.TABLE_SCHEMA
         {QuoteIdentifier($"Referenced{nameof(DatabaseObject.SchemaName)}")},
-    ReferencedColumnUsage.TABLE_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.Pair.ReferencedDbObject))},
+    ReferencedColumnUsage.TABLE_NAME {QuoteIdentifier($"Referenced{nameof(TableDefinition)}")},
     ReferencedColumnUsage.COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))}
 FROM 
     INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS ReferentialConstraints

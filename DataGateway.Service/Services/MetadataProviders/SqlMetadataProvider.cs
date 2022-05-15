@@ -178,7 +178,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private void GenerateDatabaseObjectForEntities()
         {
-            string? schemaName, dbObjectName;
+            string schemaName, dbObjectName;
             Dictionary<string, DatabaseObject> sourceObjects = new();
             foreach ((string entityName, Entity entity)
                 in _entities)
@@ -192,8 +192,8 @@ namespace Azure.DataGateway.Service.Services
                         (schemaName, dbObjectName) = ParseSchemaAndDbObjectName(entity.GetSourceName())!;
                         sourceObject = new()
                         {
-                            SchemaName = schemaName!,
-                            Name = dbObjectName!,
+                            SchemaName = schemaName,
+                            Name = dbObjectName,
                             TableDefinition = new()
                         };
 
@@ -240,11 +240,10 @@ namespace Azure.DataGateway.Service.Services
                     .SourceEntityRelationshipMap[entityName] = relationshipData;
             }
 
-            string? targetSchemaName, targetDbObjectName, linkingObjectSchema, linkingObjectName;
+            string targetSchemaName, targetDbObjectName, linkingObjectSchema, linkingObjectName;
             foreach (Relationship relationship in entity.Relationships!.Values)
             {
                 string targetEntityName = relationship.TargetEntity;
-
                 if (!_entities.TryGetValue(targetEntityName, out Entity? targetEntity))
                 {
                     throw new InvalidOperationException("Target Entity should be one of the exposed entities.");
@@ -383,9 +382,9 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="source">source string to parse</param>
         /// <returns></returns>
         /// <exception cref="DataGatewayException"></exception>
-        public (string?, string?) ParseSchemaAndDbObjectName(string source)
+        public (string, string) ParseSchemaAndDbObjectName(string source)
         {
-            (string? schemaName, string? dbObjectName) = EntitySourceNamesParser.ParseSchemaAndTable(source)!;
+            (string? schemaName, string dbObjectName) = EntitySourceNamesParser.ParseSchemaAndTable(source)!;
 
             // if schemaName is empty we check if the DB type is postgresql
             // and if the schema name was included in the connection string
@@ -797,10 +796,10 @@ namespace Azure.DataGateway.Service.Services
             {
                 string referencingSchemaName =
                     (string)foreignKeyInfo[$"Referencing{nameof(DatabaseObject.SchemaName)}"]!;
-                string referencingTableName = (string)foreignKeyInfo[nameof(TableDefinition)]!;
+                string referencingTableName = (string)foreignKeyInfo[$"Referencing{nameof(TableDefinition)}"]!;
                 string referencedSchemaName =
                     (string)foreignKeyInfo[$"Referenced{nameof(DatabaseObject.SchemaName)}"]!;
-                string referencedTableName = (string)foreignKeyInfo[nameof(ForeignKeyDefinition.Pair.ReferencedDbObject)]!;
+                string referencedTableName = (string)foreignKeyInfo[$"Referenced{nameof(TableDefinition)}"]!;
 
                 DatabaseObject referencingDbObject = new(referencingSchemaName, referencingTableName);
                 DatabaseObject referencedDbObject = new(referencedSchemaName, referencedTableName);

@@ -11,10 +11,10 @@ namespace Azure.DataGateway.Config
 
         public TableDefinition TableDefinition { get; set; } = null!;
 
-        public DatabaseObject(string? schemaName, string? tableName)
+        public DatabaseObject(string schemaName, string tableName)
         {
-            SchemaName = schemaName!;
-            Name = tableName!;
+            SchemaName = schemaName;
+            Name = tableName;
         }
 
         public DatabaseObject() { }
@@ -34,15 +34,14 @@ namespace Azure.DataGateway.Config
 
         public bool Equals(DatabaseObject? other)
         {
-            return other != null &&
+            return other is not null &&
                    SchemaName.Equals(other.SchemaName) &&
                    Name.Equals(other.Name);
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(
-                    SchemaName, Name);
+            return HashCode.Combine(SchemaName, Name);
         }
     }
 

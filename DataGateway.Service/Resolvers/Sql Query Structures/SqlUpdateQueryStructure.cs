@@ -86,6 +86,10 @@ namespace Azure.DataGateway.Service.Resolvers
             }
         }
 
+        /// <summary>
+        /// This constructor is for GraphQL updates which have UpdateEntityInput item
+        /// as one of the mutation params.
+        /// </summary>
         public SqlUpdateStructure(
             string tableName,
             ISqlMetadataProvider sqlMetadataProvider,
@@ -108,8 +112,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         new PredicateOperand($"@{MakeParamWithValue(param.Value)}")
                     ));
                 }
-                else
-                // Unpack the input argument type as columns to update
+                else // Unpack the input argument type as columns to update
                 if (param.Key == UpdateMutationBuilder.INPUT_ARGUMENT_NAME)
                 {
                     IDictionary<string, object?> updateFields =
@@ -127,6 +130,14 @@ namespace Azure.DataGateway.Service.Resolvers
                         }
                     }
                 }
+            }
+
+            if (UpdateOperations.Count == 0)
+            {
+                throw new DataGatewayException(
+                    message: "Update mutation does not update any values",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
         }
     }

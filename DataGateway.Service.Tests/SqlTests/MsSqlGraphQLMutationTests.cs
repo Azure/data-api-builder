@@ -566,10 +566,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task UpdateWithNoNewValues()
         {
-            string graphQLMutationName = "editBook";
+            string graphQLMutationName = "updateBooks";
             string graphQLMutation = @"
                 mutation {
-                    editBook(id: 1) {
+                    updateBooks(id: 1) {
                         id
                         title
                     }
@@ -577,7 +577,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             ";
 
             JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), message: $"item");
         }
 
         /// <summary>
@@ -587,10 +587,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task UpdateWithInvalidIdentifier()
         {
-            string graphQLMutationName = "editBook";
+            string graphQLMutationName = "updateBooks";
             string graphQLMutation = @"
                 mutation {
-                    editBook(id: -1, title: ""Even Better Title"") {
+                    updateBooks(id: -1, item: { title: ""Even Better Title"" }) {
                         id
                         title
                     }

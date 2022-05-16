@@ -70,7 +70,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     break;
                 }
                 default:
-                    throw new NotSupportedException($"unsupprted operation type: {resolver.OperationType}");
+                    throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}");
             }
 
             return response.Resource;

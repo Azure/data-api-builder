@@ -71,30 +71,22 @@ query{
         [TestMethod]
         public async Task GetPaginatedWithVariables()
         {
-            // Run query
-            JsonElement response = await ExecuteGraphQLRequestAsync("planets", PlanetsQuery);
-            int actualElements = response.GetArrayLength();
-            List<string> responseTotal = new();
-            ConvertJsonElementToStringList(response, responseTotal);
-
             // Run paginated query
             const int pagesize = TOTAL_ITEM_COUNT / 2;
             int totalElementsFromPaginatedQuery = 0;
             string afterToken = null;
-            List<string> pagedResponse = new();
 
             do
             {
-                JsonElement page = await ExecuteGraphQLRequestAsync("planets", PlanetsQuery, new() { { "first", pagesize }, { "after", afterToken } });
+                JsonElement page = await ExecuteGraphQLRequestAsync("planets",
+                    PlanetsQuery, new() { { "first", pagesize }, { "after", afterToken } });
                 JsonElement after = page.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME);
                 afterToken = after.ToString();
                 totalElementsFromPaginatedQuery += page.GetProperty(QueryBuilder.PAGINATION_FIELD_NAME).GetArrayLength();
-                ConvertJsonElementToStringList(page.GetProperty("items"), pagedResponse);
             } while (!string.IsNullOrEmpty(afterToken));
 
             // Validate results
-            Assert.AreEqual(actualElements, totalElementsFromPaginatedQuery);
-            Assert.IsTrue(responseTotal.SequenceEqual(pagedResponse));
+            Assert.AreEqual(TOTAL_ITEM_COUNT, totalElementsFromPaginatedQuery);
         }
 
         [TestMethod]

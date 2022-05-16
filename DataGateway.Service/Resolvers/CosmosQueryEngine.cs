@@ -52,7 +52,7 @@ namespace Azure.DataGateway.Service.Resolvers
             Container container = _clientProvider.Client.GetDatabase(structure.Database).GetContainer(structure.Container);
 
             QueryRequestOptions queryRequestOptions = new();
-            string requestAfterField = null;
+            string requestContinuation = null;
 
             string queryString = _queryBuilder.Build(structure);
 
@@ -66,10 +66,10 @@ namespace Azure.DataGateway.Service.Resolvers
             if (structure.IsPaginated)
             {
                 queryRequestOptions.MaxItemCount = (int?)structure.MaxItemCount;
-                requestAfterField = Base64Decode(structure.Continuation);
+                requestContinuation = Base64Decode(structure.Continuation);
             }
 
-            using (FeedIterator<JObject> query = container.GetItemQueryIterator<JObject>(querySpec, requestAfterField, queryRequestOptions))
+            using (FeedIterator<JObject> query = container.GetItemQueryIterator<JObject>(querySpec, requestContinuation, queryRequestOptions))
             {
                 do
                 {
@@ -86,15 +86,15 @@ namespace Azure.DataGateway.Service.Resolvers
                             jarray.Add(item);
                         }
 
-                        string responseAfterToken = page.ContinuationToken;
-                        if (string.IsNullOrEmpty(responseAfterToken))
+                        string responseContinuation = page.ContinuationToken;
+                        if (string.IsNullOrEmpty(responseContinuation))
                         {
-                            responseAfterToken = null;
+                            responseContinuation = null;
                         }
 
                         JObject res = new(
-                            new JProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME, Base64Encode(responseAfterToken)),
-                            new JProperty(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, responseAfterToken != null),
+                            new JProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME, Base64Encode(responseContinuation)),
+                            new JProperty(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, responseContinuation != null),
                             new JProperty(QueryBuilder.PAGINATION_FIELD_NAME, jarray));
 
                         // This extra deserialize/serialization will be removed after moving to Newtonsoft from System.Text.Json

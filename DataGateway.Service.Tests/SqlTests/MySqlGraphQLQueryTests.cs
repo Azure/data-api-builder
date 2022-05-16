@@ -82,7 +82,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task OneToOneJoinQuery()
         {
-             string mySqlQuery = @"
+            string mySqlQuery = @"
                 SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', `subq11`.`id`, 'website_placement', `subq11`.`website_placement`)
                         ), JSON_ARRAY()) AS `data`
                 FROM (
@@ -273,7 +273,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    ORDER BY `table0`.`id`
                    LIMIT 2) AS `subq1`";
 
-             await TestSupportForMixOfRawDbFieldFieldAndAlias(mySqlQuery);
+            await TestSupportForMixOfRawDbFieldFieldAndAlias(mySqlQuery);
         }
 
         /// <summary>

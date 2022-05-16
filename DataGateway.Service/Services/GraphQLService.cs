@@ -210,7 +210,7 @@ namespace Azure.DataGateway.Service.Services
 
         private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateCosmosGraphQLObjects()
         {
-            string graphqlSchema = _graphQLMetadataProvider.GetGraphQLSchema();
+            string graphqlSchema = _graphQLMetadataProvider!.GetGraphQLSchema();
 
             if (string.IsNullOrEmpty(graphqlSchema))
             {

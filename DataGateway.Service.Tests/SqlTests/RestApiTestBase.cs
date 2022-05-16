@@ -2251,7 +2251,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: "Invalid Column name requested: content",
+                expectedErrorMessage: "Invalid field to be returned requested: content",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

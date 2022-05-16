@@ -609,6 +609,33 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ) AS subq"
             },
             {
+                "FindTestWithMappedFieldsToBeReturned",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species, 'United State\'s Region', region)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationMappingTable + @"
+                  ) AS subq"
+            },
+            {
+                "FindTestWithSingleMappedFieldsToBeReturned",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('Scientific Name', species)) AS data
+                  FROM (
+                      SELECT species
+                      FROM " + _integrationMappingTable + @"
+                  ) AS subq"
+            },
+            {
+                "FindTestWithUnMappedFieldsToBeReturned",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId)) AS data
+                  FROM (
+                      SELECT treeId
+                      FROM " + _integrationMappingTable + @"
+                  ) AS subq"
+            },
+            {
                 "InsertOneTest",
                 @"
                     SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data

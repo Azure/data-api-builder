@@ -101,7 +101,7 @@ CREATE TABLE brokers(
 );
 
 CREATE TABLE trees (
-    treeId BIGINT  PRIMARY KEY,
+    treeId BIGINT PRIMARY KEY,
     species varchar(max),
     region varchar(max)
 );

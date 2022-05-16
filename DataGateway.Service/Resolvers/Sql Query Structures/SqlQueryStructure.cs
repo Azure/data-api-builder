@@ -874,7 +874,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         protected void AddColumn(string columnName, string labelName)
         {
-            Columns.Add(new LabelledColumn(DatabaseObject.SchemaName, DatabaseObject.Name, columnName, label: columnName, TableAlias));
+            Columns.Add(new LabelledColumn(DatabaseObject.SchemaName, DatabaseObject.Name, columnName, label: labelName, TableAlias));
         }
 
         /// <summary>

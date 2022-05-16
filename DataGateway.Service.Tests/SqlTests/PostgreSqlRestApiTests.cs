@@ -509,6 +509,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "FindTestWithMappedFieldsToBeReturned",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT  treeId, ""species"" AS ""Scientific Name"", ""region"" AS ""United State's Region""
+                        FROM " + _integrationMappingTable + @"
+                    ) AS subq
+                "
+            },
+            {
                 "InsertOneTest",
                 @"
                     SELECT to_jsonb(subq) AS data

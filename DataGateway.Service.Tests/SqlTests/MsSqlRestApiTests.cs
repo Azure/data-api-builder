@@ -320,6 +320,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTestWithMappedFieldsToBeReturned",
+                $"SELECT [treeId], [species] AS [Scientific Name], [region] AS [United State's Region] FROM { _integrationMappingTable } " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithSingleMappedFieldsToBeReturned",
+                $"SELECT [species] AS [Scientific Name] FROM { _integrationMappingTable } " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithUnMappedFieldsToBeReturned",
+                $"SELECT [treeId] FROM { _integrationMappingTable } " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "InsertOneTest",
                 // This query is the query for the result we get back from the database
                 // after the insert operation. Not the query that we generate to perform

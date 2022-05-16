@@ -36,6 +36,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static readonly string _integrationTableHasColumnWithSpace = "brokers";
         protected static readonly string _integrationTieBreakEntity = "Author";
         protected static readonly string _integrationTieBreakTable = "authors";
+        protected static readonly string _integrationMappingEntity = "Tree";
+        protected static readonly string _integrationMappingTable = "trees";
         protected static readonly string _simple_all_books = "books_view_all";
         protected static readonly string _simple_subset_stocks = "stocks_view_selected";
         protected static readonly string _composite_subset_bookPub = "books_publishers_view_composite";
@@ -774,6 +776,63 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController,
                 expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
                 paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation when the target
+        /// entity has mapped fields. Verify that we return the
+        /// correct names from the mapping, as well as the names
+        /// of the unmapped fields.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task FindTestWithMappedFieldsToBeReturned()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _integrationMappingEntity,
+                sqlQuery: GetQuery(nameof(FindTestWithMappedFieldsToBeReturned)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation when the target
+        /// entity has mapped fields. Verify that we return the
+        /// correct name from a single mapped field without
+        /// unmapped fields included.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task FindTestWithSingleMappedFieldsToBeReturned()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$f=Scientific Name",
+                entity: _integrationMappingEntity,
+                sqlQuery: GetQuery(nameof(FindTestWithSingleMappedFieldsToBeReturned)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation when the target
+        /// entity has mapped fields. Verify that we return the
+        /// correct name from a single unmapped field without
+        /// mapped fields included.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task FindTestWithUnMappedFieldsToBeReturned()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$f=treeId",
+                entity: _integrationMappingEntity,
+                sqlQuery: GetQuery(nameof(FindTestWithUnMappedFieldsToBeReturned)),
+                controller: _restController
             );
         }
 
@@ -2352,6 +2411,27 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Validate that we throw exception when we have a mapped
+        /// field but we do not use the correct mapping that
+        /// has been assigned.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task FindTestWithConflictingMappedFieldsToBeReturned()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$f=species",
+                entity: _integrationMappingEntity,
+                sqlQuery: GetQuery(nameof(FindTestWithUnMappedFieldsToBeReturned)),
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "Invalid field to be returned requested: species",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
         /// Tests the REST Api for the correct error condition format when
         /// a DataGatewayException is thrown
         /// </summary>
@@ -2365,7 +2445,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: "Invalid Column name requested: content",
+                expectedErrorMessage: "Invalid field to be returned requested: content",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

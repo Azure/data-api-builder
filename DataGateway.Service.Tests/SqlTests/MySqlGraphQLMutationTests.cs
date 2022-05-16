@@ -331,7 +331,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq`
             ";
 
-            await base.InsertWithInvalidForeignKey(mySqlQuery);
+            await InsertWithInvalidForeignKey(mySqlQuery);
         }
 
         /// <summary>

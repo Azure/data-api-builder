@@ -281,7 +281,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Do: </code>insert a new Book with an invalid foreign key
         /// <code>Check: </code>that GraphQL returns an error and that the book has not actually been added
         /// </summary>
-        public async Task InsertWithInvalidForeignKey(string dbQuery)
+        public static async Task InsertWithInvalidForeignKey(string dbQuery)
         {
             string graphQLMutationName = "createBook";
             string graphQLMutation = @"
@@ -310,7 +310,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Do: </code>edit a book with an invalid foreign key
         /// <code>Check: </code>that GraphQL returns an error and the book has not been editted
         /// </summary>
-        public async Task UpdateWithInvalidForeignKey(string dbQuery)
+        public static async Task UpdateWithInvalidForeignKey(string dbQuery)
         {
             string graphQLMutationName = "updateBook";
             string graphQLMutation = @"

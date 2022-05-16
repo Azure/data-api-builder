@@ -1,3 +1,4 @@
+DROP VIEW IF EXISTS books_authors;
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;

@@ -2520,6 +2520,32 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             );
         }
 
+        [TestMethod]
+        public async Task AddViewWithUndeterministicPrimaryKey()
+        {
+
+            // Just an example test I added. This test has nothing to do with our purpose,
+            // which is to fail the boostrap during initialisation.
+            string requestBody = @"
+            {
+                ""piecesAvailable"": ""3"",
+                ""piecesRequired"": ""1"",
+                ""categoryName"":null
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/2/pieceid/1",
+                queryString: string.Empty,
+                entity: _Composite_NonAutoGenPK_EntityName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.UpsertIncremental,
+                requestBody: requestBody,
+                exception: true,
+                expectedErrorMessage: "Invalid value for field categoryName in request body.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
         #endregion
     }
 }

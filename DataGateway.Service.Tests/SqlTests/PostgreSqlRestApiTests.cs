@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -883,6 +884,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"INSERT INTO { _integrationTableName } " +
                 $"(id, title, publisher_id)" +
                 $"VALUES (1000,'The Hobbit Returns to The Shire',1234)"
+            },
+            {
+                "AddViewWithUndeterministicPrimaryKey",
+                "CREATE VIEW public.books_authors as " +
+                "SELECT books.title, authors.name, authors.birthdate, books.id as book_id, authors.id as author_id " +
+                "FROM books " +
+                "INNER JOIN book_author_link " +
+                "ON books.id = book_author_link.book_id " +
+                "INNER JOIN authors " +
+                "ON authors.id = book_author_link.author_id"
             }
         };
 
@@ -896,7 +907,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [ClassInitialize]
         public static async Task InitializeTestFixture(TestContext context)
         {
-            await InitializeTestFixture(context, TestCategory.POSTGRESQL);
+            Dictionary<string, string> testSpecificQueries = new();
+            if (context.Properties["TestName"].Equals("AddViewWithUndeterministicPrimaryKey"))
+            {
+                string key = "AddViewWithUndeterministicPrimaryKey";
+                testSpecificQueries.Add(key, _queryMap[key]);
+            }
+
+            try
+            {
+                await InitializeTestFixture(context, TestCategory.POSTGRESQL, testSpecificQueries);
+            }
+            catch(DataGatewayException ex)
+            {
+                Console.WriteLine(ex.Message+ " <- Exception");
+            }
 
             _restService = new RestService(_queryEngine,
                 _mutationEngine,

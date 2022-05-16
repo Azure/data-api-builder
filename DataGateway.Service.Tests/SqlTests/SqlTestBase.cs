@@ -54,11 +54,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// this class.
         /// </summary>
         /// <param name="context"></param>
-        protected static async Task InitializeTestFixture(TestContext context, string testCategory)
+        protected static async Task InitializeTestFixture(TestContext context, string testCategory, Dictionary<string,string> testSpecificQueries = null)
         {
             _testCategory = testCategory;
+            bool addEntity = false;
+            if(testSpecificQueries is not null && testSpecificQueries.Count > 0)
+            {
+                addEntity = true;
+            }
 
-            _runtimeConfigPath = SqlTestHelper.LoadConfig($"{_testCategory}");
+            _runtimeConfigPath = SqlTestHelper.LoadConfig($"{_testCategory}", addEntity);
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:
@@ -120,12 +125,26 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _queryBuilder,
                 _sqlMetadataProvider);
             await ResetDbStateAsync();
+
+            if (testSpecificQueries is not null && testSpecificQueries.Count > 0)
+            {
+                await ExecuteTestSpecificQueries(testSpecificQueries);
+            }
+
             await _sqlMetadataProvider.InitializeAsync();
         }
 
         protected static async Task ResetDbStateAsync()
         {
             using DbDataReader _ = await _queryExecutor.ExecuteQueryAsync(File.ReadAllText($"{_testCategory}Books.sql"), parameters: null);
+        }
+
+        protected static async Task ExecuteTestSpecificQueries(Dictionary<string, string> testSpecificQueries)
+        {
+            foreach (string query in testSpecificQueries.Values)
+            {
+                using DbDataReader _ = await _queryExecutor.ExecuteQueryAsync(query, parameters: null);
+            }
         }
 
         /// <summary>

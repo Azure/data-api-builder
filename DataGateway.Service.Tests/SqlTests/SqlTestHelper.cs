@@ -19,7 +19,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 {
     public class SqlTestHelper
     {
-        public static IOptionsMonitor<RuntimeConfigPath> LoadConfig(string environment)
+        public static IOptionsMonitor<RuntimeConfigPath> LoadConfig(string environment,bool addEntity = false)
         {
             string configFileName = RuntimeConfigPath.GetFileNameForEnvironment(environment);
 
@@ -39,6 +39,27 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             RuntimeConfigPath configPath = config.Get<RuntimeConfigPath>();
             configPath.SetRuntimeConfigValue();
             AddMissingEntitiesToConfig(configPath);
+            if (addEntity)
+            {
+                string entityName = "\"books_authors\"";
+                string entityConfig =
+              @"{ 
+                    ""source"":  " + entityName + @",
+                    ""graphql"": true,
+                    ""permissions"": [
+                      {
+                        ""role"": ""anonymous"",
+                        ""actions"": [ ""read"" ]
+                      },
+                      {
+                        ""role"": ""authenticated"",
+                        ""actions"": [ ""create"", ""read"", ""delete"" ]
+                      }
+                    ]
+                }";
+                AddEntitiesToConfig(configPath,entityConfig, "books_authors");
+            }
+
             return Mock.Of<IOptionsMonitor<RuntimeConfigPath>>(_ => _.CurrentValue == configPath);
 
         }
@@ -83,6 +104,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             Entity magazineEntity = JsonSerializer.Deserialize<Entity>(magazineEntityJsonString, options);
             configPath.ConfigValue.Entities.Add("Magazine", magazineEntity);
+        }
+
+        private static void AddEntitiesToConfig(RuntimeConfigPath configPath,string entityConfig,string entityName)
+        {
+           JsonSerializerOptions options = new()
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters =
+                {
+                    new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+                }
+            };
+
+            Entity entity = JsonSerializer.Deserialize<Entity>(entityConfig, options);
+            configPath.ConfigValue.Entities.Add(entityName, entity);
         }
 
         /// <summary>

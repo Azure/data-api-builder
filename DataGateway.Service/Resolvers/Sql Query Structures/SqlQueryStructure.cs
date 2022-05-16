@@ -218,20 +218,23 @@ namespace Azure.DataGateway.Service.Resolvers
             Dictionary<string, string> mapping = context.MappingFromEntity!;
             foreach (string field in context.FieldsToBeReturned)
             {
-                // we know fields are valid, so if
-                // the mapping is null we use only field,
-                // if the field is named in the keys
-                // which represent columns we use only field
-                // or if the field isn't a mapped value it must
-                // be a column and we only use field
+                // we know fields to be returned are valid,
+                // therefore in any of the following cases we
+                // use only the name of the given field
+                // 1. the mapping is null
+                // 2. the field is named in the keys
+                // which represent columns 
+                // 3. the field isn't named in the values
+                // which represent the name a column maps to
                 if ((mapping is null) ||
                     (mapping.ContainsKey(field)) ||
                     (!mapping.ContainsValue(field)))
                 {
                     AddColumn(field);
                 }
-                // if the above case all fail it must be a value.
-                // since we know it is a value in the mapping
+                // if the above cases all fail, then the field name
+                // in question must be a value.
+                // since we know it is a value in the mapping,
                 // we iterate through the keys and add a column
                 // with the label of the field matched to the
                 // given column. Since mappings are 1:1, we break

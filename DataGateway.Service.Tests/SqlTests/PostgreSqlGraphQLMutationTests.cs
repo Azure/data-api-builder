@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -179,7 +180,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 FROM
                   (SELECT table0.id AS id,
                           table0.title AS title,
-                          table1_subq.data AS publisher
+                          table1_subq.data AS publishers
                    FROM books AS table0
                    LEFT OUTER JOIN LATERAL
                      (SELECT to_jsonb(subq2) AS DATA
@@ -332,7 +333,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    WHERE publisher_id = -1 ) AS subq
             ";
 
-            await InsertWithInvalidForeignKey(postgresQuery);
+            await InsertWithInvalidForeignKey(postgresQuery, PostgresDbExceptionParser.FK_VIOLATION_MESSAGE);
         }
 
         /// <summary>
@@ -350,7 +351,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    WHERE id = 1 AND publisher_id = -1 ) AS subq
             ";
 
-            await UpdateWithInvalidForeignKey(postgresQuery);
+            await UpdateWithInvalidForeignKey(postgresQuery, PostgresDbExceptionParser.FK_VIOLATION_MESSAGE);
         }
 
         /// <summary>
@@ -378,9 +379,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// placement
         /// </summary>
         [TestMethod]
-        public override async Task TestViolatingOneToOneRelashionShip()
+        public async Task TestViolatingOneToOneRelashionShip()
         {
-            await base.TestViolatingOneToOneRelashionShip();
+            await TestViolatingOneToOneRelashionShip(PostgresDbExceptionParser.UNQIUE_VIOLATION_MESSAGE);
         }
         #endregion
     }

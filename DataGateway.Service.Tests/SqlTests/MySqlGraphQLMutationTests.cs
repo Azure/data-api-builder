@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -331,7 +332,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq`
             ";
 
-            await InsertWithInvalidForeignKey(mySqlQuery);
+            await InsertWithInvalidForeignKey(mySqlQuery, MySqlDbExceptionParser.INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE);
         }
 
         /// <summary>
@@ -351,7 +352,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq`
             ";
 
-            await UpdateWithInvalidForeignKey(mySqlQuery);
+            await UpdateWithInvalidForeignKey(mySqlQuery, MySqlDbExceptionParser.INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE);
         }
 
         /// <summary>
@@ -379,9 +380,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// placement
         /// </summary>
         [TestMethod]
-        public override async Task TestViolatingOneToOneRelashionShip()
+        public async Task TestViolatingOneToOneRelashionShip()
         {
-            await base.TestViolatingOneToOneRelashionShip();
+            await TestViolatingOneToOneRelashionShip(MySqlDbExceptionParser.INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE);
         }
         #endregion
     }

@@ -281,7 +281,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Do: </code>insert a new Book with an invalid foreign key
         /// <code>Check: </code>that GraphQL returns an error and that the book has not actually been added
         /// </summary>
-        public static async Task InsertWithInvalidForeignKey(string dbQuery)
+        public static async Task InsertWithInvalidForeignKey(string dbQuery, string errorMessage)
         {
             string graphQLMutationName = "createBook";
             string graphQLMutation = @"
@@ -297,7 +297,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             SqlTestHelper.TestForErrorInGraphQLResponse(
                 result.ToString(),
-                message: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
+                message: errorMessage,
                 statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
             );
 
@@ -310,7 +310,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Do: </code>edit a book with an invalid foreign key
         /// <code>Check: </code>that GraphQL returns an error and the book has not been editted
         /// </summary>
-        public static async Task UpdateWithInvalidForeignKey(string dbQuery)
+        public static async Task UpdateWithInvalidForeignKey(string dbQuery, string errorMessage)
         {
             string graphQLMutationName = "updateBook";
             string graphQLMutation = @"
@@ -326,7 +326,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             SqlTestHelper.TestForErrorInGraphQLResponse(
                 result.ToString(),
-                message: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
+                message: errorMessage,
                 statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
             );
 
@@ -379,7 +379,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Test adding a website placement to a book which already has a website
         /// placement
         /// </summary>
-        public virtual async Task TestViolatingOneToOneRelashionShip()
+        public static async Task TestViolatingOneToOneRelashionShip(string errorMessage)
         {
             string graphQLMutationName = "createBookWebsitePlacement";
             string graphQLMutation = @"
@@ -393,7 +393,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
             SqlTestHelper.TestForErrorInGraphQLResponse(
                 result.ToString(),
-                message: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
+                message: errorMessage,
                 statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
             );
         }

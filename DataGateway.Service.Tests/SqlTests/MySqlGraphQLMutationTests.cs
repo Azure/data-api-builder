@@ -11,13 +11,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 {
 
     [TestClass, TestCategory(TestCategory.MYSQL)]
-    public class MySqlGraphQLMutationTests : SqlTestBase
+    public class MySqlGraphQLMutationTests : GraphQLMutationTestBase
     {
 
         #region Test Fixture Setup
-        private static GraphQLService _graphQLService;
-        private static GraphQLController _graphQLController;
-
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
         /// MSTest decorator.
@@ -59,18 +56,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// if the mutation query has returned the correct information
         /// </summary>
         [TestMethod]
-        public async Task InsertMutation()
+        public override async Task InsertMutation(string _)
         {
-            string graphQLMutationName = "insertBook";
-            string graphQLMutation = @"
-                mutation {
-                    insertBook(title: ""My New Book"", publisher_id: 1234) {
-                        id
-                        title
-                    }
-                }
-            ";
-
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('id', `subq`.`id`, 'title', `subq`.`title`) AS `data`
                 FROM (
@@ -84,10 +71,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq`
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(mySqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await base.InsertMutation(mySqlQuery);
         }
 
         /// <summary>
@@ -96,18 +80,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// the mutation query will return the review Id with the content of the review added
         /// </summary>
         [TestMethod]
-        public async Task InsertMutationForConstantdefaultValue()
+        public override async Task InsertMutationForConstantdefaultValue(string _)
         {
-            string graphQLMutationName = "insertReview";
-            string graphQLMutation = @"
-                mutation {
-                    insertReview(book_id: 1) {
-                        id
-                        content
-                    }
-                }
-            ";
-
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('id', `subq`.`id`, 'content', `subq`.`content`) AS `data`
                 FROM (
@@ -121,10 +95,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq`
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(mySqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await base.InsertMutationForConstantdefaultValue(mySqlQuery);
         }
 
         /// <summary>
@@ -133,18 +104,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// and if the mutation query has returned the values correctly
         /// </summary>
         [TestMethod]
-        public async Task UpdateMutation()
+        public override async Task UpdateMutation(string _)
         {
-            string graphQLMutationName = "editBook";
-            string graphQLMutation = @"
-                mutation {
-                    editBook(id: 1, title: ""Even Better Title"", publisher_id: 2345) {
-                        title
-                        publisher_id
-                    }
-                }
-            ";
-
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('title', `subq2`.`title`, 'publisher_id', `subq2`.`publisher_id`) AS `data`
                 FROM (
@@ -156,10 +117,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq2`
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(mySqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await base.UpdateMutation(mySqlQuery);
         }
 
         /// <summary>
@@ -167,18 +125,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>if the mutation returned result is as expected and if book by that id has been deleted
         /// </summary>
         [TestMethod]
-        public async Task DeleteMutation()
+        public override async Task DeleteMutation(string _, string _1)
         {
-            string graphQLMutationName = "deleteBook";
-            string graphQLMutation = @"
-                mutation {
-                    deleteBook(id: 1) {
-                        title
-                        publisher_id
-                    }
-                }
-            ";
-
             string mySqlQueryForResult = @"
                 SELECT JSON_OBJECT('title', `subq2`.`title`, 'publisher_id', `subq2`.`publisher_id`) AS `data`
                 FROM (
@@ -190,13 +138,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq2`
             ";
 
-            // query the table before deletion is performed to see if what the mutation
-            // returns is correct
-            string expected = await GetDatabaseResultAsync(mySqlQueryForResult);
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-
             string mySqlQueryToVerifyDeletion = @"
                 SELECT JSON_OBJECT('count', `subq`.`count`) AS `data`
                 FROM (
@@ -206,10 +147,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq`
             ";
 
-            string dbResponse = await GetDatabaseResultAsync(mySqlQueryToVerifyDeletion);
-
-            using JsonDocument result = JsonDocument.Parse(dbResponse);
-            Assert.AreEqual(result.RootElement.GetProperty("count").GetInt64(), 0);
+            await base.DeleteMutation(mySqlQueryForResult, mySqlQueryToVerifyDeletion);
         }
 
         /// <summary>
@@ -219,15 +157,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         // IGNORE FOR NOW, SEE: Issue #285
         [Ignore]
-        public async Task InsertMutationForNonGraphQLTypeTable()
+        public override async Task InsertMutationForNonGraphQLTypeTable(string _)
         {
-            string graphQLMutationName = "addAuthorToBook";
-            string graphQLMutation = @"
-                mutation {
-                    addAuthorToBook(author_id: 123, book_id: 2)
-                }
-            ";
-
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('count', `subq`.`count`) AS DATA
                 FROM
@@ -237,11 +168,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                      AND author_id = 123) AS subq
             ";
 
-            await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string dbResponse = await GetDatabaseResultAsync(mySqlQuery);
-
-            using JsonDocument result = JsonDocument.Parse(dbResponse);
-            Assert.AreEqual(result.RootElement.GetProperty("count").GetInt64(), 1);
+            await base.InsertMutationForNonGraphQLTypeTable(mySqlQuery);
         }
 
         /// <summary>
@@ -249,21 +176,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>if the result returned from the mutation is correct
         /// </summary>
         [TestMethod]
-        public async Task NestedQueryingInMutation()
+        public override async Task NestedQueryingInMutation(string _)
         {
-            string graphQLMutationName = "insertBook";
-            string graphQLMutation = @"
-                mutation {
-                    insertBook(title: ""My New Book"", publisher_id: 1234) {
-                        id
-                        title
-                        publisher {
-                            name
-                        }
-                    }
-                }
-            ";
-
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('id', `subq4`.`id`, 'title', `subq4`.`title`, 'publisher', JSON_EXTRACT(`subq4`.
                             `publisher`, '$')) AS `data`
@@ -283,29 +197,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq4`
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(mySqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await base.NestedQueryingInMutation(mySqlQuery);
         }
 
         /// <summary>
         /// Test explicitly inserting a null column
         /// </summary>
         [TestMethod]
-        public async Task TestExplicitNullInsert()
+        public override async Task TestExplicitNullInsert(string _)
         {
-            string graphQLMutationName = "insertMagazine";
-            string graphQLMutation = @"
-                mutation {
-                    insertMagazine(id: 800, title: ""New Magazine"", issue_number: null) {
-                        id
-                        title
-                        issue_number
-                    }
-                }
-            ";
-
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('id', `subq2`.`id`, 'title', `subq2`.`title`, 'issue_number', `subq2`.`issue_number`) AS `data`
                 FROM (
@@ -320,29 +220,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq2`
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(mySqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await base.TestExplicitNullInsert(mySqlQuery);
         }
 
         /// <summary>
         /// Test implicitly inserting a null column
         /// </summary>
         [TestMethod]
-        public async Task TestImplicitNullInsert()
+        public override async Task TestImplicitNullInsert(string _)
         {
-            string graphQLMutationName = "insertMagazine";
-            string graphQLMutation = @"
-                mutation {
-                    insertMagazine(id: 801, title: ""New Magazine 2"") {
-                        id
-                        title
-                        issue_number
-                    }
-                }
-            ";
-
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('id', `subq2`.`id`, 'title', `subq2`.`title`, 'issue_number', `subq2`.`issue_number`) AS `data`
                 FROM (
@@ -357,28 +243,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq2`
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(mySqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await base.TestImplicitNullInsert(mySqlQuery);
         }
 
         /// <summary>
         /// Test updating a column to null
         /// </summary>
         [TestMethod]
-        public async Task TestUpdateColumnToNull()
+        public override async Task TestUpdateColumnToNull(string _)
         {
-            string graphQLMutationName = "updateMagazine";
-            string graphQLMutation = @"
-                mutation {
-                    updateMagazine(id: 1, issue_number: null) {
-                        id
-                        issue_number
-                    }
-                }
-            ";
-
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('id', `subq2`.`id`, 'issue_number', `subq2`.`issue_number`) AS `data`
                 FROM (
@@ -391,29 +264,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq2`
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(mySqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await base.TestUpdateColumnToNull(mySqlQuery);
         }
 
         /// <summary>
         /// Test updating a missing column in the update mutation will not be updated to null
         /// </summary>
         [TestMethod]
-        public async Task TestMissingColumnNotUpdatedToNull()
+        public override async Task TestMissingColumnNotUpdatedToNull(string _)
         {
-            string graphQLMutationName = "updateMagazine";
-            string graphQLMutation = @"
-                mutation {
-                    updateMagazine(id: 1, title: ""Newest Magazine"") {
-                        id
-                        title
-                        issue_number
-                    }
-                }
-            ";
-
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('id', `subq2`.`id`, 'title', `subq2`.`title`, 'issue_number', `subq2`.`issue_number`) AS `data`
                 FROM (
@@ -428,10 +287,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq2`
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(mySqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await base.TestMissingColumnNotUpdatedToNull(mySqlQuery);
         }
 
         /// <summary>
@@ -440,18 +296,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// The response for the query will use the alias instead of raw db column.
         /// </summary>
         [TestMethod]
-        public async Task TestAliasSupportForGraphQLMutationQueryFields()
+        public override async Task TestAliasSupportForGraphQLMutationQueryFields(string _)
         {
-            string graphQLMutationName = "insertBook";
-            string graphQLMutation = @"
-                mutation {
-                    insertBook(title: ""My New Book"", publisher_id: 1234) {
-                        book_id: id
-                        book_title: title
-                    }
-                }
-            ";
-
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('book_id', `subq`.`book_id`, 'book_title', `subq`.`book_title`) AS `data`
                 FROM (
@@ -465,10 +311,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq`
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(mySqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await base.TestAliasSupportForGraphQLMutationQueryFields(mySqlQuery);
         }
 
         #endregion
@@ -480,26 +323,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>that GraphQL returns an error and that the book has not actually been added
         /// </summary>
         [TestMethod]
-        public async Task InsertWithInvalidForeignKey()
+        public override async Task InsertWithInvalidForeignKey(string _)
         {
-            string graphQLMutationName = "insertBook";
-            string graphQLMutation = @"
-                mutation {
-                    insertBook(title: ""My New Book"", publisher_id: -1) {
-                        id
-                        title
-                    }
-                }
-            ";
-
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-
-            SqlTestHelper.TestForErrorInGraphQLResponse(
-                result.ToString(),
-                message: MySqlDbExceptionParser.INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE,
-                statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
-            );
-
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('count', `subq`.`count`) AS `data`
                 FROM (
@@ -509,9 +334,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq`
             ";
 
-            string dbResponse = await GetDatabaseResultAsync(mySqlQuery);
-            using JsonDocument dbResponseJson = JsonDocument.Parse(dbResponse);
-            Assert.AreEqual(dbResponseJson.RootElement.GetProperty("count").GetInt64(), 0);
+            await base.InsertWithInvalidForeignKey(mySqlQuery);
         }
 
         /// <summary>
@@ -519,26 +342,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>that GraphQL returns an error and the book has not been editted
         /// </summary>
         [TestMethod]
-        public async Task UpdateWithInvalidForeignKey()
+        public override async Task UpdateWithInvalidForeignKey(string _)
         {
-            string graphQLMutationName = "editBook";
-            string graphQLMutation = @"
-                mutation {
-                    editBook(id: 1, publisher_id: -1) {
-                        id
-                        title
-                    }
-                }
-            ";
-
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-
-            SqlTestHelper.TestForErrorInGraphQLResponse(
-                result.ToString(),
-                message: MySqlDbExceptionParser.INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE,
-                statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
-            );
-
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('count', `subq`.`count`) AS `data`
                 FROM (
@@ -549,9 +354,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq`
             ";
 
-            string dbResponse = await GetDatabaseResultAsync(mySqlQuery);
-            using JsonDocument dbResponseJson = JsonDocument.Parse(dbResponse);
-            Assert.AreEqual(dbResponseJson.RootElement.GetProperty("count").GetInt64(), 0);
+            await base.UpdateWithInvalidForeignKey(mySqlQuery);
         }
 
         /// <summary>
@@ -559,20 +362,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>check that GraphQL returns the appropriate message to the user
         /// </summary>
         [TestMethod]
-        public async Task UpdateWithNoNewValues()
+        public override async Task UpdateWithNoNewValues()
         {
-            string graphQLMutationName = "editBook";
-            string graphQLMutation = @"
-                mutation {
-                    editBook(id: 1) {
-                        id
-                        title
-                    }
-                }
-            ";
-
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
+            await base.UpdateWithNoNewValues();
         }
 
         /// <summary>
@@ -580,20 +372,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>check that GraphQL returns an appropriate exception to the user
         /// </summary>
         [TestMethod]
-        public async Task UpdateWithInvalidIdentifier()
+        public override async Task UpdateWithInvalidIdentifier()
         {
-            string graphQLMutationName = "editBook";
-            string graphQLMutation = @"
-                mutation {
-                    editBook(id: -1, title: ""Even Better Title"") {
-                        id
-                        title
-                    }
-                }
-            ";
-
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.EntityNotFound}");
+            await base.UpdateWithInvalidIdentifier();
         }
 
         /// <summary>
@@ -601,23 +382,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// placement
         /// </summary>
         [TestMethod]
-        public async Task TestViolatingOneToOneRelashionShip()
+        public override async Task TestViolatingOneToOneRelashionShip()
         {
-            string graphQLMutationName = "insertWebsitePlacement";
-            string graphQLMutation = @"
-                mutation {
-                    insertWebsitePlacement(book_id: 1, price: 25) {
-                        id
-                    }
-                }
-            ";
-
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(
-                result.ToString(),
-                message: MySqlDbExceptionParser.INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE,
-                statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
-            );
+            await base.TestViolatingOneToOneRelashionShip();
         }
         #endregion
     }

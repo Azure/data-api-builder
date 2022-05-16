@@ -24,8 +24,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code> If book with the expected values of the new book is present in the database and
         /// if the mutation query has returned the correct information
         /// </summary>
-        [TestMethod]
-        public virtual async Task InsertMutation(string dbQuery)
+        public async Task InsertMutation(string dbQuery)
         {
             string graphQLMutationName = "createBook";
             string graphQLMutation = @"
@@ -48,8 +47,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code> If book with the given id is present in the database then
         /// the mutation query will return the review Id with the content of the review added
         /// </summary>
-        [TestMethod]
-        public virtual async Task InsertMutationForConstantdefaultValue(string dbQuery)
+        public async Task InsertMutationForConstantdefaultValue(string dbQuery)
         {
             string graphQLMutationName = "createReview";
             string graphQLMutation = @"
@@ -72,8 +70,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>if the book with the id of the edited book and the new values exists in the database
         /// and if the mutation query has returned the values correctly
         /// </summary>
-        [TestMethod]
-        public virtual async Task UpdateMutation(string dbQuery)
+        public async Task UpdateMutation(string dbQuery)
         {
             string graphQLMutationName = "updateBook";
             string graphQLMutation = @"
@@ -95,8 +92,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Do: </code>Delete book by id
         /// <code>Check: </code>if the mutation returned result is as expected and if book by that id has been deleted
         /// </summary>
-        [TestMethod]
-        public virtual async Task DeleteMutation(string dbQueryForResult, string dbQueryToVerifyDeletion)
+        public async Task DeleteMutation(string dbQueryForResult, string dbQueryToVerifyDeletion)
         {
             string graphQLMutationName = "deleteBook";
             string graphQLMutation = @"
@@ -125,10 +121,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Do: </code>run a mutation which mutates a relationship instead of a graphql type
         /// <code>Check: </code>that the insertion of the entry in the appropriate link table was successful
         /// </summary>
-        [TestMethod]
         // IGNORE FOR NOW, SEE: Issue #285
-        [Ignore]
-        public virtual async Task InsertMutationForNonGraphQLTypeTable(string dbQuery)
+        public async Task InsertMutationForNonGraphQLTypeTable(string dbQuery)
         {
             string graphQLMutationName = "addAuthorToBook";
             string graphQLMutation = @"
@@ -148,8 +142,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Do: </code>a new Book insertion and do a nested querying of the returned book
         /// <code>Check: </code>if the result returned from the mutation is correct
         /// </summary>
-        [TestMethod]
-        public virtual async Task NestedQueryingInMutation(string dbQuery)
+        public async Task NestedQueryingInMutation(string dbQuery)
         {
             string graphQLMutationName = "createBook";
             string graphQLMutation = @"
@@ -173,8 +166,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Test explicitly inserting a null column
         /// </summary>
-        [TestMethod]
-        public virtual async Task TestExplicitNullInsert(string dbQuery)
+        public async Task TestExplicitNullInsert(string dbQuery)
         {
             string graphQLMutationName = "createMagazine";
             string graphQLMutation = @"
@@ -196,8 +188,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Test implicitly inserting a null column
         /// </summary>
-        [TestMethod]
-        public virtual async Task TestImplicitNullInsert(string dbQuery)
+        public async Task TestImplicitNullInsert(string dbQuery)
         {
             string graphQLMutationName = "createMagazine";
             string graphQLMutation = @"
@@ -219,8 +210,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Test updating a column to null
         /// </summary>
-        [TestMethod]
-        public virtual async Task TestUpdateColumnToNull(string dbQuery)
+        public async Task TestUpdateColumnToNull(string dbQuery)
         {
             string graphQLMutationName = "updateMagazine";
             string graphQLMutation = @"
@@ -241,8 +231,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Test updating a missing column in the update mutation will not be updated to null
         /// </summary>
-        [TestMethod]
-        public virtual async Task TestMissingColumnNotUpdatedToNull(string dbQuery)
+        public async Task TestMissingColumnNotUpdatedToNull(string dbQuery)
         {
             string graphQLMutationName = "updateMagazine";
             string graphQLMutation = @"
@@ -266,8 +255,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// book_id and book_title are aliases used for corresponding query fields.
         /// The response for the query will use the alias instead of raw db column.
         /// </summary>
-        [TestMethod]
-        public virtual async Task TestAliasSupportForGraphQLMutationQueryFields(string dbQuery)
+        public async Task TestAliasSupportForGraphQLMutationQueryFields(string dbQuery)
         {
             string graphQLMutationName = "createBook";
             string graphQLMutation = @"
@@ -293,8 +281,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Do: </code>insert a new Book with an invalid foreign key
         /// <code>Check: </code>that GraphQL returns an error and that the book has not actually been added
         /// </summary>
-        [TestMethod]
-        public virtual async Task InsertWithInvalidForeignKey(string dbQuery)
+        public async Task InsertWithInvalidForeignKey(string dbQuery)
         {
             string graphQLMutationName = "createBook";
             string graphQLMutation = @"
@@ -323,8 +310,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Do: </code>edit a book with an invalid foreign key
         /// <code>Check: </code>that GraphQL returns an error and the book has not been editted
         /// </summary>
-        [TestMethod]
-        public virtual async Task UpdateWithInvalidForeignKey(string dbQuery)
+        public async Task UpdateWithInvalidForeignKey(string dbQuery)
         {
             string graphQLMutationName = "updateBook";
             string graphQLMutation = @"
@@ -353,7 +339,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Do: </code>use an update mutation without passing any of the optional new values to update
         /// <code>Check: </code>check that GraphQL returns an appropriate exception to the user
         /// </summary>
-        [TestMethod]
         public virtual async Task UpdateWithNoNewValues()
         {
             string graphQLMutationName = "updateBook";
@@ -374,7 +359,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Do: </code>use an update mutation with an invalid id to update
         /// <code>Check: </code>check that GraphQL returns an appropriate exception to the user
         /// </summary>
-        [TestMethod]
         public virtual async Task UpdateWithInvalidIdentifier()
         {
             string graphQLMutationName = "updateBook";
@@ -395,7 +379,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Test adding a website placement to a book which already has a website
         /// placement
         /// </summary>
-        [TestMethod]
         public virtual async Task TestViolatingOneToOneRelashionShip()
         {
             string graphQLMutationName = "createBookWebsitePlacement";

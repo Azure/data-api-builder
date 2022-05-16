@@ -53,7 +53,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// if the mutation query has returned the correct information
         /// </summary>
         [TestMethod]
-        public override async Task InsertMutation(string _)
+        public async Task InsertMutation()
         {
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
@@ -77,7 +77,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// the mutation query will return the review Id with the content of the review added
         /// </summary>
         [TestMethod]
-        public override async Task InsertMutationForConstantdefaultValue(string _)
+        public async Task InsertMutationForConstantdefaultValue()
         {
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
@@ -92,7 +92,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    LIMIT 1) AS subq
             ";
 
-            await base.InsertMutationForConstantdefaultValue(postgresQuery);
+            await InsertMutationForConstantdefaultValue(postgresQuery);
         }
 
         /// <summary>
@@ -101,7 +101,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// and if the mutation query has returned the values correctly
         /// </summary>
         [TestMethod]
-        public override async Task UpdateMutation(string _)
+        public async Task UpdateMutation()
         {
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
@@ -114,7 +114,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    LIMIT 1) AS subq
             ";
 
-            await base.UpdateMutation(postgresQuery);
+            await UpdateMutation(postgresQuery);
         }
 
         /// <summary>
@@ -122,7 +122,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>if the mutation returned result is as expected and if book by that id has been deleted
         /// </summary>
         [TestMethod]
-        public override async Task DeleteMutation(string _, string _1)
+        public async Task DeleteMutation()
         {
             string postgresQueryForResult = @"
                 SELECT to_jsonb(subq) AS DATA
@@ -143,7 +143,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    WHERE id = 1) AS subq
             ";
 
-            await base.DeleteMutation(postgresQueryForResult, postgresQueryToVerifyDeletion);
+            await DeleteMutation(postgresQueryForResult, postgresQueryToVerifyDeletion);
         }
 
         /// <summary>
@@ -153,7 +153,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         // IGNORE FOR NOW, SEE: Issue #285
         [Ignore]
-        public override async Task InsertMutationForNonGraphQLTypeTable(string _)
+        public async Task InsertMutationForNonGraphQLTypeTable()
         {
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
@@ -164,7 +164,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                      AND author_id = 123) AS subq
             ";
 
-            await base.InsertMutationForNonGraphQLTypeTable(postgresQuery);
+            await InsertMutationForNonGraphQLTypeTable(postgresQuery);
         }
 
         /// <summary>
@@ -172,7 +172,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>if the result returned from the mutation is correct
         /// </summary>
         [TestMethod]
-        public override async Task NestedQueryingInMutation(string _)
+        public async Task NestedQueryingInMutation()
         {
             string postgresQuery = @"
                 SELECT to_jsonb(subq3) AS DATA
@@ -196,14 +196,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    LIMIT 1) AS subq3
             ";
 
-            await base.NestedQueryingInMutation(postgresQuery);
+            await NestedQueryingInMutation(postgresQuery);
         }
 
         /// <summary>
         /// Test explicitly inserting a null column
         /// </summary>
         [TestMethod]
-        public override async Task TestExplicitNullInsert(string _)
+        public async Task TestExplicitNullInsert()
         {
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
@@ -219,14 +219,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    LIMIT 1) AS subq
             ";
 
-            await base.TestExplicitNullInsert(postgresQuery);
+            await TestExplicitNullInsert(postgresQuery);
         }
 
         /// <summary>
         /// Test implicitly inserting a null column
         /// </summary>
         [TestMethod]
-        public override async Task TestImplicitNullInsert(string _)
+        public async Task TestImplicitNullInsert()
         {
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
@@ -242,14 +242,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    LIMIT 1) AS subq
             ";
 
-            await base.TestImplicitNullInsert(postgresQuery);
+            await TestImplicitNullInsert(postgresQuery);
         }
 
         /// <summary>
         /// Test updating a column to null
         /// </summary>
         [TestMethod]
-        public override async Task TestUpdateColumnToNull(string _)
+        public async Task TestUpdateColumnToNull()
         {
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
@@ -263,14 +263,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    LIMIT 1) AS subq
             ";
 
-            await base.TestUpdateColumnToNull(postgresQuery);
+            await TestUpdateColumnToNull(postgresQuery);
         }
 
         /// <summary>
         /// Test updating a missing column in the update mutation will not be updated to null
         /// </summary>
         [TestMethod]
-        public override async Task TestMissingColumnNotUpdatedToNull(string _)
+        public async Task TestMissingColumnNotUpdatedToNull()
         {
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
@@ -286,7 +286,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    LIMIT 1) AS subq
             ";
 
-            await base.TestMissingColumnNotUpdatedToNull(postgresQuery);
+            await TestMissingColumnNotUpdatedToNull(postgresQuery);
         }
 
         /// <summary>
@@ -295,7 +295,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// if the mutation query has returned the correct information with Aliases where provided.
         /// </summary>
         [TestMethod]
-        public override async Task TestAliasSupportForGraphQLMutationQueryFields(string _)
+        public async Task TestAliasSupportForGraphQLMutationQueryFields()
         {
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
@@ -310,7 +310,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    LIMIT 1) AS subq
             ";
 
-            await base.TestAliasSupportForGraphQLMutationQueryFields(postgresQuery);
+            await TestAliasSupportForGraphQLMutationQueryFields(postgresQuery);
         }
 
         #endregion
@@ -322,7 +322,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>that GraphQL returns an error and that the book has not actually been added
         /// </summary>
         [TestMethod]
-        public override async Task InsertWithInvalidForeignKey(string _)
+        public async Task InsertWithInvalidForeignKey()
         {
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
@@ -332,7 +332,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    WHERE publisher_id = -1 ) AS subq
             ";
 
-            await base.InsertWithInvalidForeignKey(postgresQuery);
+            await InsertWithInvalidForeignKey(postgresQuery);
         }
 
         /// <summary>
@@ -340,7 +340,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>that GraphQL returns an error and the book has not been editted
         /// </summary>
         [TestMethod]
-        public override async Task UpdateWithInvalidForeignKey(string _)
+        public async Task UpdateWithInvalidForeignKey()
         {
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
@@ -350,7 +350,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    WHERE id = 1 AND publisher_id = -1 ) AS subq
             ";
 
-            await base.UpdateWithInvalidForeignKey(postgresQuery);
+            await UpdateWithInvalidForeignKey(postgresQuery);
         }
 
         /// <summary>

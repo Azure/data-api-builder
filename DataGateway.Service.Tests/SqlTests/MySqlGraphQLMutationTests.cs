@@ -53,7 +53,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// if the mutation query has returned the correct information
         /// </summary>
         [TestMethod]
-        public override async Task InsertMutation(string _)
+        public async Task InsertMutation()
         {
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('id', `subq`.`id`, 'title', `subq`.`title`) AS `data`
@@ -68,7 +68,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq`
             ";
 
-            await base.InsertMutation(mySqlQuery);
+            await InsertMutation(mySqlQuery);
         }
 
         /// <summary>
@@ -77,7 +77,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// the mutation query will return the review Id with the content of the review added
         /// </summary>
         [TestMethod]
-        public override async Task InsertMutationForConstantdefaultValue(string _)
+        public async Task InsertMutationForConstantdefaultValue()
         {
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('id', `subq`.`id`, 'content', `subq`.`content`) AS `data`
@@ -92,7 +92,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq`
             ";
 
-            await base.InsertMutationForConstantdefaultValue(mySqlQuery);
+            await InsertMutationForConstantdefaultValue(mySqlQuery);
         }
 
         /// <summary>
@@ -101,7 +101,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// and if the mutation query has returned the values correctly
         /// </summary>
         [TestMethod]
-        public override async Task UpdateMutation(string _)
+        public async Task UpdateMutation()
         {
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('title', `subq2`.`title`, 'publisher_id', `subq2`.`publisher_id`) AS `data`
@@ -114,7 +114,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq2`
             ";
 
-            await base.UpdateMutation(mySqlQuery);
+            await UpdateMutation(mySqlQuery);
         }
 
         /// <summary>
@@ -122,7 +122,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>if the mutation returned result is as expected and if book by that id has been deleted
         /// </summary>
         [TestMethod]
-        public override async Task DeleteMutation(string _, string _1)
+        public async Task DeleteMutation()
         {
             string mySqlQueryForResult = @"
                 SELECT JSON_OBJECT('title', `subq2`.`title`, 'publisher_id', `subq2`.`publisher_id`) AS `data`
@@ -144,7 +144,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq`
             ";
 
-            await base.DeleteMutation(mySqlQueryForResult, mySqlQueryToVerifyDeletion);
+            await DeleteMutation(mySqlQueryForResult, mySqlQueryToVerifyDeletion);
         }
 
         /// <summary>
@@ -154,7 +154,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         // IGNORE FOR NOW, SEE: Issue #285
         [Ignore]
-        public override async Task InsertMutationForNonGraphQLTypeTable(string _)
+        public async Task InsertMutationForNonGraphQLTypeTable()
         {
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('count', `subq`.`count`) AS DATA
@@ -165,7 +165,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                      AND author_id = 123) AS subq
             ";
 
-            await base.InsertMutationForNonGraphQLTypeTable(mySqlQuery);
+            await InsertMutationForNonGraphQLTypeTable(mySqlQuery);
         }
 
         /// <summary>
@@ -173,7 +173,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>if the result returned from the mutation is correct
         /// </summary>
         [TestMethod]
-        public override async Task NestedQueryingInMutation(string _)
+        public async Task NestedQueryingInMutation()
         {
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('id', `subq4`.`id`, 'title', `subq4`.`title`, 'publisher', JSON_EXTRACT(`subq4`.
@@ -194,14 +194,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq4`
             ";
 
-            await base.NestedQueryingInMutation(mySqlQuery);
+            await NestedQueryingInMutation(mySqlQuery);
         }
 
         /// <summary>
         /// Test explicitly inserting a null column
         /// </summary>
         [TestMethod]
-        public override async Task TestExplicitNullInsert(string _)
+        public async Task TestExplicitNullInsert()
         {
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('id', `subq2`.`id`, 'title', `subq2`.`title`, 'issue_number', `subq2`.`issue_number`) AS `data`
@@ -217,14 +217,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq2`
             ";
 
-            await base.TestExplicitNullInsert(mySqlQuery);
+            await TestExplicitNullInsert(mySqlQuery);
         }
 
         /// <summary>
         /// Test implicitly inserting a null column
         /// </summary>
         [TestMethod]
-        public override async Task TestImplicitNullInsert(string _)
+        public async Task TestImplicitNullInsert()
         {
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('id', `subq2`.`id`, 'title', `subq2`.`title`, 'issue_number', `subq2`.`issue_number`) AS `data`
@@ -240,14 +240,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq2`
             ";
 
-            await base.TestImplicitNullInsert(mySqlQuery);
+            await TestImplicitNullInsert(mySqlQuery);
         }
 
         /// <summary>
         /// Test updating a column to null
         /// </summary>
         [TestMethod]
-        public override async Task TestUpdateColumnToNull(string _)
+        public async Task TestUpdateColumnToNull()
         {
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('id', `subq2`.`id`, 'issue_number', `subq2`.`issue_number`) AS `data`
@@ -261,14 +261,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq2`
             ";
 
-            await base.TestUpdateColumnToNull(mySqlQuery);
+            await TestUpdateColumnToNull(mySqlQuery);
         }
 
         /// <summary>
         /// Test updating a missing column in the update mutation will not be updated to null
         /// </summary>
         [TestMethod]
-        public override async Task TestMissingColumnNotUpdatedToNull(string _)
+        public async Task TestMissingColumnNotUpdatedToNull()
         {
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('id', `subq2`.`id`, 'title', `subq2`.`title`, 'issue_number', `subq2`.`issue_number`) AS `data`
@@ -284,7 +284,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq2`
             ";
 
-            await base.TestMissingColumnNotUpdatedToNull(mySqlQuery);
+            await TestMissingColumnNotUpdatedToNull(mySqlQuery);
         }
 
         /// <summary>
@@ -293,7 +293,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// The response for the query will use the alias instead of raw db column.
         /// </summary>
         [TestMethod]
-        public override async Task TestAliasSupportForGraphQLMutationQueryFields(string _)
+        public async Task TestAliasSupportForGraphQLMutationQueryFields()
         {
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('book_id', `subq`.`book_id`, 'book_title', `subq`.`book_title`) AS `data`
@@ -320,7 +320,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>that GraphQL returns an error and that the book has not actually been added
         /// </summary>
         [TestMethod]
-        public override async Task InsertWithInvalidForeignKey(string _)
+        public async Task InsertWithInvalidForeignKey()
         {
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('count', `subq`.`count`) AS `data`
@@ -339,7 +339,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>that GraphQL returns an error and the book has not been editted
         /// </summary>
         [TestMethod]
-        public override async Task UpdateWithInvalidForeignKey(string _)
+        public async Task UpdateWithInvalidForeignKey()
         {
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('count', `subq`.`count`) AS `data`
@@ -351,7 +351,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq`
             ";
 
-            await base.UpdateWithInvalidForeignKey(mySqlQuery);
+            await UpdateWithInvalidForeignKey(mySqlQuery);
         }
 
         /// <summary>

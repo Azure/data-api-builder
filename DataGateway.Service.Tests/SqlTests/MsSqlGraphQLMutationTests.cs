@@ -53,7 +53,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// if the mutation query has returned the correct information
         /// </summary>
         [TestMethod]
-        public override async Task InsertMutation(string _)
+        public async Task InsertMutation()
         {
             string msSqlQuery = @"
                 SELECT TOP 1 [table0].[id] AS [id],
@@ -77,7 +77,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// the mutation query will return the review Id with the content of the review added
         /// </summary>
         [TestMethod]
-        public override async Task InsertMutationForConstantdefaultValue(string _)
+        public async Task InsertMutationForConstantdefaultValue()
         {
             string msSqlQuery = @"
                 SELECT TOP 1 [table0].[id] AS [id],
@@ -101,7 +101,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// and if the mutation query has returned the values correctly
         /// </summary>
         [TestMethod]
-        public override async Task UpdateMutation(string _)
+        public async Task UpdateMutation()
         {
             string msSqlQuery = @"
                 SELECT TOP 1 [title],
@@ -116,7 +116,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            await base.UpdateMutation(msSqlQuery);
+            await UpdateMutation(msSqlQuery);
         }
 
         /// <summary>
@@ -124,7 +124,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>if the mutation returned result is as expected and if book by that id has been deleted
         /// </summary>
         [TestMethod]
-        public override async Task DeleteMutation(string _, string _1)
+        public async Task DeleteMutation()
         {
             string msSqlQueryForResult = @"
                 SELECT TOP 1 [title],
@@ -146,7 +146,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            await base.DeleteMutation(msSqlQueryForResult, msSqlQueryToVerifyDeletion);
+            await DeleteMutation(msSqlQueryForResult, msSqlQueryToVerifyDeletion);
         }
 
         /// <summary>
@@ -156,7 +156,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         // IGNORE FOR NOW, SEE: Issue #285
         [Ignore]
-        public override async Task InsertMutationForNonGraphQLTypeTable(string _)
+        public async Task InsertMutationForNonGraphQLTypeTable()
         {
             string msSqlQuery = @"
                 SELECT COUNT(*) AS count
@@ -176,7 +176,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>if the result returned from the mutation is correct
         /// </summary>
         [TestMethod]
-        public override async Task NestedQueryingInMutation(string _)
+        public async Task NestedQueryingInMutation()
         {
             string msSqlQuery = @"
                 SELECT TOP 1 [table0].[id] AS [id],
@@ -201,14 +201,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            await base.NestedQueryingInMutation(msSqlQuery);
+            await NestedQueryingInMutation(msSqlQuery);
         }
 
         /// <summary>
         /// Test explicitly inserting a null column
         /// </summary>
         [TestMethod]
-        public override async Task TestExplicitNullInsert(string _)
+        public async Task TestExplicitNullInsert()
         {
             string msSqlQuery = @"
                 SELECT TOP 1 [id],
@@ -224,14 +224,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            await base.TestExplicitNullInsert(msSqlQuery);
+            await TestExplicitNullInsert(msSqlQuery);
         }
 
         /// <summary>
         /// Test implicitly inserting a null column
         /// </summary>
         [TestMethod]
-        public override async Task TestImplicitNullInsert(string _)
+        public async Task TestImplicitNullInsert()
         {
             string msSqlQuery = @"
                 SELECT TOP 1 [id],
@@ -247,14 +247,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            await base.TestImplicitNullInsert(msSqlQuery);
+            await TestImplicitNullInsert(msSqlQuery);
         }
 
         /// <summary>
         /// Test updating a column to null
         /// </summary>
         [TestMethod]
-        public override async Task TestUpdateColumnToNull(string _)
+        public async Task TestUpdateColumnToNull()
         {
             string msSqlQuery = @"
                 SELECT TOP 1 [id],
@@ -268,14 +268,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            await base.TestUpdateColumnToNull(msSqlQuery);
+            await TestUpdateColumnToNull(msSqlQuery);
         }
 
         /// <summary>
         /// Test updating a missing column in the update mutation will not be updated to null
         /// </summary>
         [TestMethod]
-        public override async Task TestMissingColumnNotUpdatedToNull(string _)
+        public async Task TestMissingColumnNotUpdatedToNull()
         {
             string msSqlQuery = @"
                 SELECT TOP 1 [id],
@@ -291,7 +291,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            await base.TestMissingColumnNotUpdatedToNull(msSqlQuery);
+            await TestMissingColumnNotUpdatedToNull(msSqlQuery);
         }
 
         /// <summary>
@@ -300,7 +300,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// The response for the query will use the alias instead of raw db column.
         /// </summary>
         [TestMethod]
-        public override async Task TestAliasSupportForGraphQLMutationQueryFields(string _)
+        public async Task TestAliasSupportForGraphQLMutationQueryFields()
         {
             string msSqlQuery = @"
                 SELECT TOP 1 [table0].[id] AS [book_id],
@@ -315,7 +315,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            await base.TestAliasSupportForGraphQLMutationQueryFields(msSqlQuery);
+            await TestAliasSupportForGraphQLMutationQueryFields(msSqlQuery);
         }
 
         #endregion
@@ -327,7 +327,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>that GraphQL returns an error and that the book has not actually been added
         /// </summary>
         [TestMethod]
-        public override async Task InsertWithInvalidForeignKey(string _)
+        public async Task InsertWithInvalidForeignKey()
         {
             string msSqlQuery = @"
                 SELECT COUNT(*) AS count
@@ -338,7 +338,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            await base.InsertWithInvalidForeignKey(msSqlQuery);
+            await InsertWithInvalidForeignKey(msSqlQuery);
         }
 
         /// <summary>
@@ -346,7 +346,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>that GraphQL returns an error and the book has not been editted
         /// </summary>
         [TestMethod]
-        public override async Task UpdateWithInvalidForeignKey(string _)
+        public async Task UpdateWithInvalidForeignKey()
         {
             string msSqlQuery = @"
                 SELECT COUNT(*) AS count
@@ -358,7 +358,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            await base.UpdateWithInvalidForeignKey(msSqlQuery);
+            await UpdateWithInvalidForeignKey(msSqlQuery);
         }
 
         /// <summary>

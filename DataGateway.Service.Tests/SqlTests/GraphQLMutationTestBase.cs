@@ -7,6 +7,9 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
 {
+    /// <summary>
+    /// Base class for GraphQL Mutation tests targetting Sql databases.
+    /// </summary>
     [TestClass]
     public abstract class GraphQLMutationTestBase : SqlTestBase
     {

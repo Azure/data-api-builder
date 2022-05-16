@@ -125,16 +125,11 @@ namespace Azure.DataGateway.Service.Services
             {
                 if (typeInfo is null)
                 {
-                    throw new KeyNotFoundException($"Table Definition for {name} does not exist.");
+                    throw new KeyNotFoundException($"Type info for {name} does not exist.");
                 }
             }
 
             return typeInfo;
-        }
-
-        public ResolverConfig GetResolvedConfig()
-        {
-            return GraphQLResolverConfig;
         }
     }
 }

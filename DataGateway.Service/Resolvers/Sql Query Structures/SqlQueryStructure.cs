@@ -210,7 +210,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// For fields specifically selected, we check
         /// to see if the field is from the mapping from
         /// the target entity or not, and then add the
-        /// column with the apropriate name and label.
+        /// column with the appropriate name and label.
         /// </summary>
         /// <param name="context"></param>
         private void AddFields(RestRequestContext context)

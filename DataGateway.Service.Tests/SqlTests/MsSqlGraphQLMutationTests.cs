@@ -316,7 +316,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             ";
 
             await base.TestAliasSupportForGraphQLMutationQueryFields(msSqlQuery);
-;        }
+        }
 
         #endregion
 

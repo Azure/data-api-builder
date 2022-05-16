@@ -380,7 +380,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public override async Task TestViolatingOneToOneRelashionShip()
         {
-            base.TestViolatingOneToOneRelashionShip();
+            await base.TestViolatingOneToOneRelashionShip();
         }
         #endregion
     }

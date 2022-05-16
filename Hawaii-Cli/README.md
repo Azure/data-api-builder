@@ -1,76 +1,42 @@
-# hawaii-cli
-CLi tool for hawaii
-Language: C#
-Framework: dotnet 6.0
+# Hawaii CLI
 
-**Below are the steps to install the tool in your local machine**
+Command line tool for Hawaii development workflows built on
+C#
 
-1. To update the cli tool trigger name from hawaii to anyother, goto csProj file and update the ToolCommandName accordingly:
-```
-<PackAsTool>true</PackAsTool>
-<ToolCommandName>hawaii</ToolCommandName>
-<PackageOutputPath>./nupkg</PackageOutputPath>
-```
+ - Helpful commands to improve your workflows
+   	1.Initialize the configuration.
+	2.Add new Entities.
+	3.Update Entity Details
+	4.Add/Update relationship between entities.
 
-2. goto your project directory and pack it up.
-```
-dotnet pack
-```
+ - Let the user to run locally in any environment
+ 
+## Install
+You can install the CLI using `yarn` by running the following command. This will add the `graphql` binary to your path.
 
-3. Install the tool
-```
-dotnet tool install --global --add-source ./nupkg hawaii-cli
+```sh
+yarn global add graphql-cli
 ```
 
-4. after making new changes. do the below steps
-a) update the version in *csproj: 
-```
-    <PropertyGroup>
-	  <Version>2.0.0</Version>
-	</PropertyGroup>
-```	
-b) pack the project : `dotnet pack`
-
-c) update the installed tool: 
-```
-dotnet tool update -g --add-source ./nupkg hawaii-cli --version 2.0.0
-```
-
-NOTE
-ISSUE: If you see any error while while installing the tool due to some class not found. 
-FIX: the gql-engine(hawaii-gql) is probably not linked properly.
-Please update the correct path in .csproj file.
-```
-<ItemGroup>
-	<Reference Include="Azure.DataGateway.Config">
-		<HintPath>..\hawaii-gql\DataGateway.Config\bin\Debug\net6.0\Azure.DataGateway.Config.dll</HintPath>
-	</Reference>
-</ItemGroup>
-```
-
-TO SHARE THE CHANGES:
-1) Once you create the package (dotnet pack). It's ready to be shared.
-2) Share the latest package (.nupkg file).
-3) To install: `dotnet tool install -g --add-source ./ hawaii-cli --version <<version_number>>`
+The equivalent npm global install will also work.
 
 
+## Usage / Initialization
 
-**To generate the config:**
+### Generate the config:
 ```
 hawaii init -name <<filename>> --database_type <<db_type>> --connection_string <<connection_string>>
 ```
-**To add entity to the config:**
+### Add entity to the config:
 ```
 hawaii add <<entity>> -source <<source.DB>> --rest <<rest_route>> --graphql <<graphql_type>> --permission <<rules:actions>>
 ```
-**To update entity to the config:**
+### Update entity to the config:
 ```
 hawaii update <<entity>> -source <<new_source.DB>> --rest <<new_rest_route>> --graphql <<new_graphql_type>> --permissions <<rules:actions>> --fields.include <<fields to include>> --fields.exclude <<fields to exclude>>
 ```
 
-		
-	
-**example:**
+## Example
 ```	
 hawaii init -n todo-001 --database_type "mysql" --connection_string "localhost:8000"
 ```	
@@ -106,3 +72,6 @@ hawaii update todo --name todo-005 --relationship owner --target.entity user --c
  
 ```
 
+## Contributing
+
+Please read through the [contributing guidelines](./CONTRIBUTING.md)

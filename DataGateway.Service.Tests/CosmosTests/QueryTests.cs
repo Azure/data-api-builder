@@ -110,12 +110,6 @@ query {{
         [TestMethod]
         public async Task GetPaginatedWithoutVariables()
         {
-            // Run query
-            JsonElement response = await ExecuteGraphQLRequestAsync("planets", PlanetsQuery);
-            int actualElements = response.GetArrayLength();
-            List<string> responseTotal = new();
-            ConvertJsonElementToStringList(response, responseTotal);
-
             // Run paginated query
             const int pagesize = TOTAL_ITEM_COUNT / 2;
             int totalElementsFromPaginatedQuery = 0;
@@ -142,8 +136,7 @@ query {{
                 ConvertJsonElementToStringList(page.GetProperty(QueryBuilder.PAGINATION_FIELD_NAME), pagedResponse);
             } while (!string.IsNullOrEmpty(afterToken));
 
-            Assert.AreEqual(actualElements, totalElementsFromPaginatedQuery);
-            Assert.IsTrue(responseTotal.SequenceEqual(pagedResponse));
+            Assert.AreEqual(TOTAL_ITEM_COUNT, totalElementsFromPaginatedQuery);
         }
 
         /// <summary>

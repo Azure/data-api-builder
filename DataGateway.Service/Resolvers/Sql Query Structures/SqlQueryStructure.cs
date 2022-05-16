@@ -135,7 +135,6 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             IsListQuery = context.IsMany;
             TableAlias = $"{DatabaseObject.SchemaName}_{DatabaseObject.Name}";
-            context.FieldsToBeReturned.ForEach(fieldName => AddColumn(fieldName));
             AddFields(context);
             if (Columns.Count == 0)
             {

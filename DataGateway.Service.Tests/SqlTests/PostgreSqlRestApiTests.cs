@@ -928,6 +928,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             throw new NotImplementedException();
         }
 
+        [TestMethod]
+        [Ignore]
+        public override Task FindTestWithInvalidFieldsInQueryStringOnViews()
+        {
+            throw new NotImplementedException();
+        }
+
         public override string GetDefaultSchema()
         {
             return DEFAULT_SCHEMA;

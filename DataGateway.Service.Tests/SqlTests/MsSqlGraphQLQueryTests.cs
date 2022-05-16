@@ -157,7 +157,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
             ";
 
-            await base.QueryWithSingleColumnPrimaryKey(msSqlQuery);
+            await QueryWithSingleColumnPrimaryKey(msSqlQuery);
         }
 
         [TestMethod]

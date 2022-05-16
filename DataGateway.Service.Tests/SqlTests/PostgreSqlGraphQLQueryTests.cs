@@ -1,7 +1,6 @@
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -10,13 +9,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 {
 
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
-    public class PostgreSqlGraphQLQueryTests : SqlTestBase
+    public class PostgreSqlGraphQLQueryTests : GraphQLQueryTestBase
     {
 
         #region Test Fixture Setup
-        private static GraphQLService _graphQLService;
-        private static GraphQLController _graphQLController;
-
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
         /// MSTest decorator.
@@ -45,115 +41,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task MultipleResultQuery()
         {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
-                books(first: 100) {
-                    items {
-                        id
-                        title
-                    }
-                }
-            }";
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id) as table0 LIMIT 100";
-
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await MultipleResultQuery(postgresQuery);
         }
 
         [TestMethod]
         public async Task MultipleResultQueryWithVariables()
         {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"query ($first: Int!) {
-                books(first: $first) {
-                    items {
-                        id
-                        title
-                    }
-                }
-            }";
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id) as table0 LIMIT 100";
-
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController, new() { { "first", 100 } });
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await MultipleResultQueryWithVariables(postgresQuery);
         }
 
         [TestMethod]
-        public async Task MultipleResultJoinQuery()
+        public override async Task MultipleResultJoinQuery()
         {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
-                books(first: 100) {
-                    items {
-                        id
-                        title
-                        publisher_id
-                        publisher {
-                            id
-                            name
-                        }
-                        reviews(first: 100) {
-                            id
-                            content
-                        }
-                        authors(first: 100) {
-                            id
-                            name
-                        }
-                    }
-                }
-            }";
-            string postgresQuery = @"
-                SELECT COALESCE(jsonb_agg(to_jsonb(subq8)), '[]') AS data
-                FROM
-                  (SELECT table0.id AS id,
-                          table0.title AS title,
-                          table0.publisher_id AS publisher_id,
-                          table1_subq.data AS publisher,
-                          table2_subq.data AS reviews,
-                          table3_subq.data AS authors
-                   FROM books AS table0
-                   LEFT OUTER JOIN LATERAL
-                     (SELECT to_jsonb(subq5) AS data
-                      FROM
-                        (SELECT table1.id AS id,
-                                table1.name AS name
-                         FROM publishers AS table1
-                         WHERE table0.publisher_id = table1.id
-                         ORDER BY id
-                         LIMIT 1) AS subq5) AS table1_subq ON TRUE
-                   LEFT OUTER JOIN LATERAL
-                     (SELECT COALESCE(jsonb_agg(to_jsonb(subq6)), '[]') AS data
-                      FROM
-                        (SELECT table2.id AS id,
-                                table2.content AS content
-                         FROM reviews AS table2
-                         WHERE table0.id = table2.book_id
-                         ORDER BY id
-                         LIMIT 100) AS subq6) AS table2_subq ON TRUE
-                   LEFT OUTER JOIN LATERAL
-                     (SELECT COALESCE(jsonb_agg(to_jsonb(subq7)), '[]') AS data
-                      FROM
-                        (SELECT table3.id AS id,
-                                table3.name AS name
-                         FROM authors AS table3
-                         INNER JOIN book_author_link AS table4 ON table4.author_id = table3.id
-                         WHERE table0.id = table4.book_id
-                         ORDER BY id
-                         LIMIT 100) AS subq7) AS table3_subq ON TRUE
-                   WHERE 1 = 1
-                   ORDER BY id
-                   LIMIT 100) AS subq8
-            ";
-
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await base.MultipleResultJoinQuery();
         }
 
         /// <summary>
@@ -163,20 +65,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task OneToOneJoinQuery()
         {
-            string graphQLQueryName = "getBooks";
-            string graphQLQuery = @"query {
-                getBooks {
-                    id
-                    website_placement {
-                        id
-                        price
-                        book {
-                            id
-                        }
-                    }
-                }
-            }";
-
             string postgresQuery = @"
                 SELECT COALESCE(jsonb_agg(to_jsonb(subq11)), '[]') AS data
                 FROM
@@ -206,10 +94,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    LIMIT 100) AS subq11
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await OneToOneJoinQuery(postgresQuery);
         }
 
         /// <summary>
@@ -218,91 +103,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </summary>
         /// <returns></returns>
         [TestMethod]
-        public async Task DeeplyNestedManyToOneJoinQuery()
+        public override async Task DeeplyNestedManyToOneJoinQuery()
         {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
-              books(first: 100) {
-                items {
-                    title
-                    publisher {
-                      name
-                      books(first: 100) {
-                        title
-                        publisher {
-                          name
-                          books(first: 100) {
-                            title
-                            publisher {
-                              name
-                            }
-                          }
-                        }
-                      }
-                    }
-                }
-              }
-            }";
-
-            string postgresQuery = @"
-                SELECT COALESCE(jsonb_agg(to_jsonb(subq11)), '[]') AS data
-                FROM
-                  (SELECT table0.title AS title,
-                          table1_subq.data AS publisher
-                   FROM books AS table0
-                   LEFT OUTER JOIN LATERAL
-                     (SELECT to_jsonb(subq10) AS data
-                      FROM
-                        (SELECT table1.name AS name,
-                                table2_subq.data AS books
-                         FROM publishers AS table1
-                         LEFT OUTER JOIN LATERAL
-                           (SELECT COALESCE(jsonb_agg(to_jsonb(subq9)), '[]') AS data
-                            FROM
-                              (SELECT table2.title AS title,
-                                      table3_subq.data AS publisher
-                               FROM books AS table2
-                               LEFT OUTER JOIN LATERAL
-                                 (SELECT to_jsonb(subq8) AS data
-                                  FROM
-                                    (SELECT table3.name AS name,
-                                            table4_subq.data AS books
-                                     FROM publishers AS table3
-                                     LEFT OUTER JOIN LATERAL
-                                       (SELECT COALESCE(jsonb_agg(to_jsonb(subq7)), '[]') AS data
-                                        FROM
-                                          (SELECT table4.title AS title,
-                                                  table5_subq.data AS publisher
-                                           FROM books AS table4
-                                           LEFT OUTER JOIN LATERAL
-                                             (SELECT to_jsonb(subq6) AS data
-                                              FROM
-                                                (SELECT table5.name AS name
-                                                 FROM publishers AS table5
-                                                 WHERE table4.publisher_id = table5.id
-                                                 ORDER BY id
-                                                 LIMIT 1) AS subq6) AS table5_subq ON TRUE
-                                           WHERE table3.id = table4.publisher_id
-                                           ORDER BY id
-                                           LIMIT 100) AS subq7) AS table4_subq ON TRUE
-                                     WHERE table2.publisher_id = table3.id
-                                     ORDER BY id
-                                     LIMIT 1) AS subq8) AS table3_subq ON TRUE
-                               WHERE table1.id = table2.publisher_id
-                               ORDER BY id
-                               LIMIT 100) AS subq9) AS table2_subq ON TRUE
-                         WHERE table0.publisher_id = table1.id
-                         ORDER BY id
-                         LIMIT 1) AS subq10) AS table1_subq ON TRUE
-                   WHERE 1 = 1
-                   ORDER BY id
-                   LIMIT 100) AS subq11
-            ";
-
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await base.DeeplyNestedManyToManyJoinQuery();
         }
 
         /// <summary>
@@ -311,80 +114,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </summary>
         /// <returns></returns>
         [TestMethod]
-        public async Task DeeplyNestedManyToManyJoinQuery()
+        public override async Task DeeplyNestedManyToManyJoinQuery()
         {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
-              books(first: 100) {
-                    items {
-                        title
-                        authors(first: 100) {
-                          name
-                            books(first: 100) {
-                            title
-                            authors(first: 100) {
-                                name
-                            }
-                        }
-                    }
-                }
-            }";
-
-            string postgresQuery = @"
-                SELECT COALESCE(jsonb_agg(to_jsonb(subq10)), '[]') AS data
-                FROM
-                  (SELECT table0.title AS title,
-                          table1_subq.data AS authors
-                   FROM books AS table0
-                   LEFT OUTER JOIN LATERAL
-                     (SELECT COALESCE(jsonb_agg(to_jsonb(subq9)), '[]') AS data
-                      FROM
-                        (SELECT table1.name AS name,
-                                table2_subq.data AS books
-                         FROM authors AS table1
-                         INNER JOIN book_author_link AS table6 ON table6.author_id = table1.id
-                         LEFT OUTER JOIN LATERAL
-                           (SELECT COALESCE(jsonb_agg(to_jsonb(subq8)), '[]') AS data
-                            FROM
-                              (SELECT table2.title AS title,
-                                      table3_subq.data AS authors
-                               FROM books AS table2
-                               INNER JOIN book_author_link AS table5 ON table5.book_id = table2.id
-                               LEFT OUTER JOIN LATERAL
-                                 (SELECT COALESCE(jsonb_agg(to_jsonb(subq7)), '[]') AS data
-                                  FROM
-                                    (SELECT table3.name AS name
-                                     FROM authors AS table3
-                                     INNER JOIN book_author_link AS table4 ON table4.author_id = table3.id
-                                     WHERE table2.id = table4.book_id
-                                     ORDER BY id
-                                     LIMIT 100) AS subq7) AS table3_subq ON TRUE
-                               WHERE table1.id = table5.author_id
-                               ORDER BY id
-                               LIMIT 100) AS subq8) AS table2_subq ON TRUE
-                         WHERE table0.id = table6.book_id
-                         ORDER BY id
-                         LIMIT 100) AS subq9) AS table1_subq ON TRUE
-                   WHERE 1 = 1
-                   ORDER BY id
-                   LIMIT 100) AS subq10
-            ";
-
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await base.DeeplyNestedManyToManyJoinQuery();
         }
 
         [TestMethod]
         public async Task QueryWithSingleColumnPrimaryKey()
         {
-            string graphQLQueryName = "books_by_pk";
-            string graphQLQuery = @"{
-                books_by_pk(id: 2) {
-                    title
-                }
-            }";
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS data
                 FROM (
@@ -396,21 +133,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 ) AS subq
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await QueryWithSingleColumnPrimaryKey(postgresQuery);
         }
 
         [TestMethod]
         public async Task QueryWithMultileColumnPrimaryKey()
         {
-            string graphQLQueryName = "getReview";
-            string graphQLQuery = @"{
-                getReview(id: 568, book_id: 1) {
-                    content
-                }
-            }";
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS data
                 FROM (
@@ -422,135 +150,31 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 ) AS subq
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await QueryWithMultileColumnPrimaryKey(postgresQuery);
         }
 
         [TestMethod]
-        public async Task QueryWithNullResult()
+        public override async Task QueryWithNullResult()
         {
-            string graphQLQueryName = "books_by_pk";
-            string graphQLQuery = @"{
-                books_by_pk(id: -9999) {
-                    title
-                }
-            }";
-
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-
-            SqlTestHelper.PerformTestEqualJsonStrings("null", actual);
+            await base.QueryWithNullResult();
         }
 
         /// <sumary>
         /// Test if first param successfully limits list quries
         /// </summary>
         [TestMethod]
-        public async Task TestFirstParamForListQueries()
+        public override async Task TestFirstParamForListQueries()
         {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
-                books(first: 1) {
-                    items {
-                        title
-                        publisher {
-                            name
-                            books(first: 3) {
-                                title
-                            }
-                        }
-                    }
-                }
-            }";
-
-            string postgresQuery = @"
-                SELECT COALESCE(jsonb_agg(to_jsonb(subq5)), '[]') AS DATA
-                FROM
-                  (SELECT table0.title AS title,
-                          table1_subq.data AS publisher
-                   FROM books AS table0
-                   LEFT OUTER JOIN LATERAL
-                     (SELECT to_jsonb(subq4) AS DATA
-                      FROM
-                        (SELECT table1.name AS name,
-                                table2_subq.data AS books
-                         FROM publishers AS table1
-                         LEFT OUTER JOIN LATERAL
-                           (SELECT COALESCE(jsonb_agg(to_jsonb(subq3)), '[]') AS DATA
-                            FROM
-                              (SELECT table2.title AS title
-                               FROM books AS table2
-                               WHERE table1.id = table2.publisher_id
-                               ORDER BY id
-                               LIMIT 3) AS subq3) AS table2_subq ON TRUE
-                         WHERE table0.publisher_id = table1.id
-                         ORDER BY id
-                         LIMIT 1) AS subq4) AS table1_subq ON TRUE
-                   WHERE 1 = 1
-                   ORDER BY id
-                   LIMIT 1) AS subq5
-            ";
-
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await base.TestFirstParamForListQueries();
         }
 
         /// <sumary>
         /// Test if filter and filterOData param successfully filters the query results
         /// </summary>
         [TestMethod]
-        public async Task TestFilterAndFilterODataParamForListQueries()
+        public override async Task TestFilterAndFilterODataParamForListQueries()
         {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
-                books(_filter: {id: {gte: 1} and: [{id: {lte: 4}}]}) {
-                    items {
-                        id
-                        publisher {
-                            books(first: 3, _filterOData: ""id ne 2"") {
-                                id
-                            }
-                        }
-                    }
-                }
-            }";
-
-            string postgresQuery = @"
-                SELECT COALESCE(jsonb_agg(to_jsonb(subq12)), '[]') AS data
-                FROM
-                  (SELECT table0.id AS id,
-                          table1_subq.data AS publisher
-                   FROM books AS table0
-                   LEFT OUTER JOIN LATERAL
-                     (SELECT to_jsonb(subq11) AS data
-                      FROM
-                        (SELECT table2_subq.data AS books
-                         FROM publishers AS table1
-                         LEFT OUTER JOIN LATERAL
-                           (SELECT COALESCE(jsonb_agg(to_jsonb(subq10)), '[]') AS data
-                            FROM
-                              (SELECT table2.id AS id
-                               FROM books AS table2
-                               WHERE (id != 2)
-                                 AND table1.id = table2.publisher_id
-                               ORDER BY table2.id
-                               LIMIT 3) AS subq10) AS table2_subq ON TRUE
-                         WHERE table0.publisher_id = table1.id
-                         ORDER BY table1.id
-                         LIMIT 1) AS subq11) AS table1_subq ON TRUE
-                   WHERE ((id >= 1)
-                          AND (id <= 4))
-                   ORDER BY table0.id
-                   LIMIT 100) AS subq12
-            ";
-
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await base.TestFilterAndFilterODataParamForListQueries();
         }
 
         /// <summary>
@@ -559,21 +183,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestQueryingTypeWithNullableIntFields()
         {
-            string graphQLQueryName = "getMagazines";
-            string graphQLQuery = @"{
-                getMagazines{
-                    id
-                    title
-                    issue_number
-                }
-            }";
-
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title, \"issue_number\" FROM foo.magazines ORDER BY id) as table0 LIMIT 100";
+            await TestQueryingTypeWithNullableIntFields(postgresQuery);
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
         /// <summary>
@@ -582,20 +194,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestQueryingTypeWithNullableStringFields()
         {
-            string graphQLQueryName = "getWebsiteUsers";
-            string graphQLQuery = @"{
-                getWebsiteUsers{
-                    id
-                    username
-                }
-            }";
-
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, username FROM website_users ORDER BY id) as table0 LIMIT 100";
-
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await TestQueryingTypeWithNullableStringFields(postgresQuery);
         }
 
         /// <summary>
@@ -606,19 +206,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestAliasSupportForGraphQLQueryFields()
         {
-            string graphQLQueryName = "getBooks";
-            string graphQLQuery = @"{
-                getBooks(first: 100) {
-                    book_id: id
-                    book_title: title
-                }
-            }";
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id as book_id, title as book_title FROM books ORDER BY id) as table0 LIMIT 100";
-
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await TestAliasSupportForGraphQLQueryFields(postgresQuery);
         }
 
         /// <summary>
@@ -629,61 +218,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestSupportForMixOfRawDbFieldFieldAndAlias()
         {
-            string graphQLQueryName = "getBooks";
-            string graphQLQuery = @"{
-                getBooks(first: 100) {
-                    book_id: id
-                    title
-                }
-            }";
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id as book_id, title as title FROM books ORDER BY id) as table0 LIMIT 100";
-
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await TestSupportForMixOfRawDbFieldFieldAndAlias(postgresQuery);
         }
 
         /// <summary>
         /// Tests orderBy on a list query
         /// </summary>
+        [Ignore]
         [TestMethod]
         public async Task TestOrderByInListQuery()
         {
-            string graphQLQueryName = "getBooks";
-            string graphQLQuery = @"{
-                getBooks(first: 100 orderBy: {title: Desc}) {
-                    id
-                    title
-                }
-            }";
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY title DESC, id ASC) as table0 LIMIT 100";
-
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await TestOrderByInListQuery(postgresQuery);
         }
 
         /// <summary>
         /// Use multiple order options and order an entity with a composite pk
         /// </summary>
+        [Ignore]
         [TestMethod]
         public async Task TestOrderByInListQueryOnCompPkType()
         {
-            string graphQLQueryName = "getReviews";
-            string graphQLQuery = @"{
-                getReviews(orderBy: {content: Asc id: Desc}) {
-                    id
-                    content
-                }
-            }";
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, content FROM reviews ORDER BY content ASC, id DESC, book_id ASC) as table0 LIMIT 100";
-
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await TestOrderByInListQueryOnCompPkType(postgresQuery);
         }
 
         /// <summary>
@@ -691,43 +249,23 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// meaning that null pk columns are included in the ORDER BY clause
         /// as ASC by default while null non-pk columns are completely ignored
         /// </summary>
+        [Ignore]
         [TestMethod]
         public async Task TestNullFieldsInOrderByAreIgnored()
         {
-            string graphQLQueryName = "getBooks";
-            string graphQLQuery = @"{
-                getBooks(first: 100 orderBy: {title: Desc id: null publisher_id: null}) {
-                    id
-                    title
-                }
-            }";
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY title DESC, id ASC) as table0 LIMIT 100";
-
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await TestNullFieldsInOrderByAreIgnored(postgresQuery);
         }
 
         /// <summary>
         /// Tests that an orderBy with only null fields results in default pk sorting
         /// </summary>
+        [Ignore]
         [TestMethod]
         public async Task TestOrderByWithOnlyNullFieldsDefaultsToPkSorting()
         {
-            string graphQLQueryName = "getBooks";
-            string graphQLQuery = @"{
-                getBooks(first: 100 orderBy: {title: null}) {
-                    id
-                    title
-                }
-            }";
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id ASC) as table0 LIMIT 100";
-
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await TestOrderByWithOnlyNullFieldsDefaultsToPkSorting(postgresQuery);
         }
 
         #endregion
@@ -735,37 +273,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         #region Negative Tests
 
         [TestMethod]
-        public async Task TestInvalidFirstParamQuery()
+        public override async Task TestInvalidFirstParamQuery()
         {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
-                books(first: -1) {
-                    items {
-                        id
-                        title
-                    }
-                }
-            }";
-
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
+            await base.TestInvalidFirstParamQuery();
         }
 
         [TestMethod]
-        public async Task TestInvalidFilterParamQuery()
+        public override async Task TestInvalidFilterParamQuery()
         {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
-                books(_filterOData: ""INVALID"") {
-                    items {
-                        id
-                        title
-                    }
-                }
-            }";
-
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
+            await base.TestInvalidFilterParamQuery();
         }
 
         #endregion

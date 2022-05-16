@@ -139,7 +139,7 @@ query {{
             id
             name
         }}
-        after
+        endCursor
         hasNextPage
     }}
 }}";
@@ -152,73 +152,6 @@ query {{
 
             Assert.AreEqual(actualElements, totalElementsFromPaginatedQuery);
             Assert.IsTrue(responseTotal.SequenceEqual(pagedResponse));
-        }
-
-        /// <summary>
-        /// Query List Type with input parameters
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public async Task GetListTypeWithParameters()
-        {
-            string id = _idList[0];
-            string query = @$"
-query {{
-    getPlanetListById (id: ""{id}"") {{
-        id
-        name
-    }}
-}}";
-
-            JsonElement response = await ExecuteGraphQLRequestAsync("getPlanetListById", query);
-
-            // Validate results
-            Assert.AreEqual(1, response.GetArrayLength());
-            Assert.AreEqual(id, response[0].GetProperty("id").ToString());
-        }
-
-        /// <summary>
-        /// Query single item by non-primary key field, found no match
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public async Task GetByNonePrimaryFieldResultNotFound()
-        {
-            string name = "non-existed name";
-            string query = @$"
-query {{
-    getPlanetByName (name: ""{name}"") {{
-        id
-        name
-    }}
-}}";
-
-            JsonElement response = await ExecuteGraphQLRequestAsync("getPlanetByName", query);
-
-            // Validate results
-            Assert.IsNull(response.Deserialize<string>());
-        }
-
-        /// <summary>
-        /// Query single item by non-primary key field, found record back
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public async Task GetByNonPrimaryFieldReturnsResult()
-        {
-            string name = "Earth";
-            string query = @$"
-query {{
-    getPlanetByName (name: ""{name}"") {{
-        id
-        name
-    }}
-}}";
-
-            JsonElement response = await ExecuteGraphQLRequestAsync("getPlanetByName", query);
-
-            // Validate results
-            Assert.AreEqual(name, response.GetProperty("name").ToString());
         }
 
         /// <summary>

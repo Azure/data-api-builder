@@ -134,7 +134,8 @@ mutation {{
     }}
 }}";
             JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
-            Assert.AreEqual("inputDict is missing", response[0].GetProperty("message").ToString());
+            string errorMessage = response[0].GetProperty("message").ToString();
+            Assert.IsTrue(errorMessage.Contains("The argument `item` is required."), $"The actual error is {errorMessage}");
         }
 
         [TestMethod]
@@ -144,7 +145,7 @@ mutation {{
             const string name = "test_name";
             string mutation = $@"
 mutation {{
-    createPlanet ( name: ""{name}"") {{
+    createPlanet (item: {{ name: ""{name}"" }}) {{
         id
         name
     }}

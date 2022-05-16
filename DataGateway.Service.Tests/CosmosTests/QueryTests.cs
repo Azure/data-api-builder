@@ -72,7 +72,7 @@ query{
         public async Task GetPaginatedWithVariables()
         {
             // Run query
-            JsonElement response = await ExecuteGraphQLRequestAsync("planetList", PlanetsQuery);
+            JsonElement response = await ExecuteGraphQLRequestAsync("planets", PlanetsQuery);
             int actualElements = response.GetArrayLength();
             List<string> responseTotal = new();
             ConvertJsonElementToStringList(response, responseTotal);
@@ -232,7 +232,7 @@ query {{
             string id = _idList[0];
             string query = @$"
 query {{
-    planetById (id: ""{id}"") {{
+    planet_by_pk (id: ""{id}"") {{
         id
         name
         character {{
@@ -241,7 +241,7 @@ query {{
         }}
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("planetById", query);
+            JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", query);
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());

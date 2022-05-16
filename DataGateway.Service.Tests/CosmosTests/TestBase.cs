@@ -47,7 +47,9 @@ type Character @model {
 type Planet @model {
     id : ID,
     name : String,
-    character: Character
+    character: Character,
+    age : Int,
+    dimension : String
 }";
 
             _metadataStoreProvider.GraphQLSchema = jsonString;

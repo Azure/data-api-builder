@@ -55,7 +55,6 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
 
         private static void ValidateResults(JsonElement actual, JsonElement expected)
         {
-
             Assert.IsNotNull(expected);
             Assert.IsNotNull(actual);
             Assert.IsTrue(JToken.DeepEquals(JToken.Parse(actual.ToString()), JToken.Parse(expected.ToString())));

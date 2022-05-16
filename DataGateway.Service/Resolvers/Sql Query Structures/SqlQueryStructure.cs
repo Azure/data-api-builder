@@ -5,6 +5,7 @@ using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
@@ -129,10 +130,12 @@ namespace Azure.DataGateway.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider) :
             this(metadataStoreProvider,
                 sqlMetadataProvider,
-                new IncrementingInteger(), tableName: context.EntityName)
+                new IncrementingInteger(),
+                entityName: context.EntityName)
         {
-            TableAlias = TableName;
             IsListQuery = context.IsMany;
+            TableAlias = $"{DatabaseObject.SchemaName}_{DatabaseObject.Name}";
+            context.FieldsToBeReturned.ForEach(fieldName => AddColumn(fieldName));
             AddFields(context);
             if (Columns.Count == 0)
             {
@@ -163,7 +166,17 @@ namespace Azure.DataGateway.Service.Resolvers
                 PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
             }
 
+            // context.OrderByColumnsInUrl will lack TableAlias because it is created in RequestParser
+            // which may be called for any type of operation. To avoid coupling the OrderByClauseInUrl
+            // to only Find, we populate the TableAlias in this constructor where we know we have a Find operation.
             OrderByColumns = context.OrderByClauseInUrl is not null ? context.OrderByClauseInUrl : PrimaryKeyAsOrderByColumns();
+            foreach (OrderByColumn column in OrderByColumns)
+            {
+                if (string.IsNullOrEmpty(column.TableAlias))
+                {
+                    column.TableAlias = TableAlias;
+                }
+            }
 
             if (context.FilterClauseInUrl is not null)
             {
@@ -248,8 +261,9 @@ namespace Azure.DataGateway.Service.Resolvers
                 ISqlMetadataProvider sqlMetadataProvider,
                 IObjectField schemaField,
                 FieldNode? queryField,
-                IncrementingInteger counter
-        ) : this(metadataStoreProvider, sqlMetadataProvider, counter, tableName: string.Empty)
+                IncrementingInteger counter,
+                string entityName = ""
+        ) : this(metadataStoreProvider, sqlMetadataProvider, counter, entityName: entityName)
         {
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
@@ -288,7 +302,9 @@ namespace Azure.DataGateway.Service.Resolvers
                 PaginationMetadata.Subqueries.Add("items", PaginationMetadata.MakeEmptyPaginationMetadata());
             }
 
-            TableName = _typeInfo.Table;
+            EntityName = _underlyingFieldType.Name;
+            DatabaseObject.SchemaName = sqlMetadataProvider.GetSchemaName(EntityName);
+            DatabaseObject.Name = sqlMetadataProvider.GetDatabaseObjectName(EntityName);
             TableAlias = CreateTableAlias();
 
             if (queryField != null && queryField.SelectionSet != null)
@@ -333,7 +349,12 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (filterObject != null)
                 {
                     List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
-                    Predicates.Add(GQLFilterParser.Parse(filterFields, TableAlias, GetUnderlyingTableDefinition(), MakeParamWithValue));
+                    Predicates.Add(GQLFilterParser.Parse(fields: filterFields,
+                                                         schemaName: DatabaseObject.SchemaName,
+                                                         tableName: DatabaseObject.Name,
+                                                         tableAlias: TableAlias,
+                                                         table: GetUnderlyingTableDefinition(),
+                                                         processLiterals: MakeParamWithValue));
                 }
             }
 
@@ -357,8 +378,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     string where = (string)whereObject;
 
                     ODataASTVisitor visitor = new(this);
-                    FilterParser parser = SqlMetadataProvider.GetOdataFilterParser();
-                    FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={where}", TableName);
+                    FilterParser parser = SqlMetadataProvider.ODataFilterParser;
+                    FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={where}", $"{DatabaseObject.FullName}");
                     FilterPredicates = filterClause.Expression.Accept<string>(visitor);
                 }
             }
@@ -404,8 +425,8 @@ namespace Azure.DataGateway.Service.Resolvers
             IGraphQLMetadataProvider metadataStoreProvider,
             ISqlMetadataProvider sqlMetadataProvider,
             IncrementingInteger counter,
-            string tableName = "")
-            : base(metadataStoreProvider, sqlMetadataProvider, counter: counter, tableName: tableName)
+            string entityName = "")
+            : base(metadataStoreProvider, sqlMetadataProvider, entityName: entityName, counter: counter)
         {
             JoinQueries = new();
             Joins = new();
@@ -423,7 +444,10 @@ namespace Azure.DataGateway.Service.Resolvers
             foreach (KeyValuePair<string, object?> parameter in queryParams)
             {
                 Predicates.Add(new Predicate(
-                    new PredicateOperand(new Column(TableAlias, parameter.Key)),
+                    new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName,
+                                                    tableName: DatabaseObject.Name,
+                                                    columnName: parameter.Key,
+                                                    tableAlias: TableAlias)),
                     PredicateOperation.Equal,
                     new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
                 ));
@@ -445,6 +469,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 foreach (PaginationColumn column in afterJsonValues)
                 {
+                    column.TableAlias = TableAlias;
                     column.ParamName = "@" + MakeParamWithValue(
                             GetParamAsColumnSystemType(column.Value!.ToString()!, column.ColumnName));
                 }
@@ -477,7 +502,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     parameterName = MakeParamWithValue(
                         GetParamAsColumnSystemType(value.ToString()!, field));
                     Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(TableAlias, field)),
+                        new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, field, TableAlias)),
                         op,
                         new PredicateOperand($"@{parameterName}")));
                 }
@@ -513,8 +538,9 @@ namespace Azure.DataGateway.Service.Resolvers
             return leftColumnNames.Zip(rightColumnNames,
                     (leftColumnName, rightColumnName) =>
                     {
-                        Column leftColumn = new(leftTableAlias, leftColumnName);
-                        Column rightColumn = new(rightTableAlias, rightColumnName);
+                        // no table name or schema here is needed because this is a subquery that joins on table alias
+                        Column leftColumn = new(tableSchema: string.Empty, tableName: string.Empty, leftColumnName, leftTableAlias);
+                        Column rightColumn = new(tableSchema: string.Empty, tableName: string.Empty, rightColumnName, rightTableAlias);
                         return new Predicate(
                             new PredicateOperand(leftColumn),
                             PredicateOperation.Equal,
@@ -618,7 +644,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     ObjectType subunderlyingType = subquery._underlyingFieldType;
 
                     GraphQLType subTypeInfo = MetadataStoreProvider.GetGraphQLType(subunderlyingType.Name);
-                    TableDefinition subTableDefinition = SqlMetadataProvider.GetTableDefinition(subTypeInfo.Table);
+                    TableDefinition subTableDefinition = SqlMetadataProvider.GetTableDefinition(subquery.EntityName);
                     GraphQLField fieldInfo = _typeInfo.Fields[fieldName];
 
                     string subtableAlias = subquery.TableAlias;
@@ -715,7 +741,11 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     string subqueryAlias = $"{subtableAlias}_subq";
                     JoinQueries.Add(subqueryAlias, subquery);
-                    Columns.Add(new LabelledColumn(subqueryAlias, DATA_IDENT, fieldName));
+                    Columns.Add(new LabelledColumn(tableSchema: subquery.DatabaseObject.SchemaName,
+                                                   tableName: subquery.DatabaseObject.Name,
+                                                   columnName: DATA_IDENT,
+                                                   label: fieldName,
+                                                   tableAlias: subqueryAlias));
                 }
             }
         }
@@ -782,17 +812,27 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 if (enumValue.Value == $"{OrderByDir.Desc}")
                 {
-                    orderByColumnsList.Add(new OrderByColumn(TableAlias, fieldName, OrderByDir.Desc));
+                    orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
+                                                             tableName: DatabaseObject.Name,
+                                                             columnName: fieldName,
+                                                             tableAlias: TableAlias,
+                                                             direction: OrderByDir.Desc));
                 }
                 else
                 {
-                    orderByColumnsList.Add(new OrderByColumn(TableAlias, fieldName));
+                    orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
+                                                             tableName: DatabaseObject.Name,
+                                                             columnName: fieldName,
+                                                             tableAlias: TableAlias));
                 }
             }
 
             foreach (string colName in remainingPkCols)
             {
-                orderByColumnsList.Add(new OrderByColumn(TableAlias, colName));
+                orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
+                                                         tableName: DatabaseObject.Name,
+                                                         columnName: colName,
+                                                         tableAlias: TableAlias));
             }
 
             return orderByColumnsList;
@@ -810,7 +850,10 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 foreach (string column in PrimaryKey())
                 {
-                    _primaryKeyAsOrderByColumns.Add(new OrderByColumn(TableAlias, column));
+                    _primaryKeyAsOrderByColumns.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
+                                                                      tableName: DatabaseObject.Name,
+                                                                      columnName: column,
+                                                                      tableAlias: TableAlias));
                 }
             }
 
@@ -832,7 +875,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         protected void AddColumn(string columnName, string labelName)
         {
-            Columns.Add(new LabelledColumn(TableAlias, columnName, labelName));
+            Columns.Add(new LabelledColumn(DatabaseObject.SchemaName, DatabaseObject.Name, columnName, label: columnName, TableAlias));
         }
 
         /// <summary>

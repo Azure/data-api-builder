@@ -19,6 +19,7 @@ query ($id: ID) {
         name
     }
 }";
+
         public static readonly string PlanetListQuery = @"{planetList{ id, name}}";
         public static readonly string PlanetConnectionQueryStringFormat = @"
 query ($first: Int!, $after: String) {
@@ -215,7 +216,7 @@ query {{
         [TestMethod]
         public async Task GetByNonPrimaryFieldReturnsResult()
         {
-            string name = "test name";
+            string name = "Earth";
             string query = @$"
 query {{
     getPlanetByName (name: ""{name}"") {{

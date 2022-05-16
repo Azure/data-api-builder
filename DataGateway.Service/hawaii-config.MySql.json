@@ -32,7 +32,7 @@
     }
   },
   "entities": {
-    "publishers": {
+    "Publisher": {
       "source": "publishers",
       "rest": true,
       "graphql": true,
@@ -53,7 +53,7 @@
         }
       }
     },
-    "stocks": {
+    "Stock": {
       "source": "stocks",
       "rest": true,
       "graphql": true,
@@ -76,7 +76,7 @@
         }
       }
     },
-    "books": {
+    "Book": {
       "source": "books",
       "permissions": [
         {
@@ -110,7 +110,7 @@
         }
       }
     },
-    "book_website_placements": {
+    "BookWebsitePlacement": {
       "source": "book_website_placements",
       "rest": true,
       "graphql": true,
@@ -144,7 +144,7 @@
         }
       }
     },
-    "authors": {
+    "Author": {
       "source": "authors",
       "rest": true,
       "graphql": true,
@@ -162,7 +162,7 @@
         }
       }
     },
-    "reviews": {
+    "Review": {
       "source": "reviews",
       "rest": true,
       "permissions": [
@@ -178,29 +178,7 @@
         }
       }
     },
-    "magazines": {
-      "source": "magazines",
-      "graphql": true,
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [ "read" ]
-        },
-        {
-          "role": "authenticated",
-          "actions": [
-            {
-              "action": "*",
-              "fields": {
-                "include": [ "*" ],
-                "exclude": [ "issue_number" ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    "comics": {
+    "Comic": {
       "source": "comics",
       "rest": true,
       "graphql": false,
@@ -215,7 +193,7 @@
         }
       ]
     },
-    "brokers": {
+    "Broker": {
       "source": "brokers",
       "graphql": false,
       "permissions": [
@@ -225,10 +203,61 @@
         }
       ]
     },
-    "website_users": {
+    "WebsiteUser": {
       "source": "website_users",
       "rest": false,
       "permissions": []
+    },
+    "books_view_all": {
+      "source": "books_view_all",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "read" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
+    "stocks_view_selected": {
+      "source": "stocks_view_selected",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "read" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
+    "books_publishers_view_composite": {
+      "source": "books_publishers_view_composite",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "read" ]
+        }
+      ],
+      "relationships": {
+      }
     }
   }
 }

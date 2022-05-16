@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlQueryStructure structure)
         {
-            string fromSql = $"{QuoteIdentifier(structure.TableName)} AS {QuoteIdentifier(structure.TableAlias)}{Build(structure.Joins)}";
+            string fromSql = $"{QuoteIdentifier(structure.DatabaseObject.Name)} AS {QuoteIdentifier(structure.TableAlias)}{Build(structure.Joins)}";
             fromSql += string.Join("", structure.JoinQueries.Select(x => $" LEFT OUTER JOIN LATERAL ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)} ON TRUE"));
 
             string predicates = JoinPredicateStrings(
@@ -65,7 +65,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public string Build(SqlInsertStructure structure)
         {
             // No need to put into transaction as LAST_INSERT_ID is session level variable
-            return $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
+            return $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.Name)} ({Build(structure.InsertColumns)}) " +
                     $"VALUES ({string.Join(", ", (structure.Values))}); " +
                     $" SET @ROWCOUNT=ROW_COUNT(); " +
                     $"SELECT {MakeInsertSelections(structure)} WHERE @ROWCOUNT > 0;";
@@ -77,7 +77,7 @@ namespace Azure.DataGateway.Service.Resolvers
             (string sets, string updates, string select) = MakeStoreUpdatePK(structure.PrimaryKey());
 
             return sets + ";\n" +
-                    $"UPDATE {QuoteIdentifier(structure.TableName)} " +
+                    $"UPDATE {QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                         ", " + updates +
                     $" WHERE {Build(structure.Predicates)}; " +
@@ -88,7 +88,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlDeleteStructure structure)
         {
-            return $"DELETE FROM {QuoteIdentifier(structure.TableName)} " +
+            return $"DELETE FROM {QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"WHERE {Build(structure.Predicates)}";
         }
 
@@ -100,7 +100,7 @@ namespace Azure.DataGateway.Service.Resolvers
             if (structure.IsFallbackToUpdate)
             {
                 return sets + ";\n" +
-                    $"UPDATE {QuoteIdentifier(structure.TableName)} " +
+                    $"UPDATE {QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                         ", " + updates +
                     $" WHERE {Build(structure.Predicates)}; " +
@@ -109,7 +109,7 @@ namespace Azure.DataGateway.Service.Resolvers
             }
             else
             {
-                string insert = $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
+                string insert = $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.Name)} ({Build(structure.InsertColumns)}) " +
                         $"VALUES ({string.Join(", ", (structure.Values))}) ";
 
                 return sets + ";\n" +

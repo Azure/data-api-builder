@@ -88,7 +88,7 @@ namespace Azure.DataGateway.Service.Services
                 throw new DataGatewayException(
                     message: "Primary key column(s) provided do not match DB schema.",
                     statusCode: HttpStatusCode.BadRequest,
-                    DataGatewayException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
 
             // Verify each primary key is present in the table definition.
@@ -99,10 +99,10 @@ namespace Azure.DataGateway.Service.Services
             {
                 throw new DataGatewayException(
                     message: $"The request is invalid since the primary keys: " +
-                        string.Join(", ", missingKeys) +
-                        " requested were not found in the entity definition.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        DataGatewayException.SubStatusCodes.BadRequest);
+                             string.Join(", ", missingKeys) +
+                             " requested were not found in the entity definition.",
+                    statusCode: HttpStatusCode.NotFound,
+                    subStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound);
             }
         }
 
@@ -223,7 +223,8 @@ namespace Azure.DataGateway.Service.Services
             if (unvalidatedFields.Any())
             {
                 throw new DataGatewayException(
-                    message: $"Invalid request body. Contained unexpected fields in body: {string.Join(", ", unvalidatedFields)}", statusCode: HttpStatusCode.BadRequest,
+                    message: $"Invalid request body. Contained unexpected fields in body: {string.Join(", ", unvalidatedFields)}",
+                    statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
         }
@@ -320,6 +321,23 @@ namespace Azure.DataGateway.Service.Services
                 message: message,
                 statusCode: HttpStatusCode.BadRequest,
                 subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+        }
+
+        /// <summary>
+        /// Validates that the entity in the request is valid.
+        /// </summary>
+        /// <param name="entityName">entity in the request.</param>
+        /// <param name="entities">collection of valid entities.</param>
+        /// <exception cref="DataGatewayException"></exception>
+        public static void ValidateEntity(string entityName, IEnumerable<string> entities)
+        {
+            if (!entities.Contains(entityName))
+            {
+                throw new DataGatewayException(
+                    message: $"{entityName} is not a valid entity.",
+                    statusCode: HttpStatusCode.NotFound,
+                    subStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound);
+            }
         }
 
         /// <summary>

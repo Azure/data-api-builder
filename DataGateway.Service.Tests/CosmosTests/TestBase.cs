@@ -34,55 +34,10 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         public static void Init(TestContext context)
         {
             _clientProvider = new CosmosClientProvider(TestHelper.ConfigPath);
-            _metadataStoreProvider = new MetadataStoreProviderForTest();
-            string jsonString = @"
-type Query {
-    characterList: [Character]
-    characterById (id : ID!): Character
-    planetById (id: ID! = 1): Planet
-    getPlanet(id: ID, name: String): Planet
-    planetList: [Planet]
-    planets(first: Int, after: String): PlanetConnection
-    getPlanetListById(id: ID): [Planet]
-    getPlanetByName(name: String): Planet
-    getPlanetsWithOrderBy(first: Int, after: String, orderBy: PlanetOrderByInput): PlanetConnection
-}
-
-type Mutation {
-    addPlanet(id: String, name: String): Planet
-    deletePlanet(id: String): Planet
-}
-
-type PlanetConnection {
-    items: [Planet]
-    endCursor: String
-    hasNextPage: Boolean
-}
-
-type Character {
-    id : ID,
-    name : String,
-    type: String,
-    homePlanet: Int,
-    primaryFunction: String
-}
-
-type Planet {
-    id : ID,
-    name : String,
-    character: Character
-}
-
-enum SortOrder {
-    Asc, Desc
-}
-
-input PlanetOrderByInput {
-    id: SortOrder
-    name: SortOrder
-}";
-
-            _metadataStoreProvider.GraphQLSchema = jsonString;
+            _metadataStoreProvider = new MetadataStoreProviderForTest
+            {
+                GraphQLSchema = File.ReadAllText("schema.gql")
+            };
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
             _graphQLService = new GraphQLService(
@@ -97,6 +52,9 @@ input PlanetOrderByInput {
             Client = _clientProvider.Client;
         }
 
+        private static string[] _planets = { "Earth", "Mars", "Jupiter",
+            "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial"};
+
         /// <summary>
         /// Creates items on the specified container
         /// </summary>
@@ -110,7 +68,7 @@ input PlanetOrderByInput {
             {
                 string uid = Guid.NewGuid().ToString();
                 idList.Add(uid);
-                dynamic sourceItem = TestHelper.GetItem(uid);
+                dynamic sourceItem = TestHelper.GetItem(uid, _planets[i % (_planets.Length)], i);
                 Client.GetContainer(dbName, containerName)
                     .CreateItemAsync(sourceItem, new PartitionKey(uid)).Wait();
             }
@@ -204,5 +162,28 @@ input PlanetOrderByInput {
 
             return graphQLResult.GetProperty("data").GetProperty(queryName);
         }
+
+        internal static async Task<JsonDocument> ExecuteCosmosRequestAsync(string query, int pagesize, string continuationToken, string containerName)
+        {
+            QueryRequestOptions options = new()
+            {
+                MaxItemCount = pagesize,
+            };
+            Container c = Client.GetContainer(DATABASE_NAME, containerName);
+            QueryDefinition queryDef = new(query);
+            FeedIterator<JObject> resultSetIterator = c.GetItemQueryIterator<JObject>(queryDef, continuationToken, options);
+            FeedResponse<JObject> firstPage = await resultSetIterator.ReadNextAsync();
+            JArray jarray = new();
+            IEnumerator<JObject> enumerator = firstPage.GetEnumerator();
+            while (enumerator.MoveNext())
+            {
+                JObject item = enumerator.Current;
+                jarray.Add(item);
+            }
+
+            return JsonDocument.Parse(jarray.ToString().Trim());
+
+        }
+
     }
 }

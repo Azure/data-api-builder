@@ -522,6 +522,15 @@ namespace Azure.DataGateway.Service.Services
             DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(schemaName, tableName);
 
             List<DataColumn> primaryKeys = new(dataTable.PrimaryKey);
+
+            if (primaryKeys.Count == 0)
+            {
+                throw new DataGatewayException(
+                       message: $"Primary key not configured on the given database object {tableName}",
+                       statusCode: System.Net.HttpStatusCode.NotImplemented,
+                       subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
+            }
+
             tableDefinition.PrimaryKey = new(primaryKeys.Select(primaryKey => primaryKey.ColumnName));
 
             using DataTableReader reader = new(dataTable);

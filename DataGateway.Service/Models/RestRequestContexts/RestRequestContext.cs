@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.OData.UriParser;
 
@@ -91,5 +93,48 @@ namespace Azure.DataGateway.Service.Models
         /// The database engine operation type this request is.
         /// </summary>
         public Operation OperationType { get; set; }
+
+        public HashSet<string> CumulativeColumns { get; }
+
+        private void CalculateCumulativeColumns()
+        {
+            ODataASTFieldVisitor visitor = new();
+            try
+            {
+                if (PrimaryKeyValuePairs is not null)
+                {
+                    CumulativeColumns.UnionWith(PrimaryKeyValuePairs.Keys);
+                }
+
+                if (FilterClauseInUrl is not null)
+                {
+                    FilterClauseInUrl.Expression.Accept<string>(visitor);
+                    CumulativeColumns.UnionWith(visitor.GetCumulativeColumns());
+                }
+
+                if (OrderByClauseInUrl is not null)
+                {
+                    foreach(Column col in OrderByClauseInUrl)
+                    {
+                        CumulativeColumns.Add(col.ColumnName);
+                    }
+                }
+
+                if (FieldValuePairsInBody is not null)
+                {
+                    CumulativeColumns.UnionWith(FieldValuePairsInBody.Keys);
+                }
+
+                if (ParsedQueryString is not null && ParsedQueryString.Count > 0)
+                {
+                    CumulativeColumns.UnionWith(ParsedQueryString.AllKeys!);
+                }    
+            }
+            catch
+            {
+                Console.WriteLine("ERROR IN ODATAASTCOLUMNVISITOR TRAVERSAL");
+            }
+        }
+
     }
 }

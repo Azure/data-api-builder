@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Parsers;
@@ -57,6 +58,11 @@ namespace Azure.DataGateway.Service.Services
             Operation operationType,
             string? primaryKeyRoute)
         {
+            AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
+               user: GetHttpContext().User,
+               resource: null,
+               requirements: new[] { new Stage1PermissionsRequirement() });
+
             RequestValidator.ValidateEntity(entityName, _sqlMetadataProvider.EntityToDatabaseObject.Keys);
             DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[entityName];
             QueryString? query = GetHttpContext().Request.QueryString;
@@ -131,10 +137,10 @@ namespace Azure.DataGateway.Service.Services
             // RestRequestContext is finalized for QueryBuilding and QueryExecution.
             // Perform Authorization check prior to moving forward in request pipeline.
             // RESTAuthorizationService
-            AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
+            authorizationResult = await _authorizationService.AuthorizeAsync(
                 user: GetHttpContext().User,
                 resource: context,
-                requirements: new[] { context.HttpVerb });
+                requirements: new[] { new Stage1PermissionsRequirement() });
 
             if (authorizationResult.Succeeded)
             {

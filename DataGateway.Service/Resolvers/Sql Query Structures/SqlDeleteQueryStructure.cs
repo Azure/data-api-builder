@@ -13,11 +13,11 @@ namespace Azure.DataGateway.Service.Resolvers
     public class SqlDeleteStructure : BaseSqlQueryStructure
     {
         public SqlDeleteStructure(
-            string tableName,
+            string entityName,
             IGraphQLMetadataProvider metadataStoreProvider,
             ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams)
-        : base(metadataStoreProvider, sqlMetadataProvider, tableName: tableName)
+        : base(metadataStoreProvider, sqlMetadataProvider, entityName: entityName)
         {
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
 
@@ -37,7 +37,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (primaryKeys.Contains(param.Key))
                 {
                     Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(TableName, param.Key)),
+                        new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, param.Key)),
                         PredicateOperation.Equal,
                         new PredicateOperand($"@{MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, param.Key))}")
                     ));

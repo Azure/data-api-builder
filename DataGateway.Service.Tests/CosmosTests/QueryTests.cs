@@ -19,6 +19,7 @@ query ($id: ID) {
         name
     }
 }";
+
         public static readonly string PlanetListQuery = @"{planetList{ id, name}}";
         public static readonly string PlanetConnectionQueryStringFormat = @"
 query ($first: Int!, $after: String) {
@@ -31,7 +32,18 @@ query ($first: Int!, $after: String) {
         hasNextPage
     }
 }";
-
+        public static readonly string PlanetsWithOrderBy = @"
+query{
+    getPlanetsWithOrderBy (first: 10, after: null, orderBy: {id: Asc, name: null }) {
+        items {
+            id
+            name
+        },
+        endCursor,
+        hasNextPage
+    }
+}
+";
         private static List<string> _idList;
 
         /// <summary>
@@ -204,7 +216,7 @@ query {{
         [TestMethod]
         public async Task GetByNonPrimaryFieldReturnsResult()
         {
-            string name = "test name";
+            string name = "Earth";
             string query = @$"
 query {{
     getPlanetByName (name: ""{name}"") {{
@@ -243,6 +255,19 @@ query {{
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
+        }
+
+        [TestMethod]
+        public async Task GetWithOrderBy()
+        {
+            JsonElement response = await ExecuteGraphQLRequestAsync("getPlanetsWithOrderBy", PlanetsWithOrderBy);
+
+            int i = 0;
+            // Check order matches
+            foreach (string id in _idList.OrderBy(x => x))
+            {
+                Assert.AreEqual(id, response.GetProperty("items")[i++].GetProperty("id").GetString());
+            }
         }
 
         private static void ConvertJsonElementToStringList(JsonElement ele, List<string> strList)

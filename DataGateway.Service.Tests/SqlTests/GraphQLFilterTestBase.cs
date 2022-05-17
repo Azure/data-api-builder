@@ -36,7 +36,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "title" },
-                "title = 'Awesome book'");
+                "title = 'Awesome book'",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -60,7 +61,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "title" },
-                "title != 'Awesome book'");
+                "title != 'Awesome book'",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -84,7 +86,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "title" },
-                "title LIKE 'Awe%'");
+                "title LIKE 'Awe%'",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -108,7 +111,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "title" },
-                "title LIKE '%book'");
+                "title LIKE '%book'",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -132,7 +136,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "title" },
-                "title LIKE '%some%'");
+                "title LIKE '%some%'",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -156,7 +161,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "title" },
-                "title NOT LIKE '%book%'");
+                "title NOT LIKE '%book%'",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -198,7 +204,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "id" },
-                @"id = 2");
+                @"id = 2",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -222,7 +229,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "id" },
-                @"id != 2");
+                @"id != 2",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -246,7 +254,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "id" },
-                @"(id > 2 AND id < 4)");
+                @"(id > 2 AND id < 4)",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -270,7 +279,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "id" },
-                @"(id >= 2 AND id <= 4)");
+                @"(id >= 2 AND id <= 4)",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -308,7 +318,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "id", "title" },
-                @"(title LIKE '%book%' AND ((id > 2 AND id < 4) OR id >= 4))");
+                @"(title LIKE '%book%' AND ((id > 2 AND id < 4) OR id >= 4))",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -345,7 +356,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "id", "title" },
-                @"((id > 2 AND id < 4) OR (id >= 4 AND title LIKE '%book%'))");
+                @"((id > 2 AND id < 4) OR (id >= 4 AND title LIKE '%book%'))",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -393,7 +405,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 new List<string> { "id", "title", "publisher_id" },
                 @"((id >= 2 AND title NOT LIKE '%book%') AND
                   (id < 1000 AND title LIKE 'US%') AND
-                  (publisher_id < 1500 OR publisher_id > 2000)");
+                  (publisher_id < 1500 OR publisher_id > 2000)",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -454,7 +467,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "id" },
-                "id >= 2 AND id < 4");
+                "id >= 2 AND id < 4",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -480,7 +494,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string dbQuery = MakeQueryOn(
                 "magazines",
                 new List<string> { "id", "title", "issue_number" },
-                "issue_number IS NULL");
+                "issue_number IS NULL",
+                "foo");
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -506,7 +521,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string dbQuery = MakeQueryOn(
                 "magazines",
                 new List<string> { "id", "title", "issue_number" },
-                "issue_number IS NOT NULL");
+                "issue_number IS NOT NULL",
+                "foo");
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -531,7 +547,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string dbQuery = MakeQueryOn(
                 "website_users",
                 new List<string> { "id", "username" },
-                "username IS NULL");
+                "username IS NULL",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -556,7 +573,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string dbQuery = MakeQueryOn(
                 "website_users",
                 new List<string> { "id", "username" },
-                "username IS NOT NULL");
+                "username IS NOT NULL",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -616,6 +634,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         #endregion
 
+        protected abstract string GetDefaultSchema();
+
         /// <remarks>
         /// This function does not escape special characters from column names so those might lead to errors
         /// </remarks>
@@ -623,6 +643,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string table,
             List<string> queriedColumns,
             string predicate,
+            string schema = "",
             List<string> pkColumns = null);
     }
 }

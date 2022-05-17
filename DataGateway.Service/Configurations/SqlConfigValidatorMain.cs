@@ -149,9 +149,9 @@ namespace Azure.DataGateway.Service.Configurations
         {
             string[] tableColumnsPath = new[] { "DatabaseSchema", "Tables", typeTable, "Columns" };
             ValidateTableColumnsMatchScalarFields(typeTable, typeName, MakeConfigPosition(tableColumnsPath));
-            ValidateTableColumnTypesMatchScalarFieldTypes(typeTable, typeName, MakeConfigPosition(tableColumnsPath));
-            ValidateScalarFieldsMatchingTableColumnsHaveNoArgs(typeName, typeTable, MakeConfigPosition(tableColumnsPath));
-            ValidateScalarFieldsMatchingTableColumnsNullability(typeName, typeTable, MakeConfigPosition(tableColumnsPath));
+            ValidateTableColumnTypesMatchScalarFieldTypes(typeName, MakeConfigPosition(tableColumnsPath));
+            ValidateScalarFieldsMatchingTableColumnsHaveNoArgs(typeName, MakeConfigPosition(tableColumnsPath));
+            ValidateScalarFieldsMatchingTableColumnsNullability(typeName, MakeConfigPosition(tableColumnsPath));
         }
 
         /// <summary>
@@ -290,14 +290,14 @@ namespace Azure.DataGateway.Service.Configurations
             if (hasLeftFk)
             {
                 ValidateLeftForeignKey(field, type);
-                ForeignKeyDefinition leftFk = GetFkFromTable(GetTypeTable(type), field.LeftForeignKey);
+                ForeignKeyDefinition leftFk = GetFkFromTable(type, field.LeftForeignKey);
                 ValidateLeftFkRefTableIsReturnedTypeTable(leftFk, returnedType);
             }
 
             if (hasRightFk)
             {
                 ValidateRightForeignKey(field, returnedType);
-                ForeignKeyDefinition rightFk = GetFkFromTable(GetTypeTable(returnedType), field.RightForeignKey);
+                ForeignKeyDefinition rightFk = GetFkFromTable(returnedType, field.RightForeignKey);
                 ValidateRightFkRefTableIsTypeTable(rightFk, type);
             }
         }
@@ -325,7 +325,7 @@ namespace Azure.DataGateway.Service.Configurations
             ValidateHasOnlyRightForeignKey(field);
             ValidateRightForeignKey(field, returnedType);
 
-            ForeignKeyDefinition rightFk = GetFkFromTable(GetTypeTable(returnedType), field.RightForeignKey);
+            ForeignKeyDefinition rightFk = GetFkFromTable(returnedType, field.RightForeignKey);
             ValidateRightFkRefTableIsTypeTable(rightFk, type);
         }
 
@@ -344,7 +344,7 @@ namespace Azure.DataGateway.Service.Configurations
             ValidateHasOnlyLeftForeignKey(field);
             ValidateLeftForeignKey(field, type);
 
-            ForeignKeyDefinition leftFk = GetFkFromTable(GetTypeTable(type), field.LeftForeignKey);
+            ForeignKeyDefinition leftFk = GetFkFromTable(type, field.LeftForeignKey);
             ValidateLeftFkRefTableIsReturnedTypeTable(leftFk, returnedType);
         }
 
@@ -438,7 +438,8 @@ namespace Azure.DataGateway.Service.Configurations
         {
             FieldDefinitionNode mutation = GetMutation(resolver.Id);
             Dictionary<string, InputValueDefinitionNode> mutArgs = GetArgumentsFromField(mutation);
-            TableDefinition table = GetTableWithName(resolver.Table);
+            string type = _sqlMetadataProvider.EntityToDatabaseObject.FirstOrDefault(x => x.Value.Name == resolver.Table).Key;
+            TableDefinition table = GetTableWithName(type);
 
             ValidateMutReturnTypeIsNotListType(mutation);
             if (IsCustomType(mutation.Type))
@@ -484,7 +485,8 @@ namespace Azure.DataGateway.Service.Configurations
         {
             FieldDefinitionNode mutation = GetMutation(resolver.Id);
             Dictionary<string, InputValueDefinitionNode> mutArgs = GetArgumentsFromField(mutation);
-            TableDefinition table = GetTableWithName(resolver.Table);
+            string type = _sqlMetadataProvider.EntityToDatabaseObject.FirstOrDefault(x => x.Value.Name == resolver.Table).Key;
+            TableDefinition table = GetTableWithName(type);
 
             ValidateMutReturnTypeIsNotListType(mutation);
             if (IsCustomType(mutation.Type))
@@ -552,8 +554,7 @@ namespace Azure.DataGateway.Service.Configurations
         {
             Dictionary<string, InputValueDefinitionNode> arguments = GetArgumentsFromField(queryField);
 
-            string returnedTypeTableName = GetTypeTable(InnerTypeStr(queryField.Type));
-            TableDefinition returnedTypeTable = GetTableWithName(returnedTypeTableName);
+            TableDefinition returnedTypeTable = GetTableWithName(InnerTypeStr(queryField.Type));
 
             ValidateFieldArguments(arguments.Keys, requiredArguments: returnedTypeTable.PrimaryKey);
             ValidateFieldArgumentsAreNonNullable(arguments);

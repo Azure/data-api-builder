@@ -8,9 +8,13 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
+using MySqlConnector;
+using Npgsql;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -23,6 +27,7 @@ namespace Azure.DataGateway.Service.Services
         where DataAdapterT : DbDataAdapter, new()
         where CommandT : DbCommand, new()
     {
+        public FilterParser ODataFilterParser { get; } = new();
         private FilterParser _oDataFilterParser = new();
 
         private readonly DatabaseType _databaseType;
@@ -64,11 +69,10 @@ namespace Azure.DataGateway.Service.Services
             _queryExecutor = queryExecutor;
         }
 
-        public FilterParser GetOdataFilterParser()
-        {
-            return _oDataFilterParser;
-        }
-
+        /// <summary>
+        /// Obtains the underlying database type.
+        /// </summary>
+        /// <returns></returns>
         public DatabaseType GetDatabaseType()
         {
             return _databaseType;
@@ -163,44 +167,109 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private void GenerateDatabaseObjectForEntities()
         {
+            string? schemaName, dbObjectName;
             foreach ((string entityName, Entity entity)
                 in _entities)
             {
                 if (!EntityToDatabaseObject.ContainsKey(entityName))
                 {
+                    // parse source name into a tuple of (schemaName, databaseObjectName)
+                    (schemaName, dbObjectName) = ParseSchemaAndDbObjectName(entity.GetSourceName())!;
+
                     DatabaseObject databaseObject = new()
                     {
-                        SchemaName = GetDefaultSchemaName(),
-                        Name = entity.GetSourceName(),
+                        SchemaName = schemaName!,
+                        Name = dbObjectName!,
                         TableDefinition = new()
                     };
 
                     EntityToDatabaseObject.Add(entityName, databaseObject);
+                }
 
-                    if (entity.Relationships != null)
+                if (entity.Relationships != null)
+                {
+                    // Add all the linking objects as well - so that we can infer
+                    // their metadata too.
+                    foreach (Relationship relationship in entity.Relationships.Values)
                     {
-                        // Add all the linking objects as well - so that we can infer
-                        // their metadata too.
-                        foreach (Relationship relationship in entity.Relationships.Values)
+                        if (relationship.LinkingObject != null
+                            && !EntityToDatabaseObject.ContainsKey(relationship.LinkingObject))
                         {
-                            if (relationship.LinkingObject != null
-                                && !EntityToDatabaseObject.ContainsKey(relationship.LinkingObject))
+                            // linking object can have its own schema, so we parse and update here
+                            (schemaName, dbObjectName) = ParseSchemaAndDbObjectName(relationship.LinkingObject);
+                            DatabaseObject linkingDatabaseObject = new()
                             {
-                                DatabaseObject linkingDatabaseObject = new()
-                                {
-                                    SchemaName = GetDefaultSchemaName(),
-                                    Name = relationship.LinkingObject,
-                                    TableDefinition = new()
-                                };
+                                SchemaName = schemaName!,
+                                Name = dbObjectName!,
+                                TableDefinition = new()
+                            };
 
-                                EntityToDatabaseObject.Add(
-                                    relationship.LinkingObject,
-                                    linkingDatabaseObject);
-                            }
+                            EntityToDatabaseObject.Add(
+                                relationship.LinkingObject,
+                                linkingDatabaseObject);
                         }
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Helper function will parse the schema and database object name
+        /// from the provided and string and sort out if a default schema
+        /// should be used. It then returns the appropriate schema and
+        /// db object name as a tuple of strings.
+        /// </summary>
+        /// <param name="source">source string to parse</param>
+        /// <returns></returns>
+        /// <exception cref="DataGatewayException"></exception>
+        public (string?, string?) ParseSchemaAndDbObjectName(string source)
+        {
+            (string? schemaName, string? dbObjectName) = EntitySourceNamesParser.ParseSchemaAndTable(source)!;
+
+            // if schemaName is empty we check if the DB type is postgresql
+            // and if the schema name was included in the connection string
+            // as a value associated with the keyword 'SearchPath'.
+            // if the DB type is not postgresql or if the connection string
+            // does not include the schema name, we use the default schema name.
+            // if schemaName is not empty we must check if Database Type is MySql
+            // and in this case we throw an exception since there should be no
+            // schema name in this case.
+            if (string.IsNullOrEmpty(schemaName))
+            {
+                // if DatabaseType is not postgresql will short circuit and use default
+                if (_databaseType is not DatabaseType.postgresql || !TryGetSchemaFromConnectionString(
+                                                                    out schemaName,
+                                                                    connectionString: ConnectionString))
+                {
+                    schemaName = GetDefaultSchemaName();
+                }
+            }
+            else if (_databaseType is DatabaseType.mysql)
+            {
+                throw new DataGatewayException(message: $"Invalid database object name: \"{schemaName}.{dbObjectName}\"",
+                                               statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                               subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            return (schemaName, dbObjectName);
+        }
+
+        /// <summary>
+        /// Only used for PostgreSql.
+        /// The connection string could contain the schema,
+        /// in which case it will be associated with the
+        /// property 'SearchPath' in the string builder we create.
+        /// If `SearchPath` is null we assign the empty string to the
+        /// the out param schemaName, otherwise we assign the
+        /// value associated with `SearchPath`.
+        /// </summary>
+        /// <param name="schemaName">the schema name we save.</param>
+        /// <returns>true if non empty schema in connection string, false otherwise.</returns>
+        public static bool TryGetSchemaFromConnectionString(out string schemaName, string connectionString)
+        {
+            NpgsqlConnectionStringBuilder connectionStringBuilder = new(connectionString);
+            schemaName = connectionStringBuilder.SearchPath is null ? string.Empty : connectionStringBuilder.SearchPath;
+            return string.IsNullOrEmpty(schemaName) ? false : true;
         }
 
         /// <summary>
@@ -246,7 +315,7 @@ namespace Azure.DataGateway.Service.Services
 
         private void InitFilterParser()
         {
-            _oDataFilterParser.BuildModel(EntityToDatabaseObject.Values);
+            ODataFilterParser.BuildModel(EntityToDatabaseObject.Values);
         }
 
         /// <summary>
@@ -304,6 +373,15 @@ namespace Azure.DataGateway.Service.Services
             DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(schemaName, tableName);
 
             List<DataColumn> primaryKeys = new(dataTable.PrimaryKey);
+
+            if (primaryKeys.Count == 0)
+            {
+                throw new DataGatewayException(
+                       message: $"Primary key not configured on the given database object {tableName}",
+                       statusCode: System.Net.HttpStatusCode.NotImplemented,
+                       subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
+            }
+
             tableDefinition.PrimaryKey = new(primaryKeys.Select(primaryKey => primaryKey.ColumnName));
 
             using DataTableReader reader = new(dataTable);
@@ -367,8 +445,10 @@ namespace Azure.DataGateway.Service.Services
                 Connection = conn
             };
             StringBuilder tablePrefix = new(conn.Database);
+            tablePrefix = new StringBuilder(QuoteTablePrefix(tablePrefix.ToString()));
             if (!string.IsNullOrEmpty(schemaName))
             {
+                schemaName = QuoteTablePrefix(schemaName);
                 tablePrefix.Append($".{schemaName}");
             }
 
@@ -377,6 +457,34 @@ namespace Azure.DataGateway.Service.Services
 
             DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableName);
             return dataTable[0];
+        }
+
+        /// <summary>
+        /// Helper function quotes the table prefix as appropriate
+        /// for each DatabaseType.
+        /// </summary>
+        /// <param name="prefix"></param>
+        /// <returns></returns>
+        private string QuoteTablePrefix(string prefix)
+        {
+            DbCommandBuilder builder;
+            switch (_databaseType)
+            {
+                case DatabaseType.mssql:
+                    builder = new SqlCommandBuilder();
+                    prefix = builder.QuoteIdentifier(prefix);
+                    break;
+                case DatabaseType.mysql:
+                    builder = new MySqlCommandBuilder();
+                    prefix = builder.QuoteIdentifier(prefix);
+                    break;
+                case DatabaseType.postgresql:
+                    builder = new NpgsqlCommandBuilder();
+                    prefix = builder.QuoteIdentifier(prefix);
+                    break;
+            }
+
+            return prefix;
         }
 
         /// <summary>
@@ -516,3 +624,4 @@ namespace Azure.DataGateway.Service.Services
         }
     }
 }
+

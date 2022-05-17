@@ -38,8 +38,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
         {
             return inputTypeName switch
             {
-                string s when s.StartsWith(Operation.Create.ToString(), StringComparison.Ordinal) => Operation.Create,
-                string s when s.StartsWith(Operation.Update.ToString(), StringComparison.Ordinal) => Operation.UpdateGraphQL,
+                string s when s.StartsWith(Operation.Create.ToString(), StringComparison.OrdinalIgnoreCase) => Operation.Create,
+                string s when s.StartsWith(Operation.Update.ToString(), StringComparison.OrdinalIgnoreCase) => Operation.UpdateGraphQL,
                 _ => Operation.Delete
             };
         }

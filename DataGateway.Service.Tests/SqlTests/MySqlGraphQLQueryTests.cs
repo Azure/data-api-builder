@@ -83,8 +83,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task OneToOneJoinQuery()
         {
             string mySqlQuery = @"
-                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', `subq11`.`id`, 'websiteplacement', `subq11`.`websiteplacement`)
-                        ), JSON_ARRAY()) AS `data`
+                SELECT JSON_OBJECT('id', `subq11`.`id`, 'websiteplacement', `subq11`.`websiteplacement`)
+                       AS `data`
                 FROM (
                     SELECT `table0`.`id` AS `id`,
                         `table1_subq`.`data` AS `websiteplacement`

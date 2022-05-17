@@ -1,3 +1,4 @@
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
 using HotChocolate.Types;
@@ -49,8 +50,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             // Nothing explicitly defined nor could we find anything using our conventions, fail out
             if (fieldDefinitionNodes.Count == 0)
             {
-                // TODO: Proper exception type
-                throw new Exception("No primary key defined and conventions couldn't locate a fallback");
+                throw new DataGatewayException(
+                    message: "No primary key defined and conventions couldn't locate a fallback",
+                    subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization,
+                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable);
             }
 
             return fieldDefinitionNodes;

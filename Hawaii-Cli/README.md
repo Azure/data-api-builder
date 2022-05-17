@@ -5,9 +5,9 @@ C#
 
  - Helpful commands to improve your workflows
    	1.Initialize the configuration.
-	2.Add new Entities.
-	3.Update Entity Details
-	4.Add/Update relationship between entities.
+   	2.Add new Entities.
+   	3.Update Entity Details
+   	4.Add/Update relationship between entities.
 
  - Let the user to run locally in any environment
  
@@ -25,7 +25,7 @@ The equivalent npm global install will also work.
 
 ### Generate the config:
 ```
-hawaii init -name <<filename>> --database_type <<db_type>> --connection_string <<connection_string>>
+hawaii init -name <<filename>> --database-type <<db_type>> --connection-string <<connection_string>>
 ```
 ### Add entity to the config:
 ```

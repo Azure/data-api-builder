@@ -4,6 +4,7 @@
     "database-type": "mysql",
     "connection-string": "server=localhost;database=datagatewaytest;Allow User Variables=true;uid=root;pwd=REPLACEME",
     "resolver-config-file": "sql-config.json"
+    "connection-string": "Server=(localdb)\\MSSQLLocalDB;Database=DataGateway;Integrated Security=true"
   },
   "runtime": {
     "rest": {
@@ -24,8 +25,8 @@
       "authentication": {
         "provider": "EasyAuth",
         "jwt": {
-          "audience": "",
-          "issuer": "",
+          "audience": "bbff8fdb-c073-4466-9463-170744cbd2e2",
+          "issuer": "https://login.microsoftonline.com/291bf275-ea78-4cde-84ea-21309a43a567/v2.0",
           "issuer-key": ""
         }
       }
@@ -86,6 +87,24 @@
         {
           "role": "authenticated",
           "actions": [ "create", "update", "delete" ]
+        },
+        {
+          "role": "Author",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            {
+              "action": "read",
+              "policy": {
+                "database": "@claims.id eq @item.id"
+              },
+              "fields": {
+                "include": [ "*" ],
+                "exclude": [ "id" ]
+              }
+            }
+          ]
         }
       ],
       "relationships": {

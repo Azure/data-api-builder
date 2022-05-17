@@ -3,7 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.Models.Authorization;
+//using Azure.DataGateway.Service.Models.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 
@@ -60,16 +60,16 @@ namespace Azure.DataGateway.Service.Authorization
             {
                 if (context.Resource != null)
                 {
-                    AuthorizationMetadata authData = (AuthorizationMetadata)context.Resource;
-                    if (authData.RoleName != null && authData.EntityName != null)
-                    {
-                        bool status = _authorizationResolver.IsRoleDefinedForEntity(roleName: authData.RoleName, entityName: authData.EntityName);
+                    //AuthorizationMetadata authData = (AuthorizationMetadata)context.Resource;
+                    //if (authData.RoleName != null && authData.EntityName != null)
+                    //{
+                    //    bool status = _authorizationResolver.IsRoleDefinedForEntity(roleName: authData.RoleName, entityName: authData.EntityName);
 
-                        if (status)
-                        {
-                            context.Succeed(requirement);
-                        }
-                    }
+                    //    if (status)
+                    //    {
+                    //        context.Succeed(requirement);
+                    //    }
+                    //}
                 }
                 else
                 {

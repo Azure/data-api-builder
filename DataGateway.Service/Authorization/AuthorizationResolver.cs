@@ -19,7 +19,7 @@ namespace Azure.DataGateway.Service.Authorization
     {
         private Dictionary<string, EntityMetadata> _entityPermissionMap = new();
         private const string WILDCARD = "*";
-        private static readonly HashSet<string> _validActions = new() { "Create", "Read", "Update", "Delete" };
+        private static readonly HashSet<string> _validActions = new() { "create", "read", "update", "delete" };
 
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
 

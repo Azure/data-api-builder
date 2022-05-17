@@ -37,6 +37,7 @@ namespace Azure.DataGateway.Service
         private void OnConfigurationChanged(object state)
         {
             RuntimeConfigPath runtimeConfigPath = new();
+            Console.WriteLine("Reading config file: " + runtimeConfigPath.ConfigFileName);
             Configuration.Bind(runtimeConfigPath);
             runtimeConfigPath.SetRuntimeConfigValue();
         }
@@ -84,6 +85,7 @@ namespace Azure.DataGateway.Service
                 IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
                 RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
+                Console.WriteLine("Reading config file: " + runtimeConfigPath.CurrentValue.ConfigFileName);
 
                 switch (runtimeConfig.DatabaseType)
                 {

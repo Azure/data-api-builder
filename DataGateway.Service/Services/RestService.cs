@@ -58,10 +58,20 @@ namespace Azure.DataGateway.Service.Services
             Operation operationType,
             string? primaryKeyRoute)
         {
+
             AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
                user: GetHttpContext().User,
                resource: null,
                requirements: new[] { new Stage1PermissionsRequirement() });
+
+            if (!authorizationResult.Succeeded)
+            {
+                //Handle authz failure
+                throw new DataGatewayException(
+                    message: "authZ failed",
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed);
+            }
 
             RequestValidator.ValidateEntity(entityName, _sqlMetadataProvider.EntityToDatabaseObject.Keys);
             DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[entityName];

@@ -242,8 +242,7 @@ namespace Azure.DataGateway.Service.Services
                 .TryGetValue(entityName, out relationshipData))
             {
                 relationshipData = new();
-                databaseObject.TableDefinition
-                    .SourceEntityRelationshipMap[entityName] = relationshipData;
+                databaseObject.TableDefinition.SourceEntityRelationshipMap.Add(entityName, relationshipData);
             }
 
             string targetSchemaName, targetDbObjectName, linkingObjectSchema, linkingObjectName;

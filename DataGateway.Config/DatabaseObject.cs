@@ -55,7 +55,7 @@ namespace Azure.DataGateway.Config
         /// <summary>
         /// The list of columns in this table.
         /// </summary>
-        public Dictionary<string, ColumnDefinition> Columns { get; set; } =
+        public Dictionary<string, ColumnDefinition> Columns { get; private set; } =
             new(StringComparer.InvariantCultureIgnoreCase);
 
         /// <summary>
@@ -63,10 +63,10 @@ namespace Azure.DataGateway.Config
         /// All these entities share this table definition
         /// as their underlying database object 
         /// </summary>
-        public Dictionary<string, RelationshipMetadata> SourceEntityRelationshipMap { get; set; } =
+        public Dictionary<string, RelationshipMetadata> SourceEntityRelationshipMap { get; private set; } =
             new(StringComparer.InvariantCultureIgnoreCase);
 
-        public Dictionary<string, AuthorizationRule> HttpVerbs { get; set; } = new();
+        public Dictionary<string, AuthorizationRule> HttpVerbs { get; private set; } = new();
     }
 
     /// <summary>
@@ -77,7 +77,7 @@ namespace Azure.DataGateway.Config
         /// <summary>
         /// Dictionary of target entity name to ForeignKeyDefinition.
         /// </summary>
-        public Dictionary<string, List<ForeignKeyDefinition>> TargetEntityToFkDefinitionMap { get; set; }
+        public Dictionary<string, List<ForeignKeyDefinition>> TargetEntityToFkDefinitionMap { get; private set; }
             = new(StringComparer.InvariantCultureIgnoreCase);
     }
 

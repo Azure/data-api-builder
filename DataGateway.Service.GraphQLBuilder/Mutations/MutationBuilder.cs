@@ -36,7 +36,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
         public static Operation DetermineMutationOperationTypeBasedOnInputType(string inputTypeName)
         {
-            return inputTypeName switch {
+            return inputTypeName switch
+            {
                 string s when s.StartsWith(Operation.Create, StringComparison.Ordinal) => Operation.Create,
                 string s when s.StartsWith(Operation.Update, StringComparison.Ordinal) => Operation.UpdateGraphQL,
                 _ => Operation.Delete

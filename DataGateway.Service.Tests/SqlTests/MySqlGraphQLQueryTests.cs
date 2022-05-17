@@ -89,11 +89,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     SELECT `table0`.`id` AS `id`,
                         `table1_subq`.`data` AS `websiteplacement`
                     FROM `books` AS `table0`
-                    LEFT OUTER JOIN LATERAL(SELECT JSON_OBJECT('id', `subq10`.`id`, 'price', `subq10`.`price`, 'book',
-                                `subq10`.`book`) AS `data` FROM (
+                    LEFT OUTER JOIN LATERAL(SELECT JSON_OBJECT('id', `subq10`.`id`, 'price', `subq10`.`price`, 'books',
+                                `subq10`.`books`) AS `data` FROM (
                             SELECT `table1`.`id` AS `id`,
                                 `table1`.`price` AS `price`,
-                                `table2_subq`.`data` AS `book`
+                                `table2_subq`.`data` AS `books`
                             FROM `book_website_placements` AS `table1`
                             LEFT OUTER JOIN LATERAL(SELECT JSON_OBJECT('id', `subq9`.`id`) AS `data` FROM (
                                     SELECT `table2`.`id` AS `id`

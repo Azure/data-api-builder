@@ -207,6 +207,20 @@
       "source": "website_users",
       "rest": false,
       "permissions": []
+    },
+    "Tree": {
+      "source": "trees",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "mappings": {
+        "species": "Scientific Name",
+        "region": "United State's Region"
+      }
     }
   }
 }

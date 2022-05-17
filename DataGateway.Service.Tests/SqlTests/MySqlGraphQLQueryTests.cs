@@ -87,7 +87,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         ), JSON_ARRAY()) AS `data`
                 FROM (
                     SELECT `table0`.`id` AS `id`,
-                        `table1_subq`.`data` AS `website_placement`
+                        `table1_subq`.`data` AS `websiteplacement`
                     FROM `books` AS `table0`
                     LEFT OUTER JOIN LATERAL(SELECT JSON_OBJECT('id', `subq10`.`id`, 'price', `subq10`.`price`, 'book',
                                 `subq10`.`book`) AS `data` FROM (

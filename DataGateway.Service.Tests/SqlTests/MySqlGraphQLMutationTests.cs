@@ -177,12 +177,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task NestedQueryingInMutation()
         {
             string mySqlQuery = @"
-                SELECT JSON_OBJECT('id', `subq4`.`id`, 'title', `subq4`.`title`, 'publisher', JSON_EXTRACT(`subq4`.
-                            `publisher`, '$')) AS `data`
+                SELECT JSON_OBJECT('id', `subq4`.`id`, 'title', `subq4`.`title`, 'publishers', JSON_EXTRACT(`subq4`.
+                            `publishers`, '$')) AS `data`
                 FROM (
                     SELECT `table0`.`id` AS `id`,
                         `table0`.`title` AS `title`,
-                        `table1_subq`.`data` AS `publisher`
+                        `table1_subq`.`data` AS `publishers`
                     FROM `books` AS `table0`
                     LEFT OUTER JOIN LATERAL(SELECT JSON_OBJECT('name', `subq3`.`name`) AS `data` FROM (
                             SELECT `table1`.`name` AS `name`

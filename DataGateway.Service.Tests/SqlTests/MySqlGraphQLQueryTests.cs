@@ -171,7 +171,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public override async Task QueryWithNullResult()
         {
-            await QueryWithNullResult();
+            await base.QueryWithNullResult();
         }
 
         /// <sumary>

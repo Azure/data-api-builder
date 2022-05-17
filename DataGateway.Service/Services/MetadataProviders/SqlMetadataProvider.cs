@@ -139,6 +139,14 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
+        /// Creates a Database object with the given schema and table names.
+        /// </summary>
+        protected virtual DatabaseObject GenerateDbObject(string schemaName, string tableName)
+        {
+            return new(schemaName, tableName);
+        }
+
+        /// <summary>
         /// Builds the dictionary of parameters and their values required for the
         /// foreign key query.
         /// </summary>
@@ -593,47 +601,26 @@ namespace Azure.DataGateway.Service.Services
             {
                 Connection = conn
             };
-            StringBuilder tablePrefix = new(conn.Database);
-            tablePrefix = new StringBuilder(QuoteTablePrefix(tablePrefix.ToString()));
-            if (!string.IsNullOrEmpty(schemaName))
-            {
-                schemaName = QuoteTablePrefix(schemaName);
-                tablePrefix.Append($".{schemaName}");
-            }
 
-            selectCommand.CommandText = ($"SELECT * FROM {tablePrefix}.{tableName}");
+            string tablePrefix = GetTablePrefix(conn.Database, schemaName);
+            selectCommand.CommandText
+                = ($"SELECT * FROM {tablePrefix}.{SqlQueryBuilder.QuoteIdentifier(tableName)}");
             adapterForTable.SelectCommand = selectCommand;
 
             DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableName);
             return dataTable[0];
         }
 
-        /// <summary>
-        /// Helper function quotes the table prefix as appropriate
-        /// for each DatabaseType.
-        /// </summary>
-        /// <param name="prefix"></param>
-        /// <returns></returns>
-        private string QuoteTablePrefix(string prefix)
+        private string GetTablePrefix(string databaseName, string schemaName)
         {
-            DbCommandBuilder builder;
-            switch (_databaseType)
+            StringBuilder tablePrefix = new(SqlQueryBuilder.QuoteIdentifier(databaseName));
+            if (!string.IsNullOrEmpty(schemaName))
             {
-                case DatabaseType.mssql:
-                    builder = new SqlCommandBuilder();
-                    prefix = builder.QuoteIdentifier(prefix);
-                    break;
-                case DatabaseType.mysql:
-                    builder = new MySqlCommandBuilder();
-                    prefix = builder.QuoteIdentifier(prefix);
-                    break;
-                case DatabaseType.postgresql:
-                    builder = new NpgsqlCommandBuilder();
-                    prefix = builder.QuoteIdentifier(prefix);
-                    break;
+                schemaName = SqlQueryBuilder.QuoteIdentifier(schemaName);
+                tablePrefix.Append($".{schemaName}");
             }
 
-            return prefix;
+            return tablePrefix.ToString();
         }
 
         /// <summary>
@@ -810,8 +797,8 @@ namespace Azure.DataGateway.Service.Services
                     (string)foreignKeyInfo[$"Referenced{nameof(DatabaseObject.SchemaName)}"]!;
                 string referencedTableName = (string)foreignKeyInfo[$"Referenced{nameof(TableDefinition)}"]!;
 
-                DatabaseObject referencingDbObject = new(referencingSchemaName, referencingTableName);
-                DatabaseObject referencedDbObject = new(referencedSchemaName, referencedTableName);
+                DatabaseObject referencingDbObject = GenerateDbObject(referencingSchemaName, referencingTableName);
+                DatabaseObject referencedDbObject = GenerateDbObject(referencedSchemaName, referencedTableName);
                 RelationShipPair pair = new(referencingDbObject, referencedDbObject);
                 if (!pairToFkDefinition.TryGetValue(pair, out ForeignKeyDefinition? foreignKeyDefinition))
                 {

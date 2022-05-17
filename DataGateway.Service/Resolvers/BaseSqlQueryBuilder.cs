@@ -22,7 +22,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Adds database specific quotes to string identifier
         /// </summary>
-        protected abstract string QuoteIdentifier(string ident);
+        public abstract string QuoteIdentifier(string ident);
 
         /// <summary>
         /// Builds a database specific keyset pagination predicate

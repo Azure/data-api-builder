@@ -20,7 +20,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Adds database specific quotes to string identifier
         /// </summary>
-        protected override string QuoteIdentifier(string ident)
+        public override string QuoteIdentifier(string ident)
         {
             return _builder.QuoteIdentifier(ident);
         }
@@ -132,21 +132,26 @@ namespace Azure.DataGateway.Service.Resolvers
 
             // For MySQL, the view KEY_COLUMN_USAGE provides all the information we need
             // so there is no need to join with any other view.
+            // TABLE_SCHEMA returned here is actually the database name -
+            // we don't need this column for MySql since the connection string already
+            // has the database name. We still select it to conform with other dbs.
             string foreignKeyQuery = $@"
 SELECT 
-    CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))}, 
-    TABLE_NAME {QuoteIdentifier(nameof(TableDefinition))}, 
-    COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencingColumns))}, 
-    REFERENCED_TABLE_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.Pair.ReferencedDbObject))}, 
-    REFERENCED_COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))} 
+    CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))},
+    TABLE_SCHEMA {QuoteIdentifier($"Referencing{nameof(DatabaseObject.SchemaName)}")},
+    TABLE_NAME {QuoteIdentifier($"Referencing{nameof(TableDefinition)}")},
+    COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencingColumns))},
+    REFERENCED_TABLE_SCHEMA {QuoteIdentifier($"Referenced{nameof(DatabaseObject.SchemaName)}")},
+    REFERENCED_TABLE_NAME {QuoteIdentifier($"Referenced{nameof(TableDefinition)}")},
+    REFERENCED_COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))}
 FROM 
-    INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
+    INFORMATION_SCHEMA.KEY_COLUMN_USAGE
 WHERE 
-    (TABLE_SCHEMA IN (@{tableSchemaParamsForInClause}) 
-    AND TABLE_NAME IN (@{tableNameParamsForInClause}) 
-    AND REFERENCED_TABLE_NAME IS NOT NULL 
+    (TABLE_SCHEMA IN (@{tableSchemaParamsForInClause})
+    AND TABLE_NAME IN (@{tableNameParamsForInClause})
+    AND REFERENCED_TABLE_NAME IS NOT NULL
     AND REFERENCED_COLUMN_NAME IS NOT NULL) OR
-    (REFERENCED_SCHEMA_NAME IN (@{tableSchemaParamsForInClause})
+    (REFERENCED_TABLE_SCHEMA IN (@{tableSchemaParamsForInClause}) AND
     REFERENCED_TABLE_NAME IN (@{tableNameParamsForInClause}))";
 
             Console.WriteLine($"Foreign Key Query is : {foreignKeyQuery}");

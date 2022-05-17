@@ -108,6 +108,10 @@
           "linking.source.fields": [ "book_id" ],
           "linking.target.fields": [ "author_id" ]
         }
+      },
+      "mappings": {
+        "id": "id",
+        "title": "title"
       }
     },
     "BookWebsitePlacement": {

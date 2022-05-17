@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Text;
+using Azure.DataGateway.Service.Models;
 using Npgsql;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -27,7 +28,8 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlQueryStructure structure)
         {
-            string fromSql = $"{QuoteIdentifier(structure.TableName)} AS {QuoteIdentifier(structure.TableAlias)}{Build(structure.Joins)}";
+            string fromSql = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
+                             $"AS {QuoteIdentifier(structure.TableAlias)}{Build(structure.Joins)}";
             fromSql += string.Join("", structure.JoinQueries.Select(x => $" LEFT OUTER JOIN LATERAL ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)} ON TRUE"));
 
             string predicates = JoinPredicateStrings(
@@ -63,7 +65,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlInsertStructure structure)
         {
-            return $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
+            return $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({Build(structure.InsertColumns)}) " +
                     $"VALUES ({string.Join(", ", (structure.Values))}) " +
                     $"RETURNING {Build(structure.ReturnColumns)};";
         }
@@ -71,7 +73,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlUpdateStructure structure)
         {
-            return $"UPDATE {QuoteIdentifier(structure.TableName)} " +
+            return $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                     $"WHERE {Build(structure.Predicates)} " +
                     $"RETURNING {Build(structure.PrimaryKey())};";
@@ -80,7 +82,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlDeleteStructure structure)
         {
-            return $"DELETE FROM {QuoteIdentifier(structure.TableName)} " +
+            return $"DELETE FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"WHERE {Build(structure.Predicates)}";
         }
 
@@ -88,19 +90,39 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             if (structure.IsFallbackToUpdate)
             {
-                return $"UPDATE {QuoteIdentifier(structure.TableName)} " +
+                return $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                     $"WHERE {Build(structure.Predicates)} " +
                     $"RETURNING {Build(structure.ReturnColumns)}, '{UPDATE_UPSERT}' AS {UPSERT_IDENTIFIER_COLUMN_NAME};";
             }
             else
             {
-                return $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
+                return $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({Build(structure.InsertColumns)}) " +
                     $"VALUES ({string.Join(", ", (structure.Values))}) " +
                     $"ON CONFLICT ({Build(structure.PrimaryKey())}) DO UPDATE " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                     $"RETURNING {Build(structure.ReturnColumns)}, " +
                     $"case when xmax::text::int > 0 then '{UPDATE_UPSERT}' else '{INSERT_UPSERT}' end AS {UPSERT_IDENTIFIER_COLUMN_NAME};";
+            }
+        }
+
+        /// <summary>
+        /// Build column as
+        /// "{tableAlias}"."{ColumnName}"
+        /// or if TableAlias is empty, as
+        /// "{ColumnName}"
+        /// </summary>
+        protected override string Build(Column column)
+        {
+            // If the table alias is not empty, we return [{TableAlias}].[{Column}]
+            if (!string.IsNullOrEmpty(column.TableAlias))
+            {
+                return $"{QuoteIdentifier(column.TableAlias)}.{QuoteIdentifier(column.ColumnName)}";
+            }
+            // If there is no table alias we return [{Column}]
+            else
+            {
+                return $"{QuoteIdentifier(column.ColumnName)}";
             }
         }
 

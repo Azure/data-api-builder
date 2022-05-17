@@ -31,7 +31,11 @@ namespace Azure.DataGateway.Service.Tests.REST
             OperationAuthorizationRequirement verb = new();
             try
             {
-                InsertRequestContext context = new(entityName: string.Empty, insertPayloadRoot: payload, httpVerb: verb, operationType: Operation.Insert);
+                InsertRequestContext context = new(entityName: string.Empty,
+                                                    dbo: new DatabaseObject(),
+                                                    insertPayloadRoot: payload,
+                                                    httpVerb: verb,
+                                                    operationType: Operation.Insert);
                 Assert.Fail();
             }
             catch (DataGatewayException e)
@@ -54,7 +58,11 @@ namespace Azure.DataGateway.Service.Tests.REST
             // mean an empty FieldValuePairsInBody
             JsonElement payload = JsonSerializer.Deserialize<JsonElement>("null");
             OperationAuthorizationRequirement verb = new();
-            InsertRequestContext context = new(entityName: string.Empty, insertPayloadRoot: payload, httpVerb: verb, operationType: Operation.Insert);
+            InsertRequestContext context = new(entityName: string.Empty,
+                                                dbo: new DatabaseObject(),
+                                                insertPayloadRoot: payload,
+                                                httpVerb: verb,
+                                                operationType: Operation.Insert);
             Assert.AreEqual(0, context.FieldValuePairsInBody.Count);
         }
     }

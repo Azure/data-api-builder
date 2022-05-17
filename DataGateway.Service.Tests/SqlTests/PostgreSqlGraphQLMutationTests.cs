@@ -216,6 +216,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>that the insertion of the entry in the appropriate link table was successful
         /// </summary>
         [TestMethod]
+        // IGNORE FOR NOW, SEE: Issue #285
+        [Ignore]
         public async Task InsertMutationForNonGraphQLTypeTable()
         {
             string graphQLMutationName = "addAuthorToBook";
@@ -312,7 +314,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   (SELECT table0.id AS id,
                           table0.title AS title,
                           table0.issue_number AS issue_number
-                   FROM magazines AS table0
+                   FROM foo.magazines AS table0
                    WHERE id = 800
                      AND title = 'New Magazine'
                      AND issue_number IS NULL
@@ -349,7 +351,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   (SELECT table0.id AS id,
                           table0.title AS title,
                           table0.issue_number AS issue_number
-                   FROM magazines AS table0
+                   FROM foo.magazines AS table0
                    WHERE id = 801
                      AND title = 'New Magazine 2'
                      AND issue_number IS NULL
@@ -384,7 +386,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 FROM
                   (SELECT table0.id AS id,
                           table0.issue_number AS issue_number
-                   FROM magazines AS table0
+                   FROM foo.magazines AS table0
                    WHERE id = 1
                      AND issue_number IS NULL
                    ORDER BY id
@@ -420,7 +422,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   (SELECT table0.id AS id,
                           table0.title AS title,
                           table0.issue_number AS issue_number
-                   FROM magazines AS table0
+                   FROM foo.magazines AS table0
                    WHERE id = 1
                      AND title = 'Newest Magazine'
                      AND issue_number = 1234

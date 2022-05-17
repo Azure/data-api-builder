@@ -11,9 +11,7 @@ using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
-using MySqlConnector;
 using Npgsql;
 
 namespace Azure.DataGateway.Service.Services

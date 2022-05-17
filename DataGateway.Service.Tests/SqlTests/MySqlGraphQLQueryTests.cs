@@ -104,7 +104,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                             WHERE `table0`.`id` = `table1`.`book_id`
                             ORDER BY `table1`.`id` LIMIT 1
                             ) AS `subq10`) AS `table1_subq` ON TRUE
-                    WHERE 1 = 1
+                    WHERE `table0`.`id` = 1
                     ORDER BY `table0`.`id` LIMIT 100
                     ) AS `subq11`
             ";
@@ -189,7 +189,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public override async Task TestFilterAndFilterODataParamForListQueries()
         {
-            await TestFilterAndFilterODataParamForListQueries();
+            await base.TestFilterAndFilterODataParamForListQueries();
         }
 
         /// <summary>

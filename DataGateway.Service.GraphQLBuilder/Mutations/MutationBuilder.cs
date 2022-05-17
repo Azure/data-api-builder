@@ -36,20 +36,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
         public static Operation DetermineMutationOperationTypeBasedOnInputType(string inputTypeName)
         {
-            Operation operationType = Operation.Delete;
-            if (inputTypeName.StartsWith(
-                $"{Operation.Create}", StringComparison.OrdinalIgnoreCase))
-            {
-                operationType = Operation.Create;
-            }
-
-            if (inputTypeName.StartsWith(
-                $"{Operation.Update}", StringComparison.OrdinalIgnoreCase))
-            {
-                operationType = Operation.UpdateGraphQL;
-            }
-
-            return operationType;
+            return inputTypeName switch {
+                string s when s.StartsWith(Operation.Create, StringComparison.Ordinal) => Operation.Create,
+                string s when s.StartsWith(Operation.Update, StringComparison.Ordinal) => Operation.UpdateGraphQL,
+                _ => Operation.Delete
+            };
         }
     }
 }

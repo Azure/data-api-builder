@@ -12,7 +12,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
         {
             List<FieldDefinitionNode> idFields = FindPrimaryKeyFields(objectTypeDefinitionNode);
             string description;
-            if (idFields.Count() > 1)
+            if (idFields.Count > 1)
             {
                 description = "One of the ids of the item being deleted.";
             }

@@ -84,7 +84,8 @@ namespace Azure.DataGateway.Service.Services
                         dbo: dbObject,
                         insertPayloadRoot,
                         HttpRestVerbs.POST,
-                        operationType);
+                        operationType,
+                        mapping: _sqlMetadataProvider.GetMappingForEntity(entityName));
                     RequestValidator.ValidateInsertRequestContext(
                         (InsertRequestContext)context,
                         _sqlMetadataProvider);
@@ -92,7 +93,8 @@ namespace Azure.DataGateway.Service.Services
                 case Operation.Delete:
                     context = new DeleteRequestContext(entityName,
                                                        dbo: dbObject,
-                                                       isList: false);
+                                                       isList: false,
+                                                       mapping: _sqlMetadataProvider.GetMappingForEntity(entityName));
                     RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                     break;
                 case Operation.Update:
@@ -100,7 +102,12 @@ namespace Azure.DataGateway.Service.Services
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
                     JsonElement upsertPayloadRoot = RequestValidator.ValidateUpdateOrUpsertRequest(primaryKeyRoute, requestBody);
-                    context = new UpsertRequestContext(entityName, dbo: dbObject, upsertPayloadRoot, GetHttpVerb(operationType), operationType);
+                    context = new UpsertRequestContext(entityName,
+                                                       dbo: dbObject,
+                                                       upsertPayloadRoot,
+                                                       GetHttpVerb(operationType),
+                                                       operationType,
+                                                       mapping: _sqlMetadataProvider.GetMappingForEntity(entityName));
                     RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
                     break;
                 default:

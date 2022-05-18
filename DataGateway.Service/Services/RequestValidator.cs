@@ -30,35 +30,40 @@ namespace Azure.DataGateway.Service.Services
 
             foreach (string field in context.FieldsToBeReturned)
             {
-                ValidateField(tableDefinition.Columns.Keys, context.MappingFromEntity, field);
+                ValidateField(tableDefinition.Columns.Keys, context.MappingFromEntity, context.ReversedMappingFromEntity, field);
             }
         }
 
         /// <summary>
-        /// Validate that the fields to be returned are valid.
-        /// This function takes into account the mappings provided
-        /// for the given entity that maps database object names
-        /// to names in the request/response. If mappings is null
-        /// then we only look if the columns contain the field.
-        /// Otherwise, we look these cases:
-        /// 1. not a valid column and not in the values of our mapping
-        /// 2. valid column and in the values of the mappings, and column != key
-        /// 3. valid column and not in the values of the mappings, but a key in the mapping.
+        /// Validate the field to be returned.
+        /// If there is no mapping for this entity
+        /// and the field is in columns then it is valid.
+        /// Otherwise, since we validate the mapping on boostrap,
+        /// if the field appears in the reverse mapping it is valid,
+        /// and otherwise we then simply need to check that the
+        /// mapping does not have this field as a key and also that
+        /// it is in columns. The final case failing would indicate
+        /// that the user has selected a given column name
+        /// be mapped to some other name, and then has not followed
+        /// this mapping that has been set. ie: we have some column
+        /// named "author", and we have a mapping for that entity of
+        /// "author" : "name", indicating that requests/responses
+        /// for the column "author" need to use "name", but then the
+        /// request comes in simply as "author".
         /// </summary>
         /// <param name="columns">columns of this table definition</param>
         /// <param name="mapping">mappings from this entity</param>
         /// <param name="field">field to be returned</param>
         /// <exception cref="DataGatewayException"></exception>
-        public static void ValidateField(IEnumerable<string> columns, Dictionary<string, string>? mapping, string field)
+        public static void ValidateField(IEnumerable<string> columns, Dictionary<string, string>? mapping, Dictionary<string, string>? reverseMapping, string field)
         {
-            if (mapping is null && columns.Contains(field))
+            if ((mapping is null && columns.Contains(field)) ||
+                (reverseMapping is not null && reverseMapping.ContainsKey(field)) ||
+                (mapping is not null && !mapping.ContainsKey(field) && columns.Contains(field)))
             {
                 return;
             }
-            else if ((mapping is null && !columns.Contains(field)) ||
-                    (!columns.Contains(field) && !mapping!.ContainsValue(field)) ||
-                    (mapping!.ContainsKey(field) && !mapping.ContainsValue(field)) ||
-                    (mapping.ContainsKey(field) && mapping.ContainsValue(field) && mapping[field] != field))
+            else
             {
                 throw new DataGatewayException(
                         message: "Invalid field to be returned requested: " + field,

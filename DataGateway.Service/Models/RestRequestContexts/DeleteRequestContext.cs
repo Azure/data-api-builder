@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Azure.DataGateway.Config;
 
 namespace Azure.DataGateway.Service.Models
@@ -11,8 +12,8 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Constructor.
         /// </summary>
-        public DeleteRequestContext(string entityName, DatabaseObject dbo, bool isList)
-            : base(HttpRestVerbs.DELETE, entityName, dbo)
+        public DeleteRequestContext(string entityName, DatabaseObject dbo, bool isList, Dictionary<string, string>? mapping = null)
+            : base(HttpRestVerbs.DELETE, entityName, dbo, mapping)
         {
             FieldsToBeReturned = new();
             PrimaryKeyValuePairs = new();

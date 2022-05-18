@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Linq;
 using Azure.DataGateway.Config;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.OData.UriParser;
@@ -18,6 +19,7 @@ namespace Azure.DataGateway.Service.Models
             EntityName = entityName;
             DatabaseObject = dbo;
             MappingFromEntity = mapping;
+            ReversedMappingFromEntity = mapping is not null ? MappingFromEntity.ToDictionary(x => x.Value, x => x.Key) : null;
         }
 
         /// <summary>
@@ -34,6 +36,11 @@ namespace Azure.DataGateway.Service.Models
         /// Mapping of database object names to request/response names.
         /// </summary>
         public Dictionary<string, string>? MappingFromEntity { get; }
+
+        /// <summary>
+        /// Mapping of request/response names to database object names.
+        /// </summary>
+        public Dictionary<string, string>? ReversedMappingFromEntity { get; }
 
         /// <summary>
         /// Field names of the entity that are queried in the request.

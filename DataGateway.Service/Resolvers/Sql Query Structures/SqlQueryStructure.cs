@@ -137,7 +137,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
                 {
                     // if mapping is null or doesnt have our column just use column name
-                    if (context.MappingFromEntity is null || !context.MappingFromEntity!.ContainsKey(column.Key))
+                    if (context.MappingFromEntity is null || !context.MappingFromEntity.ContainsKey(column.Key))
                     {
                         AddColumn(column.Key);
 
@@ -210,40 +210,24 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="context"></param>
         private void AddFields(RestRequestContext context)
         {
-            Dictionary<string, string> mapping = context.MappingFromEntity!;
+            Dictionary<string, string> reverseMapping = context.ReversedMappingFromEntity!;
+
             foreach (string field in context.FieldsToBeReturned)
             {
                 // we know fields to be returned are valid,
-                // therefore in any of the following cases we
-                // use only the name of the given field
-                // 1. the mapping is null
-                // 2. the field is named in the keys
-                // which represent columns 
-                // 3. the field isn't named in the values
-                // which represent the name a column maps to
-                if ((mapping is null) ||
-                    (mapping.ContainsKey(field)) ||
-                    (!mapping.ContainsValue(field)))
+                // so if field exists in reverseMapping
+                // it must be the case that we have a column
+                // name with a mapping, and so we add that column
+                // but with the appropriate name and mapped label.
+                if (reverseMapping is not null && reverseMapping.ContainsKey(field))
                 {
-                    AddColumn(field);
+                    AddColumn(reverseMapping[field], field);
                 }
-                // if the above cases all fail, then the field name
-                // in question must be a value.
-                // since we know it is a value in the mapping,
-                // we iterate through the keys and add a column
-                // with the label of the field matched to the
-                // given column. Since mappings are 1:1, we break
-                // once we find the pairing.
+                // otherwise this must simply be a column with
+                // no associated mapping. Just add the column.
                 else
                 {
-                    foreach (string column in mapping.Keys)
-                    {
-                        if (mapping[column] == field)
-                        {
-                            AddColumn(column, field);
-                            break;
-                        }
-                    }
+                    AddColumn(field);
                 }
             }
         }

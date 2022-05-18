@@ -73,7 +73,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// UnderlyingType is the type main GraphQL type that is described by
+        /// UnderlyingGraphQLEntityType is the type main GraphQL type that is described by
         /// this type. This strips all modifiers, such as List and Non-Null.
         /// So the following GraphQL types would all have the underlyingType Book:
         /// - Book
@@ -82,14 +82,14 @@ namespace Azure.DataGateway.Service.Resolvers
         /// - [Book]!
         /// - [Book!]!
         /// </summary>
-        internal static ObjectType UnderlyingType(IType type)
+        internal static ObjectType UnderlyingGraphQLEntityType(IType type)
         {
             if (type is ObjectType underlyingType)
             {
                 return underlyingType;
             }
 
-            return UnderlyingType(type.InnerType());
+            return UnderlyingGraphQLEntityType(type.InnerType());
         }
 
         /// <summary>
@@ -97,7 +97,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         internal static IObjectField ExtractItemsSchemaField(IObjectField connectionSchemaField)
         {
-            return UnderlyingType(connectionSchemaField.Type).Fields[QueryBuilder.PAGINATION_FIELD_NAME];
+            return UnderlyingGraphQLEntityType(connectionSchemaField.Type).Fields[QueryBuilder.PAGINATION_FIELD_NAME];
         }
     }
 }

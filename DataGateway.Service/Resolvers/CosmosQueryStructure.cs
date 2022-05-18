@@ -39,14 +39,14 @@ namespace Azure.DataGateway.Service.Resolvers
         private void Init(IDictionary<string, object> queryParams)
         {
             IFieldSelection selection = _context.Selection;
-            GraphQLType graphqlType = MetadataStoreProvider.GetGraphQLType(UnderlyingType(selection.Field.Type).Name);
+            GraphQLType graphqlType = MetadataStoreProvider.GetGraphQLType(UnderlyingGraphQLEntityType(selection.Field.Type).Name);
             IsPaginated = graphqlType.IsPaginationType;
             OrderByColumns = new();
 
             if (IsPaginated)
             {
                 FieldNode? fieldNode = ExtractItemsQueryField(selection.SyntaxNode);
-                graphqlType = MetadataStoreProvider.GetGraphQLType(UnderlyingType(ExtractItemsSchemaField(selection.Field).Type).Name);
+                graphqlType = MetadataStoreProvider.GetGraphQLType(UnderlyingGraphQLEntityType(ExtractItemsSchemaField(selection.Field).Type).Name);
 
                 if (fieldNode != null)
                 {

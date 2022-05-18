@@ -78,7 +78,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// The underlying type of the type returned by this query see, the
-        /// comment on UnderlyingType to understand what an underlying type is.
+        /// comment on UnderlyingGraphQLEntityType to understand what an underlying type is.
         /// </summary>
         ObjectType _underlyingFieldType = null!;
 
@@ -208,7 +208,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
-            _underlyingFieldType = UnderlyingType(outputType);
+            _underlyingFieldType = UnderlyingGraphQLEntityType(outputType);
 
             PaginationMetadata.IsPaginated = QueryBuilder.IsPaginationType(_underlyingFieldType);
 
@@ -226,7 +226,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 schemaField = ExtractItemsSchemaField(schemaField);
 
                 outputType = schemaField.Type;
-                _underlyingFieldType = UnderlyingType(outputType);
+                _underlyingFieldType = UnderlyingGraphQLEntityType(outputType);
 
                 // this is required to correctly keep track of which pagination metadata
                 // refers to what section of the json

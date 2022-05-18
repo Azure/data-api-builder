@@ -49,7 +49,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Directives
         /// <param name="field">The field that has a relationship directive defined.</param>
         /// <returns>Relationship cardinality</returns>
         /// <exception cref="ArgumentException">Thrown if the field does not have a defined relationship.</exception>
-        public static Cardinality Cardinality(NamedSyntaxNode field)
+        public static Cardinality Cardinality(FieldDefinitionNode field)
         {
             DirectiveNode? directive = field.Directives.FirstOrDefault(d => d.Name.Value == DirectiveName);
 

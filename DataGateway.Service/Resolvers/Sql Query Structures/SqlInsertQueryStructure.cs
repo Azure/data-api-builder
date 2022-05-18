@@ -40,11 +40,9 @@ namespace Azure.DataGateway.Service.Resolvers
 
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
 
-            // return primary key so the inserted row can be identified
-            //ReturnColumns = tableDefinition.PrimaryKey;
             ReturnColumns = tableDefinition.Columns.Keys.ToList();
 
-            IDictionary<string, object?> createInput = ArgumentToDictionary(mutationParams, CreateMutationBuilder.INPUT_ARGUMENT_NAME);
+            IDictionary<string, object?> createInput = InputArgumentToMutationParams(mutationParams, CreateMutationBuilder.INPUT_ARGUMENT_NAME);
 
             foreach (KeyValuePair<string, object?> param in createInput)
             {

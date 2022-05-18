@@ -174,36 +174,41 @@ namespace Azure.DataGateway.Service.Resolvers
             }
         }
 
-        internal static IDictionary<string, object?> ArgumentToDictionary(
+        /// <summary>
+        /// Creates the dictionary of fields and their values
+        /// to be set in the mutation from the MutationInput argument name "item".
+        /// </summary>
+        /// <exception cref="InvalidDataException"></exception>
+        internal static IDictionary<string, object?> InputArgumentToMutationParams(
             IDictionary<string, object?> mutationParams, string argumentName)
         {
             if (mutationParams.TryGetValue(argumentName, out object? item))
             {
-                Dictionary<string, object?> createInput;
+                Dictionary<string, object?> mutationInput;
                 // An inline argument was set
                 // TODO: This assumes the input was NOT nullable.
-                if (item is List<ObjectFieldNode> createInputRaw)
+                if (item is List<ObjectFieldNode> mutationInputRaw)
                 {
-                    createInput = new Dictionary<string, object?>();
-                    foreach (ObjectFieldNode node in createInputRaw)
+                    mutationInput = new Dictionary<string, object?>();
+                    foreach (ObjectFieldNode node in mutationInputRaw)
                     {
-                        createInput.Add(node.Name.Value, node.Value.Value);
+                        mutationInput.Add(node.Name.Value, node.Value.Value);
                     }
                 }
                 // Variables were provided to the mutation
                 else if (item is Dictionary<string, object?> dict)
                 {
-                    createInput = dict;
+                    mutationInput = dict;
                 }
                 else
                 {
                     throw new InvalidDataException("The type of argument for the provided data is unsupported.");
                 }
 
-                return createInput;
+                return mutationInput;
             }
 
-            return (IDictionary<string, object?>)mutationParams;
+            return mutationParams;
         }
     }
 }

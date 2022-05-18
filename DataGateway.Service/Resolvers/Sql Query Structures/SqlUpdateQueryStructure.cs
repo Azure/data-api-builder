@@ -89,7 +89,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (param.Key == UpdateMutationBuilder.INPUT_ARGUMENT_NAME)
                 {
                     IDictionary<string, object?> updateFields =
-                        ArgumentToDictionary(mutationParams, UpdateMutationBuilder.INPUT_ARGUMENT_NAME);
+                        InputArgumentToMutationParams(mutationParams, UpdateMutationBuilder.INPUT_ARGUMENT_NAME);
 
                     foreach (KeyValuePair<string, object?> field in updateFields)
                     {

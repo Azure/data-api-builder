@@ -58,7 +58,7 @@ namespace Azure.DataGateway.Service.Services
         public static void ValidateField(IEnumerable<string> columns, Dictionary<string, string>? mapping, Dictionary<string, string>? reverseMapping, string field)
         {
             if ((mapping is null && columns.Contains(field)) ||
-                (reverseMapping is not null && reverseMapping.ContainsKey(field)) ||
+                (reverseMapping is not null && reverseMapping.ContainsKey(field)) || // better name for reverse map // add into reverse dictionary unmapped with key:value as column name
                 (mapping is not null && !mapping.ContainsKey(field) && columns.Contains(field)))
             {
                 return;

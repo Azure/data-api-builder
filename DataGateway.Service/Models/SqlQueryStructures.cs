@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Azure.DataGateway.Config;
 
 namespace Azure.DataGateway.Service.Models
 {
@@ -302,8 +303,8 @@ namespace Azure.DataGateway.Service.Models
     /// A simple class that is used to hold the information about joins that
     /// are part of a SQL query.
     /// <summary>
-    /// <param name="TableName">The name of the table that is joined with.</param>
+    /// <param name="DbObject">The name of the database object containing table metadata like joined tables.</param>
     /// <param name="TableAlias">The alias of the table that is joined with.</param>
     /// <param name="Predicates">The predicates that are part of the ON clause of the join.</param>
-    public record SqlJoinStructure(string TableName, string TableAlias, List<Predicate> Predicates);
+    public record SqlJoinStructure(DatabaseObject DbObject, string TableAlias, List<Predicate> Predicates);
 }

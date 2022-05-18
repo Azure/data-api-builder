@@ -10,14 +10,11 @@ namespace Azure.DataGateway.Config
     /// will use to connect to the backend database.</param>
     public record DataSource(
         [property: JsonPropertyName(DataSource.DATABASE_PROPERTY_NAME)]
-        DatabaseType DatabaseType,
-        [property: JsonPropertyName(DataSource.RESOLVER_JSON_PROPERTY_NAME)]
-        string? ResolverConfigFile)
+        DatabaseType DatabaseType)
     {
         public const string JSON_PROPERTY_NAME = "data-source";
         public const string DATABASE_PROPERTY_NAME = "database-type";
         public const string CONNSTRING_PROPERTY_NAME = "connection-string";
-        public const string RESOLVER_JSON_PROPERTY_NAME = "resolver-config-file";
 
         public string GetDatabaseTypeNotSupportedMessage()
         {
@@ -32,8 +29,12 @@ namespace Azure.DataGateway.Config
     /// <summary>
     /// Options for CosmosDb database.
     /// </summary>
-    public record CosmosDbOptions(string Database)
+    public record CosmosDbOptions(
+        string Database,
+        [property: JsonPropertyName(CosmosDbOptions.RESOLVER_JSON_PROPERTY_NAME)]
+        string ResolverConfigFile)
     {
+        public const string RESOLVER_JSON_PROPERTY_NAME = "resolver-config-file";
         public const string JSON_PROPERTY_NAME = nameof(DatabaseType.cosmos);
     }
 

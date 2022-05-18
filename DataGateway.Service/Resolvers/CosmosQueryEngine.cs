@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
@@ -92,9 +93,9 @@ namespace Azure.DataGateway.Service.Resolvers
                         }
 
                         JObject res = new(
-                           new JProperty("endCursor", Base64Encode(responseContinuation)),
-                           new JProperty("hasNextPage", responseContinuation != null),
-                           new JProperty("items", jarray));
+                            new JProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME, Base64Encode(responseContinuation)),
+                            new JProperty(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, responseContinuation != null),
+                            new JProperty(QueryBuilder.PAGINATION_FIELD_NAME, jarray));
 
                         // This extra deserialize/serialization will be removed after moving to Newtonsoft from System.Text.Json
                         return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(res.ToString()), null);

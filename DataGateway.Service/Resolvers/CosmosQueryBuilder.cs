@@ -44,7 +44,7 @@ namespace Azure.DataGateway.Service.Resolvers
             return string.Empty;
         }
 
-        protected override string QuoteIdentifier(string ident)
+        public override string QuoteIdentifier(string ident)
         {
             throw new System.NotImplementedException();
         }

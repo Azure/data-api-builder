@@ -22,11 +22,17 @@ namespace Azure.DataGateway.Config
     /// <param name="Mappings"> Defines mappings between database fields
     /// and GraphQL and REST fields.</param>
     public record Entity(
+        [property: JsonPropertyName("source")]
         object Source,
+        [property: JsonPropertyName("rest")]
         object? Rest,
+        [property: JsonPropertyName("graphql")]
         object? GraphQL,
+        [property: JsonPropertyName("permissions")]
         PermissionSetting[] Permissions,
+        [property: JsonPropertyName("relationships")]
         Dictionary<string, Relationship>? Relationships,
+        [property: JsonPropertyName("mappings")]
         Dictionary<string, string>? Mappings)
     {
         public const string JSON_PROPERTY_NAME = "entities";

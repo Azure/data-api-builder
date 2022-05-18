@@ -1,9 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
+using HotChocolate.Language;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -15,8 +19,6 @@ namespace Azure.DataGateway.Service.Resolvers
     public abstract class BaseSqlQueryStructure : BaseQueryStructure
     {
         protected ISqlMetadataProvider SqlMetadataProvider { get; }
-
-        protected IGraphQLMetadataProvider MetadataStoreProvider { get; }
 
         /// <summary>
         /// The Entity associated with this query.
@@ -42,13 +44,11 @@ namespace Azure.DataGateway.Service.Resolvers
         public string? FilterPredicates { get; set; }
 
         public BaseSqlQueryStructure(
-            IGraphQLMetadataProvider metadataStoreProvider,
             ISqlMetadataProvider sqlMetadataProvider,
             string entityName,
             IncrementingInteger? counter = null)
             : base(counter)
         {
-            MetadataStoreProvider = metadataStoreProvider;
             SqlMetadataProvider = sqlMetadataProvider;
             if (!string.IsNullOrEmpty(entityName))
             {
@@ -174,6 +174,52 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Creates the dictionary of fields and their values
+        /// to be set in the mutation from the MutationInput argument name "item".
+        /// This is only applicable for GraphQL since the input we get from the request
+        /// is of the EntityInput object form.
+        /// For REST, we simply get the mutation values in the request body as is - so
+        /// we will not find the argument of name "item" in the mutationParams.
+        /// </summary>
+        /// <exception cref="InvalidDataException"></exception>
+        internal static IDictionary<string, object?> InputArgumentToMutationParams(
+            IDictionary<string, object?> mutationParams, string argumentName)
+        {
+            if (mutationParams.TryGetValue(argumentName, out object? item))
+            {
+                Dictionary<string, object?> mutationInput;
+                // An inline argument was set
+                // TODO: This assumes the input was NOT nullable.
+                if (item is List<ObjectFieldNode> mutationInputRaw)
+                {
+                    mutationInput = new Dictionary<string, object?>();
+                    foreach (ObjectFieldNode node in mutationInputRaw)
+                    {
+                        mutationInput.Add(node.Name.Value, node.Value.Value);
+                    }
+                }
+                // Variables were provided to the mutation
+                else if (item is Dictionary<string, object?> dict)
+                {
+                    mutationInput = dict;
+                }
+                else
+                {
+                    throw new DataGatewayException(
+                        message: "The type of argument for the provided data is unsupported.",
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest,
+                        statusCode: HttpStatusCode.BadRequest);
+                }
+
+                return mutationInput;
+            }
+
+            // Its ok to not find the input argument name in the mutation params dictionary
+            // because it indicates the REST scenario.
+            return mutationParams;
         }
     }
 }

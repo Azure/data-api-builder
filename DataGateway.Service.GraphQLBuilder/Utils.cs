@@ -30,6 +30,12 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             return false;
         }
 
+        /// <summary>
+        /// Find all the primary keys for a given object node
+        /// using the information available in the directives.
+        /// If no directives present, default to a field named "id" as the primary key.
+        /// If even that doesn't exist, throw an exception in initialization.
+        /// </summary>
         public static List<FieldDefinitionNode> FindPrimaryKeyFields(ObjectTypeDefinitionNode node)
         {
             List<FieldDefinitionNode> fieldDefinitionNodes =

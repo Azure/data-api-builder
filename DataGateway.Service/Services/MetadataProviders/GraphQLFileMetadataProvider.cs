@@ -105,6 +105,12 @@ namespace Azure.DataGateway.Service.Services
             return resolver;
         }
 
+        /// <summary>
+        /// Retrieves the graphql type specified in the resolver-config file
+        /// for the given Hotchocolate object type either for a directive name if it exists
+        /// or from the Hotchocolate object's type name.
+        /// </summary>
+        /// <param name="objectType"></param>
         public GraphQLType GetGraphQLType(ObjectType objectType)
         {
             IDirective nameDirective = objectType.Directives.First(d => d.Name == ModelDirectiveType.DirectiveName);

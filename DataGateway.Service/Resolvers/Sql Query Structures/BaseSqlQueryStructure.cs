@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
@@ -202,7 +204,10 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
                 else
                 {
-                    throw new InvalidDataException("The type of argument for the provided data is unsupported.");
+                    throw new DataGatewayException(
+                        message: "The type of argument for the provided data is unsupported.",
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest,
+                        statusCode: HttpStatusCode.BadRequest);
                 }
 
                 return mutationInput;

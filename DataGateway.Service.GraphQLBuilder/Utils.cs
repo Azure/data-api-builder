@@ -7,6 +7,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
 {
     internal static class Utils
     {
+        const string DEFAULT_PRIMARY_KEY_NAME = "id";
+
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
             string modelDirectiveName = ModelDirectiveType.DirectiveName;
@@ -46,7 +48,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             if (fieldDefinitionNodes.Count == 0)
             {
                 FieldDefinitionNode? fieldDefinitionNode =
-                    node.Fields.FirstOrDefault(f => f.Name.Value == "id");
+                    node.Fields.FirstOrDefault(f => f.Name.Value == DEFAULT_PRIMARY_KEY_NAME);
                 if (fieldDefinitionNode is not null)
                 {
                     fieldDefinitionNodes.Add(fieldDefinitionNode);

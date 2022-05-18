@@ -1,9 +1,10 @@
 using System;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
-using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
@@ -19,7 +20,9 @@ namespace Azure.DataGateway.Service.Tests.REST
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class ODataASTVisitorUnitTests : SqlTestBase
     {
-        private const string DEFAULT_ENTITY = "books";
+        private const string DEFAULT_ENTITY = "Book";
+        private const string DEFAULT_SCHEMA_NAME = "dbo";
+        private const string DEFAULT_TABLE_NAME = "books";
 
         [ClassInitialize]
         public static async Task InitializeTestFixture(TestContext context)
@@ -37,6 +40,8 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             PerformVisitorTest(
                 entityName: DEFAULT_ENTITY,
+                schemaName: DEFAULT_SCHEMA_NAME,
+                tableName: DEFAULT_TABLE_NAME,
                 filterString: "?$filter=id eq null",
                 expected: "(id IS NULL)"
                 );
@@ -51,6 +56,8 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             PerformVisitorTest(
                 entityName: DEFAULT_ENTITY,
+                schemaName: DEFAULT_SCHEMA_NAME,
+                tableName: DEFAULT_TABLE_NAME,
                 filterString: "?$filter=id ne null",
                 expected: "(id IS NOT NULL)"
                 );
@@ -65,6 +72,8 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             PerformVisitorTest(
                 entityName: DEFAULT_ENTITY,
+                schemaName: DEFAULT_SCHEMA_NAME,
+                tableName: DEFAULT_TABLE_NAME,
                 filterString: "?$filter=null eq id",
                 expected: "(id IS NULL)"
                 );
@@ -79,6 +88,8 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             PerformVisitorTest(
                 entityName: DEFAULT_ENTITY,
+                schemaName: DEFAULT_SCHEMA_NAME,
+                tableName: DEFAULT_TABLE_NAME,
                 filterString: "?$filter=id gt null",
                 expected: "(id > NULL)"
                 );
@@ -96,14 +107,14 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
 
             ConstantNode nodeIn = CreateConstantNode(constantValue: string.Empty, literalText: "text", EdmPrimitiveTypeKind.Geography);
-            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY);
+            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY, DEFAULT_SCHEMA_NAME, DEFAULT_TABLE_NAME);
             Assert.ThrowsException<NotSupportedException>(() => visitor.Visit(nodeIn));
         }
 
         /// <summary>
         /// Verifies that we throw an exception for values that can
         /// not be parsed into a valid Edm Type Kind. Create a constant
-        /// node with a valid type and a value that can not be parsed into
+        /// node with a valid type and a value that cannot be parsed into
         /// that type and then invoke the visit function from our visitor
         /// using that node.
         /// </summary>
@@ -111,7 +122,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         public void InvalidValueTypeTest()
         {
             ConstantNode nodeIn = CreateConstantNode(constantValue: string.Empty, literalText: "text", EdmPrimitiveTypeKind.Int64);
-            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY);
+            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY, DEFAULT_SCHEMA_NAME, DEFAULT_TABLE_NAME);
             Assert.ThrowsException<ArgumentException>(() => visitor.Visit(nodeIn));
         }
 
@@ -124,7 +135,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             ConstantNode constantNode = CreateConstantNode(constantValue: "null", literalText: "null", EdmPrimitiveTypeKind.None, isNull: true);
             BinaryOperatorNode binaryNode = CreateBinaryNode(constantNode, constantNode, BinaryOperatorKind.And);
-            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY);
+            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY, DEFAULT_SCHEMA_NAME, DEFAULT_TABLE_NAME);
             Assert.ThrowsException<NotSupportedException>(() => visitor.Visit(binaryNode));
         }
 
@@ -137,7 +148,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             ConstantNode constantNode = CreateConstantNode(constantValue: "null", literalText: "null", EdmPrimitiveTypeKind.None, isNull: true);
             UnaryOperatorNode binaryNode = CreateUnaryNode(constantNode, UnaryOperatorKind.Negate);
-            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY);
+            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY, DEFAULT_SCHEMA_NAME, DEFAULT_TABLE_NAME);
             Assert.ThrowsException<ArgumentException>(() => visitor.Visit(binaryNode));
         }
 
@@ -150,6 +161,8 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             Assert.ThrowsException<DataGatewayException>(() => PerformVisitorTest(
                 entityName: DEFAULT_ENTITY,
+                schemaName: DEFAULT_SCHEMA_NAME,
+                tableName: DEFAULT_TABLE_NAME,
                 filterString: "?$filter=id eq (publisher_id gt 1)",
                 expected: string.Empty
                 ));
@@ -165,6 +178,8 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             Assert.ThrowsException<ArgumentException>(() => PerformVisitorTest(
                 entityName: DEFAULT_ENTITY,
+                schemaName: DEFAULT_SCHEMA_NAME,
+                tableName: DEFAULT_TABLE_NAME,
                 filterString: "?$filter=id eq (publisher_id add 1)",
                 expected: string.Empty
                 ));
@@ -180,6 +195,8 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             Assert.ThrowsException<DataGatewayException>(() => PerformVisitorTest(
                 entityName: DEFAULT_ENTITY,
+                schemaName: DEFAULT_SCHEMA_NAME,
+                tableName: DEFAULT_TABLE_NAME,
                 filterString: "?$filter=null add 1",
                 expected: string.Empty
                 ));
@@ -198,12 +215,14 @@ namespace Azure.DataGateway.Service.Tests.REST
         /// <param name="expected">The expected filter after parsing.</param>
         private static void PerformVisitorTest(
             string entityName,
+            string schemaName,
+            string tableName,
             string filterString,
             string expected)
         {
-            FilterClause ast = _sqlMetadataProvider.GetOdataFilterParser().
-                GetFilterClause(filterString, entityName);
-            ODataASTVisitor visitor = CreateVisitor(entityName);
+            FilterClause ast = _sqlMetadataProvider.ODataFilterParser.
+                GetFilterClause(filterString, $"{schemaName}.{tableName}");
+            ODataASTVisitor visitor = CreateVisitor(entityName, schemaName, tableName);
             string actual = ast.Expression.Accept(visitor);
             Assert.AreEqual(expected, actual);
         }
@@ -216,10 +235,17 @@ namespace Azure.DataGateway.Service.Tests.REST
         /// <returns></returns>
         private static ODataASTVisitor CreateVisitor(
             string entityName,
+            string schemaName,
+            string tableName,
             bool isList = false)
         {
-            FindRequestContext context = new(entityName, isList);
-            Mock<SqlQueryStructure> structure = new(context, _metadataStoreProvider, _sqlMetadataProvider);
+            DatabaseObject dbo = new()
+            {
+                SchemaName = schemaName,
+                Name = tableName
+            };
+            FindRequestContext context = new(entityName, dbo, isList);
+            Mock<SqlQueryStructure> structure = new(context, _sqlMetadataProvider);
             return new ODataASTVisitor(structure.Object);
         }
 

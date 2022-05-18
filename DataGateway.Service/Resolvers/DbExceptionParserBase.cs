@@ -14,7 +14,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public virtual Exception Parse(DbException e)
         {
             return new DataGatewayException(
-                message: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
+                message: GENERIC_DB_EXCEPTION_MESSAGE,
                 statusCode: HttpStatusCode.InternalServerError,
                 subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed
             );

@@ -21,16 +21,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     {
         protected static RestService _restService;
         protected static RestController _restController;
+        protected static readonly string _integrationEntityName = "Book";
         protected static readonly string _integrationTableName = "books";
+        protected static readonly string _entityWithCompositePrimaryKey = "Review";
         protected static readonly string _tableWithCompositePrimaryKey = "reviews";
         protected const int STARTING_ID_FOR_TEST_INSERTS = 5001;
+        protected static readonly string _integration_NonAutoGenPK_EntityName = "Magazine";
         protected static readonly string _integration_NonAutoGenPK_TableName = "magazines";
+        protected static readonly string _integration_AutoGenNonPK_EntityName = "Comic";
         protected static readonly string _integration_AutoGenNonPK_TableName = "comics";
-        protected static readonly string _Composite_NonAutoGenPK = "stocks";
+        protected static readonly string _Composite_NonAutoGenPK_EntityName = "Stock";
+        protected static readonly string _Composite_NonAutoGenPK_TableName = "stocks";
+        protected static readonly string _integrationEntityHasColumnWithSpace = "Broker";
         protected static readonly string _integrationTableHasColumnWithSpace = "brokers";
+        protected static readonly string _integrationTieBreakEntity = "Author";
         protected static readonly string _integrationTieBreakTable = "authors";
+        protected static readonly string _simple_all_books = "books_view_all";
+        protected static readonly string _simple_subset_stocks = "stocks_view_selected";
+        protected static readonly string _composite_subset_bookPub = "books_publishers_view_composite";
         public static readonly int _numRecordsReturnedFromTieBreakTable = 2;
 
+        public abstract string GetDefaultSchema();
+        public abstract string GetDefaultSchemaForEdmModel();
         public abstract string GetQuery(string key);
 
         #region Positive Tests
@@ -43,10 +55,86 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/2",
                 queryString: string.Empty,
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindByIdTest)),
                 controller: _restController
             );
+        }
+
+        ///<summary>
+        /// Tests the Rest Api for GET operations on Database Views,
+        /// either simple or composite.
+        ///</summary>
+        [TestMethod]
+        public virtual async Task FindOnViews()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/2",
+                queryString: string.Empty,
+                entity: _simple_all_books,
+                sqlQuery: GetQuery("FindViewAll"),
+                controller: _restController
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/2/pieceid/1",
+                queryString: string.Empty,
+                entity: _simple_subset_stocks,
+                sqlQuery: GetQuery("FindViewSelected"),
+                controller: _restController
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/2",
+                queryString: string.Empty,
+                entity: _composite_subset_bookPub,
+                sqlQuery: GetQuery("FindViewComposite"),
+                controller: _restController
+            );
+        }
+
+        ///<summary>
+        /// Tests the Rest Api for GET operations on Database Views,
+        /// either simple or composite,having filter clause.
+        ///</summary>
+        [TestMethod]
+        public virtual async Task FindTestWithQueryStringOnViews()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id ge 4",
+                entity: _simple_all_books,
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneGeFilterOnView"),
+                controller: _restController);
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: "?$f=id,title",
+                entity: _simple_all_books,
+                sqlQuery: GetQuery("FindByIdTestWithQueryStringFieldsOnView"),
+                controller: _restController
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=pieceid eq 1",
+                entity: _simple_subset_stocks,
+                sqlQuery: GetQuery("FindTestWithFilterQueryStringOneEqFilterOnView"),
+                controller: _restController);
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=not (categoryid gt 1)",
+                entity: _simple_subset_stocks,
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneNotFilterOnView"),
+                controller: _restController);
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter= id lt 5",
+                entity: _composite_subset_bookPub,
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneLtFilterOnView"),
+                controller: _restController);
         }
 
         /// <summary>
@@ -59,7 +147,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/1",
                 queryString: "?$f=id,title",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindByIdTestWithQueryStringFields)),
                 controller: _restController
             );
@@ -75,7 +163,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$f=id",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithQueryStringOneField)),
                 controller: _restController);
 
@@ -91,7 +179,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithQueryStringAllFields)),
                 controller: _restController
             );
@@ -107,61 +195,61 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id eq 1",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestWithFilterQueryStringOneEqFilter"),
                 controller: _restController);
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=2 eq id",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestWithFilterQueryStringValueFirstOneEqFilter"),
                 controller: _restController);
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id gt 3",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneGtFilter"),
                 controller: _restController);
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id ge 4",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneGeFilter"),
                 controller: _restController);
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id lt 5",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneLtFilter"),
                 controller: _restController);
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id le 4",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneLeFilter"),
                 controller: _restController);
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id ne 3",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneNeFilter"),
                 controller: _restController);
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=not (id lt 2)",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneNotFilter"),
                 controller: _restController);
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=not (title eq null)",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneRightNullEqFilter"),
                 controller: _restController);
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=null ne title",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneLeftNullNeFilter"),
                 controller: _restController
             );
@@ -177,7 +265,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id lt 3 and id gt 1",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringSingleAndFilter)),
                 controller: _restController
             );
@@ -193,7 +281,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id lt 3 or id gt 4",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringSingleOrFilter)),
                 controller: _restController
             );
@@ -209,7 +297,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id lt 4 and id gt 1 and title ne 'Awesome book'",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringMultipleAndFilters)),
                 controller: _restController);
 
@@ -225,7 +313,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id eq 1 or id eq 2 or id eq 3",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringMultipleOrFilters)),
                 controller: _restController
             );
@@ -241,7 +329,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=(id gt 2 and id lt 4) or (title eq 'Awesome book')",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringMultipleAndOrFilters)),
                 controller: _restController
             );
@@ -257,7 +345,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=(not (id lt 3) or id lt 4) or not (title eq 'Awesome book')",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringMultipleNotAndOrFilters)),
                 controller: _restController
             );
@@ -273,7 +361,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id eq (publisher_id gt 1)",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringSingleAndFilter)),
                 controller: _restController,
                 exception: true,
@@ -289,7 +377,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/567/book_id/1",
                 queryString: "?$f=id,content",
-                entity: _tableWithCompositePrimaryKey,
+                entity: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithPrimaryKeyContainingForeignKey)),
                 controller: _restController
             );
@@ -303,13 +391,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstSingleKeyPagination()
         {
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyPagination)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(after)}",
                 paginated: true
             );
         }
@@ -322,12 +411,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstMultiKeyPagination()
         {
-            string after = "[{\"Value\":1,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"book_id\"}," +
-                            "{\"Value\":567,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"id\"}]";
+            string after = $"[{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}}," +
+                            $"{{\"Value\":567,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1",
-                entity: _tableWithCompositePrimaryKey,
+                entity: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyPagination)),
                 controller: _restController,
                 expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
@@ -342,10 +431,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithAfterSingleKeyPagination()
         {
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":7,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":7,\"Direction\":0,\"ColumnName\":\"id\"}]"))}",
-                entity: _integrationTableName,
+                queryString: $"?$after={HttpUtility.UrlEncode(after)}",
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithAfterSingleKeyPagination)),
                 controller: _restController
             );
@@ -358,12 +448,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithAfterMultiKeyPagination()
         {
-            string after = "[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"book_id\"}," +
-                            "{\"Value\":567,\"Direction\":0,\"ColumnName\":\"id\"}]";
+            string after = $"[{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}}," +
+                            $"{{\"Value\":567,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}}]";
+
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
-                entity: _tableWithCompositePrimaryKey,
+                entity: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithAfterMultiKeyPagination)),
                 controller: _restController
             );
@@ -377,13 +468,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithPaginationVerifSinglePrimaryKeyInAfter()
         {
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$first=1",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithPaginationVerifSinglePrimaryKeyInAfter)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(after)}",
                 paginated: true
             );
         }
@@ -396,12 +488,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithPaginationVerifMultiplePrimaryKeysInAfter()
         {
-            string after = "[{\"Value\":1,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"book_id\"}," +
-                            "{\"Value\":567,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"id\"}]";
+            string after = $"[{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}}," +
+                            $"{{\"Value\":567,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$first=1",
-                entity: _tableWithCompositePrimaryKey,
+                entity: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithPaginationVerifMultiplePrimaryKeysInAfter)),
                 controller: _restController,
                 expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
@@ -419,7 +511,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$orderby=title",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithQueryStringAllFieldsOrderByAsc)),
                 controller: _restController
             );
@@ -435,7 +527,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$orderby=publisher_id desc",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithQueryStringAllFieldsOrderByDesc)),
                 controller: _restController
             );
@@ -449,12 +541,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstSingleKeyPaginationAndOrderBy()
         {
-            string after = "[{\"Value\":\"Also Awesome book\",\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"title\"}," +
-                            "{\"Value\":2,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]";
+            string after = $"[{{\"Value\":\"Also Awesome book\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"title\"}}," +
+                            $"{{\"Value\":2,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=title",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyPaginationAndOrderBy)),
                 controller: _restController,
                 expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
@@ -470,13 +562,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstSingleKeyIncludedInOrderByAndPagination()
         {
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=id",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyIncludedInOrderByAndPagination)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(after)}",
                 paginated: true
             );
         }
@@ -489,13 +582,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstTwoOrderByAndPagination()
         {
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":2,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=2&$orderby=id",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstTwoOrderByAndPagination)),
                 controller: _restController,
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode("[{\"Value\":2,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]"))}",
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(after)}",
                 paginated: true
             );
         }
@@ -508,14 +602,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstTwoVerifyAfterFormedCorrectlyWithOrderBy()
         {
-            string after = "[{\"Value\":\"2001-01-01\",\"Direction\":0,\"TableAlias\":\"authors\",\"ColumnName\":\"birthdate\"}," +
-                            "{\"Value\":\"Aniruddh\",\"Direction\":0,\"TableAlias\":\"authors\",\"ColumnName\":\"name\"}," +
-                            "{\"Value\":125,\"Direction\":1,\"TableAlias\":\"authors\",\"ColumnName\":\"id\"}]";
+            string after = $"[{{\"Value\":\"2001-01-01\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"authors\",\"ColumnName\":\"birthdate\"}}," +
+                            $"{{\"Value\":\"Aniruddh\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"authors\",\"ColumnName\":\"name\"}}," +
+                            $"{{\"Value\":125,\"Direction\":1,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"authors\",\"ColumnName\":\"id\"}}]";
             after = $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$first=2&$orderby=birthdate, name, id desc",
-                entity: _integrationTieBreakTable,
+                entity: _integrationTieBreakEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstTwoVerifyAfterFormedCorrectlyWithOrderBy)),
                 controller: _restController,
                 expectedAfterQueryString: after,
@@ -539,7 +633,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$first=2&$orderby=birthdate, name, id{after}",
-                entity: _integrationTieBreakTable,
+                entity: _integrationTieBreakEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstTwoVerifyAfterBreaksTieCorrectlyWithOrderBy)),
                 controller: _restController,
                 verifyNumRecords: _numRecordsReturnedFromTieBreakTable
@@ -555,12 +649,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstMultiKeyIncludeAllInOrderByAndPagination()
         {
-            string after = "[{\"Value\":569,\"Direction\":1,\"TableAlias\":\"reviews\",\"ColumnName\":\"id\"}," +
-                            "{\"Value\":1,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"book_id\"}]";
+            string after = $"[{{\"Value\":569,\"Direction\":1,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}}," +
+                            $"{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=id desc, book_id",
-                entity: _tableWithCompositePrimaryKey,
+                entity: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyIncludeAllInOrderByAndPagination)),
                 controller: _restController,
                 expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
@@ -577,12 +671,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstMultiKeyIncludeOneInOrderByAndPagination()
         {
-            string after = "[{\"Value\":1,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"book_id\"}," +
-                            "{\"Value\":567,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"id\"}]";
+            string after = $"[{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}}," +
+                            $"{{\"Value\":567,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=book_id",
-                entity: _tableWithCompositePrimaryKey,
+                entity: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyIncludeOneInOrderByAndPagination)),
                 controller: _restController,
                 expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
@@ -600,13 +694,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstAndMultiColumnOrderBy()
         {
-            string after = "[{\"Value\":2345,\"Direction\":1,\"TableAlias\":\"books\",\"ColumnName\":\"publisher_id\"}," +
-                            "{\"Value\":\"US history in a nutshell\",\"Direction\":1,\"TableAlias\":\"books\",\"ColumnName\":\"title\"}," +
-                            "{\"Value\":4,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]";
+            string after = $"[{{\"Value\":2345,\"Direction\":1,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"publisher_id\"}}," +
+                            $"{{\"Value\":\"US history in a nutshell\",\"Direction\":1,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"title\"}}," +
+                            $"{{\"Value\":4,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=publisher_id desc, title desc",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstAndMultiColumnOrderBy)),
                 controller: _restController,
                 expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
@@ -623,12 +717,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstAndTiedColumnOrderBy()
         {
-            string after = "[{\"Value\":2345,\"Direction\":1,\"TableAlias\":\"books\",\"ColumnName\":\"publisher_id\"}," +
-                            "{\"Value\":3,\"Direction\":0,\"TableAlias\":\"books\",\"ColumnName\":\"id\"}]";
+            string after = $"[{{\"Value\":2345,\"Direction\":1,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"publisher_id\"}}," +
+                            $"{{\"Value\":3,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=publisher_id desc",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstAndTiedColumnOrderBy)),
                 controller: _restController,
                 expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
@@ -647,14 +741,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$orderby=id desc, publisher_id",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestVerifyMaintainColumnOrderForOrderBy)),
                 controller: _restController
             );
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$orderby=publisher_id, id desc",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestVerifyMaintainColumnOrderForOrderByInReverse"),
                 controller: _restController
             );
@@ -669,13 +763,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task FindTestWithFirstMultiKeyPaginationAndOrderBy()
         {
-            string after = "[{\"Value\":\"Indeed a great book\",\"Direction\":1,\"TableAlias\":\"reviews\",\"ColumnName\":\"content\"}," +
-                            "{\"Value\":1,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"book_id\"}," +
-                            "{\"Value\":567,\"Direction\":0,\"TableAlias\":\"reviews\",\"ColumnName\":\"id\"}]";
+            string after = $"[{{\"Value\":\"Indeed a great book\",\"Direction\":1,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"content\"}}," +
+                            $"{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}}," +
+                            $"{{\"Value\":567,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=content desc",
-                entity: _tableWithCompositePrimaryKey,
+                entity: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyPaginationAndOrderBy)),
                 controller: _restController,
                 expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
@@ -699,7 +793,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(InsertOneTest)),
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -719,7 +813,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
-                entity: _Composite_NonAutoGenPK,
+                entity: _Composite_NonAutoGenPK_EntityName,
                 sqlQuery: GetQuery("InsertOneInCompositeNonAutoGenPKTest"),
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -746,7 +840,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
-                entity: _tableWithCompositePrimaryKey,
+                entity: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(InsertOneInCompositeKeyTableTest)),
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -764,7 +858,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
-                entity: _tableWithCompositePrimaryKey,
+                entity: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery("InsertOneInDefaultTestTable"),
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -789,7 +883,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/5",
                     queryString: null,
-                    entity: _integrationTableName,
+                    entity: _integrationEntityName,
                     sqlQuery: null,
                     controller: _restController,
                     operationType: Operation.Delete,
@@ -814,7 +908,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/7",
                     queryString: null,
-                    entity: _integrationTableName,
+                    entity: _integrationEntityName,
                     sqlQuery: GetQuery(nameof(PutOne_Update_Test)),
                     controller: _restController,
                     operationType: Operation.Upsert,
@@ -831,7 +925,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
-                entity: _tableWithCompositePrimaryKey,
+                entity: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery("PutOne_Update_Default_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -851,7 +945,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
-                entity: _Composite_NonAutoGenPK,
+                entity: _Composite_NonAutoGenPK_EntityName,
                 sqlQuery: GetQuery("PutOne_Update_CompositeNonAutoGenPK_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -872,7 +966,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
-                entity: _Composite_NonAutoGenPK,
+                entity: _Composite_NonAutoGenPK_EntityName,
                 sqlQuery: GetQuery("PutOne_Update_NullOutMissingField_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -892,7 +986,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
-                entity: _Composite_NonAutoGenPK,
+                entity: _Composite_NonAutoGenPK_EntityName,
                 sqlQuery: GetQuery("PutOne_Update_Empty_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -921,7 +1015,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/1",
                     queryString: null,
-                    entity: _integrationTableName,
+                    entity: _integrationEntityName,
                     sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Upsert,
@@ -932,7 +1026,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                   primaryKeyRoute: "id/1",
                   queryString: "?$filter=title eq 'The Return of the King'",
-                  entity: _integrationTableName,
+                  entity: _integrationEntityName,
                   sqlQuery: GetQuery("PutOne_Update_IfMatchHeaders_Test_Confirm_Update"),
                   controller: _restController,
                   operationType: Operation.Find,
@@ -958,7 +1052,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: expectedLocationHeader,
                     queryString: null,
-                    entity: _integration_NonAutoGenPK_TableName,
+                    entity: _integration_NonAutoGenPK_EntityName,
                     sqlQuery: GetQuery(nameof(PutOne_Insert_Test)),
                     controller: _restController,
                     operationType: Operation.Upsert,
@@ -980,7 +1074,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
-                entity: _integration_NonAutoGenPK_TableName,
+                entity: _integration_NonAutoGenPK_EntityName,
                 sqlQuery: GetQuery("PutOne_Insert_Nullable_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -1003,7 +1097,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
-                entity: _integration_AutoGenNonPK_TableName,
+                entity: _integration_AutoGenNonPK_EntityName,
                 sqlQuery: GetQuery("PutOne_Insert_AutoGenNonPK_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -1023,7 +1117,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
-                entity: _Composite_NonAutoGenPK,
+                entity: _Composite_NonAutoGenPK_EntityName,
                 sqlQuery: GetQuery("PutOne_Insert_CompositeNonAutoGenPK_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -1041,7 +1135,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
-                entity: _Composite_NonAutoGenPK,
+                entity: _Composite_NonAutoGenPK_EntityName,
                 sqlQuery: GetQuery("PutOne_Insert_Default_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -1061,7 +1155,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
-                entity: _Composite_NonAutoGenPK,
+                entity: _Composite_NonAutoGenPK_EntityName,
                 sqlQuery: GetQuery("PutOne_Insert_Empty_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -1092,7 +1186,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: expectedLocationHeader,
                     queryString: null,
-                    entity: _Composite_NonAutoGenPK,
+                    entity: _Composite_NonAutoGenPK_EntityName,
                     sqlQuery: GetQuery("PutOne_Insert_Nulled_Test"),
                     controller: _restController,
                     operationType: Operation.Upsert,
@@ -1114,7 +1208,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
-                entity: _Composite_NonAutoGenPK,
+                entity: _Composite_NonAutoGenPK_EntityName,
                 sqlQuery: GetQuery("PutOne_Update_Nulled_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -1145,7 +1239,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: expectedLocationHeader,
                     queryString: null,
-                    entity: _Composite_NonAutoGenPK,
+                    entity: _Composite_NonAutoGenPK_EntityName,
                     sqlQuery: GetQuery("PatchOne_Insert_Nulled_Test"),
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
@@ -1164,7 +1258,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "categoryid/1/pieceid/1",
                     queryString: null,
-                    entity: _Composite_NonAutoGenPK,
+                    entity: _Composite_NonAutoGenPK_EntityName,
                     sqlQuery: GetQuery("PatchOne_Update_Nulled_Test"),
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
@@ -1193,7 +1287,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: $"id/2",
                     queryString: null,
-                    entity: _integration_NonAutoGenPK_TableName,
+                    entity: _integration_NonAutoGenPK_EntityName,
                     sqlQuery: GetQuery(nameof(PatchOne_Insert_NonAutoGenPK_Test)),
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
@@ -1213,7 +1307,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: expectedLocationHeader,
                     queryString: null,
-                    entity: _Composite_NonAutoGenPK,
+                    entity: _Composite_NonAutoGenPK_EntityName,
                     sqlQuery: GetQuery("PatchOne_Insert_CompositeNonAutoGenPK_Test"),
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
@@ -1233,7 +1327,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: expectedLocationHeader,
                     queryString: null,
-                    entity: _Composite_NonAutoGenPK,
+                    entity: _Composite_NonAutoGenPK_EntityName,
                     sqlQuery: GetQuery("PatchOne_Insert_Empty_Test"),
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
@@ -1251,7 +1345,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: expectedLocationHeader,
                     queryString: null,
-                    entity: _Composite_NonAutoGenPK,
+                    entity: _Composite_NonAutoGenPK_EntityName,
                     sqlQuery: GetQuery("PatchOne_Insert_Default_Test"),
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
@@ -1278,7 +1372,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/8",
                     queryString: null,
-                    entity: _integrationTableName,
+                    entity: _integrationEntityName,
                     sqlQuery: GetQuery(nameof(PatchOne_Update_Test)),
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
@@ -1294,7 +1388,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/567/book_id/1",
                     queryString: null,
-                    entity: _tableWithCompositePrimaryKey,
+                    entity: _entityWithCompositePrimaryKey,
                     sqlQuery: GetQuery("PatchOne_Update_Default_Test"),
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
@@ -1310,7 +1404,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "categoryid/1/pieceid/1",
                     queryString: null,
-                    entity: _Composite_NonAutoGenPK,
+                    entity: _Composite_NonAutoGenPK_EntityName,
                     sqlQuery: GetQuery("PatchOne_Update_CompositeNonAutoGenPK_Test"),
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
@@ -1327,7 +1421,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "categoryid/1/pieceid/1",
                     queryString: null,
-                    entity: _Composite_NonAutoGenPK,
+                    entity: _Composite_NonAutoGenPK_EntityName,
                     sqlQuery: GetQuery("PatchOne_Update_Empty_Test"),
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
@@ -1354,7 +1448,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/1",
                     queryString: null,
-                    entity: _integrationTableName,
+                    entity: _integrationEntityName,
                     sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
@@ -1366,7 +1460,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/1",
                     queryString: "?$filter=title eq 'The Hobbit Returns to The Shire' and publisher_id eq 1234",
-                    entity: _integrationTableName,
+                    entity: _integrationEntityName,
                     sqlQuery: GetQuery("PatchOne_Update_IfMatchHeaders_Test_Confirm_Update"),
                     controller: _restController,
                     operationType: Operation.Find
@@ -1389,7 +1483,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
-                entity: _Composite_NonAutoGenPK,
+                entity: _Composite_NonAutoGenPK_EntityName,
                 sqlQuery: GetQuery("InsertOneWithNullFieldValue"),
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -1413,7 +1507,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=0",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
@@ -1438,7 +1532,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$filter={keyword}{value} {compareTo}",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
@@ -1448,6 +1542,43 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             );
         }
 
+        [TestMethod]
+        public virtual async Task FindTestWithInvalidFieldsInQueryStringOnViews()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=pq ge 4",
+                entity: _simple_all_books,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: $"Could not find a property named 'pq' on type 'default_namespace.{GetDefaultSchemaForEdmModel()}books_view_all'.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+                );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=pq le 4",
+                entity: _simple_subset_stocks,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: $"Could not find a property named 'pq' on type 'default_namespace.{GetDefaultSchemaForEdmModel()}stocks_view_selected'.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+                );
+
+            //"?$filter=not (categoryid gt 1)",
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=not (title gt 1)",
+                entity: _composite_subset_bookPub,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: $"Could not find a property named 'title' on type 'default_namespace.{GetDefaultSchemaForEdmModel()}books_publishers_view_composite'.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+                );
+        }
         /// <summary>
         /// Tests the InsertOne functionality with disallowed URL composition: contains Query String.
         /// </summary>
@@ -1463,7 +1594,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?/id/5001",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -1489,7 +1620,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -1516,7 +1647,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -1540,7 +1671,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -1566,7 +1697,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -1592,7 +1723,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integration_NonAutoGenPK_TableName,
+                entity: _integration_NonAutoGenPK_EntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -1620,7 +1751,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integration_NonAutoGenPK_TableName,
+                entity: _integration_NonAutoGenPK_EntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -1640,7 +1771,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK,
+                entity: _Composite_NonAutoGenPK_EntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -1665,7 +1796,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/1/pieceid/1",
                 queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK,
+                entity: _Composite_NonAutoGenPK_EntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -1690,7 +1821,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/1/pieceid/1",
                 queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK,
+                entity: _Composite_NonAutoGenPK_EntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -1720,13 +1851,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/1000",
                     queryString: null,
-                    entity: _integrationTableName,
+                    entity: _integrationEntityName,
                     sqlQuery: null,
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: $"Cannot perform INSERT and could not find books with primary key <id: 1000> to perform UPDATE on.",
+                    expectedErrorMessage: $"Cannot perform INSERT and could not find {_integrationEntityName} with primary key <id: 1000> to perform UPDATE on.",
                     expectedStatusCode: HttpStatusCode.NotFound,
                     expectedSubStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound.ToString()
                 );
@@ -1750,13 +1881,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/1000",
                     queryString: null,
-                    entity: _integration_NonAutoGenPK_TableName,
+                    entity: _integration_NonAutoGenPK_EntityName,
                     sqlQuery: null,
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: "Cannot perform INSERT and could not find magazines with primary key <id: 1000> to perform UPDATE on.",
+                    expectedErrorMessage: $"Cannot perform INSERT and could not find {_integration_NonAutoGenPK_EntityName} with primary key <id: 1000> to perform UPDATE on.",
                     expectedStatusCode: HttpStatusCode.NotFound,
                     expectedSubStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound.ToString()
                 );
@@ -1782,7 +1913,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/18",
                     queryString: string.Empty,
-                    entity: _integrationTableName,
+                    entity: _integrationEntityName,
                     sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
@@ -1812,7 +1943,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/7",
                     queryString: string.Empty,
-                    entity: _integrationTableName,
+                    entity: _integrationEntityName,
                     sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Upsert,
@@ -1843,13 +1974,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/1000",
                     queryString: string.Empty,
-                    entity: _integrationTableName,
+                    entity: _integrationEntityName,
                     sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: $"Cannot perform INSERT and could not find books with primary key <id: 1000> to perform UPDATE on.",
+                    expectedErrorMessage: $"Cannot perform INSERT and could not find {_integrationEntityName} with primary key <id: 1000> to perform UPDATE on.",
                     expectedStatusCode: HttpStatusCode.NotFound,
                     expectedSubStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound.ToString()
                 );
@@ -1866,13 +1997,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: $"id/{STARTING_ID_FOR_TEST_INSERTS + 1}/book_id/1",
                     queryString: string.Empty,
-                    entity: _tableWithCompositePrimaryKey,
+                    entity: _entityWithCompositePrimaryKey,
                     sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
                     exception: true,
-                    expectedErrorMessage: $"Cannot perform INSERT and could not find reviews with primary key <id: 5002, book_id: 1> to perform UPDATE on.",
+                    expectedErrorMessage: $"Cannot perform INSERT and could not find {_entityWithCompositePrimaryKey} with primary key <id: 5002, book_id: 1> to perform UPDATE on.",
                     expectedStatusCode: HttpStatusCode.NotFound,
                     expectedSubStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound.ToString()
                 );
@@ -1895,7 +2026,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/1000",
                     queryString: string.Empty,
-                    entity: _integrationTableName,
+                    entity: _integrationEntityName,
                     sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Upsert,
@@ -1914,7 +2045,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "categoryid/1/pieceid/1",
                     queryString: string.Empty,
-                    entity: _Composite_NonAutoGenPK,
+                    entity: _Composite_NonAutoGenPK_EntityName,
                     sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Upsert,
@@ -1942,7 +2073,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: $"/id/{STARTING_ID_FOR_TEST_INSERTS}",
                 queryString: null,
-                entity: _integration_AutoGenNonPK_TableName,
+                entity: _integration_AutoGenNonPK_EntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -1972,7 +2103,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/18",
                     queryString: string.Empty,
-                    entity: _integrationTableName,
+                    entity: _integrationEntityName,
                     sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Upsert,
@@ -2004,7 +2135,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: string.Empty,
                     queryString: null,
-                    entity: _integration_NonAutoGenPK_TableName,
+                    entity: _integration_NonAutoGenPK_EntityName,
                     sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Upsert,
@@ -2028,7 +2159,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/1000",
                     queryString: string.Empty,
-                    entity: _integrationTableName,
+                    entity: _integrationEntityName,
                     sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Delete,
@@ -2052,15 +2183,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "title/7",
                     queryString: string.Empty,
-                    entity: _integrationTableName,
+                    entity: _integrationEntityName,
                     sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Delete,
                     requestBody: string.Empty,
                     exception: true,
                     expectedErrorMessage: "The request is invalid since the primary keys: title requested were not found in the entity definition.",
-                    expectedStatusCode: HttpStatusCode.BadRequest,
-                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
+                    expectedStatusCode: HttpStatusCode.NotFound,
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound.ToString()
                 );
         }
 
@@ -2076,7 +2207,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: string.Empty,
                     queryString: string.Empty,
-                    entity: _integrationTableName,
+                    entity: _integrationEntityName,
                     sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Delete,
@@ -2097,7 +2228,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/",
                 queryString: string.Empty,
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
@@ -2116,7 +2247,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/5671",
                 queryString: "?$f=id,content",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
@@ -2135,7 +2266,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$f=id,null",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
@@ -2154,7 +2285,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$orderby=id random",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
@@ -2172,11 +2303,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$orderby=Pinecone",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: "Could not find a property named 'Pinecone' on type 'default_namespace.books'.",
+                expectedErrorMessage: $"Could not find a property named 'Pinecone' on type 'default_namespace.{GetDefaultSchemaForEdmModel()}books'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }
@@ -2190,7 +2321,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$orderby=null",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
@@ -2211,7 +2342,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby='ID Number'",
-                entity: _integrationTableHasColumnWithSpace,
+                entity: _integrationEntityHasColumnWithSpace,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
@@ -2230,7 +2361,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$f=id,content",
-                entity: _integrationTableName,
+                entity: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
@@ -2254,7 +2385,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK,
+                entity: _Composite_NonAutoGenPK_EntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -2276,7 +2407,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK,
+                entity: _Composite_NonAutoGenPK_EntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -2306,7 +2437,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/2/pieceid/1",
                 queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK,
+                entity: _Composite_NonAutoGenPK_EntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -2327,7 +2458,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/3/pieceid/1",
                 queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK,
+                entity: _Composite_NonAutoGenPK_EntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -2357,7 +2488,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/2/pieceid/1",
                 queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK,
+                entity: _Composite_NonAutoGenPK_EntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.UpsertIncremental,
@@ -2378,7 +2509,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/3/pieceid/1",
                 queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK,
+                entity: _Composite_NonAutoGenPK_EntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.UpsertIncremental,

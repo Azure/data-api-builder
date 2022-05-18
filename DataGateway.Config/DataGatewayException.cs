@@ -44,7 +44,11 @@ namespace Azure.DataGateway.Service.Exceptions
             /// <summary>
             /// Error due to trying to use unsupported feature
             /// </summary>
-            NotSupported
+            NotSupported,
+            /// <summary>
+            /// Error encountered while initializing.
+            /// </summary>
+            ErrorInInitialization
         }
 
         public HttpStatusCode StatusCode { get; }

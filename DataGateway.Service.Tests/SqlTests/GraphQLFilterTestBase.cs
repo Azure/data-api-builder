@@ -27,18 +27,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestStringFiltersEq()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"{
-                getBooks(_filter: {title: {eq: ""Awesome book""}})
+                books(_filter: {title: {eq: ""Awesome book""}})
                 {
-                    title
+                    items {
+                        title
+                    }
                 }
             }";
 
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "title" },
-                "title = 'Awesome book'");
+                "title = 'Awesome book'",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -51,18 +54,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestStringFiltersNeq()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"{
-                getBooks(_filter: {title: {neq: ""Awesome book""}})
+                books(_filter: {title: {neq: ""Awesome book""}})
                 {
-                    title
+                    items {
+                        title
+                    }
                 }
             }";
 
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "title" },
-                "title != 'Awesome book'");
+                "title != 'Awesome book'",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -75,18 +81,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestStringFiltersStartsWith()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"{
-                getBooks(_filter: {title: {startsWith: ""Awe""}})
+                books(_filter: {title: {startsWith: ""Awe""}})
                 {
-                    title
+                    items {
+                        title
+                    }
                 }
             }";
 
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "title" },
-                "title LIKE 'Awe%'");
+                "title LIKE 'Awe%'",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -99,18 +108,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestStringFiltersEndsWith()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"{
-                getBooks(_filter: {title: {endsWith: ""book""}})
+                books(_filter: {title: {endsWith: ""book""}})
                 {
-                    title
+                    items {
+                        title
+                    }
                 }
             }";
 
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "title" },
-                "title LIKE '%book'");
+                "title LIKE '%book'",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -123,18 +135,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestStringFiltersContains()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"{
-                getBooks(_filter: {title: {contains: ""some""}})
+                books(_filter: {title: {contains: ""some""}})
                 {
-                    title
+                    items {
+                        title
+                    }
                 }
             }";
 
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "title" },
-                "title LIKE '%some%'");
+                "title LIKE '%some%'",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -147,18 +162,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestStringFiltersNotContains()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"{
-                getBooks(_filter: {title: {notContains: ""book""}})
+                books(_filter: {title: {notContains: ""book""}})
                 {
-                    title
+                    items {
+                        title
+                    }
                 }
             }";
 
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "title" },
-                "title NOT LIKE '%book%'");
+                "title NOT LIKE '%book%'",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -171,11 +189,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestStringFiltersContainsWithSpecialChars()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"{
-                getBooks(_filter: {title: {contains: ""%""}})
+                books(_filter: {title: {contains: ""%""}})
                 {
-                    title
+                    items {
+                        title
+                    }
                 }
             }";
 
@@ -189,18 +209,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestIntFiltersEq()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"{
-                getBooks(_filter: {id: {eq: 2}})
+                books(_filter: {id: {eq: 2}})
                 {
-                    id
+                    items {
+                        id
+                    }
                 }
             }";
 
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "id" },
-                @"id = 2");
+                @"id = 2",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -213,18 +236,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestIntFiltersNeq()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"{
-                getBooks(_filter: {id: {neq: 2}})
+                books(_filter: {id: {neq: 2}})
                 {
-                    id
+                    items {
+                        id
+                    }
                 }
             }";
 
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "id" },
-                @"id != 2");
+                @"id != 2",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -237,18 +263,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestIntFiltersGtLt()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"{
-                getBooks(_filter: {id: {gt: 2 lt: 4}})
+                books(_filter: {id: {gt: 2 lt: 4}})
                 {
-                    id
+                    items {
+                        id
+                    }
                 }
             }";
 
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "id" },
-                @"(id > 2 AND id < 4)");
+                @"(id > 2 AND id < 4)",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -261,18 +290,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestIntFiltersGteLte()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"{
-                getBooks(_filter: {id: {gte: 2 lte: 4}})
+                books(_filter: {id: {gte: 2 lte: 4}})
                 {
-                    id
+                    items {
+                        id
+                    }
                 }
             }";
 
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "id" },
-                @"(id >= 2 AND id <= 4)");
+                @"(id >= 2 AND id <= 4)",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -292,9 +324,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </remarks>
         public async Task TestCreatingParenthesis1()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"{
-                getBooks(_filter: {
+                books(_filter: {
                                     title: {contains: ""book""}
                                     or: [
                                         {id:{gt: 2 lt: 4}},
@@ -302,15 +334,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                     ]
                                 })
                 {
-                    id
-                    title
+                    items {
+                        id
+                        title
+                    }
                 }
             }";
 
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "id", "title" },
-                @"(title LIKE '%book%' AND ((id > 2 AND id < 4) OR id >= 4))");
+                @"(title LIKE '%book%' AND ((id > 2 AND id < 4) OR id >= 4))",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -330,24 +365,27 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </remarks>
         public async Task TestCreatingParenthesis2()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"{
-                getBooks(_filter: {
+                books(_filter: {
                                     or: [
                                         {id: {gt: 2} and: [{id: {lt: 4}}]},
                                         {id: {gte: 4} title: {contains: ""book""}}
                                     ]
                                 })
                 {
-                    id
-                    title
+                    items {
+                        id
+                        title
+                    }
                 }
             }";
 
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "id", "title" },
-                @"((id > 2 AND id < 4) OR (id >= 4 AND title LIKE '%book%'))");
+                @"((id > 2 AND id < 4) OR (id >= 4 AND title LIKE '%book%'))",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -363,9 +401,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </summart>
         public async Task TestComplicatedFilter()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"{
-                getBooks(_filter: {
+                books(_filter: {
                                     id: {gte: 2}
                                     title: {notContains: ""book""}
                                     and: [
@@ -384,9 +422,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                     ]
                                 })
                 {
-                    id
-                    title
-                    publisher_id
+                    items {
+                        id
+                        title
+                        publisher_id
+                    }
                 }
             }";
 
@@ -395,7 +435,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 new List<string> { "id", "title", "publisher_id" },
                 @"((id >= 2 AND title NOT LIKE '%book%') AND
                   (id < 1000 AND title LIKE 'US%') AND
-                  (publisher_id < 1500 OR publisher_id > 2000)");
+                  (publisher_id < 1500 OR publisher_id > 2000)",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -408,11 +449,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestOnlyEmptyAnd()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"{
-                getBooks(_filter: {and: []})
+                books(_filter: {and: []})
                 {
-                    id
+                    items {
+                        id
+                    }
                 }
             }";
 
@@ -426,11 +469,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestOnlyEmptyOr()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"{
-                getBooks(_filter: {or: []})
+                books(_filter: {or: []})
                 {
-                    id
+                    items {
+                        id
+                    }
                 }
             }";
 
@@ -445,18 +490,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestFilterAndFilterODataUsedTogether()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"{
-                getBooks(_filter: {id: {gte: 2}}, _filterOData: ""id lt 4"")
+                books(_filter: {id: {gte: 2}}, _filterOData: ""id lt 4"")
                 {
-                    id
+                    items {
+                        id
+                    }
                 }
             }";
 
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "id" },
-                "id >= 2 AND id < 4");
+                "id >= 2 AND id < 4",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -469,20 +517,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestGetNullIntFields()
         {
-            string graphQLQueryName = "getMagazines";
+            string graphQLQueryName = "magazines";
             string gqlQuery = @"{
-                getMagazines(_filter: {issue_number: {isNull: true}})
-                {
-                    id
-                    title
-                    issue_number
-                }
-            }";
+                magazines(_filter: {issue_number: {isNull: true}}) {
+                    items {
+                        id
+                        title
+                        issue_number
+                        }
+                    }
+                }";
 
             string dbQuery = MakeQueryOn(
                 "magazines",
                 new List<string> { "id", "title", "issue_number" },
-                "issue_number IS NULL");
+                "issue_number IS NULL",
+                "foo");
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -495,20 +545,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestGetNonNullIntFields()
         {
-            string graphQLQueryName = "getMagazines";
+            string graphQLQueryName = "magazines";
             string gqlQuery = @"{
-                getMagazines(_filter: {issue_number: {isNull: false}})
-                {
-                    id
-                    title
-                    issue_number
+                magazines(_filter: {issue_number: {isNull: false}}) {
+                    items {
+                        id
+                        title
+                        issue_number
+                    }
                 }
             }";
 
             string dbQuery = MakeQueryOn(
                 "magazines",
                 new List<string> { "id", "title", "issue_number" },
-                "issue_number IS NOT NULL");
+                "issue_number IS NOT NULL",
+                "foo");
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -521,19 +573,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestGetNullStringFields()
         {
-            string graphQLQueryName = "getWebsiteUsers";
+            string graphQLQueryName = "websiteUsers";
             string gqlQuery = @"{
-                getWebsiteUsers(_filter: {username: {isNull: true}})
-                {
-                    id
-                    username
+                websiteUsers(_filter: {username: {isNull: true}}) {
+                    items {
+                        id
+                        username
+                    }
                 }
             }";
 
             string dbQuery = MakeQueryOn(
                 "website_users",
                 new List<string> { "id", "username" },
-                "username IS NULL");
+                "username IS NULL",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -546,19 +600,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestGetNonNullStringFields()
         {
-            string graphQLQueryName = "getWebsiteUsers";
+            string graphQLQueryName = "websiteUsers";
             string gqlQuery = @"{
-                getWebsiteUsers(_filter: {username: {isNull: false}})
-                {
-                    id
-                    username
+                websiteUsers(_filter: {username: {isNull: false}}) {
+                    items {
+                        id
+                        username
+                    }
                 }
             }";
 
             string dbQuery = MakeQueryOn(
                 "website_users",
                 new List<string> { "id", "username" },
-                "username IS NOT NULL");
+                "username IS NOT NULL",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -570,9 +626,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </summary>
         public async Task TestExplicitNullFieldsAreIgnored()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"{
-                getBooks(_filter: {
+                books(_filter: {
                                     id: {gte: 2 lte: null}
                                     title: null
                                     or: null
@@ -666,6 +722,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         #endregion
 
+        protected abstract string GetDefaultSchema();
+
         /// <remarks>
         /// This function does not escape special characters from column names so those might lead to errors
         /// </remarks>
@@ -673,6 +731,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string table,
             List<string> queriedColumns,
             string predicate,
+            string schema = "",
             List<string> pkColumns = null);
+
+        protected override async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController, Dictionary<string, object> variables = null, bool failOnErrors = true)
+        {
+            string dataResult = await base.GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, graphQLController, variables, failOnErrors);
+
+            return JsonDocument.Parse(dataResult).RootElement.GetProperty("items").ToString();
+        }
     }
 }

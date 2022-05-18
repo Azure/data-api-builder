@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Controllers;
@@ -37,9 +38,51 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             RuntimeConfigPath configPath = config.Get<RuntimeConfigPath>();
             configPath.SetRuntimeConfigValue();
-
+            AddMissingEntitiesToConfig(configPath);
             return Mock.Of<IOptionsMonitor<RuntimeConfigPath>>(_ => _.CurrentValue == configPath);
 
+        }
+
+        /// <summary>
+        /// Temporary Helper function to ensure that in testing we have an entity
+        /// that can have a custom schema. We create a new entity of 'Magazine' with
+        /// a schema of 'foo' for table 'magazines', and then add this entity to our
+        /// runtime configuration. Because MySql will not have a schema we need a way
+        /// to customize this entity, which this helper function provides. Ultimately
+        /// this will be replaced with a JSON string in the tests that can be fully
+        /// customized for testing purposes.
+        /// </summary>
+        /// <param name="configPath"></param>
+        private static void AddMissingEntitiesToConfig(RuntimeConfigPath configPath)
+        {
+            string magazineSource = configPath.ConfigValue.DatabaseType is DatabaseType.mysql ? "\"magazines\"" : "\"foo.magazines\"";
+            string magazineEntityJsonString =
+              @"{ 
+                    ""source"":  " + magazineSource + @",
+                    ""graphql"": true,
+                    ""permissions"": [
+                      {
+                        ""role"": ""anonymous"",
+                        ""actions"": [ ""read"" ]
+                      },
+                      {
+                        ""role"": ""authenticated"",
+                        ""actions"": [ ""create"", ""read"", ""delete"" ]
+                      }
+                    ]
+                }";
+
+            JsonSerializerOptions options = new()
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters =
+                {
+                    new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+                }
+            };
+
+            Entity magazineEntity = JsonSerializer.Deserialize<Entity>(magazineEntityJsonString, options);
+            configPath.ConfigValue.Entities.Add("Magazine", magazineEntity);
         }
 
         /// <summary>
@@ -80,7 +123,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             Assert.IsTrue(response.Contains("\"errors\""), "No error was found where error is expected.");
 
-            if (message != null)
+            if (message is not null)
             {
                 Console.WriteLine(response);
                 Assert.IsTrue(response.Contains(message), $"Message \"{message}\" not found in error");
@@ -201,5 +244,269 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 Assert.AreEqual(expected, actual, ignoreCase: true);
             }
         }
+
+        /// <summary>
+        /// For testing we use a JSON string that represents
+        /// the runtime config that would otherwise be generated
+        /// by the client for use by the runtime. This makes it
+        /// easier to test with different configurations, and allows
+        /// for different formats between database types.
+        /// </summary>
+        /// <param name="dbType"> the database type associated with this config.</param>
+        /// <returns></returns>
+        public static string GetRuntimeConfigJsonString(string dbType)
+        {
+            string magazinesSource = string.Empty;
+            switch (dbType)
+            {
+                case TestCategory.MSSQL:
+                case TestCategory.POSTGRESQL:
+                    magazinesSource = "\"foo.magazines\"";
+                    break;
+                case TestCategory.MYSQL:
+                    magazinesSource = "\"magazines\"";
+                    break;
+            }
+
+            return
+@"
+{
+  ""$schema"": ""../../project-hawaii/playground/hawaii.draft-01.schema.json"",
+  ""data-source"": {
+    ""database-type"": """ + dbType.ToLower() + @""",
+    ""connection-string"": """"
+  },
+  """ + dbType.ToLower() + @""": {
+    ""set-session-context"": true
+  },
+  ""runtime"": {
+    ""rest"": {
+      ""enabled"": true,
+      ""path"": ""/api""
+    },
+    ""graphql"": {
+      ""enabled"": true,
+      ""path"": ""/graphql"",
+      ""allow-introspection"": true
+    },
+    ""host"": {
+      ""mode"": ""Development"",
+      ""cors"": {
+      ""origins"": [ ""1"", ""2"" ],
+      ""allow-credentials"": true
+      },
+      ""authentication"": {
+        ""provider"": """",
+        ""jwt"": {
+          ""audience"": """",
+          ""issuer"": """",
+          ""issuer-key"": """"
+        }
+      }
+    }
+  },
+  ""entities"": {
+    ""Publisher"": {
+      ""source"": ""publishers"",
+      ""rest"": true,
+      ""graphql"": true,
+      ""permissions"": [
+        {
+          ""role"": ""anonymous"",
+          ""actions"": [ ""read"" ]
+        },
+        {
+          ""role"": ""authenticated"",
+          ""actions"": [ ""create"", ""read"", ""update"", ""delete"" ]
+        }
+      ],
+      ""relationships"": {
+        ""books"": {
+          ""cardinality"": ""many"",
+          ""target.entity"": ""books""
+        }
+      }
+    },
+    ""Stock"": {
+      ""source"": ""stocks"",
+      ""rest"": true,
+      ""graphql"": true,
+      ""permissions"": [
+        {
+          ""role"": ""anonymous"",
+          ""actions"": [ ""read"" ]
+        },
+        {
+          ""role"": ""authenticated"",
+          ""actions"": [ ""create"", ""read"", ""update"" ]
+        }
+      ],
+      ""relationships"": {
+        ""comics"": {
+          ""cardinality"": ""many"",
+          ""target.entity"": ""comics"",
+          ""source.fields"": [ ""categoryName"" ],
+          ""target.fields"": [ ""categoryName"" ]
+        }
+      }
+    },
+    ""Book"": {
+      ""source"": ""books"",
+      ""permissions"": [
+        {
+          ""role"": ""anonymous"",
+          ""actions"": [ ""read"" ]
+        },
+        {
+          ""role"": ""authenticated"",
+          ""actions"": [ ""create"", ""update"", ""delete"" ]
+        }
+      ],
+      ""relationships"": {
+        ""publisher"": {
+          ""cardinality"": ""one"",
+          ""target.entity"": ""publisher""
+        },
+        ""websiteplacement"": {
+          ""cardinality"": ""one"",
+          ""target.entity"": ""book_website_placements""
+        },
+        ""reviews"": {
+          ""cardinality"": ""many"",
+          ""target.entity"": ""reviews""
+        },
+        ""authors"": {
+          ""cardinality"": ""many"",
+          ""target.entity"": ""authors"",
+          ""linking.object"": ""book_author_link"",
+          ""linking.source.fields"": [ ""book_id"" ],
+          ""linking.target.fields"": [ ""author_id"" ]
+        }
+      }
+    },
+    ""BookWebsitePlacement"": {
+      ""source"": ""book_website_placements"",
+      ""rest"": true,
+      ""graphql"": true,
+      ""permissions"": [
+        {
+          ""role"": ""anonymous"",
+          ""actions"": [ ""read"" ]
+        },
+        {
+          ""role"": ""authenticated"",
+          ""actions"": [
+            ""create"",
+            ""update"",
+            {
+              ""action"": ""delete"",
+              ""policy"": {
+                ""database"": ""@claims.id eq @item.id""
+              },
+              ""fields"": {
+                ""include"": [ ""*"" ],
+                ""exclude"": [ ""id"" ]
+              }
+            }
+          ]
+        }
+      ],
+      ""relationships"": {
+          ""book_website_placements"": {
+            ""cardinality"": ""one"",
+            ""target.entity"": ""books""
+          }
+        }
+      },
+    ""Author"": {
+      ""source"": ""authors"",
+      ""rest"": true,
+      ""graphql"": true,
+      ""permissions"": [
+        {
+          ""role"": ""anonymous"",
+          ""actions"": [ ""read"" ]
+        }
+      ],
+      ""relationships"": {
+          ""books"": {
+            ""cardinality"": ""many"",
+            ""target.entity"": ""books"",
+            ""linking.object"": ""book_author_link""
+         }
+       }
+     },
+    ""Review"": {
+      ""source"": ""reviews"",
+      ""rest"": true,
+      ""permissions"": [
+        {
+          ""role"": ""anonymous"",
+          ""actions"": [ ""read"" ]
+        }
+      ],
+      ""relationships"": {
+         ""books"": {
+           ""cardinality"": ""one"",
+           ""target.entity"": ""books""
+         }
+       }
+     },
+    ""Magazine"": {
+      ""source"": " + magazinesSource + @",
+      ""graphql"": true,
+      ""permissions"": [
+        {
+          ""role"": ""anonymous"",
+          ""actions"": [ ""read"" ]
+        },
+        {
+          ""role"": ""authenticated"",
+          ""actions"": [
+             {
+             ""action"": ""*"",
+             ""fields"": {
+               ""include"": [ ""*"" ],
+               ""exclude"": [ ""issue_number"" ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    ""Comic"": {
+      ""source"": ""comics"",
+      ""rest"": true,
+      ""graphql"": false,
+      ""permissions"": [
+        {
+          ""role"": ""anonymous"",
+          ""actions"": [ ""read"" ]
+        },
+        {
+          ""role"": ""authenticated"",
+          ""actions"": [ ""create"", ""read"", ""delete"" ]
+        }
+      ]
+    },
+    ""Broker"": {
+      ""source"": ""brokers"",
+      ""graphql"": false,
+      ""permissions"": [
+        {
+          ""role"": ""anonymous"",
+          ""actions"": [ ""read"" ]
+        }
+      ]
+    },
+    ""WebsiteUser"": {
+      ""source"": ""website_users"",
+      ""rest"": false,
+      ""permissions"" : []
+    }
+  }
+}";
+        }
+
     }
 }

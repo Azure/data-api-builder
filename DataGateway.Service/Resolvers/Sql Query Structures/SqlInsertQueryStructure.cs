@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -29,20 +30,22 @@ namespace Azure.DataGateway.Service.Resolvers
         public List<string> ReturnColumns { get; }
 
         public SqlInsertStructure(
-            string tableName,
-            IGraphQLMetadataProvider metadataStoreProvider,
+            string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams)
-        : base(metadataStoreProvider, sqlMetadataProvider, tableName: tableName)
+        : base(sqlMetadataProvider, entityName: entityName)
         {
             InsertColumns = new();
             Values = new();
 
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
 
-            ReturnColumns = tableDefinition.Columns.Keys.ToList<string>();
+            ReturnColumns = tableDefinition.Columns.Keys.ToList();
 
-            foreach (KeyValuePair<string, object?> param in mutationParams)
+            IDictionary<string, object?> createInput =
+                InputArgumentToMutationParams(mutationParams, CreateMutationBuilder.INPUT_ARGUMENT_NAME);
+
+            foreach (KeyValuePair<string, object?> param in createInput)
             {
                 PopulateColumnsAndParams(param.Key, param.Value);
             }

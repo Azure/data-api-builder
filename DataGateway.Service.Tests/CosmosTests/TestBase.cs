@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -35,27 +36,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             _clientProvider = new CosmosClientProvider(TestHelper.ConfigPath);
             _metadataStoreProvider = new MetadataStoreProviderForTest();
             string jsonString = @"
-type Query {
-    characterList: [Character]
-    characterById (id : ID!): Character
-    planetById (id: ID! = 1): Planet
-    getPlanet(id: ID, name: String): Planet
-    planetList: [Planet]
-    planets(first: Int, after: String): PlanetConnection
-}
-
-type Mutation {
-    addPlanet(id: String, name: String): Planet
-    deletePlanet(id: String): Planet
-}
-
-type PlanetConnection {
-    items: [Planet]
-    endCursor: String
-    hasNextPage: Boolean
-}
-
-type Character {
+type Character @model {
     id : ID,
     name : String,
     type: String,
@@ -63,9 +44,12 @@ type Character {
     primaryFunction: String
 }
 
-type Planet {
+type Planet @model {
     id : ID,
-    name : String
+    name : String,
+    character: Character,
+    age : Int,
+    dimension : String
 }";
 
             _metadataStoreProvider.GraphQLSchema = jsonString;
@@ -83,6 +67,9 @@ type Planet {
             Client = _clientProvider.Client;
         }
 
+        private static string[] _planets = { "Earth", "Mars", "Jupiter",
+            "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial"};
+
         /// <summary>
         /// Creates items on the specified container
         /// </summary>
@@ -96,7 +83,7 @@ type Planet {
             {
                 string uid = Guid.NewGuid().ToString();
                 idList.Add(uid);
-                dynamic sourceItem = TestHelper.GetItem(uid);
+                dynamic sourceItem = TestHelper.GetItem(uid, _planets[i % (_planets.Length)], i);
                 Client.GetContainer(dbName, containerName)
                     .CreateItemAsync(sourceItem, new PartitionKey(uid)).Wait();
             }
@@ -109,9 +96,11 @@ type Planet {
             HttpRequestMessage request = new();
             MemoryStream stream = new(Encoding.UTF8.GetBytes(data));
             request.Method = HttpMethod.Post;
+            ClaimsPrincipal user = new(new ClaimsIdentity(authenticationType: "Bearer"));
             DefaultHttpContext httpContext = new()
             {
-                Request = { Body = stream, ContentLength = stream.Length }
+                Request = { Body = stream, ContentLength = stream.Length },
+                User = user
             };
             return httpContext;
         }
@@ -182,10 +171,34 @@ type Planet {
 
             if (graphQLResult.TryGetProperty("errors", out JsonElement errors))
             {
-                Assert.Fail(errors.GetRawText());
+                // to validate expected errors and error message
+                return errors;
             }
 
             return graphQLResult.GetProperty("data").GetProperty(queryName);
         }
+
+        internal static async Task<JsonDocument> ExecuteCosmosRequestAsync(string query, int pagesize, string continuationToken, string containerName)
+        {
+            QueryRequestOptions options = new()
+            {
+                MaxItemCount = pagesize,
+            };
+            Container c = Client.GetContainer(DATABASE_NAME, containerName);
+            QueryDefinition queryDef = new(query);
+            FeedIterator<JObject> resultSetIterator = c.GetItemQueryIterator<JObject>(queryDef, continuationToken, options);
+            FeedResponse<JObject> firstPage = await resultSetIterator.ReadNextAsync();
+            JArray jarray = new();
+            IEnumerator<JObject> enumerator = firstPage.GetEnumerator();
+            while (enumerator.MoveNext())
+            {
+                JObject item = enumerator.Current;
+                jarray.Add(item);
+            }
+
+            return JsonDocument.Parse(jarray.ToString().Trim());
+
+        }
+
     }
 }

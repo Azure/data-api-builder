@@ -458,7 +458,8 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } });
+            DocumentNode mutationRoot = MutationBuilder.Build(
+                root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } });
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"deleteFoo");

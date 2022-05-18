@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
@@ -21,7 +22,6 @@ namespace Azure.DataGateway.Service.Resolvers
     public class SqlMutationEngine : IMutationEngine
     {
         private readonly IQueryEngine _queryEngine;
-        private readonly IGraphQLMetadataProvider _metadataStoreProvider;
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly IQueryExecutor _queryExecutor;
         private readonly IQueryBuilder _queryBuilder;
@@ -31,13 +31,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public SqlMutationEngine(
             IQueryEngine queryEngine,
-            IGraphQLMetadataProvider metadataStoreProvider,
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder,
             ISqlMetadataProvider sqlMetadataProvider)
         {
             _queryEngine = queryEngine;
-            _metadataStoreProvider = metadataStoreProvider;
             _queryExecutor = queryExecutor;
             _queryBuilder = queryBuilder;
             _sqlMetadataProvider = sqlMetadataProvider;
@@ -57,13 +55,12 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             string graphqlMutationName = context.Selection.Field.Name.Value;
-            MutationResolver mutationResolver = _metadataStoreProvider.GetMutationResolver(graphqlMutationName);
-
-            string tableName = mutationResolver.Table;
+            string entityName = context.Selection.Field.Type.TypeName();
 
             Tuple<JsonDocument, IMetadata>? result = null;
-
-            if (mutationResolver.OperationType == Operation.Delete)
+            Operation mutationOperation =
+                MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
+            if (mutationOperation == Operation.Delete)
             {
                 // compute the mutation result before removing the element
                 result = await _queryEngine.ExecuteAsync(context, parameters);
@@ -71,13 +68,13 @@ namespace Azure.DataGateway.Service.Resolvers
 
             using DbDataReader dbDataReader =
                 await PerformMutationOperation(
-                    tableName,
-                    mutationResolver.OperationType,
+                    entityName,
+                    mutationOperation,
                     parameters);
 
-            if (!context.Selection.Type.IsScalarType() && mutationResolver.OperationType != Operation.Delete)
+            if (!context.Selection.Type.IsScalarType() && mutationOperation != Operation.Delete)
             {
-                TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(tableName);
+                TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
 
                 // only extract pk columns
                 // since non pk columns can be null
@@ -208,7 +205,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// on the table and returns result as JSON object asynchronously.
         /// </summary>
         private async Task<DbDataReader> PerformMutationOperation(
-            string tableName,
+            string entityName,
             Operation operationType,
             IDictionary<string, object?> parameters)
         {
@@ -218,9 +215,9 @@ namespace Azure.DataGateway.Service.Resolvers
             switch (operationType)
             {
                 case Operation.Insert:
+                case Operation.Create:
                     SqlInsertStructure insertQueryStruct =
-                        new(tableName,
-                        _metadataStoreProvider,
+                        new(entityName,
                         _sqlMetadataProvider,
                         parameters);
                     queryString = _queryBuilder.Build(insertQueryStruct);
@@ -228,8 +225,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     break;
                 case Operation.Update:
                     SqlUpdateStructure updateStructure =
-                        new(tableName,
-                        _metadataStoreProvider,
+                        new(entityName,
                         _sqlMetadataProvider,
                         parameters,
                         isIncrementalUpdate: false);
@@ -238,18 +234,24 @@ namespace Azure.DataGateway.Service.Resolvers
                     break;
                 case Operation.UpdateIncremental:
                     SqlUpdateStructure updateIncrementalStructure =
-                        new(tableName,
-                        _metadataStoreProvider,
+                        new(entityName,
                         _sqlMetadataProvider,
                         parameters,
                         isIncrementalUpdate: true);
                     queryString = _queryBuilder.Build(updateIncrementalStructure);
                     queryParameters = updateIncrementalStructure.Parameters;
                     break;
+                case Operation.UpdateGraphQL:
+                    SqlUpdateStructure updateGraphQLStructure =
+                        new(entityName,
+                        _sqlMetadataProvider,
+                        parameters);
+                    queryString = _queryBuilder.Build(updateGraphQLStructure);
+                    queryParameters = updateGraphQLStructure.Parameters;
+                    break;
                 case Operation.Delete:
                     SqlDeleteStructure deleteStructure =
-                        new(tableName,
-                        _metadataStoreProvider,
+                        new(entityName,
                         _sqlMetadataProvider,
                         parameters);
                     queryString = _queryBuilder.Build(deleteStructure);
@@ -257,8 +259,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     break;
                 case Operation.Upsert:
                     SqlUpsertQueryStructure upsertStructure =
-                        new(tableName,
-                        _metadataStoreProvider,
+                        new(entityName,
                         _sqlMetadataProvider,
                         parameters,
                         incrementalUpdate: false);
@@ -267,8 +268,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     break;
                 case Operation.UpsertIncremental:
                     SqlUpsertQueryStructure upsertIncrementalStructure =
-                        new(tableName,
-                        _metadataStoreProvider,
+                        new(entityName,
                         _sqlMetadataProvider,
                         parameters,
                         incrementalUpdate: true);

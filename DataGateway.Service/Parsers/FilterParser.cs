@@ -7,7 +7,7 @@ using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
 
-namespace Azure.DataGateway.Service.Services
+namespace Azure.DataGateway.Service.Parsers
 {
     /// <summary>
     /// FilterParser stores the model that represents customer data and can

@@ -137,7 +137,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
         private static NameNode GenerateInputTypeName(string typeName, Entity entity)
         {
-            return new($"Update{FormatNameForObject(typeName, entity)}Input");
+            return new($"{Operation.Update}{FormatNameForObject(typeName, entity)}Input");
         }
 
         /// <summary>
@@ -158,29 +158,42 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             DatabaseType databaseType)
         {
             InputObjectTypeDefinitionNode input = GenerateUpdateInputType(inputs, objectTypeDefinitionNode, name, root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>(), entity, databaseType);
+            List<FieldDefinitionNode> idFields = FindPrimaryKeyFields(objectTypeDefinitionNode);
+            string description;
+            if (idFields.Count() > 1)
+            {
+                description = "One of the ids of the item being updated.";
+            }
+            else
+            {
+                description = "The ID of the item being updated.";
+            }
 
-            FieldDefinitionNode idField = FindPrimaryKeyField(objectTypeDefinitionNode);
-
-            return new(
-                location: null,
-                new NameNode($"update{FormatNameForObject(name, entity)}"),
-                new StringValueNode($"Updates a {name}"),
-                new List<InputValueDefinitionNode> {
-                new InputValueDefinitionNode(
+            List<InputValueDefinitionNode> inputValues = new();
+            foreach (FieldDefinitionNode idField in idFields)
+            {
+                inputValues.Add(new InputValueDefinitionNode(
                     location: null,
                     idField.Name,
-                    new("The ID of the item being updated"),
+                    new StringValueNode(description),
                     new NonNullTypeNode(idField.Type.NamedType()),
                     defaultValue: null,
-                    new List<DirectiveNode>()),
-                new InputValueDefinitionNode(
+                    new List<DirectiveNode>()));
+            }
+
+            inputValues.Add(new InputValueDefinitionNode(
                     location: null,
                     new NameNode(INPUT_ARGUMENT_NAME),
                     new StringValueNode($"Input representing all the fields for updating {name}"),
                     new NonNullTypeNode(new NamedTypeNode(input.Name)),
                     defaultValue: null,
-                    new List<DirectiveNode>())
-                },
+                    new List<DirectiveNode>()));
+
+            return new(
+                location: null,
+                new NameNode($"update{FormatNameForObject(name, entity)}"),
+                new StringValueNode($"Updates a {name}"),
+                inputValues,
                 new NamedTypeNode(FormatNameForObject(name, entity)),
                 new List<DirectiveNode>()
             );

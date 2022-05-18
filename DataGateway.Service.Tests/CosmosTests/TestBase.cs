@@ -34,10 +34,25 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         public static void Init(TestContext context)
         {
             _clientProvider = new CosmosClientProvider(TestHelper.ConfigPath);
-            _metadataStoreProvider = new MetadataStoreProviderForTest
-            {
-                GraphQLSchema = File.ReadAllText("schema.gql")
-            };
+            _metadataStoreProvider = new MetadataStoreProviderForTest();
+            string jsonString = @"
+type Character @model {
+    id : ID,
+    name : String,
+    type: String,
+    homePlanet: Int,
+    primaryFunction: String
+}
+
+type Planet @model {
+    id : ID,
+    name : String,
+    character: Character,
+    age : Int,
+    dimension : String
+}";
+
+            _metadataStoreProvider.GraphQLSchema = jsonString;
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
             _graphQLService = new GraphQLService(

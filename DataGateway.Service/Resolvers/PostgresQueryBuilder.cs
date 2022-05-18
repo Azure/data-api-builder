@@ -20,7 +20,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private static DbCommandBuilder _builder = new NpgsqlCommandBuilder();
 
         /// <inheritdoc />
-        protected override string QuoteIdentifier(string ident)
+        public override string QuoteIdentifier(string ident)
         {
             return _builder.QuoteIdentifier(ident);
         }

@@ -12,7 +12,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
     public class AuthenticationConfigValidatorUnitTests
     {
         private const string DEFAULT_CONNECTION_STRING = "Server=tcp:127.0.0.1";
-        private const string DEFAULT_RESOLVER_FILE = "sql-config.json";
         private const string DEFAULT_ISSUER = "https://login.microsoftonline.com";
 
         #region Positive Tests
@@ -127,8 +126,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         private static RuntimeConfig CreateRuntimeConfigWithAuthN(AuthenticationConfig authNConfig)
         {
             DataSource dataSource = new(
-                DatabaseType: DatabaseType.mssql,
-                ResolverConfigFile: DEFAULT_RESOLVER_FILE)
+                DatabaseType: DatabaseType.mssql)
             {
                 ConnectionString = DEFAULT_CONNECTION_STRING
             };

@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using Azure.DataGateway.Service.Models;
+using HotChocolate.Types;
 using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Services
@@ -24,19 +27,20 @@ namespace Azure.DataGateway.Service.Services
             IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
         {
             RuntimeConfig config = runtimeConfigPath.CurrentValue.ConfigValue!;
+            string resolverConfigFileName = config.CosmosDb!.ResolverConfigFile;
 
             // At this point, the validation is done so, ConfigValue and ResolverConfigFile
-            // must not be null.
+            // must not be null, and this should be CosmosDb only.
             string resolverConfigJson =
-                File.ReadAllText(config.DataSource.ResolverConfigFile!);
+                File.ReadAllText(config.CosmosDb!.ResolverConfigFile);
 
             // Even though the file name may not be null and exist, the check here
             // guarantees it is not empty.
             if (string.IsNullOrEmpty(resolverConfigJson))
             {
-                throw new ArgumentNullException("runtime-config.data-source.resolver-config-file",
+                throw new ArgumentNullException("runtime-config.cosmosdb.resolver-config-file",
                     $"The resolver config file contents are empty resolver-config-file: " +
-                    $"{config.DataSource.ResolverConfigFile}\n" +
+                    $"{resolverConfigFileName}\n" +
                     $"RuntimeConfigPath: {runtimeConfigPath.CurrentValue.ConfigFileName}");
             }
 
@@ -101,19 +105,37 @@ namespace Azure.DataGateway.Service.Services
             return resolver;
         }
 
+        /// <summary>
+        /// Retrieves the graphql type specified in the resolver-config file
+        /// for the given Hotchocolate object type either for a directive name if it exists
+        /// or from the Hotchocolate object's type name.
+        /// </summary>
+        /// <param name="objectType"></param>
+        public GraphQLType GetGraphQLType(ObjectType objectType)
+        {
+            IDirective nameDirective = objectType.Directives.First(d => d.Name == ModelDirectiveType.DirectiveName);
+
+            string nameFromDirective = nameDirective.GetArgument<string>("name");
+
+            if (string.IsNullOrEmpty(nameFromDirective))
+            {
+                return GetGraphQLType(objectType.Name);
+            }
+
+            return GetGraphQLType(nameFromDirective);
+        }
+
         public GraphQLType GetGraphQLType(string name)
         {
             if (!GraphQLResolverConfig.GraphQLTypes.TryGetValue(name, out GraphQLType? typeInfo))
             {
-                throw new KeyNotFoundException($"Table Definition for {name} does not exist.");
+                if (typeInfo is null)
+                {
+                    throw new KeyNotFoundException($"Type info for {name} does not exist.");
+                }
             }
 
             return typeInfo;
-        }
-
-        public ResolverConfig GetResolvedConfig()
-        {
-            return GraphQLResolverConfig;
         }
     }
 }

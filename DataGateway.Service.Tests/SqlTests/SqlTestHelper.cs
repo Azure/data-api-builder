@@ -123,7 +123,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             Assert.IsTrue(response.Contains("\"errors\""), "No error was found where error is expected.");
 
-            if (message != null)
+            if (message is not null)
             {
                 Console.WriteLine(response);
                 Assert.IsTrue(response.Contains(message), $"Message \"{message}\" not found in error");

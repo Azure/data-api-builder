@@ -41,5 +41,10 @@ namespace Azure.DataGateway.Service.Resolvers
         /// number of parameters.
         /// </summary>
         public string BuildForeignKeyInfoQuery(int numberOfParameters);
+
+        /// <summary>
+        /// Adds database specific quotes to string identifier
+        /// </summary>
+        public string QuoteIdentifier(string identifier);
     }
 }

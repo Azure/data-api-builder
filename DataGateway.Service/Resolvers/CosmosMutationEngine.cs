@@ -59,7 +59,6 @@ namespace Azure.DataGateway.Service.Resolvers
                     response = await HandleUpsertAsync(queryArgs, container);
                     break;
                 case Operation.Delete:
-                {
                     response = await HandleDeleteAsync(queryArgs, container);
                     if (response.StatusCode == HttpStatusCode.NoContent)
                     {
@@ -68,7 +67,6 @@ namespace Azure.DataGateway.Service.Resolvers
                     }
 
                     break;
-                }
                 default:
                     throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}");
             }

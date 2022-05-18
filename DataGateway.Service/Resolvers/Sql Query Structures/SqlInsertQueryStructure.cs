@@ -42,7 +42,8 @@ namespace Azure.DataGateway.Service.Resolvers
 
             ReturnColumns = tableDefinition.Columns.Keys.ToList();
 
-            IDictionary<string, object?> createInput = InputArgumentToMutationParams(mutationParams, CreateMutationBuilder.INPUT_ARGUMENT_NAME);
+            IDictionary<string, object?> createInput =
+                InputArgumentToMutationParams(mutationParams, CreateMutationBuilder.INPUT_ARGUMENT_NAME);
 
             foreach (KeyValuePair<string, object?> param in createInput)
             {

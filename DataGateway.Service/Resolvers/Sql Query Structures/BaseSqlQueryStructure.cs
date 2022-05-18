@@ -179,6 +179,10 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Creates the dictionary of fields and their values
         /// to be set in the mutation from the MutationInput argument name "item".
+        /// This is only applicable for GraphQL since the input we get from the request
+        /// is of the EntityInput object form.
+        /// For REST, we simply get the mutation values in the request body as is - so
+        /// we will not find the argument of name "item" in the mutationParams.
         /// </summary>
         /// <exception cref="InvalidDataException"></exception>
         internal static IDictionary<string, object?> InputArgumentToMutationParams(
@@ -213,6 +217,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 return mutationInput;
             }
 
+            // Its ok to not find the input argument name in the mutation params dictionary
+            // because it indicates the REST scenario.
             return mutationParams;
         }
     }

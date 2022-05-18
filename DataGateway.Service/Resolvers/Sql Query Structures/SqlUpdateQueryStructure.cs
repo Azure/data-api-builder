@@ -75,13 +75,11 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             UpdateOperations = new();
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
-
-            List<string> primaryKeys = tableDefinition.PrimaryKey;
             List<string> columns = tableDefinition.Columns.Keys.ToList();
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
                 // primary keys used as predicates
-                if (primaryKeys.Contains(param.Key))
+                if (tableDefinition.PrimaryKey.Contains(param.Key))
                 {
                     Predicates.Add(CreatePredicateForParam(param));
                 }

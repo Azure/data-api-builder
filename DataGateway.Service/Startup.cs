@@ -58,7 +58,25 @@ namespace Azure.DataGateway.Service
             }
 
             services.AddSingleton<RuntimeConfigValidator>();
-            services.AddSingleton<IGraphQLMetadataProvider, GraphQLFileMetadataProvider>();
+            services.AddSingleton<IGraphQLMetadataProvider>(implementationFactory: (serviceProvider) =>
+            {
+                IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
+                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
+                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
+
+                switch (runtimeConfig.DatabaseType)
+                {
+                    case DatabaseType.cosmos:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<GraphQLFileMetadataProvider>(serviceProvider);
+                    case DatabaseType.mssql:
+                    case DatabaseType.postgresql:
+                    case DatabaseType.mysql:
+                        return null!;
+                    default:
+                        throw new NotSupportedException(runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
+                }
+            });
+
             services.AddSingleton<CosmosClientProvider>();
 
             services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
@@ -97,26 +115,6 @@ namespace Azure.DataGateway.Service
                         return ActivatorUtilities.GetServiceOrCreateInstance<SqlMutationEngine>(serviceProvider);
                     default:
                         throw new NotSupportedException(runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
-                }
-            });
-
-            services.AddSingleton<IConfigValidator>(implementationFactory: (serviceProvider) =>
-            {
-                IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
-                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
-                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
-
-                switch (runtimeConfig.DatabaseType)
-                {
-                    case DatabaseType.cosmos:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<CosmosConfigValidator>(serviceProvider);
-                    case DatabaseType.mssql:
-                    case DatabaseType.postgresql:
-                    case DatabaseType.mysql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<SqlConfigValidator>(serviceProvider);
-                    default:
-                        throw new NotSupportedException(
-                            runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
                 }
             });
 
@@ -323,8 +321,6 @@ namespace Azure.DataGateway.Service
                     await sqlMetadataProvider.InitializeAsync();
                 }
 
-                // After initialization of metadata, validate the db specific configuration.
-                app.ApplicationServices.GetService<IConfigValidator>()!.ValidateConfig();
                 return true;
             }
             catch (Exception ex)

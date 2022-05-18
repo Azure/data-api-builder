@@ -39,7 +39,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static IQueryBuilder _queryBuilder;
         protected static IQueryEngine _queryEngine;
         protected static IMutationEngine _mutationEngine;
-        protected static GraphQLFileMetadataProvider _metadataStoreProvider;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
         protected static DbExceptionParserBase _dbExceptionParser;
@@ -94,7 +93,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     break;
             }
 
-            _metadataStoreProvider = new GraphQLFileMetadataProvider(_runtimeConfigPath);
             // Setup AuthorizationService to always return Authorized.
             _authorizationService = new Mock<IAuthorizationService>();
             _authorizationService.Setup(x => x.AuthorizeAsync(
@@ -108,14 +106,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
 
             _queryEngine = new SqlQueryEngine(
-                _metadataStoreProvider,
                 _queryExecutor,
                 _queryBuilder,
                 _sqlMetadataProvider);
             _mutationEngine =
                 new SqlMutationEngine(
                 _queryEngine,
-                _metadataStoreProvider,
                 _queryExecutor,
                 _queryBuilder,
                 _sqlMetadataProvider);
@@ -140,7 +136,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             IHeaderDictionary headers = null,
             string bodyData = null)
         {
-
             DefaultHttpContext httpContext;
             if (headers is not null)
             {
@@ -360,10 +355,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="graphQLController"></param>
         /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
         /// <returns>string in JSON format</returns>
-        protected static async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController, Dictionary<string, object> variables = null)
+        protected virtual async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController, Dictionary<string, object> variables = null, bool failOnErrors = true)
         {
             JsonElement graphQLResult = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, graphQLController, variables);
             Console.WriteLine(graphQLResult.ToString());
+
+            if (failOnErrors && graphQLResult.TryGetProperty("errors", out JsonElement errors))
+            {
+                Assert.Fail(errors.GetRawText());
+            }
+
             JsonElement graphQLResultData = graphQLResult.GetProperty("data").GetProperty(graphQLQueryName);
 
             // JsonElement.ToString() prints null values as empty strings instead of "null"
@@ -372,13 +373,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         /// <summary>
         /// Sends graphQL query through graphQL service, consisting of gql engine processing (resolvers, object serialization)
-        /// returning the result as a JsonDocument
+        /// returning the result as a JsonElement - the root of the JsonDocument.
         /// </summary>
         /// <param name="query"></param>
         /// <param name="graphQLQueryName"></param>
         /// <param name="graphQLController"></param>
         /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
-        /// <returns>JsonDocument</returns>
+        /// <returns>JsonElement</returns>
         protected static async Task<JsonElement> GetGraphQLControllerResultAsync(string query, string graphQLQueryName, GraphQLController graphQLController, Dictionary<string, object> variables = null)
         {
             string graphqlQueryJson = variables == null ?

@@ -11,12 +11,37 @@ namespace Azure.DataGateway.Config
 
         public TableDefinition TableDefinition { get; set; } = null!;
 
+        public DatabaseObject(string schemaName, string tableName)
+        {
+            SchemaName = schemaName;
+            Name = tableName;
+        }
+
+        public DatabaseObject() { }
+
         public string FullName
         {
             get
             {
                 return string.IsNullOrEmpty(SchemaName) ? Name : $"{SchemaName}.{Name}";
             }
+        }
+
+        public override bool Equals(object? other)
+        {
+            return Equals(other as DatabaseObject);
+        }
+
+        public bool Equals(DatabaseObject? other)
+        {
+            return other is not null &&
+                   SchemaName.Equals(other.SchemaName) &&
+                   Name.Equals(other.Name);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(SchemaName, Name);
         }
     }
 
@@ -26,10 +51,34 @@ namespace Azure.DataGateway.Config
         /// The list of columns that together form the primary key of the table.
         /// </summary>
         public List<string> PrimaryKey { get; set; } = new();
-        public Dictionary<string, ColumnDefinition> Columns { get; set; } =
+
+        /// <summary>
+        /// The list of columns in this table.
+        /// </summary>
+        public Dictionary<string, ColumnDefinition> Columns { get; private set; } =
             new(StringComparer.InvariantCultureIgnoreCase);
-        public Dictionary<string, ForeignKeyDefinition> ForeignKeys { get; set; } = new();
-        public Dictionary<string, AuthorizationRule> HttpVerbs { get; set; } = new();
+
+        /// <summary>
+        /// A dictionary mapping all the source entities to their relationship metadata.
+        /// All these entities share this table definition
+        /// as their underlying database object 
+        /// </summary>
+        public Dictionary<string, RelationshipMetadata> SourceEntityRelationshipMap { get; private set; } =
+            new(StringComparer.InvariantCultureIgnoreCase);
+
+        public Dictionary<string, AuthorizationRule> HttpVerbs { get; private set; } = new();
+    }
+
+    /// <summary>
+    /// Class encapsulating foreign keys corresponding to target entities.
+    /// </summary>
+    public class RelationshipMetadata
+    {
+        /// <summary>
+        /// Dictionary of target entity name to ForeignKeyDefinition.
+        /// </summary>
+        public Dictionary<string, List<ForeignKeyDefinition>> TargetEntityToFkDefinitionMap { get; private set; }
+            = new(StringComparer.InvariantCultureIgnoreCase);
     }
 
     public class ColumnDefinition
@@ -46,7 +95,10 @@ namespace Azure.DataGateway.Config
 
     public class ForeignKeyDefinition
     {
-        public string ReferencedTable { get; set; } = string.Empty;
+        /// <summary>
+        /// The referencing and referenced table pair.
+        /// </summary>
+        public RelationShipPair Pair { get; set; } = new();
 
         /// <summary>
         /// The list of columns referenced in the reference table.
@@ -70,7 +122,7 @@ namespace Azure.DataGateway.Config
         public bool Equals(ForeignKeyDefinition? other)
         {
             return other != null &&
-                   ReferencedTable.Equals(other.ReferencedTable) &&
+                   Pair.Equals(other.Pair) &&
                    ReferencedColumns.SequenceEqual(other.ReferencedColumns) &&
                    ReferencingColumns.SequenceEqual(other.ReferencingColumns);
         }
@@ -78,7 +130,42 @@ namespace Azure.DataGateway.Config
         public override int GetHashCode()
         {
             return HashCode.Combine(
-                    ReferencedTable, ReferencedColumns, ReferencingColumns);
+                    Pair, ReferencedColumns, ReferencingColumns);
+        }
+    }
+
+    public class RelationShipPair
+    {
+        public RelationShipPair() { }
+
+        public RelationShipPair(
+            DatabaseObject referencingDbObject,
+            DatabaseObject referencedDbObject)
+        {
+            ReferencingDbObject = referencingDbObject;
+            ReferencedDbObject = referencedDbObject;
+        }
+
+        public DatabaseObject ReferencingDbObject { get; set; } = new();
+
+        public DatabaseObject ReferencedDbObject { get; set; } = new();
+
+        public override bool Equals(object? other)
+        {
+            return Equals(other as RelationShipPair);
+        }
+
+        public bool Equals(RelationShipPair? other)
+        {
+            return other != null &&
+                   ReferencedDbObject.Equals(other.ReferencedDbObject) &&
+                   ReferencingDbObject.Equals(other.ReferencingDbObject);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(
+                    ReferencedDbObject, ReferencingDbObject);
         }
     }
 

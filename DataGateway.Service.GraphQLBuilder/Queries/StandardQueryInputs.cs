@@ -13,7 +13,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 new List<DirectiveNode>(),
                 new List<InputValueDefinitionNode> {
                     new InputValueDefinitionNode(null, new NameNode("eq"), new StringValueNode("Equals"), new IdType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new IdType().ToTypeNode(), null, new List<DirectiveNode>())
+                    new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new IdType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
                 }
             );
 
@@ -25,7 +26,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 new List<DirectiveNode>(),
                 new List<InputValueDefinitionNode> {
                     new InputValueDefinitionNode(null, new NameNode("eq"), new StringValueNode("Equals"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                    new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
                 }
             );
 
@@ -41,7 +43,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                     new InputValueDefinitionNode(null, new NameNode("gte"), new StringValueNode("Greater Than or Equal To"), new IntType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new InputValueDefinitionNode(null, new NameNode("lt"), new StringValueNode("Less Than"), new IntType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new InputValueDefinitionNode(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new IntType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new IntType().ToTypeNode(), null, new List<DirectiveNode>())
+                    new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new IntType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
                 }
             );
 
@@ -57,7 +60,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                     new InputValueDefinitionNode(null, new NameNode("gte"), new StringValueNode("Greater Than or Equal To"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new InputValueDefinitionNode(null, new NameNode("lt"), new StringValueNode("Less Than"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new InputValueDefinitionNode(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>())
+                    new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
                 }
             );
 
@@ -74,7 +78,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                     new InputValueDefinitionNode(null, new NameNode("startsWith"), new StringValueNode("Starts With"), new StringType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new InputValueDefinitionNode(null, new NameNode("endsWith"), new StringValueNode("Ends With"), new StringType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new StringType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new InputValueDefinitionNode(null, new NameNode("caseInsensitive"), new StringValueNode("Case Insensitive"), new BooleanType().ToTypeNode(), new BooleanValueNode(false), new List<DirectiveNode>())
+                    new InputValueDefinitionNode(null, new NameNode("caseInsensitive"), new StringValueNode("Case Insensitive"), new BooleanType().ToTypeNode(), new BooleanValueNode(false), new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
                 }
             );
 

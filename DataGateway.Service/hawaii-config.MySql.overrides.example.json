@@ -2,9 +2,7 @@
   "$schema": "../../project-hawaii/playground/hawaii.draft-01.schema.json",
   "data-source": {
     "database-type": "mysql",
-    "connection-string": "server=localhost;database=datagatewaytest;Allow User Variables=true;uid=root;pwd=REPLACEME",
-    "resolver-config-file": "sql-config.json"
-    "connection-string": "Server=(localdb)\\MSSQLLocalDB;Database=DataGateway;Integrated Security=true"
+    "connection-string": "server=localhost;database=datagatewaytest;Allow User Variables=true;uid=root;pwd=REPLACEME"
   },
   "runtime": {
     "rest": {
@@ -33,7 +31,7 @@
     }
   },
   "entities": {
-    "publishers": {
+    "Publisher": {
       "source": "publishers",
       "rest": true,
       "graphql": true,
@@ -50,11 +48,11 @@
       "relationships": {
         "books": {
           "cardinality": "many",
-          "target.entity": "books"
+          "target.entity": "Book"
         }
       }
     },
-    "stocks": {
+    "Stock": {
       "source": "stocks",
       "rest": true,
       "graphql": true,
@@ -71,13 +69,13 @@
       "relationships": {
         "comics": {
           "cardinality": "many",
-          "target.entity": "comics",
+          "target.entity": "Comic",
           "source.fields": [ "categoryName" ],
           "target.fields": [ "categoryName" ]
         }
       }
     },
-    "books": {
+    "Book": {
       "source": "books",
       "permissions": [
         {
@@ -108,28 +106,28 @@
         }
       ],
       "relationships": {
-        "publisher": {
+        "publishers": {
           "cardinality": "one",
-          "target.entity": "publisher"
+          "target.entity": "Publisher"
         },
         "websiteplacement": {
           "cardinality": "one",
-          "target.entity": "book_website_placements"
+          "target.entity": "BookWebsitePlacement"
         },
         "reviews": {
           "cardinality": "many",
-          "target.entity": "reviews"
+          "target.entity": "Review"
         },
         "authors": {
           "cardinality": "many",
-          "target.entity": "authors",
+          "target.entity": "Author",
           "linking.object": "book_author_link",
           "linking.source.fields": [ "book_id" ],
           "linking.target.fields": [ "author_id" ]
         }
       }
     },
-    "book_website_placements": {
+    "BookWebsitePlacement": {
       "source": "book_website_placements",
       "rest": true,
       "graphql": true,
@@ -157,13 +155,13 @@
         }
       ],
       "relationships": {
-        "book_website_placements": {
+        "books": {
           "cardinality": "one",
-          "target.entity": "books"
+          "target.entity": "Book"
         }
       }
     },
-    "authors": {
+    "Author": {
       "source": "authors",
       "rest": true,
       "graphql": true,
@@ -176,12 +174,12 @@
       "relationships": {
         "books": {
           "cardinality": "many",
-          "target.entity": "books",
+          "target.entity": "Book",
           "linking.object": "book_author_link"
         }
       }
     },
-    "reviews": {
+    "Review": {
       "source": "reviews",
       "rest": true,
       "permissions": [
@@ -193,33 +191,11 @@
       "relationships": {
         "books": {
           "cardinality": "one",
-          "target.entity": "books"
+          "target.entity": "Book"
         }
       }
     },
-    "magazines": {
-      "source": "magazines",
-      "graphql": true,
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [ "read" ]
-        },
-        {
-          "role": "authenticated",
-          "actions": [
-            {
-              "action": "*",
-              "fields": {
-                "include": [ "*" ],
-                "exclude": [ "issue_number" ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    "comics": {
+    "Comic": {
       "source": "comics",
       "rest": true,
       "graphql": false,
@@ -234,7 +210,7 @@
         }
       ]
     },
-    "brokers": {
+    "Broker": {
       "source": "brokers",
       "graphql": false,
       "permissions": [
@@ -244,10 +220,61 @@
         }
       ]
     },
-    "website_users": {
+    "WebsiteUser": {
       "source": "website_users",
       "rest": false,
       "permissions": []
+    },
+    "books_view_all": {
+      "source": "books_view_all",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "read" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
+    "stocks_view_selected": {
+      "source": "stocks_view_selected",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "read" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
+    "books_publishers_view_composite": {
+      "source": "books_publishers_view_composite",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "read" ]
+        }
+      ],
+      "relationships": {
+      }
     }
   }
 }

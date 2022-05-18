@@ -372,7 +372,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             PermissionSetting permissionForEntity = new(
                 Role: roleName,
-                Actions: new JsonElement[] { JsonSerializer.SerializeToElement(actionForRole) });
+                Actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
 
             Entity sampleEntity = new(
                 Source: new String("SQL"),
@@ -392,7 +392,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 CosmosDb: null,
                 PostgreSql: null,
                 MySql: null,
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql, ResolverConfigFile: null),
+                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
                 );

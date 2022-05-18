@@ -1,32 +1,15 @@
-type Query {
-    characterList: [Character]
-    characterById (id : ID!): Character
-    planetById (id: ID! = 1): Planet
-    getPlanet(id: ID, name: String): Planet
-    planetList: [Planet]
-    planets(first: Int, after: String): PlanetConnection
-}
-
-type Mutation {
-    addPlanet(id: String, name: String): Planet
-    deletePlanet(id: String): Planet
-}
-
-type PlanetConnection {
-        items: [Planet]
-        endCursor: String
-        hasNextPage: Boolean
-}
-
-type Character {
-        id : ID,
-        name : String,
-        type: String,
-        homePlanet: Int,
-        primaryFunction: String
-}
-
-type Planet {
+type Character @model {
     id : ID,
-    name : String
+    name : String,
+    type: String,
+    homePlanet: Int,
+    primaryFunction: String
+}
+
+type Planet @model {
+    id : ID,
+    name : String,
+    character: Character,
+    age : Int,
+    dimension : String
 }

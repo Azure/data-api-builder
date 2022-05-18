@@ -20,7 +20,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Adds database specific quotes to string identifier
         /// </summary>
-        protected override string QuoteIdentifier(string ident)
+        public override string QuoteIdentifier(string ident)
         {
             return _builder.QuoteIdentifier(ident);
         }
@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlQueryStructure structure)
         {
-            string fromSql = $"{QuoteIdentifier(structure.TableName)} AS {QuoteIdentifier(structure.TableAlias)}{Build(structure.Joins)}";
+            string fromSql = $"{QuoteIdentifier(structure.DatabaseObject.Name)} AS {QuoteIdentifier(structure.TableAlias)}{Build(structure.Joins)}";
             fromSql += string.Join("", structure.JoinQueries.Select(x => $" LEFT OUTER JOIN LATERAL ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)} ON TRUE"));
 
             string predicates = JoinPredicateStrings(
@@ -65,7 +65,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public string Build(SqlInsertStructure structure)
         {
             // No need to put into transaction as LAST_INSERT_ID is session level variable
-            return $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
+            return $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.Name)} ({Build(structure.InsertColumns)}) " +
                     $"VALUES ({string.Join(", ", (structure.Values))}); " +
                     $" SET @ROWCOUNT=ROW_COUNT(); " +
                     $"SELECT {MakeInsertSelections(structure)} WHERE @ROWCOUNT > 0;";
@@ -77,7 +77,7 @@ namespace Azure.DataGateway.Service.Resolvers
             (string sets, string updates, string select) = MakeStoreUpdatePK(structure.PrimaryKey());
 
             return sets + ";\n" +
-                    $"UPDATE {QuoteIdentifier(structure.TableName)} " +
+                    $"UPDATE {QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                         ", " + updates +
                     $" WHERE {Build(structure.Predicates)}; " +
@@ -88,7 +88,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlDeleteStructure structure)
         {
-            return $"DELETE FROM {QuoteIdentifier(structure.TableName)} " +
+            return $"DELETE FROM {QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"WHERE {Build(structure.Predicates)}";
         }
 
@@ -100,7 +100,7 @@ namespace Azure.DataGateway.Service.Resolvers
             if (structure.IsFallbackToUpdate)
             {
                 return sets + ";\n" +
-                    $"UPDATE {QuoteIdentifier(structure.TableName)} " +
+                    $"UPDATE {QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                         ", " + updates +
                     $" WHERE {Build(structure.Predicates)}; " +
@@ -109,7 +109,7 @@ namespace Azure.DataGateway.Service.Resolvers
             }
             else
             {
-                string insert = $"INSERT INTO {QuoteIdentifier(structure.TableName)} ({Build(structure.InsertColumns)}) " +
+                string insert = $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.Name)} ({Build(structure.InsertColumns)}) " +
                         $"VALUES ({string.Join(", ", (structure.Values))}) ";
 
                 return sets + ";\n" +
@@ -132,20 +132,27 @@ namespace Azure.DataGateway.Service.Resolvers
 
             // For MySQL, the view KEY_COLUMN_USAGE provides all the information we need
             // so there is no need to join with any other view.
+            // TABLE_SCHEMA returned here is actually the database name -
+            // we don't need this column for MySql since the connection string already
+            // has the database name. We still select it to conform with other dbs.
             string foreignKeyQuery = $@"
-                SELECT
-                    CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))},
-                    TABLE_NAME {QuoteIdentifier(nameof(TableDefinition))},
-                    COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencingColumns))},
-                    REFERENCED_TABLE_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedTable))},
-                    REFERENCED_COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))}
-                FROM
-                    INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-                WHERE
-                    TABLE_SCHEMA IN (@{tableSchemaParamsForInClause})
-                    AND TABLE_NAME IN (@{tableNameParamsForInClause})
-                    AND REFERENCED_TABLE_NAME IS NOT NULL
-                    AND REFERENCED_COLUMN_NAME IS NOT NULL;";
+SELECT
+    CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))},
+    TABLE_SCHEMA {QuoteIdentifier($"Referencing{nameof(DatabaseObject.SchemaName)}")},
+    TABLE_NAME {QuoteIdentifier($"Referencing{nameof(TableDefinition)}")},
+    COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencingColumns))},
+    REFERENCED_TABLE_SCHEMA {QuoteIdentifier($"Referenced{nameof(DatabaseObject.SchemaName)}")},
+    REFERENCED_TABLE_NAME {QuoteIdentifier($"Referenced{nameof(TableDefinition)}")},
+    REFERENCED_COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))}
+FROM
+    INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+WHERE
+    (TABLE_SCHEMA IN (@{tableSchemaParamsForInClause})
+    AND TABLE_NAME IN (@{tableNameParamsForInClause})
+    AND REFERENCED_TABLE_NAME IS NOT NULL
+    AND REFERENCED_COLUMN_NAME IS NOT NULL) OR
+    (REFERENCED_TABLE_SCHEMA IN (@{tableSchemaParamsForInClause}) AND
+    REFERENCED_TABLE_NAME IN (@{tableNameParamsForInClause}))";
 
             Console.WriteLine($"Foreign Key Query is : {foreignKeyQuery}");
             return foreignKeyQuery;

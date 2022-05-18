@@ -91,9 +91,16 @@ namespace Azure.DataGateway.Service.Services
             return parameters;
         }
 
+        /// <inheritdoc />
         protected override string GetDefaultSchemaName()
         {
             return string.Empty;
+        }
+
+        /// <inheritdoc />
+        protected override DatabaseObject GenerateDbObject(string schemaName, string tableName)
+        {
+            return new(GetDefaultSchemaName(), tableName);
         }
     }
 }

@@ -1,9 +1,11 @@
 # nullable disable
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
@@ -67,49 +69,48 @@ namespace Azure.DataGateway.Service.Resolvers
                 requestContinuation = Base64Decode(structure.Continuation);
             }
 
-            FeedResponse<JObject> firstPage = await container.GetItemQueryIterator<JObject>(querySpec, requestContinuation, queryRequestOptions).ReadNextAsync();
-
-            if (structure.IsPaginated)
+            using (FeedIterator<JObject> query = container.GetItemQueryIterator<JObject>(querySpec, requestContinuation, queryRequestOptions))
             {
-                JArray jarray = new();
-                IEnumerator<JObject> enumerator = firstPage.GetEnumerator();
-                while (enumerator.MoveNext())
+                do
                 {
-                    JObject item = enumerator.Current;
-                    jarray.Add(item);
+                    FeedResponse<JObject> page = await query.ReadNextAsync();
+
+                    // For connection type, return first page result directly
+                    if (structure.IsPaginated)
+                    {
+                        JArray jarray = new();
+                        IEnumerator<JObject> enumerator = page.GetEnumerator();
+                        while (enumerator.MoveNext())
+                        {
+                            JObject item = enumerator.Current;
+                            jarray.Add(item);
+                        }
+
+                        string responseContinuation = page.ContinuationToken;
+                        if (string.IsNullOrEmpty(responseContinuation))
+                        {
+                            responseContinuation = null;
+                        }
+
+                        JObject res = new(
+                            new JProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME, Base64Encode(responseContinuation)),
+                            new JProperty(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, responseContinuation != null),
+                            new JProperty(QueryBuilder.PAGINATION_FIELD_NAME, jarray));
+
+                        // This extra deserialize/serialization will be removed after moving to Newtonsoft from System.Text.Json
+                        return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(res.ToString()), null);
+                    }
+
+                    if (page.Count > 0)
+                    {
+                        return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(page.First().ToString()), null);
+                    }
                 }
-
-                string responseContinuation = firstPage.ContinuationToken;
-                if (string.IsNullOrEmpty(responseContinuation))
-                {
-                    responseContinuation = null;
-                }
-
-                JObject res = new(
-                   new JProperty("endCursor", Base64Encode(responseContinuation)),
-                   new JProperty("hasNextPage", responseContinuation != null),
-                   new JProperty("items", jarray));
-
-                // This extra deserialize/serialization will be removed after moving to Newtonsoft from System.Text.Json
-                return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(res.ToString()), null);
+                while (query.HasMoreResults);
             }
 
-            static JObject FindFirstItem(IEnumerator<JObject> iterator)
-            {
-                JObject firstItem;
-                if (iterator.MoveNext() && (firstItem = iterator.Current) == null)
-                {
-                    return FindFirstItem(iterator);
-                }
-
-                return iterator.Current;
-            }
-
-            JObject firstItem = FindFirstItem(firstPage.GetEnumerator());
-
-            JsonDocument jsonDocument = JsonDocument.Parse(firstItem.ToString());
-
-            return new Tuple<JsonDocument, IMetadata>(jsonDocument, null);
+            // Return empty list when query gets no result back
+            return new Tuple<JsonDocument, IMetadata>(null, null);
         }
 
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
@@ -124,12 +125,9 @@ namespace Azure.DataGateway.Service.Resolvers
             Container container = _clientProvider.Client.GetDatabase(structure.Database).GetContainer(structure.Container);
             QueryDefinition querySpec = new(_queryBuilder.Build(structure));
 
-            if (parameters != null)
+            foreach (KeyValuePair<string, object> parameterEntry in structure.Parameters)
             {
-                foreach (KeyValuePair<string, object> parameterEntry in parameters)
-                {
-                    querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
-                }
+                querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
             }
 
             FeedIterator<JObject> resultSetIterator = container.GetItemQueryIterator<JObject>(querySpec);

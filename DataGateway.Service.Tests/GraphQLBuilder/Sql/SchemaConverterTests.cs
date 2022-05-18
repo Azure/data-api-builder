@@ -14,10 +14,16 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
     [TestCategory("GraphQL Schema Builder")]
     public class SchemaConverterTests
     {
-        private static Entity GenerateEmptyEntity()
-        {
-            return new Entity("dbo.entity", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
-        }
+        const string SCHEMA_NAME = "dbo";
+        const string TABLE_NAME = "tableName";
+        const string COLUMN_NAME = "columnName";
+        const string REF_COLNAME = "ref_col_in_source";
+        const string SOURCE_ENTITY = "sourceEntity";
+        const string FIELD_NAME_FOR_TARGET = "target";
+
+        const string TARGET_ENTITY = "TargetEntity";
+        const string REFERENCED_TABLE = "fkTable";
+        const string REFD_COLNAME = "fk_col";
 
         [DataTestMethod]
         [DataRow("test", "Test")]
@@ -184,130 +190,27 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
         [TestMethod]
         public void ForeignKeyGeneratesObjectAndColumnField()
         {
-            TableDefinition table = new();
-
-            string columnName = "columnName";
-            table.Columns.Add(columnName, new ColumnDefinition
-            {
-                SystemType = typeof(string),
-                IsNullable = false,
-            });
-            const string refColName = "ref_col";
-            const string foreignKeyTable = "fkTable";
-            table.ForeignKeys.Add("forign_key", new ForeignKeyDefinition { ReferencedTable = foreignKeyTable, ReferencingColumns = new List<string> { refColName } });
-            table.Columns.Add(refColName, new ColumnDefinition
-            {
-                SystemType = typeof(int)
-            });
-
-            Dictionary<string, Relationship> relationships =
-                new()
-                {
-                    {
-                        foreignKeyTable,
-                        new Relationship(
-                          Cardinality.One,
-                          foreignKeyTable,
-                          SourceFields: null,
-                          TargetFields: null,
-                          LinkingObject: null,
-                          LinkingSourceFields: null,
-                          LinkingTargetFields: null)
-                    }
-                };
-            Entity configEntity = GenerateEmptyEntity() with { Relationships = relationships };
-            Entity relationshipEntity = GenerateEmptyEntity();
-
-            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity, new() { { foreignKeyTable, relationshipEntity } });
-
+            ObjectTypeDefinitionNode od = GenerateObjectWithRelationship(Cardinality.Many);
             Assert.AreEqual(3, od.Fields.Count);
         }
 
         [TestMethod]
         public void ForeignKeyObjectFieldNameAndTypeMatchesReferenceTable()
         {
-            TableDefinition table = new();
 
-            string columnName = "columnName";
-            table.Columns.Add(columnName, new ColumnDefinition
-            {
-                SystemType = typeof(string),
-                IsNullable = false,
-            });
-            const string foreignKeyTable = "FkTable";
-            const string refColName = "ref_col";
-            table.ForeignKeys.Add("foreign_key", new ForeignKeyDefinition { ReferencedTable = foreignKeyTable, ReferencingColumns = new List<string> { refColName } });
-            table.Columns.Add(refColName, new ColumnDefinition
-            {
-                SystemType = typeof(int)
-            });
+            ObjectTypeDefinitionNode od = GenerateObjectWithRelationship(Cardinality.One);
+            FieldDefinitionNode field
+                = od.Fields.First(f => f.Name.Value != REF_COLNAME && f.Name.Value != COLUMN_NAME);
 
-            Dictionary<string, Relationship> relationships =
-                new()
-                {
-                    {
-                        foreignKeyTable,
-                        new Relationship(
-                          Cardinality.One,
-                          foreignKeyTable,
-                          SourceFields: null,
-                          TargetFields: null,
-                          LinkingObject: null,
-                          LinkingSourceFields: null,
-                          LinkingTargetFields: null)
-                    }
-                };
-            Entity configEntity = GenerateEmptyEntity() with { Relationships = relationships };
-            Entity relationshipEntity = GenerateEmptyEntity();
-
-            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity, new() { { foreignKeyTable, relationshipEntity } });
-
-            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value != refColName && f.Name.Value != columnName);
-
-            Assert.AreEqual("fkTable", field.Name.Value);
-            Assert.AreEqual(foreignKeyTable, field.Type.NamedType().Name.Value);
+            Assert.AreEqual(FIELD_NAME_FOR_TARGET, field.Name.Value);
+            Assert.AreEqual(TARGET_ENTITY, field.Type.NamedType().Name.Value);
         }
 
         [TestMethod]
         public void ForeignKeyFieldWillHaveRelationshipDirective()
         {
-            TableDefinition table = new();
-
-            string columnName = "columnName";
-            table.Columns.Add(columnName, new ColumnDefinition
-            {
-                SystemType = typeof(string),
-                IsNullable = false,
-            });
-            const string foreignKeyTable = "FkTable";
-            const string refColName = "ref_col";
-            table.ForeignKeys.Add("foreign_key", new ForeignKeyDefinition { ReferencedTable = foreignKeyTable, ReferencingColumns = new List<string> { refColName } });
-            table.Columns.Add(refColName, new ColumnDefinition
-            {
-                SystemType = typeof(int)
-            });
-            string relationshipName = "otherTable";
-            Dictionary<string, Relationship> relationships =
-                new()
-                {
-                    {
-                        relationshipName,
-                        new Relationship(
-                          Cardinality.One,
-                          foreignKeyTable,
-                          SourceFields: null,
-                          TargetFields: null,
-                          LinkingObject: null,
-                          LinkingSourceFields: null,
-                          LinkingTargetFields: null)
-                    }
-                };
-            Entity configEntity = GenerateEmptyEntity() with { Relationships = relationships };
-            Entity relationshipEntity = GenerateEmptyEntity();
-
-            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity, new() { { foreignKeyTable, relationshipEntity } });
-
-            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == relationshipName);
+            ObjectTypeDefinitionNode od = GenerateObjectWithRelationship(Cardinality.One);
+            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == FIELD_NAME_FOR_TARGET);
 
             Assert.AreEqual(1, field.Directives.Count);
             Assert.AreEqual(RelationshipDirectiveType.DirectiveName, field.Directives[0].Name.Value);
@@ -316,69 +219,22 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
         [TestMethod]
         public void CardinalityOfManyWillBeConnectionRelationship()
         {
-            TableDefinition table = new();
-
-            string columnName = "columnName";
-            table.Columns.Add(columnName, new ColumnDefinition
-            {
-                SystemType = typeof(string),
-                IsNullable = false,
-            });
-            const string foreignKeyTable = "FkTable";
-            const string refColName = "ref_col";
-            table.ForeignKeys.Add("foreign_key", new ForeignKeyDefinition { ReferencedTable = foreignKeyTable, ReferencingColumns = new List<string> { refColName } });
-            table.Columns.Add(refColName, new ColumnDefinition
-            {
-                SystemType = typeof(int)
-            });
-
-            Dictionary<string, Relationship> relationships =
-                new()
-                {
-                    {
-                        foreignKeyTable,
-                        new Relationship(
-                          Cardinality.Many,
-                          foreignKeyTable,
-                          SourceFields: null,
-                          TargetFields: null,
-                          LinkingObject: null,
-                          LinkingSourceFields: null,
-                          LinkingTargetFields: null)
-                    }
-                };
-            Entity configEntity = GenerateEmptyEntity() with { Relationships = relationships };
-            Entity relationshipEntity = GenerateEmptyEntity();
-
-            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity, new() { { foreignKeyTable, relationshipEntity } });
-
-            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == "fkTable");
+            ObjectTypeDefinitionNode od = GenerateObjectWithRelationship(Cardinality.Many);
+            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == FIELD_NAME_FOR_TARGET);
             Assert.IsTrue(QueryBuilder.IsPaginationType(field.Type.NamedType()));
         }
 
         [TestMethod]
         public void WhenForeignKeyDefinedButNoRelationship_GraphQLWontModelIt()
         {
-            TableDefinition table = new();
-
-            string columnName = "columnName";
-            table.Columns.Add(columnName, new ColumnDefinition
-            {
-                SystemType = typeof(string),
-                IsNullable = false,
-            });
-            const string foreignKeyTable = "FkTable";
-            const string refColName = "ref_col";
-            table.ForeignKeys.Add("foreign_key", new ForeignKeyDefinition { ReferencedTable = foreignKeyTable, ReferencingColumns = new List<string> { refColName } });
-            table.Columns.Add(refColName, new ColumnDefinition
-            {
-                SystemType = typeof(int)
-            });
+            TableDefinition table = GenerateTableWithForeignKeyDefinition();
 
             Entity configEntity = GenerateEmptyEntity() with { Relationships = new() };
             Entity relationshipEntity = GenerateEmptyEntity();
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, configEntity, new() { { foreignKeyTable, relationshipEntity } });
+            ObjectTypeDefinitionNode od =
+                SchemaConverter.FromTableDefinition(
+                    SOURCE_ENTITY, table, configEntity, new() { { TARGET_ENTITY, relationshipEntity } });
 
             Assert.AreEqual(2, od.Fields.Count);
         }
@@ -439,6 +295,73 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             ObjectValueNode value = (ObjectValueNode)directive.Arguments[0].Value;
             Assert.AreEqual(fieldName, value.Fields[0].Name.Value);
             Assert.AreEqual(kind, value.Fields[0].Value.Kind);
+        }
+
+        private static Entity GenerateEmptyEntity()
+        {
+            return new Entity("dbo.entity", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
+        }
+
+        private static ObjectTypeDefinitionNode GenerateObjectWithRelationship(Cardinality cardinality)
+        {
+            TableDefinition table = GenerateTableWithForeignKeyDefinition();
+
+            Dictionary<string, Relationship> relationships =
+                new()
+                {
+                    {
+                        FIELD_NAME_FOR_TARGET,
+                        new Relationship(
+                          cardinality,
+                          TARGET_ENTITY,
+                          SourceFields: null,
+                          TargetFields: null,
+                          LinkingObject: null,
+                          LinkingSourceFields: null,
+                          LinkingTargetFields: null)
+                    }
+                };
+            Entity configEntity = GenerateEmptyEntity() with { Relationships = relationships };
+            Entity relationshipEntity = GenerateEmptyEntity();
+
+            return SchemaConverter.FromTableDefinition
+                    (SOURCE_ENTITY,
+                     table,
+                     configEntity, new() { { TARGET_ENTITY, relationshipEntity } });
+        }
+
+        private static TableDefinition GenerateTableWithForeignKeyDefinition()
+        {
+            TableDefinition table = new();
+            table.Columns.Add(COLUMN_NAME, new ColumnDefinition
+            {
+                SystemType = typeof(string),
+                IsNullable = false,
+            });
+
+            RelationshipMetadata
+                relationshipMetadata = new();
+
+            table.SourceEntityRelationshipMap.Add(SOURCE_ENTITY, relationshipMetadata);
+            List<ForeignKeyDefinition> fkDefinitions = new();
+            fkDefinitions.Add(new ForeignKeyDefinition()
+            {
+                Pair = new()
+                {
+                    ReferencingDbObject = new(SCHEMA_NAME, TABLE_NAME),
+                    ReferencedDbObject = new(SCHEMA_NAME, REFERENCED_TABLE)
+                },
+                ReferencingColumns = new List<string> { REF_COLNAME },
+                ReferencedColumns = new List<string> { REFD_COLNAME }
+            });
+            relationshipMetadata.TargetEntityToFkDefinitionMap.Add(TARGET_ENTITY, fkDefinitions);
+
+            table.Columns.Add(REF_COLNAME, new ColumnDefinition
+            {
+                SystemType = typeof(long)
+            });
+
+            return table;
         }
     }
 }

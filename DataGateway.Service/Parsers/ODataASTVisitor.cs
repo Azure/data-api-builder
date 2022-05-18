@@ -3,7 +3,7 @@ using Azure.DataGateway.Service.Resolvers;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
 
-namespace Azure.DataGateway.Service.Services
+namespace Azure.DataGateway.Service.Parsers
 {
     /// <summary>
     /// This class is a visitor for an AST generated when parsing a $filter query string

@@ -1,7 +1,5 @@
-using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
@@ -11,13 +9,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 {
 
     [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class MsSqlGraphQLMutationTests : SqlTestBase
+    public class MsSqlGraphQLMutationTests : GraphQLMutationTestBase
     {
 
         #region Test Fixture Setup
-        private static GraphQLService _graphQLService;
-        private static GraphQLController _graphQLController;
-
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
         /// MSTest decorator.
@@ -33,7 +28,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _runtimeConfigPath,
                 _queryEngine,
                 _mutationEngine,
-                _metadataStoreProvider,
+                graphQLMetadataProvider: null,
                 new DocumentCache(),
                 new Sha256DocumentHashProvider(),
                 _sqlMetadataProvider);
@@ -61,16 +56,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task InsertMutation()
         {
-            string graphQLMutationName = "insertBook";
-            string graphQLMutation = @"
-                mutation {
-                    insertBook(title: ""My New Book"", publisher_id: 1234) {
-                        id
-                        title
-                    }
-                }
-            ";
-
             string msSqlQuery = @"
                 SELECT TOP 1 [table0].[id] AS [id],
                     [table0].[title] AS [title]
@@ -84,10 +69,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await InsertMutation(msSqlQuery);
         }
 
         /// <summary>
@@ -98,16 +80,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task InsertMutationForConstantdefaultValue()
         {
-            string graphQLMutationName = "insertReview";
-            string graphQLMutation = @"
-                mutation {
-                    insertReview(book_id: 1) {
-                        id
-                        content
-                    }
-                }
-            ";
-
             string msSqlQuery = @"
                 SELECT TOP 1 [table0].[id] AS [id],
                     [table0].[content] AS [content]
@@ -121,10 +93,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await InsertMutationForConstantdefaultValue(msSqlQuery);
         }
 
         /// <summary>
@@ -135,16 +104,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task UpdateMutation()
         {
-            string graphQLMutationName = "editBook";
-            string graphQLMutation = @"
-                mutation {
-                    editBook(id: 1, title: ""Even Better Title"", publisher_id: 2345) {
-                        title
-                        publisher_id
-                    }
-                }
-            ";
-
             string msSqlQuery = @"
                 SELECT TOP 1 [title],
                     [publisher_id]
@@ -158,10 +117,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await UpdateMutation(msSqlQuery);
         }
 
         /// <summary>
@@ -171,16 +127,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task DeleteMutation()
         {
-            string graphQLMutationName = "deleteBook";
-            string graphQLMutation = @"
-                mutation {
-                    deleteBook(id: 1) {
-                        title
-                        publisher_id
-                    }
-                }
-            ";
-
             string msSqlQueryForResult = @"
                 SELECT TOP 1 [title],
                     [publisher_id]
@@ -192,13 +138,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            // query the table before deletion is performed to see if what the mutation
-            // returns is correct
-            string expected = await GetDatabaseResultAsync(msSqlQueryForResult);
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-
             string msSqlQueryToVerifyDeletion = @"
                 SELECT COUNT(*) AS count
                 FROM [books]
@@ -208,10 +147,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            string dbResponse = await GetDatabaseResultAsync(msSqlQueryToVerifyDeletion);
-
-            using JsonDocument result = JsonDocument.Parse(dbResponse);
-            Assert.AreEqual(result.RootElement.GetProperty("count").GetInt64(), 0);
+            await DeleteMutation(msSqlQueryForResult, msSqlQueryToVerifyDeletion);
         }
 
         /// <summary>
@@ -219,15 +155,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>that the insertion of the entry in the appropriate link table was successful
         /// </summary>
         [TestMethod]
+        // IGNORE FOR NOW, SEE: Issue #285
+        [Ignore]
         public async Task InsertMutationForNonGraphQLTypeTable()
         {
-            string graphQLMutationName = "addAuthorToBook";
-            string graphQLMutation = @"
-                mutation {
-                    addAuthorToBook(author_id: 123, book_id: 2)
-                }
-            ";
-
             string msSqlQuery = @"
                 SELECT COUNT(*) AS count
                 FROM [book_author_link]
@@ -238,11 +169,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string dbResponse = await GetDatabaseResultAsync(msSqlQuery);
-
-            using JsonDocument result = JsonDocument.Parse(dbResponse);
-            Assert.AreEqual(result.RootElement.GetProperty("count").GetInt64(), 1);
+            await InsertMutationForNonGraphQLTypeTable(msSqlQuery);
         }
 
         /// <summary>
@@ -252,23 +179,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task NestedQueryingInMutation()
         {
-            string graphQLMutationName = "insertBook";
-            string graphQLMutation = @"
-                mutation {
-                    insertBook(title: ""My New Book"", publisher_id: 1234) {
-                        id
-                        title
-                        publisher {
-                            name
-                        }
-                    }
-                }
-            ";
-
             string msSqlQuery = @"
                 SELECT TOP 1 [table0].[id] AS [id],
                     [table0].[title] AS [title],
-                    JSON_QUERY([table1_subq].[data]) AS [publisher]
+                    JSON_QUERY([table1_subq].[data]) AS [publishers]
                 FROM [books] AS [table0]
                 OUTER APPLY (
                     SELECT TOP 1 [table1].[name] AS [name]
@@ -288,10 +202,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await NestedQueryingInMutation(msSqlQuery);
         }
 
         /// <summary>
@@ -300,35 +211,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestExplicitNullInsert()
         {
-            string graphQLMutationName = "insertMagazine";
-            string graphQLMutation = @"
-                mutation {
-                    insertMagazine(id: 800, title: ""New Magazine"", issue_number: null) {
-                        id
-                        title
-                        issue_number
-                    }
-                }
-            ";
-
             string msSqlQuery = @"
                 SELECT TOP 1 [id],
                     [title],
                     [issue_number]
-                FROM [magazines]
-                WHERE [magazines].[id] = 800
-                    AND [magazines].[title] = 'New Magazine'
-                    AND [magazines].[issue_number] IS NULL
-                ORDER BY [magazines].[id]
+                FROM [foo].[magazines]
+                WHERE [foo].[magazines].[id] = 800
+                    AND [foo].[magazines].[title] = 'New Magazine'
+                    AND [foo].[magazines].[issue_number] IS NULL
+                ORDER BY [foo].[magazines].[id]
                 FOR JSON PATH,
                     INCLUDE_NULL_VALUES,
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await TestExplicitNullInsert(msSqlQuery);
         }
 
         /// <summary>
@@ -337,35 +234,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestImplicitNullInsert()
         {
-            string graphQLMutationName = "insertMagazine";
-            string graphQLMutation = @"
-                mutation {
-                    insertMagazine(id: 801, title: ""New Magazine 2"") {
-                        id
-                        title
-                        issue_number
-                    }
-                }
-            ";
-
             string msSqlQuery = @"
                 SELECT TOP 1 [id],
                     [title],
                     [issue_number]
-                FROM [magazines]
-                WHERE [magazines].[id] = 801
-                    AND [magazines].[title] = 'New Magazine 2'
-                    AND [magazines].[issue_number] IS NULL
-                ORDER BY [magazines].[id]
+                FROM [foo].[magazines]
+                WHERE [foo].[magazines].[id] = 801
+                    AND [foo].[magazines].[title] = 'New Magazine 2'
+                    AND [foo].[magazines].[issue_number] IS NULL
+                ORDER BY [foo].[magazines].[id]
                 FOR JSON PATH,
                     INCLUDE_NULL_VALUES,
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await TestImplicitNullInsert(msSqlQuery);
         }
 
         /// <summary>
@@ -374,32 +257,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestUpdateColumnToNull()
         {
-            string graphQLMutationName = "updateMagazine";
-            string graphQLMutation = @"
-                mutation {
-                    updateMagazine(id: 1, issue_number: null) {
-                        id
-                        issue_number
-                    }
-                }
-            ";
-
             string msSqlQuery = @"
                 SELECT TOP 1 [id],
                     [issue_number]
-                FROM [magazines]
-                WHERE [magazines].[id] = 1
-                    AND [magazines].[issue_number] IS NULL
-                ORDER BY [magazines].[id]
+                FROM [foo].[magazines]
+                WHERE [foo].[magazines].[id] = 1
+                    AND [foo].[magazines].[issue_number] IS NULL
+                ORDER BY [foo].[magazines].[id]
                 FOR JSON PATH,
                     INCLUDE_NULL_VALUES,
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await TestUpdateColumnToNull(msSqlQuery);
         }
 
         /// <summary>
@@ -408,35 +278,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestMissingColumnNotUpdatedToNull()
         {
-            string graphQLMutationName = "updateMagazine";
-            string graphQLMutation = @"
-                mutation {
-                    updateMagazine(id: 1, title: ""Newest Magazine"") {
-                        id
-                        title
-                        issue_number
-                    }
-                }
-            ";
-
             string msSqlQuery = @"
                 SELECT TOP 1 [id],
                     [title],
                     [issue_number]
-                FROM [magazines]
-                WHERE [magazines].[id] = 1
-                    AND [magazines].[title] = 'Newest Magazine'
-                    AND [magazines].[issue_number] = 1234
-                ORDER BY [magazines].[id]
+                FROM [foo].[magazines]
+                WHERE [foo].[magazines].[id] = 1
+                    AND [foo].[magazines].[title] = 'Newest Magazine'
+                    AND [foo].[magazines].[issue_number] = 1234
+                ORDER BY [foo].[magazines].[id]
                 FOR JSON PATH,
                     INCLUDE_NULL_VALUES,
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await TestMissingColumnNotUpdatedToNull(msSqlQuery);
         }
 
         /// <summary>
@@ -447,16 +303,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestAliasSupportForGraphQLMutationQueryFields()
         {
-            string graphQLMutationName = "insertBook";
-            string graphQLMutation = @"
-                mutation {
-                    insertBook(title: ""My New Book"", publisher_id: 1234) {
-                        book_id: id
-                        book_title: title
-                    }
-                }
-            ";
-
             string msSqlQuery = @"
                 SELECT TOP 1 [table0].[id] AS [book_id],
                     [table0].[title] AS [book_title]
@@ -470,178 +316,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-        }
-
-        /// <summary>
-        /// Test inserting a type with float and bool fields
-        /// </summary>
-        [TestMethod]
-        public async Task TestInsertingTypeWithFloatAndBoolFields()
-        {
-            string graphQLMutationName = "insertStockPrice";
-            string graphQLMutation = @"
-                mutation {
-                    insertStockPrice(categoryid: 100 pieceid: 99 instant: ""9999"" price: 22.5 is_wholesale_price: false) {
-                        categoryid
-                        pieceid
-                        instant
-                        price
-                        is_wholesale_price
-                    }
-                }
-            ";
-
-            string msSqlQuery = @"
-                SELECT TOP 1 [table0].[categoryid] AS [categoryid],
-                    [table0].[pieceid] AS [pieceid],
-                    [table0].[instant] AS [instant],
-                    [table0].[price] AS [price],
-                    [table0].[is_wholesale_price] AS [is_wholesale_price]
-                FROM [stocks_price] AS [table0]
-                WHERE [table0].[categoryid] = 100
-                    AND [table0].[pieceid] = 99
-                    AND [table0].[instant] = '9999'
-                ORDER BY [categoryid], [pieceid], [instant]
-                FOR JSON PATH,
-                    INCLUDE_NULL_VALUES,
-                    WITHOUT_ARRAY_WRAPPER
-            ";
-
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-        }
-
-        /// <summary>
-        /// Test inserting a type with null float and bool fields
-        /// </summary>
-        [TestMethod]
-        public async Task TestInsertingTypeWithNullFloatAndBoolFields()
-        {
-            string graphQLMutationName = "insertStockPrice";
-            string graphQLMutation = @"
-                mutation {
-                    insertStockPrice(categoryid: 100 pieceid: 99 instant: ""9999"") {
-                        categoryid
-                        pieceid
-                        instant
-                        price
-                        is_wholesale_price
-                    }
-                }
-            ";
-
-            string msSqlQuery = @"
-                SELECT TOP 1 [table0].[categoryid] AS [categoryid],
-                    [table0].[pieceid] AS [pieceid],
-                    [table0].[instant] AS [instant],
-                    [table0].[price] AS [price],
-                    [table0].[is_wholesale_price] AS [is_wholesale_price]
-                FROM [stocks_price] AS [table0]
-                WHERE [table0].[categoryid] = 100
-                    AND [table0].[pieceid] = 99
-                    AND [table0].[instant] = '9999'
-                ORDER BY [categoryid], [pieceid], [instant]
-                FOR JSON PATH,
-                    INCLUDE_NULL_VALUES,
-                    WITHOUT_ARRAY_WRAPPER
-            ";
-
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-        }
-
-        /// <summary>
-        /// Test updating float and bool fields
-        /// </summary>
-        [TestMethod]
-        public async Task TestUpdatingFloatAndBoolFields()
-        {
-            string graphQLMutationName = "updateStockPrice";
-            string graphQLMutation = @"
-                mutation {
-                    updateStockPrice(categoryid: 2 pieceid: 1 instant: ""instant1"" price: 19.5 is_wholesale_price: false) {
-                        categoryid
-                        pieceid
-                        instant
-                        price
-                        is_wholesale_price
-                    }
-                }
-            ";
-
-            string msSqlQuery = @"
-                SELECT TOP 1 [table0].[categoryid] AS [categoryid],
-                    [table0].[pieceid] AS [pieceid],
-                    [table0].[instant] AS [instant],
-                    [table0].[price] AS [price],
-                    [table0].[is_wholesale_price] AS [is_wholesale_price]
-                FROM [stocks_price] AS [table0]
-                WHERE [table0].[categoryid] = 2
-                    AND [table0].[pieceid] = 1
-                    AND [table0].[instant] = 'instant1'
-                    AND [table0].[price] = 19.5
-                    AND [table0].[is_wholesale_price] = 0
-                ORDER BY [categoryid], [pieceid], [instant]
-                FOR JSON PATH,
-                    INCLUDE_NULL_VALUES,
-                    WITHOUT_ARRAY_WRAPPER
-            ";
-
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-        }
-
-        /// <summary>
-        /// Test updating float and bool fields to null
-        /// </summary>
-        [TestMethod]
-        public async Task TestUpdatingFloatAndBoolFieldsToNull()
-        {
-            string graphQLMutationName = "updateStockPrice";
-            string graphQLMutation = @"
-                mutation {
-                    updateStockPrice(categoryid: 2 pieceid: 1 instant: ""instant1"" price: null is_wholesale_price: null) {
-                        categoryid
-                        pieceid
-                        instant
-                        price
-                        is_wholesale_price
-                    }
-                }
-            ";
-
-            string msSqlQuery = @"
-                SELECT TOP 1 [table0].[categoryid] AS [categoryid],
-                    [table0].[pieceid] AS [pieceid],
-                    [table0].[instant] AS [instant],
-                    [table0].[price] AS [price],
-                    [table0].[is_wholesale_price] AS [is_wholesale_price]
-                FROM [stocks_price] AS [table0]
-                WHERE [table0].[categoryid] = 2
-                    AND [table0].[pieceid] = 1
-                    AND [table0].[instant] = 'instant1'
-                    AND [table0].[price] IS NULL
-                    AND [table0].[is_wholesale_price] IS NULL
-                ORDER BY [categoryid], [pieceid], [instant]
-                FOR JSON PATH,
-                    INCLUDE_NULL_VALUES,
-                    WITHOUT_ARRAY_WRAPPER
-            ";
-
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(msSqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await TestAliasSupportForGraphQLMutationQueryFields(msSqlQuery);
         }
 
         #endregion
@@ -655,24 +330,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task InsertWithInvalidForeignKey()
         {
-            string graphQLMutationName = "insertBook";
-            string graphQLMutation = @"
-                mutation {
-                    insertBook(title: ""My New Book"", publisher_id: -1) {
-                        id
-                        title
-                    }
-                }
-            ";
-
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-
-            SqlTestHelper.TestForErrorInGraphQLResponse(
-                result.ToString(),
-                message: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
-                statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
-            );
-
             string msSqlQuery = @"
                 SELECT COUNT(*) AS count
                 FROM [books]
@@ -682,9 +339,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            string dbResponse = await GetDatabaseResultAsync(msSqlQuery);
-            using JsonDocument dbResponseJson = JsonDocument.Parse(dbResponse);
-            Assert.AreEqual(dbResponseJson.RootElement.GetProperty("count").GetInt64(), 0);
+            await InsertWithInvalidForeignKey(msSqlQuery, DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE);
         }
 
         /// <summary>
@@ -694,24 +349,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task UpdateWithInvalidForeignKey()
         {
-            string graphQLMutationName = "editBook";
-            string graphQLMutation = @"
-                mutation {
-                    editBook(id: 1, publisher_id: -1) {
-                        id
-                        title
-                    }
-                }
-            ";
-
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-
-            SqlTestHelper.TestForErrorInGraphQLResponse(
-                result.ToString(),
-                message: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
-                statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
-            );
-
             string msSqlQuery = @"
                 SELECT COUNT(*) AS count
                 FROM [books]
@@ -722,9 +359,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            string dbResponse = await GetDatabaseResultAsync(msSqlQuery);
-            using JsonDocument dbResponseJson = JsonDocument.Parse(dbResponse);
-            Assert.AreEqual(dbResponseJson.RootElement.GetProperty("count").GetInt64(), 0);
+            await UpdateWithInvalidForeignKey(msSqlQuery, DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE);
         }
 
         /// <summary>
@@ -732,20 +367,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>check that GraphQL returns an appropriate exception to the user
         /// </summary>
         [TestMethod]
-        public async Task UpdateWithNoNewValues()
+        public override async Task UpdateWithNoNewValues()
         {
-            string graphQLMutationName = "editBook";
-            string graphQLMutation = @"
-                mutation {
-                    editBook(id: 1) {
-                        id
-                        title
-                    }
-                }
-            ";
-
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
+            await base.UpdateWithNoNewValues();
         }
 
         /// <summary>
@@ -753,20 +377,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>check that GraphQL returns an appropriate exception to the user
         /// </summary>
         [TestMethod]
-        public async Task UpdateWithInvalidIdentifier()
+        public override async Task UpdateWithInvalidIdentifier()
         {
-            string graphQLMutationName = "editBook";
-            string graphQLMutation = @"
-                mutation {
-                    editBook(id: -1, title: ""Even Better Title"") {
-                        id
-                        title
-                    }
-                }
-            ";
-
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.EntityNotFound}");
+            await base.UpdateWithInvalidIdentifier();
         }
 
         /// <summary>
@@ -776,21 +389,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestViolatingOneToOneRelashionShip()
         {
-            string graphQLMutationName = "insertWebsitePlacement";
-            string graphQLMutation = @"
-                mutation {
-                    insertWebsitePlacement(book_id: 1, price: 25) {
-                        id
-                    }
-                }
-            ";
-
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(
-                result.ToString(),
-                message: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
-                statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
-            );
+            await TestViolatingOneToOneRelashionShip(DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE);
         }
         #endregion
     }

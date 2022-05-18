@@ -1,7 +1,5 @@
-using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
@@ -11,13 +9,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 {
 
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
-    public class PostgreSqlGraphQLMutationTests : SqlTestBase
+    public class PostgreSqlGraphQLMutationTests : GraphQLMutationTestBase
     {
 
         #region Test Fixture Setup
-        private static GraphQLService _graphQLService;
-        private static GraphQLController _graphQLController;
-
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
         /// MSTest decorator.
@@ -33,7 +28,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _runtimeConfigPath,
                 _queryEngine,
                 _mutationEngine,
-                _metadataStoreProvider,
+                graphQLMetadataProvider: null,
                 new DocumentCache(),
                 new Sha256DocumentHashProvider(),
                 _sqlMetadataProvider);
@@ -61,16 +56,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task InsertMutation()
         {
-            string graphQLMutationName = "insertBook";
-            string graphQLMutation = @"
-                mutation {
-                    insertBook(title: ""My New Book"", publisher_id: 1234) {
-                        id
-                        title
-                    }
-                }
-            ";
-
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
                 FROM
@@ -84,10 +69,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    LIMIT 1) AS subq
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await InsertMutation(postgresQuery);
         }
 
         /// <summary>
@@ -98,16 +80,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task InsertMutationForConstantdefaultValue()
         {
-            string graphQLMutationName = "insertReview";
-            string graphQLMutation = @"
-                mutation {
-                    insertReview(book_id: 1) {
-                        id
-                        content
-                    }
-                }
-            ";
-
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
                 FROM
@@ -121,10 +93,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    LIMIT 1) AS subq
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await InsertMutationForConstantdefaultValue(postgresQuery);
         }
 
         /// <summary>
@@ -135,16 +104,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task UpdateMutation()
         {
-            string graphQLMutationName = "editBook";
-            string graphQLMutation = @"
-                mutation {
-                    editBook(id: 1, title: ""Even Better Title"", publisher_id: 2345) {
-                        title
-                        publisher_id
-                    }
-                }
-            ";
-
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
                 FROM
@@ -156,10 +115,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    LIMIT 1) AS subq
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await UpdateMutation(postgresQuery);
         }
 
         /// <summary>
@@ -169,16 +125,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task DeleteMutation()
         {
-            string graphQLMutationName = "deleteBook";
-            string graphQLMutation = @"
-                mutation {
-                    deleteBook(id: 1) {
-                        title
-                        publisher_id
-                    }
-                }
-            ";
-
             string postgresQueryForResult = @"
                 SELECT to_jsonb(subq) AS DATA
                 FROM
@@ -190,13 +136,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    LIMIT 1) AS subq
             ";
 
-            // query the table before deletion is performed to see if what the mutation
-            // returns is correct
-            string expected = await GetDatabaseResultAsync(postgresQueryForResult);
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-
             string postgresQueryToVerifyDeletion = @"
                 SELECT to_jsonb(subq) AS DATA
                 FROM
@@ -205,10 +144,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    WHERE id = 1) AS subq
             ";
 
-            string dbResponse = await GetDatabaseResultAsync(postgresQueryToVerifyDeletion);
-
-            using JsonDocument result = JsonDocument.Parse(dbResponse);
-            Assert.AreEqual(result.RootElement.GetProperty("count").GetInt64(), 0);
+            await DeleteMutation(postgresQueryForResult, postgresQueryToVerifyDeletion);
         }
 
         /// <summary>
@@ -216,15 +152,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code>that the insertion of the entry in the appropriate link table was successful
         /// </summary>
         [TestMethod]
+        // IGNORE FOR NOW, SEE: Issue #285
+        [Ignore]
         public async Task InsertMutationForNonGraphQLTypeTable()
         {
-            string graphQLMutationName = "addAuthorToBook";
-            string graphQLMutation = @"
-                mutation {
-                    addAuthorToBook(author_id: 123, book_id: 2)
-                }
-            ";
-
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
                 FROM
@@ -234,11 +165,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                      AND author_id = 123) AS subq
             ";
 
-            await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string dbResponse = await GetDatabaseResultAsync(postgresQuery);
-
-            using JsonDocument result = JsonDocument.Parse(dbResponse);
-            Assert.AreEqual(result.RootElement.GetProperty("count").GetInt64(), 1);
+            await InsertMutationForNonGraphQLTypeTable(postgresQuery);
         }
 
         /// <summary>
@@ -248,25 +175,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task NestedQueryingInMutation()
         {
-            string graphQLMutationName = "insertBook";
-            string graphQLMutation = @"
-                mutation {
-                    insertBook(title: ""My New Book"", publisher_id: 1234) {
-                        id
-                        title
-                        publisher {
-                            name
-                        }
-                    }
-                }
-            ";
-
             string postgresQuery = @"
                 SELECT to_jsonb(subq3) AS DATA
                 FROM
                   (SELECT table0.id AS id,
                           table0.title AS title,
-                          table1_subq.data AS publisher
+                          table1_subq.data AS publishers
                    FROM books AS table0
                    LEFT OUTER JOIN LATERAL
                      (SELECT to_jsonb(subq2) AS DATA
@@ -283,10 +197,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    LIMIT 1) AS subq3
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await NestedQueryingInMutation(postgresQuery);
         }
 
         /// <summary>
@@ -295,24 +206,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestExplicitNullInsert()
         {
-            string graphQLMutationName = "insertMagazine";
-            string graphQLMutation = @"
-                mutation {
-                    insertMagazine(id: 800, title: ""New Magazine"", issue_number: null) {
-                        id
-                        title
-                        issue_number
-                    }
-                }
-            ";
-
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
                 FROM
                   (SELECT table0.id AS id,
                           table0.title AS title,
                           table0.issue_number AS issue_number
-                   FROM magazines AS table0
+                   FROM foo.magazines AS table0
                    WHERE id = 800
                      AND title = 'New Magazine'
                      AND issue_number IS NULL
@@ -320,10 +220,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    LIMIT 1) AS subq
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await TestExplicitNullInsert(postgresQuery);
         }
 
         /// <summary>
@@ -332,24 +229,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestImplicitNullInsert()
         {
-            string graphQLMutationName = "insertMagazine";
-            string graphQLMutation = @"
-                mutation {
-                    insertMagazine(id: 801, title: ""New Magazine 2"") {
-                        id
-                        title
-                        issue_number
-                    }
-                }
-            ";
-
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
                 FROM
                   (SELECT table0.id AS id,
                           table0.title AS title,
                           table0.issue_number AS issue_number
-                   FROM magazines AS table0
+                   FROM foo.magazines AS table0
                    WHERE id = 801
                      AND title = 'New Magazine 2'
                      AND issue_number IS NULL
@@ -357,10 +243,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    LIMIT 1) AS subq
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await TestImplicitNullInsert(postgresQuery);
         }
 
         /// <summary>
@@ -369,32 +252,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestUpdateColumnToNull()
         {
-            string graphQLMutationName = "updateMagazine";
-            string graphQLMutation = @"
-                mutation {
-                    updateMagazine(id: 1, issue_number: null) {
-                        id
-                        issue_number
-                    }
-                }
-            ";
-
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
                 FROM
                   (SELECT table0.id AS id,
                           table0.issue_number AS issue_number
-                   FROM magazines AS table0
+                   FROM foo.magazines AS table0
                    WHERE id = 1
                      AND issue_number IS NULL
                    ORDER BY id
                    LIMIT 1) AS subq
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            await TestUpdateColumnToNull(postgresQuery);
         }
 
         /// <summary>
@@ -403,24 +273,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestMissingColumnNotUpdatedToNull()
         {
-            string graphQLMutationName = "updateMagazine";
-            string graphQLMutation = @"
-                mutation {
-                    updateMagazine(id: 1, title: ""Newest Magazine"") {
-                        id
-                        title
-                        issue_number
-                    }
-                }
-            ";
-
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
                 FROM
                   (SELECT table0.id AS id,
                           table0.title AS title,
                           table0.issue_number AS issue_number
-                   FROM magazines AS table0
+                   FROM foo.magazines AS table0
                    WHERE id = 1
                      AND title = 'Newest Magazine'
                      AND issue_number = 1234
@@ -428,332 +287,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    LIMIT 1) AS subq
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-        }
-
-        /// <summary>
-        /// Test inserting a type with float and bool fields
-        /// </summary>
-        [TestMethod]
-        public async Task TestInsertingTypeWithFloatAndBoolFields()
-        {
-            string graphQLMutationName = "insertStockPrice";
-            string graphQLMutation = @"
-                mutation {
-                    insertStockPrice(categoryid: 100 pieceid: 99 instant: ""9999"" price: 22.5 is_wholesale_price: false) {
-                        categoryid
-                        pieceid
-                        instant
-                        price
-                        is_wholesale_price
-                    }
-                }
-            ";
-
-            string postgresQuery = @"
-                SELECT to_jsonb(table0)
-                FROM
-                  (SELECT categoryid,
-                          pieceid,
-                          instant,
-                          price,
-                          is_wholesale_price
-                   FROM stocks_price
-                   WHERE categoryid = 100
-                     AND pieceid = 99
-                     AND instant = '9999'
-                   ORDER BY categoryid,
-                            pieceid,
-                            instant) AS table0
-                LIMIT 1
-            ";
-
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-        }
-
-        /// <summary>
-        /// Test inserting a type with null float and bool fields
-        /// </summary>
-        [TestMethod]
-        public async Task TestInsertingTypeWithNullFloatAndBoolFields()
-        {
-            string graphQLMutationName = "insertStockPrice";
-            string graphQLMutation = @"
-                mutation {
-                    insertStockPrice(categoryid: 100 pieceid: 99 instant: ""9999"") {
-                        categoryid
-                        pieceid
-                        instant
-                        price
-                        is_wholesale_price
-                    }
-                }
-            ";
-
-            string postgresQuery = @"
-                SELECT to_jsonb(table0)
-                FROM
-                  (SELECT categoryid,
-                          pieceid,
-                          instant,
-                          price,
-                          is_wholesale_price
-                   FROM stocks_price
-                   WHERE categoryid = 100
-                     AND pieceid = 99
-                     AND instant = '9999'
-                   ORDER BY categoryid,
-                            pieceid,
-                            instant) AS table0
-                LIMIT 1
-            ";
-
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-        }
-
-        /// <summary>
-        /// Test updating float and bool fields
-        /// </summary>
-        [TestMethod]
-        public async Task TestUpdatingFloatAndBoolFields()
-        {
-            string graphQLMutationName = "updateStockPrice";
-            string graphQLMutation = @"
-                mutation {
-                    updateStockPrice(categoryid: 2 pieceid: 1 instant: ""instant1"" price: 19.5 is_wholesale_price: false) {
-                        categoryid
-                        pieceid
-                        instant
-                        price
-                        is_wholesale_price
-                    }
-                }
-            ";
-
-            string postgresQuery = @"
-                SELECT to_jsonb(table0)
-                FROM
-                  (SELECT categoryid,
-                          pieceid,
-                          instant,
-                          price,
-                          is_wholesale_price
-                   FROM stocks_price
-                   WHERE categoryid = 2
-                     AND pieceid = 1
-                     AND instant = 'instant1'
-                     AND price = 19.5
-                     AND is_wholesale_price IS FALSE
-                   ORDER BY categoryid,
-                            pieceid,
-                            instant) AS table0
-                LIMIT 1
-            ";
-
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-        }
-
-        /// <summary>
-        /// Test updating float and bool fields to null
-        /// </summary>
-        [TestMethod]
-        public async Task TestUpdatingFloatAndBoolFieldsToNull()
-        {
-            string graphQLMutationName = "updateStockPrice";
-            string graphQLMutation = @"
-                mutation {
-                    updateStockPrice(categoryid: 2 pieceid: 1 instant: ""instant1"" price: null is_wholesale_price: null) {
-                        categoryid
-                        pieceid
-                        instant
-                        price
-                        is_wholesale_price
-                    }
-                }
-            ";
-
-            string postgresQuery = @"
-                SELECT to_jsonb(table0)
-                FROM
-                  (SELECT categoryid,
-                          pieceid,
-                          instant,
-                          price,
-                          is_wholesale_price
-                   FROM stocks_price
-                   WHERE categoryid = 2
-                     AND pieceid = 1
-                     AND instant = 'instant1'
-                     AND price IS NULL
-                     AND is_wholesale_price IS NULL
-                   ORDER BY categoryid,
-                            pieceid,
-                            instant) AS table0
-                LIMIT 1
-            ";
-
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-        }
-
-        #endregion
-
-        #region Negative Tests
-
-        /// <summary>
-        /// <code>Do: </code>insert a new Book with an invalid foreign key
-        /// <code>Check: </code>that GraphQL returns an error and that the book has not actually been added
-        /// </summary>
-        [TestMethod]
-        public async Task InsertWithInvalidForeignKey()
-        {
-            string graphQLMutationName = "insertBook";
-            string graphQLMutation = @"
-                mutation {
-                    insertBook(title: ""My New Book"", publisher_id: -1) {
-                        id
-                        title
-                    }
-                }
-            ";
-
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-
-            SqlTestHelper.TestForErrorInGraphQLResponse(
-                result.ToString(),
-                message: PostgresDbExceptionParser.FK_VIOLATION_MESSAGE,
-                statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
-            );
-
-            string postgresQuery = @"
-                SELECT to_jsonb(subq) AS DATA
-                FROM
-                  (SELECT COUNT(*) AS COUNT
-                   FROM books
-                   WHERE publisher_id = -1 ) AS subq
-            ";
-
-            string dbResponse = await GetDatabaseResultAsync(postgresQuery);
-            using JsonDocument dbResponseJson = JsonDocument.Parse(dbResponse);
-            Assert.AreEqual(dbResponseJson.RootElement.GetProperty("count").GetInt64(), 0);
-        }
-
-        /// <summary>
-        /// <code>Do: </code>edit a book with an invalid foreign key
-        /// <code>Check: </code>that GraphQL returns an error and the book has not been editted
-        /// </summary>
-        [TestMethod]
-        public async Task UpdateWithInvalidForeignKey()
-        {
-            string graphQLMutationName = "editBook";
-            string graphQLMutation = @"
-                mutation {
-                    editBook(id: 1, publisher_id: -1) {
-                        id
-                        title
-                    }
-                }
-            ";
-
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-
-            SqlTestHelper.TestForErrorInGraphQLResponse(
-                result.ToString(),
-                message: PostgresDbExceptionParser.FK_VIOLATION_MESSAGE,
-                statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
-            );
-
-            string postgresQuery = @"
-                SELECT to_jsonb(subq) AS DATA
-                FROM
-                  (SELECT COUNT(*) AS COUNT
-                   FROM books
-                   WHERE id = 1 AND publisher_id = -1 ) AS subq
-            ";
-
-            string dbResponse = await GetDatabaseResultAsync(postgresQuery);
-            using JsonDocument dbResponseJson = JsonDocument.Parse(dbResponse);
-            Assert.AreEqual(dbResponseJson.RootElement.GetProperty("count").GetInt64(), 0);
-        }
-
-        /// <summary>
-        /// <code>Do: </code>use an update mutation without passing any of the optional new values to update
-        /// <code>Check: </code>check that GraphQL returns the appropriate message to the user
-        /// </summary>
-        [TestMethod]
-        public async Task UpdateWithNoNewValues()
-        {
-            string graphQLMutationName = "editBook";
-            string graphQLMutation = @"
-                mutation {
-                    editBook(id: 1) {
-                        id
-                        title
-                    }
-                }
-            ";
-
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
-        }
-
-        /// <summary>
-        /// <code>Do: </code>use an update mutation with an invalid id to update
-        /// <code>Check: </code>check that GraphQL returns an appropriate exception to the user
-        /// </summary>
-        [TestMethod]
-        public async Task UpdateWithInvalidIdentifier()
-        {
-            string graphQLMutationName = "editBook";
-            string graphQLMutation = @"
-                mutation {
-                    editBook(id: -1, title: ""Even Better Title"") {
-                        id
-                        title
-                    }
-                }
-            ";
-
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.EntityNotFound}");
-        }
-
-        /// <summary>
-        /// Test adding a website placement to a book which already has a website
-        /// placement
-        /// </summary>
-        [TestMethod]
-        public async Task TestViolatingOneToOneRelashionShip()
-        {
-            string graphQLMutationName = "insertWebsitePlacement";
-            string graphQLMutation = @"
-                mutation {
-                    insertWebsitePlacement(book_id: 1, price: 25) {
-                        id
-                    }
-                }
-            ";
-
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(
-                result.ToString(),
-                message: PostgresDbExceptionParser.UNQIUE_VIOLATION_MESSAGE,
-                statusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
-            );
+            await TestMissingColumnNotUpdatedToNull(postgresQuery);
         }
 
         /// <summary>
@@ -764,16 +298,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestAliasSupportForGraphQLMutationQueryFields()
         {
-            string graphQLMutationName = "insertBook";
-            string graphQLMutation = @"
-                mutation {
-                    insertBook(title: ""My New Book"", publisher_id: 1234) {
-                        book_id: id
-                        book_title: title
-                    }
-                }
-            ";
-
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
                 FROM
@@ -787,10 +311,77 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    LIMIT 1) AS subq
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
+            await TestAliasSupportForGraphQLMutationQueryFields(postgresQuery);
+        }
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        #endregion
+
+        #region Negative Tests
+
+        /// <summary>
+        /// <code>Do: </code>insert a new Book with an invalid foreign key
+        /// <code>Check: </code>that GraphQL returns an error and that the book has not actually been added
+        /// </summary>
+        [TestMethod]
+        public async Task InsertWithInvalidForeignKey()
+        {
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT COUNT(*) AS COUNT
+                   FROM books
+                   WHERE publisher_id = -1 ) AS subq
+            ";
+
+            await InsertWithInvalidForeignKey(postgresQuery, PostgresDbExceptionParser.FK_VIOLATION_MESSAGE);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>edit a book with an invalid foreign key
+        /// <code>Check: </code>that GraphQL returns an error and the book has not been editted
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateWithInvalidForeignKey()
+        {
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT COUNT(*) AS COUNT
+                   FROM books
+                   WHERE id = 1 AND publisher_id = -1 ) AS subq
+            ";
+
+            await UpdateWithInvalidForeignKey(postgresQuery, PostgresDbExceptionParser.FK_VIOLATION_MESSAGE);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>use an update mutation without passing any of the optional new values to update
+        /// <code>Check: </code>check that GraphQL returns the appropriate message to the user
+        /// </summary>
+        [TestMethod]
+        public override async Task UpdateWithNoNewValues()
+        {
+            await base.UpdateWithNoNewValues();
+        }
+
+        /// <summary>
+        /// <code>Do: </code>use an update mutation with an invalid id to update
+        /// <code>Check: </code>check that GraphQL returns an appropriate exception to the user
+        /// </summary>
+        [TestMethod]
+        public override async Task UpdateWithInvalidIdentifier()
+        {
+            await base.UpdateWithInvalidIdentifier();
+        }
+
+        /// <summary>
+        /// Test adding a website placement to a book which already has a website
+        /// placement
+        /// </summary>
+        [TestMethod]
+        public async Task TestViolatingOneToOneRelashionShip()
+        {
+            await TestViolatingOneToOneRelashionShip(PostgresDbExceptionParser.UNQIUE_VIOLATION_MESSAGE);
         }
         #endregion
     }

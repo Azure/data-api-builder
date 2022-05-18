@@ -22,7 +22,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Adds database specific quotes to string identifier
         /// </summary>
-        protected abstract string QuoteIdentifier(string ident);
+        public abstract string QuoteIdentifier(string ident);
 
         /// <summary>
         /// Builds a database specific keyset pagination predicate
@@ -105,19 +105,28 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// Build column as
-        /// {TableAlias}.{ColumnName}
-        /// If TableAlias is null
-        /// {ColumnName}
+        /// [{tableAlias}].[{ColumnName}]
+        /// or if TableAlias is empty, as
+        /// [{schema}].[{table}].[{ColumnName}]
+        /// or if schema is empty, as
+        /// [{table}].[{ColumnName}]
         /// </summary>
         protected virtual string Build(Column column)
         {
-            if (column.TableAlias != null)
+            // If the table alias is not empty, we return [{TableAlias}].[{Column}]
+            if (!string.IsNullOrEmpty(column.TableAlias))
             {
-                return QuoteIdentifier(column.TableAlias) + "." + QuoteIdentifier(column.ColumnName);
+                return $"{QuoteIdentifier(column.TableAlias)}.{QuoteIdentifier(column.ColumnName)}";
             }
+            // If there is no table alias then if the schema is not empty, we return [{TableSchema}].[{TableName}].[{Column}]
+            else if (!string.IsNullOrEmpty(column.TableSchema))
+            {
+                return $"{QuoteIdentifier($"{column.TableSchema}")}.{QuoteIdentifier($"{column.TableName}")}.{QuoteIdentifier(column.ColumnName)}";
+            }
+            // If there is no table alias, and no schema, we return [{TableName}].[{Column}]
             else
             {
-                return QuoteIdentifier(column.ColumnName);
+                return $"{QuoteIdentifier($"{column.TableName}")}.{QuoteIdentifier(column.ColumnName)}";
             }
         }
 
@@ -201,7 +210,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Resolves a predicate operation enum to string
         /// </summary>
-        protected string Build(PredicateOperation op)
+        protected virtual string Build(PredicateOperation op)
         {
             switch (op)
             {
@@ -238,7 +247,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Build left and right predicate operand and resolve the predicate operator into
         /// {OperandLeft} {Operator} {OperandRight}
         /// </summary>
-        protected string Build(Predicate? predicate)
+        protected virtual string Build(Predicate? predicate)
         {
             if (predicate is null)
             {
@@ -275,9 +284,18 @@ namespace Azure.DataGateway.Service.Resolvers
                 throw new ArgumentNullException(nameof(join));
             }
 
-            return $" INNER JOIN {QuoteIdentifier(join.TableName)}"
-                        + $" AS {QuoteIdentifier(join.TableAlias)}"
-                        + $" ON {Build(join.Predicates)}";
+            if (!string.IsNullOrWhiteSpace(join.DbObject.SchemaName))
+            {
+                return $@" INNER JOIN {QuoteIdentifier(join.DbObject.SchemaName)}.{QuoteIdentifier(join.DbObject.Name)}
+                           AS {QuoteIdentifier(join.TableAlias)}
+                           ON {Build(join.Predicates)}";
+            }
+            else
+            {
+                return $@" INNER JOIN {QuoteIdentifier(join.DbObject.Name)}
+                           AS {QuoteIdentifier(join.TableAlias)}
+                           ON {Build(join.Predicates)}";
+            }
         }
 
         /// <summary>
@@ -329,30 +347,33 @@ namespace Azure.DataGateway.Service.Resolvers
             // constraint columns - one inner join for the columns from the 'Referencing table'
             // and the other join for the columns from the 'Referenced Table'.
             string foreignKeyQuery = $@"
-                SELECT 
-                    ReferentialConstraints.CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))}, 
-                    ReferencingColumnUsage.TABLE_NAME {QuoteIdentifier(nameof(TableDefinition))}, 
-                    ReferencingColumnUsage.COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencingColumns))}, 
-                    ReferencedColumnUsage.TABLE_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedTable))}, 
-                    ReferencedColumnUsage.COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))} 
-                FROM 
-                    INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS ReferentialConstraints 
-                    INNER JOIN 
-                    INFORMATION_SCHEMA.KEY_COLUMN_USAGE ReferencingColumnUsage 
-                        ON ReferentialConstraints.CONSTRAINT_CATALOG = ReferencingColumnUsage.CONSTRAINT_CATALOG 
-                        AND ReferentialConstraints.CONSTRAINT_SCHEMA = ReferencingColumnUsage.CONSTRAINT_SCHEMA 
-                        AND ReferentialConstraints.CONSTRAINT_NAME = ReferencingColumnUsage.CONSTRAINT_NAME 
-                    INNER JOIN 
-                        INFORMATION_SCHEMA.KEY_COLUMN_USAGE ReferencedColumnUsage 
-                        ON ReferentialConstraints.UNIQUE_CONSTRAINT_CATALOG = ReferencedColumnUsage.CONSTRAINT_CATALOG 
-                        AND ReferentialConstraints.UNIQUE_CONSTRAINT_SCHEMA = ReferencedColumnUsage.CONSTRAINT_SCHEMA 
-                        AND ReferentialConstraints.UNIQUE_CONSTRAINT_NAME = ReferencedColumnUsage.CONSTRAINT_NAME 
-                        AND ReferencingColumnUsage.ORDINAL_POSITION = ReferencedColumnUsage.ORDINAL_POSITION 
-                WHERE 
-                    ReferencingColumnUsage.TABLE_SCHEMA IN (@{tableSchemaParamsForInClause})
-                    AND ReferencingColumnUsage.TABLE_NAME IN (@{tableNameParamsForInClause})";
-
-            Console.WriteLine($"Foreign Key Query: {foreignKeyQuery}");
+SELECT 
+    ReferentialConstraints.CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))},
+    ReferencingColumnUsage.TABLE_SCHEMA
+        {QuoteIdentifier($"Referencing{nameof(DatabaseObject.SchemaName)}")},
+    ReferencingColumnUsage.TABLE_NAME {QuoteIdentifier($"Referencing{nameof(TableDefinition)}")},
+    ReferencingColumnUsage.COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencingColumns))},
+    ReferencedColumnUsage.TABLE_SCHEMA
+        {QuoteIdentifier($"Referenced{nameof(DatabaseObject.SchemaName)}")},
+    ReferencedColumnUsage.TABLE_NAME {QuoteIdentifier($"Referenced{nameof(TableDefinition)}")},
+    ReferencedColumnUsage.COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))}
+FROM 
+    INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS ReferentialConstraints
+    INNER JOIN 
+    INFORMATION_SCHEMA.KEY_COLUMN_USAGE ReferencingColumnUsage
+        ON ReferentialConstraints.CONSTRAINT_CATALOG = ReferencingColumnUsage.CONSTRAINT_CATALOG
+        AND ReferentialConstraints.CONSTRAINT_SCHEMA = ReferencingColumnUsage.CONSTRAINT_SCHEMA
+        AND ReferentialConstraints.CONSTRAINT_NAME = ReferencingColumnUsage.CONSTRAINT_NAME
+    INNER JOIN
+        INFORMATION_SCHEMA.KEY_COLUMN_USAGE ReferencedColumnUsage
+        ON ReferentialConstraints.UNIQUE_CONSTRAINT_CATALOG = ReferencedColumnUsage.CONSTRAINT_CATALOG
+        AND ReferentialConstraints.UNIQUE_CONSTRAINT_SCHEMA = ReferencedColumnUsage.CONSTRAINT_SCHEMA
+        AND ReferentialConstraints.UNIQUE_CONSTRAINT_NAME = ReferencedColumnUsage.CONSTRAINT_NAME
+        AND ReferencingColumnUsage.ORDINAL_POSITION = ReferencedColumnUsage.ORDINAL_POSITION
+WHERE
+    ReferencingColumnUsage.TABLE_SCHEMA IN (@{tableSchemaParamsForInClause})
+    AND ReferencingColumnUsage.TABLE_NAME IN (@{tableNameParamsForInClause})";
+            Console.WriteLine($"Foreign Key Query is : {foreignKeyQuery}");
             return foreignKeyQuery;
         }
 

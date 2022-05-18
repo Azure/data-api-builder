@@ -69,15 +69,15 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                 {
                     // Generate the field that represents the relationship to ObjectType, so you can navigate through it
                     // and walk the graph
-                    string targetTableName = relationship.TargetEntity.Split('.').Last();
-                    Entity referencedEntity = entities[targetTableName];
+                    string targetEntityName = relationship.TargetEntity.Split('.').Last();
+                    Entity referencedEntity = entities[targetEntityName];
 
                     INullableTypeNode targetField = relationship.Cardinality switch
                     {
                         Cardinality.One =>
-                            new NamedTypeNode(FormatNameForObject(targetTableName, referencedEntity)),
+                            new NamedTypeNode(FormatNameForObject(targetEntityName, referencedEntity)),
                         Cardinality.Many =>
-                            new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(FormatNameForObject(targetTableName, referencedEntity))),
+                            new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(FormatNameForObject(targetEntityName, referencedEntity))),
                         _ =>
                             throw new DataGatewayException("Specified cardinality isn't supported", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.GraphQLMapping),
                     };
@@ -90,7 +90,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                         // TODO: Check for whether it should be a nullable relationship based on the relationship fields
                         new NonNullTypeNode(targetField),
                         new List<DirectiveNode> {
-                            new(RelationshipDirectiveType.DirectiveName, new ArgumentNode("target", FormatNameForObject(targetTableName, referencedEntity)), new ArgumentNode("cardinality", relationship.Cardinality.ToString()))
+                            new(RelationshipDirectiveType.DirectiveName,
+                                new ArgumentNode("target", FormatNameForObject(targetEntityName, referencedEntity)),
+                                new ArgumentNode("cardinality", relationship.Cardinality.ToString()))
                         });
 
                     fields.Add(relationshipField.Name.Value, relationshipField);

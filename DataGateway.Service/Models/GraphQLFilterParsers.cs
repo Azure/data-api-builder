@@ -11,6 +11,8 @@ namespace Azure.DataGateway.Service.Models
     /// </summary>
     public static class GQLFilterParser
     {
+        public static readonly string NullStringValue = "NULL";
+
         /// <summary>
         /// Parse a predicate for a *FilterInput input type
         /// </summary>
@@ -20,6 +22,8 @@ namespace Azure.DataGateway.Service.Models
         /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
         public static Predicate Parse(
             List<ObjectFieldNode> fields,
+            string schemaName,
+            string tableName,
             string tableAlias,
             TableDefinition table,
             Func<object, string> processLiterals)
@@ -43,12 +47,12 @@ namespace Azure.DataGateway.Service.Models
                     PredicateOperation op = fieldIsAnd ? PredicateOperation.AND : PredicateOperation.OR;
 
                     List<IValueNode> otherPredicates = (List<IValueNode>)field.Value.Value!;
-                    predicates.Push(new PredicateOperand(ParseAndOr(otherPredicates, tableAlias, table, op, processLiterals)));
+                    predicates.Push(new PredicateOperand(ParseAndOr(otherPredicates, schemaName, tableName, tableAlias, table, op, processLiterals)));
                 }
                 else
                 {
                     List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)field.Value.Value!;
-                    predicates.Push(new PredicateOperand(ParseScalarType(name, subfields, tableAlias, table, processLiterals)));
+                    predicates.Push(new PredicateOperand(ParseScalarType(name, subfields, schemaName, tableName, tableAlias, processLiterals)));
                 }
             }
 
@@ -57,26 +61,19 @@ namespace Azure.DataGateway.Service.Models
 
         /// <summary>
         /// Calls the appropriate scalar type filter parser based on the type of
-        /// the underlying table column
+        /// the fields
         /// </summary>
         private static Predicate ParseScalarType(
             string name,
             List<ObjectFieldNode> fields,
+            string schemaName,
+            string tableName,
             string tableAlias,
-            TableDefinition table,
             Func<object, string> processLiterals)
         {
-            Column column = new(tableAlias, name);
-            Type columnType = table.Columns[name].SystemType;
-            switch (Type.GetTypeCode(columnType))
-            {
-                case TypeCode.String:
-                    return StringTypeFilterParser.Parse(column, fields, processLiterals);
-                case TypeCode.Int32:
-                    return IntTypeFilterParser.Parse(column, fields, processLiterals);
-                default:
-                    throw new NotSupportedException($"Unexpected system type {columnType} found for column.");
-            }
+            Column column = new(schemaName, tableName, columnName: name, tableAlias);
+
+            return FieldFilterParser.Parse(column, fields, processLiterals);
         }
 
         /// <summary>
@@ -88,6 +85,8 @@ namespace Azure.DataGateway.Service.Models
         /// </returns>
         private static Predicate ParseAndOr(
             List<IValueNode> predicates,
+            string schemaName,
+            string tableName,
             string tableAlias,
             TableDefinition table,
             PredicateOperation op,
@@ -102,7 +101,7 @@ namespace Azure.DataGateway.Service.Models
             foreach (IValueNode predicate in predicates)
             {
                 List<ObjectFieldNode> fields = (List<ObjectFieldNode>)predicate.Value!;
-                operands.Add(new PredicateOperand(Parse(fields, tableAlias, table, processLiterals)));
+                operands.Add(new PredicateOperand(Parse(fields, schemaName, tableName, tableAlias, table, processLiterals)));
             }
 
             return MakeChainPredicate(operands, op);
@@ -136,18 +135,8 @@ namespace Azure.DataGateway.Service.Models
         }
     }
 
-    /// <summary>
-    /// Contains methods to parse a IntFilterInput
-    /// </summary>
-    public static class IntTypeFilterParser
+    public static class FieldFilterParser
     {
-
-        /// <summary>
-        /// Parse a predicate for a IntFilterInput input type
-        /// </summary>
-        /// <param name="column">A Column representing the table column being filtered by the IntFilterInput</param>
-        /// <param name="fields">The fields in the IntFilterInput being processed</param>
-        /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
         public static Predicate Parse(
             Column column,
             List<ObjectFieldNode> fields,
@@ -187,11 +176,27 @@ namespace Azure.DataGateway.Service.Models
                     case "gte":
                         op = PredicateOperation.GreaterThanOrEqual;
                         break;
+                    case "contains":
+                        op = PredicateOperation.LIKE;
+                        value = $"%{EscapeLikeString((string)value)}%";
+                        break;
+                    case "notContains":
+                        op = PredicateOperation.NOT_LIKE;
+                        value = $"%{EscapeLikeString((string)value)}%";
+                        break;
+                    case "startsWith":
+                        op = PredicateOperation.LIKE;
+                        value = $"{EscapeLikeString((string)value)}%";
+                        break;
+                    case "endsWith":
+                        op = PredicateOperation.LIKE;
+                        value = $"%{EscapeLikeString((string)value)}";
+                        break;
                     case "isNull":
                         processLiteral = false;
                         bool isNull = (bool)value;
                         op = isNull ? PredicateOperation.IS : PredicateOperation.IS_NOT;
-                        value = "NULL";
+                        value = GQLFilterParser.NullStringValue;
                         break;
                     default:
                         throw new NotSupportedException($"Operation {name} on int type not supported.");
@@ -206,88 +211,7 @@ namespace Azure.DataGateway.Service.Models
 
             return GQLFilterParser.MakeChainPredicate(predicates, PredicateOperation.AND);
         }
-    }
 
-    /// <summary>
-    /// Contains methods to parse a StringFilterInput
-    /// </summary>
-    public static class StringTypeFilterParser
-    {
-
-        /// <summary>
-        /// Parse a predicate for a StringFilterInput input type
-        /// </summary>
-        /// <param name="column">A Column representing the table column being filtered by the StringFilterInput</param>
-        /// <param name="fields">The fields in the StringFilterInput being processed</param>
-        /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
-        public static Predicate Parse(
-            Column column,
-            List<ObjectFieldNode> fields,
-            Func<object, string> processLiterals)
-        {
-            List<PredicateOperand> predicates = new();
-
-            foreach (ObjectFieldNode field in fields)
-            {
-                string ruleName = field.Name.ToString();
-                object? ruleValue = ResolverMiddleware.ArgumentValue(field.Value);
-                bool processLiteral = true;
-
-                if (ruleValue is null)
-                {
-                    continue;
-                }
-
-                PredicateOperation op;
-
-                switch (ruleName)
-                {
-                    case "eq":
-                        op = PredicateOperation.Equal;
-                        break;
-                    case "neq":
-                        op = PredicateOperation.NotEqual;
-                        break;
-                    case "contains":
-                        op = PredicateOperation.LIKE;
-                        ruleValue = $"%{EscapeLikeString((string)ruleValue)}%";
-                        break;
-                    case "notContains":
-                        op = PredicateOperation.NOT_LIKE;
-                        ruleValue = $"%{EscapeLikeString((string)ruleValue)}%";
-                        break;
-                    case "startsWith":
-                        op = PredicateOperation.LIKE;
-                        ruleValue = $"{EscapeLikeString((string)ruleValue)}%";
-                        break;
-                    case "endsWith":
-                        op = PredicateOperation.LIKE;
-                        ruleValue = ((StringValueNode)field.Value).Value;
-                        ruleValue = $"%{EscapeLikeString((string)ruleValue)}";
-                        break;
-                    case "isNull":
-                        processLiteral = false;
-                        bool isNull = (bool)ruleValue;
-                        op = isNull ? PredicateOperation.IS : PredicateOperation.IS_NOT;
-                        ruleValue = "NULL";
-                        break;
-                    default:
-                        throw new NotSupportedException($"Operation {ruleName} on string type not supported.");
-                }
-
-                predicates.Push(new PredicateOperand(new Predicate(
-                    new PredicateOperand(column),
-                    op,
-                    new PredicateOperand(processLiteral ? $"@{processLiterals((string)ruleValue)}" : (string)ruleValue)
-                )));
-            }
-
-            return GQLFilterParser.MakeChainPredicate(predicates, PredicateOperation.AND);
-        }
-
-        /// <summary>
-        /// Escape character special to the LIKE operator in sql
-        /// </summary>
         private static string EscapeLikeString(string input)
         {
             input = input.Replace(@"\", @"\\");

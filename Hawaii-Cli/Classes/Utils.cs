@@ -2,7 +2,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataGateway.Config;
 using Humanizer;
-using System.Runtime.Serialization;
 
 namespace Hawaii.Cli.Classes
 {
@@ -93,7 +92,6 @@ namespace Hawaii.Cli.Classes
                 action_items =  new object[]{Action.GetAction(actions, fieldsToInclude, fieldsToExclude)};
             } else {
                 string[] action_elements = actions.Split(",");
-                //#action_items should be 1, if either fieldsTOInclude or fieldsToExclude is not null.
                 if(fieldsToInclude!=null || fieldsToExclude!=null ) {
                     List<object> action_list = new List<object>();
                     foreach(string action_element in action_elements) {

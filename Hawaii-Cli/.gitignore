@@ -15,3 +15,7 @@
 
 # Nuget package
 /nupkg
+
+#generated json file for testing
+*.json
+

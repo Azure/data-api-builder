@@ -10,7 +10,8 @@ namespace Hawaii.Cli.Classes
         {
 
             DatabaseType dbType = Enum.Parse<DatabaseType>(database_type);
-            DataSource dataSource = new DataSource(dbType, connection_string);
+            DataSource dataSource = new DataSource(dbType);
+            dataSource.ConnectionString = connection_string;
 
             string file = fileName + ".json";
 

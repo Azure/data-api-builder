@@ -6,6 +6,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -13,7 +14,7 @@ namespace Azure.DataGateway.Service.Resolvers
     /// <summary>
     /// Contains methods to help generating the *Connection result for pagination
     /// </summary>
-    public class SqlPaginationUtil
+    public static class SqlPaginationUtil
     {
         /// <summary>
         /// Receives the result of a query as a JsonElement and parses:
@@ -38,7 +39,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 hasExtraElement = rootEnumerated.Count() == paginationMetadata.Structure!.Limit();
 
                 // add hasNextPage to connection elements
-                connectionJson.Add("hasNextPage", hasExtraElement ? true : false);
+                connectionJson.Add(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, hasExtraElement ? true : false);
 
                 if (hasExtraElement)
                 {
@@ -55,26 +56,27 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     // use rootEnumerated to make the *Connection.items since the last element of rootEnumerated
                     // is removed if the result has an extra element
-                    connectionJson.Add("items", JsonSerializer.Serialize(rootEnumerated.ToArray()));
+                    connectionJson.Add(QueryBuilder.PAGINATION_FIELD_NAME, JsonSerializer.Serialize(rootEnumerated.ToArray()));
                 }
                 else
                 {
                     // if the result doesn't have an extra element, just return the dbResult for *Conneciton.items
-                    connectionJson.Add("items", root.ToString()!);
+                    connectionJson.Add(QueryBuilder.PAGINATION_FIELD_NAME, root.ToString()!);
                 }
             }
 
             if (paginationMetadata.RequestedEndCursor)
             {
                 // parse *Connection.endCursor if there are no elements
-                // if no endCursor is added, but it has been requested HotChocolate will report it as null
+                // if no after is added, but it has been requested HotChocolate will report it as null
                 if (returnedElemNo > 0)
                 {
                     JsonElement lastElemInRoot = rootEnumerated.ElementAtOrDefault(returnedElemNo - 1);
-                    connectionJson.Add("endCursor", MakeCursorFromJsonElement(
-                        lastElemInRoot,
-                        paginationMetadata.Structure!.PrimaryKey(),
-                        paginationMetadata.Structure!.OrderByColumns));
+                    connectionJson.Add(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME,
+                        MakeCursorFromJsonElement(
+                            lastElemInRoot,
+                            paginationMetadata.Structure!.PrimaryKey(),
+                            paginationMetadata.Structure!.OrderByColumns));
                 }
             }
 
@@ -88,7 +90,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public static JsonDocument CreatePaginationConnectionFromJsonDocument(JsonDocument jsonDocument, PaginationMetadata paginationMetadata)
         {
             // necessary for MsSql because it doesn't coalesce list query results like Postgres
-            if (jsonDocument == null)
+            if (jsonDocument is null)
             {
                 jsonDocument = JsonDocument.Parse("[]");
             }
@@ -173,41 +175,32 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Parse the value of "after" parameter from query parameters, validate it, and return the json object it stores
         /// </summary>
-        public static List<PaginationColumn> ParseAfterFromQueryParams(IDictionary<string, object?> queryParams, PaginationMetadata paginationMetadata)
+        public static IEnumerable<PaginationColumn> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
         {
-            List<PaginationColumn> after = new();
-            object? afterObject = null;
-
-            if (queryParams.ContainsKey("after"))
+            if (queryParams.TryGetValue(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME, out object? continuationObject))
             {
-                afterObject = queryParams["after"];
+                string afterPlainText = (string)continuationObject;
+                return ParseAfterFromJsonString(afterPlainText, paginationMetadata);
             }
 
-            if (afterObject != null)
-            {
-                string afterPlainText = (string)afterObject;
-                after = ParseAfterFromJsonString(afterPlainText, paginationMetadata);
-
-            }
-
-            return after;
+            return Enumerable.Empty<PaginationColumn>();
         }
 
         /// <summary>
         /// Validate the value associated with $after, and return list of orderby columns
         /// it represents.
         /// </summary>
-        public static List<PaginationColumn> ParseAfterFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
+        public static IEnumerable<PaginationColumn> ParseAfterFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
         {
-            List<PaginationColumn>? after;
+            IEnumerable<PaginationColumn>? after;
             try
             {
                 afterJsonString = Base64Decode(afterJsonString);
-                after = JsonSerializer.Deserialize<List<PaginationColumn>>(afterJsonString);
+                after = JsonSerializer.Deserialize<IEnumerable<PaginationColumn>>(afterJsonString);
 
                 if (after is null)
                 {
-                    throw new ArgumentNullException(nameof(after));
+                    throw new ArgumentException("Failed to parse the pagination information from the provided token");
                 }
 
                 Dictionary<string, PaginationColumn> afterDict = new();
@@ -240,8 +233,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         afterDict[columnName].Direction != column.Direction)
                     {
                         throw new ArgumentException(
-                            $"Could not match order by column {columnName} with a column in the pagination token " +
-                            "with the same name and direction.");
+                            $"Could not match order by column {columnName} with a column in the pagination token with the same name and direction.");
                     }
 
                     orderByColumnCount++;
@@ -293,22 +285,14 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Resolves a JsonElement representing a variable to the appropriate type
         /// </summary>
         /// <exception cref="ArgumentException" />
-        public static object ResolveJsonElementToScalarVariable(JsonElement element)
+        public static object ResolveJsonElementToScalarVariable(JsonElement element) => element.ValueKind switch
         {
-            switch (element.ValueKind)
-            {
-                case JsonValueKind.String:
-                    return element.GetString()!;
-                case JsonValueKind.Number:
-                    return element.GetInt64();
-                case JsonValueKind.True:
-                    return true;
-                case JsonValueKind.False:
-                    return false;
-                default:
-                    throw new ArgumentException("Unexpected JsonElement value");
-            }
-        }
+            JsonValueKind.String => element.GetString()!,
+            JsonValueKind.Number => element.GetInt64(),
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            _ => throw new ArgumentException("Unexpected JsonElement value"),
+        };
 
         /// <summary>
         /// Encodes string to base64
@@ -354,7 +338,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 new
                 {
-                    nextLink = @$"{path}?{nvc.ToString()}"
+                    nextLink = @$"{path}?{nvc}"
                 }
             });
             return JsonSerializer.Deserialize<JsonElement>(jsonString);

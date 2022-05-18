@@ -2,8 +2,7 @@
   "$schema": "../../project-hawaii/playground/hawaii.draft-01.schema.json",
   "data-source": {
     "database-type": "postgresql",
-    "connection-string": "Host=localhost;Database=datagatewaytest;username=REPLACEME;password=REPLACEME",
-    "resolver-config-file": "sql-config.json"
+    "connection-string": "Host=localhost;Database=datagatewaytest;username=REPLACEME;password=REPLACEME"
   },
   "postgresql": {
   },

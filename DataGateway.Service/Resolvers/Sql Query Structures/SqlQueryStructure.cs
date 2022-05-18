@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Services;
@@ -77,11 +78,9 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// The underlying type of the type returned by this query see, the
-        /// comment on UnderlyingType to understand what an underlying type is.
+        /// comment on UnderlyingGraphQLEntityType to understand what an underlying type is.
         /// </summary>
         ObjectType _underlyingFieldType = null!;
-
-        private readonly GraphQLType _typeInfo = null!;
 
         /// <summary>
         /// Used to cache the primary key as a list of OrderByColumn
@@ -96,14 +95,12 @@ namespace Azure.DataGateway.Service.Resolvers
         public SqlQueryStructure(
             IResolverContext ctx,
             IDictionary<string, object?> queryParams,
-            IGraphQLMetadataProvider metadataStoreProvider,
             ISqlMetadataProvider sqlMetadataProvider)
             // This constructor simply forwards to the more general constructor
             // that is used to create GraphQL queries. We give it some values
             // that make sense for the outermost query.
             : this(ctx,
                 queryParams,
-                metadataStoreProvider,
                 sqlMetadataProvider,
                 ctx.Selection.Field,
                 ctx.Selection.SyntaxNode,
@@ -126,10 +123,8 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public SqlQueryStructure(
             RestRequestContext context,
-            IGraphQLMetadataProvider metadataStoreProvider,
             ISqlMetadataProvider sqlMetadataProvider) :
-            this(metadataStoreProvider,
-                sqlMetadataProvider,
+            this(sqlMetadataProvider,
                 new IncrementingInteger(),
                 entityName: context.EntityName)
         {
@@ -198,26 +193,24 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// Private constructor that is used for recursive query generation,
-        /// for each subquery that's necassery to resolve a nested GraphQL
+        /// for each subquery that's necessary to resolve a nested GraphQL
         /// request.
         /// </summary>
         private SqlQueryStructure(
                 IResolverContext ctx,
                 IDictionary<string, object?> queryParams,
-                IGraphQLMetadataProvider metadataStoreProvider,
                 ISqlMetadataProvider sqlMetadataProvider,
                 IObjectField schemaField,
                 FieldNode? queryField,
                 IncrementingInteger counter,
                 string entityName = ""
-        ) : this(metadataStoreProvider, sqlMetadataProvider, counter, entityName: entityName)
+        ) : this(sqlMetadataProvider, counter, entityName: entityName)
         {
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
-            _underlyingFieldType = UnderlyingType(outputType);
+            _underlyingFieldType = UnderlyingGraphQLEntityType(outputType);
 
-            _typeInfo = MetadataStoreProvider.GetGraphQLType(_underlyingFieldType.Name);
-            PaginationMetadata.IsPaginated = _typeInfo.IsPaginationType;
+            PaginationMetadata.IsPaginated = QueryBuilder.IsPaginationType(_underlyingFieldType);
 
             if (PaginationMetadata.IsPaginated)
             {
@@ -233,8 +226,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 schemaField = ExtractItemsSchemaField(schemaField);
 
                 outputType = schemaField.Type;
-                _underlyingFieldType = UnderlyingType(outputType);
-                _typeInfo = MetadataStoreProvider.GetGraphQLType(_underlyingFieldType.Name);
+                _underlyingFieldType = UnderlyingGraphQLEntityType(outputType);
 
                 // this is required to correctly keep track of which pagination metadata
                 // refers to what section of the json
@@ -369,11 +361,10 @@ namespace Azure.DataGateway.Service.Resolvers
         /// constructors.
         /// </summary>
         private SqlQueryStructure(
-            IGraphQLMetadataProvider metadataStoreProvider,
             ISqlMetadataProvider sqlMetadataProvider,
             IncrementingInteger counter,
             string entityName = "")
-            : base(metadataStoreProvider, sqlMetadataProvider, entityName: entityName, counter: counter)
+            : base(sqlMetadataProvider, entityName: entityName, counter: counter)
         {
             JoinQueries = new();
             Joins = new();
@@ -404,7 +395,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Add the predicates associated with the "after" parameter of paginated queries
         /// </summary>
-        public void AddPaginationPredicate(List<PaginationColumn> afterJsonValues)
+        public void AddPaginationPredicate(IEnumerable<PaginationColumn> afterJsonValues)
         {
             if (!afterJsonValues.Any())
             {
@@ -429,7 +420,7 @@ namespace Azure.DataGateway.Service.Resolvers
                   subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
 
-            PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(afterJsonValues);
+            PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(afterJsonValues.ToList());
         }
 
         /// <summary>
@@ -521,13 +512,13 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 switch (fieldName)
                 {
-                    case "items":
+                    case QueryBuilder.PAGINATION_FIELD_NAME:
                         PaginationMetadata.RequestedItems = true;
                         break;
-                    case "endCursor":
+                    case QueryBuilder.PAGINATION_TOKEN_FIELD_NAME:
                         PaginationMetadata.RequestedEndCursor = true;
                         break;
-                    case "hasNextPage":
+                    case QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME:
                         PaginationMetadata.RequestedHasNextPage = true;
                         break;
                 }
@@ -541,7 +532,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// to the result set, but also adding any subqueries or joins that are
         /// required to fetch nested data.
         /// </summary>
-        void AddGraphQLFields(IReadOnlyList<ISelectionNode> Selections)
+        private void AddGraphQLFields(IReadOnlyList<ISelectionNode> Selections)
         {
             foreach (ISelectionNode node in Selections)
             {
@@ -563,7 +554,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     IDictionary<string, object?> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
 
-                    SqlQueryStructure subquery = new(_ctx, subqueryParams, MetadataStoreProvider, SqlMetadataProvider, subschemaField, field, Counter);
+                    SqlQueryStructure subquery = new(_ctx, subqueryParams, SqlMetadataProvider, subschemaField, field, Counter);
 
                     if (PaginationMetadata.IsPaginated)
                     {
@@ -583,134 +574,22 @@ namespace Azure.DataGateway.Service.Resolvers
                         Parameters.Add(parameter.Key, parameter.Value);
                     }
 
-                    // explicitly set to null so it is not used later because this value does not reflect the schema of subquery
-                    // if the subquery is paginated since it will be overridden with the schema of *Conntion.items
-                    subschemaField = null;
-
                     // use the _underlyingType from the subquery which will be overridden appropriately if the query is paginated
                     ObjectType subunderlyingType = subquery._underlyingFieldType;
-
-                    GraphQLType subTypeInfo = MetadataStoreProvider.GetGraphQLType(subunderlyingType.Name);
-                    TableDefinition subTableDefinition = SqlMetadataProvider.GetTableDefinition(subquery.EntityName);
-                    GraphQLField fieldInfo = _typeInfo.Fields[fieldName];
-
+                    string targetEntityName = subunderlyingType.Name;
                     string subtableAlias = subquery.TableAlias;
 
-                    ForeignKeyDefinition fk;
-                    List<string> columns;
-                    List<string> subTableColumns;
-
-                    switch (fieldInfo.RelationshipType)
-                    {
-                        case GraphQLRelationshipType.OneToOne:
-                            if (!string.IsNullOrEmpty(fieldInfo.LeftForeignKey))
-                            {
-                                fk = GetUnderlyingTableDefinition().ForeignKeys[fieldInfo.LeftForeignKey];
-                                columns = GetFkColumns(fk, GetUnderlyingTableDefinition());
-                                subTableColumns = GetFkRefColumns(fk, subTableDefinition);
-                            }
-                            else
-                            {
-                                fk = subTableDefinition.ForeignKeys[fieldInfo.RightForeignKey];
-                                columns = GetFkRefColumns(fk, GetUnderlyingTableDefinition());
-                                subTableColumns = GetFkColumns(fk, subTableDefinition);
-                            }
-
-                            subquery.Predicates.AddRange(CreateJoinPredicates(
-                                TableAlias,
-                                columns,
-                                subtableAlias,
-                                subTableColumns
-                            ));
-                            break;
-                        case GraphQLRelationshipType.ManyToOne:
-                            fk = GetUnderlyingTableDefinition().ForeignKeys[fieldInfo.LeftForeignKey];
-                            columns = GetFkColumns(fk, GetUnderlyingTableDefinition());
-                            subTableColumns = GetFkRefColumns(fk, subTableDefinition);
-
-                            subquery.Predicates.AddRange(CreateJoinPredicates(
-                                TableAlias,
-                                columns,
-                                subtableAlias,
-                                subTableColumns
-                            ));
-                            break;
-                        case GraphQLRelationshipType.OneToMany:
-                            fk = subTableDefinition.ForeignKeys[fieldInfo.RightForeignKey];
-                            columns = GetFkRefColumns(fk, GetUnderlyingTableDefinition());
-                            subTableColumns = GetFkColumns(fk, subTableDefinition);
-
-                            subquery.Predicates.AddRange(CreateJoinPredicates(
-                                TableAlias,
-                                columns,
-                                subtableAlias,
-                                subTableColumns
-                            ));
-                            break;
-                        case GraphQLRelationshipType.ManyToMany:
-                            string associativeTableName = fieldInfo.AssociativeTable;
-                            string associativeTableAlias = CreateTableAlias();
-                            TableDefinition associativeTableDefinition = SqlMetadataProvider.GetTableDefinition(associativeTableName);
-
-                            ForeignKeyDefinition fkLeft = associativeTableDefinition.ForeignKeys[fieldInfo.LeftForeignKey];
-                            List<string> columnsLeft = GetFkRefColumns(fkLeft, GetUnderlyingTableDefinition());
-                            List<string> subTableColumnsLeft = GetFkColumns(fkLeft, associativeTableDefinition);
-
-                            ForeignKeyDefinition fkRight = associativeTableDefinition.ForeignKeys[fieldInfo.RightForeignKey];
-                            List<string> columnsRight = GetFkColumns(fkRight, associativeTableDefinition);
-                            List<string> subTableColumnsRight = GetFkRefColumns(fkRight, subTableDefinition);
-
-                            subquery.Predicates.AddRange(CreateJoinPredicates(
-                                TableAlias,
-                                columnsLeft,
-                                associativeTableAlias,
-                                subTableColumnsLeft
-                            ));
-
-                            subquery.Joins.Add(new SqlJoinStructure
-                            (
-                                associativeTableName,
-                                associativeTableAlias,
-                                CreateJoinPredicates(
-                                        associativeTableAlias,
-                                        columnsRight,
-                                        subtableAlias,
-                                        subTableColumnsRight
-                                    ).ToList()
-                            ));
-                            break;
-
-                        case GraphQLRelationshipType.None:
-                            throw new NotSupportedException("Cannot do a join when there is no relationship");
-                        default:
-                            throw new NotSupportedException("Relationships type ${fieldInfo.RelationshipType} is not supported.");
-                    }
+                    AddJoinPredicatesForSubQuery(targetEntityName, subtableAlias, subquery);
 
                     string subqueryAlias = $"{subtableAlias}_subq";
                     JoinQueries.Add(subqueryAlias, subquery);
                     Columns.Add(new LabelledColumn(tableSchema: subquery.DatabaseObject.SchemaName,
-                                                   tableName: subquery.DatabaseObject.Name,
-                                                   columnName: DATA_IDENT,
-                                                   label: fieldName,
-                                                   tableAlias: subqueryAlias));
+                              tableName: subquery.DatabaseObject.Name,
+                              columnName: DATA_IDENT,
+                              label: fieldName,
+                              tableAlias: subqueryAlias));
                 }
             }
-        }
-
-        /// <summary>
-        /// Get foreign key columns (if no columns select table pk)
-        /// </summary>
-        private static List<string> GetFkColumns(ForeignKeyDefinition fk, TableDefinition table)
-        {
-            return fk.ReferencingColumns.Count > 0 ? fk.ReferencingColumns : table.PrimaryKey;
-        }
-
-        /// <summary>
-        /// Get foreign key referenced columns (if no referenced columns select referenced table pk)
-        /// </summary>
-        private static List<string> GetFkRefColumns(ForeignKeyDefinition fk, TableDefinition refTable)
-        {
-            return fk.ReferencedColumns.Count > 0 ? fk.ReferencedColumns : refTable.PrimaryKey;
         }
 
         /// <summary>
@@ -725,6 +604,107 @@ namespace Azure.DataGateway.Service.Resolvers
             else
             {
                 return 1;
+            }
+        }
+
+        /// <summary>
+        /// Based on the relationship metadata involving foreign key referenced and
+        /// referencing columns, add the join predicates to the subquery Query structure
+        /// created for the given target entity Name and sub table alias.
+        /// There are only a couple of options for the foreign key - we only use the
+        /// valid foreign key definition. It is guaranteed at least one fk definition
+        /// will be valid since the SqlMetadataProvider.ValidateAllFkHaveBeenInferred.
+        /// </summary>
+        /// <param name="targetEntityName"></param>
+        /// <param name="subtableAlias"></param>
+        /// <param name="subQuery"></param>
+        private void AddJoinPredicatesForSubQuery(
+            string targetEntityName,
+            string subtableAlias,
+            SqlQueryStructure subQuery)
+        {
+            TableDefinition tableDefinition = GetUnderlyingTableDefinition();
+            if (tableDefinition.SourceEntityRelationshipMap.TryGetValue(
+                _underlyingFieldType.Name, out RelationshipMetadata? relationshipMetadata)
+                && relationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
+                    out List<ForeignKeyDefinition>? foreignKeyDefinitions))
+            {
+                Dictionary<DatabaseObject, string> associativeTableAndAliases = new();
+                // For One-One and One-Many, not all fk definitions would be valid
+                // but at least 1 will be.
+                // Identify the side of the relationship first, then check if its valid
+                // by ensuring the referencing and referenced column count > 0
+                // before adding the predicates.
+                foreach (ForeignKeyDefinition foreignKeyDefinition in foreignKeyDefinitions)
+                {
+                    // First identify which side of the relationship, this fk definition
+                    // is looking at.
+                    if (foreignKeyDefinition.Pair.ReferencingDbObject.Equals(DatabaseObject))
+                    {
+                        // Case where fk in parent entity references the nested entity.
+                        // Verify this is a valid fk definition before adding the join predicate.
+                        if (foreignKeyDefinition.ReferencingColumns.Count() > 0
+                            && foreignKeyDefinition.ReferencedColumns.Count() > 0)
+                        {
+                            subQuery.Predicates.AddRange(CreateJoinPredicates(
+                                TableAlias,
+                                foreignKeyDefinition.ReferencingColumns,
+                                subtableAlias,
+                                foreignKeyDefinition.ReferencedColumns));
+                        }
+                    }
+                    else if (foreignKeyDefinition.Pair.ReferencingDbObject.Equals(subQuery.DatabaseObject))
+                    {
+                        // Case where fk in nested entity references the parent entity.
+                        if (foreignKeyDefinition.ReferencingColumns.Count() > 0
+                            && foreignKeyDefinition.ReferencedColumns.Count() > 0)
+                        {
+                            subQuery.Predicates.AddRange(CreateJoinPredicates(
+                                subtableAlias,
+                                foreignKeyDefinition.ReferencingColumns,
+                                TableAlias,
+                                foreignKeyDefinition.ReferencedColumns));
+                        }
+                    }
+                    else
+                    {
+                        DatabaseObject associativeTableDbObject =
+                            foreignKeyDefinition.Pair.ReferencingDbObject;
+                        // Case when the linking object is the referencing table
+                        if (!associativeTableAndAliases.TryGetValue(
+                                associativeTableDbObject,
+                                out string? associativeTableAlias))
+                        {
+                            // this is the first fk definition found for this associative table.
+                            // create an alias for it and store for later lookup.
+                            associativeTableAlias = CreateTableAlias();
+                            associativeTableAndAliases.Add(associativeTableDbObject, associativeTableAlias);
+                        }
+
+                        if (foreignKeyDefinition.Pair.ReferencedDbObject.Equals(DatabaseObject))
+                        {
+                            subQuery.Predicates.AddRange(CreateJoinPredicates(
+                                associativeTableAlias,
+                                foreignKeyDefinition.ReferencingColumns,
+                                TableAlias,
+                                foreignKeyDefinition.ReferencedColumns));
+                        }
+                        else
+                        {
+                            subQuery.Joins.Add(new SqlJoinStructure
+                            (
+                                associativeTableDbObject,
+                                associativeTableAlias,
+                                CreateJoinPredicates(
+                                    associativeTableAlias,
+                                    foreignKeyDefinition.ReferencingColumns,
+                                    subtableAlias,
+                                    foreignKeyDefinition.ReferencedColumns
+                                    ).ToList()
+                            ));
+                        }
+                    }
+                }
             }
         }
 

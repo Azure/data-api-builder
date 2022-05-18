@@ -2,8 +2,7 @@
   "$schema": "../../project-hawaii/playground/hawaii.draft-01.schema.json",
   "data-source": {
     "database-type": "mssql",
-    "connection-string": "",
-    "resolver-config-file": "sql-config.json"
+    "connection-string": ""
   },
   "runtime": {
     "rest": {
@@ -22,7 +21,7 @@
         "allow-credentials": true
       },
       "authentication": {
-        "provider": "",
+        "provider": "EasyAuth",
         "jwt": {
           "audience": "",
           "issuer": "",
@@ -49,7 +48,7 @@
       "relationships": {
         "books": {
           "cardinality": "many",
-          "target.entity": "books"
+          "target.entity": "Book"
         }
       }
     },
@@ -70,7 +69,7 @@
       "relationships": {
         "comics": {
           "cardinality": "many",
-          "target.entity": "comics",
+          "target.entity": "Comic",
           "source.fields": [ "categoryName" ],
           "target.fields": [ "categoryName" ]
         }
@@ -89,21 +88,21 @@
         }
       ],
       "relationships": {
-        "publisher": {
+        "publishers": {
           "cardinality": "one",
-          "target.entity": "publisher"
+          "target.entity": "Publisher"
         },
         "websiteplacement": {
           "cardinality": "one",
-          "target.entity": "book_website_placements"
+          "target.entity": "BookWebsitePlacement"
         },
         "reviews": {
           "cardinality": "many",
-          "target.entity": "reviews"
+          "target.entity": "Review"
         },
         "authors": {
           "cardinality": "many",
-          "target.entity": "authors",
+          "target.entity": "Author",
           "linking.object": "book_author_link",
           "linking.source.fields": [ "book_id" ],
           "linking.target.fields": [ "author_id" ]
@@ -138,9 +137,9 @@
         }
       ],
       "relationships": {
-        "book_website_placements": {
+        "books": {
           "cardinality": "one",
-          "target.entity": "books"
+          "target.entity": "Book"
         }
       }
     },
@@ -157,7 +156,7 @@
       "relationships": {
         "books": {
           "cardinality": "many",
-          "target.entity": "books",
+          "target.entity": "Book",
           "linking.object": "book_author_link"
         }
       }
@@ -174,31 +173,9 @@
       "relationships": {
         "books": {
           "cardinality": "one",
-          "target.entity": "books"
+          "target.entity": "Book"
         }
       }
-    },
-    "Magazine": {
-      "source": "foo.magazines",
-      "graphql": true,
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [ "read" ]
-        },
-        {
-          "role": "authenticated",
-          "actions": [
-            {
-              "action": "*",
-              "fields": {
-                "include": [ "*" ],
-                "exclude": [ "issue_number" ]
-              }
-            }
-          ]
-        }
-      ]
     },
     "Comic": {
       "source": "comics",
@@ -229,6 +206,57 @@
       "source": "website_users",
       "rest": false,
       "permissions": []
+    },
+    "books_view_all": {
+      "source": "books_view_all",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "read" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
+    "stocks_view_selected": {
+      "source": "stocks_view_selected",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "read" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
+    "books_publishers_view_composite": {
+      "source": "books_publishers_view_composite",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "read" ]
+        }
+      ],
+      "relationships": {
+      }
     }
   }
 }

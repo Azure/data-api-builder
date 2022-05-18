@@ -10,7 +10,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
     public static class QueryBuilder
     {
         public const string PAGINATION_FIELD_NAME = "items";
-        public const string PAGINATION_TOKEN_FIELD_NAME = "after";
+        public const string PAGINATION_TOKEN_FIELD_NAME = "endCursor";
+        public const string PAGINATION_TOKEN_ARGUMENT_NAME = "after";
         public const string HAS_NEXT_PAGE_FIELD_NAME = "hasNextPage";
         public const string PAGE_START_ARGUMENT_NAME = "first";
         public const string PAGINATION_OBJECT_TYPE_SUFFIX = "Connection";
@@ -48,20 +49,26 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
         private static FieldDefinitionNode GenerateByPKQuery(ObjectTypeDefinitionNode objectTypeDefinitionNode, NameNode name)
         {
-            FieldDefinitionNode primaryKeyField = FindPrimaryKeyField(objectTypeDefinitionNode);
-            return new(
-                location: null,
-                new NameNode($"{FormatNameForField(name)}_by_pk"),
-                new StringValueNode($"Get a {name} from the database by its ID/primary key"),
-                new List<InputValueDefinitionNode> {
-                new InputValueDefinitionNode(
-                    location : null,
+            IEnumerable<FieldDefinitionNode> primaryKeyFields =
+                FindPrimaryKeyFields(objectTypeDefinitionNode);
+            List<InputValueDefinitionNode> inputValues = new();
+
+            foreach (FieldDefinitionNode primaryKeyField in primaryKeyFields)
+            {
+                inputValues.Add(new InputValueDefinitionNode(
+                    location: null,
                     primaryKeyField.Name,
                     description: null,
                     primaryKeyField.Type,
                     defaultValue: null,
-                    new List<DirectiveNode>())
-                },
+                    new List<DirectiveNode>()));
+            }
+
+            return new(
+                location: null,
+                new NameNode($"{FormatNameForField(name)}_by_pk"),
+                new StringValueNode($"Get a {name} from the database by its ID/primary key"),
+                inputValues,
                 new NamedTypeNode(name),
                 new List<DirectiveNode>()
             );
@@ -99,7 +106,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             return new()
             {
                 new(location: null, new NameNode(PAGE_START_ARGUMENT_NAME), description: new StringValueNode("The number of items to return from the page start point"), new IntType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
-                new(location: null, new NameNode(PAGINATION_TOKEN_FIELD_NAME), new StringValueNode("A pagination token from a previous query to continue through a paginated list"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
+                new(location: null, new NameNode(PAGINATION_TOKEN_ARGUMENT_NAME), new StringValueNode("A pagination token from a previous query to continue through a paginated list"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
                 new(location: null, new NameNode(FILTER_FIELD_NAME), new StringValueNode("Filter options for query"), new NamedTypeNode(filterInputName), defaultValue: null, new List<DirectiveNode>()),
                 new(location: null, new NameNode(ODATA_FILTER_FIELD_NAME), new StringValueNode("Filter options for query expressed as OData query language"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>())
             };

@@ -31,7 +31,7 @@ namespace Azure.DataGateway.Config
         Upsert, Create,
 
         // Sql operations
-        Insert, Update,
+        Insert, Update, UpdateGraphQL,
 
         // Additional
         UpsertIncremental, UpdateIncremental

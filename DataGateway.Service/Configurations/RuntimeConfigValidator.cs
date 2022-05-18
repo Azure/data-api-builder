@@ -23,6 +23,11 @@ namespace Azure.DataGateway.Service.Configurations
             _runtimeConfig = config;
         }
 
+        /// <summary>
+        /// The driver for validation of the runtime configuration file.
+        /// </summary>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="NotSupportedException"></exception>
         public void ValidateConfig()
         {
             if (_runtimeConfig is null)
@@ -41,10 +46,12 @@ namespace Azure.DataGateway.Service.Configurations
                 throw new NotSupportedException($"The Connection String should be provided.");
             }
 
-            if (string.IsNullOrEmpty(_runtimeConfig.DataSource.ResolverConfigFile)
-                || !File.Exists(_runtimeConfig.DataSource.ResolverConfigFile))
+            if (_runtimeConfig.DatabaseType.Equals(DatabaseType.cosmos) &&
+                ((_runtimeConfig.CosmosDb is null) ||
+                (string.IsNullOrWhiteSpace(_runtimeConfig.CosmosDb.ResolverConfigFile)) ||
+                (!File.Exists(_runtimeConfig.CosmosDb.ResolverConfigFile))))
             {
-                throw new NotSupportedException("The resolver-config-file should be provided with the runtime config and must exist in the current directory.");
+                throw new NotSupportedException("The resolver-config-file should be provided with the runtime config and must exist in the current directory when database type is cosmosdb.");
             }
 
             ValidateAuthenticationConfig();

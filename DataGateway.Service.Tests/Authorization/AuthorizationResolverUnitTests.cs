@@ -392,7 +392,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 CosmosDb: null,
                 PostgreSql: null,
                 MySql: null,
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql, ResolverConfigFile: null),
+                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
                 );

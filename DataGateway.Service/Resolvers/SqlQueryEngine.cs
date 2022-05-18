@@ -17,7 +17,6 @@ namespace Azure.DataGateway.Service.Resolvers
     //</summary>
     public class SqlQueryEngine : IQueryEngine
     {
-        private readonly IGraphQLMetadataProvider _metadataStoreProvider;
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly IQueryExecutor _queryExecutor;
         private readonly IQueryBuilder _queryBuilder;
@@ -26,12 +25,10 @@ namespace Azure.DataGateway.Service.Resolvers
         // Constructor.
         // </summary>
         public SqlQueryEngine(
-            IGraphQLMetadataProvider metadataStoreProvider,
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder,
             ISqlMetadataProvider sqlMetadataProvider)
         {
-            _metadataStoreProvider = metadataStoreProvider;
             _queryExecutor = queryExecutor;
             _queryBuilder = queryBuilder;
             _sqlMetadataProvider = sqlMetadataProvider;
@@ -61,7 +58,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _sqlMetadataProvider);
+            SqlQueryStructure structure = new(context, parameters, _sqlMetadataProvider);
 
             if (structure.PaginationMetadata.IsPaginated)
             {
@@ -83,7 +80,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            SqlQueryStructure structure = new(context, parameters, _metadataStoreProvider, _sqlMetadataProvider);
+            SqlQueryStructure structure = new(context, parameters, _sqlMetadataProvider);
             string queryString = _queryBuilder.Build(structure);
             Console.WriteLine(queryString);
             using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, structure.Parameters);
@@ -106,7 +103,7 @@ namespace Azure.DataGateway.Service.Resolvers
         // </summary>
         public async Task<JsonDocument> ExecuteAsync(RestRequestContext context)
         {
-            SqlQueryStructure structure = new(context, _metadataStoreProvider, _sqlMetadataProvider);
+            SqlQueryStructure structure = new(context, _sqlMetadataProvider);
             return await ExecuteAsync(structure);
         }
 
@@ -153,9 +150,12 @@ namespace Azure.DataGateway.Service.Resolvers
 
             // Parse Results into Json and return
             //
-            if (await _queryExecutor.ReadAsync(dbDataReader))
+            if (dbDataReader.HasRows)
             {
-                jsonDocument = JsonDocument.Parse(dbDataReader.GetString(0));
+                // Make sure to get the complete json string in case of large document.
+                jsonDocument =
+                    JsonSerializer.Deserialize<JsonDocument>(
+                        await GetJsonStringFromDbReader(dbDataReader, _queryExecutor));
             }
             else
             {

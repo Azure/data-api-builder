@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
+using Azure.Core;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
@@ -30,40 +31,25 @@ namespace Azure.DataGateway.Service.Services
 
             foreach (string field in context.FieldsToBeReturned)
             {
-                ValidateField(tableDefinition.Columns.Keys, context.MappingFromEntity, context.ReversedMappingFromEntity, field);
+                ValidateField(tableDefinition.Columns.Keys, context.ExposedNamesToBackingColumnNames, field);
             }
         }
 
         /// <summary>
         /// Validate the field to be returned.
-        /// If there is no mapping for this entity
-        /// and the field is in columns then it is valid.
-        /// Otherwise, since we validate the mapping on boostrap,
-        /// if the field appears in the reverse mapping it is valid,
-        /// and otherwise we then simply need to check that the
-        /// mapping does not have this field as a key and also that
-        /// it is in columns. The final case failing would indicate
-        /// that the user has selected a given column name
-        /// be mapped to some other name, and then has not followed
-        /// this mapping that has been set. ie: we have some column
-        /// named "author", and we have a mapping for that entity of
-        /// "author" : "name", indicating that requests/responses
-        /// for the column "author" need to use "name", but then the
-        /// request comes in simply as "author".
+        /// Since the exposed names to backing columns
+        /// map contains all of the potential names
+        /// that a request could contain, if there is
+        /// no key in this map of the field to validate
+        /// then the field is not valid.
         /// </summary>
         /// <param name="columns">columns of this table definition</param>
         /// <param name="mapping">mappings from this entity</param>
         /// <param name="field">field to be returned</param>
         /// <exception cref="DataGatewayException"></exception>
-        public static void ValidateField(IEnumerable<string> columns, Dictionary<string, string>? mapping, Dictionary<string, string>? reverseMapping, string field)
+        public static void ValidateField(IEnumerable<string> columns, Dictionary<string, string> ExposedNamesToBackingColumnNames, string field)
         {
-            if ((mapping is null && columns.Contains(field)) ||
-                (reverseMapping is not null && reverseMapping.ContainsKey(field)) || // better name for reverse map // add into reverse dictionary unmapped with key:value as column name
-                (mapping is not null && !mapping.ContainsKey(field) && columns.Contains(field)))
-            {
-                return;
-            }
-            else
+            if (!ExposedNamesToBackingColumnNames.ContainsKey(field))
             {
                 throw new DataGatewayException(
                         message: "Invalid field to be returned requested: " + field,
@@ -195,12 +181,10 @@ namespace Azure.DataGateway.Service.Services
             IEnumerable<string> fieldsInRequestBody = insertRequestCtx.FieldValuePairsInBody.Keys;
             TableDefinition tableDefinition =
                 TryGetTableDefinition(insertRequestCtx.EntityName, sqlMetadataProvider);
-
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
             // At the end, if we end up with extraneous unvalidated fields, we throw error.
             HashSet<string> unvalidatedFields = new(fieldsInRequestBody);
-
             foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
             {
                 // Request body must have value defined for included non-nullable columns
@@ -214,7 +198,6 @@ namespace Azure.DataGateway.Service.Services
                         subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }
                 }
-
                 // The insert operation behaves like a replacement update, since it
                 // requires nullable fields to be defined in the request.
                 if (ValidateColumn(column, fieldsInRequestBody, isReplacementUpdate: true))
@@ -222,7 +205,6 @@ namespace Azure.DataGateway.Service.Services
                     unvalidatedFields.Remove(column.Key);
                 }
             }
-
             // TO DO: If the request header contains x-ms-must-match custom header with value of "ignore"
             // this should not throw any error. Tracked by issue #158.
             if (unvalidatedFields.Any())
@@ -233,7 +215,6 @@ namespace Azure.DataGateway.Service.Services
                     subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
         }
-
         /// <summary>
         /// Validates the request body of an Upsert request context.
         /// Checks if all the fields necessary are present in the body, if they are not autogenerated
@@ -249,12 +230,10 @@ namespace Azure.DataGateway.Service.Services
             IEnumerable<string> fieldsInRequestBody = upsertRequestCtx.FieldValuePairsInBody.Keys;
             TableDefinition tableDefinition =
                 TryGetTableDefinition(upsertRequestCtx.EntityName, sqlMetadataProvider);
-
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
             // At the end, if we end up with extraneous unvalidated fields, we throw error.
             HashSet<string> unValidatedFields = new(fieldsInRequestBody);
-
             foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
             {
                 // Primary Key(s) should not be present in the request body. We do not fail a request
@@ -265,7 +244,6 @@ namespace Azure.DataGateway.Service.Services
                 {
                     continue;
                 }
-
                 // Request body must have value defined for included non-nullable columns
                 if (!column.Value.IsNullable && fieldsInRequestBody.Contains(column.Key))
                 {
@@ -279,13 +257,11 @@ namespace Azure.DataGateway.Service.Services
                 }
 
                 bool isReplacementUpdate = (upsertRequestCtx.OperationType == Operation.Upsert) ? true : false;
-
                 if (ValidateColumn(column, fieldsInRequestBody, isReplacementUpdate))
                 {
                     unValidatedFields.Remove(column.Key);
                 }
             }
-
             // TO DO: If the request header contains x-ms-must-match custom header with value of "ignore"
             // this should not throw any error. Tracked by issue #158.
             if (unValidatedFields.Any())
@@ -296,7 +272,6 @@ namespace Azure.DataGateway.Service.Services
                     subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
         }
-
         /// <summary>
         /// Validates a given column by checking that the column's properties
         /// are valid for the provided request body.

@@ -136,17 +136,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 TableDefinition tableDefinition = GetUnderlyingTableDefinition();
                 foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
                 {
-                    // if mapping is null or doesnt have our column just use column name
-                    if (context.MappingFromEntity is null || !context.MappingFromEntity.ContainsKey(column.Key))
-                    {
-                        AddColumn(column.Key);
-
-                    }
-                    // otherwise the mapping must contain the label to use
-                    else
-                    {
-                        AddColumn(column.Key, context.MappingFromEntity[column.Key]);
-                    }
+                    AddColumn(column.Key, context.BackingColumnsToExposedNames[column.Key]);
                 }
             }
 
@@ -202,33 +192,16 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// For fields specifically selected, we check
-        /// to see if the field is from the mapping from
-        /// the target entity or not, and then add the
-        /// column with the appropriate name and label.
+        /// Use the mapping of exposed names to
+        /// backing columns to add column with
+        /// the correct name and label.
         /// </summary>
         /// <param name="context"></param>
         private void AddFields(RestRequestContext context)
         {
-            Dictionary<string, string> reverseMapping = context.ReversedMappingFromEntity!;
-
             foreach (string field in context.FieldsToBeReturned)
             {
-                // we know fields to be returned are valid,
-                // so if field exists in reverseMapping
-                // it must be the case that we have a column
-                // name with a mapping, and so we add that column
-                // but with the appropriate name and mapped label.
-                if (reverseMapping is not null && reverseMapping.ContainsKey(field))
-                {
-                    AddColumn(reverseMapping[field], field);
-                }
-                // otherwise this must simply be a column with
-                // no associated mapping. Just add the column.
-                else
-                {
-                    AddColumn(field);
-                }
+                AddColumn(context.ExposedNamesToBackingColumnNames[field], field);
             }
         }
 

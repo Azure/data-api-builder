@@ -18,8 +18,16 @@ namespace Azure.DataGateway.Service.Models
             HttpVerb = httpVerb;
             EntityName = entityName;
             DatabaseObject = dbo;
-            MappingFromEntity = mapping;
-            ReversedMappingFromEntity = mapping is not null ? MappingFromEntity.ToDictionary(x => x.Value, x => x.Key) : null;
+            BackingColumnsToExposedNames = mapping is not null ? mapping : new();
+            foreach (string column in dbo.TableDefinition.Columns.Keys)
+            {
+                if (!BackingColumnsToExposedNames.ContainsKey(column))
+                {
+                    BackingColumnsToExposedNames.Add(column, column);
+                }
+            }
+
+            ExposedNamesToBackingColumnNames = BackingColumnsToExposedNames!.ToDictionary(x => x.Value, x => x.Key);
         }
 
         /// <summary>
@@ -33,14 +41,16 @@ namespace Azure.DataGateway.Service.Models
         public DatabaseObject DatabaseObject { get; }
 
         /// <summary>
-        /// Mapping of database object names to request/response names.
+        /// Mapping of the names of the backing column from the database object
+        /// to the names to request/response names.
         /// </summary>
-        public Dictionary<string, string>? MappingFromEntity { get; }
+        public Dictionary<string, string> BackingColumnsToExposedNames { get; }
 
         /// <summary>
-        /// Mapping of request/response names to database object names.
+        /// Mapping of request/response names to the names of the backing column from
+        /// the database object.
         /// </summary>
-        public Dictionary<string, string>? ReversedMappingFromEntity { get; }
+        public Dictionary<string, string> ExposedNamesToBackingColumnNames { get; }
 
         /// <summary>
         /// Field names of the entity that are queried in the request.

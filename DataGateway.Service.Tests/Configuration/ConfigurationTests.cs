@@ -12,6 +12,7 @@ using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using Azure.DataGateway.Service.Services.MetadataProviders;
 using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
@@ -496,8 +497,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
         private static void ValidateCosmosDbSetup(TestServer server)
         {
-            object metadataProvider = server.Services.GetService(typeof(IGraphQLMetadataProvider));
-            Assert.IsInstanceOfType(metadataProvider, typeof(GraphQLFileMetadataProvider));
+            object metadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
+            Assert.IsInstanceOfType(metadataProvider, typeof(CosmosSqlMetadataProvider));
 
             object queryEngine = server.Services.GetService(typeof(IQueryEngine));
             Assert.IsInstanceOfType(queryEngine, typeof(CosmosQueryEngine));

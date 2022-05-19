@@ -33,8 +33,7 @@ namespace Azure.DataGateway.Config
             "$schema": "",
             "data-source": {
                 "database-type": "mssql",
-                "connection-string": "",
-                "resolver-config-file": ""
+                "connection-string": ""
             },
             "mssql": {},
             "runtime": {

@@ -48,10 +48,10 @@ namespace Azure.DataGateway.Service.Configurations
 
             if (_runtimeConfig.DatabaseType.Equals(DatabaseType.cosmos) &&
                 ((_runtimeConfig.CosmosDb is null) ||
-                (string.IsNullOrWhiteSpace(_runtimeConfig.CosmosDb.ResolverConfigFile)) ||
-                (!File.Exists(_runtimeConfig.CosmosDb.ResolverConfigFile))))
+                (string.IsNullOrWhiteSpace(_runtimeConfig.CosmosDb.GraphQLSchemaPath)) ||
+                (!File.Exists(_runtimeConfig.CosmosDb.GraphQLSchemaPath))))
             {
-                throw new NotSupportedException("The resolver-config-file should be provided with the runtime config and must exist in the current directory when database type is cosmosdb.");
+                throw new NotSupportedException("The GraphQL schema path should be provided with the GraphQL schema file and must exist in the current directory when database type is cosmosdb.");
             }
 
             ValidateAuthenticationConfig();

@@ -9,10 +9,11 @@ using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
+using HotChocolate.Types;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -21,15 +22,15 @@ namespace Azure.DataGateway.Service.Resolvers
     {
         private readonly CosmosClientProvider _clientProvider;
 
-        private readonly IGraphQLMetadataProvider _metadataStoreProvider;
+        private readonly IOptionsMonitor<RuntimeConfigPath> _runtimeConfigPath;
 
-        public CosmosMutationEngine(CosmosClientProvider clientProvider, IGraphQLMetadataProvider metadataStoreProvider)
+        public CosmosMutationEngine(CosmosClientProvider clientProvider, IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
         {
             _clientProvider = clientProvider;
-            _metadataStoreProvider = metadataStoreProvider;
+            _runtimeConfigPath = runtimeConfigPath;
         }
 
-        private async Task<JObject> ExecuteAsync(IDictionary<string, object?> queryArgs, MutationResolver resolver)
+        private async Task<JObject> ExecuteAsync(IDictionary<string, object?> queryArgs, CosmosMutation resolver)
         {
             // TODO: add support for all mutation types
             // we only support CreateOrUpdate (Upsert) for now
@@ -56,6 +57,7 @@ namespace Azure.DataGateway.Service.Resolvers
             switch (resolver.OperationType)
             {
                 case Operation.Upsert:
+                case Operation.Create:
                     response = await HandleUpsertAsync(queryArgs, container);
                     break;
                 case Operation.Delete:
@@ -149,11 +151,31 @@ namespace Azure.DataGateway.Service.Resolvers
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context,
             IDictionary<string, object?> parameters)
         {
-            string graphQLMutationName = context.Selection.Field.Name.Value;
-            MutationResolver resolver = _metadataStoreProvider.GetMutationResolver(graphQLMutationName);
+            string entityName = context.Selection.Field.Type.NamedType().Name.Value;
+            RuntimeConfig? configValue = _runtimeConfigPath.CurrentValue.ConfigValue;
+            if (configValue is null)
+            {
+                throw new DataGatewayException("Runtime config isn't setup.", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            Entity entity = configValue.Entities[entityName];
+            string? containerName = (entity.Source is string s && !string.IsNullOrEmpty(s)) ? s : configValue.CosmosDb!.Container;
+
+            if (containerName is null)
+            {
+                throw new DataGatewayException($"No container configured for entity {entityName}.", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            string databaseName = configValue.CosmosDb!.Database;
+
+            string graphqlMutationName = context.Selection.Field.Name.Value;
+            Operation mutationOperation =
+                MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
+
+            CosmosMutation mutation = new(databaseName, containerName, mutationOperation);
             // TODO: we are doing multiple round of serialization/deserialization
             // fixme
-            JObject jObject = await ExecuteAsync(parameters, resolver);
+            JObject jObject = await ExecuteAsync(parameters, mutation);
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
             return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(jObject.ToString()), null);
 #pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
@@ -169,4 +191,6 @@ namespace Azure.DataGateway.Service.Resolvers
             throw new NotImplementedException();
         }
     }
+
+    record CosmosMutation(string DatabaseName, string ContainerName, Operation OperationType);
 }

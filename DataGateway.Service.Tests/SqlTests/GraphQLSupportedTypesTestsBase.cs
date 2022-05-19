@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Services;
@@ -43,7 +42,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "supportedType_by_pk";
             string gqlQuery = "{ supportedType_by_pk(id: " + id + ") { " + type + "_types } }";
 
-            string dbQuery = MakeQueryOnTypeTable(new List<string> {$"{type}_types"}, id);
+            string dbQuery = MakeQueryOnTypeTable(new List<string> { $"{type}_types" }, id);
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -72,7 +71,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 5001);
 
-            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController, new() { {"value", value} });
+            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController, new() { { "value", value } });
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
 

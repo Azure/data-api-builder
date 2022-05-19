@@ -3,6 +3,7 @@ using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.Extensions.Options;
 using MySqlConnector;
@@ -15,10 +16,10 @@ namespace Azure.DataGateway.Service.Services
     public class MySqlMetadataProvider : SqlMetadataProvider<MySqlConnection, MySqlDataAdapter, MySqlCommand>, ISqlMetadataProvider
     {
         public MySqlMetadataProvider(
-            RuntimeConfig runtimeConfig,
+            RuntimeConfigProvider runtimeConfigProvider,
             IQueryExecutor queryExecutor,
             IQueryBuilder sqlQueryBuilder)
-            : base(runtimeConfig, queryExecutor, sqlQueryBuilder)
+            : base(runtimeConfigProvider, queryExecutor, sqlQueryBuilder)
         {
         }
 

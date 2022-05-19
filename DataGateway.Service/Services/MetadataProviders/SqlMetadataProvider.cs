@@ -7,11 +7,11 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
-using Microsoft.Extensions.Options;
 using Npgsql;
 
 namespace Azure.DataGateway.Service.Services
@@ -52,10 +52,16 @@ namespace Azure.DataGateway.Service.Services
             new(StringComparer.InvariantCultureIgnoreCase);
 
         public SqlMetadataProvider(
-            RuntimeConfig runtimeConfig,
+            RuntimeConfigProvider runtimeConfigProvider,
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder)
         {
+            RuntimeConfig? runtimeConfig = runtimeConfigProvider.RuntimeConfiguration;
+            if (runtimeConfig == null)
+            {
+                throw new InvalidOperationException("RuntimeConfiguration hasn't been set yet.");
+            }
+
             _databaseType = runtimeConfig.DatabaseType;
             _entities = runtimeConfig.Entities;
             ConnectionString = runtimeConfig.ConnectionString;

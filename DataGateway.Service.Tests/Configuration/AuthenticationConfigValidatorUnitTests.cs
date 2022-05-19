@@ -4,6 +4,7 @@ using System.Text.Json;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Azure.DataGateway.Service.Tests.Configuration
@@ -20,7 +21,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         {
             RuntimeConfig config =
                 CreateRuntimeConfigWithAuthN(new AuthenticationConfig());
-            RuntimeConfigValidator configValidator = new(config);
+            RuntimeConfigProvider runtimeConfigProvider = Mock.Of<RuntimeConfigProvider>(_ => _.RuntimeConfiguration == config);
+            RuntimeConfigValidator configValidator = new(runtimeConfigProvider);
 
             try
             {
@@ -43,8 +45,9 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 Provider: "AzureAD",
                 Jwt: jwt);
             RuntimeConfig config = CreateRuntimeConfigWithAuthN(authNConfig);
+            RuntimeConfigProvider runtimeConfigProvider = Mock.Of<RuntimeConfigProvider>(_ => _.RuntimeConfiguration == config);
 
-            RuntimeConfigValidator configValidator = new(config);
+            RuntimeConfigValidator configValidator = new(runtimeConfigProvider);
 
             try
             {
@@ -72,7 +75,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
             RuntimeConfig config = CreateRuntimeConfigWithAuthN(authNConfig);
 
-            RuntimeConfigValidator configValidator = new(config);
+            RuntimeConfigProvider runtimeConfigProvider = Mock.Of<RuntimeConfigProvider>(_ => _.RuntimeConfiguration == config);
+            RuntimeConfigValidator configValidator = new(runtimeConfigProvider);
             Assert.ThrowsException<NotSupportedException>(() =>
             {
                 configValidator.ValidateConfig();
@@ -102,7 +106,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 IssuerKey: string.Empty);
             AuthenticationConfig authNConfig = new(Provider: "EasyAuth", Jwt: jwt);
             RuntimeConfig config = CreateRuntimeConfigWithAuthN(authNConfig);
-            RuntimeConfigValidator configValidator = new(config);
+            RuntimeConfigProvider runtimeConfigProvider = Mock.Of<RuntimeConfigProvider>(_ => _.RuntimeConfiguration == config);
+            RuntimeConfigValidator configValidator = new(runtimeConfigProvider);
 
             Assert.ThrowsException<NotSupportedException>(() =>
             {

@@ -41,10 +41,7 @@ namespace Azure.DataGateway.Service
         // IWebHostbuilder, instead of a IHostBuilder.
         public static IWebHostBuilder CreateWebHostFromInMemoryUpdateableConfBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
-            .ConfigureAppConfiguration((builder) =>
-            {
-                builder.AddInMemoryUpdateableConfiguration();
-            }).UseStartup<Startup>();
+            .UseStartup<Startup>();
 
         /// <summary>
         /// Adds the various configuration providers.
@@ -57,8 +54,6 @@ namespace Azure.DataGateway.Service
             IConfigurationBuilder configurationBuilder,
             string[] args)
         {
-            configurationBuilder.Sources.Clear();
-
             string configFileName
                 = RuntimeConfigPath.GetFileNameForEnvironment(env.EnvironmentName);
             Dictionary<string, string> configFileNameMap = new()
@@ -72,8 +67,7 @@ namespace Azure.DataGateway.Service
             configurationBuilder
                 .AddInMemoryCollection(configFileNameMap)
                 .AddEnvironmentVariables(prefix: RuntimeConfigPath.ENVIRONMENT_PREFIX)
-                .AddCommandLine(args)
-                .AddInMemoryUpdateableConfiguration();
+                .AddCommandLine(args);
         }
     }
 }

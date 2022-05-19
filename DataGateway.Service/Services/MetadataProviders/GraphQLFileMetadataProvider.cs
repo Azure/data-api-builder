@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using Azure.DataGateway.Service.Models;
 using HotChocolate.Types;
@@ -16,33 +17,48 @@ namespace Azure.DataGateway.Service.Services
     /// </summary>
     public class GraphQLFileMetadataProvider : IGraphQLMetadataProvider
     {
-        public ResolverConfig GraphQLResolverConfig { get; set; }
+        private ResolverConfig GraphQLResolverConfig { get; set; }
 
         /// <summary>
         /// Stores mutation resolvers contained in configuration file.
         /// </summary>
         private Dictionary<string, MutationResolver> _mutationResolvers;
 
-        public GraphQLFileMetadataProvider(RuntimeConfig runtimeConfig)
+        public GraphQLFileMetadataProvider(RuntimeConfigProvider runtimeConfigProvider)
         {
-            string resolverConfigFileName = runtimeConfig.CosmosDb!.ResolverConfigFile;
-
-            // At this point, the validation is done so, ConfigValue and ResolverConfigFile
-            // must not be null, and this should be CosmosDb only.
-            string resolverConfigJson =
-                File.ReadAllText(runtimeConfig.CosmosDb!.ResolverConfigFile);
-
-            // Even though the file name may not be null and exist, the check here
-            // guarantees it is not empty.
-            if (string.IsNullOrEmpty(resolverConfigJson))
+            RuntimeConfig? runtimeConfig = runtimeConfigProvider.RuntimeConfiguration;
+            if (runtimeConfig == null)
             {
-                throw new ArgumentNullException("runtime-config.cosmosdb.resolver-config-file",
-                    $"The resolver config file contents are empty resolver-config-file: " +
-                    $"{resolverConfigFileName}\n");
+                throw new InvalidOperationException("RuntimeConfiguration hasn't been set yet.");
             }
 
-            GraphQLResolverConfig =
-                RuntimeConfig.GetDeserializedConfig<ResolverConfig>(resolverConfigJson);
+            // If the resolver config is set in the runtime config provider, it takes priority
+            // over the file resolver config.
+            ResolverConfig? resolverConfig = runtimeConfigProvider.ResolverConfig;
+            if (resolverConfig == null)
+            {
+                string resolverConfigFileName = runtimeConfig.CosmosDb!.ResolverConfigFile;
+                // At this point, the validation is done so, ConfigValue and ResolverConfigFile
+                // must not be null, and this should be CosmosDb only.
+                string resolverConfigJson =
+                    File.ReadAllText(runtimeConfig.CosmosDb!.ResolverConfigFile);
+
+                // Even though the file name may not be null and exist, the check here
+                // guarantees it is not empty.
+                if (string.IsNullOrEmpty(resolverConfigJson))
+                {
+                    throw new ArgumentNullException("runtime-config.cosmosdb.resolver-config-file",
+                        $"The resolver config file contents are empty resolver-config-file: " +
+                        $"{resolverConfigFileName}\n");
+                }
+
+                GraphQLResolverConfig =
+                    RuntimeConfig.GetDeserializedConfig<ResolverConfig>(resolverConfigJson);
+            }
+            else
+            {
+                GraphQLResolverConfig = resolverConfig;
+            }
 
             if (string.IsNullOrEmpty(GraphQLResolverConfig.GraphQLSchema))
             {

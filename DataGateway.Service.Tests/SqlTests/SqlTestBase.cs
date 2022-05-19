@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
@@ -45,7 +46,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static ISqlMetadataProvider _sqlMetadataProvider;
         protected static string _defaultSchemaName;
         protected static string _defaultSchemaVersion;
-        protected static RuntimeConfig _runtimeConfig;
+        protected static RuntimeConfigProvider _runtimeConfigProvider;
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run.
@@ -57,17 +58,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             _testCategory = testCategory;
 
-            _runtimeConfig = SqlTestHelper.LoadConfig($"{_testCategory}").CurrentValue;
+            RuntimeConfig _runtimeConfig = SqlTestHelper.LoadConfig($"{_testCategory}").CurrentValue;
+            Mock<RuntimeConfigProvider> _runtimeConfigProvider = new();
+            _runtimeConfigProvider.Setup(x => x.RuntimeConfiguration).Returns(_runtimeConfig);
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:
                     _queryBuilder = new PostgresQueryBuilder();
                     _defaultSchemaName = "public";
                     _dbExceptionParser = new PostgresDbExceptionParser();
-                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(_runtimeConfig, _dbExceptionParser);
+                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(_runtimeConfigProvider.Object, _dbExceptionParser);
                     _sqlMetadataProvider =
                         new PostgreSqlMetadataProvider(
-                            _runtimeConfig,
+                            _runtimeConfigProvider.Object,
                             _queryExecutor,
                             _queryBuilder);
                     break;
@@ -75,19 +78,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _queryBuilder = new MsSqlQueryBuilder();
                     _defaultSchemaName = "dbo";
                     _dbExceptionParser = new DbExceptionParserBase();
-                    _queryExecutor = new QueryExecutor<SqlConnection>(_runtimeConfig, _dbExceptionParser);
+                    _queryExecutor = new QueryExecutor<SqlConnection>(_runtimeConfigProvider.Object, _dbExceptionParser);
                     _sqlMetadataProvider = new MsSqlMetadataProvider(
-                        _runtimeConfig,
+                        _runtimeConfigProvider.Object,
                         _queryExecutor, _queryBuilder);
                     break;
                 case TestCategory.MYSQL:
                     _queryBuilder = new MySqlQueryBuilder();
                     _defaultSchemaName = "mysql";
                     _dbExceptionParser = new MySqlDbExceptionParser();
-                    _queryExecutor = new QueryExecutor<MySqlConnection>(_runtimeConfig, _dbExceptionParser);
+                    _queryExecutor = new QueryExecutor<MySqlConnection>(_runtimeConfigProvider.Object, _dbExceptionParser);
                     _sqlMetadataProvider =
                          new MySqlMetadataProvider(
-                             _runtimeConfig,
+                             _runtimeConfigProvider.Object,
                              _queryExecutor,
                              _queryBuilder);
                     break;

@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Action = Azure.DataGateway.Config.Action;
@@ -23,10 +23,19 @@ namespace Azure.DataGateway.Service.Authorization
 
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
 
-        public AuthorizationResolver(RuntimeConfig runtimeConfig)
+        public AuthorizationResolver(RuntimeConfigProvider runtimeConfigProvider)
         {
-            // Datastructure constructor will pull required properties from metadataprovider.
-            SetEntityPermissionMap(runtimeConfig);
+            RuntimeConfig? runtimeConfig = runtimeConfigProvider.RuntimeConfiguration;
+            if (runtimeConfig != null)
+            {
+                // Datastructure constructor will pull required properties from metadataprovider.
+                SetEntityPermissionMap(runtimeConfig);
+            }
+            else
+            {
+                runtimeConfigProvider.RuntimeConfigLoaded +=
+                    (object? sender, RuntimeConfig config) => SetEntityPermissionMap(config);
+            }
         }
 
         /// <summary>

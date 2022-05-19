@@ -4,7 +4,7 @@ using System.Data;
 using System.Data.Common;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
-using Microsoft.Extensions.Options;
+using Azure.DataGateway.Service.Configurations;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -17,8 +17,14 @@ namespace Azure.DataGateway.Service.Resolvers
         private readonly string _connectionString;
         private readonly DbExceptionParserBase _dbExceptionParser;
 
-        public QueryExecutor(RuntimeConfig runtimeConfig, DbExceptionParserBase dbExceptionParser)
+        public QueryExecutor(RuntimeConfigProvider runtimeConfigProvider, DbExceptionParserBase dbExceptionParser)
         {
+            RuntimeConfig? runtimeConfig = runtimeConfigProvider.RuntimeConfiguration;
+            if (runtimeConfig == null)
+            {
+                throw new InvalidOperationException("Runtime configuration hasn't been set yet.");
+            }
+
             _connectionString = runtimeConfig.ConnectionString;
             _dbExceptionParser = dbExceptionParser;
         }

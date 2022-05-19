@@ -4,6 +4,7 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -81,6 +82,16 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         public static IOptionsMonitor<RuntimeConfigPath> ConfigPath
         {
             get { return _runtimeConfigPath.Value; }
+        }
+
+        public static RuntimeConfigProvider ConfigProvider
+        {
+            get
+            {
+                Mock<RuntimeConfigProvider> mock = new();
+                mock.Setup(x => x.RuntimeConfiguration).Returns(Config);
+                return mock.Object;
+            }
         }
 
         // TODO: This doesn't seem great, we'll load the file every time? 

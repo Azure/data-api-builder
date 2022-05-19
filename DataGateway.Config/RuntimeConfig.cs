@@ -52,7 +52,7 @@ namespace Azure.DataGateway.Config
             "entities" : {},
         }
     */
-    public record class RuntimeConfig(
+    public record RuntimeConfig(
         [property: JsonPropertyName(RuntimeConfig.SCHEMA_PROPERTY_NAME)] string Schema,
         [property: JsonPropertyName(DataSource.JSON_PROPERTY_NAME)] DataSource DataSource,
         [property: JsonPropertyName(CosmosDbOptions.JSON_PROPERTY_NAME)]

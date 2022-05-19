@@ -8,16 +8,15 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
-using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.Parsers;
+using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using MySqlConnector;
 using Npgsql;
 
@@ -51,18 +50,12 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
-            Dictionary<string, string> config = new()
-            {
-                {
-                    $"{nameof(RuntimeConfigPath.ConfigFileName)}",
-                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
-                }
-            };
+            ConfigurationPostParameters body = GetConfigurationParameters();
 
-            _ = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+            _ = await httpClient.PostAsync("/configuration", JsonContent.Create(body));
             ValidateCosmosDbSetup(server);
 
-            HttpResponseMessage result = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+            HttpResponseMessage result = await httpClient.PostAsync("/configuration", JsonContent.Create(body));
             Assert.AreEqual(HttpStatusCode.Conflict, result.StatusCode);
         }
 
@@ -76,64 +69,24 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
             ValidateCosmosDbSetup(server);
 
-            Dictionary<string, string> config = new()
-            {
-                {
-                    $"{nameof(RuntimeConfigPath.ConfigFileName)}",
-                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
-                }
-            };
+            ConfigurationPostParameters body = GetConfigurationParameters();
 
             HttpResponseMessage result =
-                await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+                await httpClient.PostAsync("/configuration", JsonContent.Create(body));
             Assert.AreEqual(HttpStatusCode.Conflict, result.StatusCode);
         }
 
-        [TestMethod("Validates that querying for a config that's not set returns a 404.")]
-        public async Task TestGettingNonSetConfigurationReturns404()
-        {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
-            HttpClient httpClient = server.CreateClient();
-            Dictionary<string, string> config = new()
-            {
-                {
-                    $"{nameof(RuntimeConfigPath.ConfigFileName)}",
-                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
-                }
-            };
-
-            _ = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
-
-            HttpResponseMessage result = await httpClient.GetAsync("/configuration?key=test");
-            Assert.AreEqual(HttpStatusCode.NotFound, result.StatusCode);
-        }
-
-        [TestMethod("Validates that configurations are set and can be retrieved.")]
+        [TestMethod("Validates setting the configuration at runtime.")]
         public async Task TestSettingConfigurations()
         {
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
-            Dictionary<string, string> config = new()
-            {
-                {
-                    $"{nameof(RuntimeConfigPath.ConfigFileName)}",
-                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
-                },
-            };
+
+            ConfigurationPostParameters body = GetConfigurationParameters();
 
             HttpResponseMessage postResult =
-                await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+                await httpClient.PostAsync("/configuration", JsonContent.Create(body));
             Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
-
-            foreach (KeyValuePair<string, string> setting in config)
-            {
-                HttpResponseMessage result =
-                    await httpClient.GetAsync($"/configuration?key={setting.Key}");
-                Assert.AreEqual(HttpStatusCode.OK, result.StatusCode);
-
-                string text = await result.Content.ReadAsStringAsync();
-                Assert.AreEqual(setting.Value, text);
-            }
         }
 
         [TestMethod("Validates that local cosmos settings can be loaded and the correct classes are in the service provider.")]
@@ -217,20 +170,11 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
             HttpClient client = server.CreateClient();
-            Dictionary<string, string> config = new()
-            {
-                {
-                    $"{nameof(RuntimeConfigPath.ConfigFileName)}",
-                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{MSSQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
-                }
-            };
 
-            HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(config));
+            ConfigurationPostParameters body = GetConfigurationParameters();
+
+            HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(body));
             Assert.AreEqual(HttpStatusCode.Conflict, postResult.StatusCode);
-            // Since the body of the response when there's a conflict is the conflicting key:value pair, here we
-            // expect DatabaseType:mssql.
-            Assert.AreEqual($"ConfigFileName:hawaii-config.{MSSQL_ENVIRONMENT}.json",
-                await postResult.Content.ReadAsStringAsync());
         }
 
         [TestMethod("Validates that setting the configuration at runtime will instantiate the proper classes.")]
@@ -238,85 +182,13 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         {
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
             HttpClient client = server.CreateClient();
-            Dictionary<string, string> config = new()
-            {
-                {
-                    $"{nameof(RuntimeConfigPath.ConfigFileName)}",
-                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
-                }
-            };
 
-            HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(config));
+            ConfigurationPostParameters body = GetConfigurationParameters();
+
+            HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(body));
             Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
 
             ValidateCosmosDbSetup(server);
-        }
-
-        [TestMethod("Validates that change notifications are raised by the InMemoryUpdateableConfigurationProvider.")]
-        public void TestChangeNotificationsInMemoryUpdateableConfigurationProvider()
-        {
-            InMemoryUpdateableConfigurationProvider provider = new();
-            Dictionary<string, string> config = new()
-            {
-                {
-                    $"{nameof(RuntimeConfigPath.ConfigFileName)}",
-                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
-                }
-            };
-
-            provider.SetManyAndReload(config);
-
-            IChangeToken token = provider.GetReloadToken();
-            string finalConfigFileName;
-            if (!provider.TryGet($"{nameof(RuntimeConfigPath.ConfigFileName)}", out finalConfigFileName))
-            {
-                Assert.Fail("RuntimeConfig File Name wasn't found in the provider.");
-            }
-            else
-            {
-                Assert.AreEqual(
-                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}",
-                    finalConfigFileName);
-            }
-
-            token.RegisterChangeCallback((state) =>
-            {
-                if (!provider.TryGet($"{nameof(RuntimeConfigPath.ConfigFileName)}",
-                    out finalConfigFileName))
-                {
-                    Assert.Fail("RuntimeConfig File Name wasn't found in the provider.");
-                }
-            }, null);
-
-            Dictionary<string, string> toUpdate = new()
-            {
-                {
-                    $"{nameof(RuntimeConfigPath.ConfigFileName)}",
-                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{POSTGRESQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
-                }
-            };
-            provider.SetManyAndReload(toUpdate);
-            Assert.AreEqual(
-                $"{RuntimeConfigPath.CONFIGFILE_NAME}.{POSTGRESQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}",
-                finalConfigFileName);
-        }
-
-        [TestMethod("Validates that an exception is thrown if there's a null model in filter parser.")]
-        public void VerifyExceptionOnNullModelinFilterParser()
-        {
-            FilterParser parser = new();
-            try
-            {
-                // FilterParser has no model so we expect exception
-                parser.GetFilterClause(filterQueryString: string.Empty, resourcePath: string.Empty);
-                Assert.Fail();
-            }
-            catch (DataGatewayException exception)
-            {
-                Assert.AreEqual("The runtime has not been initialized with an Edm model.", exception.Message);
-                Assert.AreEqual(HttpStatusCode.InternalServerError, exception.StatusCode);
-                Assert.AreEqual(DataGatewayException.SubStatusCodes.UnexpectedError, exception.SubStatusCode);
-            }
         }
 
         /// <summary>
@@ -460,7 +332,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         {
             IOptionsMonitor<RuntimeConfig> config =
                 SqlTestHelper.LoadConfig(MSSQL_ENVIRONMENT);
-            IConfigValidator configValidator = new RuntimeConfigValidator(config.CurrentValue);
+            RuntimeConfigProvider runtimeConfigProvider = Mock.Of<RuntimeConfigProvider>(_ => _.RuntimeConfiguration == config.CurrentValue);
+            IConfigValidator configValidator = new RuntimeConfigValidator(runtimeConfigProvider);
             configValidator.ValidateConfig();
         }
 
@@ -492,7 +365,19 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         public void Cleanup()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "");
-            Environment.SetEnvironmentVariable($"{RuntimeConfigPath.ENVIRONMENT_PREFIX}{nameof(RuntimeConfigPath.CONNSTRING)}","");
+            Environment.SetEnvironmentVariable($"{RuntimeConfigPath.ENVIRONMENT_PREFIX}{nameof(RuntimeConfigPath.CONNSTRING)}", "");
+        }
+
+        private static ConfigurationPostParameters GetConfigurationParameters()
+        {
+            string cosmosFile = $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}";
+            return new()
+            {
+                Configuration = File.ReadAllText(cosmosFile),
+                SchemaJson = File.ReadAllText("schema.gql"),
+                ConnectionString = "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==",
+                Resolvers = File.ReadAllText("cosmos-config.json")
+            };
         }
 
         private static void ValidateCosmosDbSetup(TestServer server)

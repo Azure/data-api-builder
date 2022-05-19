@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
@@ -17,8 +16,6 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Primitives;
 using MySqlConnector;
 using Npgsql;
 
@@ -32,46 +29,23 @@ namespace Azure.DataGateway.Service
         }
 
         public IConfiguration Configuration { get; }
-        private IChangeToken? _inMemoryConfigChangeToken;
-
-        private void OnConfigurationChanged(object state)
-        {
-            RuntimeConfigPath runtimeConfigPath = new();
-            Configuration.Bind(runtimeConfigPath);
-            runtimeConfigPath.LoadRuntimeConfigValue();
-        }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
             services.Configure<RuntimeConfigPath>(Configuration);
 
-            services.AddSingleton((serviceProvider) =>
-            {
-                IOptions<RuntimeConfigPath>? path = serviceProvider.GetRequiredService<IOptions<RuntimeConfigPath>>();
-                RuntimeConfig? config = path.Value.LoadRuntimeConfigValue();
-                if (config == null)
-                {
-                    throw new ArgumentNullException();
-                }
-
-                return config;
-            });
-
-            if (Configuration is IConfigurationRoot root)
-            {
-                if (root.Providers.First(prov => prov is InMemoryUpdateableConfigurationProvider) is InMemoryUpdateableConfigurationProvider provider)
-                {
-                    services.AddSingleton(provider);
-                    _inMemoryConfigChangeToken = provider.GetReloadToken();
-                    _inMemoryConfigChangeToken.RegisterChangeCallback(new Action<object>(OnConfigurationChanged), provider);
-                }
-            }
+            services.AddSingleton<RuntimeConfigProvider>();
 
             services.AddSingleton<RuntimeConfigValidator>();
             services.AddSingleton<IGraphQLMetadataProvider>(implementationFactory: (serviceProvider) =>
             {
-                RuntimeConfig runtimeConfig = serviceProvider.GetRequiredService<RuntimeConfig>();
+                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig? runtimeConfig = configProvider.RuntimeConfiguration;
+                if (runtimeConfig == null)
+                {
+                    throw new Exception("null runtime config");
+                }
 
                 switch (runtimeConfig.DatabaseType)
                 {
@@ -90,7 +64,12 @@ namespace Azure.DataGateway.Service
 
             services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
             {
-                RuntimeConfig runtimeConfig = serviceProvider.GetRequiredService<RuntimeConfig>();
+                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig? runtimeConfig = configProvider.RuntimeConfiguration;
+                if (runtimeConfig == null)
+                {
+                    throw new Exception("null runtime config");
+                }
 
                 switch (runtimeConfig.DatabaseType)
                 {
@@ -107,7 +86,12 @@ namespace Azure.DataGateway.Service
 
             services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
             {
-                RuntimeConfig runtimeConfig = serviceProvider.GetRequiredService<RuntimeConfig>();
+                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig? runtimeConfig = configProvider.RuntimeConfiguration;
+                if (runtimeConfig == null)
+                {
+                    throw new Exception("null runtime config");
+                }
 
                 switch (runtimeConfig.DatabaseType)
                 {
@@ -124,7 +108,12 @@ namespace Azure.DataGateway.Service
 
             services.AddSingleton<IQueryExecutor>(implementationFactory: (serviceProvider) =>
             {
-                RuntimeConfig runtimeConfig = serviceProvider.GetRequiredService<RuntimeConfig>();
+                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig? runtimeConfig = configProvider.RuntimeConfiguration;
+                if (runtimeConfig == null)
+                {
+                    throw new Exception("null runtime config");
+                }
 
                 switch (runtimeConfig.DatabaseType)
                 {
@@ -144,7 +133,12 @@ namespace Azure.DataGateway.Service
 
             services.AddSingleton<IQueryBuilder>(implementationFactory: (serviceProvider) =>
             {
-                RuntimeConfig runtimeConfig = serviceProvider.GetRequiredService<RuntimeConfig>();
+                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig? runtimeConfig = configProvider.RuntimeConfiguration;
+                if (runtimeConfig == null)
+                {
+                    throw new Exception("null runtime config");
+                }
 
                 switch (runtimeConfig.DatabaseType)
                 {
@@ -163,7 +157,12 @@ namespace Azure.DataGateway.Service
 
             services.AddSingleton<ISqlMetadataProvider>(implementationFactory: (serviceProvider) =>
             {
-                RuntimeConfig runtimeConfig = serviceProvider.GetRequiredService<RuntimeConfig>();
+                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig? runtimeConfig = configProvider.RuntimeConfiguration;
+                if (runtimeConfig == null)
+                {
+                    throw new Exception("null runtime config");
+                }
 
                 switch (runtimeConfig.DatabaseType)
                 {
@@ -182,7 +181,12 @@ namespace Azure.DataGateway.Service
 
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
-                RuntimeConfig runtimeConfig = serviceProvider.GetRequiredService<RuntimeConfig>();
+                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig? runtimeConfig = configProvider.RuntimeConfiguration;
+                if (runtimeConfig == null)
+                {
+                    throw new Exception("null runtime config");
+                }
 
                 switch (runtimeConfig.DatabaseType)
                 {
@@ -215,28 +219,20 @@ namespace Azure.DataGateway.Service
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, RuntimeConfigProvider runtimeConfigProvider)
         {
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
-                = app.ApplicationServices.GetService<IOptionsMonitor<RuntimeConfigPath>>()!;
-            RuntimeConfig? runtimeConfig = runtimeConfigPath.CurrentValue.LoadRuntimeConfigValue();
+            RuntimeConfig? runtimeConfig = runtimeConfigProvider.RuntimeConfiguration;
             bool isRuntimeReady = false;
             if (runtimeConfig is not null)
             {
-                isRuntimeReady =
-                    PerformOnConfigChangeAsync(app).Result;
+                isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
             }
             else
             {
-                runtimeConfigPath.OnChange(async (newConfig) =>
+                runtimeConfigProvider.RuntimeConfigLoaded += async (sender, newConfig) =>
                 {
-                    if (!string.IsNullOrWhiteSpace(runtimeConfigPath.CurrentValue.ConfigFileName))
-                    {
-                        runtimeConfigPath.CurrentValue.LoadRuntimeConfigValue();
-                        isRuntimeReady =
-                            await PerformOnConfigChangeAsync(app);
-                    }
-                });
+                    isRuntimeReady = await PerformOnConfigChangeAsync(app);
+                };
             }
 
             if (env.IsDevelopment())
@@ -274,7 +270,7 @@ namespace Azure.DataGateway.Service
             app.UseAuthentication();
 
             // Conditionally add EasyAuth middleware if no JwtAuth configuration supplied.
-            if (runtimeConfig is not null && runtimeConfig.IsEasyAuthAuthenticationProvider())
+            if (runtimeConfig is null || runtimeConfig.IsEasyAuthAuthenticationProvider())
             {
                 app.UseEasyAuthMiddleware();
             }

@@ -52,16 +52,13 @@ namespace Azure.DataGateway.Service.Services
             new(StringComparer.InvariantCultureIgnoreCase);
 
         public SqlMetadataProvider(
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,
+            RuntimeConfig runtimeConfig,
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder)
         {
-            runtimeConfigPath.CurrentValue.
-                ExtractConfigValues(
-                    out _databaseType,
-                    out string connectionString,
-                    out _entities);
-            ConnectionString = connectionString;
+            _databaseType = runtimeConfig.DatabaseType;
+            _entities = runtimeConfig.Entities;
+            ConnectionString = runtimeConfig.ConnectionString;
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;

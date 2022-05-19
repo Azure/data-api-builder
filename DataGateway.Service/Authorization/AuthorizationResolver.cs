@@ -23,10 +23,10 @@ namespace Azure.DataGateway.Service.Authorization
 
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
 
-        public AuthorizationResolver(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
+        public AuthorizationResolver(RuntimeConfig runtimeConfig)
         {
             // Datastructure constructor will pull required properties from metadataprovider.
-            SetEntityPermissionMap(runtimeConfigPath.CurrentValue.ConfigValue!);
+            SetEntityPermissionMap(runtimeConfig);
         }
 
         /// <summary>

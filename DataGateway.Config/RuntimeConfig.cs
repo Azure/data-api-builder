@@ -52,7 +52,7 @@ namespace Azure.DataGateway.Config
             "entities" : {},
         }
     */
-    public record RuntimeConfig(
+    public record class RuntimeConfig(
         [property: JsonPropertyName(RuntimeConfig.SCHEMA_PROPERTY_NAME)] string Schema,
         [property: JsonPropertyName(DataSource.JSON_PROPERTY_NAME)] DataSource DataSource,
         [property: JsonPropertyName(CosmosDbOptions.JSON_PROPERTY_NAME)]
@@ -180,6 +180,12 @@ namespace Azure.DataGateway.Config
             {
                 return HostGlobalSettings.Authentication;
             }
+        }
+
+        public string GetDatabaseTypeNotSupportedMessage()
+        {
+            return string.Format("The provided database-type value: {0} is currently not supported." +
+                "Please check the configuration file.", DatabaseType);
         }
     }
 }

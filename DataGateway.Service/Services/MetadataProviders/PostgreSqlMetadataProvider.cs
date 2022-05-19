@@ -15,10 +15,10 @@ namespace Azure.DataGateway.Service.Services
         SqlMetadataProvider<NpgsqlConnection, NpgsqlDataAdapter, NpgsqlCommand>
     {
         public PostgreSqlMetadataProvider(
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,
+            RuntimeConfig runtimeConfig,
             IQueryExecutor queryExecutor,
             IQueryBuilder sqlQueryBuilder)
-            : base(runtimeConfigPath, queryExecutor, sqlQueryBuilder)
+            : base(runtimeConfig, queryExecutor, sqlQueryBuilder)
         {
         }
 

@@ -458,9 +458,9 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("Validates the runtime configuration file.")]
         public void TestConfigIsValid()
         {
-            IOptionsMonitor<RuntimeConfigPath> configPath =
+            IOptionsMonitor<RuntimeConfig> config =
                 SqlTestHelper.LoadConfig(MSSQL_ENVIRONMENT);
-            IConfigValidator configValidator = new RuntimeConfigValidator(configPath);
+            IConfigValidator configValidator = new RuntimeConfigValidator(config.CurrentValue);
             configValidator.ValidateConfig();
         }
 
@@ -492,6 +492,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         public void Cleanup()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "");
+            Environment.SetEnvironmentVariable($"{RuntimeConfigPath.ENVIRONMENT_PREFIX}{nameof(RuntimeConfigPath.CONNSTRING)}","");
         }
 
         private static void ValidateCosmosDbSetup(TestServer server)

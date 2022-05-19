@@ -12,15 +12,9 @@ namespace Azure.DataGateway.Service.Configurations
     {
         private readonly RuntimeConfig? _runtimeConfig;
 
-        public RuntimeConfigValidator(
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
+        public RuntimeConfigValidator(RuntimeConfig runtimeConfig)
         {
-            _runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue;
-        }
-
-        public RuntimeConfigValidator(RuntimeConfig config)
-        {
-            _runtimeConfig = config;
+            _runtimeConfig = runtimeConfig;
         }
 
         /// <summary>

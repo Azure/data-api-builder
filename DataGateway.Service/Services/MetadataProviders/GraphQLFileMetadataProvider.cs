@@ -23,16 +23,14 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         private Dictionary<string, MutationResolver> _mutationResolvers;
 
-        public GraphQLFileMetadataProvider(
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
+        public GraphQLFileMetadataProvider(RuntimeConfig runtimeConfig)
         {
-            RuntimeConfig config = runtimeConfigPath.CurrentValue.ConfigValue!;
-            string resolverConfigFileName = config.CosmosDb!.ResolverConfigFile;
+            string resolverConfigFileName = runtimeConfig.CosmosDb!.ResolverConfigFile;
 
             // At this point, the validation is done so, ConfigValue and ResolverConfigFile
             // must not be null, and this should be CosmosDb only.
             string resolverConfigJson =
-                File.ReadAllText(config.CosmosDb!.ResolverConfigFile);
+                File.ReadAllText(runtimeConfig.CosmosDb!.ResolverConfigFile);
 
             // Even though the file name may not be null and exist, the check here
             // guarantees it is not empty.
@@ -40,8 +38,7 @@ namespace Azure.DataGateway.Service.Services
             {
                 throw new ArgumentNullException("runtime-config.cosmosdb.resolver-config-file",
                     $"The resolver config file contents are empty resolver-config-file: " +
-                    $"{resolverConfigFileName}\n" +
-                    $"RuntimeConfigPath: {runtimeConfigPath.CurrentValue.ConfigFileName}");
+                    $"{resolverConfigFileName}\n");
             }
 
             GraphQLResolverConfig =

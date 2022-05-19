@@ -33,7 +33,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         [ClassInitialize]
         public static void Init(TestContext context)
         {
-            _clientProvider = new CosmosClientProvider(TestHelper.ConfigPath);
+            _clientProvider = new CosmosClientProvider(TestHelper.Config);
             _metadataStoreProvider = new MetadataStoreProviderForTest();
             string jsonString = @"
 type Character @model {
@@ -56,7 +56,7 @@ type Planet @model {
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
             _graphQLService = new GraphQLService(
-                TestHelper.ConfigPath,
+                TestHelper.Config,
                 _queryEngine,
                 _mutationEngine,
                 _metadataStoreProvider,

@@ -45,7 +45,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static ISqlMetadataProvider _sqlMetadataProvider;
         protected static string _defaultSchemaName;
         protected static string _defaultSchemaVersion;
-        protected static IOptionsMonitor<RuntimeConfigPath> _runtimeConfigPath;
+        protected static RuntimeConfig _runtimeConfig;
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run.
@@ -57,17 +57,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             _testCategory = testCategory;
 
-            _runtimeConfigPath = SqlTestHelper.LoadConfig($"{_testCategory}");
+            _runtimeConfig = SqlTestHelper.LoadConfig($"{_testCategory}").CurrentValue;
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:
                     _queryBuilder = new PostgresQueryBuilder();
                     _defaultSchemaName = "public";
                     _dbExceptionParser = new PostgresDbExceptionParser();
-                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(_runtimeConfigPath, _dbExceptionParser);
+                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(_runtimeConfig, _dbExceptionParser);
                     _sqlMetadataProvider =
                         new PostgreSqlMetadataProvider(
-                            _runtimeConfigPath,
+                            _runtimeConfig,
                             _queryExecutor,
                             _queryBuilder);
                     break;
@@ -75,19 +75,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _queryBuilder = new MsSqlQueryBuilder();
                     _defaultSchemaName = "dbo";
                     _dbExceptionParser = new DbExceptionParserBase();
-                    _queryExecutor = new QueryExecutor<SqlConnection>(_runtimeConfigPath, _dbExceptionParser);
+                    _queryExecutor = new QueryExecutor<SqlConnection>(_runtimeConfig, _dbExceptionParser);
                     _sqlMetadataProvider = new MsSqlMetadataProvider(
-                        _runtimeConfigPath,
+                        _runtimeConfig,
                         _queryExecutor, _queryBuilder);
                     break;
                 case TestCategory.MYSQL:
                     _queryBuilder = new MySqlQueryBuilder();
                     _defaultSchemaName = "mysql";
                     _dbExceptionParser = new MySqlDbExceptionParser();
-                    _queryExecutor = new QueryExecutor<MySqlConnection>(_runtimeConfigPath, _dbExceptionParser);
+                    _queryExecutor = new QueryExecutor<MySqlConnection>(_runtimeConfig, _dbExceptionParser);
                     _sqlMetadataProvider =
                          new MySqlMetadataProvider(
-                             _runtimeConfigPath,
+                             _runtimeConfig,
                              _queryExecutor,
                              _queryBuilder);
                     break;

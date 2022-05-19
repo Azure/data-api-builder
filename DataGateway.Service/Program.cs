@@ -70,13 +70,10 @@ namespace Azure.DataGateway.Service
             };
 
             configurationBuilder
-                .AddInMemoryCollection(configFileNameMap);
-            configurationBuilder.AddEnvironmentVariables(
-                prefix: RuntimeConfigPath.ENVIRONMENT_PREFIX);
-
-            configurationBuilder.AddCommandLine(args);
-
-            configurationBuilder.AddInMemoryUpdateableConfiguration();
+                .AddInMemoryCollection(configFileNameMap)
+                .AddEnvironmentVariables(prefix: RuntimeConfigPath.ENVIRONMENT_PREFIX)
+                .AddCommandLine(args)
+                .AddInMemoryUpdateableConfiguration();
         }
     }
 }

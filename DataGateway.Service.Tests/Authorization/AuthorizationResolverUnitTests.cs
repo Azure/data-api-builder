@@ -343,15 +343,10 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         #region Helpers
         private static AuthorizationResolver InitAuthZResolver(RuntimeConfig runtimeConfig)
         {
-            RuntimeConfigPath configPath = new()
-            {
-                ConfigValue = runtimeConfig
-            };
+            Mock<IOptionsMonitor<RuntimeConfig>> runtimeConfigProvider = new();
+            runtimeConfigProvider.Setup(x => x.CurrentValue).Returns(runtimeConfig);
 
-            Mock<IOptionsMonitor<RuntimeConfigPath>> runtimeConfigProvider = new();
-            runtimeConfigProvider.Setup(x => x.CurrentValue).Returns(configPath);
-
-            return new AuthorizationResolver(runtimeConfigProvider.Object);
+            return new AuthorizationResolver(runtimeConfigProvider.Object.CurrentValue);
         }
         private static RuntimeConfig InitRuntimeConfig(
             string entityName = "SampleEntity",

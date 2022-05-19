@@ -31,8 +31,8 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
                 .Build();
 
             RuntimeConfigPath configPath = config.Get<RuntimeConfigPath>();
-            configPath.SetRuntimeConfigValue();
-            AddMissingEntitiesToConfig(configPath);
+            RuntimeConfig? runtimeConfig = configPath.LoadRuntimeConfigValue();
+            AddMissingEntitiesToConfig(runtimeConfig);
             return Mock.Of<IOptionsMonitor<RuntimeConfigPath>>(_ => _.CurrentValue == configPath);
         }
 
@@ -46,9 +46,9 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         /// customized for testing purposes.
         /// </summary>
         /// <param name="configPath"></param>
-        private static void AddMissingEntitiesToConfig(RuntimeConfigPath configPath)
+        private static void AddMissingEntitiesToConfig(RuntimeConfig config)
         {
-            string magazineSource = configPath.ConfigValue.DatabaseType is DatabaseType.mysql ? "\"magazines\"" : "\"foo.magazines\"";
+            string magazineSource = config.DatabaseType is DatabaseType.mysql ? "\"magazines\"" : "\"foo.magazines\"";
             string magazineEntityJsonString =
               @"{ 
                     ""source"":  " + magazineSource + @",
@@ -75,13 +75,16 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             };
 
             Entity magazineEntity = JsonSerializer.Deserialize<Entity>(magazineEntityJsonString, options);
-            configPath.ConfigValue.Entities.Add("Magazine", magazineEntity);
+            config.Entities.Add("Magazine", magazineEntity);
         }
 
         public static IOptionsMonitor<RuntimeConfigPath> ConfigPath
         {
             get { return _runtimeConfigPath.Value; }
         }
+
+        // TODO: This doesn't seem great, we'll load the file every time? 
+        public static RuntimeConfig Config { get; } = _runtimeConfigPath.Value.CurrentValue.LoadRuntimeConfigValue();
 
         public static object GetItem(string id, string name = null, int numericVal = 4)
         {

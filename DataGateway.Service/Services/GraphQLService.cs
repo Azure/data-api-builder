@@ -37,7 +37,7 @@ namespace Azure.DataGateway.Service.Services
         public IRequestExecutor? Executor { private set; get; }
 
         public GraphQLService(
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,
+            RuntimeConfig runtimeConfig,
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
             IGraphQLMetadataProvider? graphQLMetadataProvider,
@@ -45,12 +45,8 @@ namespace Azure.DataGateway.Service.Services
             IDocumentHashProvider documentHashProvider,
             ISqlMetadataProvider sqlMetadataProvider)
         {
-
-            runtimeConfigPath.CurrentValue.
-                ExtractConfigValues(
-                    out _databaseType,
-                    out _,
-                    out _entities);
+            _databaseType = runtimeConfig.DatabaseType;
+            _entities = runtimeConfig.Entities;
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
             if (_databaseType == DatabaseType.cosmos && graphQLMetadataProvider is null)

@@ -10,18 +10,19 @@ namespace Azure.DataGateway.Service.Resolvers
     {
         private string? _connectionString;
         public CosmosClient? Client { get; private set; }
-        public CosmosClientProvider(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
+        public CosmosClientProvider(RuntimeConfig runtimeConfig)
         {
-            runtimeConfigPath.OnChange((newValue) =>
-            {
-                newValue.SetRuntimeConfigValue();
-                InitializeClient(runtimeConfigPath.CurrentValue.ConfigValue);
-            });
+            //runtimeConfig.OnChange((newValue) =>
+            //{
+            //    // TODO: This needs to be done somewhere else.
+            //    //newValue.SetRuntimeConfigValue();
+            //    InitializeClient(runtimeConfig.CurrentValue);
+            //});
 
-            InitializeClient(runtimeConfigPath.CurrentValue.ConfigValue);
+            InitializeClient(runtimeConfig);
         }
 
-        private void InitializeClient(RuntimeConfig? configuration)
+        private void InitializeClient(RuntimeConfig configuration)
         {
             if (configuration is null)
             {

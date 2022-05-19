@@ -358,7 +358,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
 
             table.Columns.Add(REF_COLNAME, new ColumnDefinition
             {
-                SystemType = typeof(long)
+                SystemType = typeof(int)
             });
 
             return table;

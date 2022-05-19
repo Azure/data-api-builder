@@ -235,6 +235,11 @@
       "source": "stocks_price",
       "rest": false,
       "permissions": []
+    },
+    "SupportedType": {
+      "source": "type_table",
+      "rest": false,
+      "permissions": []
     }
   }
 }

@@ -1,8 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 
@@ -53,22 +56,46 @@ namespace Azure.DataGateway.Service.Authorization
                         );
                 }
 
-                _authorizationResolver.IsValidRoleContext(httpContext);
+                if (_authorizationResolver.IsValidRoleContext(httpContext))
+                {
+                    context.Succeed(requirement);
+                }
             }
             else if (requirement is Stage2PermissionsRequirement)
             {
                 if (context.Resource != null)
                 {
-                    //AuthorizationMetadata authData = (AuthorizationMetadata)context.Resource;
-                    //if (authData.RoleName != null && authData.EntityName != null)
-                    //{
-                    //    bool status = _authorizationResolver.IsRoleDefinedForEntity(roleName: authData.RoleName, entityName: authData.EntityName);
+                    RestRequestContext restContext = (RestRequestContext)context.Resource;
 
-                    //    if (status)
-                    //    {
-                    //        context.Succeed(requirement);
-                    //    }
-                    //}
+                    HttpContext? httpContext = _contextAccessor.HttpContext;
+
+                    if (httpContext is null || restContext is null)
+                    {
+                        throw new DataGatewayException(
+                            message: "HTTP Context Unavailable, Something went wrong",
+                            statusCode: System.Net.HttpStatusCode.Unauthorized,
+                            subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError
+                        );
+                    }
+
+                    string entityName = restContext.DatabaseObject.TableDefinition.SourceEntityRelationshipMap.Keys.First();
+                    string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
+                    List<string> actions = OperationToCRUD(restContext.OperationType);
+
+                    foreach(string action in actions)
+                    {
+                        bool status = _authorizationResolver.AreRoleAndActionDefinedForEntity(entityName, roleName, action);
+                        if (!status)
+                        {
+                            context.Fail();                           
+                        }
+                    }
+
+                    // All requirement checks must pass.
+                    if (!context.HasFailed)
+                    {
+                        context.Succeed(requirement);
+                    }
                 }
                 else
                 {
@@ -85,6 +112,20 @@ namespace Azure.DataGateway.Service.Authorization
             }
 
             return Task.CompletedTask;
+        }
+
+        private static List<string> OperationToCRUD(Operation operation)
+        {
+            return operation switch
+            {
+                Operation.UpsertIncremental => new List<string>(new string[] { "create", "update" }),
+                Operation.Upsert => new List<string>(new string[] { "create", "update" }),
+                Operation.Find => new List<string>(new string[] { "read"}),
+                Operation.Delete => new List<string>(new string[] { "delete" }),
+                Operation.Insert => new List<string>(new string[] { "create" }),
+                Operation.UpdateIncremental => new List<string>(new string[] { "update" }),
+                _ => throw new ArgumentException("Invalid value for operation"),
+            };
         }
     }
 }

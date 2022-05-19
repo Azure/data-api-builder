@@ -147,10 +147,10 @@ namespace Azure.DataGateway.Service.Services
             // RestRequestContext is finalized for QueryBuilding and QueryExecution.
             // Perform Authorization check prior to moving forward in request pipeline.
             // RESTAuthorizationService
-            authorizationResult = await _authorizationService.AuthorizeAsync(
+            authorizationResult= await _authorizationService.AuthorizeAsync(
                 user: GetHttpContext().User,
                 resource: context,
-                requirements: new[] { new Stage1PermissionsRequirement() });
+                requirements: new[] { new Stage2PermissionsRequirement() });
 
             if (authorizationResult.Succeeded)
             {

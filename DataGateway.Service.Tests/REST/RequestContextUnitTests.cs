@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
 using Azure.DataGateway.Config;
@@ -16,6 +17,20 @@ namespace Azure.DataGateway.Service.Tests.REST
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class RequestContextUnitTests
     {
+        private static Dictionary<string, string> _defaultMapping = new()
+        {
+            { "id", "id" },
+            {"title", "title" },
+            {"publisher_id", "publisher_id" }
+        };
+
+        private static DatabaseObject _defaultDbObject = new()
+        {
+            SchemaName = string.Empty,
+            Name = string.Empty,
+            TableDefinition = new()
+        };
+
         /// <summary>
         /// Verify that if a payload does not Deserialize
         /// when constructing an InsertRequestContext that the
@@ -32,10 +47,11 @@ namespace Azure.DataGateway.Service.Tests.REST
             try
             {
                 InsertRequestContext context = new(entityName: string.Empty,
-                                                    dbo: new DatabaseObject(),
+                                                    dbo: _defaultDbObject,
                                                     insertPayloadRoot: payload,
                                                     httpVerb: verb,
-                                                    operationType: Operation.Insert);
+                                                    operationType: Operation.Insert,
+                                                    _defaultMapping);
                 Assert.Fail();
             }
             catch (DataGatewayException e)
@@ -59,10 +75,11 @@ namespace Azure.DataGateway.Service.Tests.REST
             JsonElement payload = JsonSerializer.Deserialize<JsonElement>("null");
             OperationAuthorizationRequirement verb = new();
             InsertRequestContext context = new(entityName: string.Empty,
-                                                dbo: new DatabaseObject(),
+                                                dbo: _defaultDbObject,
                                                 insertPayloadRoot: payload,
                                                 httpVerb: verb,
-                                                operationType: Operation.Insert);
+                                                operationType: Operation.Insert,
+                                                _defaultMapping);
             Assert.AreEqual(0, context.FieldValuePairsInBody.Count);
         }
     }

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
@@ -23,6 +25,12 @@ namespace Azure.DataGateway.Service.Tests.REST
         private const string DEFAULT_ENTITY = "Book";
         private const string DEFAULT_SCHEMA_NAME = "dbo";
         private const string DEFAULT_TABLE_NAME = "books";
+        private static Dictionary<string, string> _defaultMapping = new()
+        {
+            { "id", "id" },
+            {"title", "title" },
+            {"publisher_id", "publisher_id" }
+        };
 
         [ClassInitialize]
         public static async Task InitializeTestFixture(TestContext context)
@@ -107,7 +115,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
 
             ConstantNode nodeIn = CreateConstantNode(constantValue: string.Empty, literalText: "text", EdmPrimitiveTypeKind.Geography);
-            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY, DEFAULT_SCHEMA_NAME, DEFAULT_TABLE_NAME);
+            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY, DEFAULT_SCHEMA_NAME, DEFAULT_TABLE_NAME, _defaultMapping);
             Assert.ThrowsException<NotSupportedException>(() => visitor.Visit(nodeIn));
         }
 
@@ -122,7 +130,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         public void InvalidValueTypeTest()
         {
             ConstantNode nodeIn = CreateConstantNode(constantValue: string.Empty, literalText: "text", EdmPrimitiveTypeKind.Int64);
-            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY, DEFAULT_SCHEMA_NAME, DEFAULT_TABLE_NAME);
+            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY, DEFAULT_SCHEMA_NAME, DEFAULT_TABLE_NAME, _defaultMapping);
             Assert.ThrowsException<ArgumentException>(() => visitor.Visit(nodeIn));
         }
 
@@ -135,7 +143,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             ConstantNode constantNode = CreateConstantNode(constantValue: "null", literalText: "null", EdmPrimitiveTypeKind.None, isNull: true);
             BinaryOperatorNode binaryNode = CreateBinaryNode(constantNode, constantNode, BinaryOperatorKind.And);
-            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY, DEFAULT_SCHEMA_NAME, DEFAULT_TABLE_NAME);
+            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY, DEFAULT_SCHEMA_NAME, DEFAULT_TABLE_NAME, _defaultMapping);
             Assert.ThrowsException<NotSupportedException>(() => visitor.Visit(binaryNode));
         }
 
@@ -148,7 +156,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             ConstantNode constantNode = CreateConstantNode(constantValue: "null", literalText: "null", EdmPrimitiveTypeKind.None, isNull: true);
             UnaryOperatorNode binaryNode = CreateUnaryNode(constantNode, UnaryOperatorKind.Negate);
-            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY, DEFAULT_SCHEMA_NAME, DEFAULT_TABLE_NAME);
+            ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY, DEFAULT_SCHEMA_NAME, DEFAULT_TABLE_NAME, _defaultMapping);
             Assert.ThrowsException<ArgumentException>(() => visitor.Visit(binaryNode));
         }
 
@@ -222,7 +230,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             FilterClause ast = _sqlMetadataProvider.ODataFilterParser.
                 GetFilterClause(filterString, $"{schemaName}.{tableName}");
-            ODataASTVisitor visitor = CreateVisitor(entityName, schemaName, tableName);
+            ODataASTVisitor visitor = CreateVisitor(entityName, schemaName, tableName, _defaultMapping);
             string actual = ast.Expression.Accept(visitor);
             Assert.AreEqual(expected, actual);
         }
@@ -237,14 +245,16 @@ namespace Azure.DataGateway.Service.Tests.REST
             string entityName,
             string schemaName,
             string tableName,
+            Dictionary<string, string> mapping,
             bool isList = false)
         {
             DatabaseObject dbo = new()
             {
                 SchemaName = schemaName,
-                Name = tableName
+                Name = tableName,
+                TableDefinition = new()
             };
-            FindRequestContext context = new(entityName, dbo, isList);
+            FindRequestContext context = new(entityName, dbo, isList, mapping);
             Mock<SqlQueryStructure> structure = new(context, _sqlMetadataProvider);
             return new ODataASTVisitor(structure.Object);
         }

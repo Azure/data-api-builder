@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Text;
 using Azure.DataGateway.Config;
@@ -21,6 +22,12 @@ namespace Azure.DataGateway.Service.Tests.REST
         private static Mock<ISqlMetadataProvider> _mockMetadataStore;
         private const string DEFAULT_NAME = "entity";
         private const string DEFAULT_SCHEMA = "dbo";
+        private static Dictionary<string, string> _defaultMapping = new()
+        {
+            { "id", "id" },
+            {"title", "title" },
+            {"publisher_id", "publisher_id" }
+        };
 
         [ClassInitialize]
         public static void InitializeTestFixture(TestContext context)
@@ -43,7 +50,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             };
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
 
-            FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
+            FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false, _defaultMapping);
             string primaryKeyRoute = "id/1";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
@@ -63,7 +70,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 PrimaryKey = new(primaryKeys)
             };
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
+            FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false, _defaultMapping);
             string primaryKeyRoute = "id/2/isbn/12345";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
@@ -84,7 +91,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 PrimaryKey = new(primaryKeys)
             };
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
+            FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false, _defaultMapping);
             string primaryKeyRoute = "isbn/12345/id/2";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
@@ -174,7 +181,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 PrimaryKey = new(primaryKeys)
             };
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
+            FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false, _defaultMapping);
             string primaryKeyRoute = "id/12345/name/2";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
@@ -197,7 +204,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 PrimaryKey = new(primaryKeys)
             };
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
+            FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false, _defaultMapping);
             string primaryKeyRoute = "id/12345/isbn/2/name/TwoTowers";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
@@ -211,7 +218,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         [TestMethod]
         public void PrimaryKeyWithNoValueTest()
         {
-            FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
+            FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false, _defaultMapping);
             string primaryKeyRoute = "id/";
             PerformRequestParserPrimaryKeyTest(findRequestContext, primaryKeyRoute, expectsException: true);
 
@@ -344,7 +351,8 @@ namespace Azure.DataGateway.Service.Tests.REST
             return new DatabaseObject()
             {
                 SchemaName = schema,
-                Name = name
+                Name = name,
+                TableDefinition = new()
             };
         }
     }

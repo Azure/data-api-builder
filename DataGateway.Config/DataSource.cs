@@ -16,12 +16,6 @@ namespace Azure.DataGateway.Config
         public const string DATABASE_PROPERTY_NAME = "database-type";
         public const string CONNSTRING_PROPERTY_NAME = "connection-string";
 
-        public string GetDatabaseTypeNotSupportedMessage()
-        {
-            return string.Format("The provided database-type value: {0} is currently not supported." +
-                "Please check the configuration file.", DatabaseType);
-        }
-
         [property: JsonPropertyName(CONNSTRING_PROPERTY_NAME)]
         public string ConnectionString { get; set; } = string.Empty;
     }

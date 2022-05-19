@@ -149,6 +149,11 @@ namespace Azure.DataGateway.Config
                     : false;
         }
 
+        public bool IsDeveloperMode()
+        {
+            return HostGlobalSettings.Mode is HostModeType.Development;
+        }
+
         [JsonIgnore]
         public DatabaseType DatabaseType
         {
@@ -180,5 +185,7 @@ namespace Azure.DataGateway.Config
                 return HostGlobalSettings.Authentication;
             }
         }
+
+        public string DatabaseTypeNotSupportedMessage => $"The provided database-type value: {DatabaseType} is currently not supported. Please check the configuration file.";
     }
 }

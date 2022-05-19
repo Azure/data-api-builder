@@ -3,16 +3,15 @@ using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
-using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Services.MetadataProviders
 {
     public class CosmosSqlMetadataProvider : ISqlMetadataProvider
     {
-        private readonly IOptionsMonitor<RuntimeConfigPath> _runtimeConfigPath;
         private readonly IFileSystem _fileSystem;
         private readonly DatabaseType _databaseType;
         private readonly Dictionary<string, Entity> _entities;
@@ -23,17 +22,15 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
         /// <inheritdoc />
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } = new(StringComparer.InvariantCultureIgnoreCase);
 
-        public CosmosSqlMetadataProvider(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath, IFileSystem fileSystem)
+        public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem)
         {
-            _runtimeConfigPath = runtimeConfigPath;
             _fileSystem = fileSystem;
-            runtimeConfigPath.CurrentValue.
-                ExtractConfigValues(
-                    out _databaseType,
-                    out _,
-                    out _entities);
+            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
 
-            CosmosDbOptions? cosmosDb = _runtimeConfigPath.CurrentValue.ConfigValue!.CosmosDb;
+            _databaseType = runtimeConfig.DatabaseType;
+            _entities = runtimeConfig.Entities;
+
+            CosmosDbOptions? cosmosDb = runtimeConfig.CosmosDb;
 
             if (cosmosDb is null)
             {

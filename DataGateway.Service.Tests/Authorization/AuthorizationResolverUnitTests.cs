@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Text.Json;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
+using Azure.DataGateway.Service.Configurations;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -343,13 +343,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         #region Helpers
         private static AuthorizationResolver InitAuthZResolver(RuntimeConfig runtimeConfig)
         {
-            RuntimeConfigPath configPath = new()
-            {
-                ConfigValue = runtimeConfig
-            };
-
-            Mock<IOptionsMonitor<RuntimeConfigPath>> runtimeConfigProvider = new();
-            runtimeConfigProvider.Setup(x => x.CurrentValue).Returns(configPath);
+            Mock<RuntimeConfigProvider> runtimeConfigProvider = new();
+            runtimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out runtimeConfig)).Returns(true);
+            runtimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(runtimeConfig);
 
             return new AuthorizationResolver(runtimeConfigProvider.Object);
         }

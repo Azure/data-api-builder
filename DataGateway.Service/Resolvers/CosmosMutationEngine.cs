@@ -21,7 +21,6 @@ namespace Azure.DataGateway.Service.Resolvers
     public class CosmosMutationEngine : IMutationEngine
     {
         private readonly CosmosClientProvider _clientProvider;
-
         private readonly IOptionsMonitor<RuntimeConfigPath> _runtimeConfigPath;
 
         public CosmosMutationEngine(CosmosClientProvider clientProvider, IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
@@ -30,7 +29,7 @@ namespace Azure.DataGateway.Service.Resolvers
             _runtimeConfigPath = runtimeConfigPath;
         }
 
-        private async Task<JObject> ExecuteAsync(IDictionary<string, object?> queryArgs, CosmosMutation resolver)
+        private async Task<JObject> ExecuteAsync(IDictionary<string, object?> queryArgs, CosmosOperationMetadata resolver)
         {
             // TODO: add support for all mutation types
             // we only support CreateOrUpdate (Upsert) for now
@@ -172,7 +171,7 @@ namespace Azure.DataGateway.Service.Resolvers
             Operation mutationOperation =
                 MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
 
-            CosmosMutation mutation = new(databaseName, containerName, mutationOperation);
+            CosmosOperationMetadata mutation = new(databaseName, containerName, mutationOperation);
             // TODO: we are doing multiple round of serialization/deserialization
             // fixme
             JObject jObject = await ExecuteAsync(parameters, mutation);
@@ -191,6 +190,4 @@ namespace Azure.DataGateway.Service.Resolvers
             throw new NotImplementedException();
         }
     }
-
-    record CosmosMutation(string DatabaseName, string ContainerName, Operation OperationType);
 }

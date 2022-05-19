@@ -1,4 +1,4 @@
-using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Azure.DataGateway.Config
 {
@@ -12,6 +12,8 @@ namespace Azure.DataGateway.Config
     /// create, read, update, delete, *.
     /// The wildcard * can be used to mean all the actions.</param>
     public record PermissionSetting(
+        [property: JsonPropertyName("role")]
         string Role,
-        JsonElement[] Actions);
+        [property: JsonPropertyName("actions")]
+        object[] Actions);
 }

@@ -13,7 +13,9 @@ namespace Azure.DataGateway.Config
     public record Action(
         [property: JsonPropertyName("action")]
         string Name,
+        [property: JsonPropertyName("policy")]
         Policy? Policy,
+        [property: JsonPropertyName("fields")]
         Field? Fields);
 
     /// <summary>
@@ -45,7 +47,9 @@ namespace Azure.DataGateway.Config
     /// <param name="Include">All the fields specified here are included.</param>
     /// <param name="Exclude">All the fields specified here are excluded.</param>
     public record Field(
+        [property: JsonPropertyName("include")]
         string[]? Include,
+        [property: JsonPropertyName("exclude")]
         string[]? Exclude);
 
     /// <summary>

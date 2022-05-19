@@ -133,10 +133,13 @@ namespace Azure.DataGateway.Config
             return options;
         }
 
+        [JsonIgnore]
         public RestGlobalSettings RestGlobalSettings { get; private set; } = new();
 
+        [JsonIgnore]
         public GraphQLGlobalSettings GraphQLGlobalSettings { get; private set; } = new();
 
+        [JsonIgnore]
         public HostGlobalSettings HostGlobalSettings { get; private set; } = new();
 
         public bool IsEasyAuthAuthenticationProvider()
@@ -146,6 +149,7 @@ namespace Azure.DataGateway.Config
                     : false;
         }
 
+        [JsonIgnore]
         public DatabaseType DatabaseType
         {
             get
@@ -154,6 +158,7 @@ namespace Azure.DataGateway.Config
             }
         }
 
+        [JsonIgnore]
         public string ConnectionString
         {
             get
@@ -167,6 +172,7 @@ namespace Azure.DataGateway.Config
             }
         }
 
+        [JsonIgnore]
         public AuthenticationConfig? AuthNConfig
         {
             get

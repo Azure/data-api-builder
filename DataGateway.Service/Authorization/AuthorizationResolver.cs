@@ -146,7 +146,7 @@ namespace Azure.DataGateway.Service.Authorization
                 {
                     string role = permission.Role;
                     RoleMetadata roleToAction = new();
-                    JsonElement[] Actions = permission.Actions;
+                    object[] Actions = permission.Actions;
                     foreach (JsonElement actionElement in Actions)
                     {
                         string actionName = string.Empty;

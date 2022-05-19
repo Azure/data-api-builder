@@ -6,10 +6,10 @@ using System.Text.Json;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models.Authorization;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Action = Azure.DataGateway.Config.Action;
@@ -30,13 +30,21 @@ namespace Azure.DataGateway.Service.Authorization
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
 
         public AuthorizationResolver(
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,
+            RuntimeConfigProvider runtimeConfigProvider,
             ISqlMetadataProvider sqlMetadataProvider
             )
         {
-            // Datastructure constructor will pull required properties from metadataprovider.
             _metadataProvider = sqlMetadataProvider;
-            SetEntityPermissionMap(runtimeConfigPath.CurrentValue.ConfigValue!);
+            if (runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
+            {
+                // Datastructure constructor will pull required properties from metadataprovider.
+                SetEntityPermissionMap(runtimeConfig);
+            }
+            else
+            {
+                runtimeConfigProvider.RuntimeConfigLoaded +=
+                    (object? sender, RuntimeConfig config) => SetEntityPermissionMap(config);
+            }
         }
 
         /// <summary>
@@ -129,7 +137,7 @@ namespace Azure.DataGateway.Service.Authorization
             {
                 if (_metadataProvider.TryGetBackingColumn(entityName, field: exposedColumn, out string? backingColumn))
                 {
-                    // backingColumn will not be null when TryGetBackingColumn() is true. 
+                    // backingColumn will not be null when TryGetBackingColumn() is true.
                     if (actionToColumnMap.excluded.Contains(backingColumn!) || actionToColumnMap.excluded.Contains(WILDCARD) ||
                     !(actionToColumnMap.included.Contains(WILDCARD) || actionToColumnMap.included.Contains(backingColumn!)))
                     {

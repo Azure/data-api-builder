@@ -175,6 +175,19 @@ namespace Azure.DataGateway.Service.Authorization
                                 {
                                     actionToColumn.excluded = new(actionObj.Fields.Exclude);
                                 }
+
+                                if (actionObj.Policy is not null)
+                                {
+                                    if (actionObj.Policy.Request is not null)
+                                    {
+                                        actionToColumn.policies.Add(nameof(actionObj.Policy.Request), actionObj.Policy.Request);
+                                    }
+
+                                    if (actionObj.Policy.Database is not null)
+                                    {
+                                        actionToColumn.policies.Add(nameof(actionObj.Policy.Database), actionObj.Policy.Database);
+                                    }
+                                }
                             }
                         }
 

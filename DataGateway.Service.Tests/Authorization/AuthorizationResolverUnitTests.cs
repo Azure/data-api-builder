@@ -123,7 +123,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 TEST_ENTITY,
                 TEST_ROLE,
                 TEST_ACTION,
-                includedCols: new string[] { "col1", "col2", "col3" }
+                includedCols: new string[] { "col1", "col2", "col3" },
+                databasePolicy: "@claims.col1 eq @item.col1"
                 );
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
@@ -178,7 +179,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 TEST_ROLE,
                 TEST_ACTION,
                 includedCols: new string[] { "*" },
-                excludedCols: new string[] { "col1", "col2" }
+                excludedCols: new string[] { "col1", "col2" },
+                databasePolicy: "@claims.col2 eq @item.col2"
                 );
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 
@@ -358,17 +360,23 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string roleName = "Reader",
             string actionName = "Create",
             string[] includedCols = null,
-            string[] excludedCols = null
+            string[] excludedCols = null,
+            string requestPolicy = null,
+            string databasePolicy = null
             )
         {
             Field fieldsForRole = new(
                 Include: includedCols,
                 Exclude: excludedCols);
 
+            Policy policy = new(
+                Request: requestPolicy,
+                Database: databasePolicy);
+
             Action actionForRole = new(
                 Name: actionName,
                 Fields: fieldsForRole,
-                Policy: null);
+                Policy: policy);
 
             PermissionSetting permissionForEntity = new(
                 Role: roleName,

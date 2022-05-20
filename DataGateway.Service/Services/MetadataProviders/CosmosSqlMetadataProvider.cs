@@ -16,13 +16,12 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
         private readonly DatabaseType _databaseType;
         private readonly Dictionary<string, Entity> _entities;
         private readonly CosmosDbOptions _cosmosDb;
+        private readonly string _connectionString;
 
         public FilterParser ODataFilterParser => new();
 
         /// <inheritdoc />
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } = new(StringComparer.InvariantCultureIgnoreCase);
-
-        protected string ConnectionString { get; init; }
 
         public CosmosSqlMetadataProvider(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath, IFileSystem fileSystem)
         {
@@ -33,7 +32,7 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
                     out _databaseType,
                     out string connectionString,
                     out _entities);
-            ConnectionString = connectionString;
+            _connectionString = connectionString;
 
             CosmosDbOptions? cosmosDb = _runtimeConfigPath.CurrentValue.ConfigValue!.CosmosDb;
 

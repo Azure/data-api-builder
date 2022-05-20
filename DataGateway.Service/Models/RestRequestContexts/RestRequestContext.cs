@@ -19,6 +19,7 @@ namespace Azure.DataGateway.Service.Models
             HttpVerb = httpVerb;
             EntityName = entityName;
             DatabaseObject = dbo;
+            CumulativeColumns = new HashSet<string>();
         }
 
         /// <summary>
@@ -96,12 +97,12 @@ namespace Azure.DataGateway.Service.Models
 
         public HashSet<string> CumulativeColumns { get; }
 
-        private void CalculateCumulativeColumns()
+        public void CalculateCumulativeColumns()
         {
             ODataASTFieldVisitor visitor = new();
             try
             {
-                if (PrimaryKeyValuePairs is not null)
+                if (PrimaryKeyValuePairs is not null && PrimaryKeyValuePairs.Count > 0)
                 {
                     CumulativeColumns.UnionWith(PrimaryKeyValuePairs.Keys);
                 }
@@ -120,7 +121,7 @@ namespace Azure.DataGateway.Service.Models
                     }
                 }
 
-                if (FieldValuePairsInBody is not null)
+                if (FieldValuePairsInBody is not null && FieldValuePairsInBody.Count > 0)
                 {
                     CumulativeColumns.UnionWith(FieldValuePairsInBody.Keys);
                 }
@@ -132,9 +133,10 @@ namespace Azure.DataGateway.Service.Models
 
                 // 0 columns collected so far indicates that request is FindMany variant with no filters.
                 // Add list of includedColumns defined by config.
-                if (CumulativeColumns.Count == 0)
+                if (CumulativeColumns.Count == -1)
                 {
-
+                    // Get's all columns for table definition just for this scenario 
+                    CumulativeColumns.UnionWith(this.DatabaseObject.TableDefinition.Columns.Keys);
                 }
             }
             catch

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 
@@ -15,13 +16,16 @@ namespace Azure.DataGateway.Service.Authorization
     {
         private IAuthorizationResolver _authorizationResolver;
         private IHttpContextAccessor _contextAccessor;
+       // private ISqlMetadataProvider _metadataProvider;
 
         public RestAuthorizationHandler(
             IAuthorizationResolver authZResolver,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor
+            )
         {
             _authorizationResolver = authZResolver;
             _contextAccessor = httpContextAccessor;
+           // _metadataProvider = sqlMetadataProvider;
         }
 
         public Task HandleAsync(AuthorizationHandlerContext context)
@@ -113,12 +117,60 @@ namespace Azure.DataGateway.Service.Authorization
                     // if included columns is finite/explicit, just add those columns.
                     // All other request types will have columns listed, so no empty column checks will occur. Maybe check for this.
                     RestRequestContext restContext = (RestRequestContext)context.Resource;
-                    if (restContext.CumulativeColumns.Count == 0)
+                    HttpContext? httpContext = _contextAccessor.HttpContext;
+                    if (httpContext is null)
                     {
-                        // get list of includedColumns from config permissions
-                        _authorizationResolver.
+                        throw new DataGatewayException(
+                            message: "HTTP Context Unavailable, Something went wrong",
+                            statusCode: System.Net.HttpStatusCode.Unauthorized,
+                            subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError
+                        );
                     }
-                    bool isAuthorized = _authorizationResolver.AreColumnsAllowedForAction(entityName: , roleName: , actionName: , columns: );
+
+                    string entityName = restContext.DatabaseObject.TableDefinition.SourceEntityRelationshipMap.Keys.First();
+                    string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
+                    List<string> actions = HttpVerbToCRUD(httpContext.Request.Method);
+
+                    restContext.CalculateCumulativeColumns();
+
+                    // Actions will have count > 1 if HTTP operation is PUT or PATCH.
+                    // As those operations resolve to create and update actions.
+                    // A user must fulfill both actions' permissions requirements to proceed.
+                    foreach (string action in actions)
+                    {
+                        List<string> columnsToCheck;
+                        if (restContext.CumulativeColumns.Count == 0)
+                        {
+                            //restContext.CumulativeColumns.UnionWith(restContext.DatabaseObject.TableDefinition.Columns.Keys);
+                            columnsToCheck = _authorizationResolver.GetAllowedColumns(entityName, roleName, action);
+
+                        }
+                        else
+                        {
+                            columnsToCheck = restContext.CumulativeColumns.ToList();
+                        }
+
+                        // get list of includedColumns from config permissions
+                        bool isAuthorized = _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName, action, columnsToCheck);
+                        if (!isAuthorized)
+                        {
+                            context.Fail();
+                        }
+                        else
+                        {
+                            // This check catches the FindMany variant with no filters or column references.
+                            if (restContext.FieldsToBeReturned.Count == 0)
+                            {
+                                restContext.FieldsToBeReturned.AddRange(columnsToCheck);
+                            }
+                            
+                        }
+                    }
+
+                    if (!context.HasFailed)
+                    {
+                        context.Succeed(requirement);
+                    }
                 }
             }
 

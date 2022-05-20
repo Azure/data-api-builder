@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Models.Authorization;
+using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
@@ -23,10 +25,13 @@ namespace Azure.DataGateway.Service.Authorization
 
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
 
-        public AuthorizationResolver(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
+        public AuthorizationResolver(
+            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,
+            ISqlMetadataProvider sqlMetadataProvider
+            )
         {
             // Datastructure constructor will pull required properties from metadataprovider.
-            SetEntityPermissionMap(runtimeConfigPath.CurrentValue.ConfigValue!);
+            SetEntityPermissionMap(runtimeConfigPath.CurrentValue.ConfigValue!, sqlMetadataProvider);
         }
 
         /// <summary>
@@ -136,7 +141,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// </summary>
         /// <param name="runtimeConfig"></param>
         /// <returns></returns>
-        public void SetEntityPermissionMap(RuntimeConfig? runtimeConfig)
+        public void SetEntityPermissionMap(RuntimeConfig? runtimeConfig, ISqlMetadataProvider metadataProvider)
         {
             foreach ((string entityName, Entity entity) in runtimeConfig!.Entities)
             {
@@ -154,7 +159,9 @@ namespace Azure.DataGateway.Service.Authorization
                         if (actionElement.ValueKind == JsonValueKind.String)
                         {
                             actionName = actionElement.ToString();
-                            actionToColumn.included.Add(WILDCARD);
+
+                            // actionToColumn.included.Add(WILDCARD);
+                            actionToColumn.included.UnionWith(ResolveTableDefinitionColumns(metadataProvider, entityName));
                         }
                         else if (actionElement.ValueKind == JsonValueKind.Object)
                         {
@@ -168,12 +175,26 @@ namespace Azure.DataGateway.Service.Authorization
 
                                 if (actionObj.Fields!.Include is not null)
                                 {
-                                    actionToColumn.included = new(actionObj.Fields.Include);
+                                    if (actionObj.Fields.Include.Length == 1 && actionObj.Fields.Include[0] == WILDCARD)
+                                    {
+                                        actionToColumn.included.UnionWith(ResolveTableDefinitionColumns(metadataProvider, entityName));
+                                    }
+                                    else
+                                    {
+                                        actionToColumn.included = new(actionObj.Fields.Include);
+                                    }
                                 }
 
                                 if (actionObj.Fields!.Exclude is not null)
                                 {
-                                    actionToColumn.excluded = new(actionObj.Fields.Exclude);
+                                    if (actionObj.Fields.Exclude.Length == 1 && actionObj.Fields.Exclude[0] == WILDCARD)
+                                    {
+                                        actionToColumn.excluded.UnionWith(ResolveTableDefinitionColumns(metadataProvider, entityName));
+                                    }
+                                    else
+                                    {
+                                        actionToColumn.excluded = new(actionObj.Fields.Exclude);
+                                    }
                                 }
                             }
                         }
@@ -188,11 +209,22 @@ namespace Azure.DataGateway.Service.Authorization
             }
         }
 
-        public List<string> GetAllowedColumns(string entityName, string roleName, string actionName)
+        /// <inheritdoc />
+        public List<string> GetAllowedColumns(string entityName, string roleName, string action)
         {
-            _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[actionName].included
-            return ne
+            HashSet<string> includedColumns = _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action].included;
+
+            foreach(string excludedColumnName in _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action].excluded)
+            {
+                if (includedColumns.Contains(excludedColumnName))
+                {
+                    includedColumns.Remove(excludedColumnName);
+                }
+            }
+
+            return includedColumns.ToList();
         }
+
         private static bool IsValidActionName(string actionName)
         {
             if (actionName.Equals(WILDCARD) || _validActions.Contains(actionName))
@@ -203,5 +235,10 @@ namespace Azure.DataGateway.Service.Authorization
             return false;
         }
         #endregion
+
+        private static List<string> ResolveTableDefinitionColumns(ISqlMetadataProvider metadataProvider, string entityName)
+        {
+            return metadataProvider.GetTableDefinition(entityName).Columns.Keys.ToList();
+        }
     }
 }

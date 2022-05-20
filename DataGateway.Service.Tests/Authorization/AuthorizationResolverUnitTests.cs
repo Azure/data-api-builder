@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
+using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
@@ -349,9 +350,10 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             };
 
             Mock<IOptionsMonitor<RuntimeConfigPath>> runtimeConfigProvider = new();
+            Mock<ISqlMetadataProvider> metadataProvider = new();
             runtimeConfigProvider.Setup(x => x.CurrentValue).Returns(configPath);
 
-            return new AuthorizationResolver(runtimeConfigProvider.Object);
+            return new AuthorizationResolver(runtimeConfigProvider.Object, metadataProvider.Object);
         }
         private static RuntimeConfig InitRuntimeConfig(
             string entityName = "SampleEntity",

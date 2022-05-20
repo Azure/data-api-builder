@@ -19,15 +19,16 @@ namespace Azure.DataGateway.Service.Models
             EntityName = entityName;
             DatabaseObject = dbo;
             BackingColumnsToExposedNames = mapping is not null ? mapping : new();
+            ExposedNamesToBackingColumnNames = BackingColumnsToExposedNames!.ToDictionary(x => x.Value, x => x.Key);
             foreach (string column in dbo.TableDefinition.Columns.Keys)
             {
-                if (!BackingColumnsToExposedNames.ContainsKey(column))
+                if (!ExposedNamesToBackingColumnNames.ContainsKey(column) && !BackingColumnsToExposedNames.ContainsKey(column))
                 {
                     BackingColumnsToExposedNames.Add(column, column);
+                    ExposedNamesToBackingColumnNames.Add(column, column);
                 }
             }
 
-            ExposedNamesToBackingColumnNames = BackingColumnsToExposedNames!.ToDictionary(x => x.Value, x => x.Key);
         }
 
         /// <summary>

@@ -136,7 +136,10 @@ namespace Azure.DataGateway.Service.Resolvers
                 TableDefinition tableDefinition = GetUnderlyingTableDefinition();
                 foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
                 {
-                    AddColumn(column.Key, context.BackingColumnsToExposedNames[column.Key]);
+                    if (context.BackingColumnsToExposedNames.ContainsKey(column.Key))
+                    {
+                        AddColumn(column.Key, context.BackingColumnsToExposedNames[column.Key]);
+                    }
                 }
             }
 

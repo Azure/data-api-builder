@@ -16,7 +16,6 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
         private readonly DatabaseType _databaseType;
         private readonly Dictionary<string, Entity> _entities;
         private readonly CosmosDbOptions _cosmosDb;
-        private readonly string _connectionString;
 
         public FilterParser ODataFilterParser => new();
 
@@ -30,9 +29,8 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
             runtimeConfigPath.CurrentValue.
                 ExtractConfigValues(
                     out _databaseType,
-                    out string connectionString,
+                    out _,
                     out _entities);
-            _connectionString = connectionString;
 
             CosmosDbOptions? cosmosDb = _runtimeConfigPath.CurrentValue.ConfigValue!.CosmosDb;
 

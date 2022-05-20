@@ -19,9 +19,7 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
 
         public FilterParser ODataFilterParser => new();
 
-        /// <summary>
-        /// Maps an entity name to a DatabaseObject.
-        /// </summary>
+        /// <inheritdoc />
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } = new(StringComparer.InvariantCultureIgnoreCase);
 
         protected string ConnectionString { get; init; }
@@ -47,23 +45,45 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
             _cosmosDb = cosmosDb;
         }
 
+        /// <inheritdoc />
         public string GetDatabaseObjectName(string entityName)
         {
-            return _cosmosDb.Database;
+            Entity entity = _entities[entityName];
+
+            string entitySource = entity.GetSourceName();
+
+            return entitySource switch
+            {
+                string s when string.IsNullOrEmpty(s) && !string.IsNullOrEmpty(_cosmosDb.Container) => _cosmosDb.Container,
+                string s when !string.IsNullOrEmpty(s) => EntitySourceNamesParser.ParseSchemaAndTable(entitySource).Item2,
+                string s => s,
+                _ => throw new DataGatewayException($"No container provided for {entityName}", System.Net.HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.ErrorInInitialization)
+            };
         }
 
+        /// <inheritdoc />
         public DatabaseType GetDatabaseType()
         {
             return _databaseType;
         }
 
+        /// <inheritdoc />
         public string GetSchemaName(string entityName)
         {
             Entity entity = _entities[entityName];
 
-            return entity.Source switch
+            string entitySource = entity.GetSourceName();
+
+            if (string.IsNullOrEmpty(entitySource))
             {
-                string s when string.IsNullOrEmpty(s) && !string.IsNullOrEmpty(_cosmosDb.Container) => _cosmosDb.Container,
+                return _cosmosDb.Database;
+            }
+
+            (string? database, _) = EntitySourceNamesParser.ParseSchemaAndTable(entitySource);
+
+            return database switch
+            {
+                string s when string.IsNullOrEmpty(s) && !string.IsNullOrEmpty(_cosmosDb.Container) => _cosmosDb.Database,
                 string s => s,
                 _ => throw new DataGatewayException($"No container provided for {entityName}", System.Net.HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.ErrorInInitialization)
             };

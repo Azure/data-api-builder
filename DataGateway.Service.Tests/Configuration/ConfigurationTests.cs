@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Abstractions.TestingHelpers;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -461,7 +462,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         {
             IOptionsMonitor<RuntimeConfigPath> configPath =
                 SqlTestHelper.LoadConfig(MSSQL_ENVIRONMENT);
-            IConfigValidator configValidator = new RuntimeConfigValidator(configPath);
+            IConfigValidator configValidator = new RuntimeConfigValidator(configPath, new MockFileSystem());
             configValidator.ValidateConfig();
         }
 

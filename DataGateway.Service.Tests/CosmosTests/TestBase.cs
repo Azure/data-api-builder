@@ -57,7 +57,7 @@ type Planet @model {
 
             CosmosSqlMetadataProvider _metadataStoreProvider = new(TestHelper.ConfigPath, fileSystem);
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
-            _mutationEngine = new CosmosMutationEngine(_clientProvider, TestHelper.ConfigPath);
+            _mutationEngine = new CosmosMutationEngine(_clientProvider, TestHelper.ConfigPath, _metadataStoreProvider);
             _graphQLService = new GraphQLService(
                 TestHelper.ConfigPath,
                 _queryEngine,

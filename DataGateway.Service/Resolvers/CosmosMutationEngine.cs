@@ -9,6 +9,8 @@ using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Parsers;
+using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
@@ -22,11 +24,16 @@ namespace Azure.DataGateway.Service.Resolvers
     {
         private readonly CosmosClientProvider _clientProvider;
         private readonly IOptionsMonitor<RuntimeConfigPath> _runtimeConfigPath;
+        private readonly ISqlMetadataProvider _metadataProvider;
 
-        public CosmosMutationEngine(CosmosClientProvider clientProvider, IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
+        public CosmosMutationEngine(
+            CosmosClientProvider clientProvider,
+            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,
+            ISqlMetadataProvider metadataProvider)
         {
             _clientProvider = clientProvider;
             _runtimeConfigPath = runtimeConfigPath;
+            _metadataProvider = metadataProvider;
         }
 
         private async Task<JObject> ExecuteAsync(IDictionary<string, object?> queryArgs, CosmosOperationMetadata resolver)
@@ -157,15 +164,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 throw new DataGatewayException("Runtime config isn't setup.", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.ErrorInInitialization);
             }
 
-            Entity entity = configValue.Entities[entityName];
-            string? containerName = (entity.Source is string s && !string.IsNullOrEmpty(s)) ? s : configValue.CosmosDb!.Container;
-
-            if (containerName is null)
-            {
-                throw new DataGatewayException($"No container configured for entity {entityName}.", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.ErrorInInitialization);
-            }
-
-            string databaseName = configValue.CosmosDb!.Database;
+            string databaseName = _metadataProvider.GetSchemaName(entityName);
+            string containerName = _metadataProvider.GetDatabaseObjectName(entityName);
 
             string graphqlMutationName = context.Selection.Field.Name.Value;
             Operation mutationOperation =

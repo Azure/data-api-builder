@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Azure.DataGateway.Config
 {
@@ -42,6 +43,11 @@ namespace Azure.DataGateway.Config
         /// </summary>
         public string GetSourceName()
         {
+            if (Source is null)
+            {
+                return string.Empty;
+            }
+
             if (((JsonElement)Source).ValueKind is JsonValueKind.String)
             {
                 return JsonSerializer.Deserialize<string>((JsonElement)Source)!;

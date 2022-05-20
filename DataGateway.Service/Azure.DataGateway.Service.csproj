@@ -7,7 +7,6 @@
 
   <ItemGroup>
     <None Remove="schema.gql" />
-    <None Remove="books.gql" />
   </ItemGroup>
 
   <!--
@@ -23,9 +22,6 @@
 
   <ItemGroup>
     <Content Include="schema.gql">
-      <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
-    </Content>
-    <Content Include="books.gql">
       <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
     </Content>
     <Content Include="MsSqlBooks.sql">

@@ -62,8 +62,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 ObjectType realType = UnderlyingGraphQLEntityType(underlyingType.Fields[QueryBuilder.PAGINATION_FIELD_NAME].Type);
                 string entityName = realType.Name;
 
-                Database = _metadataProvider.GetDatabaseObjectName(entityName);
-                Container = _metadataProvider.GetSchemaName(entityName);
+                Database = _metadataProvider.GetSchemaName(entityName);
+                Container = _metadataProvider.GetDatabaseObjectName(entityName);
             }
             else
             {
@@ -74,8 +74,8 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 string entityName = underlyingType.Name;
 
-                Database = _metadataProvider.GetDatabaseObjectName(entityName);
-                Container = _metadataProvider.GetSchemaName(entityName);
+                Database = _metadataProvider.GetSchemaName(entityName);
+                Container = _metadataProvider.GetDatabaseObjectName(entityName);
             }
 
             // first and after will not be part of query parameters. They will be going into headers instead.

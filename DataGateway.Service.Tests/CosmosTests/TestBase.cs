@@ -52,7 +52,7 @@ type Planet @model {
 }";
             MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>()
             {
-                { @"./schema.graphql", new MockFileData(jsonString) }
+                { @"./schema.gql", new MockFileData(jsonString) }
             });
 
             CosmosSqlMetadataProvider _metadataStoreProvider = new(TestHelper.ConfigPath, fileSystem);
@@ -117,7 +117,7 @@ type Planet @model {
             Entity entity = TestHelper.ConfigPath.CurrentValue.ConfigValue.Entities[entityName];
 
             System.Reflection.PropertyInfo prop = entity.GetType().GetProperty("Source");
-            prop.SetValue(entity, containerName);
+            prop.SetValue(entity, JsonDocument.Parse(@$"{{ ""value"": ""{containerName}"" }}").RootElement.GetProperty("value"));
         }
 
         /// <summary>

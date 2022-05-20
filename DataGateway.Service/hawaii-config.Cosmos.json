@@ -7,7 +7,7 @@
   "cosmos": {
     "database": "graphqldb",
     "container": "planet",
-    "schema": "schema.graphql"
+    "schema": "schema.gql"
   },
   "runtime": {
     "rest": {

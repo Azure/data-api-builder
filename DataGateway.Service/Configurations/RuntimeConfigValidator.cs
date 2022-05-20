@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.IO.Abstractions;
 using Azure.DataGateway.Config;
 using Microsoft.Extensions.Options;
 
@@ -11,11 +12,13 @@ namespace Azure.DataGateway.Service.Configurations
     public class RuntimeConfigValidator : IConfigValidator
     {
         private readonly RuntimeConfig? _runtimeConfig;
+        private readonly IFileSystem _fileSystem;
 
         public RuntimeConfigValidator(
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
+            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath, IFileSystem fileSystem)
         {
             _runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue;
+            _fileSystem = fileSystem;
         }
 
         public RuntimeConfigValidator(RuntimeConfig config)
@@ -49,7 +52,7 @@ namespace Azure.DataGateway.Service.Configurations
             if (_runtimeConfig.DatabaseType.Equals(DatabaseType.cosmos) &&
                 ((_runtimeConfig.CosmosDb is null) ||
                 (string.IsNullOrWhiteSpace(_runtimeConfig.CosmosDb.GraphQLSchemaPath)) ||
-                (!File.Exists(_runtimeConfig.CosmosDb.GraphQLSchemaPath))))
+                (!_fileSystem.File.Exists(_runtimeConfig.CosmosDb.GraphQLSchemaPath))))
             {
                 throw new NotSupportedException("The GraphQL schema path should be provided with the GraphQL schema file and must exist in the current directory when database type is cosmosdb.");
             }

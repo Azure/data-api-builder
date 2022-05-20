@@ -206,6 +206,16 @@
       "source": "website_users",
       "rest": false,
       "permissions": []
+    },
+    "stocks_price": {
+      "source": "stocks_price",
+      "rest": false,
+      "permissions": []
+    },
+    "SupportedType": {
+      "source": "type_table",
+      "rest": false,
+      "permissions": []
     }
   }
 }

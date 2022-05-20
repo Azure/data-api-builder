@@ -7,7 +7,6 @@
 
   <ItemGroup>
     <None Remove="schema.gql" />
-    <None Remove="books.sql" />
   </ItemGroup>
 
   <!--

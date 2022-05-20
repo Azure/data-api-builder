@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -58,23 +59,13 @@ namespace Azure.DataGateway.Service.Services
             Operation operationType,
             string? primaryKeyRoute)
         {
-
-            AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
-               user: GetHttpContext().User,
-               resource: null,
-               requirements: new[] { new Stage1PermissionsRequirement() });
-
-            if (!authorizationResult.Succeeded)
-            {
-                //Handle authz failure
-                throw new DataGatewayException(
-                    message: "authZ failed",
-                    statusCode: HttpStatusCode.Forbidden,
-                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed);
-            }
+            AuthorizationCheckForRequirement(resource: null, requirement: new Stage1PermissionsRequirement());
 
             RequestValidator.ValidateEntity(entityName, _sqlMetadataProvider.EntityToDatabaseObject.Keys);
             DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[entityName];
+
+            AuthorizationCheckForRequirement(resource: dbObject, requirement: new Stage2PermissionsRequirement());
+
             QueryString? query = GetHttpContext().Request.QueryString;
             string queryString = query is null ? string.Empty : GetHttpContext().Request.QueryString.ToString();
 
@@ -144,39 +135,23 @@ namespace Azure.DataGateway.Service.Services
             // At this point for DELETE, the primary key should be populated in the Request Context.
             RequestValidator.ValidateRequestContext(context, _sqlMetadataProvider);
 
-            // RestRequestContext is finalized for QueryBuilding and QueryExecution.
-            // Perform Authorization check prior to moving forward in request pipeline.
-            // RESTAuthorizationService
-            authorizationResult= await _authorizationService.AuthorizeAsync(
-                user: GetHttpContext().User,
-                resource: context,
-                requirements: new[] { new Stage2PermissionsRequirement() });
+            // The final authorization check on columns occurs after the request is fully parsed and validated.
+            AuthorizationCheckForRequirement(resource: dbObject, requirement: new Stage3ConfiguredPermissionsRequirement());
 
-            if (authorizationResult.Succeeded)
+            switch (operationType)
             {
-                switch (operationType)
-                {
-                    case Operation.Find:
-                        return FormatFindResult(await _queryEngine.ExecuteAsync(context), (FindRequestContext)context);
-                    case Operation.Insert:
-                    case Operation.Delete:
-                    case Operation.Update:
-                    case Operation.UpdateIncremental:
-                    case Operation.Upsert:
-                    case Operation.UpsertIncremental:
-                        return await _mutationEngine.ExecuteAsync(context);
-                    default:
-                        throw new NotSupportedException("This operation is not yet supported.");
-                };
-            }
-            else
-            {
-                throw new DataGatewayException(
-                    message: "Forbidden",
-                    statusCode: HttpStatusCode.Forbidden,
-                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
-                );
-            }
+                case Operation.Find:
+                    return FormatFindResult(await _queryEngine.ExecuteAsync(context), (FindRequestContext)context);
+                case Operation.Insert:
+                case Operation.Delete:
+                case Operation.Update:
+                case Operation.UpdateIncremental:
+                case Operation.Upsert:
+                case Operation.UpsertIncremental:
+                    return await _mutationEngine.ExecuteAsync(context);
+                default:
+                    throw new NotSupportedException("This operation is not yet supported.");
+            };
         }
 
         /// <summary>
@@ -278,6 +253,28 @@ namespace Azure.DataGateway.Service.Services
                     return HttpRestVerbs.GET;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
+            }
+        }
+
+        public async void AuthorizationCheckForRequirement(object? resource,IAuthorizationRequirement requirement)
+        {
+            if (requirement is not Stage1PermissionsRequirement && resource is null)
+            {
+                throw new ArgumentNullException(paramName: "resource", message: "Resource can't be null for this requirement.");
+            }
+
+            AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
+                user: GetHttpContext().User,
+                resource: resource,
+                requirements: new[] { requirement });
+
+            if (!authorizationResult.Succeeded)
+            {
+                // Authorization failed so the request terminates.
+                throw new DataGatewayException(
+                    message: "Authorization Failure: Access Not Allowed.",
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed);
             }
         }
     }

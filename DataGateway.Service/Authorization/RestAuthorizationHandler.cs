@@ -65,11 +65,11 @@ namespace Azure.DataGateway.Service.Authorization
             {
                 if (context.Resource != null)
                 {
-                    RestRequestContext restContext = (RestRequestContext)context.Resource;
+                    DatabaseObject dbObject = (DatabaseObject)context.Resource;
 
                     HttpContext? httpContext = _contextAccessor.HttpContext;
 
-                    if (httpContext is null || restContext is null)
+                    if (httpContext is null || dbObject is null)
                     {
                         throw new DataGatewayException(
                             message: "HTTP Context Unavailable, Something went wrong",
@@ -78,14 +78,15 @@ namespace Azure.DataGateway.Service.Authorization
                         );
                     }
 
-                    string entityName = restContext.DatabaseObject.TableDefinition.SourceEntityRelationshipMap.Keys.First();
+                    string entityName = dbObject.TableDefinition.SourceEntityRelationshipMap.Keys.First();
                     string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-                    List<string> actions = OperationToCRUD(restContext.OperationType);
+                    List<string> actions = HttpVerbToCRUD(httpContext.Request.Method);
+                    //List<string> actions = OperationToCRUD(restContext.OperationType);
 
                     foreach(string action in actions)
                     {
-                        bool status = _authorizationResolver.AreRoleAndActionDefinedForEntity(entityName, roleName, action);
-                        if (!status)
+                        bool isAuthorized = _authorizationResolver.AreRoleAndActionDefinedForEntity(entityName, roleName, action);
+                        if (!isAuthorized)
                         {
                             context.Fail();                           
                         }
@@ -104,11 +105,21 @@ namespace Azure.DataGateway.Service.Authorization
             }
             else if (requirement is Stage3ConfiguredPermissionsRequirement)
             {
-
-            }
-            else if (requirement is Stage4ConfiguredPermissionsRequirement)
-            {
-
+                if (context.Resource is not null)
+                {
+                    // Get column list to authorize
+                    // FIND MANY: If includedColumns is *, add table def cols to list, but if a col equals a listed exclude col, then
+                    // don't add that.
+                    // if included columns is finite/explicit, just add those columns.
+                    // All other request types will have columns listed, so no empty column checks will occur. Maybe check for this.
+                    RestRequestContext restContext = (RestRequestContext)context.Resource;
+                    if (restContext.CumulativeColumns.Count == 0)
+                    {
+                        // get list of includedColumns from config permissions
+                        _authorizationResolver.
+                    }
+                    bool isAuthorized = _authorizationResolver.AreColumnsAllowedForAction(entityName: , roleName: , actionName: , columns: );
+                }
             }
 
             return Task.CompletedTask;
@@ -126,6 +137,26 @@ namespace Azure.DataGateway.Service.Authorization
                 Operation.UpdateIncremental => new List<string>(new string[] { "update" }),
                 _ => throw new ArgumentException("Invalid value for operation"),
             };
+        }
+
+        private static List<string> HttpVerbToCRUD(string httpVerb)
+        {
+            switch (httpVerb)
+            {
+                case "POST":
+                    return new List<string>(new string[] { "create" });
+                case "PUT":
+                case "PATCH":
+                    return new List<string>(new string[] { "create", "update" });
+                case "DELETE":
+                    return new List<string>(new string[] { "delete" });
+                case "GET":
+                    return new List<string>(new string[] { "read" });
+                default:
+                    break;
+            }
+
+            return new List<string>();
         }
     }
 }

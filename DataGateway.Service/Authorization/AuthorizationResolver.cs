@@ -188,6 +188,11 @@ namespace Azure.DataGateway.Service.Authorization
             }
         }
 
+        public List<string> GetAllowedColumns(string entityName, string roleName, string actionName)
+        {
+            _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[actionName].included
+            return ne
+        }
         private static bool IsValidActionName(string actionName)
         {
             if (actionName.Equals(WILDCARD) || _validActions.Contains(actionName))

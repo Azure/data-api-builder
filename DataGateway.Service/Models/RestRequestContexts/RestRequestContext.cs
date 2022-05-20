@@ -128,7 +128,14 @@ namespace Azure.DataGateway.Service.Models
                 if (ParsedQueryString is not null && ParsedQueryString.Count > 0)
                 {
                     CumulativeColumns.UnionWith(ParsedQueryString.AllKeys!);
-                }    
+                }
+
+                // 0 columns collected so far indicates that request is FindMany variant with no filters.
+                // Add list of includedColumns defined by config.
+                if (CumulativeColumns.Count == 0)
+                {
+
+                }
             }
             catch
             {

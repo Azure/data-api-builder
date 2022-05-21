@@ -9,6 +9,7 @@ using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -341,7 +342,7 @@ namespace Azure.DataGateway.Service
                 runtimeConfig.AuthNConfig != null &&
                 !runtimeConfig.IsEasyAuthAuthenticationProvider())
             {
-                services.AddAuthentication()
+                services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
                     options.Audience = runtimeConfig.AuthNConfig.Jwt!.Audience;

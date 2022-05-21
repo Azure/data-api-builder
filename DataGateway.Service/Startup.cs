@@ -8,7 +8,9 @@ using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using HotChocolate.AspNetCore;
 using HotChocolate.Language;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -37,7 +39,7 @@ namespace Azure.DataGateway.Service
         private void OnConfigurationChanged(object state)
         {
             RuntimeConfigPath runtimeConfigPath = new();
-            Console.WriteLine("Reading config file: " + runtimeConfigPath.ConfigFileName);
+            Console.WriteLine("Config Change: Reading file: " + runtimeConfigPath.ConfigFileName);
             Configuration.Bind(runtimeConfigPath);
             runtimeConfigPath.SetRuntimeConfigValue();
         }
@@ -103,7 +105,7 @@ namespace Azure.DataGateway.Service
                 IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
                 RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
-                Console.WriteLine("Reading config file: " + runtimeConfigPath.CurrentValue.ConfigFileName);
+                Console.WriteLine("Initial Config: Reading file: " + runtimeConfigPath.CurrentValue.ConfigFileName);
 
                 switch (runtimeConfig.DatabaseType)
                 {
@@ -292,10 +294,18 @@ namespace Azure.DataGateway.Service
 
             app.UseAuthorization();
 
+            // AuthZ Engine MW enforces that all requests (including introspection)
+            // include proper auth headers.
+            // - {Authorization header + Client role header for JWT}
+            // - {X-MS-CLIENT-PRINCIPAL + Client role header for EasyAuth}
+            // When enabled, the MW will prevent BCP from loading
+            // without proper authZ headers.
+            // app.UseAuthorizationEngineMiddleware();
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                endpoints.MapBananaCakePop("/graphql");
+                endpoints.MapBananaCakePop(toolPath: "/graphql");
             });
         }
 
@@ -345,7 +355,7 @@ namespace Azure.DataGateway.Service
                 runtimeConfig.AuthNConfig != null &&
                 !runtimeConfig.IsEasyAuthAuthenticationProvider())
             {
-                services.AddAuthentication()
+                services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
                     options.Audience = runtimeConfig.AuthNConfig.Jwt!.Audience;

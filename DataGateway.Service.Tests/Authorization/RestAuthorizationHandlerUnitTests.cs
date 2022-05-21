@@ -63,7 +63,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 ActionName: "Create",
                 Columns: new List<string>(new string[] { "id", "title", "publisherId" }));
 
-            AuthorizationHandlerContext context = new(new List<IAuthorizationRequirement> { new Stage1PermissionsRequirement() }, user, authZData);
+            AuthorizationHandlerContext context = new(new List<IAuthorizationRequirement> { new RoleContextPermissionsRequirement() }, user, authZData);
             RestAuthorizationHandler handler = new(_authorizationResolver, _contextAccessor);
 
             await handler.HandleAsync(context);

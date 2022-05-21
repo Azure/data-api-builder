@@ -47,7 +47,7 @@ namespace Azure.DataGateway.Service.Authorization
             // DG requires only 1 requirement be processed at a time.
             IAuthorizationRequirement requirement = pendingRequirements.First();
 
-            if (requirement is Stage1PermissionsRequirement)
+            if (requirement is RoleContextPermissionsRequirement)
             {
                 HttpContext? httpContext = _contextAccessor.HttpContext;
 
@@ -65,7 +65,7 @@ namespace Azure.DataGateway.Service.Authorization
                     context.Succeed(requirement);
                 }
             }
-            else if (requirement is Stage2PermissionsRequirement)
+            else if (requirement is EntityRoleActionPermissionsRequirement)
             {
                 if (context.Resource != null)
                 {
@@ -107,7 +107,7 @@ namespace Azure.DataGateway.Service.Authorization
                     context.Fail();
                 }
             }
-            else if (requirement is Stage3ConfiguredPermissionsRequirement)
+            else if (requirement is ColumnsPermissionsRequirement)
             {
                 if (context.Resource is not null)
                 {

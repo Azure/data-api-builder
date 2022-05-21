@@ -101,6 +101,12 @@ namespace Azure.DataGateway.Service.Authorization
         /// <inheritdoc />
         public bool AreColumnsAllowedForAction(string entityName, string roleName, string actionName, List<string> columns)
         {
+            // When the list of columns to check has no items, the user has no access to any field of the entity
+            if (columns.Count == 0)
+            {
+                return false;
+            }
+
             ActionMetadata actionToColumnMap;
             RoleMetadata roleInEntity = _entityPermissionMap[entityName].RoleToActionMap[roleName];
 

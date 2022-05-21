@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -59,12 +58,12 @@ namespace Azure.DataGateway.Service.Services
             Operation operationType,
             string? primaryKeyRoute)
         {
-            AuthorizationCheckForRequirement(resource: null, requirement: new Stage1PermissionsRequirement());
+            await AuthorizationCheckForRequirement(resource: null, requirement: new RoleContextPermissionsRequirement());
 
             RequestValidator.ValidateEntity(entityName, _sqlMetadataProvider.EntityToDatabaseObject.Keys);
             DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[entityName];
 
-            AuthorizationCheckForRequirement(resource: dbObject, requirement: new Stage2PermissionsRequirement());
+            await AuthorizationCheckForRequirement(resource: dbObject, requirement: new EntityRoleActionPermissionsRequirement());
 
             QueryString? query = GetHttpContext().Request.QueryString;
             string queryString = query is null ? string.Empty : GetHttpContext().Request.QueryString.ToString();
@@ -136,7 +135,7 @@ namespace Azure.DataGateway.Service.Services
             RequestValidator.ValidateRequestContext(context, _sqlMetadataProvider);
 
             // The final authorization check on columns occurs after the request is fully parsed and validated.
-            AuthorizationCheckForRequirement(resource: context, requirement: new Stage3ConfiguredPermissionsRequirement());
+            await AuthorizationCheckForRequirement(resource: context, requirement: new ColumnsPermissionsRequirement());
 
             switch (operationType)
             {
@@ -256,9 +255,9 @@ namespace Azure.DataGateway.Service.Services
             }
         }
 
-        public async void AuthorizationCheckForRequirement(object? resource,IAuthorizationRequirement requirement)
+        public async Task AuthorizationCheckForRequirement(object? resource,IAuthorizationRequirement requirement)
         {
-            if (requirement is not Stage1PermissionsRequirement && resource is null)
+            if (requirement is not RoleContextPermissionsRequirement && resource is null)
             {
                 throw new ArgumentNullException(paramName: "resource", message: "Resource can't be null for this requirement.");
             }

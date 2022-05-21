@@ -9,7 +9,8 @@ using Microsoft.Extensions.Primitives;
 namespace Azure.DataGateway.Service.AuthenticationHelpers
 {
     /// <summary>
-    /// Helper class which parses EasyAuth's injected headers into a ClaimsIdentity object
+    /// Helper class which parses EasyAuth's injected headers into a ClaimsIdentity object.
+    /// This class provides helper methods for StaticWebApp's Authentication feature: EasyAuth.
     /// </summary>
     public static class EasyAuthAuthentication
     {

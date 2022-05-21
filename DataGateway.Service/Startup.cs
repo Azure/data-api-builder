@@ -277,12 +277,8 @@ namespace Azure.DataGateway.Service
             });
             app.UseAuthentication();
 
-            // Conditionally add EasyAuth middleware if no JwtAuth configuration supplied.
-            if (runtimeConfig is not null && runtimeConfig.IsEasyAuthAuthenticationProvider())
-            {
-                app.UseEasyAuthMiddleware();
-            }
-            else
+            // Conditionally add JWT middleware if EasyAuth configuration is not supplied.
+            if (runtimeConfig is not null && !runtimeConfig.IsEasyAuthAuthenticationProvider())
             {
                 app.UseJwtAuthenticationMiddleware();
             }
@@ -348,6 +344,13 @@ namespace Azure.DataGateway.Service
                     options.Audience = runtimeConfig.AuthNConfig.Jwt!.Audience;
                     options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
                 });
+            }
+            else if( runtimeConfig != null &&
+                runtimeConfig.AuthNConfig != null &&
+                runtimeConfig.IsEasyAuthAuthenticationProvider())
+            {
+                services.AddAuthentication(StaticWebAppAuthenticationDefaults.AUTHENTICATIONSCHEME)
+                    .AddStaticWebAppAuthentication();
             }
         }
     }

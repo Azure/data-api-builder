@@ -16,7 +16,6 @@ namespace Azure.DataGateway.Service.Authorization
     {
         private IAuthorizationResolver _authorizationResolver;
         private IHttpContextAccessor _contextAccessor;
-       // private ISqlMetadataProvider _metadataProvider;
 
         public RestAuthorizationHandler(
             IAuthorizationResolver authZResolver,
@@ -25,7 +24,6 @@ namespace Azure.DataGateway.Service.Authorization
         {
             _authorizationResolver = authZResolver;
             _contextAccessor = httpContextAccessor;
-           // _metadataProvider = sqlMetadataProvider;
         }
 
         public Task HandleAsync(AuthorizationHandlerContext context)
@@ -85,7 +83,6 @@ namespace Azure.DataGateway.Service.Authorization
                     string entityName = dbObject.TableDefinition.SourceEntityRelationshipMap.Keys.First();
                     string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
                     List<string> actions = HttpVerbToCRUD(httpContext.Request.Method);
-                    //List<string> actions = OperationToCRUD(restContext.OperationType);
 
                     foreach(string action in actions)
                     {
@@ -141,7 +138,6 @@ namespace Azure.DataGateway.Service.Authorization
                         List<string> columnsToCheck;
                         if (restContext.CumulativeColumns.Count == 0)
                         {
-                            //restContext.CumulativeColumns.UnionWith(restContext.DatabaseObject.TableDefinition.Columns.Keys);
                             columnsToCheck = _authorizationResolver.GetAllowedColumns(entityName, roleName, action);
 
                         }

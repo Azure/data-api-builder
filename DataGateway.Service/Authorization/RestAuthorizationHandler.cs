@@ -32,7 +32,8 @@ namespace Azure.DataGateway.Service.Authorization
             // Catch clause to ensure multiple requirements are not sent at one time, to ensure
             // that requirements are evaluated in order, and fail the request upon first requirement failure.
             //      Order not maintained by pendingRequirements as ASP.NET Core implementation is HashSet.
-            // This will prevent extraneous computation on later authZ steps that shouldn't occur for a 403'd request.
+            // This will prevent extraneous computation on later authZ steps that shouldn't occur for a request
+            // that has already been evaluated as Unauthorized.
             if (pendingRequirements.Count() > 1)
             {
                 throw new DataGatewayException(
@@ -42,22 +43,22 @@ namespace Azure.DataGateway.Service.Authorization
                 );
             }
 
+            HttpContext? httpContext = _contextAccessor.HttpContext;
+
+            if (httpContext == null)
+            {
+                throw new DataGatewayException(
+                    message: "HTTP Context Unavailable, Something went wrong",
+                    statusCode: System.Net.HttpStatusCode.Unauthorized,
+                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError
+                    );
+            }
+
             // DG requires only 1 requirement be processed at a time.
             IAuthorizationRequirement requirement = pendingRequirements.First();
 
             if (requirement is RoleContextPermissionsRequirement)
             {
-                HttpContext? httpContext = _contextAccessor.HttpContext;
-
-                if (httpContext == null)
-                {
-                    throw new DataGatewayException(
-                        message: "HTTP Context Unavailable, Something went wrong",
-                        statusCode: System.Net.HttpStatusCode.Unauthorized,
-                        subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError
-                        );
-                }
-
                 if (_authorizationResolver.IsValidRoleContext(httpContext))
                 {
                     context.Succeed(requirement);
@@ -69,12 +70,10 @@ namespace Azure.DataGateway.Service.Authorization
                 {
                     DatabaseObject dbObject = (DatabaseObject)context.Resource;
 
-                    HttpContext? httpContext = _contextAccessor.HttpContext;
-
-                    if (httpContext is null || dbObject is null)
+                    if (dbObject is null)
                     {
                         throw new DataGatewayException(
-                            message: "HTTP Context Unavailable, Something went wrong",
+                            message: "DbObject Resource Null, Something went wrong",
                             statusCode: System.Net.HttpStatusCode.Unauthorized,
                             subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError
                         );
@@ -114,16 +113,6 @@ namespace Azure.DataGateway.Service.Authorization
                     // if included columns is finite/explicit, just add those columns.
                     // All other request types will have columns listed, so no empty column checks will occur. Maybe check for this.
                     RestRequestContext restContext = (RestRequestContext)context.Resource;
-                    HttpContext? httpContext = _contextAccessor.HttpContext;
-                    if (httpContext is null)
-                    {
-                        throw new DataGatewayException(
-                            message: "HTTP Context Unavailable, Something went wrong",
-                            statusCode: System.Net.HttpStatusCode.Unauthorized,
-                            subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError
-                        );
-                    }
-
                     string entityName = restContext.DatabaseObject.TableDefinition.SourceEntityRelationshipMap.Keys.First();
                     string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
                     List<string> actions = HttpVerbToCRUD(httpContext.Request.Method);

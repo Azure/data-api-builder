@@ -345,7 +345,7 @@ namespace Azure.DataGateway.Service
                     options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
                 });
             }
-            else if( runtimeConfig != null &&
+            else if (runtimeConfig != null &&
                 runtimeConfig.AuthNConfig != null &&
                 runtimeConfig.IsEasyAuthAuthenticationProvider())
             {

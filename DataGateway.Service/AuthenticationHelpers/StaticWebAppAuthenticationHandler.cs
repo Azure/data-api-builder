@@ -34,7 +34,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
               ILoggerFactory logger,
               UrlEncoder encoder,
               ISystemClock clock
-           ):base(options, logger, encoder, clock) 
+           ) : base(options, logger, encoder, clock)
         {
         }
 

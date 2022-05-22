@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
@@ -37,23 +39,29 @@ namespace Azure.DataGateway.Service.Resolvers
         private void Init(IDictionary<string, object> queryParams)
         {
             IFieldSelection selection = _context.Selection;
-            GraphQLType graphqlType = MetadataStoreProvider.GetGraphQLType(UnderlyingType(selection.Field.Type).Name);
+            GraphQLType graphqlType = MetadataStoreProvider.GetGraphQLType(UnderlyingGraphQLEntityType(selection.Field.Type).Name);
             IsPaginated = graphqlType.IsPaginationType;
             OrderByColumns = new();
 
             if (IsPaginated)
             {
                 FieldNode? fieldNode = ExtractItemsQueryField(selection.SyntaxNode);
-                graphqlType = MetadataStoreProvider.GetGraphQLType(UnderlyingType(ExtractItemsSchemaField(selection.Field).Type).Name);
+                graphqlType = MetadataStoreProvider.GetGraphQLType(UnderlyingGraphQLEntityType(ExtractItemsSchemaField(selection.Field).Type).Name);
 
                 if (fieldNode != null)
                 {
-                    Columns.AddRange(fieldNode.SelectionSet!.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.GetNodes().First().ToString())));
+                    Columns.AddRange(fieldNode.SelectionSet!.Selections.Select(x => new LabelledColumn(tableSchema: string.Empty,
+                                                                                                       tableName: _containerAlias,
+                                                                                                       columnName: string.Empty,
+                                                                                                       label: x.GetNodes().First().ToString())));
                 }
             }
             else
             {
-                Columns.AddRange(selection.SyntaxNode.SelectionSet!.Selections.Select(x => new LabelledColumn(_containerAlias, "", x.GetNodes().First().ToString())));
+                Columns.AddRange(selection.SyntaxNode.SelectionSet!.Selections.Select(x => new LabelledColumn(tableSchema: string.Empty,
+                                                                                                              tableName: _containerAlias,
+                                                                                                              columnName: string.Empty,
+                                                                                                              label: x.GetNodes().First().ToString())));
             }
 
             Container = graphqlType.ContainerName;
@@ -61,16 +69,16 @@ namespace Azure.DataGateway.Service.Resolvers
 
             // first and after will not be part of query parameters. They will be going into headers instead.
             // TODO: Revisit 'first' while adding support for TOP queries
-            if (queryParams.ContainsKey("first"))
+            if (queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
             {
-                MaxItemCount = (int)queryParams["first"];
-                queryParams.Remove("first");
+                MaxItemCount = (int)queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME];
+                queryParams.Remove(QueryBuilder.PAGE_START_ARGUMENT_NAME);
             }
 
-            if (queryParams.ContainsKey("after"))
+            if (queryParams.ContainsKey(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME))
             {
-                Continuation = (string)queryParams["after"];
-                queryParams.Remove("after");
+                Continuation = (string)queryParams[QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME];
+                queryParams.Remove(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME);
             }
 
             if (queryParams.ContainsKey("orderBy"))
@@ -81,6 +89,24 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     OrderByColumns = ProcessGqlOrderByArg((List<ObjectFieldNode>)orderByObject);
                 }
+
+                queryParams.Remove("orderBy");
+            }
+
+            if (queryParams.ContainsKey("_filter"))
+            {
+                object? filterObject = queryParams["_filter"];
+
+                if (filterObject != null)
+                {
+                    List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
+                    Predicates.Add(GQLFilterParser.Parse(fields: filterFields,
+                        schemaName: string.Empty,
+                        tableName: _containerAlias,
+                        tableAlias: _containerAlias,
+                        table: new TableDefinition(),
+                        processLiterals: MakeParamWithValue));
+                }
             }
             else
             {
@@ -88,7 +114,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 foreach (KeyValuePair<string, object> parameter in queryParams)
                 {
                     Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(_containerAlias, parameter.Key)),
+                        new PredicateOperand(new Column(tableSchema: string.Empty, _containerAlias, parameter.Key)),
                         PredicateOperation.Equal,
                         new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
                     ));
@@ -121,11 +147,11 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 if (enumValue.Value == $"{OrderByDir.Desc}")
                 {
-                    orderByColumnsList.Add(new OrderByColumn(_containerAlias, fieldName, OrderByDir.Desc));
+                    orderByColumnsList.Add(new OrderByColumn(tableSchema: string.Empty, _containerAlias, fieldName, direction: OrderByDir.Desc));
                 }
                 else
                 {
-                    orderByColumnsList.Add(new OrderByColumn(_containerAlias, fieldName));
+                    orderByColumnsList.Add(new OrderByColumn(tableSchema: string.Empty, _containerAlias, fieldName));
                 }
             }
 

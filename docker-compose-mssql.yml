@@ -6,6 +6,4 @@ services:
       - "5000:5000"
     restart: "no"
     volumes:
-      - "./DataGateway.Service/books.gql:/App/books.gql"
       - "./DataGateway.Service/hawaii-config.MsSql.json:/App/hawaii-config.MsSql.json"
-      - "./DataGateway.Service/sql-config.json:/App/config.json"

@@ -40,7 +40,11 @@ namespace Azure.DataGateway.Service.Exceptions
             /// <summary>
             /// Error mapping database information to GraphQL information
             /// </summary>
-            GraphQLMapping
+            GraphQLMapping,
+            /// <summary>
+            /// Error encountered while initializing.
+            /// </summary>
+            ErrorInInitialization
         }
 
         public HttpStatusCode StatusCode { get; }

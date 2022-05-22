@@ -7,8 +7,6 @@
 
   <ItemGroup>
     <None Remove="schema.gql" />
-    <None Remove="books.gql" />
-    <None Remove="books.sql" />
   </ItemGroup>
 
   <!--
@@ -24,9 +22,6 @@
 
   <ItemGroup>
     <Content Include="schema.gql">
-      <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
-    </Content>
-    <Content Include="books.gql">
       <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
     </Content>
     <Content Include="MsSqlBooks.sql">
@@ -57,14 +52,14 @@
 
 
   <ItemGroup>
-    <Watch Remove="hawaii-config.cosmos.json" />
+    <Watch Remove="hawaii-config.Cosmos.json" />
     <Watch Remove="hawaii-config.Cosmos.overrides.example.json" />
     <Watch Remove="hawaii-config.json" />
-    <Watch Remove="hawaii-config.mssql.json" />
+    <Watch Remove="hawaii-config.Mssql.json" />
     <Watch Remove="hawaii-config.MsSql.overrides.example.json" />
-    <Watch Remove="hawaii-config.mysql.json" />
+    <Watch Remove="hawaii-config.Mysql.json" />
     <Watch Remove="hawaii-config.MySql.overrides.example.json" />
-    <Watch Remove="hawaii-config.postgresql.json" />
+    <Watch Remove="hawaii-config.Postgresql.json" />
     <Watch Remove="hawaii-config.PostgreSql.overrides.example.json" />
   </ItemGroup>
 

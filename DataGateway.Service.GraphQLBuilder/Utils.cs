@@ -1,3 +1,4 @@
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
 using HotChocolate.Types;
@@ -6,6 +7,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
 {
     internal static class Utils
     {
+        const string DEFAULT_PRIMARY_KEY_NAME = "id";
+
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
             string modelDirectiveName = ModelDirectiveType.DirectiveName;
@@ -29,25 +32,39 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             return false;
         }
 
-        public static FieldDefinitionNode FindPrimaryKeyField(ObjectTypeDefinitionNode node)
+        /// <summary>
+        /// Find all the primary keys for a given object node
+        /// using the information available in the directives.
+        /// If no directives present, default to a field named "id" as the primary key.
+        /// If even that doesn't exist, throw an exception in initialization.
+        /// </summary>
+        public static List<FieldDefinitionNode> FindPrimaryKeyFields(ObjectTypeDefinitionNode node)
         {
-            FieldDefinitionNode? fieldDefinitionNode = node.Fields.FirstOrDefault(f => f.Directives.Any(d => d.Name.Value == PrimaryKeyDirectiveType.DirectiveName));
+            List<FieldDefinitionNode> fieldDefinitionNodes =
+                new(node.Fields.Where(f => f.Directives.Any(d => d.Name.Value == PrimaryKeyDirectiveType.DirectiveName)));
 
             // By convention we look for a `@primaryKey` directive, if that didn't exist
             // fallback to using an expected field name on the GraphQL object
-            if (fieldDefinitionNode == null)
+            if (fieldDefinitionNodes.Count == 0)
             {
-                fieldDefinitionNode = node.Fields.FirstOrDefault(f => f.Name.Value == "id");
+                FieldDefinitionNode? fieldDefinitionNode =
+                    node.Fields.FirstOrDefault(f => f.Name.Value == DEFAULT_PRIMARY_KEY_NAME);
+                if (fieldDefinitionNode is not null)
+                {
+                    fieldDefinitionNodes.Add(fieldDefinitionNode);
+                }
             }
 
             // Nothing explicitly defined nor could we find anything using our conventions, fail out
-            if (fieldDefinitionNode == null)
+            if (fieldDefinitionNodes.Count == 0)
             {
-                // TODO: Proper exception type
-                throw new Exception("No primary key defined and conventions couldn't locate a fallback");
+                throw new DataGatewayException(
+                    message: "No primary key defined and conventions couldn't locate a fallback",
+                    subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization,
+                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable);
             }
 
-            return fieldDefinitionNode;
+            return fieldDefinitionNodes;
         }
 
         /// <summary>

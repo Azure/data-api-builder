@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Azure.DataGateway.Config;
 using Microsoft.OData.Edm;
 
-namespace Azure.DataGateway.Service.Services
+namespace Azure.DataGateway.Service.Parsers
 {
     /// <summary>
     /// This class represents an EdmModelBuilder which can build the needed
@@ -44,10 +44,10 @@ namespace Azure.DataGateway.Service.Services
         {
             foreach (DatabaseObject dbObject in databaseObjects)
             {
-                string entitySourceName = dbObject.Name;
+                string entitySourceName = $"{dbObject.FullName}";
                 TableDefinition tableDefinition = dbObject.TableDefinition;
                 EdmEntityType newEntity = new(DEFAULT_NAMESPACE, entitySourceName);
-                string newEntityKey = DEFAULT_NAMESPACE + entitySourceName;
+                string newEntityKey = $"{DEFAULT_NAMESPACE}.{entitySourceName}";
                 _entities.Add(newEntityKey, newEntity);
 
                 // each column represents a property of the current entity we are adding
@@ -67,14 +67,14 @@ namespace Azure.DataGateway.Service.Services
                         case TypeCode.String:
                             type = EdmPrimitiveTypeKind.String;
                             break;
-                        case TypeCode.Int64:
-                            type = EdmPrimitiveTypeKind.Int64;
-                            break;
-                        case TypeCode.Single:
-                            type = EdmPrimitiveTypeKind.Single;
+                        case TypeCode.Int32:
+                            type = EdmPrimitiveTypeKind.Int32;
                             break;
                         case TypeCode.Double:
                             type = EdmPrimitiveTypeKind.Double;
+                            break;
+                        case TypeCode.Boolean:
+                            type = EdmPrimitiveTypeKind.Boolean;
                             break;
                         default:
                             throw new ArgumentException($"Column type" +
@@ -115,8 +115,8 @@ namespace Azure.DataGateway.Service.Services
             // that has a key, then an entity set can be thought of as a table made up of those rows
             foreach (DatabaseObject dbObject in databaseObjects)
             {
-                string entityName = dbObject.Name;
-                container.AddEntitySet(name: entityName, _entities[DEFAULT_NAMESPACE + entityName]);
+                string entityName = $"{dbObject.FullName}";
+                container.AddEntitySet(name: entityName, _entities[$"{DEFAULT_NAMESPACE}.{entityName}"]);
             }
 
             return this;

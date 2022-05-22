@@ -3,7 +3,7 @@ using Azure.DataGateway.Service.Resolvers;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
 
-namespace Azure.DataGateway.Service.Services
+namespace Azure.DataGateway.Service.Parsers
 {
     /// <summary>
     /// This class is a visitor for an AST generated when parsing a $filter query string
@@ -57,7 +57,7 @@ namespace Azure.DataGateway.Service.Services
 
         /// <summary>
         /// Represents visiting a ConstantNode, which is what
-        /// holds a value in the AST. 
+        /// holds a value in the AST.
         /// </summary>
         /// <param name="nodeIn">The node visited.</param>
         /// <returns>String representing param that holds given value.</returns>
@@ -96,8 +96,8 @@ namespace Azure.DataGateway.Service.Services
                 {
                     case EdmPrimitiveTypeKind.String:
                         return param;
-                    case EdmPrimitiveTypeKind.Int64:
-                        return long.Parse(param);
+                    case EdmPrimitiveTypeKind.Int32:
+                        return int.Parse(param);
                     default:
                         // should never happen due to the config being validated for correct types
                         throw new NotSupportedException($"{edmType} is not supported");

@@ -27,9 +27,14 @@ namespace Azure.DataGateway.Config
         public void SetRuntimeConfigValue()
         {
             string? runtimeConfigJson = null;
-            if (!string.IsNullOrEmpty(ConfigFileName) && File.Exists(ConfigFileName))
+            if (!string.IsNullOrEmpty(ConfigFileName))
             {
-                runtimeConfigJson = File.ReadAllText(ConfigFileName);
+                if (File.Exists(ConfigFileName))
+                {
+                    runtimeConfigJson = File.ReadAllText(ConfigFileName);
+                } else {
+                    throw new FileNotFoundException($"Requested configuration file {ConfigFileName} do not exists.");
+                }
             }
 
             if (!string.IsNullOrEmpty(runtimeConfigJson))

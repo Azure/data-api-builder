@@ -24,10 +24,5 @@ namespace Azure.DataGateway.Service.Services
         /// name.
         /// </summary>
         GraphQLType GetGraphQLType(string name);
-
-        /// <summary>
-        /// Returns the resolved config
-        /// </summary>
-        ResolverConfig GetResolvedConfig();
     }
 }

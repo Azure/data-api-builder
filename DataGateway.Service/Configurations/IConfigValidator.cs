@@ -2,13 +2,13 @@ namespace Azure.DataGateway.Service.Configurations
 {
 
     /// <summary>
-    /// Validates the application logic config
+    /// Validates the runtime config.
     /// </summary>
     public interface IConfigValidator
     {
         /// <summary>
-        /// Validate the application logic of the resolved config both within the
-        /// config itself and in relation to the graphQL schema
+        /// Validate the runtime config both within the
+        /// config itself and in relation to the schema if available.
         /// </summary>
         void ValidateConfig();
     }

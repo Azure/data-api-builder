@@ -12,12 +12,58 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class MsSqlRestApiTests : RestApiTestBase
     {
+        protected static string DEFAULT_SCHEMA = "dbo";
         private static Dictionary<string, string> _queryMap = new()
         {
             {
                 "FindByIdTest",
                 $"SELECT * FROM { _integrationTableName } " +
                 $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindViewAll",
+                $"SELECT * FROM { _simple_all_books } " +
+                $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindViewSelected",
+                $"SELECT categoryid, pieceid, categoryName, piecesAvailable FROM {_simple_subset_stocks} " +
+                $"WHERE categoryid = 2 AND pieceid = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindViewComposite",
+                $"SELECT name ,id, publisher_id FROM {_composite_subset_bookPub} " +
+                $"WHERE id=2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindTestWithFilterQueryOneGeFilterOnView",
+                $"SELECT * FROM { _simple_all_books } " +
+                $"WHERE id >= 4 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindByIdTestWithQueryStringFieldsOnView",
+                $"SELECT[id], [title] FROM { _simple_all_books } " +
+                $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindTestWithFilterQueryStringOneEqFilterOnView",
+                $"SELECT [categoryid],[pieceid],[categoryName],[piecesAvailable] " +
+                $"FROM { _simple_subset_stocks } " +
+                $"WHERE [pieceid] = 1 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFilterQueryOneNotFilterOnView",
+                $"SELECT [categoryid],[pieceid],[categoryName],[piecesAvailable] " +
+                $"FROM { _simple_subset_stocks } " +
+                $"WHERE NOT([categoryid] > 1)" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFilterQueryOneLtFilterOnView",
+                $"SELECT[id], [name],[publisher_id] FROM { _composite_subset_bookPub } " +
+                $"WHERE id < 5 FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindByIdTestWithQueryStringFields",
@@ -289,7 +335,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 // after the insert operation. Not the query that we generate to perform
                 // the insertion.
                 $"SELECT [categoryid],[pieceid],[categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
                 $"WHERE [categoryid] = 5 AND [pieceid] = 2 AND [categoryName] = 'FairyTales' " +
                 $"AND [piecesAvailable] = 0 AND [piecesRequired] = 0 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -338,7 +384,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "PutOne_Update_CompositeNonAutoGenPK_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName], [piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
                 $"WHERE [categoryid] = 2 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
                 $"AND [piecesAvailable] = 10  AND [piecesRequired] = 5 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -346,7 +392,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "PutOne_Update_NullOutMissingField_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
                 $"WHERE [categoryid] = 1 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
                 $"AND [piecesAvailable] is NULL  AND [piecesRequired] = 5 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -354,7 +400,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "PutOne_Update_Empty_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
                 $"WHERE [categoryid] = 2 AND [pieceid] = 1 AND [categoryName] = '' " +
                 $"AND [piecesAvailable] = 2  AND [piecesRequired] = 3 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -362,21 +408,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "PutOne_Update_Nulled_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
                 $"WHERE [categoryid] = 2 AND [pieceid] = 1 AND [categoryName] = 'FairyTales' " +
                 $"AND [piecesAvailable] is NULL  AND [piecesRequired] = 4 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "PutOne_Insert_Test",
-                $"SELECT [id], [title], [issue_number] FROM { _integration_NonAutoGenPK_TableName } " +
+                $"SELECT [id], [title], [issue_number] FROM [foo].{ _integration_NonAutoGenPK_TableName } " +
                 $"WHERE id = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'Batman Returns' " +
                 $"AND [issue_number] = 1234" +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "PutOne_Insert_Nullable_Test",
-                $"SELECT [id], [title], [issue_number] FROM { _integration_NonAutoGenPK_TableName } " +
+                $"SELECT [id], [title], [issue_number] FROM [foo].{ _integration_NonAutoGenPK_TableName } " +
                 $"WHERE id = { STARTING_ID_FOR_TEST_INSERTS + 1 } AND [title] = 'Times' " +
                 $"AND [issue_number] IS NULL " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -398,7 +444,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "PutOne_Insert_CompositeNonAutoGenPK_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
                 $"WHERE [categoryid] = 3 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
                 $"AND [piecesAvailable] = 2 AND [piecesRequired] = 1 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -406,7 +452,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "PutOne_Insert_Default_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
                 $"WHERE [categoryid] = 8 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
                 $"AND [piecesAvailable] = 0 AND [piecesRequired] = 0 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -414,7 +460,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "PutOne_Insert_Empty_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
                 $"WHERE [categoryid] = 4 AND [pieceid] = 1 AND [categoryName] = '' " +
                 $"AND [piecesAvailable] = 2 AND [piecesRequired] = 3 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -422,14 +468,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "PutOne_Insert_Nulled_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
                 $"WHERE [categoryid] = 4 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
                 $"AND [piecesAvailable] is NULL AND [piecesRequired] = 4 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "PatchOne_Insert_NonAutoGenPK_Test",
-                $"SELECT [id], [title], [issue_number] FROM { _integration_NonAutoGenPK_TableName } " +
+                $"SELECT [id], [title], [issue_number] FROM [foo].{ _integration_NonAutoGenPK_TableName } " +
                 $"WHERE id = 2 AND [title] = 'Batman Begins' " +
                 $"AND [issue_number] = 1234 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -437,7 +483,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "PatchOne_Insert_CompositeNonAutoGenPK_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
                 $"WHERE [categoryid] = 4 AND [pieceid] = 1 AND [categoryName] = 'FairyTales' " +
                 $"AND [piecesAvailable] = 5 AND [piecesRequired] = 4 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -445,7 +491,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "PatchOne_Insert_Empty_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
                 $"WHERE [categoryid] = 5 AND [pieceid] = 1 AND [categoryName] = '' " +
                 $"AND [piecesAvailable] = 5 AND [piecesRequired] = 4 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -453,7 +499,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "PatchOne_Insert_Default_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
                 $"WHERE [categoryid] = 7 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
                 $"AND [piecesAvailable] = 0 AND [piecesRequired] = 0 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -461,7 +507,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "PatchOne_Insert_Nulled_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
                 $"WHERE [categoryid] = 3 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
                 $"AND [piecesAvailable] is NULL AND [piecesRequired] = 4 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -488,7 +534,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "PatchOne_Update_CompositeNonAutoGenPK_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
                 $"WHERE [categoryid] = 1 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
                 $"AND [piecesAvailable]= 10 AND [piecesRequired] = 0 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -496,7 +542,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "PatchOne_Update_Empty_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
                 $"WHERE [categoryid] = 1 AND [pieceid] = 1 AND [categoryName] = '' " +
                 $"AND [piecesAvailable]= 10 AND [piecesRequired] = 0 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -504,7 +550,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "PatchOne_Update_Nulled_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
                 $"WHERE [categoryid] = 1 AND [pieceid] = 1 AND [categoryName] = 'books' " +
                 $"AND [piecesAvailable] is NULL AND [piecesRequired] = 0 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -512,7 +558,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "InsertOneWithNullFieldValue",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK } " +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
                 $"WHERE [categoryid] = 3 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
                 $"AND [piecesAvailable] is NULL AND [piecesRequired] = 1 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -556,6 +602,24 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         #endregion
+
+        public override string GetDefaultSchema()
+        {
+            return DEFAULT_SCHEMA;
+        }
+
+        /// <summary>
+        /// We include a '.' for the Edm Model
+        /// schema to allow both MsSql/PostgreSql
+        /// and MySql to share code. MySql does not
+        /// include a '.' but MsSql does so
+        /// we must include here.
+        /// </summary>
+        /// <returns></returns>
+        public override string GetDefaultSchemaForEdmModel()
+        {
+            return $"{DEFAULT_SCHEMA}.";
+        }
 
         public override string GetQuery(string key)
         {

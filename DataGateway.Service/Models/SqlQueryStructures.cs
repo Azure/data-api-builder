@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Azure.DataGateway.Config;
 
 namespace Azure.DataGateway.Service.Models
 {
@@ -9,18 +10,28 @@ namespace Azure.DataGateway.Service.Models
     public class Column
     {
         /// <summary>
-        /// Table alias of the table which owns the column
+        /// Schema name of the table which owns the column
         /// </summary>
-        public string? TableAlias { get; }
+        public string TableSchema { get; }
+        /// <summary>
+        /// Name of the table which owns the column
+        /// </summary>
+        public string TableName { get; }
+        /// <summary>
+        /// Name of the alias of the table which owns the column
+        /// </summary>
+        public string? TableAlias { get; set; }
         /// <summary>
         /// Name of the column
         /// </summary>
         public string ColumnName { get; }
 
-        public Column(string? tableAlias, string columnName)
+        public Column(string tableSchema, string tableName, string columnName, string? tableAlias = null)
         {
-            TableAlias = tableAlias;
+            TableSchema = tableSchema;
+            TableName = tableName;
             ColumnName = columnName;
+            TableAlias = tableAlias;
         }
     }
 
@@ -30,8 +41,8 @@ namespace Azure.DataGateway.Service.Models
     public class OrderByColumn : Column
     {
         public OrderByDir Direction { get; }
-        public OrderByColumn(string? tableAlias, string columnName, OrderByDir direction = OrderByDir.Asc)
-            : base(tableAlias, columnName)
+        public OrderByColumn(string tableSchema, string tableName, string columnName, string? tableAlias = null, OrderByDir direction = OrderByDir.Asc)
+            : base(tableSchema, tableName, columnName, tableAlias)
         {
             Direction = direction;
         }
@@ -45,8 +56,14 @@ namespace Azure.DataGateway.Service.Models
     {
         public object? Value { get; }
         public string? ParamName { get; set; }
-        public PaginationColumn(string? tableAlias, string columnName, object? value, OrderByDir direction = OrderByDir.Asc, string? paramName = null)
-            : base(tableAlias, columnName, direction)
+        public PaginationColumn(string tableSchema,
+                                string tableName,
+                                string columnName,
+                                object? value,
+                                string? tableAlias = null,
+                                OrderByDir direction = OrderByDir.Asc,
+                                string? paramName = null)
+            : base(tableSchema, tableName, columnName, tableAlias, direction)
         {
             Value = value;
             ParamName = paramName;
@@ -63,8 +80,8 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
         public string Label { get; }
 
-        public LabelledColumn(string tableAlias, string columnName, string label)
-            : base(tableAlias, columnName)
+        public LabelledColumn(string tableSchema, string tableName, string columnName, string label, string? tableAlias = null)
+            : base(tableSchema, tableName, columnName, tableAlias)
         {
             Label = label;
         }
@@ -286,8 +303,8 @@ namespace Azure.DataGateway.Service.Models
     /// A simple class that is used to hold the information about joins that
     /// are part of a SQL query.
     /// <summary>
-    /// <param name="TableName">The name of the table that is joined with.</param>
+    /// <param name="DbObject">The name of the database object containing table metadata like joined tables.</param>
     /// <param name="TableAlias">The alias of the table that is joined with.</param>
     /// <param name="Predicates">The predicates that are part of the ON clause of the join.</param>
-    public record SqlJoinStructure(string TableName, string TableAlias, List<Predicate> Predicates);
+    public record SqlJoinStructure(DatabaseObject DbObject, string TableAlias, List<Predicate> Predicates);
 }

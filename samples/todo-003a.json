@@ -1,0 +1,89 @@
+{
+  "$schema": "../schemas/hawaii.draft-01.schema.json",
+  "data-source": {
+    "database-type": "mssql",
+    "connection-string": "Server=localhost;Database=HawaiiTest;User ID=sa;Password=Passw0rd!;TrustServerCertificate=true"
+  },
+  "runtime": {
+    "host": {
+      "mode": "development",
+      "authentication": {
+        "provider": "EasyAuth"
+      }
+    },
+    "rest": {
+      "enabled": true
+    },
+    "graphql": {
+      "enabled": true
+    }
+  },
+  "entities": {
+    "todo": {
+      "source": "s003a.todos",
+      "relationships": {
+        "category": {
+          "cardinality": "one",
+          "target.entity": "category"
+        },
+        "tags": {
+          "cardinality": "many",
+          "linking.object": "s003a.todos_tags",
+          "target.entity": "tag"
+        }
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        }
+      ]
+    },
+    "category": {
+      "source": "s003a.categories",
+      "relationships": {
+        "todos": {
+          "cardinality": "many",
+          "target.entity": "todo"
+        }
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        }
+      ]
+    },
+    "tag": {
+      "source": "s003a.tags",
+      "relationships": {
+        "todos": {
+          "cardinality": "many",
+          "linking.object": "s003a.todos_tags",
+          "linking.source.fields": [
+            "tag_id"
+          ],
+          "linking.target.fields": [
+            "todo_id"
+          ],
+          "target.entity": "todo",
+          "target.fields": [
+            "id"
+          ]
+        }
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        }
+      ]
+    }
+  }
+}

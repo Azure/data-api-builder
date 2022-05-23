@@ -20,7 +20,30 @@
     },
     "entities": {
         "todo": {
-            "source": "s001.todos",
+            "source": "s002.todos",
+            "relationships": {
+                "category": {
+                    "cardinality": "one",
+                    "target.entity": "category"
+                }
+            },
+            "permissions": [
+                {
+                    "role": "anonymous",
+                    "actions": [
+                        "*"
+                    ]
+                }
+            ]
+        },
+        "category": {
+            "source": "s002.categories",
+            "relationships": {
+                "todos": {
+                    "cardinality": "many",
+                    "target.entity": "todo"
+                }
+            },
             "permissions": [
                 {
                     "role": "anonymous",

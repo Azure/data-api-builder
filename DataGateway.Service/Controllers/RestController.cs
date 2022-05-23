@@ -19,7 +19,7 @@ namespace Azure.DataGateway.Service.Controllers
     /// <see href="https://github.com/Microsoft/api-guidelines/blob/vNext/Guidelines.md">Microsoft REST API Guidelines</see>.
     /// </summary>
     [ApiController]
-    [Route("{entityName}")]
+    [Route("api/{entityName}")]
     public class RestController : ControllerBase
     {
         /// <summary>

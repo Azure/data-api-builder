@@ -1,0 +1,23 @@
+type Query {        
+    todo_by_pk(id: Int!): Todo  
+    todo(first: Int, after: String): TodoConnection!    
+}
+
+type Mutation {
+    editTodo(id: Int!, title: String, completed: Int, owner: String): Todo
+    insertTodo(title: String!, completed: Int!, owner: String!): Todo    
+    deleteTodo(id: Int!): Todo
+}
+
+type Todo {
+    id: Int!
+    title: String!
+    completed: Int!
+    owner: String!
+}
+
+type TodoConnection {
+    items: [Todo!]!
+    endCursor: String
+    hasNextPage: Boolean!
+}

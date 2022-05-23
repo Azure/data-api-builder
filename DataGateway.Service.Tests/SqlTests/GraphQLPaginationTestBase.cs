@@ -608,12 +608,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string expected = @"{
               ""items"": [
                 {
-                  ""pieceid"": 1,
-                  ""categoryid"": 0
+                  ""pieceid"": 99,
+                  ""categoryid"": 100
                 },
                 {
                   ""pieceid"": 1,
-                  ""categoryid"": 1
+                  ""categoryid"": 0
                 }
               ],
               ""endCursor"": """ + SqlPaginationUtil.Base64Encode(

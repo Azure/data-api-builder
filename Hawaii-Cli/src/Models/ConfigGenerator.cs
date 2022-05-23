@@ -288,7 +288,7 @@ namespace Hawaii.Cli.Models
                         updatedEntity.Relationships[relationship] = updatedRelationship;
                     }
                 } else {    // if it's a new relationship
-                    if(cardinality is not null && targetEntity is not null && mappingFields is not null) {
+                    if(cardinality is not null && targetEntity is not null) {
                         Dictionary<string, Relationship> relationship_mapping = updatedEntity.Relationships==null ? new Dictionary<string, Relationship>(): updatedEntity.Relationships;
                         Cardinality cardinalityType;
                         try
@@ -309,22 +309,28 @@ namespace Hawaii.Cli.Models
                         string[]? sourceAndTargetFields = null;
                         string[]? sourceFields = null;
                         string[]? targetFields = null;
-                        try
-                        {
-                            sourceAndTargetFields = mappingFields.Split(":");
-                            if(sourceAndTargetFields.Length is not 2) {
-                                throw new Exception();
+                        if(mappingFields is not null) {
+                            try
+                            {
+                                sourceAndTargetFields = mappingFields.Split(":");
+                                if(sourceAndTargetFields.Length is not 2) {
+                                    throw new Exception();
+                                }
+                                sourceFields = sourceAndTargetFields[0].Split(",");
+                                targetFields = sourceAndTargetFields[1].Split(",");
                             }
-                            sourceFields = sourceAndTargetFields[0].Split(",");
-                            targetFields = sourceAndTargetFields[1].Split(",");
+                            catch (System.Exception)
+                            {
+                                Console.WriteLine($"ERROR: Please use correct format for --mappings.fields, It should be \"<<source.fields>>:<<target.fields>>\".");
+                                return false;
+                            }
                         }
-                        catch (System.Exception)
-                        {
-                            Console.WriteLine($"ERROR: Please use correct format for --mappings.fields, It should be \"<<source.fields>>:<<target.fields>>\".");
-                            return false;
-                        }
+
+                        relationship_mapping.Add(relationship, new Relationship(cardinalityType, targetEntity,
+                                                                                    sourceFields, targetFields,
+                                                                                    LinkingObject: null, LinkingSourceFields: null,
+                                                                                    LinkingTargetFields: null));
                         
-                        relationship_mapping.Add(relationship, new Relationship(cardinalityType, targetEntity, sourceFields, targetFields, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null));
                         updatedEntity = new Entity(updatedEntity.Source, updatedEntity.Rest, updatedEntity.GraphQL, updatedEntity.Permissions, relationship_mapping, updatedEntity.Mappings);
                     } else {
                         Console.WriteLine($"ERROR: For adding a new relationship following options are mandatory: --relationship, --cardinality, --target.entity, --mappings.field.");

@@ -3,30 +3,41 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 
-namespace Hawaii.Cli.Classes
+namespace Hawaii.Cli.Models
 {
+    /// <summary>
+    /// Contains the methods related to commands for the CLI tool.
+    /// Contains error or success messages.
+    /// </summary>
     public class Operations
     {
-        public static string DEFAULT_CONFIG_FILENAME = "hawaii-config";
+
+        /// <summary>
+        /// This method will be triggered when "init" command is used.
+        /// It will generate the initial config file.
+        /// </summary>
         public static void Init(CommandLineOptions options)
         {
-            var fileName = options.name;
-            var databaseType = options.databaseType;
-            var connectionString = options.connectionString;
+            string? fileName = options.name;
+            string? databaseType = options.databaseType;
+            string? connectionString = options.connectionString;
+            string? resolverConfigFile = options.resolverConfigFile;
 
             if(fileName == null) {
                 Console.WriteLine("Using default file hawaii-config");
-                fileName = DEFAULT_CONFIG_FILENAME;
+                fileName = RuntimeConfigPath.CONFIGFILE_NAME;
             }
 
             if (databaseType == null || connectionString == null)
             {
-                Console.WriteLine(@"Please check if any required arguments are not missing.
-                Required options: --database-type, --connection-string");
+                Console.WriteLine(@"Please check if any required arguments are not missing.");
+                Console.WriteLine("Required options: --database-type, --connection-string");
                 return;
             }
-            bool isSuccess = ConfigGenerator.GenerateConfig(fileName, databaseType, connectionString);
+            
+            bool isSuccess = ConfigGenerator.GenerateConfig(fileName, resolverConfigFile, databaseType, connectionString);
             if(isSuccess) {
                 Console.WriteLine($"Config generated with file name: {fileName}, database type: {databaseType}, and connectionString: {connectionString}");
                 Console.WriteLine($"SUGGESTION: Use 'hawaii add <options>' to add new entities in your config.");
@@ -35,19 +46,24 @@ namespace Hawaii.Cli.Classes
             }
         }
 
+
+        /// <summary>
+        /// This method will be triggered when "add" command is used.
+        /// It will add a new entity to the current list of entities.
+        /// </summary>
         public static void Add(string entity, CommandLineOptions options)
         {
-            var fileName = options.name;
-            var source = options.source;
-            var rest = options.restRoute;
-            var graphQL = options.graphQLType;
-            var permissions = options.permission;
-            var fieldsToInclude = options.fieldsToInclude;
-            var fieldsToExclude = options.fieldsToExclude;
+            string? fileName = options.name;
+            string? source = options.source;
+            string? rest = options.restRoute;
+            string? graphQL = options.graphQLType;
+            string? permissions = options.permission;
+            string? fieldsToInclude = options.fieldsToInclude;
+            string? fieldsToExclude = options.fieldsToExclude;
 
             if(fileName == null) {
                 Console.WriteLine("Using default file hawaii-config");
-                fileName = DEFAULT_CONFIG_FILENAME;
+                fileName = RuntimeConfigPath.CONFIGFILE_NAME;
             }
 
             if (source == null || permissions == null)
@@ -66,23 +82,27 @@ namespace Hawaii.Cli.Classes
             }
         }
 
+        /// <summary>
+        /// This method will be triggered when "update" command is used.
+        /// It will update an excisting entity.
+        /// </summary>
         public static void Update(string entity, CommandLineOptions options)
         {
-            var fileName = options.name;
-            var source = options.source;
-            var rest = options.restRoute;
-            var graphQL = options.graphQLType;
-            var permission = options.permission;
-            var fieldsToInclude = options.fieldsToInclude;
-            var fieldsToExclude = options.fieldsToExclude;
-            var relationship = options.relationship;
-            var targetEntity = options.targetEntity;
-            var cardinality = options.cardinality;
-            var mappingFields = options.mappingFields;
+            string? fileName = options.name;
+            string? source = options.source;
+            string? rest = options.restRoute;
+            string? graphQL = options.graphQLType;
+            string? permission = options.permission;
+            string? fieldsToInclude = options.fieldsToInclude;
+            string? fieldsToExclude = options.fieldsToExclude;
+            string? relationship = options.relationship;
+            string? targetEntity = options.targetEntity;
+            string? cardinality = options.cardinality;
+            string? mappingFields = options.mappingFields;
 
             if(fileName == null) {
                 Console.WriteLine("Using default file hawaii-config");
-                fileName = DEFAULT_CONFIG_FILENAME;
+                fileName = RuntimeConfigPath.CONFIGFILE_NAME;
             }
             bool isSuccess = ConfigGenerator.UpdateEntity(fileName, entity, source, permission, rest, graphQL, fieldsToInclude, fieldsToExclude, relationship, targetEntity, cardinality, mappingFields);
             if(isSuccess) {

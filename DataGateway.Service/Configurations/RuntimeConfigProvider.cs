@@ -9,7 +9,7 @@ namespace Azure.DataGateway.Service.Configurations
     {
         public event EventHandler<RuntimeConfig>? RuntimeConfigLoaded;
 
-        public RuntimeConfig? RuntimeConfiguration { get; internal set; }
+        public virtual RuntimeConfig? RuntimeConfiguration { get; internal set; }
         public ResolverConfig? ResolverConfig { get; internal set; }
 
         public RuntimeConfigProvider() { }

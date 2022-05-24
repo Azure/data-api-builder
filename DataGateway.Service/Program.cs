@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Configurations;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;

@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Tests.SqlTests;
@@ -50,12 +52,12 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
-            ConfigurationPostParameters body = GetConfigurationParameters();
+            ConfigurationPostParameters config = GetCosmosConfigurationParameters();
 
-            _ = await httpClient.PostAsync("/configuration", JsonContent.Create(body));
+            _ = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
             ValidateCosmosDbSetup(server);
 
-            HttpResponseMessage result = await httpClient.PostAsync("/configuration", JsonContent.Create(body));
+            HttpResponseMessage result = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
             Assert.AreEqual(HttpStatusCode.Conflict, result.StatusCode);
         }
 
@@ -69,10 +71,10 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
             ValidateCosmosDbSetup(server);
 
-            ConfigurationPostParameters body = GetConfigurationParameters();
+            ConfigurationPostParameters config = GetCosmosConfigurationParameters();
 
             HttpResponseMessage result =
-                await httpClient.PostAsync("/configuration", JsonContent.Create(body));
+                await httpClient.PostAsync("/configuration", JsonContent.Create(config));
             Assert.AreEqual(HttpStatusCode.Conflict, result.StatusCode);
         }
 
@@ -82,10 +84,10 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
-            ConfigurationPostParameters body = GetConfigurationParameters();
+            ConfigurationPostParameters config = GetCosmosConfigurationParameters();
 
             HttpResponseMessage postResult =
-                await httpClient.PostAsync("/configuration", JsonContent.Create(body));
+                await httpClient.PostAsync("/configuration", JsonContent.Create(config));
             Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
         }
 
@@ -171,9 +173,9 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
             HttpClient client = server.CreateClient();
 
-            ConfigurationPostParameters body = GetConfigurationParameters();
+            ConfigurationPostParameters config = GetCosmosConfigurationParameters();
 
-            HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(body));
+            HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(config));
             Assert.AreEqual(HttpStatusCode.Conflict, postResult.StatusCode);
         }
 
@@ -183,12 +185,30 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
             HttpClient client = server.CreateClient();
 
-            ConfigurationPostParameters body = GetConfigurationParameters();
+            ConfigurationPostParameters config = GetCosmosConfigurationParameters();
 
-            HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(body));
+            HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(config));
             Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
 
             ValidateCosmosDbSetup(server);
+        }
+
+        [TestMethod("Validates that an exception is thrown if there's a null model in filter parser.")]
+        public void VerifyExceptionOnNullModelinFilterParser()
+        {
+            FilterParser parser = new();
+            try
+            {
+                // FilterParser has no model so we expect exception
+                parser.GetFilterClause(filterQueryString: string.Empty, resourcePath: string.Empty);
+                Assert.Fail();
+            }
+            catch (DataGatewayException exception)
+            {
+                Assert.AreEqual("The runtime has not been initialized with an Edm model.", exception.Message);
+                Assert.AreEqual(HttpStatusCode.InternalServerError, exception.StatusCode);
+                Assert.AreEqual(DataGatewayException.SubStatusCodes.UnexpectedError, exception.SubStatusCode);
+            }
         }
 
         /// <summary>
@@ -368,7 +388,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Environment.SetEnvironmentVariable($"{RuntimeConfigPath.ENVIRONMENT_PREFIX}{nameof(RuntimeConfigPath.CONNSTRING)}", "");
         }
 
-        private static ConfigurationPostParameters GetConfigurationParameters()
+        private static ConfigurationPostParameters GetCosmosConfigurationParameters()
         {
             string cosmosFile = $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}";
             return new()

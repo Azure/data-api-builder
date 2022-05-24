@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
-using Microsoft.Extensions.Options;
 using MySqlConnector;
 
 namespace Azure.DataGateway.Service.Services

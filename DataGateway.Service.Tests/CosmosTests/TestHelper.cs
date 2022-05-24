@@ -94,7 +94,6 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             }
         }
 
-        // TODO: This doesn't seem great, we'll load the file every time? 
         public static RuntimeConfig Config { get; } = _runtimeConfigPath.Value.CurrentValue.LoadRuntimeConfigValue();
 
         public static object GetItem(string id, string name = null, int numericVal = 4)

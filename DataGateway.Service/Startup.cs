@@ -36,7 +36,6 @@ namespace Azure.DataGateway.Service
             services.Configure<RuntimeConfigPath>(Configuration);
 
             services.AddSingleton<RuntimeConfigProvider>();
-
             services.AddSingleton<RuntimeConfigValidator>();
             services.AddSingleton<IGraphQLMetadataProvider>(implementationFactory: (serviceProvider) =>
             {
@@ -44,7 +43,7 @@ namespace Azure.DataGateway.Service
                 RuntimeConfig? runtimeConfig = configProvider.RuntimeConfiguration;
                 if (runtimeConfig == null)
                 {
-                    throw new Exception("null runtime config");
+                    throw new InvalidOperationException("RuntimeConfiguration hasn't been provided yet.");
                 }
 
                 switch (runtimeConfig.DatabaseType)
@@ -68,7 +67,7 @@ namespace Azure.DataGateway.Service
                 RuntimeConfig? runtimeConfig = configProvider.RuntimeConfiguration;
                 if (runtimeConfig == null)
                 {
-                    throw new Exception("null runtime config");
+                    throw new InvalidOperationException("RuntimeConfiguration hasn't been provided yet.");
                 }
 
                 switch (runtimeConfig.DatabaseType)
@@ -90,7 +89,7 @@ namespace Azure.DataGateway.Service
                 RuntimeConfig? runtimeConfig = configProvider.RuntimeConfiguration;
                 if (runtimeConfig == null)
                 {
-                    throw new Exception("null runtime config");
+                    throw new InvalidOperationException("RuntimeConfiguration hasn't been provided yet.");
                 }
 
                 switch (runtimeConfig.DatabaseType)
@@ -112,7 +111,7 @@ namespace Azure.DataGateway.Service
                 RuntimeConfig? runtimeConfig = configProvider.RuntimeConfiguration;
                 if (runtimeConfig == null)
                 {
-                    throw new Exception("null runtime config");
+                    throw new InvalidOperationException("RuntimeConfiguration hasn't been provided yet.");
                 }
 
                 switch (runtimeConfig.DatabaseType)
@@ -137,7 +136,7 @@ namespace Azure.DataGateway.Service
                 RuntimeConfig? runtimeConfig = configProvider.RuntimeConfiguration;
                 if (runtimeConfig == null)
                 {
-                    throw new Exception("null runtime config");
+                    throw new InvalidOperationException("RuntimeConfiguration hasn't been provided yet.");
                 }
 
                 switch (runtimeConfig.DatabaseType)
@@ -161,7 +160,7 @@ namespace Azure.DataGateway.Service
                 RuntimeConfig? runtimeConfig = configProvider.RuntimeConfiguration;
                 if (runtimeConfig == null)
                 {
-                    throw new Exception("null runtime config");
+                    throw new InvalidOperationException("RuntimeConfiguration hasn't been provided yet.");
                 }
 
                 switch (runtimeConfig.DatabaseType)
@@ -185,7 +184,7 @@ namespace Azure.DataGateway.Service
                 RuntimeConfig? runtimeConfig = configProvider.RuntimeConfiguration;
                 if (runtimeConfig == null)
                 {
-                    throw new Exception("null runtime config");
+                    throw new InvalidOperationException("RuntimeConfiguration hasn't been provided yet.");
                 }
 
                 switch (runtimeConfig.DatabaseType)

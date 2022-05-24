@@ -1,6 +1,5 @@
 using Azure.DataGateway.Service.Configurations;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 
 namespace Azure.DataGateway.Service.Controllers
 {
@@ -9,20 +8,17 @@ namespace Azure.DataGateway.Service.Controllers
     public class ConfigurationController : Controller
     {
         RuntimeConfigProvider _configurationProvider;
-        IConfiguration _configuration;
-        public ConfigurationController(
-            RuntimeConfigProvider configurationProvider,
-            IConfiguration configuration)
+        public ConfigurationController(RuntimeConfigProvider configurationProvider)
         {
-            _configuration = configuration;
             _configurationProvider = configurationProvider;
         }
 
         /// <summary>
-        /// Takes in KeyValuePairs and sets them all. In case of conflict with an
-        /// existing key, this will return a Conflict result with the conflicting key:value.
+        /// Takes in the runtime configuration, schema, connection string and optionally the
+        /// resolvers and configures the runtime. If the runtime is already configured, it will
+        /// return a conflict result.
         /// </summary>
-        /// <param name="configuration">The list of configurations to set.</param>
+        /// <param name="configuration">Runtime configuration, schema, resolvers and connection string.</param>
         /// <returns>Ok in case of success or Conflict with the key:value.</returns>
         [HttpPost]
         public ActionResult Index([FromBody] ConfigurationPostParameters configuration)

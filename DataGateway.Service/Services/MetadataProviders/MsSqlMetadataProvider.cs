@@ -1,8 +1,6 @@
-using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Services
 {

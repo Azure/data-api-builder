@@ -7,7 +7,6 @@ using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using Azure.DataGateway.Service.Models;
 using HotChocolate.Types;
-using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Services
 {

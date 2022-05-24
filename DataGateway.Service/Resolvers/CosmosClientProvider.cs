@@ -26,7 +26,7 @@ namespace Azure.DataGateway.Service.Resolvers
             }
         }
 
-        private void InitializeClient(RuntimeConfig configuration)
+        private void InitializeClient(RuntimeConfig? configuration)
         {
             if (configuration is null)
             {

@@ -87,6 +87,9 @@ namespace Azure.DataGateway.Service.Parsers
         /// later generate queries in the given RestRequestContext.
         /// </summary>
         /// <param name="context">The RestRequestContext holding the major components of the query.</param>
+        /// <param name="filterParser">Stores the data model and can parse a filter clause based on that model.</param>
+        /// <param name="primaryKeys">List of primary keys.</param>
+        /// <param name="exposedNamesToBackingColumnNames">Mapping of exposed names to backing columns.</param>
         public static void ParseQueryString(RestRequestContext context, FilterParser filterParser, List<string> primaryKeys, Dictionary<string, string> exposedNamesToBackingColumnNames)
         {
             foreach (string key in context.ParsedQueryString!.Keys)
@@ -128,8 +131,10 @@ namespace Azure.DataGateway.Service.Parsers
         /// and return that list as List<Column> since OrderByColumn is a Column.
         /// </summary>
         /// <param name="node">The OrderByClause.</param>
-        /// <param name="tableAlias">The name of the Table the columns are from.</param>
-        /// <paramref name="primaryKeys">A list of the primaryKeys of the given table.</paramref>/>
+        /// <param name="tableName">The name of the Table the columns are from.</param>
+        /// <param name="schemaName"/>The name of the associted schema.</param>
+        /// <param name="primaryKeys">A list of the primaryKeys of the given table.</paramref>/>
+        /// <param name="ExposedNamesToBackingColumnNames">Mapping of exposed names to backing columns.</param>
         /// <returns>A List<OrderByColumns></returns>
         private static List<OrderByColumn>? GenerateOrderByList(OrderByClause node, string schemaName, string tableName, List<string> primaryKeys, Dictionary<string, string> ExposedNamesToBackingColumnNames)
         {

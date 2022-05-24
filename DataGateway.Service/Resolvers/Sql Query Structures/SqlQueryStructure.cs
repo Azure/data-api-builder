@@ -206,6 +206,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// the correct name and label.
         /// </summary>
         /// <param name="context"></param>
+        /// <param name="exposedNamesToBackingColumns">Mapping of exposed names to backing columns.</param>
         private void AddFields(RestRequestContext context, Dictionary<string, string> exposedNamesToBackingColumns)
         {
             foreach (string field in context.FieldsToBeReturned)

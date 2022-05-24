@@ -26,8 +26,8 @@ namespace Azure.DataGateway.Service.Parsers
         /// Build the model from the provided schema.
         /// </summary>
         /// <param name="entitiesToDatabaseObjects">Entities mapped to their database objects.</param>
-        /// <param name="eachEntityBackingColumnsToExposedNames">Entites mapped to their mapings of backing
-        /// columns to exposed aliases.</param>
+        /// <param name="eachEntityBackingColumnsToExposedNames">Entites mapped to their mappings of backing
+        /// columns to exposed names.</param>
         /// <returns>An EdmModelBuilder that can be used to get a model.</returns>
         public EdmModelBuilder BuildModel(Dictionary<string, DatabaseObject> entitiesToDatabaseObjects,
                                           Dictionary<string, Dictionary<string, string>> eachEntityBackingColumnsToExposedNames)
@@ -40,14 +40,15 @@ namespace Azure.DataGateway.Service.Parsers
         /// Add the entity types found in the schema to the model
         /// </summary>
         /// <param name="entitiesToDatabaseObjects">Entities mapped to their database objects.</param>
-        /// <param name="eachEntityBackingColumnsToExposedNames">Entites mapped to their mapings of backing
+        /// <param name="eachEntityBackingColumnsToExposedNames">Entites mapped to their mappings of backing
+        /// columns to exposed names.</param>
         /// <returns>this model builder</returns>
         private EdmModelBuilder BuildEntityTypes(
             Dictionary<string, DatabaseObject> entitiesToDatabaseObjects,
             Dictionary<string, Dictionary<string, string>> eachEntityBackingColumnsToExposedNames)
         {
             // since we allow for aliases to be used in place of the names of the actual
-            // database object, we need to account for these potential alises in our EDM Model.
+            // database object, we need to account for these potential aliases in our EDM Model.
             foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in entitiesToDatabaseObjects)
             {
                 string entitySourceName = $"{entityAndDbObject.Value.FullName}";
@@ -87,7 +88,7 @@ namespace Azure.DataGateway.Service.Parsers
                                 $" {columnSystemType.Name} not yet supported.");
                     }
 
-                    // here we must use the proper aliasing for the column name
+                    // here we must use the correct aliasing for the column name
                     // which is on a per entity basis.
                     // if column is in our list of keys we add as a key to entity
                     if (tableDefinition.PrimaryKey.Contains(column))
@@ -116,7 +117,7 @@ namespace Azure.DataGateway.Service.Parsers
         /// <summary>
         /// Add the entity sets contained within the schema to container.
         /// </summary>
-        /// <param name="sqlEntities">All the sql entities with their table definitions.</param>
+        /// <param name="databaseObjects">A mapping of entities to their corresponding database object.</param>
         /// <returns>this model builder</returns>
         private EdmModelBuilder BuildEntitySets(Dictionary<string, DatabaseObject> databaseObjects)
         {

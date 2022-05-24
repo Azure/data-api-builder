@@ -97,6 +97,14 @@ namespace Azure.DataGateway.Service.Models
 
         public HashSet<string> CumulativeColumns { get; }
 
+        /// <summary>
+        /// Populates the CumulativeColumns property with a unique list
+        /// of all columns present in a request. Primarily used
+        /// for authorization purposes.
+        /// # URL Route Components: PrimaryKey Key/Value Pairs
+        /// # Query String components: $f (Column filter), $filter (FilterClause /row filter), $orderby clause
+        /// # Request Body: FieldValuePairs in body
+        /// </summary>
         public void CalculateCumulativeColumns()
         {
             ODataASTFieldVisitor visitor = new();
@@ -105,6 +113,11 @@ namespace Azure.DataGateway.Service.Models
                 if (PrimaryKeyValuePairs is not null && PrimaryKeyValuePairs.Count > 0)
                 {
                     CumulativeColumns.UnionWith(PrimaryKeyValuePairs.Keys);
+                }
+
+                if (FieldsToBeReturned is not null && FieldsToBeReturned.Count > 0)
+                {
+                    CumulativeColumns.UnionWith(FieldsToBeReturned);
                 }
 
                 if (FilterClauseInUrl is not null)
@@ -125,23 +138,10 @@ namespace Azure.DataGateway.Service.Models
                 {
                     CumulativeColumns.UnionWith(FieldValuePairsInBody.Keys);
                 }
-
-                if (ParsedQueryString is not null && ParsedQueryString.Count > 0)
-                {
-                    CumulativeColumns.UnionWith(ParsedQueryString.AllKeys!);
-                }
-
-                // 0 columns collected so far indicates that request is FindMany variant with no filters.
-                // Add list of includedColumns defined by config.
-                if (CumulativeColumns.Count == -1)
-                {
-                    // Get's all columns for table definition just for this scenario 
-                    CumulativeColumns.UnionWith(this.DatabaseObject.TableDefinition.Columns.Keys);
-                }
             }
             catch
             {
-                Console.WriteLine("ERROR IN ODATAASTCOLUMNVISITOR TRAVERSAL");
+                Console.WriteLine("ERROR IN ODATA_AST_COLUMN_VISITOR TRAVERSAL");
             }
         }
 

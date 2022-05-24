@@ -82,12 +82,12 @@ namespace Azure.DataGateway.Service.Authorization
                     string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
                     List<string> actions = HttpVerbToCRUD(httpContext.Request.Method);
 
-                    foreach(string action in actions)
+                    foreach (string action in actions)
                     {
                         bool isAuthorized = _authorizationResolver.AreRoleAndActionDefinedForEntity(entityName, roleName, action);
                         if (!isAuthorized)
                         {
-                            context.Fail();                           
+                            context.Fail();
                         }
                     }
 
@@ -107,7 +107,8 @@ namespace Azure.DataGateway.Service.Authorization
                 if (context.Resource is not null)
                 {
                     // Get column list to authorize
-                    // FIND MANY: If includedColumns is *, add table def cols to list, but if a col equals a listed exclude col, then
+                    // FIND MANY: If includedColumns is *, add table definition columns to list.
+                    // If a requested column equals a listed exclude col, then
                     // don't add that.
                     // if included columns is finite/explicit, just add those columns.
                     // All other request types will have columns listed, so no empty column checks will occur. Maybe check for this.
@@ -118,16 +119,18 @@ namespace Azure.DataGateway.Service.Authorization
 
                     restContext.CalculateCumulativeColumns();
 
-                    // Actions will have count > 1 if HTTP operation is PUT or PATCH.
-                    // As those operations resolve to create and update actions.
+                    // Two actions must be checked when HTTP operation is PUT or PATCH.
+                    // PUT and PATCH resolve to actions 'create' and 'update'.
                     // A user must fulfill both actions' permissions requirements to proceed.
                     foreach (string action in actions)
                     {
                         List<string> columnsToCheck;
+
+                        // No cumulative columns indicates that this is a FindMany request.
+                        // To resolve columns to return, check permissions for role.
                         if (restContext.CumulativeColumns.Count == 0)
                         {
                             columnsToCheck = _authorizationResolver.GetAllowedColumns(entityName, roleName, action);
-
                         }
                         else
                         {
@@ -143,11 +146,10 @@ namespace Azure.DataGateway.Service.Authorization
                         else
                         {
                             // This check catches the FindMany variant with no filters or column references.
-                            if (restContext.FieldsToBeReturned.Count == 0)
+                            if (restContext.FieldsToBeReturned.Count == 0 && restContext.IsMany)
                             {
                                 restContext.FieldsToBeReturned.AddRange(columnsToCheck);
                             }
-                            
                         }
                     }
 
@@ -161,6 +163,13 @@ namespace Azure.DataGateway.Service.Authorization
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Converts operation type of a RestRequestContext object to the
+        /// matching CRUD operations, to facilitate authorization checks.
+        /// </summary>
+        /// <param name="operation"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
         private static List<string> OperationToCRUD(Operation operation)
         {
             return operation switch
@@ -175,6 +184,12 @@ namespace Azure.DataGateway.Service.Authorization
             };
         }
 
+        /// <summary>
+        /// Converts httpverb type of a RestRequestContext object to the
+        /// matching CRUD operation(s), to facilitate authorization checks.
+        /// </summary>
+        /// <param name="httpVerb"></param>
+        /// <returns></returns>
         private static List<string> HttpVerbToCRUD(string httpVerb)
         {
             switch (httpVerb)

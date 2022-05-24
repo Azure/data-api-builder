@@ -62,7 +62,7 @@ namespace Azure.DataGateway.Service.Services
         /// <returns>String representing the Field name</returns>
         public override string Visit(SingleValuePropertyAccessNode nodeIn)
         {
-            if(nodeIn is not null)
+            if (nodeIn is not null)
             {
                 _cumulativeColumns.Add(nodeIn.Property.Name.ToString());
             }

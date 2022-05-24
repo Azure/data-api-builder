@@ -266,7 +266,7 @@ namespace Azure.DataGateway.Service.Services
         /// for requirements which need one.</exception>
         /// <exception cref="DataGatewayException">Thrown when authorization fails.
         /// Results in server returning 403 Unauthorized.</exception>
-        public async Task AuthorizationCheckForRequirement(object? resource,IAuthorizationRequirement requirement)
+        public async Task AuthorizationCheckForRequirement(object? resource, IAuthorizationRequirement requirement)
         {
             if (requirement is not RoleContextPermissionsRequirement && resource is null)
             {

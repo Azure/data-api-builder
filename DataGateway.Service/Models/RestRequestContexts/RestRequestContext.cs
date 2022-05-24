@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Linq;
 using Azure.DataGateway.Config;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.OData.UriParser;

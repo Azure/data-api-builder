@@ -43,7 +43,9 @@ namespace Azure.DataGateway.Service.Authorization
         }
     }
 
-    // Extension method used to add the middleware to the HTTP request pipeline.
+    /// <summary>
+    /// Extension method used to add the middleware to the HTTP request pipeline.
+    /// </summary>
     public static class AuthorizationEngineMiddlewareExtensions
     {
         public static IApplicationBuilder UseAuthorizationEngineMiddleware(this IApplicationBuilder builder)

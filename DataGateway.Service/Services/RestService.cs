@@ -255,6 +255,17 @@ namespace Azure.DataGateway.Service.Services
             }
         }
 
+        /// <summary>
+        /// Performs authorization check for REST with a single requirement.
+        /// Called when the relevant metadata has been parsed from the request.
+        /// </summary>
+        /// <param name="resource">Request metadata object (RestRequestContext, DatabaseObject, or null)</param>
+        /// <param name="requirement">The authorization check to perform.</param>
+        /// <returns>No return value. If this method succeeds, the request is authorized for the requirement.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when the resource is null
+        /// for requirements which need one.</exception>
+        /// <exception cref="DataGatewayException">Thrown when authorization fails.
+        /// Results in server returning 403 Unauthorized.</exception>
         public async Task AuthorizationCheckForRequirement(object? resource,IAuthorizationRequirement requirement)
         {
             if (requirement is not RoleContextPermissionsRequirement && resource is null)

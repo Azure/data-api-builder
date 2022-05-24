@@ -3,6 +3,12 @@ using Microsoft.OData.UriParser;
 
 namespace Azure.DataGateway.Service.Services
 {
+    /// <summary>
+    /// OData Visitor implementation which traverses the abstract syntax tree (AST)
+    /// of a request's filter clause(s).
+    /// This visitor enumerates a unique list of columns present within a filter clause,
+    /// so that the authorization engine can check for the presence of unauthorized columns.
+    /// </summary>
     public class ODataASTFieldVisitor : QueryNodeVisitor<string>
     {
         private HashSet<string> _cumulativeColumns;
@@ -12,6 +18,10 @@ namespace Azure.DataGateway.Service.Services
             _cumulativeColumns = new();
         }
 
+        /// <summary>
+        /// Returns a list of columns that are present in a request.
+        /// </summary>
+        /// <returns>List of Column names</returns>
         public List<string> GetCumulativeColumns()
         {
             string[] columns = new string[_cumulativeColumns.Count];

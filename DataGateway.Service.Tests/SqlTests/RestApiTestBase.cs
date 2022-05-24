@@ -1611,7 +1611,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: $"Could not find a property named 'pq' on type 'default_namespace.{GetDefaultSchemaForEdmModel()}books_view_all'.",
+                expectedErrorMessage: $"Could not find a property named 'pq' on type '{_simple_all_books}.{GetDefaultSchemaForEdmModel()}books_view_all'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
 
@@ -1622,7 +1622,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: $"Could not find a property named 'pq' on type 'default_namespace.{GetDefaultSchemaForEdmModel()}stocks_view_selected'.",
+                expectedErrorMessage: $"Could not find a property named 'pq' on type '{_simple_subset_stocks}.{GetDefaultSchemaForEdmModel()}stocks_view_selected'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
 
@@ -1634,7 +1634,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: $"Could not find a property named 'title' on type 'default_namespace.{GetDefaultSchemaForEdmModel()}books_publishers_view_composite'.",
+                expectedErrorMessage: $"Could not find a property named 'title' on type '{_composite_subset_bookPub}.{GetDefaultSchemaForEdmModel()}books_publishers_view_composite'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
         }
@@ -2366,7 +2366,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: $"Could not find a property named 'Pinecone' on type 'default_namespace.{GetDefaultSchemaForEdmModel()}books'.",
+                expectedErrorMessage: $"Could not find a property named 'Pinecone' on type '{_integrationEntityName}.{GetDefaultSchemaForEdmModel()}books'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

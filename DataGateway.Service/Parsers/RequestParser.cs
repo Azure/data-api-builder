@@ -34,6 +34,7 @@ namespace Azure.DataGateway.Service.Parsers
         /// Prefix used for specifying paging in the query string of the URL.
         /// </summary>
         private const string AFTER_URL = "$after";
+
         /// <summary>
         /// Parses the primary key string to identify the field names composing the key
         /// and their values.
@@ -86,7 +87,7 @@ namespace Azure.DataGateway.Service.Parsers
         /// later generate queries in the given RestRequestContext.
         /// </summary>
         /// <param name="context">The RestRequestContext holding the major components of the query.</param>
-        public static void ParseQueryString(RestRequestContext context, FilterParser filterParser, List<string> primaryKeys)
+        public static void ParseQueryString(RestRequestContext context, FilterParser filterParser, List<string> primaryKeys, Dictionary<string, string> exposedNamesToBackingColumnNames)
         {
             foreach (string key in context.ParsedQueryString!.Keys)
             {
@@ -107,7 +108,8 @@ namespace Azure.DataGateway.Service.Parsers
                         context.OrderByClauseInUrl = GenerateOrderByList(filterParser.GetOrderByClause(sortQueryString, $"{context.DatabaseObject.FullName}"),
                                                                          context.DatabaseObject.SchemaName,
                                                                          context.DatabaseObject.Name,
-                                                                         primaryKeys);
+                                                                         primaryKeys,
+                                                                         exposedNamesToBackingColumnNames);
                         break;
                     case AFTER_URL:
                         context.After = context.ParsedQueryString[key];
@@ -129,7 +131,7 @@ namespace Azure.DataGateway.Service.Parsers
         /// <param name="tableAlias">The name of the Table the columns are from.</param>
         /// <paramref name="primaryKeys">A list of the primaryKeys of the given table.</paramref>/>
         /// <returns>A List<OrderByColumns></returns>
-        private static List<OrderByColumn>? GenerateOrderByList(OrderByClause node, string schemaName, string tableName, List<string> primaryKeys)
+        private static List<OrderByColumn>? GenerateOrderByList(OrderByClause node, string schemaName, string tableName, List<string> primaryKeys, Dictionary<string, string> ExposedNamesToBackingColumnNames)
         {
             // used for performant Remove operations
             HashSet<string> remainingKeys = new(primaryKeys);
@@ -149,7 +151,7 @@ namespace Azure.DataGateway.Service.Parsers
                 }
                 else
                 {
-                    columnName = expression.Property.Name;
+                    columnName = ExposedNamesToBackingColumnNames[expression.Property.Name];
                 }
 
                 // Sorting order is stored in node.Direction as OrderByDirection Enum

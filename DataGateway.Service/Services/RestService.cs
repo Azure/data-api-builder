@@ -74,8 +74,7 @@ namespace Azure.DataGateway.Service.Services
                 case Operation.Find:
                     context = new FindRequestContext(entityName,
                                                      dbo: dbObject,
-                                                     isList: string.IsNullOrEmpty(primaryKeyRoute),
-                                                     mapping: _sqlMetadataProvider.GetMappingForEntity(entityName));
+                                                     isList: string.IsNullOrEmpty(primaryKeyRoute));
                     break;
                 case Operation.Insert:
                     JsonElement insertPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);
@@ -84,8 +83,7 @@ namespace Azure.DataGateway.Service.Services
                         dbo: dbObject,
                         insertPayloadRoot,
                         HttpRestVerbs.POST,
-                        operationType,
-                        mapping: _sqlMetadataProvider.GetMappingForEntity(entityName));
+                        operationType);
                     RequestValidator.ValidateInsertRequestContext(
                         (InsertRequestContext)context,
                         _sqlMetadataProvider);
@@ -93,8 +91,7 @@ namespace Azure.DataGateway.Service.Services
                 case Operation.Delete:
                     context = new DeleteRequestContext(entityName,
                                                        dbo: dbObject,
-                                                       isList: false,
-                                                       mapping: _sqlMetadataProvider.GetMappingForEntity(entityName));
+                                                       isList: false);
                     RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                     break;
                 case Operation.Update:
@@ -106,8 +103,7 @@ namespace Azure.DataGateway.Service.Services
                                                        dbo: dbObject,
                                                        upsertPayloadRoot,
                                                        GetHttpVerb(operationType),
-                                                       operationType,
-                                                       mapping: _sqlMetadataProvider.GetMappingForEntity(entityName));
+                                                       operationType);
                     RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
                     break;
                 default:
@@ -130,7 +126,8 @@ namespace Azure.DataGateway.Service.Services
                 RequestParser.ParseQueryString(
                     context,
                     _sqlMetadataProvider.ODataFilterParser,
-                    _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey);
+                    _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey,
+                    _sqlMetadataProvider.EachEntityExposedNamesToBackingColumnNames[entityName]);
             }
 
             // At this point for DELETE, the primary key should be populated in the Request Context.

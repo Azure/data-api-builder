@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using Azure.DataGateway.Service.Resolvers;
+using Azure.DataGateway.Service.Services;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
 
@@ -12,6 +14,13 @@ namespace Azure.DataGateway.Service.Parsers
     public class ODataASTVisitor : QueryNodeVisitor<string>
     {
         private SqlQueryStructure _struct;
+        private Dictionary<string, string>? _aliasings;
+
+        public ODataASTVisitor(SqlQueryStructure structure, ISqlMetadataProvider sqlMetadataProvider)
+        {
+            _struct = structure;
+            _aliasings = sqlMetadataProvider.EachEntityExposedNamesToBackingColumnNames[structure.EntityName];
+        }
 
         public ODataASTVisitor(SqlQueryStructure structure)
         {
@@ -46,13 +55,15 @@ namespace Azure.DataGateway.Service.Parsers
 
         /// <summary>
         /// Represents visiting a SingleValuePropertyAccessNode, which is what
-        /// holds a field name in the AST.
+        /// holds a field name in the AST. We return the value associated with
+        /// the name in the aliasings so that we have the backing column even
+        /// in the case where an alias is used in the request.
         /// </summary>
         /// <param name="nodeIn">The node visited.</param>
         /// <returns>String representing the Field name</returns>
         public override string Visit(SingleValuePropertyAccessNode nodeIn)
         {
-            return nodeIn.Property.Name;
+            return _aliasings is null ? nodeIn.Property.Name : _aliasings[nodeIn.Property.Name];
         }
 
         /// <summary>

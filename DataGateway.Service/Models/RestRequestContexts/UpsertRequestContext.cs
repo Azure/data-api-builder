@@ -21,9 +21,8 @@ namespace Azure.DataGateway.Service.Models
             DatabaseObject dbo,
             JsonElement insertPayloadRoot,
             OperationAuthorizationRequirement httpVerb,
-            Operation operationType,
-            Dictionary<string, string>? mapping = null)
-            : base(httpVerb, entityName, dbo, mapping)
+            Operation operationType)
+            : base(httpVerb, entityName, dbo)
         {
             FieldsToBeReturned = new();
             PrimaryKeyValuePairs = new();

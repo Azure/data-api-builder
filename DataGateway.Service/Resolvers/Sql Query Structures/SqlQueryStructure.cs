@@ -130,27 +130,30 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             IsListQuery = context.IsMany;
             TableAlias = $"{DatabaseObject.SchemaName}_{DatabaseObject.Name}";
-            AddFields(context);
+            Dictionary<string, string> exposedNamesToBackingColumns = sqlMetadataProvider.EachEntityExposedNamesToBackingColumnNames[EntityName];
+            Dictionary<string, string> backingColumnsToExposedNames = sqlMetadataProvider.EachEntityBackingColumnsToExposedNames[EntityName];
+            AddFields(context, exposedNamesToBackingColumns);
             if (Columns.Count == 0)
             {
                 TableDefinition tableDefinition = GetUnderlyingTableDefinition();
                 foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
                 {
-                    if (context.BackingColumnsToExposedNames.ContainsKey(column.Key))
+                    // We only include columns that are exposed for use in requests
+                    if (backingColumnsToExposedNames.ContainsKey(column.Key))
                     {
-                        AddColumn(column.Key, context.BackingColumnsToExposedNames[column.Key]);
+                        AddColumn(column.Key, backingColumnsToExposedNames[column.Key]);
                     }
                 }
             }
 
             foreach (KeyValuePair<string, object> predicate in context.PrimaryKeyValuePairs)
             {
-                PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
+                PopulateParamsAndPredicates(field: predicate.Key, backingColumn: exposedNamesToBackingColumns[predicate.Key], value: predicate.Value);
             }
 
             foreach (KeyValuePair<string, object?> predicate in context.FieldValuePairsInBody)
             {
-                PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
+                PopulateParamsAndPredicates(field: predicate.Key, backingColumn: exposedNamesToBackingColumns[predicate.Key], value: predicate.Value);
             }
 
             // context.OrderByColumnsInUrl will lack TableAlias because it is created in RequestParser
@@ -172,7 +175,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 // our visit functions. Each node in the AST will then automatically
                 // call the visit function for that node types, and we process the AST
                 // based on what type of node we are currently traversing.
-                ODataASTVisitor visitor = new(this);
+                ODataASTVisitor visitor = new(this, sqlMetadataProvider);
                 try
                 {
                     FilterPredicates = context.FilterClauseInUrl.Expression.Accept<string>(visitor);
@@ -187,7 +190,10 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (!string.IsNullOrWhiteSpace(context.After))
             {
-                AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromJsonString(context.After, PaginationMetadata));
+                AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromJsonString(context.After,
+                                                                                  PaginationMetadata,
+                                                                                  exposedNamesToBackingColumns,
+                                                                                  backingColumnsToExposedNames));
             }
 
             _limit = context.First is not null ? context.First + 1 : DEFAULT_LIST_LIMIT + 1;
@@ -200,11 +206,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// the correct name and label.
         /// </summary>
         /// <param name="context"></param>
-        private void AddFields(RestRequestContext context)
+        private void AddFields(RestRequestContext context, Dictionary<string, string> exposedNamesToBackingColumns)
         {
             foreach (string field in context.FieldsToBeReturned)
             {
-                AddColumn(context.ExposedNamesToBackingColumnNames[field], field);
+                AddColumn(exposedNamesToBackingColumns[field], field);
             }
         }
 
@@ -447,7 +453,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="field">The string representing a field.</param>
         /// <param name="value">The value associated with a given field.</param>
         /// <param name="op">The predicate operation representing the comparison between field and value.</param>
-        private void PopulateParamsAndPredicates(string field, object? value, PredicateOperation op = PredicateOperation.Equal)
+        private void PopulateParamsAndPredicates(string field, string backingColumn, object? value, PredicateOperation op = PredicateOperation.Equal)
         {
             try
             {
@@ -455,9 +461,9 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (value != null)
                 {
                     parameterName = MakeParamWithValue(
-                        GetParamAsColumnSystemType(value.ToString()!, field));
+                        GetParamAsColumnSystemType(value.ToString()!, backingColumn));
                     Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, field, TableAlias)),
+                        new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, TableAlias)),
                         op,
                         new PredicateOperand($"@{parameterName}")));
                 }

@@ -26,11 +26,9 @@ namespace Azure.DataGateway.Service.Services
             RestRequestContext context,
             ISqlMetadataProvider sqlMetadataProvider)
         {
-            TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, sqlMetadataProvider);
-
             foreach (string field in context.FieldsToBeReturned)
             {
-                ValidateField(tableDefinition.Columns.Keys, context.ExposedNamesToBackingColumnNames, field);
+                ValidateField(sqlMetadataProvider.EachEntityExposedNamesToBackingColumnNames[context.EntityName], field);
             }
         }
 
@@ -42,11 +40,9 @@ namespace Azure.DataGateway.Service.Services
         /// no key in this map of the field to validate
         /// then the field is not valid.
         /// </summary>
-        /// <param name="columns">columns of this table definition</param>
-        /// <param name="mapping">mappings from this entity</param>
         /// <param name="field">field to be returned</param>
         /// <exception cref="DataGatewayException"></exception>
-        public static void ValidateField(IEnumerable<string> columns, Dictionary<string, string> ExposedNamesToBackingColumnNames, string field)
+        public static void ValidateField(Dictionary<string, string> ExposedNamesToBackingColumnNames, string field)
         {
             if (!ExposedNamesToBackingColumnNames.ContainsKey(field))
             {
@@ -69,6 +65,7 @@ namespace Azure.DataGateway.Service.Services
             ISqlMetadataProvider sqlMetadataProvider)
         {
             TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, sqlMetadataProvider);
+            Dictionary<string, string> exposedNamesToBackingColumns = sqlMetadataProvider.EachEntityExposedNamesToBackingColumnNames[context.EntityName];
 
             int countOfPrimaryKeysInSchema = tableDefinition.PrimaryKey.Count;
             int countOfPrimaryKeysInRequest = context.PrimaryKeyValuePairs.Count;
@@ -81,8 +78,21 @@ namespace Azure.DataGateway.Service.Services
                     subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
 
+            List<string> primaryKeysInRequest = new();
+            foreach (string pk in context.PrimaryKeyValuePairs.Keys)
+            {
+                if (!exposedNamesToBackingColumns.ContainsKey(pk))
+                {
+                    throw new DataGatewayException(
+                    message: $"Primary key column: {pk} not found in the entity definition.",
+                    statusCode: HttpStatusCode.NotFound,
+                    subStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound);
+                }
+
+                primaryKeysInRequest.Add(exposedNamesToBackingColumns[pk]);
+            }
+
             // Verify each primary key is present in the table definition.
-            List<string> primaryKeysInRequest = new(context.PrimaryKeyValuePairs.Keys);
             IEnumerable<string> missingKeys = primaryKeysInRequest.Except(tableDefinition.PrimaryKey);
 
             if (missingKeys.Any())
@@ -184,6 +194,7 @@ namespace Azure.DataGateway.Service.Services
             // from the hash set of unvalidated fields.
             // At the end, if we end up with extraneous unvalidated fields, we throw error.
             HashSet<string> unvalidatedFields = new(fieldsInRequestBody);
+
             foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
             {
                 // Request body must have value defined for included non-nullable columns

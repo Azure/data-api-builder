@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
@@ -41,6 +42,10 @@ namespace Azure.DataGateway.Service.Services
         FilterParser ODataFilterParser { get; }
 
         Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; }
+
+        Dictionary<string, Dictionary<string, string>> EachEntityBackingColumnsToExposedNames { get; }
+
+        Dictionary<string, Dictionary<string, string>> EachEntityExposedNamesToBackingColumnNames { get; }
 
         DatabaseType GetDatabaseType();
     }

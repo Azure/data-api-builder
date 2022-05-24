@@ -50,8 +50,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                                                     dbo: _defaultDbObject,
                                                     insertPayloadRoot: payload,
                                                     httpVerb: verb,
-                                                    operationType: Operation.Insert,
-                                                    _defaultMapping);
+                                                    operationType: Operation.Insert);
                 Assert.Fail();
             }
             catch (DataGatewayException e)
@@ -78,8 +77,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                                                 dbo: _defaultDbObject,
                                                 insertPayloadRoot: payload,
                                                 httpVerb: verb,
-                                                operationType: Operation.Insert,
-                                                _defaultMapping);
+                                                operationType: Operation.Insert);
             Assert.AreEqual(0, context.FieldValuePairsInBody.Count);
         }
     }

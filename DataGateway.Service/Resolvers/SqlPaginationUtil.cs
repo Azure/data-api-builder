@@ -190,7 +190,10 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Validate the value associated with $after, and return list of orderby columns
         /// it represents.
         /// </summary>
-        public static IEnumerable<PaginationColumn> ParseAfterFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
+        public static IEnumerable<PaginationColumn> ParseAfterFromJsonString(string afterJsonString,
+                                                                             PaginationMetadata paginationMetadata,
+                                                                             Dictionary<string, string>? exposedNameToBackingColumn = null,
+                                                                             Dictionary<string, string>? backingColumnToExposedName = null)
         {
             IEnumerable<PaginationColumn>? after;
             try
@@ -206,7 +209,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 Dictionary<string, PaginationColumn> afterDict = new();
                 foreach (PaginationColumn column in after)
                 {
-                    afterDict.Add(column.ColumnName, column);
+                    string columnName = exposedNameToBackingColumn is null ? column.ColumnName : exposedNameToBackingColumn[column.ColumnName];
+                    afterDict.Add(columnName, column);
                 }
 
                 // verify that primary keys is a sub set of after's column names
@@ -217,7 +221,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     if (!afterDict.ContainsKey(pk))
                     {
-                        throw new ArgumentException($"Cursor for Pagination Predicates is not well formed, missing primary key column: {pk}");
+                        string safePK = backingColumnToExposedName is null ? pk : backingColumnToExposedName[pk];
+                        throw new ArgumentException($"Cursor for Pagination Predicates is not well formed, missing primary key column: {safePK}");
                     }
                 }
 
@@ -232,8 +237,9 @@ namespace Azure.DataGateway.Service.Resolvers
                     if (!afterDict.ContainsKey(columnName) ||
                         afterDict[columnName].Direction != column.Direction)
                     {
+                        string safeColumnName = backingColumnToExposedName is null ? columnName : backingColumnToExposedName[columnName];
                         throw new ArgumentException(
-                            $"Could not match order by column {columnName} with a column in the pagination token with the same name and direction.");
+                            $"Could not match order by column {safeColumnName} with a column in the pagination token with the same name and direction.");
                     }
 
                     orderByColumnCount++;

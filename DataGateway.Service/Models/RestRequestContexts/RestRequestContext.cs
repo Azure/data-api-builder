@@ -13,22 +13,11 @@ namespace Azure.DataGateway.Service.Models
     /// </summary>
     public abstract class RestRequestContext
     {
-        protected RestRequestContext(OperationAuthorizationRequirement httpVerb, string entityName, DatabaseObject dbo, Dictionary<string, string>? mapping = null)
+        protected RestRequestContext(OperationAuthorizationRequirement httpVerb, string entityName, DatabaseObject dbo)
         {
             HttpVerb = httpVerb;
             EntityName = entityName;
             DatabaseObject = dbo;
-            BackingColumnsToExposedNames = mapping is not null ? mapping : new();
-            ExposedNamesToBackingColumnNames = BackingColumnsToExposedNames!.ToDictionary(x => x.Value, x => x.Key);
-            foreach (string column in dbo.TableDefinition.Columns.Keys)
-            {
-                if (!ExposedNamesToBackingColumnNames.ContainsKey(column) && !BackingColumnsToExposedNames.ContainsKey(column))
-                {
-                    BackingColumnsToExposedNames.Add(column, column);
-                    ExposedNamesToBackingColumnNames.Add(column, column);
-                }
-            }
-
         }
 
         /// <summary>
@@ -40,18 +29,6 @@ namespace Azure.DataGateway.Service.Models
         /// The database object associated with the target entity.
         /// </summary>
         public DatabaseObject DatabaseObject { get; }
-
-        /// <summary>
-        /// Mapping of the names of the backing column from the database object
-        /// to the names to request/response names.
-        /// </summary>
-        public Dictionary<string, string> BackingColumnsToExposedNames { get; }
-
-        /// <summary>
-        /// Mapping of request/response names to the names of the backing column from
-        /// the database object.
-        /// </summary>
-        public Dictionary<string, string> ExposedNamesToBackingColumnNames { get; }
 
         /// <summary>
         /// Field names of the entity that are queried in the request.

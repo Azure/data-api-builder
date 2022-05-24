@@ -45,6 +45,10 @@ namespace Azure.DataGateway.Service.Services
 
         protected DataSet EntitiesDataSet { get; init; }
 
+        public Dictionary<string, Dictionary<string, string>> EachEntityBackingColumnsToExposedNames { get; } = new();
+
+        public Dictionary<string, Dictionary<string, string>> EachEntityExposedNamesToBackingColumnNames { get; } = new();
+
         /// <summary>
         /// Maps an entity name to a DatabaseObject.
         /// </summary>
@@ -131,6 +135,7 @@ namespace Azure.DataGateway.Service.Services
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
             GenerateDatabaseObjectForEntities();
             await PopulateTableDefinitionForEntities();
+            GenerateExposedToBackingColumnMapsForEntities();
             ProcessEntityPermissions();
             InitFilterParser();
             timer.Stop();
@@ -469,6 +474,32 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
+        /// Generate the mappings of exposed names to
+        /// backing columns, and of backing columns to
+        /// exposed names. Used to generate EDM Model using
+        /// the exposed names, and to translate between
+        /// exposed name and backing column (or the reverse)
+        /// when needed while processing the request.
+        /// </summary>
+        private void GenerateExposedToBackingColumnMapsForEntities()
+        {
+            foreach (string entityName in _entities.Keys)
+            {
+                Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
+                EachEntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
+                EachEntityExposedNamesToBackingColumnNames[entityName] = EachEntityBackingColumnsToExposedNames![entityName].ToDictionary(x => x.Value, x => x.Key);
+                foreach (string column in EntityToDatabaseObject[entityName].TableDefinition.Columns.Keys)
+                {
+                    if (!EachEntityExposedNamesToBackingColumnNames[entityName].ContainsKey(column) && !EachEntityBackingColumnsToExposedNames[entityName].ContainsKey(column))
+                    {
+                        EachEntityBackingColumnsToExposedNames[entityName].Add(column, column);
+                        EachEntityExposedNamesToBackingColumnNames[entityName].Add(column, column);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Processes permissions for all the entities.
         /// </summary>
         private void ProcessEntityPermissions()
@@ -481,7 +512,7 @@ namespace Azure.DataGateway.Service.Services
 
         private void InitFilterParser()
         {
-            ODataFilterParser.BuildModel(EntityToDatabaseObject.Values);
+            ODataFilterParser.BuildModel(EntityToDatabaseObject, EachEntityBackingColumnsToExposedNames);
         }
 
         /// <summary>

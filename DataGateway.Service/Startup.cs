@@ -299,7 +299,10 @@ namespace Azure.DataGateway.Service
             // - {X-MS-CLIENT-PRINCIPAL + Client role header for EasyAuth}
             // When enabled, the MW will prevent BCP from loading
             // without proper authZ headers.
-            // app.UseAuthorizationEngineMiddleware();
+            if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Mode == HostModeType.Production)
+            {
+                app.UseAuthorizationEngineMiddleware();
+            }
 
             app.UseEndpoints(endpoints =>
             {

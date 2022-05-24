@@ -29,12 +29,6 @@ namespace Azure.DataGateway.Service.Tests.REST
         private const string DEFAULT_ENTITY = "Book";
         private const string DEFAULT_SCHEMA_NAME = "dbo";
         private const string DEFAULT_TABLE_NAME = "books";
-        private static Dictionary<string, string> _defaultMapping = new()
-        {
-            { "id", "id" },
-            {"title", "title" },
-            {"publisher_id", "publisher_id" }
-        };
 
         [ClassInitialize]
         public static async Task InitializeTestFixture(TestContext context)
@@ -243,6 +237,8 @@ namespace Azure.DataGateway.Service.Tests.REST
         /// Create and return an ODataASTVisitor.
         /// </summary>
         /// <param name="entityName">String represents the entity name.</param>
+        /// <param name="schemaName">String represents the schema of the source entity.</param>
+        /// <param name="tableName">String represents the table name of the source entity.</param>
         /// <param name="isList">bool represents if the context is a list.</param>
         /// <returns></returns>
         private static ODataASTVisitor CreateVisitor(

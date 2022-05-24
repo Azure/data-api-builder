@@ -128,7 +128,7 @@ namespace Azure.DataGateway.Service.Models
 
                 if (OrderByClauseInUrl is not null)
                 {
-                    foreach(Column col in OrderByClauseInUrl)
+                    foreach (Column col in OrderByClauseInUrl)
                     {
                         CumulativeColumns.Add(col.ColumnName);
                     }

@@ -218,7 +218,7 @@ namespace Azure.DataGateway.Service.Authorization
         {
             HashSet<string> includedColumns = _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action].included;
 
-            foreach(string excludedColumnName in _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action].excluded)
+            foreach (string excludedColumnName in _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action].excluded)
             {
                 if (includedColumns.Contains(excludedColumnName))
                 {

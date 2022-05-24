@@ -176,7 +176,7 @@ namespace Azure.DataGateway.Service.Authorization
             {
                 Operation.UpsertIncremental => new List<string>(new string[] { "create", "update" }),
                 Operation.Upsert => new List<string>(new string[] { "create", "update" }),
-                Operation.Find => new List<string>(new string[] { "read"}),
+                Operation.Find => new List<string>(new string[] { "read" }),
                 Operation.Delete => new List<string>(new string[] { "delete" }),
                 Operation.Insert => new List<string>(new string[] { "create" }),
                 Operation.UpdateIncremental => new List<string>(new string[] { "update" }),

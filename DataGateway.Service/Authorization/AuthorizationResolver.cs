@@ -165,8 +165,6 @@ namespace Azure.DataGateway.Service.Authorization
                         if (actionElement.ValueKind == JsonValueKind.String)
                         {
                             actionName = actionElement.ToString();
-
-                            // actionToColumn.included.Add(WILDCARD);
                             actionToColumn.included.UnionWith(ResolveTableDefinitionColumns(metadataProvider, entityName));
                         }
                         else if (actionElement.ValueKind == JsonValueKind.Object)
@@ -231,6 +229,11 @@ namespace Azure.DataGateway.Service.Authorization
             return includedColumns.ToList();
         }
 
+        /// <summary>
+        /// Returns whether the actionName is a valid CRUD operation/Wildcard (*)
+        /// </summary>
+        /// <param name="actionName"></param>
+        /// <returns></returns>
         private static bool IsValidActionName(string actionName)
         {
             if (actionName.Equals(WILDCARD) || _validActions.Contains(actionName))
@@ -242,6 +245,12 @@ namespace Azure.DataGateway.Service.Authorization
         }
         #endregion
 
+        /// <summary>
+        /// For a given entityName, retrieve the column names on the associated table.
+        /// </summary>
+        /// <param name="metadataProvider"></param>
+        /// <param name="entityName"></param>
+        /// <returns>List of columns in table definition.</returns>
         private static List<string> ResolveTableDefinitionColumns(ISqlMetadataProvider metadataProvider, string entityName)
         {
             return metadataProvider.GetTableDefinition(entityName).Columns.Keys.ToList();

@@ -1,5 +1,4 @@
 using System;
-using System.Data;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Microsoft.OData.Edm;

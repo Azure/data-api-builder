@@ -28,7 +28,8 @@ namespace Azure.DataGateway.Service.Services
         {
             foreach (string field in context.FieldsToBeReturned)
             {
-                if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, field, out string _))
+                if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, field, out string? backingColumn) ||
+                    !sqlMetadataProvider.GetTableDefinition(context.EntityName).Columns.ContainsKey(backingColumn!))
                 {
                     throw new DataGatewayException(
                             message: "Invalid field to be returned requested: " + field,

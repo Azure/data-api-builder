@@ -228,6 +228,19 @@
         "region": "United State's Region"
       }
     },
+    "Fungus": {
+      "source": "fungi",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "mappings": {
+        "spores": "hazards",
+      }
+    },
     "books_view_all": {
       "source": "books_view_all",
       "rest": true,

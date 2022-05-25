@@ -38,6 +38,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static readonly string _integrationTieBreakTable = "authors";
         protected static readonly string _integrationMappingEntity = "Tree";
         protected static readonly string _integrationMappingTable = "trees";
+        protected static readonly string _integrationBrokenMappingEntity = "Fungus";
+        protected static readonly string _integrationBrokenMappingTable = "fungi";
         protected static readonly string _simple_all_books = "books_view_all";
         protected static readonly string _simple_subset_stocks = "stocks_view_selected";
         protected static readonly string _composite_subset_bookPub = "books_publishers_view_composite";
@@ -2408,6 +2410,52 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expectedErrorMessage: "OrderBy property is not supported.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
+        }
+
+        /// <summary>
+        /// Verifies that we throw exception when primary key
+        /// route contains an exposed name that maps to a
+        /// backing column name that does not exist in the
+        /// table.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task FindOneTestWithInvalidMapping()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "hazards/black_mold_spores",
+                queryString: string.Empty,
+                entity: _integrationBrokenMappingEntity,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "The request is invalid since the primary keys: spores requested were not found in the entity definition.",
+                expectedStatusCode: HttpStatusCode.NotFound,
+                expectedSubStatusCode: "EntityNotFound"
+                );
+        }
+
+        /// <summary>
+        /// Verifies that we throw exception when field
+        /// requested is an exposed name that maps to a
+        /// backing column name that does not exist in
+        /// the table.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task FindTestWithInvalidMapping()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$f=hazards",
+                entity: _integrationBrokenMappingEntity,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "Invalid field to be returned requested: hazards",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: "BadRequest"
+                );
         }
 
         /// <summary>

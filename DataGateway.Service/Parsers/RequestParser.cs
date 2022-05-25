@@ -87,9 +87,7 @@ namespace Azure.DataGateway.Service.Parsers
         /// later generate queries in the given RestRequestContext.
         /// </summary>
         /// <param name="context">The RestRequestContext holding the major components of the query.</param>
-        /// <param name="filterParser">Stores the data model and can parse a filter clause based on that model.</param>
-        /// <param name="primaryKeys">List of primary keys.</param>
-        /// <param name="exposedNamesToBackingColumnNames">Mapping of exposed names to backing columns.</param>
+        /// <param name="sqlMetadataProvider">The SqlMetadataProvider holds mny of the components needed to parse the query.</param>
         public static void ParseQueryString(RestRequestContext context, ISqlMetadataProvider sqlMetadataProvider)
         {
             foreach (string key in context.ParsedQueryString!.Keys)
@@ -126,12 +124,12 @@ namespace Azure.DataGateway.Service.Parsers
         /// Create List of OrderByColumn from an OrderByClause Abstract Syntax Tree
         /// and return that list as List<Column> since OrderByColumn is a Column.
         /// </summary>
-        /// <param name="node">The OrderByClause.</param>
-        /// <param name="tableName">The name of the Table the columns are from.</param>
-        /// <param name="schemaName"/>The name of the associted schema.</param>
-        /// <param name="primaryKeys">A list of the primaryKeys of the given table.</paramref>/>
-        /// <param name="ExposedNamesToBackingColumnNames">Mapping of exposed names to backing columns.</param>
+        /// <param name="context">The request context.</param>
+        /// <param name="sqlMetadataProvider">The meta data provider.</param>
+        /// <param name="sortQueryString">String represents the section of the query string
+        /// associated with the sort param.</param>
         /// <returns>A List<OrderByColumns></returns>
+        /// <exception cref="DataGatewayException"></exception>
         private static List<OrderByColumn>? GenerateOrderByList(RestRequestContext context, ISqlMetadataProvider sqlMetadataProvider, string sortQueryString)
         {
             string schemaName = context.DatabaseObject.SchemaName;

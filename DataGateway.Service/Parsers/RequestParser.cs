@@ -130,7 +130,9 @@ namespace Azure.DataGateway.Service.Parsers
         /// associated with the sort param.</param>
         /// <returns>A List<OrderByColumns></returns>
         /// <exception cref="DataGatewayException"></exception>
-        private static List<OrderByColumn>? GenerateOrderByList(RestRequestContext context, ISqlMetadataProvider sqlMetadataProvider, string sortQueryString)
+        private static List<OrderByColumn>? GenerateOrderByList(RestRequestContext context,
+                                                                ISqlMetadataProvider sqlMetadataProvider,
+                                                                string sortQueryString)
         {
             string schemaName = context.DatabaseObject.SchemaName;
             string tableName = context.DatabaseObject.Name;
@@ -156,7 +158,7 @@ namespace Azure.DataGateway.Service.Parsers
                 }
                 else
                 {
-                    columnName = sqlMetadataProvider.GetBackingColumn(context.EntityName, expression.Property.Name);
+                    sqlMetadataProvider.TryGetBackingColumn(context.EntityName, expression.Property.Name, out columnName!);
                 }
 
                 // Sorting order is stored in node.Direction as OrderByDirection Enum

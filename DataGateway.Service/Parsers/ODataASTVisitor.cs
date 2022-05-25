@@ -57,7 +57,8 @@ namespace Azure.DataGateway.Service.Parsers
         /// <returns>String representing the Field name</returns>
         public override string Visit(SingleValuePropertyAccessNode nodeIn)
         {
-            return _metadatProvider.GetBackingColumn(_struct.EntityName, nodeIn.Property.Name);
+            _metadatProvider.TryGetBackingColumn(_struct.EntityName, nodeIn.Property.Name, out string? name);
+            return name!;
         }
 
         /// <summary>

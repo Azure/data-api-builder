@@ -37,26 +37,6 @@ namespace Azure.DataGateway.Service.Services
 
         /// <summary>
         /// For the entity that is provided as an argument,
-        /// get the underlying exposed name associated
-        /// with the provided field parameter.
-        /// </summary>
-        /// <param name="entityName">The entity whose mapping we lookup.</param>
-        /// <param name="field">The field used for the lookup in the mapping.</param>
-        /// <returns>The exposed name associated with the provided field.</returns>
-        string GetExposedColumnName(string entityName, string field);
-
-        /// <summary>
-        /// For the entity that is provided as an argument,
-        /// get the underlying backing column name associated
-        /// with the provided field parameter.
-        /// </summary>
-        /// <param name="entityName">The entity whose mapping we lookup.</param>
-        /// <param name="field">The field used for the lookup in the mapping.</param>
-        /// <returns>The backing column associated with the provided field.</returns>
-        string GetBackingColumn(string entityName, string field);
-
-        /// <summary>
-        /// For the entity that is provided as an argument,
         /// try to get the underlying exposed name associated
         /// with the provided field, if it exists, save in out
         /// parameter, and return true, otherwise return false.

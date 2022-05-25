@@ -211,7 +211,16 @@ namespace Azure.DataGateway.Service.Resolvers
                 Dictionary<string, PaginationColumn> afterDict = new();
                 foreach (PaginationColumn column in after)
                 {
-                    string columnName = sqlMetadataProvider is null ? column.ColumnName : sqlMetadataProvider.GetBackingColumn(entityName, column.ColumnName);
+                    string columnName;
+                    if (sqlMetadataProvider is not null)
+                    {
+                        sqlMetadataProvider.TryGetBackingColumn(entityName, column.ColumnName, out columnName!);
+                    }
+                    else
+                    {
+                        columnName = column.ColumnName;
+                    }
+
                     afterDict.Add(columnName, column);
                 }
 
@@ -223,7 +232,16 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     if (!afterDict.ContainsKey(pk))
                     {
-                        string safePK = sqlMetadataProvider is null ? pk : sqlMetadataProvider.GetExposedColumnName(entityName, pk);
+                        string safePK;
+                        if (sqlMetadataProvider is not null)
+                        {
+                            sqlMetadataProvider.TryGetExposedColumnName(entityName, pk, out safePK!);
+                        }
+                        else
+                        {
+                            safePK = pk;
+                        }
+
                         throw new ArgumentException($"Cursor for Pagination Predicates is not well formed, missing primary key column: {safePK}");
                     }
                 }
@@ -239,7 +257,16 @@ namespace Azure.DataGateway.Service.Resolvers
                     if (!afterDict.ContainsKey(columnName) ||
                         afterDict[columnName].Direction != column.Direction)
                     {
-                        string safeColumnName = sqlMetadataProvider is null ? columnName : sqlMetadataProvider.GetExposedColumnName(entityName, columnName);
+                        string safeColumnName;
+                        if (sqlMetadataProvider is not null)
+                        {
+                            sqlMetadataProvider.TryGetExposedColumnName(entityName, columnName, out safeColumnName!);
+                        }
+                        else
+                        {
+                            safeColumnName = columnName;
+                        }
+
                         throw new ArgumentException(
                             $"Could not match order by column {safeColumnName} with a column in the pagination token with the same name and direction.");
                     }

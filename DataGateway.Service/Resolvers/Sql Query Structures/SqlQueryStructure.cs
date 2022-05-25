@@ -146,15 +146,17 @@ namespace Azure.DataGateway.Service.Resolvers
 
             foreach (KeyValuePair<string, object> predicate in context.PrimaryKeyValuePairs)
             {
+                sqlMetadataProvider.TryGetBackingColumn(EntityName, predicate.Key, out string? backingColumn);
                 PopulateParamsAndPredicates(field: predicate.Key,
-                                            backingColumn: sqlMetadataProvider.GetBackingColumn(EntityName, predicate.Key),
+                                            backingColumn: backingColumn!,
                                             value: predicate.Value);
             }
 
             foreach (KeyValuePair<string, object?> predicate in context.FieldValuePairsInBody)
             {
+                sqlMetadataProvider.TryGetBackingColumn(EntityName, predicate.Key, out string? backingColumn);
                 PopulateParamsAndPredicates(field: predicate.Key,
-                                            backingColumn: sqlMetadataProvider.GetBackingColumn(EntityName, predicate.Key),
+                                            backingColumn: backingColumn!,
                                             value: predicate.Value);
             }
 
@@ -213,7 +215,8 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             foreach (string field in context.FieldsToBeReturned)
             {
-                AddColumn(sqlMetadataProvider.GetBackingColumn(EntityName, field), field);
+                sqlMetadataProvider.TryGetBackingColumn(EntityName, field, out string? backingColumn);
+                AddColumn(backingColumn!, field);
             }
         }
 

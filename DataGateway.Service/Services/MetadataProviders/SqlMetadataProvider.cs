@@ -45,9 +45,9 @@ namespace Azure.DataGateway.Service.Services
 
         protected DataSet EntitiesDataSet { get; init; }
 
-        protected Dictionary<string, Dictionary<string, string>> EntityBackingColumnsToExposedNames { get; } = new();
+        private Dictionary<string, Dictionary<string, string>> EntityBackingColumnsToExposedNames { get; } = new();
 
-        protected Dictionary<string, Dictionary<string, string>> EntityExposedNamesToBackingColumnNames { get; } = new();
+        private Dictionary<string, Dictionary<string, string>> EntityExposedNamesToBackingColumnNames { get; } = new();
 
         /// <summary>
         /// Maps an entity name to a DatabaseObject.
@@ -69,18 +69,6 @@ namespace Azure.DataGateway.Service.Services
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;
-        }
-
-        /// <summary>
-        /// Obtains the underlying mapping that belongs
-        /// to a given entity.
-        /// </summary>
-        /// <param name="entityName">entity whose map we get.</param>
-        /// <returns>mapping belonging to eneity.</returns>
-        private Dictionary<string, string>? GetMappingForEntity(string entityName)
-        {
-            _entities.TryGetValue(entityName, out Entity? entity);
-            return entity is not null ? entity.Mappings : null;
         }
 
         /// <inheritdoc />
@@ -120,18 +108,6 @@ namespace Azure.DataGateway.Service.Services
             }
 
             return databaseObject!.TableDefinition;
-        }
-
-        /// <inheritdoc />
-        public string GetExposedColumnName(string entityName, string field)
-        {
-            return EntityBackingColumnsToExposedNames[entityName][field];
-        }
-
-        /// <inheritdoc />
-        public string GetBackingColumn(string entityName, string field)
-        {
-            return EntityExposedNamesToBackingColumnNames[entityName][field];
         }
 
         /// <inheritdoc />
@@ -514,6 +490,18 @@ namespace Azure.DataGateway.Service.Services
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Obtains the underlying mapping that belongs
+        /// to a given entity.
+        /// </summary>
+        /// <param name="entityName">entity whose map we get.</param>
+        /// <returns>mapping belonging to eneity.</returns>
+        private Dictionary<string, string>? GetMappingForEntity(string entityName)
+        {
+            _entities.TryGetValue(entityName, out Entity? entity);
+            return entity is not null ? entity.Mappings : null;
         }
 
         /// <summary>

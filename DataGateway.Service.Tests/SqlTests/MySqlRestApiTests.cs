@@ -611,7 +611,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithMappedFieldsToBeReturned",
                 @"
-                  SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species, 'United State\'s Region', region)) AS data
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species, 'United State\'s Region', region, 'height', height)) AS data
                   FROM (
                       SELECT *
                       FROM " + _integrationMappingTable + @"

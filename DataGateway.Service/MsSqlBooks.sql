@@ -103,7 +103,8 @@ CREATE TABLE brokers(
 CREATE TABLE trees (
     treeId BIGINT PRIMARY KEY,
     species varchar(max),
-    region varchar(max)
+    region varchar(max),
+    height varchar(max)
 );
 
 ALTER TABLE books
@@ -175,7 +176,7 @@ INSERT INTO [foo].[magazines](id, title, issue_number) VALUES (1, 'Vogue', 1234)
 INSERT INTO brokers([ID Number], [First Name], [Last Name]) VALUES (1, 'Michael', 'Burry'), (2, 'Jordan', 'Belfort');
 INSERT INTO comics(id, title, categoryName) VALUES (1, 'Star Trek', 'SciFi'), (2, 'Cinderella', 'FairyTales'),(3,'Unknown','');
 INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2, 1, 'FairyTales'),(0,1,'');
-INSERT INTO trees(treeId, species, region) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest');
+INSERT INTO trees(treeId, species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
 
 
 EXEC('CREATE VIEW books_view_all AS SELECT * FROM dbo.books');

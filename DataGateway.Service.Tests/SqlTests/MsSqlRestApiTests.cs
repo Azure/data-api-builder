@@ -321,7 +321,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             },
             {
                 "FindTestWithMappedFieldsToBeReturned",
-                $"SELECT [treeId], [species] AS [Scientific Name], [region] AS [United State's Region] FROM { _integrationMappingTable } " +
+                $"SELECT [treeId], [species] AS [Scientific Name], [region] AS [United State's Region], [height] FROM { _integrationMappingTable } " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {

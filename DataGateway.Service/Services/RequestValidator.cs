@@ -16,7 +16,7 @@ namespace Azure.DataGateway.Service.Services
     {
         /// <summary>
         /// Validates the given request by ensuring:
-        /// - each field to be returned is one of the columns in the table.
+        /// - each field to be returned is one of the exposed name for the entity.
         /// - extra fields specified in the body, will be discarded.
         /// </summary>
         /// <param name="context">Request context containing the REST operation fields and their values.</param>
@@ -28,29 +28,13 @@ namespace Azure.DataGateway.Service.Services
         {
             foreach (string field in context.FieldsToBeReturned)
             {
-                ValidateField(sqlMetadataProvider.EachEntityExposedNamesToBackingColumnNames[context.EntityName], field);
-            }
-        }
-
-        /// <summary>
-        /// Validate the field to be returned.
-        /// Since the exposed names to backing columns
-        /// map contains all of the potential names
-        /// that a request could contain, if there is
-        /// no key in this map of the field to validate
-        /// then the field is not valid.
-        /// </summary>
-        /// <param name="ExposedNamesToBackingColumnNames">Dictionary maps exposed names to their backing columns.</param>
-        /// <param name="field">field to be returned</param>
-        /// <exception cref="DataGatewayException"></exception>
-        public static void ValidateField(Dictionary<string, string> ExposedNamesToBackingColumnNames, string field)
-        {
-            if (!ExposedNamesToBackingColumnNames.ContainsKey(field))
-            {
-                throw new DataGatewayException(
-                        message: "Invalid field to be returned requested: " + field,
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, field, out string _))
+                {
+                    throw new DataGatewayException(
+                            message: "Invalid field to be returned requested: " + field,
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                }
             }
         }
 
@@ -66,7 +50,6 @@ namespace Azure.DataGateway.Service.Services
             ISqlMetadataProvider sqlMetadataProvider)
         {
             TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, sqlMetadataProvider);
-            Dictionary<string, string> exposedNamesToBackingColumns = sqlMetadataProvider.EachEntityExposedNamesToBackingColumnNames[context.EntityName];
 
             int countOfPrimaryKeysInSchema = tableDefinition.PrimaryKey.Count;
             int countOfPrimaryKeysInRequest = context.PrimaryKeyValuePairs.Count;
@@ -82,7 +65,7 @@ namespace Azure.DataGateway.Service.Services
             List<string> primaryKeysInRequest = new();
             foreach (string pk in context.PrimaryKeyValuePairs.Keys)
             {
-                if (!exposedNamesToBackingColumns.ContainsKey(pk))
+                if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, pk, out string? backingColumn))
                 {
                     throw new DataGatewayException(
                     message: $"Primary key column: {pk} not found in the entity definition.",
@@ -90,7 +73,7 @@ namespace Azure.DataGateway.Service.Services
                     subStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound);
                 }
 
-                primaryKeysInRequest.Add(exposedNamesToBackingColumns[pk]);
+                primaryKeysInRequest.Add(backingColumn!);
             }
 
             // Verify each primary key is present in the table definition.

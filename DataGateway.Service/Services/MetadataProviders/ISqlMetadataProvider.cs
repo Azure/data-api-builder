@@ -27,14 +27,6 @@ namespace Azure.DataGateway.Service.Services
         string GetDatabaseObjectName(string entityName);
 
         /// <summary>
-        /// Obtains the underlying mapping that belongs
-        /// to a given entity.
-        /// </summary>
-        /// <param name="entityName">entity whose map we get.</param>
-        /// <returns>mapping belonging to entity.</returns>
-        Dictionary<string, string>? GetMappingForEntity(string entityName);
-
-        /// <summary>
         /// Obtains the underlying TableDefinition for the given entity name.
         /// </summary>
         TableDefinition GetTableDefinition(string entityName);
@@ -43,10 +35,54 @@ namespace Azure.DataGateway.Service.Services
 
         Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; }
 
-        Dictionary<string, Dictionary<string, string>> EachEntityBackingColumnsToExposedNames { get; }
+        /// <summary>
+        /// For the entity that is provided as an argument,
+        /// get the underlying exposed name associated
+        /// with the provided field parameter.
+        /// </summary>
+        /// <param name="entityName">The entity whose mapping we lookup.</param>
+        /// <param name="field">The field used for the lookup in the mapping.</param>
+        /// <returns>The exposed name associated with the provided field.</returns>
+        string GetExposedColumnName(string entityName, string field);
 
-        Dictionary<string, Dictionary<string, string>> EachEntityExposedNamesToBackingColumnNames { get; }
+        /// <summary>
+        /// For the entity that is provided as an argument,
+        /// get the underlying backing column name associated
+        /// with the provided field parameter.
+        /// </summary>
+        /// <param name="entityName">The entity whose mapping we lookup.</param>
+        /// <param name="field">The field used for the lookup in the mapping.</param>
+        /// <returns>The backing column associated with the provided field.</returns>
+        string GetBackingColumn(string entityName, string field);
 
+        /// <summary>
+        /// For the entity that is provided as an argument,
+        /// try to get the underlying exposed name associated
+        /// with the provided field, if it exists, save in out
+        /// parameter, and return true, otherwise return false.
+        /// </summary>
+        /// <param name="entityName">The entity whose mapping we lookup.</param>
+        /// <param name="field">The field used for the lookup in the mapping.</param>
+        /// <param name="name">Out parameter in which we will save exposed name.</param>
+        /// <returns>True if exists, false otherwise.</returns>
+        bool TryGetExposedColumnName(string entityName, string field, out string? name);
+
+        /// <summary>
+        /// For the entity that is provided as an argument,
+        /// try to get the underlying backing column name associated
+        /// with the provided field, if it exists, save in out
+        /// parameter, and return true, otherwise return false.
+        /// </summary>
+        /// <param name="entityName">The entity whose mapping we lookup.</param>
+        /// <param name="field">The field used for the lookup in the mapping.</param>
+        /// <param name="name"/>Out parameter in which we will save backing column name.<param>
+        /// <returns>True if exists, false otherwise.</returns>
+        bool TryGetBackingColumn(string entityName, string field, out string? name);
+
+        /// <summary>
+        /// Obtains the underlying database type.
+        /// </summary>
+        /// <returns></returns>
         DatabaseType GetDatabaseType();
     }
 }

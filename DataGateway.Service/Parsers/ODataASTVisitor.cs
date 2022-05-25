@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Microsoft.OData.Edm;
@@ -14,17 +13,12 @@ namespace Azure.DataGateway.Service.Parsers
     public class ODataASTVisitor : QueryNodeVisitor<string>
     {
         private SqlQueryStructure _struct;
-        private Dictionary<string, string>? _aliasings;
+        ISqlMetadataProvider _metadatProvider;
 
         public ODataASTVisitor(SqlQueryStructure structure, ISqlMetadataProvider sqlMetadataProvider)
         {
             _struct = structure;
-            _aliasings = sqlMetadataProvider.EachEntityExposedNamesToBackingColumnNames[structure.EntityName];
-        }
-
-        public ODataASTVisitor(SqlQueryStructure structure)
-        {
-            _struct = structure;
+            _metadatProvider = sqlMetadataProvider;
         }
 
         /// <summary>
@@ -63,7 +57,7 @@ namespace Azure.DataGateway.Service.Parsers
         /// <returns>String representing the Field name</returns>
         public override string Visit(SingleValuePropertyAccessNode nodeIn)
         {
-            return _aliasings is null ? nodeIn.Property.Name : _aliasings[nodeIn.Property.Name];
+            return _metadatProvider.GetBackingColumn(_struct.EntityName, nodeIn.Property.Name);
         }
 
         /// <summary>

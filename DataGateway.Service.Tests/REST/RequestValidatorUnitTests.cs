@@ -75,7 +75,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 PrimaryKey = new(primaryKeys)
             };
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            _mockMetadataStore.Setup(x => x.EachEntityExposedNamesToBackingColumnNames).Returns(_defaultMapping);
+            _mockMetadataStore.Setup(x => x.GetBackingColumn(It.IsAny<string>(), It.IsAny<string>())).Returns((string s, string t) => _defaultMapping[s][t]);
 
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
             string primaryKeyRoute = "id/2/isbn/12345";
@@ -98,7 +98,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 PrimaryKey = new(primaryKeys)
             };
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            _mockMetadataStore.Setup(x => x.EachEntityExposedNamesToBackingColumnNames).Returns(_defaultMapping);
+            _mockMetadataStore.Setup(x => x.GetBackingColumn(It.IsAny<string>(), It.IsAny<string>())).Returns((string s, string t) => _defaultMapping[s][t]);
 
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
             string primaryKeyRoute = "isbn/12345/id/2";
@@ -123,7 +123,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 PrimaryKey = new(primaryKeys)
             };
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            _mockMetadataStore.Setup(x => x.EachEntityExposedNamesToBackingColumnNames).Returns(_defaultMapping);
+            _mockMetadataStore.Setup(x => x.GetBackingColumn(It.IsAny<string>(), It.IsAny<string>())).Returns((string s, string t) => _defaultMapping[s][t]);
 
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
             string primaryKeyRoute = "name/Catch22";
@@ -192,7 +192,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 PrimaryKey = new(primaryKeys)
             };
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            _mockMetadataStore.Setup(x => x.EachEntityExposedNamesToBackingColumnNames).Returns(_defaultMapping);
+            _mockMetadataStore.Setup(x => x.GetBackingColumn(It.IsAny<string>(), It.IsAny<string>())).Returns((string s, string t) => _defaultMapping[s][t]);
 
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
             string primaryKeyRoute = "id/12345/name/2";
@@ -217,7 +217,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 PrimaryKey = new(primaryKeys)
             };
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            _mockMetadataStore.Setup(x => x.EachEntityExposedNamesToBackingColumnNames).Returns(_defaultMapping);
+            _mockMetadataStore.Setup(x => x.GetBackingColumn(It.IsAny<string>(), It.IsAny<string>())).Returns((string s, string t) => _defaultMapping[s][t]);
 
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
             string primaryKeyRoute = "id/12345/isbn/2/name/TwoTowers";

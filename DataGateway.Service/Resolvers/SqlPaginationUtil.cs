@@ -8,6 +8,8 @@ using System.Text.Json.Serialization;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Services;
+using Microsoft.Data.SqlClient;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -192,8 +194,8 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public static IEnumerable<PaginationColumn> ParseAfterFromJsonString(string afterJsonString,
                                                                              PaginationMetadata paginationMetadata,
-                                                                             Dictionary<string, string>? exposedNameToBackingColumn = null,
-                                                                             Dictionary<string, string>? backingColumnToExposedName = null)
+                                                                             string entityName = "",
+                                                                             ISqlMetadataProvider? sqlMetadataProvider = null)
         {
             IEnumerable<PaginationColumn>? after;
             try
@@ -209,7 +211,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 Dictionary<string, PaginationColumn> afterDict = new();
                 foreach (PaginationColumn column in after)
                 {
-                    string columnName = exposedNameToBackingColumn is null ? column.ColumnName : exposedNameToBackingColumn[column.ColumnName];
+                    string columnName = sqlMetadataProvider is null ? column.ColumnName : sqlMetadataProvider.GetBackingColumn(entityName, column.ColumnName);
                     afterDict.Add(columnName, column);
                 }
 
@@ -221,7 +223,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     if (!afterDict.ContainsKey(pk))
                     {
-                        string safePK = backingColumnToExposedName is null ? pk : backingColumnToExposedName[pk];
+                        string safePK = sqlMetadataProvider is null ? pk : sqlMetadataProvider.GetExposedColumnName(entityName, pk);
                         throw new ArgumentException($"Cursor for Pagination Predicates is not well formed, missing primary key column: {safePK}");
                     }
                 }
@@ -237,7 +239,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     if (!afterDict.ContainsKey(columnName) ||
                         afterDict[columnName].Direction != column.Direction)
                     {
-                        string safeColumnName = backingColumnToExposedName is null ? columnName : backingColumnToExposedName[columnName];
+                        string safeColumnName = sqlMetadataProvider is null ? columnName : sqlMetadataProvider.GetExposedColumnName(entityName, columnName);
                         throw new ArgumentException(
                             $"Could not match order by column {safeColumnName} with a column in the pagination token with the same name and direction.");
                     }

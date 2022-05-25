@@ -130,30 +130,32 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             IsListQuery = context.IsMany;
             TableAlias = $"{DatabaseObject.SchemaName}_{DatabaseObject.Name}";
-            Dictionary<string, string> exposedNamesToBackingColumns = sqlMetadataProvider.EachEntityExposedNamesToBackingColumnNames[EntityName];
-            Dictionary<string, string> backingColumnsToExposedNames = sqlMetadataProvider.EachEntityBackingColumnsToExposedNames[EntityName];
-            AddFields(context, exposedNamesToBackingColumns);
+            AddFields(context, sqlMetadataProvider);
             if (Columns.Count == 0)
             {
                 TableDefinition tableDefinition = GetUnderlyingTableDefinition();
                 foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
                 {
                     // We only include columns that are exposed for use in requests
-                    if (backingColumnsToExposedNames.ContainsKey(column.Key))
+                    if (sqlMetadataProvider.TryGetExposedColumnName(EntityName, column.Key, out string? name))
                     {
-                        AddColumn(column.Key, backingColumnsToExposedNames[column.Key]);
+                        AddColumn(column.Key, name!);
                     }
                 }
             }
 
             foreach (KeyValuePair<string, object> predicate in context.PrimaryKeyValuePairs)
             {
-                PopulateParamsAndPredicates(field: predicate.Key, backingColumn: exposedNamesToBackingColumns[predicate.Key], value: predicate.Value);
+                PopulateParamsAndPredicates(field: predicate.Key,
+                                            backingColumn: sqlMetadataProvider.GetBackingColumn(EntityName, predicate.Key),
+                                            value: predicate.Value);
             }
 
             foreach (KeyValuePair<string, object?> predicate in context.FieldValuePairsInBody)
             {
-                PopulateParamsAndPredicates(field: predicate.Key, backingColumn: exposedNamesToBackingColumns[predicate.Key], value: predicate.Value);
+                PopulateParamsAndPredicates(field: predicate.Key,
+                                            backingColumn: sqlMetadataProvider.GetBackingColumn(EntityName, predicate.Key),
+                                            value: predicate.Value);
             }
 
             // context.OrderByColumnsInUrl will lack TableAlias because it is created in RequestParser
@@ -192,8 +194,8 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromJsonString(context.After,
                                                                                   PaginationMetadata,
-                                                                                  exposedNamesToBackingColumns,
-                                                                                  backingColumnsToExposedNames));
+                                                                                  EntityName,
+                                                                                  sqlMetadataProvider));
             }
 
             _limit = context.First is not null ? context.First + 1 : DEFAULT_LIST_LIMIT + 1;
@@ -207,11 +209,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         /// <param name="context"></param>
         /// <param name="exposedNamesToBackingColumns">Mapping of exposed names to backing columns.</param>
-        private void AddFields(RestRequestContext context, Dictionary<string, string> exposedNamesToBackingColumns)
+        private void AddFields(RestRequestContext context, ISqlMetadataProvider sqlMetadataProvider)
         {
             foreach (string field in context.FieldsToBeReturned)
             {
-                AddColumn(exposedNamesToBackingColumns[field], field);
+                AddColumn(sqlMetadataProvider.GetBackingColumn(EntityName, field), field);
             }
         }
 
@@ -340,7 +342,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     string where = (string)whereObject;
 
-                    ODataASTVisitor visitor = new(this);
+                    ODataASTVisitor visitor = new(this, sqlMetadataProvider);
                     FilterParser parser = SqlMetadataProvider.ODataFilterParser;
                     FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={where}", $"{DatabaseObject.FullName}");
                     FilterPredicates = filterClause.Expression.Accept<string>(visitor);
@@ -452,6 +454,7 @@ namespace Azure.DataGateway.Service.Resolvers
         ///  populates the Parameters and Predicates properties.
         /// </summary>
         /// <param name="field">The string representing a field.</param>
+        /// <param name="backingColumn">string represents the backing column of the field.</param>
         /// <param name="value">The value associated with a given field.</param>
         /// <param name="op">The predicate operation representing the comparison between field and value.</param>
         private void PopulateParamsAndPredicates(string field, string backingColumn, object? value, PredicateOperation op = PredicateOperation.Equal)

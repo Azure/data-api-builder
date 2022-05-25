@@ -19,10 +19,11 @@ namespace Azure.DataGateway.Service.Parsers
 
         public FilterParser() { }
 
-        public void BuildModel(Dictionary<string, DatabaseObject> entitiesToDatabaseObjects, Dictionary<string, Dictionary<string, string>> eachEntityBackingColumnsToExposedNames)
+        public void BuildModel(Dictionary<string, DatabaseObject> entitiesToDatabaseObjects,
+                               Dictionary<string, Dictionary<string, string>> entityBackingColumnsToExposedNames)
         {
             EdmModelBuilder builder = new();
-            _model = builder.BuildModel(entitiesToDatabaseObjects, eachEntityBackingColumnsToExposedNames).GetModel();
+            _model = builder.BuildModel(entitiesToDatabaseObjects, entityBackingColumnsToExposedNames).GetModel();
         }
 
         /// <summary>

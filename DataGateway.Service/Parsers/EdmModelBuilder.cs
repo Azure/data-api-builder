@@ -26,13 +26,13 @@ namespace Azure.DataGateway.Service.Parsers
         /// Build the model from the provided schema.
         /// </summary>
         /// <param name="entitiesToDatabaseObjects">Entities mapped to their database objects.</param>
-        /// <param name="eachEntityBackingColumnsToExposedNames">Entites mapped to their mappings of backing
+        /// <param name="entityBackingColumnsToExposedNames">Entites mapped to their mappings of backing
         /// columns to exposed names.</param>
         /// <returns>An EdmModelBuilder that can be used to get a model.</returns>
         public EdmModelBuilder BuildModel(Dictionary<string, DatabaseObject> entitiesToDatabaseObjects,
-                                          Dictionary<string, Dictionary<string, string>> eachEntityBackingColumnsToExposedNames)
+                                          Dictionary<string, Dictionary<string, string>> entityBackingColumnsToExposedNames)
         {
-            return BuildEntityTypes(entitiesToDatabaseObjects, eachEntityBackingColumnsToExposedNames)
+            return BuildEntityTypes(entitiesToDatabaseObjects, entityBackingColumnsToExposedNames)
                 .BuildEntitySets(entitiesToDatabaseObjects);
         }
 
@@ -40,12 +40,12 @@ namespace Azure.DataGateway.Service.Parsers
         /// Add the entity types found in the schema to the model
         /// </summary>
         /// <param name="entitiesToDatabaseObjects">Entities mapped to their database objects.</param>
-        /// <param name="eachEntityBackingColumnsToExposedNames">Entites mapped to their mappings of backing
+        /// <param name="entityBackingColumnsToExposedNames">Entites mapped to their mappings of backing
         /// columns to exposed names.</param>
         /// <returns>this model builder</returns>
         private EdmModelBuilder BuildEntityTypes(
             Dictionary<string, DatabaseObject> entitiesToDatabaseObjects,
-            Dictionary<string, Dictionary<string, string>> eachEntityBackingColumnsToExposedNames)
+            Dictionary<string, Dictionary<string, string>> entityBackingColumnsToExposedNames)
         {
             // since we allow for aliases to be used in place of the names of the actual
             // database object, we need to account for these potential aliases in our EDM Model.
@@ -93,14 +93,14 @@ namespace Azure.DataGateway.Service.Parsers
                     // if column is in our list of keys we add as a key to entity
                     if (tableDefinition.PrimaryKey.Contains(column))
                     {
-                        newEntity.AddKeys(newEntity.AddStructuralProperty(name: eachEntityBackingColumnsToExposedNames[entityAndDbObject.Key][column],
+                        newEntity.AddKeys(newEntity.AddStructuralProperty(name: entityBackingColumnsToExposedNames[entityAndDbObject.Key][column],
                                                                           type,
                                                                           isNullable: false));
                     }
                     else
                     {
                         // not a key just add the property
-                        newEntity.AddStructuralProperty(name: eachEntityBackingColumnsToExposedNames[entityAndDbObject.Key][column],
+                        newEntity.AddStructuralProperty(name: entityBackingColumnsToExposedNames[entityAndDbObject.Key][column],
                                                         type,
                                                         isNullable: true);
                     }

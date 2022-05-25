@@ -90,7 +90,7 @@ namespace Azure.DataGateway.Service.Parsers
         /// <param name="filterParser">Stores the data model and can parse a filter clause based on that model.</param>
         /// <param name="primaryKeys">List of primary keys.</param>
         /// <param name="exposedNamesToBackingColumnNames">Mapping of exposed names to backing columns.</param>
-        public static void ParseQueryString(RestRequestContext context, FilterParser filterParser, List<string> primaryKeys, Dictionary<string, string> exposedNamesToBackingColumnNames)
+        public static void ParseQueryString(RestRequestContext context, ISqlMetadataProvider sqlMetadataProvider)
         {
             foreach (string key in context.ParsedQueryString!.Keys)
             {
@@ -104,15 +104,11 @@ namespace Azure.DataGateway.Service.Parsers
                         // save the AST that represents the filter for the query
                         // ?$filter=<filter clause using microsoft api guidelines>
                         string filterQueryString = $"?{FILTER_URL}={context.ParsedQueryString[key]}";
-                        context.FilterClauseInUrl = filterParser.GetFilterClause(filterQueryString, $"{context.DatabaseObject.FullName}");
+                        context.FilterClauseInUrl = sqlMetadataProvider.ODataFilterParser.GetFilterClause(filterQueryString, $"{context.DatabaseObject.FullName}");
                         break;
                     case SORT_URL:
                         string sortQueryString = $"?{SORT_URL}={context.ParsedQueryString[key]}";
-                        context.OrderByClauseInUrl = GenerateOrderByList(filterParser.GetOrderByClause(sortQueryString, $"{context.DatabaseObject.FullName}"),
-                                                                         context.DatabaseObject.SchemaName,
-                                                                         context.DatabaseObject.Name,
-                                                                         primaryKeys,
-                                                                         exposedNamesToBackingColumnNames);
+                        context.OrderByClauseInUrl = GenerateOrderByList(context, sqlMetadataProvider, sortQueryString);
                         break;
                     case AFTER_URL:
                         context.After = context.ParsedQueryString[key];
@@ -136,8 +132,14 @@ namespace Azure.DataGateway.Service.Parsers
         /// <param name="primaryKeys">A list of the primaryKeys of the given table.</paramref>/>
         /// <param name="ExposedNamesToBackingColumnNames">Mapping of exposed names to backing columns.</param>
         /// <returns>A List<OrderByColumns></returns>
-        private static List<OrderByColumn>? GenerateOrderByList(OrderByClause node, string schemaName, string tableName, List<string> primaryKeys, Dictionary<string, string> ExposedNamesToBackingColumnNames)
+        private static List<OrderByColumn>? GenerateOrderByList(RestRequestContext context, ISqlMetadataProvider sqlMetadataProvider, string sortQueryString)
         {
+            string schemaName = context.DatabaseObject.SchemaName;
+            string tableName = context.DatabaseObject.Name;
+
+            OrderByClause node = sqlMetadataProvider.ODataFilterParser.GetOrderByClause(sortQueryString, $"{context.DatabaseObject.FullName}");
+            List<string> primaryKeys = sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey;
+
             // used for performant Remove operations
             HashSet<string> remainingKeys = new(primaryKeys);
 
@@ -156,7 +158,7 @@ namespace Azure.DataGateway.Service.Parsers
                 }
                 else
                 {
-                    columnName = ExposedNamesToBackingColumnNames[expression.Property.Name];
+                    columnName = sqlMetadataProvider.GetBackingColumn(context.EntityName, expression.Property.Name);
                 }
 
                 // Sorting order is stored in node.Direction as OrderByDirection Enum

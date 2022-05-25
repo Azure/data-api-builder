@@ -45,9 +45,9 @@ namespace Azure.DataGateway.Service.Services
 
         protected DataSet EntitiesDataSet { get; init; }
 
-        public Dictionary<string, Dictionary<string, string>> EachEntityBackingColumnsToExposedNames { get; } = new();
+        protected Dictionary<string, Dictionary<string, string>> EntityBackingColumnsToExposedNames { get; } = new();
 
-        public Dictionary<string, Dictionary<string, string>> EachEntityExposedNamesToBackingColumnNames { get; } = new();
+        protected Dictionary<string, Dictionary<string, string>> EntityExposedNamesToBackingColumnNames { get; } = new();
 
         /// <summary>
         /// Maps an entity name to a DatabaseObject.
@@ -72,29 +72,24 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
-        /// Obtains the underlying database type.
-        /// </summary>
-        /// <returns></returns>
-        public DatabaseType GetDatabaseType()
-        {
-            return _databaseType;
-        }
-
-        /// <summary>
         /// Obtains the underlying mapping that belongs
         /// to a given entity.
         /// </summary>
         /// <param name="entityName">entity whose map we get.</param>
         /// <returns>mapping belonging to eneity.</returns>
-        public virtual Dictionary<string, string>? GetMappingForEntity(string entityName)
+        private Dictionary<string, string>? GetMappingForEntity(string entityName)
         {
             _entities.TryGetValue(entityName, out Entity? entity);
             return entity is not null ? entity.Mappings : null;
         }
 
-        /// <summary>
-        /// Obtains the underlying source object's schema name.
-        /// </summary>
+        /// <inheritdoc />
+        public DatabaseType GetDatabaseType()
+        {
+            return _databaseType;
+        }
+
+        /// <inheritdoc />
         public virtual string GetSchemaName(string entityName)
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
@@ -105,9 +100,7 @@ namespace Azure.DataGateway.Service.Services
             return databaseObject!.SchemaName;
         }
 
-        /// <summary>
-        /// Obtains the underlying source object's name.
-        /// </summary>
+        /// <inheritdoc />
         public string GetDatabaseObjectName(string entityName)
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
@@ -127,6 +120,30 @@ namespace Azure.DataGateway.Service.Services
             }
 
             return databaseObject!.TableDefinition;
+        }
+
+        /// <inheritdoc />
+        public string GetExposedColumnName(string entityName, string field)
+        {
+            return EntityBackingColumnsToExposedNames[entityName][field];
+        }
+
+        /// <inheritdoc />
+        public string GetBackingColumn(string entityName, string field)
+        {
+            return EntityExposedNamesToBackingColumnNames[entityName][field];
+        }
+
+        /// <inheritdoc />
+        public bool TryGetExposedColumnName(string entityName, string field, out string? name)
+        {
+            return EntityBackingColumnsToExposedNames[entityName].TryGetValue(field, out name);
+        }
+
+        /// <inheritdoc />
+        public bool TryGetBackingColumn(string entityName, string field, out string? name)
+        {
+            return EntityExposedNamesToBackingColumnNames[entityName].TryGetValue(field, out name);
         }
 
         /// <inheritdoc />
@@ -486,14 +503,14 @@ namespace Azure.DataGateway.Service.Services
             foreach (string entityName in _entities.Keys)
             {
                 Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
-                EachEntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
-                EachEntityExposedNamesToBackingColumnNames[entityName] = EachEntityBackingColumnsToExposedNames![entityName].ToDictionary(x => x.Value, x => x.Key);
+                EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
+                EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames![entityName].ToDictionary(x => x.Value, x => x.Key);
                 foreach (string column in EntityToDatabaseObject[entityName].TableDefinition.Columns.Keys)
                 {
-                    if (!EachEntityExposedNamesToBackingColumnNames[entityName].ContainsKey(column) && !EachEntityBackingColumnsToExposedNames[entityName].ContainsKey(column))
+                    if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(column) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(column))
                     {
-                        EachEntityBackingColumnsToExposedNames[entityName].Add(column, column);
-                        EachEntityExposedNamesToBackingColumnNames[entityName].Add(column, column);
+                        EntityBackingColumnsToExposedNames[entityName].Add(column, column);
+                        EntityExposedNamesToBackingColumnNames[entityName].Add(column, column);
                     }
                 }
             }
@@ -512,7 +529,7 @@ namespace Azure.DataGateway.Service.Services
 
         private void InitFilterParser()
         {
-            ODataFilterParser.BuildModel(EntityToDatabaseObject, EachEntityBackingColumnsToExposedNames);
+            ODataFilterParser.BuildModel(EntityToDatabaseObject, EntityBackingColumnsToExposedNames);
         }
 
         /// <summary>

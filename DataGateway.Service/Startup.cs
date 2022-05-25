@@ -349,8 +349,8 @@ namespace Azure.DataGateway.Service
                 runtimeConfig.AuthNConfig != null &&
                 runtimeConfig.IsEasyAuthAuthenticationProvider())
             {
-                services.AddAuthentication(StaticWebAppAuthenticationDefaults.AUTHENTICATIONSCHEME)
-                    .AddStaticWebAppAuthentication();
+                services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
+                    .AddEasyAuthAuthentication();
             }
         }
     }

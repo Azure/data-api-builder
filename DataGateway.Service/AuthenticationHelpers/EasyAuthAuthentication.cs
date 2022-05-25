@@ -38,15 +38,16 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
 
         /// <summary>
         /// Create ClaimsIdentity object from EasyAuth
-        /// injected x-ms-client-principal injected header
+        /// injected x-ms-client-principal injected header,
+        /// the value is a base64 encoded custom JWT injected by EasyAuth
+        /// as a result of validating a bearer token.
         /// </summary>
         /// <param name="context">Request's Http Context</param>
         /// <returns></returns>
         public static ClaimsIdentity? Parse(HttpContext context)
         {
             ClaimsIdentity? identity = null;
-            // x-ms-client-principal is base64 encoded custom JWT injected by EasyAuth
-            // only when Bearer token has been validated.
+
             if (context.Request.Headers.TryGetValue("x-ms-client-principal", out StringValues header))
             {
                 string encodedPrincipalData = header[0];

@@ -17,20 +17,20 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
     /// Usage modelled from Microsoft.Identity.Web.
     ///     Ref: https://github.com/AzureAD/microsoft-identity-web/blob/master/src/Microsoft.Identity.Web/AppServicesAuth/AppServicesAuthenticationHandler.cs
     /// </summary>
-    public class StaticWebAppAuthenticationHandler : AuthenticationHandler<StaticWebAppAuthenticationOptions>
+    public class EasyAuthAuthenticationHandler : AuthenticationHandler<EasyAuthAuthenticationOptions>
     {
         private const string EASY_AUTH_HEADER = "X-MS-CLIENT-PRINCIPAL";
 
         /// <summary>
-        /// Constructor for the AppServiceAuthenticationHandler.
+        /// Constructor for the EasyAuthAuthenticationHandler.
         /// Note the parameters are required by the base class.
         /// </summary>
         /// <param name="options">App service authentication options.</param>
         /// <param name="logger">Logger factory.</param>
         /// <param name="encoder">URL encoder.</param>
         /// <param name="clock">System clock.</param>
-        public StaticWebAppAuthenticationHandler(
-            IOptionsMonitor<StaticWebAppAuthenticationOptions> options,
+        public EasyAuthAuthenticationHandler(
+            IOptionsMonitor<EasyAuthAuthenticationOptions> options,
               ILoggerFactory logger,
               UrlEncoder encoder,
               ISystemClock clock
@@ -38,27 +38,32 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         {
         }
 
+        /// <summary>
+        /// Gets any authentication data for a request. When an EasyAuth header is present,
+        /// parses the header and authenticates the user within a ClaimsPrincipal object.
+        /// The ClaimsPrincipal is a security principal usable by middleware to identify the
+        /// authenticated user.
+        /// </summary>
+        /// <returns>An authentication result to ASP.NET Core library authentication mechanisms</returns>
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-
             if (Context.Request.Headers[EASY_AUTH_HEADER].Count > 0)
             {
                 ClaimsIdentity? identity = EasyAuthAuthentication.Parse(Context);
 
-                // Parse EasyAuth injected headers into MiddleWare usable Security Principal
-                if (identity == null)
+                if (identity is null)
                 {
                     identity = EasyAuthAuthentication.Parse(Context);
                 }
 
-                if (identity != null)
+                if (identity is not null)
                 {
                     ClaimsPrincipal? claimsPrincipal = new(identity);
-                    if (claimsPrincipal != null)
+                    if (claimsPrincipal is not null)
                     {
                         // AuthenticationTicket is Asp.Net Core Abstraction of Authentication information
                         // Ref: aspnetcore/src/Http/Authentication.Abstractions/src/AuthenticationTicket.cs 
-                        AuthenticationTicket ticket = new(claimsPrincipal, StaticWebAppAuthenticationDefaults.AUTHENTICATIONSCHEME);
+                        AuthenticationTicket ticket = new(claimsPrincipal, EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME);
                         AuthenticateResult success = AuthenticateResult.Success(ticket);
                         return Task<AuthenticateResult>.FromResult<AuthenticateResult>(success);
                     }

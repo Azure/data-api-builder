@@ -246,7 +246,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             };
             FindRequestContext context = new(entityName, dbo, isList);
             Mock<SqlQueryStructure> structure = new(context, _sqlMetadataProvider);
-            return new ODataASTVisitor(structure.Object);
+            return new ODataASTVisitor(structure.Object, _sqlMetadataProvider);
         }
 
         /// <summary>

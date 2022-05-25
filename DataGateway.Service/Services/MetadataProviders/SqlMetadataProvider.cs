@@ -26,7 +26,6 @@ namespace Azure.DataGateway.Service.Services
         where CommandT : DbCommand, new()
     {
         public FilterParser ODataFilterParser { get; } = new();
-        private FilterParser _oDataFilterParser = new();
 
         private readonly DatabaseType _databaseType;
 
@@ -74,6 +73,15 @@ namespace Azure.DataGateway.Service.Services
         public DatabaseType GetDatabaseType()
         {
             return _databaseType;
+        }
+
+        /// <summary>
+        /// Obtains the underlying query builder.
+        /// </summary>
+        /// <returns></returns>
+        public IQueryBuilder GetQueryBuilder()
+        {
+            return SqlQueryBuilder;
         }
 
         /// <summary>

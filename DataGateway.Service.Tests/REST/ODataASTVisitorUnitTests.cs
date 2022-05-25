@@ -43,7 +43,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 schemaName: DEFAULT_SCHEMA_NAME,
                 tableName: DEFAULT_TABLE_NAME,
                 filterString: "?$filter=id eq null",
-                expected: "(id IS NULL)"
+                expected: "([id] IS NULL)"
                 );
         }
 
@@ -59,7 +59,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 schemaName: DEFAULT_SCHEMA_NAME,
                 tableName: DEFAULT_TABLE_NAME,
                 filterString: "?$filter=id ne null",
-                expected: "(id IS NOT NULL)"
+                expected: "([id] IS NOT NULL)"
                 );
         }
 
@@ -75,7 +75,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 schemaName: DEFAULT_SCHEMA_NAME,
                 tableName: DEFAULT_TABLE_NAME,
                 filterString: "?$filter=null eq id",
-                expected: "(id IS NULL)"
+                expected: "([id] IS NULL)"
                 );
         }
 
@@ -91,7 +91,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 schemaName: DEFAULT_SCHEMA_NAME,
                 tableName: DEFAULT_TABLE_NAME,
                 filterString: "?$filter=id gt null",
-                expected: "(id > NULL)"
+                expected: "([id] > NULL)"
                 );
         }
 

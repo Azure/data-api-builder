@@ -1,5 +1,6 @@
 using System;
 using Azure.DataGateway.Service.Resolvers;
+using Azure.DataGateway.Service.Services;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
 
@@ -12,10 +13,12 @@ namespace Azure.DataGateway.Service.Parsers
     public class ODataASTVisitor : QueryNodeVisitor<string>
     {
         private SqlQueryStructure _struct;
+        private ISqlMetadataProvider _metadataProvider;
 
-        public ODataASTVisitor(SqlQueryStructure structure)
+        public ODataASTVisitor(SqlQueryStructure structure, ISqlMetadataProvider metadataProvider)
         {
             _struct = structure;
+            _metadataProvider = metadataProvider;
         }
 
         /// <summary>
@@ -52,12 +55,12 @@ namespace Azure.DataGateway.Service.Parsers
         /// <returns>String representing the Field name</returns>
         public override string Visit(SingleValuePropertyAccessNode nodeIn)
         {
-            return nodeIn.Property.Name;
+            return _metadataProvider.GetQueryBuilder().QuoteIdentifier(nodeIn.Property.Name);
         }
 
         /// <summary>
         /// Represents visiting a ConstantNode, which is what
-        /// holds a value in the AST. 
+        /// holds a value in the AST.
         /// </summary>
         /// <param name="nodeIn">The node visited.</param>
         /// <returns>String representing param that holds given value.</returns>
@@ -96,8 +99,8 @@ namespace Azure.DataGateway.Service.Parsers
                 {
                     case EdmPrimitiveTypeKind.String:
                         return param;
-                    case EdmPrimitiveTypeKind.Int64:
-                        return long.Parse(param);
+                    case EdmPrimitiveTypeKind.Int32:
+                        return int.Parse(param);
                     default:
                         // should never happen due to the config being validated for correct types
                         throw new NotSupportedException($"{edmType} is not supported");

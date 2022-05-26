@@ -26,9 +26,8 @@ namespace Azure.DataGateway.Service.Parsers
         /// <summary>
         /// Build the model from the provided schema.
         /// </summary>
-        /// <param name="entitiesToDatabaseObjects">Entities mapped to their database objects.</param>
-        /// <param name="entityBackingColumnsToExposedNames">Entites mapped to their mappings of backing
-        /// columns to exposed names.</param>
+        /// <param name="sqlMetadataProvider">The SqlMetadataProvider holds the objects needed
+        /// to build the correct model.</param>
         /// <returns>An EdmModelBuilder that can be used to get a model.</returns>
         public EdmModelBuilder BuildModel(ISqlMetadataProvider sqlMetadataProvider)
         {
@@ -39,9 +38,8 @@ namespace Azure.DataGateway.Service.Parsers
         /// <summary>
         /// Add the entity types found in the schema to the model
         /// </summary>
-        /// <param name="entitiesToDatabaseObjects">Entities mapped to their database objects.</param>
-        /// <param name="entityBackingColumnsToExposedNames">Entites mapped to their mappings of backing
-        /// columns to exposed names.</param>
+        /// <param name="sqlMetadataProvider">The SqlMetadataProvider holds the objects needed
+        /// to build the correct model.</param>
         /// <returns>this model builder</returns>
         private EdmModelBuilder BuildEntityTypes(ISqlMetadataProvider sqlMetadataProvider)
         {
@@ -119,7 +117,8 @@ namespace Azure.DataGateway.Service.Parsers
         /// <summary>
         /// Add the entity sets contained within the schema to container.
         /// </summary>
-        /// <param name="databaseObjects">A mapping of entities to their corresponding database object.</param>
+        /// <param name="sqlMetadataProvider">The SqlMetadataProvider holds the objects needed
+        /// to build the correct model.</param>
         /// <returns>this model builder</returns>
         private EdmModelBuilder BuildEntitySets(ISqlMetadataProvider sqlMetadataProvider)
         {

@@ -347,7 +347,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     ODataASTVisitor visitor = new(this, sqlMetadataProvider);
                     FilterParser parser = SqlMetadataProvider.ODataFilterParser;
-                    FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={where}", $"{DatabaseObject.FullName}");
+                    FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={where}", $"{EntityName}.{DatabaseObject.FullName}");
                     FilterPredicates = filterClause.Expression.Accept<string>(visitor);
                 }
             }

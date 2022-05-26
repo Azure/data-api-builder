@@ -293,12 +293,12 @@ namespace Azure.DataGateway.Service
 
             app.UseAuthorization();
 
-            // AuthZ Engine MW enforces that all requests (including introspection)
+            // Authorization Engine middleware enforces that all requests (including introspection)
             // include proper auth headers.
             // - {Authorization header + Client role header for JWT}
             // - {X-MS-CLIENT-PRINCIPAL + Client role header for EasyAuth}
             // When enabled, the MW will prevent BCP from loading
-            // without proper authZ headers.
+            // without proper authorization headers.
             if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Mode == HostModeType.Production)
             {
                 app.UseAuthorizationEngineMiddleware();

@@ -11,7 +11,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
     /// This middleware validates JWT tokens when JWT Auth is configured
     /// and an Authorization HTTP header is present with a token.
     /// This is required since Asp.Net Core UseAuthentication() does not make
-    /// AuthZ decisions nor does it terminate requests.
+    /// Authorization decisions nor does it terminate requests.
     /// https://github.com/aspnet/Security/issues/1613#issuecomment-358843214
     /// </summary>
     public class JwtAuthenticationMiddleware

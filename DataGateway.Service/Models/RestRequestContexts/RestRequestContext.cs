@@ -128,7 +128,7 @@ namespace Azure.DataGateway.Service.Models
 
                 if (FilterClauseInUrl is not null)
                 {
-                    FilterClauseInUrl.Expression.Accept<string>(visitor);
+                    FilterClauseInUrl.Expression.Accept(visitor);
                     CumulativeColumns.UnionWith(visitor.CumulativeColumns);
                 }
 

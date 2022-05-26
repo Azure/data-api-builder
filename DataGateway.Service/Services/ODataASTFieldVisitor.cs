@@ -8,8 +8,10 @@ namespace Azure.DataGateway.Service.Services
     /// of a request's filter clause(s).
     /// This visitor enumerates a unique list of columns present within a filter clause,
     /// so that the authorization engine can check for the presence of unauthorized columns.
+    /// The visitor does not create a result to return and instead stores the CumulativeColumn
+    /// set to be referenced by authorization code.
     /// </summary>
-    public class ODataASTFieldVisitor : QueryNodeVisitor<string>
+    public class ODataASTFieldVisitor : QueryNodeVisitor<object>
     {
         /// <summary>
         /// A collection of all unique columns names present in the Abstract Syntax Tree (AST).
@@ -22,12 +24,12 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="nodeIn">The node visited.</param>
         /// <returns>String concatenation of (left op right).</returns>
-        public override string Visit(BinaryOperatorNode nodeIn)
+        public override object Visit(BinaryOperatorNode nodeIn)
         {
             // In order traversal but add parens to maintain order of logical operations
             nodeIn.Left.Accept(this);
             nodeIn.Right.Accept(this);
-            return string.Empty;
+            return null;
         }
 
         /// <summary>
@@ -36,10 +38,10 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="nodeIn">The node visisted.</param>
         /// <returns>String concatenation of (op children)</returns>
-        public override string Visit(UnaryOperatorNode nodeIn)
+        public override object Visit(UnaryOperatorNode nodeIn)
         {
             nodeIn.Operand.Accept(this);
-            return string.Empty;
+            return null;
         }
 
         /// <summary>
@@ -48,10 +50,10 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="nodeIn">The node visited.</param>
         /// <returns>String representing the Field name</returns>
-        public override string Visit(SingleValuePropertyAccessNode nodeIn)
+        public override object Visit(SingleValuePropertyAccessNode nodeIn)
         {
             CumulativeColumns.Add(nodeIn.Property.Name.ToString());
-            return string.Empty;
+            return null;
         }
 
         /// <summary>
@@ -60,9 +62,9 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="nodeIn">The node visited.</param>
         /// <returns>String representing param that holds given value.</returns>
-        public override string Visit(ConstantNode nodeIn)
+        public override object Visit(ConstantNode nodeIn)
         {
-            return string.Empty;
+            return null;
         }
 
         /// <summary>
@@ -72,7 +74,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="nodeIn">The node visited.</param>
         /// <returns></returns>
-        public override string Visit(ConvertNode nodeIn)
+        public override object Visit(ConvertNode nodeIn)
         {
             return nodeIn.Source.Accept(this);
         }

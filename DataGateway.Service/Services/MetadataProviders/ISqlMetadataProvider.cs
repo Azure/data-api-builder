@@ -31,9 +31,9 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         TableDefinition GetTableDefinition(string entityName);
 
-        FilterParser ODataFilterParser { get; }
-
         Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; }
+
+        FilterParser GetODataFilterParser();
 
         DatabaseType GetDatabaseType();
 

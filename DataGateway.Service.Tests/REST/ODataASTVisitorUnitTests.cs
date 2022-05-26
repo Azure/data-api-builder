@@ -220,7 +220,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             string filterString,
             string expected)
         {
-            FilterClause ast = _sqlMetadataProvider.ODataFilterParser.
+            FilterClause ast = _sqlMetadataProvider.GetODataFilterParser().
                 GetFilterClause(filterString, $"{schemaName}.{tableName}");
             ODataASTVisitor visitor = CreateVisitor(entityName, schemaName, tableName);
             string actual = ast.Expression.Accept(visitor);

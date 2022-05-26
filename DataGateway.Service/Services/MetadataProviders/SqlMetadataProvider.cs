@@ -25,7 +25,7 @@ namespace Azure.DataGateway.Service.Services
         where DataAdapterT : DbDataAdapter, new()
         where CommandT : DbCommand, new()
     {
-        public FilterParser ODataFilterParser { get; } = new();
+        private FilterParser _oDataFilterParser = new();
 
         private readonly DatabaseType _databaseType;
 
@@ -64,6 +64,15 @@ namespace Azure.DataGateway.Service.Services
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;
+        }
+
+        /// <summary>
+        /// Obtains the underlying OData filter parser.
+        /// </summary>
+        /// <returns></returns>
+        public FilterParser GetODataFilterParser()
+        {
+            return _oDataFilterParser;
         }
 
         /// <summary>
@@ -477,7 +486,7 @@ namespace Azure.DataGateway.Service.Services
 
         private void InitFilterParser()
         {
-            ODataFilterParser.BuildModel(EntityToDatabaseObject.Values);
+            _oDataFilterParser.BuildModel(EntityToDatabaseObject.Values);
         }
 
         /// <summary>

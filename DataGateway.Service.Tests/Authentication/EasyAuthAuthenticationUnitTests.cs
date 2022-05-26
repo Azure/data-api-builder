@@ -22,6 +22,10 @@ using static Azure.DataGateway.Service.AuthenticationHelpers.EasyAuthAuthenticat
 
 namespace Azure.DataGateway.Service.Tests.Authentication
 {
+    /// <summary>
+    /// Tests how the runtime handles the presence/no presence of an EasyAuth header
+    /// when EasyAuth is configured for authentication.
+    /// </summary>
     [TestClass]
     public class EasyAuthAuthenticationUnitTests
     {
@@ -143,7 +147,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
 
             EasyAuthClaim roleClaim = new()
             {
-                Val = "apple@contoso.com",
+                Val = "Anonymous",
                 Typ = ClaimTypes.Role
             };
 

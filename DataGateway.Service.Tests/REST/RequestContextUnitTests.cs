@@ -17,13 +17,6 @@ namespace Azure.DataGateway.Service.Tests.REST
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class RequestContextUnitTests
     {
-        private static Dictionary<string, string> _defaultMapping = new()
-        {
-            { "id", "id" },
-            {"title", "title" },
-            {"publisher_id", "publisher_id" }
-        };
-
         private static DatabaseObject _defaultDbObject = new()
         {
             SchemaName = string.Empty,

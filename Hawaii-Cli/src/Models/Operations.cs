@@ -97,19 +97,27 @@ namespace Hawaii.Cli.Models
             string? fieldsToInclude = options.fieldsToInclude;
             string? fieldsToExclude = options.fieldsToExclude;
             string? relationship = options.relationship;
-            string? targetEntity = options.targetEntity;
             string? cardinality = options.cardinality;
+            string? targetEntity = options.targetEntity;
+            string? linkingObject = options.linkingObject;
+            string? linkingSourceFields = options.linkingSourceFields;
+            string? linkingTargetFields = options.linkingTargetFields;
             string? mappingFields = options.mappingFields;
 
             if(fileName == null) {
                 Console.WriteLine("Using default file hawaii-config");
                 fileName = RuntimeConfigPath.CONFIGFILE_NAME;
             }
-            bool isSuccess = ConfigGenerator.UpdateEntity(fileName, entity, source, permission, rest, graphQL, fieldsToInclude, fieldsToExclude, relationship, targetEntity, cardinality, mappingFields);
+            bool isSuccess = ConfigGenerator.UpdateEntity(fileName, entity, source, permission, rest, graphQL,
+                                                        fieldsToInclude, fieldsToExclude,
+                                                        relationship, cardinality, targetEntity,
+                                                        linkingObject, linkingSourceFields, linkingTargetFields,
+                                                        mappingFields);
+
             if(isSuccess) {
-                Console.WriteLine($"Updated entity:{entity} in the config.");
+                Console.WriteLine($"Updated the entity:{entity} in the config.");
             } else {
-                Console.WriteLine($"Could not update entity:{entity}.");
+                Console.WriteLine($"Could not update the entity:{entity}.");
             }
         }
     }

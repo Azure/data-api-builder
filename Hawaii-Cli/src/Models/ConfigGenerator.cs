@@ -136,8 +136,10 @@ namespace Hawaii.Cli.Models
                                             object? source, string? permissions,
                                             object? rest, object? graphQL,
                                             string? fieldsToInclude, string? fieldsToExclude,
-                                            string? relationship, string? targetEntity,
-                                            string? cardinality, string? mappingFields) {
+                                            string? relationship, string? cardinality,
+                                            string? targetEntity, string? linkingObject,
+                                            string? linkingSourceFields, string? linkingTargetFields,
+                                            string? mappingFields) {
             
             string file = $"{fileName}.json";
             string jsonString = File.ReadAllText(file);
@@ -270,29 +272,7 @@ namespace Hawaii.Cli.Models
 
                         updatedRelationship = new Relationship(updatedRelationship.Cardinality, targetEntity, updatedRelationship.SourceFields, updatedRelationship.TargetFields, updatedRelationship.LinkingObject, updatedRelationship.LinkingSourceFields, updatedRelationship.LinkingTargetFields);
                     }
-                    if(mappingFields is not null) {
-                        string[]? sourceAndTargetFields = null;
-                        string[]? sourceFields = null;
-                        string[]? targetFields = null;
-                        try
-                        {
-                            sourceAndTargetFields = mappingFields.Split(":");
-                            if(sourceAndTargetFields.Length is not 2) {
-                                throw new Exception();
-                            }
 
-                            sourceFields = sourceAndTargetFields[0].Split(",");
-                            targetFields = sourceAndTargetFields[1].Split(",");
-                        }
-                        catch (System.Exception)
-                        {
-                            Console.WriteLine($"ERROR: Please use correct format for --mappings.fields, It should be \"<<source.fields>>:<<target.fields>>\".");
-                            return false;
-                        }
-                        
-                        updatedRelationship = new Relationship(updatedRelationship.Cardinality, updatedRelationship.TargetEntity, sourceFields, targetFields, updatedRelationship.LinkingObject, updatedRelationship.LinkingSourceFields, updatedRelationship.LinkingTargetFields);
-                        updatedEntity.Relationships[relationship] = updatedRelationship;
-                    }
                 } else {    // if it's a new relationship
                     if(cardinality is not null && targetEntity is not null) {
                         Dictionary<string, Relationship> relationship_mapping = updatedEntity.Relationships==null ? new Dictionary<string, Relationship>(): updatedEntity.Relationships;
@@ -312,37 +292,55 @@ namespace Hawaii.Cli.Models
                             return false;
                         }
 
-                        string[]? sourceAndTargetFields = null;
-                        string[]? sourceFields = null;
-                        string[]? targetFields = null;
-                        if(mappingFields is not null) {
-                            try
-                            {
-                                sourceAndTargetFields = mappingFields.Split(":");
-                                if(sourceAndTargetFields.Length is not 2) {
-                                    throw new Exception();
-                                }
-                                sourceFields = sourceAndTargetFields[0].Split(",");
-                                targetFields = sourceAndTargetFields[1].Split(",");
-                            }
-                            catch (System.Exception)
-                            {
-                                Console.WriteLine($"ERROR: Please use correct format for --mappings.fields, It should be \"<<source.fields>>:<<target.fields>>\".");
-                                return false;
-                            }
-                        }
-
                         relationship_mapping.Add(relationship, new Relationship(cardinalityType, targetEntity,
-                                                                                    sourceFields, targetFields,
+                                                                                    SourceFields: null, TargetFields: null,
                                                                                     LinkingObject: null, LinkingSourceFields: null,
                                                                                     LinkingTargetFields: null));
                         
                         updatedEntity = new Entity(updatedEntity.Source, updatedEntity.Rest, updatedEntity.GraphQL, updatedEntity.Permissions, relationship_mapping, updatedEntity.Mappings);
                     } else {
-                        Console.WriteLine($"ERROR: For adding a new relationship following options are mandatory: --relationship, --cardinality, --target.entity, --mappings.field.");
+                        Console.WriteLine($"ERROR: For adding a new relationship following options are mandatory: --relationship, --cardinality, --target.entity.");
                         return false;
                     }
                 }
+
+                if(mappingFields is not null) {
+                    string[]? sourceAndTargetFields = null;
+                    string[]? sourceFields = null;
+                    string[]? targetFields = null;
+                    
+                    sourceAndTargetFields = mappingFields.Split(":");
+                    if(sourceAndTargetFields.Length is not 2) {
+                        Console.WriteLine($"ERROR: Please use correct format for --mappings.fields, It should be \"<<source.fields>>:<<target.fields>>\".");
+                        return false;
+                    }
+
+                    sourceFields = sourceAndTargetFields[0].Split(",");
+                    targetFields = sourceAndTargetFields[1].Split(",");
+
+                    Relationship updatedRelationship = updatedEntity.Relationships[relationship];
+                    updatedRelationship = new Relationship(updatedRelationship.Cardinality, updatedRelationship.TargetEntity,
+                                                            sourceFields, targetFields, updatedRelationship.LinkingObject,
+                                                            updatedRelationship.LinkingSourceFields, updatedRelationship.LinkingTargetFields);
+
+                    updatedEntity.Relationships[relationship] = updatedRelationship;
+                }
+                
+                if(linkingObject is not null && linkingSourceFields is not null && linkingTargetFields is not null) {
+                    string[] linkingSourceFieldsArray = linkingSourceFields.Split(",");
+                    string[] linkingTargetFieldsArray = linkingTargetFields.Split(",");
+
+                    Relationship updatedRelationship = updatedEntity.Relationships[relationship];
+                    updatedRelationship = new Relationship(updatedRelationship.Cardinality, updatedRelationship.TargetEntity,
+                                                            updatedRelationship.SourceFields, updatedRelationship.TargetFields,
+                                                            linkingObject, linkingSourceFieldsArray, linkingTargetFieldsArray);
+
+                    updatedEntity.Relationships[relationship] = updatedRelationship;
+                } else if(linkingObject is not null || linkingSourceFields is not null || linkingTargetFields is not null) {
+                    Console.WriteLine($"ERROR: Please provide --linking.object, --linking.source.fields, and --linking.target.fields to add the linking object.");
+                    return false;
+                }
+
             }
             
             runtimeConfig.Entities[entity] = updatedEntity;

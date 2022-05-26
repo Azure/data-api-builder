@@ -50,11 +50,7 @@ namespace Azure.DataGateway.Service.Services
         /// <returns>String representing the Field name</returns>
         public override string Visit(SingleValuePropertyAccessNode nodeIn)
         {
-            if (nodeIn is not null)
-            {
-                CumulativeColumns.Add(nodeIn.Property.Name.ToString());
-            }
-
+            CumulativeColumns.Add(nodeIn.Property.Name.ToString());
             return string.Empty;
         }
 
@@ -72,12 +68,12 @@ namespace Azure.DataGateway.Service.Services
         /// <summary>
         /// Represents visiting a ConvertNode, which holds
         /// some other node as its source.
+        /// Calls accept on source to keep traversing AST.
         /// </summary>
         /// <param name="nodeIn">The node visited.</param>
         /// <returns></returns>
         public override string Visit(ConvertNode nodeIn)
         {
-            // call accept on source to keep traversing AST.
             return nodeIn.Source.Accept(this);
         }
     }

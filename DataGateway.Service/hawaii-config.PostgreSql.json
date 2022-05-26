@@ -225,6 +225,19 @@
         "region": "United State's Region"
       }
     },
+    "Shrub": {
+      "source": "trees",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "mappings": {
+        "species": "fancy name"
+      }
+    },
     "Fungus": {
       "source": "fungi",
       "rest": true,

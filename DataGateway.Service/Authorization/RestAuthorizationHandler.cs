@@ -84,7 +84,7 @@ namespace Azure.DataGateway.Service.Authorization
             {
                 if (context.Resource is not null)
                 {
-                    DatabaseObject dbObject = (DatabaseObject)context.Resource;
+                    DatabaseObject? dbObject = context.Resource as DatabaseObject;
 
                     if (dbObject is null)
                     {
@@ -129,7 +129,17 @@ namespace Azure.DataGateway.Service.Authorization
                     // don't add that.
                     // if included columns is finite/explicit, just add those columns.
                     // All other request types will have columns listed, so no empty column checks will occur. Maybe check for this.
-                    RestRequestContext restContext = (RestRequestContext)context.Resource;
+                    RestRequestContext? restContext = context.Resource as RestRequestContext;
+
+                    if (restContext is null)
+                    {
+                        throw new DataGatewayException(
+                            message: "restContext Resource Null, Something went wrong",
+                            statusCode: HttpStatusCode.Unauthorized,
+                            subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError
+                        );
+                    }
+
                     string entityName = restContext.DatabaseObject.TableDefinition.SourceEntityRelationshipMap.Keys.First();
                     string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
                     List<string> actions = HttpVerbToActions(httpContext.Request.Method);

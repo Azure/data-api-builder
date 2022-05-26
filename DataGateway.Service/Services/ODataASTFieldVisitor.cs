@@ -11,7 +11,7 @@ namespace Azure.DataGateway.Service.Services
     /// The visitor does not create a result to return and instead stores the CumulativeColumn
     /// set to be referenced by authorization code.
     /// </summary>
-    public class ODataASTFieldVisitor : QueryNodeVisitor<object>
+    public class ODataASTFieldVisitor : QueryNodeVisitor<object?>
     {
         /// <summary>
         /// A collection of all unique columns names present in the Abstract Syntax Tree (AST).
@@ -24,7 +24,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="nodeIn">The node visited.</param>
         /// <returns>String concatenation of (left op right).</returns>
-        public override object Visit(BinaryOperatorNode nodeIn)
+        public override object? Visit(BinaryOperatorNode nodeIn)
         {
             // In order traversal but add parens to maintain order of logical operations
             nodeIn.Left.Accept(this);
@@ -38,7 +38,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="nodeIn">The node visisted.</param>
         /// <returns>String concatenation of (op children)</returns>
-        public override object Visit(UnaryOperatorNode nodeIn)
+        public override object? Visit(UnaryOperatorNode nodeIn)
         {
             nodeIn.Operand.Accept(this);
             return null;
@@ -50,7 +50,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="nodeIn">The node visited.</param>
         /// <returns>String representing the Field name</returns>
-        public override object Visit(SingleValuePropertyAccessNode nodeIn)
+        public override object? Visit(SingleValuePropertyAccessNode nodeIn)
         {
             CumulativeColumns.Add(nodeIn.Property.Name.ToString());
             return null;
@@ -62,7 +62,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="nodeIn">The node visited.</param>
         /// <returns>String representing param that holds given value.</returns>
-        public override object Visit(ConstantNode nodeIn)
+        public override object? Visit(ConstantNode nodeIn)
         {
             return null;
         }
@@ -74,7 +74,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="nodeIn">The node visited.</param>
         /// <returns></returns>
-        public override object Visit(ConvertNode nodeIn)
+        public override object? Visit(ConvertNode nodeIn)
         {
             return nodeIn.Source.Accept(this);
         }

@@ -277,8 +277,8 @@ namespace Azure.DataGateway.Service
             });
             app.UseAuthentication();
 
-            // Conditionally add JWT middleware if EasyAuth configuration is not supplied.
-            if (runtimeConfig is not null && !runtimeConfig.IsEasyAuthAuthenticationProvider())
+            // Conditionally add authentication middleware in Production Mode
+            if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Mode != HostModeType.Development)
             {
                 app.UseJwtAuthenticationMiddleware();
             }

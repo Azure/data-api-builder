@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Net;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
-using Azure.DataGateway.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 
@@ -46,7 +44,11 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         /// as a result of validating a bearer token.
         /// </summary>
         /// <param name="context">Request's Http Context</param>
-        /// <returns></returns>
+        /// <returns>
+        /// Success: Hydrated ClaimsIdentity object.
+        /// Failure: null, which indicates parsing failed, and can be interpreted
+        /// as an authentication failure.
+        /// </returns>
         public static ClaimsIdentity? Parse(HttpContext context)
         {
             ClaimsIdentity? identity = null;
@@ -70,15 +72,17 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
                         }
                     }
                 }
-                catch(Exception)
+                catch(Exception error)
                 {
-                    Console.WriteLine("Invalid EasyAuth header.");
+                    Console.Error.WriteLine("Failure processing the EasyAuth header.");
+                    Console.Error.WriteLine(error.Message);
+                    Console.Error.WriteLine(error.StackTrace);
 
-                    throw new DataGatewayException(
-                        message: "Forbidden",
-                        statusCode: HttpStatusCode.Forbidden,
-                        subStatusCode: DataGatewayException.SubStatusCodes.AuthenticationChallenge
-                       );
+                    //throw new DataGatewayException(
+                    //    message: "Invalid EasyAuth header",
+                    //    statusCode: HttpStatusCode.Unauthorized,
+                    //    subStatusCode: DataGatewayException.SubStatusCodes.AuthenticationChallenge
+                    //    );
                 }
             }
 

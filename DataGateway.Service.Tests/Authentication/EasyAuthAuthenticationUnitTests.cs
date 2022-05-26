@@ -58,7 +58,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(token);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: (int)HttpStatusCode.Forbidden, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);
         }
         #endregion
         #region Helper Methods
@@ -89,7 +89,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
                         .Configure(app =>
                         {
                             app.UseAuthentication();
-                            //app.UseMiddleware<JwtAuthenticationMiddleware>();
+                            app.UseMiddleware<AuthenticationMiddleware>();
 
                             // app.Run acts as terminating middleware to return 200 if we reach it. Without this,
                             // the Middleware pipeline will return 404 by default.

@@ -53,7 +53,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
 
                 if (identity is null)
                 {
-                    identity = EasyAuthAuthentication.Parse(Context);
+                    return Task.FromResult(AuthenticateResult.Fail(failureMessage: "Invalid EasyAuth token."));
                 }
 
                 if (identity is not null)
@@ -65,7 +65,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
                         // Ref: aspnetcore/src/Http/Authentication.Abstractions/src/AuthenticationTicket.cs 
                         AuthenticationTicket ticket = new(claimsPrincipal, EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME);
                         AuthenticateResult success = AuthenticateResult.Success(ticket);
-                        return Task<AuthenticateResult>.FromResult<AuthenticateResult>(success);
+                        return Task.FromResult(success);
                     }
                 }
             }

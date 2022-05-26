@@ -11,23 +11,11 @@ namespace Azure.DataGateway.Service.Services
     /// </summary>
     public class ODataASTFieldVisitor : QueryNodeVisitor<string>
     {
-        private HashSet<string> _cumulativeColumns;
-
-        public ODataASTFieldVisitor()
-        {
-            _cumulativeColumns = new();
-        }
-
         /// <summary>
-        /// Returns a list of columns that are present in a request.
+        /// A collection of all unique columns names present in the Abstract Syntax Tree (AST).
         /// </summary>
-        /// <returns>List of Column names</returns>
-        public List<string> GetCumulativeColumns()
-        {
-            string[] columns = new string[_cumulativeColumns.Count];
-            _cumulativeColumns.CopyTo(columns);
-            return new List<string>(columns);
-        }
+        public HashSet<string> CumulativeColumns { get; } = new();
+
         /// <summary>
         /// Represents visiting a BinaryOperatorNode, which will hold either
         /// a Predicate operation (eq, gt, lt, etc), or a Logical operaton (And, Or).
@@ -64,7 +52,7 @@ namespace Azure.DataGateway.Service.Services
         {
             if (nodeIn is not null)
             {
-                _cumulativeColumns.Add(nodeIn.Property.Name.ToString());
+                CumulativeColumns.Add(nodeIn.Property.Name.ToString());
             }
 
             return string.Empty;

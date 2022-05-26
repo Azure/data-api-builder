@@ -19,7 +19,6 @@ namespace Azure.DataGateway.Service.Models
             HttpVerb = httpVerb;
             EntityName = entityName;
             DatabaseObject = dbo;
-            CumulativeColumns = new HashSet<string>();
         }
 
         /// <summary>
@@ -95,7 +94,10 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
         public Operation OperationType { get; set; }
 
-        public HashSet<string> CumulativeColumns { get; }
+        /// <summary>
+        /// A collection of all unique columns names present in the request.
+        /// </summary>
+        public HashSet<string> CumulativeColumns { get; } = new();
 
         /// <summary>
         /// Populates the CumulativeColumns property with a unique list
@@ -123,7 +125,7 @@ namespace Azure.DataGateway.Service.Models
                 if (FilterClauseInUrl is not null)
                 {
                     FilterClauseInUrl.Expression.Accept<string>(visitor);
-                    CumulativeColumns.UnionWith(visitor.GetCumulativeColumns());
+                    CumulativeColumns.UnionWith(visitor.CumulativeColumns);
                 }
 
                 if (OrderByClauseInUrl is not null)

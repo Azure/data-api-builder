@@ -21,7 +21,7 @@ namespace Azure.DataGateway.Service.Authorization
     {
         private Dictionary<string, EntityMetadata> _entityPermissionMap = new();
         private const string WILDCARD = "*";
-        private static readonly HashSet<string> _validActions = new() { "create", "read", "update", "delete" };
+        private static readonly HashSet<string> _validActions = new() { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE };
 
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
 
@@ -230,7 +230,9 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <summary>
-        /// Returns whether the actionName is a valid CRUD operation/Wildcard (*)
+        /// Returns whether the actionName is a valid
+        /// - Create, Read, Update, Delete (CRUD) operation
+        /// - Wildcard (*)
         /// </summary>
         /// <param name="actionName"></param>
         /// <returns></returns>
@@ -243,7 +245,6 @@ namespace Azure.DataGateway.Service.Authorization
 
             return false;
         }
-        #endregion
 
         /// <summary>
         /// For a given entityName, retrieve the column names on the associated table.
@@ -255,5 +256,6 @@ namespace Azure.DataGateway.Service.Authorization
         {
             return metadataProvider.GetTableDefinition(entityName).Columns.Keys.ToList();
         }
+        #endregion
     }
 }

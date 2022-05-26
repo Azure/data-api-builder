@@ -127,7 +127,7 @@ namespace Azure.DataGateway.Service.Services
                 context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
                 RequestParser.ParseQueryString(
                     context,
-                    _sqlMetadataProvider.ODataFilterParser,
+                    _sqlMetadataProvider.GetODataFilterParser(),
                     _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey);
             }
 

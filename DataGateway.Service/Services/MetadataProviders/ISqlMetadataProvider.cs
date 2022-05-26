@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Parsers;
+using Azure.DataGateway.Service.Resolvers;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -30,10 +31,12 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         TableDefinition GetTableDefinition(string entityName);
 
-        FilterParser ODataFilterParser { get; }
-
         Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; }
 
+        FilterParser GetODataFilterParser();
+
         DatabaseType GetDatabaseType();
+
+        IQueryBuilder GetQueryBuilder();
     }
 }

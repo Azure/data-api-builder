@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.IO.Abstractions;
 using Azure.DataGateway.Config;
 using Microsoft.Extensions.Options;

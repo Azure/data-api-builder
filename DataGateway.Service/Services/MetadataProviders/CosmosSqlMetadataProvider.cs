@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Parsers;
+using Azure.DataGateway.Service.Resolvers;
 using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Services.MetadataProviders
@@ -99,6 +100,16 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
         public string GraphQLSchema()
         {
             return _fileSystem.File.ReadAllText(_cosmosDb.GraphQLSchemaPath);
+        }
+
+        public FilterParser GetODataFilterParser()
+        {
+            throw new NotImplementedException();
+        }
+
+        public IQueryBuilder GetQueryBuilder()
+        {
+            throw new NotImplementedException();
         }
     }
 }

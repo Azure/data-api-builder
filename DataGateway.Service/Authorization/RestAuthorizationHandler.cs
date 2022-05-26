@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -44,7 +43,7 @@ namespace Azure.DataGateway.Service.Authorization
 
             HttpContext? httpContext = _contextAccessor.HttpContext;
 
-            if (httpContext == null)
+            if (httpContext is null)
             {
                 throw new DataGatewayException(
                     message: "HTTP Context Unavailable, Something went wrong",
@@ -65,7 +64,7 @@ namespace Azure.DataGateway.Service.Authorization
             }
             else if (requirement is EntityRoleActionPermissionsRequirement)
             {
-                if (context.Resource != null)
+                if (context.Resource is not null)
                 {
                     DatabaseObject dbObject = (DatabaseObject)context.Resource;
 
@@ -161,27 +160,6 @@ namespace Azure.DataGateway.Service.Authorization
             }
 
             return Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// Converts operation type of a RestRequestContext object to the
-        /// matching CRUD operations, to facilitate authorization checks.
-        /// </summary>
-        /// <param name="operation"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentException"></exception>
-        private static List<string> OperationToCRUD(Operation operation)
-        {
-            return operation switch
-            {
-                Operation.UpsertIncremental => new List<string>(new string[] { "create", "update" }),
-                Operation.Upsert => new List<string>(new string[] { "create", "update" }),
-                Operation.Find => new List<string>(new string[] { "read" }),
-                Operation.Delete => new List<string>(new string[] { "delete" }),
-                Operation.Insert => new List<string>(new string[] { "create" }),
-                Operation.UpdateIncremental => new List<string>(new string[] { "update" }),
-                _ => throw new ArgumentException("Invalid value for operation"),
-            };
         }
 
         /// <summary>

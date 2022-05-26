@@ -26,6 +26,9 @@ namespace Hawaii.Cli.Models
         [Option("resolver-config-file", Required = false, HelpText = "Path of the file to resolve the configuration for CosmosDB")]
         public string? resolverConfigFile { get; set; }
 
+        [Option("host-mode", Required = false, HelpText = "Specify the Host mode - Development/Production. Default value = Production")]
+        public string? hostMode { get; set; }
+
         //TODO: Link options with Specidied commands
         // we need to make sure certain options are only required with certain commands.
         // for example: source is required only with add/update and not init

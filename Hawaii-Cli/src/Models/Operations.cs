@@ -24,6 +24,7 @@ namespace Hawaii.Cli.Models
             string? databaseType = options.databaseType;
             string? connectionString = options.connectionString;
             string? resolverConfigFile = options.resolverConfigFile;
+            string? hostMode = options.hostMode;
 
             if(fileName == null) {
                 Console.WriteLine("Using default file hawaii-config");
@@ -37,7 +38,7 @@ namespace Hawaii.Cli.Models
                 return;
             }
             
-            bool isSuccess = ConfigGenerator.GenerateConfig(fileName, resolverConfigFile, databaseType, connectionString);
+            bool isSuccess = ConfigGenerator.GenerateConfig(fileName, resolverConfigFile, databaseType, connectionString, hostMode);
             if(isSuccess) {
                 Console.WriteLine($"Config generated with file name: {fileName}, database type: {databaseType}, and connectionString: {connectionString}");
                 Console.WriteLine($"SUGGESTION: Use 'hawaii add <options>' to add new entities in your config.");
@@ -84,7 +85,7 @@ namespace Hawaii.Cli.Models
 
         /// <summary>
         /// This method will be triggered when "update" command is used.
-        /// It will update an excisting entity.
+        /// It will update an existing entity.
         /// </summary>
         public static void Update(string entity, CommandLineOptions options)
         {

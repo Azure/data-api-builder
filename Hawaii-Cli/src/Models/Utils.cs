@@ -188,7 +188,7 @@ namespace Hawaii.Cli.Models
         /// <summary>
         /// returns the default global settings based on dbType.
         /// </summary>
-        public static Dictionary<GlobalSettingsType, object> GetDefaultGlobalSettings(DatabaseType dbType) {
+        public static Dictionary<GlobalSettingsType, object> GetDefaultGlobalSettings(DatabaseType dbType, string? hostMode) {
             Dictionary<GlobalSettingsType, object> defaultGlobalSettings = new ();
             if(DatabaseType.cosmos.Equals(dbType)) {
                 defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings(Enabled: false));
@@ -197,8 +197,47 @@ namespace Hawaii.Cli.Models
             }
             
             defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings());
-            defaultGlobalSettings.Add(GlobalSettingsType.Host, new HostGlobalSettings());
+            defaultGlobalSettings.Add(GlobalSettingsType.Host, GetDefaultHostGlobalSettings(hostMode));
             return defaultGlobalSettings;
+        }
+
+        /// <summary>
+        /// returns the default host Global Settings
+        /// if the user doesn't specify host mode. Default value to be used is Production.
+        /// sample:
+        // "host": {
+        //     "mode": "production",
+        //     "cors": {
+        //         "origins": [],
+        //         "allow-credentials": true
+        //     },
+        //     "authentication": {
+        //         "provider": "EasyAuth",
+        //         "jwt": {
+        //         "audience": "",
+        //         "issuer": "",
+        //         "issuerkey": ""
+        //         }
+        //     }
+        // }
+        /// </summary>
+        public static HostGlobalSettings GetDefaultHostGlobalSettings(string? hostMode) {
+            HostModeType hostModeType;
+            try {
+                if(hostMode is null) {  // host mode not specified by user
+                    hostModeType = HostModeType.Production;
+                } else {
+                    hostModeType = Enum.Parse<HostModeType>(hostMode,true);
+                }
+            } catch(Exception) {
+                Console.WriteLine($"Unsupported hostMode: {hostMode}. Supported values: Production/Development");
+                throw new NotSupportedException("Invalid Host Mode provided.");
+            }
+
+            string[] origins = {};
+            Cors cors = new Cors(origins);
+            AuthenticationConfig authenticationConfig = new AuthenticationConfig(Jwt: new Jwt(Audience: String.Empty, Issuer: String.Empty, IssuerKey: String.Empty));
+            return new HostGlobalSettings(hostModeType, cors, authenticationConfig);
         }
     }
 }

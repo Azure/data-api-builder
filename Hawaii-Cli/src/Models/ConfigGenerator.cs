@@ -10,10 +10,10 @@ namespace Hawaii.Cli.Models
     /// </summary>
     public class ConfigGenerator
     {
-        //
-        // Summary:
-        //      This mehod will generate the initial config with databaseType and connection-string.
-        public static bool GenerateConfig(string fileName, string? resolverConfigFile, string database_type, string connection_string)
+        /// <summary>
+        /// This method will generate the initial config with databaseType and connection-string.
+        /// </summary>
+        public static bool GenerateConfig(string fileName, string? resolverConfigFile, string database_type, string connection_string, string? hostMode)
         {
             DatabaseType dbType;
             try {
@@ -61,9 +61,15 @@ namespace Hawaii.Cli.Models
                         return false;
             }
 
-            RuntimeConfig runtimeConfig = new RuntimeConfig(schema, dataSource, CosmosDb: cosmosDbOptions, MsSql: msSqlOptions,
-                                                PostgreSql: postgreSqlOptions, MySql: mySqlOptions,
-                                                GetDefaultGlobalSettings(dbType), new Dictionary<string, Entity>());
+            RuntimeConfig runtimeConfig;
+            try {
+                runtimeConfig = new RuntimeConfig(schema, dataSource, CosmosDb: cosmosDbOptions, MsSql: msSqlOptions,
+                                                    PostgreSql: postgreSqlOptions, MySql: mySqlOptions,
+                                                    GetDefaultGlobalSettings(dbType, hostMode), new Dictionary<string, Entity>());
+            } catch(NotSupportedException e) {
+                Console.WriteLine($"{e}");
+                return false;
+            }
 
             string JSONresult = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
 
@@ -76,10 +82,10 @@ namespace Hawaii.Cli.Models
         }
 
 
-        //
-        // Summary:
-        //      This mehod will add a new Entity with the given restand graphql endpoints, source, and permissions.
-        //      It also support fields that needs to encluded or excluded for a given role and action.
+        /// <summary>
+        /// This method will add a new Entity with the given REST and GraphQL endpoints, source, and permissions.
+        /// It also supports fields that needs to be included or excluded for a given role and action.
+        /// </summary>
         public static bool AddEntitiesToConfig(string fileName, string entity,
                                             object source, string permissions,
                                             object? rest, object? graphQL,
@@ -122,10 +128,10 @@ namespace Hawaii.Cli.Models
         }
 
 
-        //
-        // Summary:
-        //      This mehod will update an excisting Entity with the given restand graphql endpoints, source, and permissions.
-        //      It also support adding a new relationship as well as updating an excisting one.
+        /// <summary>
+        /// This method will update an existing Entity with the given REST and GraphQL endpoints, source, and permissions.
+        /// It also supports adding a new relationship as well as updating an existing one.
+        /// </summary>
         public static bool UpdateEntity(string fileName, string entity,
                                             object? source, string? permissions,
                                             object? rest, object? graphQL,
@@ -179,7 +185,7 @@ namespace Hawaii.Cli.Models
 
                     string new_action_element = new_action;
                     foreach(PermissionSetting permission in updatedEntity.Permissions) {    //Loop through current permissions for an entity.
-                        if(permission.Role==new_role) { // Updating an excisting permission
+                        if(permission.Role==new_role) { // Updating an existing permission
                             string operation = GetCRUDOperation((JsonElement)permission.Actions[0]);
                             if(permission.Actions.Length==1 && "*".Equals(operation)) { // if the role had only one action and that is "*"
                                 if(operation == new_action_element) { // if the new and old action is "*"
@@ -190,7 +196,7 @@ namespace Hawaii.Cli.Models
                                         string op = crud.ToString();
                                         if(op.Equals(new_action_element)) { //if the current crud operation is equal to the asked crud operation
                                             action_list.Add(GetAction(op, fieldsToInclude, fieldsToExclude));
-                                        } else {    // else we just create a new node and add it with excisting properties
+                                        } else {    // else we just create a new node and add it with existing properties
                                             string[]? currentFieldsToInclude = null;
                                             string[]? currentFieldsToExclude = null;
                                             if(!JsonValueKind.String.Equals(((JsonElement)permission.Actions[0]).ValueKind)) {

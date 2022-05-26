@@ -106,8 +106,12 @@ namespace Azure.DataGateway.Service.Models
         /// # URL Route Components: PrimaryKey Key/Value Pairs
         /// # Query String components: $f (Column filter), $filter (FilterClause /row filter), $orderby clause
         /// # Request Body: FieldValuePairs in body
+        /// -> Failure r
         /// </summary>
-        public void CalculateCumulativeColumns()
+        /// <returns>
+        /// Returns true on success, false on failure.
+        /// </returns>
+        public bool TryCalculateCumulativeColumns()
         {
             ODataASTFieldVisitor visitor = new();
             try
@@ -140,10 +144,17 @@ namespace Azure.DataGateway.Service.Models
                 {
                     CumulativeColumns.UnionWith(FieldValuePairsInBody.Keys);
                 }
+
+                return true;
             }
-            catch
+            catch (Exception e)
             {
-                Console.WriteLine("ERROR IN ODATA_AST_COLUMN_VISITOR TRAVERSAL");
+                // Exception not rethrown as returning false here is gracefully handled by caller,
+                // which will result in a 403 Unauthorized response to the client.
+                Console.Error.WriteLine("ERROR IN ODATA_AST_COLUMN_VISITOR TRAVERSAL");
+                Console.Error.WriteLine(e.Message);
+                Console.Error.WriteLine(e.StackTrace);
+                return false;
             }
         }
 

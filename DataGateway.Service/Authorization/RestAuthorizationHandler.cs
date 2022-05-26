@@ -134,45 +134,45 @@ namespace Azure.DataGateway.Service.Authorization
                     string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
                     List<string> actions = HttpVerbToActions(httpContext.Request.Method);
 
-                    restContext.CalculateCumulativeColumns();
-
-                    // Two actions must be checked when HTTP operation is PUT or PATCH.
-                    // PUT and PATCH resolve to actions 'create' and 'update'.
-                    // A user must fulfill both actions' permissions requirements to proceed.
-                    foreach (string action in actions)
+                    if (restContext.TryCalculateCumulativeColumns())
                     {
-                        List<string> columnsToCheck;
+                        // Two actions must be checked when HTTP operation is PUT or PATCH.
+                        // PUT and PATCH resolve to actions 'create' and 'update'.
+                        // A user must fulfill both actions' permissions requirements to proceed.
+                        foreach (string action in actions)
+                        {
+                            List<string> columnsToCheck;
 
-                        // No cumulative columns indicates that this is a FindMany request.
-                        // To resolve columns to return, check permissions for role.
-                        if (restContext.CumulativeColumns.Count == 0)
-                        {
-                            columnsToCheck = _authorizationResolver.GetAllowedColumns(entityName, roleName, action);
-                        }
-                        else
-                        {
-                            columnsToCheck = restContext.CumulativeColumns.ToList();
-                        }
-
-                        // get list of includedColumns from config permissions
-                        bool isAuthorized = _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName, action, columnsToCheck);
-                        if (!isAuthorized)
-                        {
-                            context.Fail();
-                        }
-                        else
-                        {
-                            // This check catches the FindMany variant with no filters or column references.
-                            if (restContext.FieldsToBeReturned.Count == 0 && restContext.IsMany)
+                            // No cumulative columns indicates that this is a FindMany request.
+                            // To resolve columns to return, check permissions for role.
+                            if (restContext.CumulativeColumns.Count == 0)
                             {
-                                restContext.FieldsToBeReturned.AddRange(columnsToCheck);
+                                columnsToCheck = _authorizationResolver.GetAllowedColumns(entityName, roleName, action);
+                            }
+                            else
+                            {
+                                columnsToCheck = restContext.CumulativeColumns.ToList();
+                            }
+
+                            if (_authorizationResolver.AreColumnsAllowedForAction(entityName, roleName, action, columnsToCheck))
+                            {
+                                // This check catches the FindMany variant with no filters or column references.
+                                if (restContext.FieldsToBeReturned.Count == 0 && restContext.IsMany)
+                                {
+                                    // Union performed to avoid duplicate field names in FieldsToBeReturned.
+                                    restContext.FieldsToBeReturned.Union(columnsToCheck);
+                                }
+                            }
+                            else
+                            {
+                                context.Fail();
                             }
                         }
-                    }
 
-                    if (!context.HasFailed)
-                    {
-                        context.Succeed(requirement);
+                        if (!context.HasFailed)
+                        {
+                            context.Succeed(requirement);
+                        }
                     }
                 }
             }

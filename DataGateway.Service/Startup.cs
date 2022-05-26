@@ -216,8 +216,9 @@ namespace Azure.DataGateway.Service
 
             services.AddAuthorization();
             services.AddSingleton<IAuthorizationHandler, RequestAuthorizationHandler>();
-            services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
+            services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
+
             services.AddControllers();
         }
 

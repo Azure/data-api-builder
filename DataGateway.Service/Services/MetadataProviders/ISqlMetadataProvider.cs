@@ -64,5 +64,12 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <returns></returns>
         DatabaseType GetDatabaseType();
+
+        /// <summary>
+        /// Returns a collection of (Entity, DatabaseObject) without
+        /// exposing the internal representation.
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<KeyValuePair<string, DatabaseObject>> GetEntitiesAndDbObjects();
     }
 }

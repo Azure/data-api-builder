@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Services;
 using Microsoft.OData.Edm;
 
 namespace Azure.DataGateway.Service.Parsers
@@ -29,11 +30,10 @@ namespace Azure.DataGateway.Service.Parsers
         /// <param name="entityBackingColumnsToExposedNames">Entites mapped to their mappings of backing
         /// columns to exposed names.</param>
         /// <returns>An EdmModelBuilder that can be used to get a model.</returns>
-        public EdmModelBuilder BuildModel(Dictionary<string, DatabaseObject> entitiesToDatabaseObjects,
-                                          Dictionary<string, Dictionary<string, string>> entityBackingColumnsToExposedNames)
+        public EdmModelBuilder BuildModel(ISqlMetadataProvider sqlMetadataProvider)
         {
-            return BuildEntityTypes(entitiesToDatabaseObjects, entityBackingColumnsToExposedNames)
-                .BuildEntitySets(entitiesToDatabaseObjects);
+            return BuildEntityTypes(sqlMetadataProvider)
+                .BuildEntitySets(sqlMetadataProvider);
         }
 
         /// <summary>
@@ -43,13 +43,11 @@ namespace Azure.DataGateway.Service.Parsers
         /// <param name="entityBackingColumnsToExposedNames">Entites mapped to their mappings of backing
         /// columns to exposed names.</param>
         /// <returns>this model builder</returns>
-        private EdmModelBuilder BuildEntityTypes(
-            Dictionary<string, DatabaseObject> entitiesToDatabaseObjects,
-            Dictionary<string, Dictionary<string, string>> entityBackingColumnsToExposedNames)
+        private EdmModelBuilder BuildEntityTypes(ISqlMetadataProvider sqlMetadataProvider)
         {
             // since we allow for aliases to be used in place of the names of the actual
             // database object, we need to account for these potential aliases in our EDM Model.
-            foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in entitiesToDatabaseObjects)
+            foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in sqlMetadataProvider.GetEntitiesAndDbObjects())
             {
                 string entitySourceName = $"{entityAndDbObject.Value.FullName}";
                 string newEntityKey = $"{entityAndDbObject.Key}.{entitySourceName}";
@@ -92,16 +90,19 @@ namespace Azure.DataGateway.Service.Parsers
                     // here we must use the correct aliasing for the column name
                     // which is on a per entity basis.
                     // if column is in our list of keys we add as a key to entity
+                    string columnName;
                     if (tableDefinition.PrimaryKey.Contains(column))
                     {
-                        newEntity.AddKeys(newEntity.AddStructuralProperty(name: entityBackingColumnsToExposedNames[entityAndDbObject.Key][column],
+                        sqlMetadataProvider.TryGetExposedColumnName(entityAndDbObject.Key, column, out columnName!);
+                        newEntity.AddKeys(newEntity.AddStructuralProperty(name: columnName,
                                                                           type,
                                                                           isNullable: false));
                     }
                     else
                     {
                         // not a key just add the property
-                        newEntity.AddStructuralProperty(name: entityBackingColumnsToExposedNames[entityAndDbObject.Key][column],
+                        sqlMetadataProvider.TryGetExposedColumnName(entityAndDbObject.Key, column, out columnName!);
+                        newEntity.AddStructuralProperty(name: columnName,
                                                         type,
                                                         isNullable: true);
                     }
@@ -120,14 +121,14 @@ namespace Azure.DataGateway.Service.Parsers
         /// </summary>
         /// <param name="databaseObjects">A mapping of entities to their corresponding database object.</param>
         /// <returns>this model builder</returns>
-        private EdmModelBuilder BuildEntitySets(Dictionary<string, DatabaseObject> databaseObjects)
+        private EdmModelBuilder BuildEntitySets(ISqlMetadataProvider sqlMetadataProvider)
         {
             EdmEntityContainer container = new(DEFAULT_NAMESPACE, DEFAULT_CONTAINER_NAME);
             _model.AddElement(container);
 
             // Entity set is a collection of the same entity, if we think of an entity as a row of data
             // that has a key, then an entity set can be thought of as a table made up of those rows.
-            foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in databaseObjects)
+            foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in sqlMetadataProvider.GetEntitiesAndDbObjects())
             {
                 string entityName = $"{entityAndDbObject.Value.FullName}";
                 container.AddEntitySet(name: $"{entityAndDbObject.Key}.{entityName}", _entities[$"{entityAndDbObject.Key}.{entityName}"]);

@@ -122,6 +122,12 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <inheritdoc />
+        public IEnumerable<KeyValuePair<string, DatabaseObject>> GetEntitiesAndDbObjects()
+        {
+            return EntityToDatabaseObject.ToList();
+        }
+
+        /// <inheritdoc />
         public async Task InitializeAsync()
         {
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
@@ -516,7 +522,7 @@ namespace Azure.DataGateway.Service.Services
 
         private void InitFilterParser()
         {
-            ODataFilterParser.BuildModel(EntityToDatabaseObject, EntityBackingColumnsToExposedNames);
+            ODataFilterParser.BuildModel(this);
         }
 
         /// <summary>

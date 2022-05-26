@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Services;
 using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
@@ -19,11 +20,10 @@ namespace Azure.DataGateway.Service.Parsers
 
         public FilterParser() { }
 
-        public void BuildModel(Dictionary<string, DatabaseObject> entitiesToDatabaseObjects,
-                               Dictionary<string, Dictionary<string, string>> entityBackingColumnsToExposedNames)
+        public void BuildModel(ISqlMetadataProvider sqlMetadataProvider)
         {
             EdmModelBuilder builder = new();
-            _model = builder.BuildModel(entitiesToDatabaseObjects, entityBackingColumnsToExposedNames).GetModel();
+            _model = builder.BuildModel(sqlMetadataProvider).GetModel();
         }
 
         /// <summary>

@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using Azure.DataGateway.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 
@@ -14,11 +16,12 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
     /// </summary>
     public static class EasyAuthAuthentication
     {
+        public const string EASYAUTHHEADER = "X-MS-CLIENT-PRINCIPAL";
         /// <summary>
         /// Representation of authenticated user principal Http header
         /// injected by EasyAuth
         /// </summary>
-        private struct EasyAuthClientPrincipal
+        public struct EasyAuthClientPrincipal
         {
             public string Auth_typ { get; set; }
             public string Name_typ { get; set; }
@@ -30,7 +33,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         /// Representation of authenticated user principal claims
         /// injected by EasyAuth
         /// </summary>
-        private struct EasyAuthClaim
+        public struct EasyAuthClaim
         {
             public string Typ { get; set; }
             public string Val { get; set; }
@@ -48,21 +51,34 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         {
             ClaimsIdentity? identity = null;
 
-            if (context.Request.Headers.TryGetValue("x-ms-client-principal", out StringValues header))
+            if (context.Request.Headers.TryGetValue(EasyAuthAuthentication.EASYAUTHHEADER, out StringValues header))
             {
-                string encodedPrincipalData = header[0];
-                byte[] decodedPrincpalData = Convert.FromBase64String(encodedPrincipalData);
-                string json = Encoding.UTF8.GetString(decodedPrincpalData);
-                EasyAuthClientPrincipal principal = JsonSerializer.Deserialize<EasyAuthClientPrincipal>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                identity = new(principal.Auth_typ, principal.Name_typ, principal.Role_typ);
-
-                if (principal.Claims != null)
+                try
                 {
-                    foreach (EasyAuthClaim claim in principal.Claims)
+                    string encodedPrincipalData = header[0];
+                    byte[] decodedPrincpalData = Convert.FromBase64String(encodedPrincipalData);
+                    string json = Encoding.UTF8.GetString(decodedPrincpalData);
+                    EasyAuthClientPrincipal principal = JsonSerializer.Deserialize<EasyAuthClientPrincipal>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    identity = new(principal.Auth_typ, principal.Name_typ, principal.Role_typ);
+
+                    if (principal.Claims != null)
                     {
-                        identity.AddClaim(new Claim(type: claim.Typ, value: claim.Val));
+                        foreach (EasyAuthClaim claim in principal.Claims)
+                        {
+                            identity.AddClaim(new Claim(type: claim.Typ, value: claim.Val));
+                        }
                     }
+                }
+                catch(Exception)
+                {
+                    Console.WriteLine("Invalid EasyAuth header.");
+
+                    throw new DataGatewayException(
+                        message: "Forbidden",
+                        statusCode: HttpStatusCode.Forbidden,
+                        subStatusCode: DataGatewayException.SubStatusCodes.AuthenticationChallenge
+                       );
                 }
             }
 

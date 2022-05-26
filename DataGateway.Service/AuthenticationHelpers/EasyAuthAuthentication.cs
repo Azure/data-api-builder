@@ -74,15 +74,12 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
                 }
                 catch (Exception error)
                 {
+                    // Logging the parsing failure exception to the console, but not rethrowing
+                    // nor creating a DataGateway exception because the authentication handler
+                    // will create and send a 401 unauthorized response to the client.
                     Console.Error.WriteLine("Failure processing the EasyAuth header.");
                     Console.Error.WriteLine(error.Message);
                     Console.Error.WriteLine(error.StackTrace);
-
-                    //throw new DataGatewayException(
-                    //    message: "Invalid EasyAuth header",
-                    //    statusCode: HttpStatusCode.Unauthorized,
-                    //    subStatusCode: DataGatewayException.SubStatusCodes.AuthenticationChallenge
-                    //    );
                 }
             }
 

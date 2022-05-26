@@ -20,6 +20,7 @@ namespace Azure.DataGateway.Service.Authorization
     /// </summary>
     public class AuthorizationResolver : IAuthorizationResolver
     {
+        private ISqlMetadataProvider _metadataProvider;
         private Dictionary<string, EntityMetadata> _entityPermissionMap = new();
         private const string WILDCARD = "*";
         private static readonly HashSet<string> _validActions = new() { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE };
@@ -32,7 +33,8 @@ namespace Azure.DataGateway.Service.Authorization
             )
         {
             // Datastructure constructor will pull required properties from metadataprovider.
-            SetEntityPermissionMap(runtimeConfigPath.CurrentValue.ConfigValue!, sqlMetadataProvider);
+            _metadataProvider = sqlMetadataProvider;
+            SetEntityPermissionMap(runtimeConfigPath.CurrentValue.ConfigValue!);
         }
 
         /// <summary>
@@ -148,7 +150,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// </summary>
         /// <param name="runtimeConfig"></param>
         /// <returns></returns>
-        public void SetEntityPermissionMap(RuntimeConfig? runtimeConfig, ISqlMetadataProvider metadataProvider)
+        public void SetEntityPermissionMap(RuntimeConfig? runtimeConfig)
         {
             foreach ((string entityName, Entity entity) in runtimeConfig!.Entities)
             {
@@ -166,7 +168,7 @@ namespace Azure.DataGateway.Service.Authorization
                         if (actionElement.ValueKind == JsonValueKind.String)
                         {
                             actionName = actionElement.ToString();
-                            actionToColumn.included.UnionWith(ResolveTableDefinitionColumns(metadataProvider, entityName));
+                            actionToColumn.included.UnionWith(ResolveTableDefinitionColumns(entityName));
                         }
                         else if (actionElement.ValueKind == JsonValueKind.Object)
                         {
@@ -182,7 +184,7 @@ namespace Azure.DataGateway.Service.Authorization
                                 {
                                     if (actionObj.Fields.Include.Length == 1 && actionObj.Fields.Include[0] == WILDCARD)
                                     {
-                                        actionToColumn.included.UnionWith(ResolveTableDefinitionColumns(metadataProvider, entityName));
+                                        actionToColumn.included.UnionWith(ResolveTableDefinitionColumns(entityName));
                                     }
                                     else
                                     {
@@ -194,7 +196,7 @@ namespace Azure.DataGateway.Service.Authorization
                                 {
                                     if (actionObj.Fields.Exclude.Length == 1 && actionObj.Fields.Exclude[0] == WILDCARD)
                                     {
-                                        actionToColumn.excluded.UnionWith(ResolveTableDefinitionColumns(metadataProvider, entityName));
+                                        actionToColumn.excluded.UnionWith(ResolveTableDefinitionColumns(entityName));
                                     }
                                     else
                                     {
@@ -248,14 +250,14 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <summary>
-        /// For a given entityName, retrieve the column names on the associated table.
+        /// For a given entityName, retrieve the column names on the associated table
+        /// from the metadataProvider.
         /// </summary>
-        /// <param name="metadataProvider">Used to retrieve table definition</param>
         /// <param name="entityName">Used to lookup table definition of specific entity</param>
         /// <returns>List of columns in table definition.</returns>
-        private static List<string> ResolveTableDefinitionColumns(ISqlMetadataProvider metadataProvider, string entityName)
+        private List<string> ResolveTableDefinitionColumns(string entityName)
         {
-            return metadataProvider.GetTableDefinition(entityName).Columns.Keys.ToList();
+            return _metadataProvider.GetTableDefinition(entityName).Columns.Keys.ToList();
         }
         #endregion
     }

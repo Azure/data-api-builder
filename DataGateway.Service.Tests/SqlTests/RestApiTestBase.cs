@@ -38,8 +38,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static readonly string _integrationTieBreakTable = "authors";
         protected static readonly string _integrationMappingEntity = "Tree";
         protected static readonly string _integrationMappingTable = "trees";
+        protected static readonly string _integrationMappingDifferentEntity = "Shrub";
         protected static readonly string _integrationBrokenMappingEntity = "Fungus";
-        protected static readonly string _integrationBrokenMappingTable = "fungi";
         protected static readonly string _simple_all_books = "books_view_all";
         protected static readonly string _simple_subset_stocks = "stocks_view_selected";
         protected static readonly string _composite_subset_bookPub = "books_publishers_view_composite";
@@ -834,6 +834,26 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 queryString: "?$f=treeId",
                 entity: _integrationMappingEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithUnMappedFieldsToBeReturned)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation when the target
+        /// entity has mapped fields that are different from another
+        /// entity which shares the same source table. Verify that
+        /// we return the correct name from a single unmapped field
+        /// without mapped fields included.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task FindTestWithDifferentMappedFieldsToBeReturned()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=fancyName eq null",
+                entity: _integrationMappingDifferentEntity,
+                sqlQuery: GetQuery(nameof(FindTestWithDifferentMappedFieldsToBeReturned)),
                 controller: _restController
             );
         }

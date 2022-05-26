@@ -1,17 +1,11 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
-using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Tests.SqlTests;
-using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -250,8 +244,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             DatabaseObject dbo = new()
             {
                 SchemaName = schemaName,
-                Name = tableName,
-                TableDefinition = new()
+                Name = tableName
             };
             FindRequestContext context = new(entityName, dbo, isList);
             Mock<SqlQueryStructure> structure = new(context, _sqlMetadataProvider);

@@ -32,9 +32,14 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         /// <summary>
         /// Ensures a valid EasyAuth header/value does NOT result in HTTP 401 Unauthorized response.
         /// 403 is okay, as it indicates authorization level failure, not authentication.
+        /// When an authorization header is sent, it contains an invalid value, if the runtime returns an error
+        /// then there is improper JWT validation occurring.
         /// </summary>
+        [DataTestMethod]
+        [DataRow(false, DisplayName = "Valid EasyAuth header only")]
+        [DataRow(true, DisplayName = "Valid EasyAuth header and authorization header")]
         [TestMethod]
-        public async Task TestValidEasyAuthToken()
+        public async Task TestValidEasyAuthToken(bool sendAuthorizationHeader)
         {
             string generatedToken = CreateEasyAuthToken();
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(generatedToken);
@@ -45,9 +50,11 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         #endregion
         #region Negative Tests
         /// <summary>
-        /// Ensures an invalid/no EasyAuth header/value results in HTTP 401 Unauthorized response.
+        /// - Ensures an invalid/no EasyAuth header/value results in HTTP 401 Unauthorized response.
         /// 403 is NOT okay here, this indicates authentication incorrectly succeeded, and authorization
         /// rules are being checked.
+        /// - Also, validate that if other auth headers are present (Authorization Bearer token), that it is never considered
+        /// when the runtime is configured for EasyAuth authentication.
         /// </summary>
         /// <param name="token">EasyAuth header value</param>
         /// <returns></returns>
@@ -55,14 +62,18 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         [DataRow("", DisplayName = "No EasyAuth header value provided")]
         [DataRow("ey==", DisplayName = "Corrupt EasyAuth header value provided")]
         [DataRow(null, DisplayName = "No EasyAuth header provided")]
+        [DataRow("", true, DisplayName = "No EasyAuth header value provided, include authorization header")]
+        [DataRow("ey==", true, DisplayName = "Corrupt EasyAuth header value provided, include authorization header")]
+        [DataRow(null, true, DisplayName = "No EasyAuth header provided, include authorization header")]
         [TestMethod]
-        public async Task TestInvalidEasyAuthToken(string token)
+        public async Task TestInvalidEasyAuthToken(string token, bool sendAuthorizationHeader = false)
         {
-            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(token);
+            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(token, sendAuthorizationHeader);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
             Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);
         }
+
         #endregion
         #region Helper Methods
         /// <summary>
@@ -112,8 +123,9 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         /// Sends a request with an EasyAuth header to the TestServer created.
         /// </summary>
         /// <param name="token">The EasyAuth header value(base64 encoded token) to test against the TestServer</param>
+        /// <param name="sendAuthorizationHeader">Whether to add authorization header to header dictionary</param>
         /// <returns></returns>
-        private static async Task<HttpContext> SendRequestAndGetHttpContextState(string? token)
+        private static async Task<HttpContext> SendRequestAndGetHttpContextState(string? token, bool sendAuthorizationHeader = false)
         {
             using IHost host = await CreateWebHostEasyAuth();
             TestServer server = host.GetTestServer();
@@ -124,6 +136,12 @@ namespace Azure.DataGateway.Service.Tests.Authentication
                 {
                     StringValues headerValue = new(new string[] { $"{token}" });
                     KeyValuePair<string, StringValues> easyAuthHeader = new(EasyAuthAuthentication.EASYAUTHHEADER, headerValue);
+                    context.Request.Headers.Add(easyAuthHeader);
+                }
+
+                if (sendAuthorizationHeader)
+                {
+                    KeyValuePair<string, StringValues> easyAuthHeader = new("Authorization", "Bearer eyxyz");
                     context.Request.Headers.Add(easyAuthHeader);
                 }
 

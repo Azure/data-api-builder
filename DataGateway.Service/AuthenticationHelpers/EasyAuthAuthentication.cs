@@ -72,7 +72,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
                         }
                     }
                 }
-                catch(Exception error)
+                catch (Exception error)
                 {
                     Console.Error.WriteLine("Failure processing the EasyAuth header.");
                     Console.Error.WriteLine(error.Message);

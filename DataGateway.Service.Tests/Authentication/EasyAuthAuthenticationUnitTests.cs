@@ -80,7 +80,6 @@ namespace Azure.DataGateway.Service.Tests.Authentication
                         {
                             services.AddAuthentication(defaultScheme: EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
                                 .AddEasyAuthAuthentication();
-                                
                             services.AddAuthorization();
                         })
                         .ConfigureLogging(o =>
@@ -127,7 +126,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
                     KeyValuePair<string, StringValues> easyAuthHeader = new(EasyAuthAuthentication.EASYAUTHHEADER, headerValue);
                     context.Request.Headers.Add(easyAuthHeader);
                 }
-                
+
                 context.Request.Scheme = "https";
             });
         }

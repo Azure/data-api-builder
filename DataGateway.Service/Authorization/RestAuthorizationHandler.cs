@@ -10,6 +10,11 @@ using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataGateway.Service.Authorization
 {
+    /// <summary>
+    /// Make authorization decisions for REST requests.
+    /// Checks a requirement against an object(resource) to decide whether
+    /// a request should continue processing.
+    /// </summary>
     public class RestAuthorizationHandler : IAuthorizationHandler
     {
         private IAuthorizationResolver _authorizationResolver;
@@ -24,15 +29,28 @@ namespace Azure.DataGateway.Service.Authorization
             _contextAccessor = httpContextAccessor;
         }
 
+        /// <summary>
+        /// Executed by the internal ASP.NET authorization engine
+        /// whenever client code calls authorizationService.AuthorizeAsync()
+        /// Execution of this method calls either 
+        ///     .Succeed(IRequirement)
+        ///     .Failure()
+        /// To set the result of authorization. If Faiure() is called, this
+        /// ensures Microsoft.AspNetCore.Authorization.AuthorizationHandlerContext.HasSucceeded
+        //  will never return true.
+        /// </summary>
+        /// <param name="context">Contains the requirement and object(resource)
+        /// to determine an authorization decision. </param>
+        /// <returns>No object is returned.</returns>
+        /// <exception cref="DataGatewayException"></exception>
         public Task HandleAsync(AuthorizationHandlerContext context)
         {
-            List<IAuthorizationRequirement> pendingRequirements = context.PendingRequirements.ToList();
             // Catch clause to ensure multiple requirements are not sent at one time, to ensure
             // that requirements are evaluated in order, and fail the request upon first requirement failure.
             //      Order not maintained by pendingRequirements as ASP.NET Core implementation is HashSet.
             // This will prevent extraneous computation on later authZ steps that shouldn't occur for a request
             // that has already been evaluated as Unauthorized.
-            if (pendingRequirements.Count() > 1)
+            if (context.PendingRequirements.Count() > 1)
             {
                 throw new DataGatewayException(
                     message: "Multiple requirements are not supported.",
@@ -53,7 +71,7 @@ namespace Azure.DataGateway.Service.Authorization
             }
 
             // DG requires only 1 requirement be processed at a time.
-            IAuthorizationRequirement requirement = pendingRequirements.First();
+            IAuthorizationRequirement requirement = context.PendingRequirements.First();
 
             if (requirement is RoleContextPermissionsRequirement)
             {
@@ -79,7 +97,7 @@ namespace Azure.DataGateway.Service.Authorization
 
                     string entityName = dbObject.TableDefinition.SourceEntityRelationshipMap.Keys.First();
                     string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-                    List<string> actions = HttpVerbToCRUD(httpContext.Request.Method);
+                    List<string> actions = HttpVerbToActions(httpContext.Request.Method);
 
                     foreach (string action in actions)
                     {
@@ -114,7 +132,7 @@ namespace Azure.DataGateway.Service.Authorization
                     RestRequestContext restContext = (RestRequestContext)context.Resource;
                     string entityName = restContext.DatabaseObject.TableDefinition.SourceEntityRelationshipMap.Keys.First();
                     string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-                    List<string> actions = HttpVerbToCRUD(httpContext.Request.Method);
+                    List<string> actions = HttpVerbToActions(httpContext.Request.Method);
 
                     restContext.CalculateCumulativeColumns();
 
@@ -168,7 +186,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// </summary>
         /// <param name="httpVerb"></param>
         /// <returns></returns>
-        private static List<string> HttpVerbToCRUD(string httpVerb)
+        private static List<string> HttpVerbToActions(string httpVerb)
         {
             switch (httpVerb)
             {

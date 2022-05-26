@@ -53,8 +53,12 @@ namespace Azure.DataGateway.Service.Tests.REST
             {
                 PrimaryKey = new(primaryKeys)
             };
-            _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
 
+            string outParam;
+            _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            _mockMetadataStore.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out outParam))
+                              .Callback(new metaDataCallback((string entity, string field, out string backingColumn) => _ = _defaultMapping[entity].TryGetValue(field, out backingColumn)))
+                              .Returns((string s, string t, string _) => _defaultMapping[s].TryGetValue(t, out _));
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
             string primaryKeyRoute = "id/1";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
@@ -74,10 +78,12 @@ namespace Azure.DataGateway.Service.Tests.REST
             {
                 PrimaryKey = new(primaryKeys)
             };
+
             string outParam;
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            _mockMetadataStore.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out outParam)).Returns((string s, string t) => _defaultMapping[s][t]);
-
+            _mockMetadataStore.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out outParam))
+                              .Callback(new metaDataCallback((string entity, string field, out string backingColumn) => _ = _defaultMapping[entity].TryGetValue(field, out backingColumn)))
+                              .Returns((string s, string t, string _) => _defaultMapping[s].TryGetValue(t, out _));
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
             string primaryKeyRoute = "id/2/isbn/12345";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
@@ -98,9 +104,12 @@ namespace Azure.DataGateway.Service.Tests.REST
             {
                 PrimaryKey = new(primaryKeys)
             };
+
             string outParam;
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            _mockMetadataStore.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out outParam)).Returns((string s, string t) => _defaultMapping[s][t]);
+            _mockMetadataStore.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out outParam))
+                              .Callback(new metaDataCallback((string entity, string field, out string backingColumn) => _ = _defaultMapping[entity].TryGetValue(field, out backingColumn)))
+                              .Returns((string s, string t, string _) => _defaultMapping[s].TryGetValue(t, out _));
 
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
             string primaryKeyRoute = "isbn/12345/id/2";
@@ -124,10 +133,12 @@ namespace Azure.DataGateway.Service.Tests.REST
             {
                 PrimaryKey = new(primaryKeys)
             };
+
             string outParam;
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            _mockMetadataStore.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out outParam)).Returns((string s, string t) => _defaultMapping[s][t]);
-
+            _mockMetadataStore.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out outParam))
+                              .Callback(new metaDataCallback((string entity, string field, out string backingColumn) => _ = _defaultMapping[entity].TryGetValue(field, out backingColumn)))
+                              .Returns((string s, string t, string _) => _defaultMapping[s].TryGetValue(t, out _));
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
             string primaryKeyRoute = "name/Catch22";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
@@ -174,6 +185,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             {
                 PrimaryKey = new(primaryKeys)
             };
+
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
             string primaryKeyRoute = "name/1";
@@ -194,10 +206,8 @@ namespace Azure.DataGateway.Service.Tests.REST
             {
                 PrimaryKey = new(primaryKeys)
             };
-            string outParam;
-            _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            _mockMetadataStore.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out outParam)).Returns((string s, string t) => _defaultMapping[s][t]);
 
+            _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
             string primaryKeyRoute = "id/12345/name/2";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
@@ -222,7 +232,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             };
             string outParam;
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
-            _mockMetadataStore.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out outParam)).Returns((string s, string t) => _defaultMapping[s][t]);
+            _mockMetadataStore.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out outParam)).Returns((string s, string t, string outParam) => _defaultMapping[s].TryGetValue(t, out outParam));
 
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
             string primaryKeyRoute = "id/12345/isbn/2/name/TwoTowers";
@@ -359,6 +369,17 @@ namespace Azure.DataGateway.Service.Tests.REST
         }
 
         #endregion
+
+        /// <summary>
+        /// Needed for the callback that is required
+        /// to make use of out parameter with mocking.
+        /// This delegate if for the callback used
+        /// with the mocked SqlMetadataProvider.
+        /// </summary>
+        /// <param name="s"></param>
+        /// <param name="t"></param>
+        /// <param name="param"></param>
+        delegate void metaDataCallback(string entity, string field, out string backingColumn);
 
         /// <summary>
         /// Make a new DatabaseObject set fields and return.

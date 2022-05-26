@@ -841,20 +841,60 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Tests the REST Api for Find operation when the target
         /// entity has mapped fields that are different from another
-        /// entity which shares the same source table. Verify that
-        /// we return the correct name from a single unmapped field
-        /// without mapped fields included.
+        /// entity which shares the same source table.
         /// </summary>
         /// <returns></returns>
         [TestMethod]
-        public async Task FindTestWithDifferentMappedFieldsToBeReturned()
+        public async Task FindTestWithDifferentMappedFieldsAndFilter()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$filter=fancyName eq null",
+                queryString: "?$filter=fancyName eq 'Tsuga terophylla'",
                 entity: _integrationMappingDifferentEntity,
-                sqlQuery: GetQuery(nameof(FindTestWithDifferentMappedFieldsToBeReturned)),
+                sqlQuery: GetQuery(nameof(FindTestWithDifferentMappedFieldsAndFilter)),
                 controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation when the target
+        /// entity has mapped fields that are different from another
+        /// entity which shares the same source table, and we include
+        /// orderby in the request.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task FindTestWithDifferentMappedFieldsAndOrderBy()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby=fancyName",
+                entity: _integrationMappingDifferentEntity,
+                sqlQuery: GetQuery(nameof(FindTestWithDifferentMappedFieldsAndOrderBy)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation when the target
+        /// entity has mapped fields that are different from another
+        /// entity which shares the same source table, and we include
+        /// orderby in the request, along with pagination.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task FindTestWithDifferentMappingFirstSingleKeyPaginationAndOrderBy()
+        {
+            string after = $"[{{\"Value\":\"Pseudotsuga menziesii\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"trees\",\"ColumnName\":\"fancyName\"}}," +
+                            $"{{\"Value\":2,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"trees\",\"ColumnName\":\"treeId\"}}]";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=1&$orderby=fancyName",
+                entity: _integrationMappingDifferentEntity,
+                sqlQuery: GetQuery(nameof(FindTestWithDifferentMappingFirstSingleKeyPaginationAndOrderBy)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                paginated: true
             );
         }
 
@@ -1633,7 +1673,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: $"Could not find a property named 'pq' on type '{_simple_all_books}.{GetDefaultSchemaForEdmModel()}books_view_all'.",
+                expectedErrorMessage: $"Could not find a property named 'pq' on type 'default_namespace.{_simple_all_books}.{GetDefaultSchemaForEdmModel()}books_view_all'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
 
@@ -1644,7 +1684,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: $"Could not find a property named 'pq' on type '{_simple_subset_stocks}.{GetDefaultSchemaForEdmModel()}stocks_view_selected'.",
+                expectedErrorMessage: $"Could not find a property named 'pq' on type 'default_namespace.{_simple_subset_stocks}.{GetDefaultSchemaForEdmModel()}stocks_view_selected'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
 
@@ -1656,7 +1696,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: $"Could not find a property named 'title' on type '{_composite_subset_bookPub}.{GetDefaultSchemaForEdmModel()}books_publishers_view_composite'.",
+                expectedErrorMessage: $"Could not find a property named 'title' on type 'default_namespace.{_composite_subset_bookPub}.{GetDefaultSchemaForEdmModel()}books_publishers_view_composite'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
         }
@@ -2388,7 +2428,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: $"Could not find a property named 'Pinecone' on type '{_integrationEntityName}.{GetDefaultSchemaForEdmModel()}books'.",
+                expectedErrorMessage: $"Could not find a property named 'Pinecone' on type 'default_namespace.{_integrationEntityName}.{GetDefaultSchemaForEdmModel()}books'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

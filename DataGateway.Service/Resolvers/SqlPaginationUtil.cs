@@ -116,8 +116,10 @@ namespace Azure.DataGateway.Service.Resolvers
         public static string MakeCursorFromJsonElement(JsonElement element,
                                                         List<string> primaryKey,
                                                         List<OrderByColumn>? orderByColumns,
+                                                        string entityName = "",
                                                         string schemaName = "",
-                                                        string tableName = "")
+                                                        string tableName = "",
+                                                        ISqlMetadataProvider? sqlMetadataProvider = null)
         {
             List<PaginationColumn> cursorJson = new();
             JsonSerializerOptions options = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
@@ -136,10 +138,11 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 foreach (OrderByColumn column in orderByColumns)
                 {
-                    object value = ResolveJsonElementToScalarVariable(element.GetProperty(column.ColumnName));
+                    string? columnName = GetColumnName(entityName, column.ColumnName, sqlMetadataProvider);
+                    object value = ResolveJsonElementToScalarVariable(element.GetProperty(columnName));
                     cursorJson.Add(new PaginationColumn(tableSchema: schemaName,
                                                         tableName: tableName,
-                                                        column.ColumnName,
+                                                        columnName,
                                                         value,
                                                         tableAlias: null,
                                                         direction: column.Direction));
@@ -161,14 +164,14 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 if (remainingKeys.Contains(column))
                 {
+                    string? columnName = GetColumnName(entityName, column, sqlMetadataProvider);
                     cursorJson.Add(new PaginationColumn(tableSchema: schemaName,
                                                         tableName: tableName,
-                                                        column,
+                                                        columnName,
                                                         ResolveJsonElementToScalarVariable(element.GetProperty(column)),
                                                         direction: OrderByDir.Asc));
                     remainingKeys.Remove(column);
                 }
-
             }
 
             return Base64Encode(JsonSerializer.Serialize(cursorJson, options));
@@ -314,6 +317,25 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return after;
+        }
+
+        /// <summary>
+        /// Helper function will return the exposed column name, which is
+        /// what is used to return a cursor in the response, since we only
+        /// use the exposed names in requests and responses.
+        /// </summary>
+        /// <param name="entityName">String holds the name of the entity.</param>
+        /// <param name="column">String holds the name of the backing column.</param>
+        /// <param name="sqlMetadataProvider">Holds the sqlmetadataprovider for REST requests.</param>
+        /// <returns>the exposed name</returns>
+        private static string GetColumnName(string entityName, string column, ISqlMetadataProvider? sqlMetadataProvider)
+        {
+            if (sqlMetadataProvider is not null)
+            {
+                sqlMetadataProvider.TryGetExposedColumnName(entityName, column, out column!);
+            }
+
+            return column;
         }
 
         /// <summary>

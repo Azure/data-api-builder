@@ -197,8 +197,10 @@ namespace Azure.DataGateway.Service.Services
                                element: rootEnumerated.Last(),
                                orderByColumns: context.OrderByClauseInUrl,
                                primaryKey: _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey,
+                               entityName: context.EntityName,
                                schemaName: context.DatabaseObject.SchemaName,
-                               tableName: context.DatabaseObject.Name);
+                               tableName: context.DatabaseObject.Name,
+                               sqlMetadataProvider: _sqlMetadataProvider);
 
             // nextLink is the URL needed to get the next page of records using the same query options
             // with $after base64 encoded for opaqueness

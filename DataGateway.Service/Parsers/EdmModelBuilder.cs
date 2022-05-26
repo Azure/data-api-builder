@@ -53,8 +53,7 @@ namespace Azure.DataGateway.Service.Parsers
             {
                 string entitySourceName = $"{entityAndDbObject.Value.FullName}";
                 string newEntityKey = $"{entityAndDbObject.Key}.{entitySourceName}";
-
-                EdmEntityType newEntity = new(entityAndDbObject.Key, entitySourceName);
+                EdmEntityType newEntity = new(DEFAULT_NAMESPACE, newEntityKey);
                 _entities.Add(newEntityKey, newEntity);
 
                 TableDefinition tableDefinition = entityAndDbObject.Value.TableDefinition;
@@ -130,8 +129,8 @@ namespace Azure.DataGateway.Service.Parsers
             // that has a key, then an entity set can be thought of as a table made up of those rows.
             foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in databaseObjects)
             {
-                string entityName = $"{entityAndDbObject.Key}.{entityAndDbObject.Value.FullName}";
-                container.AddEntitySet(name: entityName, _entities[$"{entityName}"]);
+                string entityName = $"{entityAndDbObject.Value.FullName}";
+                container.AddEntitySet(name: $"{entityAndDbObject.Key}.{entityName}", _entities[$"{entityAndDbObject.Key}.{entityName}"]);
             }
 
             return this;

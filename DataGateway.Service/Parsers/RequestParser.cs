@@ -102,7 +102,7 @@ namespace Azure.DataGateway.Service.Parsers
                         // save the AST that represents the filter for the query
                         // ?$filter=<filter clause using microsoft api guidelines>
                         string filterQueryString = $"?{FILTER_URL}={context.ParsedQueryString[key]}";
-                        context.FilterClauseInUrl = sqlMetadataProvider.ODataFilterParser.GetFilterClause(filterQueryString, $"{context.DatabaseObject.FullName}");
+                        context.FilterClauseInUrl = sqlMetadataProvider.ODataFilterParser.GetFilterClause(filterQueryString, $"{context.EntityName}.{context.DatabaseObject.FullName}");
                         break;
                     case SORT_URL:
                         string sortQueryString = $"?{SORT_URL}={context.ParsedQueryString[key]}";
@@ -137,7 +137,7 @@ namespace Azure.DataGateway.Service.Parsers
             string schemaName = context.DatabaseObject.SchemaName;
             string tableName = context.DatabaseObject.Name;
 
-            OrderByClause node = sqlMetadataProvider.ODataFilterParser.GetOrderByClause(sortQueryString, $"{context.DatabaseObject.FullName}");
+            OrderByClause node = sqlMetadataProvider.ODataFilterParser.GetOrderByClause(sortQueryString, $"{context.EntityName}.{context.DatabaseObject.FullName}");
             List<string> primaryKeys = sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey;
 
             // used for performant Remove operations

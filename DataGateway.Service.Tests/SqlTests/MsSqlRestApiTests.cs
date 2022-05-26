@@ -335,8 +335,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
-                "FindTestWithDifferentMappedFieldsToBeReturned",
-                $"SELECT [species] AS [fancy name] FROM { _integrationMappingTable } " +
+                "FindTestWithDifferentMappedFieldsAndFilter",
+                $"SELECT [treeId], [species] AS [fancyName], [region], [height] FROM { _integrationMappingTable } " +
+                $"WHERE [species] = 'Tsuga terophylla' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithDifferentMappedFieldsAndOrderBy",
+                $"SELECT [treeId], [species] AS [fancyName], [region], [height] FROM { _integrationMappingTable } " +
+                $"ORDER BY [trees].[species] " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithDifferentMappingFirstSingleKeyPaginationAndOrderBy",
+                $"SELECT TOP 1 [treeId], [species] AS [fancyName], [region], [height] FROM { _integrationMappingTable } " +
+                $"ORDER BY [trees].[species] " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {

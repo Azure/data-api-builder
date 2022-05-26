@@ -539,6 +539,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "FindTestWithDifferentMappedFieldsAndFilter",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT  ""treeId"", ""species"" AS ""fancyName"", ""region"", ""height""
+                        FROM " + _integrationMappingTable + @"
+                        WHERE species = 'Tsuga terophylla'
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithDifferentMappedFieldsAndOrderBy",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT  ""treeId"", ""species"" AS ""fancyName"", ""region"", ""height""
+                        FROM " + _integrationMappingTable + @"
+                        ORDER BY species
+                    ) AS subq
+                "
+            },
+            {
                 "InsertOneTest",
                 @"
                     SELECT to_jsonb(subq) AS data

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Models.Authorization;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Http;

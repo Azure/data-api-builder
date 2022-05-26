@@ -250,8 +250,8 @@ namespace Azure.DataGateway.Service.Authorization
         /// <summary>
         /// For a given entityName, retrieve the column names on the associated table.
         /// </summary>
-        /// <param name="metadataProvider"></param>
-        /// <param name="entityName"></param>
+        /// <param name="metadataProvider">Used to retrieve table definition</param>
+        /// <param name="entityName">Used to lookup table definition of specific entity</param>
         /// <returns>List of columns in table definition.</returns>
         private static List<string> ResolveTableDefinitionColumns(ISqlMetadataProvider metadataProvider, string entityName)
         {

@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -60,7 +61,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             ItemResponse<JObject>? response = resolver.OperationType switch
             {
-                Operation.Upsert => await HandleUpsertAsync(queryArgs, container),
+                Operation.UpdateGraphQL => await HandleUpsertAsync(queryArgs, container),
                 Operation.Create => await HandleCreateAsync(queryArgs, container),
                 Operation.Delete => await HandleDeleteAsync(queryArgs, container),
                 _ => throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}")
@@ -100,33 +101,22 @@ namespace Azure.DataGateway.Service.Resolvers
 
         private static async Task<ItemResponse<JObject>> HandleUpsertAsync(IDictionary<string, object> queryArgs, Container container)
         {
-            string? id = null;
+            string? id = queryArgs.First(arg => arg.Key == GraphQLUtils.DEFAULT_PRIMARY_KEY_NAME).Value.ToString();
 
             object item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
 
-            // Variables were provided to the mutation
-            if (item is Dictionary<string, object?> createInput)
+            Dictionary<string, object?> createInput = new();
+            if (item is List<ObjectFieldNode> createInputRaw)
             {
-                if (createInput.TryGetValue("id", out object? idObj))
-                {
-                    id = idObj?.ToString();
-                }
-            }
-            // An inline argument was set
-            else if (item is List<ObjectFieldNode> createInputRaw)
-            {
-                ObjectFieldNode? idObj = createInputRaw.FirstOrDefault(field => field.Name.Value == "id");
-
-                if (idObj != null && idObj.Value.Value != null)
-                {
-                    id = idObj.Value.Value.ToString();
-                }
-
                 createInput = new Dictionary<string, object?>();
                 foreach (ObjectFieldNode node in createInputRaw)
                 {
                     createInput.Add(node.Name.Value, node.Value.Value);
                 }
+            }
+            else if (item is Dictionary<string, object?> dict)
+            {
+                createInput = dict;
             }
             else
             {
@@ -135,8 +125,10 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (string.IsNullOrEmpty(id))
             {
-                throw new InvalidDataException("id field is mandatory");
+                throw new InvalidDataException($"{GraphQLUtils.DEFAULT_PRIMARY_KEY_NAME} field is mandatory");
             }
+
+            createInput.Add(GraphQLUtils.DEFAULT_PRIMARY_KEY_NAME, id);
 
             return await container.UpsertItemAsync(JObject.FromObject(createInput));
         }

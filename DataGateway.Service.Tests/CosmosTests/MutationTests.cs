@@ -153,6 +153,69 @@ mutation {{
             Assert.AreEqual("id field is mandatory", response[0].GetProperty("message").ToString());
         }
 
+        [TestMethod]
+        public async Task CanUpdateItemWithoutVariables()
+        {
+            // Run mutation Add planet;
+            string id = Guid.NewGuid().ToString();
+            const string name = "test_name";
+            string mutation = $@"
+mutation {{
+    createPlanet (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
+        id
+        name
+    }}
+}}";
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
+
+            const string newName = "new_name";
+            mutation = $@"
+mutation {{
+    updatePlanet (id: ""{id}"", item: {{ name: ""{newName}"" }}) {{
+        id
+        name
+    }}
+}}";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("updatePlanet", mutation, variables: new());
+
+            // Validate results
+            Assert.AreEqual(newName, response.GetProperty("name").GetString());
+            Assert.AreNotEqual(name, response.GetProperty("name").GetString());
+        }
+
+        [TestMethod]
+        public async Task CanUpdateItemWithVariables()
+        {
+            // Run mutation Add planet;
+            string id = Guid.NewGuid().ToString();
+            var input = new
+            {
+                id,
+                name = "test_name"
+            };
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } });
+
+            const string newName = "new_name";
+            string mutation = @"
+mutation ($id: ID!, $item: UpdatePlanetInput!) {
+    updatePlanet (id: $id, item: $item) {
+        id
+        name
+     }
+}";
+            var update = new
+            {
+                name = "new_name"
+            };
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("updatePlanet", mutation, variables: new() { { "id", id }, { "item", update } });
+
+            // Validate results
+            Assert.AreEqual(newName, response.GetProperty("name").GetString());
+            Assert.AreNotEqual(input.name, response.GetProperty("name").GetString());
+        }
+
         /// <summary>
         /// Runs once after all tests in this class are executed
         /// </summary>

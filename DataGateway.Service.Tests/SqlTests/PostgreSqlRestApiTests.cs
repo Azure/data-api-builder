@@ -359,9 +359,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 @"
                   SELECT json_agg(to_jsonb(subq)) AS data
                   FROM (
-                      SELECT TOP 1 *
+                      SELECT *
                       FROM " + _integrationTableHasColumnWithSpace + @"
                       ORDER BY ""Last Name""
+                      LIMIT 1
                   ) AS subq"
             },
             {

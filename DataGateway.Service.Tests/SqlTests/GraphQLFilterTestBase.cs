@@ -483,34 +483,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Test that filters applied by the typed filter and the OData filter
-        /// are AND-ed
-        /// </summary>
-        [TestMethod]
-        public async Task TestFilterAndFilterODataUsedTogether()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"{
-                books(_filter: {id: {gte: 2}}, _filterOData: ""id lt 4"")
-                {
-                    items {
-                        id
-                    }
-                }
-            }";
-
-            string dbQuery = MakeQueryOn(
-                "books",
-                new List<string> { "id" },
-                "id >= 2 AND id < 4",
-                GetDefaultSchema());
-
-            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-        }
-
-        /// <summary>
         /// Test filtering null integer fields
         /// </summary>
         [TestMethod]

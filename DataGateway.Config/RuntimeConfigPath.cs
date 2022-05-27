@@ -51,14 +51,19 @@ namespace Azure.DataGateway.Config
         /// <param name="databaseType"></param>
         /// <param name="connectionString"></param>
         /// <param name="entities"></param>
+        /// <param name="mode"></param>
         public void ExtractConfigValues(
             out DatabaseType databaseType,
             out string connectionString,
-            out Dictionary<string, Entity> entities)
+            out Dictionary<string, Entity> entities,
+            out HostModeType mode)
         {
+            ConfigValue!.RuntimeSettings.TryGetValue(GlobalSettingsType.Host, out object? hostObject);
+
             databaseType = ConfigValue!.DatabaseType;
             connectionString = ConfigValue!.ConnectionString;
             entities = ConfigValue!.Entities;
+            mode = (hostObject as HostGlobalSettings)!.Mode;
         }
 
         /// <summary>

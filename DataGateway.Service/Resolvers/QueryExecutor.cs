@@ -16,6 +16,7 @@ namespace Azure.DataGateway.Service.Resolvers
     {
         private readonly string _connectionString;
         private readonly DbExceptionParserBase _dbExceptionParser;
+        private readonly HostModeType _mode;
 
         public QueryExecutor(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath, DbExceptionParserBase dbExceptionParser)
         {
@@ -23,7 +24,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 ExtractConfigValues(
                     out _,
                     out _connectionString,
-                    out _);
+                    out _,
+                    out _mode);
 
             _dbExceptionParser = dbExceptionParser;
         }
@@ -62,7 +64,7 @@ namespace Azure.DataGateway.Service.Resolvers
             catch (DbException e)
             {
                 Console.Error.WriteLine(e);
-                throw _dbExceptionParser.Parse(e);
+                throw _dbExceptionParser.Parse(e, _mode);
             }
         }
 
@@ -76,7 +78,7 @@ namespace Azure.DataGateway.Service.Resolvers
             catch (DbException e)
             {
                 Console.Error.WriteLine(e);
-                throw _dbExceptionParser.Parse(e);
+                throw _dbExceptionParser.Parse(e, _mode);
             }
         }
 

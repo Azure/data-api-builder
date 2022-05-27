@@ -102,10 +102,10 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <inheritdoc />
-        public bool AreColumnsAllowedForAction(string entityName, string roleName, string actionName, List<string> columns)
+        public bool AreColumnsAllowedForAction(string entityName, string roleName, string actionName, IEnumerable<string> columns)
         {
             // When the list of columns to check has no items, the user has no access to any field of the entity
-            if (columns.Count == 0)
+            if (columns.Count() == 0)
             {
                 return false;
             }
@@ -217,7 +217,7 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <inheritdoc />
-        public List<string> GetAllowedColumns(string entityName, string roleName, string action)
+        public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, string action)
         {
             HashSet<string> includedColumns = _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action].included;
 
@@ -255,7 +255,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// </summary>
         /// <param name="entityName">Used to lookup table definition of specific entity</param>
         /// <returns>List of columns in table definition.</returns>
-        private List<string> ResolveTableDefinitionColumns(string entityName)
+        private IEnumerable<string> ResolveTableDefinitionColumns(string entityName)
         {
             return _metadataProvider.GetTableDefinition(entityName).Columns.Keys.ToList();
         }

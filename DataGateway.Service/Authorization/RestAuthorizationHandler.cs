@@ -97,7 +97,7 @@ namespace Azure.DataGateway.Service.Authorization
 
                     string entityName = dbObject.TableDefinition.SourceEntityRelationshipMap.Keys.First();
                     string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-                    List<string> actions = HttpVerbToActions(httpContext.Request.Method);
+                    IEnumerable<string> actions = HttpVerbToActions(httpContext.Request.Method);
 
                     foreach (string action in actions)
                     {
@@ -142,7 +142,7 @@ namespace Azure.DataGateway.Service.Authorization
 
                     string entityName = restContext.DatabaseObject.TableDefinition.SourceEntityRelationshipMap.Keys.First();
                     string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-                    List<string> actions = HttpVerbToActions(httpContext.Request.Method);
+                    IEnumerable<string> actions = HttpVerbToActions(httpContext.Request.Method);
 
                     if (restContext.TryCalculateCumulativeColumns())
                     {
@@ -151,7 +151,7 @@ namespace Azure.DataGateway.Service.Authorization
                         // A user must fulfill both actions' permissions requirements to proceed.
                         foreach (string action in actions)
                         {
-                            List<string> columnsToCheck;
+                            IEnumerable<string> columnsToCheck;
 
                             // No cumulative columns indicates that this is a FindMany request.
                             // To resolve columns to return, check permissions for role.
@@ -196,7 +196,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// </summary>
         /// <param name="httpVerb"></param>
         /// <returns></returns>
-        private static List<string> HttpVerbToActions(string httpVerb)
+        private static IEnumerable<string> HttpVerbToActions(string httpVerb)
         {
             switch (httpVerb)
             {

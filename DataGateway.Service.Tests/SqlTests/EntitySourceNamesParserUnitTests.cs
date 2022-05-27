@@ -84,7 +84,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public void ParseInvalidSchemaAndTableNames(string schemaTable)
         {
             Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
         }
 
         #endregion

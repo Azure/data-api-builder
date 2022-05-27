@@ -156,12 +156,16 @@ namespace Azure.DataGateway.Service.Parsers
                 string columnName;
                 if (expression.Kind is QueryNodeKind.SingleValuePropertyAccess)
                 {
-                    columnName = (expression as SingleValuePropertyAccessNode)!.Property.Name;
+                    // assignment of columnName will need to change when mapping work item merges
+                    // see: https://github.com/Azure/hawaii-gql/pull/421
+                    columnName = ((SingleValuePropertyAccessNode)expression).Property.Name;
                 }
                 else if (expression.Kind is QueryNodeKind.Constant &&
-                        (expression as ConstantNode)!.Value is not null)
+                        ((ConstantNode)expression).Value is not null)
                 {
-                    columnName = (expression as ConstantNode)!.Value.ToString()!;
+                    // assignment of columnName will need to change when mapping work item merges
+                    // see: https://github.com/Azure/hawaii-gql/pull/421
+                    columnName = ((ConstantNode)expression).Value.ToString()!;
                 }
                 else
                 {

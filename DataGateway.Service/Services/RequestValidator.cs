@@ -92,6 +92,8 @@ namespace Azure.DataGateway.Service.Services
                 Dictionary<string, ColumnDefinition>.KeyCollection validColumns = context.DatabaseObject.TableDefinition.Columns.Keys;
                 foreach (Column column in context.OrderByClauseInUrl)
                 {
+                    // lookup will need to change when mapping work item merges
+                    // see: https://github.com/Azure/hawaii-gql/pull/421
                     if (!validColumns.Contains(column.ColumnName))
                     {
                         throw new DataGatewayException(

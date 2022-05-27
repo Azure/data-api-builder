@@ -506,7 +506,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <sumary>
         /// Test if filter param successfully filters the query results
         /// </summary>
-        [Ignore]
         [TestMethod]
         public virtual async Task TestFilterParamForListQueries()
         {

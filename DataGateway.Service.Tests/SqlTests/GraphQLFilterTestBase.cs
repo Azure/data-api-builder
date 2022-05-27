@@ -483,36 +483,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Test verifies that when _filterOData is present we get
-        /// the correct error message.
-        /// </summary>
-        [TestMethod]
-        public async Task TestIncludingFilterODataFails()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"{
-                books(_filter: {id: {gte: 2}}, _filterOData: ""id lt 4"")
-                {
-                    items {
-                        id
-                    }
-                }
-            }";
-
-            JsonElement actualJsonElement = await GetGraphQLControllerResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
-            string actual = actualJsonElement.ToString();
-            string expected = @"{""errors"":[{
-                                   ""message"":""The argument \u0060_filterOData\u0060 does not exist."",
-                                   ""locations"":[{""line"":2,""column"":48}],
-                                   ""extensions"":{
-                                     ""type"":""Query"",
-                                     ""field"":""books"",
-                                     ""argument"":""_filterOData"",
-                                     ""specifiedBy"":""http://spec.graphql.org/October2021/#sec-Required-Arguments""}}]}";
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-        }
-
-        /// <summary>
         /// Test filtering null integer fields
         /// </summary>
         [TestMethod]

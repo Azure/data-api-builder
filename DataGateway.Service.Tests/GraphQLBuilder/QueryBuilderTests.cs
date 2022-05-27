@@ -11,6 +11,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder
     [TestClass]
     public class QueryBuilderTests
     {
+        private const int NUMBER_OF_ARGUMENTS = 3;
         private static Entity GenerateEmptyEntity()
         {
             return new Entity("dbo.entity", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
@@ -151,7 +152,7 @@ type Table @model(name: ""table"") {
             Assert.AreNotEqual(node, updatedNode);
 
             FieldDefinitionNode field = updatedNode.Fields[0];
-            Assert.AreEqual(4, field.Arguments.Count, "Query fields should have 4 arguments");
+            Assert.AreEqual(NUMBER_OF_ARGUMENTS, field.Arguments.Count, "Query fields should have 3 arguments");
             Assert.AreEqual(QueryBuilder.PAGE_START_ARGUMENT_NAME, field.Arguments[0].Name.Value, "First argument should be the page start");
             Assert.AreEqual(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME, field.Arguments[1].Name.Value, "Second argument is pagination token");
             Assert.AreEqual(QueryBuilder.FILTER_FIELD_NAME, field.Arguments[2].Name.Value, "Third argument is typed filter field");

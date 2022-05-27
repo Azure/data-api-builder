@@ -238,6 +238,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTestWithQueryStringSpaceInNamesOrderByAsc",
+                $"SELECT * FROM { _integrationTableHasColumnWithSpace } " +
+                $"ORDER BY [ID Number] " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindTestWithQueryStringAllFieldsOrderByDesc",
                 $"SELECT * FROM { _integrationTableName } " +
                 $"ORDER BY publisher_id desc, id " +

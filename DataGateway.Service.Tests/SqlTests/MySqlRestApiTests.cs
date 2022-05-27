@@ -464,6 +464,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ) AS subq"
             },
             {
+                "FindTestWithQueryStringSpaceInNamesOrderByAsc",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('ID Number', ID Number, 'First Name', First Name, 'Last Name', Last Name)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableHasColumnWithSpace + @"
+                      ORDER BY `ID Number`
+                      LIMIT 100
+                  ) AS subq"
+            },
+            {
                 "FindTestWithQueryStringAllFieldsOrderByDesc",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data

@@ -502,7 +502,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Tests the REST Api for Find operation for all records
+        /// Tests the REST Api for Find operation for all records.
         /// order by title in ascending order.
         /// </summary>
         [TestMethod]
@@ -513,6 +513,23 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 queryString: "?$orderby=title",
                 entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithQueryStringAllFieldsOrderByAsc)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation for all records
+        /// when there is a space in the column name.
+        /// order by "ID Number" in ascending order.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithQueryStringSpaceInNamesOrderByAsc()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby='ID Number'",
+                entity: _integrationEntityHasColumnWithSpace,
+                sqlQuery: GetQuery(nameof(FindTestWithQueryStringSpaceInNamesOrderByAsc)),
                 controller: _restController
             );
         }
@@ -2308,6 +2325,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController,
                 exception: true,
                 expectedErrorMessage: $"Could not find a property named 'Pinecone' on type 'default_namespace.{GetDefaultSchemaForEdmModel()}books'.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with an invalid column name for sorting
+        /// that contains spaces.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestInvalidOrderBySpaceInColumn()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby='Large Pinecone'",
+                entity: _integrationEntityHasColumnWithSpace,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: $"Invalid orderby column requested: Large Pinecone.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

@@ -80,6 +80,30 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
+        /// Validates that all of the orderby columns in the request
+        /// are in the table definitions.
+        /// </summary>
+        /// <param name="context">Context of the request we validate.</param>
+        /// <exception cref="DataGatewayException"></exception>
+        public static void CheckOrderByValidity(RestRequestContext context)
+        {
+            if (context.OrderByClauseInUrl is not null)
+            {
+                Dictionary<string, ColumnDefinition>.KeyCollection validColumns = context.DatabaseObject.TableDefinition.Columns.Keys;
+                foreach (Column column in context.OrderByClauseInUrl)
+                {
+                    if (!validColumns.Contains(column.ColumnName))
+                    {
+                        throw new DataGatewayException(
+                            message: $"Invalid orderby column requested: {column.ColumnName}.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Validates the request body and queryString with respect to an Insert operation.
         /// </summary>
         /// <param name="queryString">Query string from the url.</param>

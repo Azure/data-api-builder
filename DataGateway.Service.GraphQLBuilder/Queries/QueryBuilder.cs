@@ -16,7 +16,6 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         public const string PAGE_START_ARGUMENT_NAME = "first";
         public const string PAGINATION_OBJECT_TYPE_SUFFIX = "Connection";
         public const string FILTER_FIELD_NAME = "_filter";
-        public const string ODATA_FILTER_FIELD_NAME = "_filterOData";
 
         public static DocumentNode Build(DocumentNode root, IDictionary<string, Entity> entities, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
         {
@@ -90,7 +89,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
             // Query field for the parent object type
             // Generates a file like:
-            //    books(first: Int, after: String, _filter: BooksFilterInput, _filterOData: String): BooksConnection!
+            //    books(first: Int, after: String, _filter: BooksFilterInput): BooksConnection!
             return new(
                 location: null,
                 Pluralize(name, entity),
@@ -108,7 +107,6 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 new(location: null, new NameNode(PAGE_START_ARGUMENT_NAME), description: new StringValueNode("The number of items to return from the page start point"), new IntType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
                 new(location: null, new NameNode(PAGINATION_TOKEN_ARGUMENT_NAME), new StringValueNode("A pagination token from a previous query to continue through a paginated list"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
                 new(location: null, new NameNode(FILTER_FIELD_NAME), new StringValueNode("Filter options for query"), new NamedTypeNode(filterInputName), defaultValue: null, new List<DirectiveNode>()),
-                new(location: null, new NameNode(ODATA_FILTER_FIELD_NAME), new StringValueNode("Filter options for query expressed as OData query language"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>())
             };
         }
 

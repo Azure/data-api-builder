@@ -308,21 +308,6 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            if (IsListQuery && queryParams.ContainsKey("_filterOData"))
-            {
-                object? whereObject = queryParams["_filterOData"];
-
-                if (whereObject != null)
-                {
-                    string where = (string)whereObject;
-
-                    ODataASTVisitor visitor = new(this, sqlMetadataProvider);
-                    FilterParser parser = SqlMetadataProvider.GetODataFilterParser();
-                    FilterClause filterClause = parser.GetFilterClause($"?{RequestParser.FILTER_URL}={where}", $"{DatabaseObject.FullName}");
-                    FilterPredicates = filterClause.Expression.Accept<string>(visitor);
-                }
-            }
-
             // need to run after the rest of the query has been processed since it relies on
             // TableName, TableAlias, Columns, and _limit
             if (PaginationMetadata.IsPaginated)

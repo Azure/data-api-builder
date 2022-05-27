@@ -506,8 +506,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <sumary>
         /// Test if filter and filterOData param successfully filters the query results
         /// </summary>
+        [Ignore]
         [TestMethod]
-        public virtual async Task TestFilterAndFilterODataParamForListQueries()
+        public virtual async Task TestFilterParamForListQueries()
         {
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
@@ -515,7 +516,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     items {
                         id
                         publishers {
-                            books(first: 3, _filterOData: ""id ne 2"") {
+                            books(first: 3, _filter: {id: {neq: 2}}) {
                                 items {
                                     id
                                 }
@@ -794,7 +795,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                books(_filterOData: ""INVALID"") {
+                books(_filter: ""INVALID"") {
                     items {
                         id
                         title
@@ -803,7 +804,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }";
 
             JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
         }
 
         #endregion

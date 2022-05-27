@@ -487,7 +487,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// are AND-ed
         /// </summary>
         [TestMethod]
-        public async Task TestFilterAndFilterODataUsedTogether()
+        public async Task TestIncludingFilterODataFails()
         {
             string graphQLQueryName = "books";
             string gqlQuery = @"{
@@ -499,14 +499,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             }";
 
-            string dbQuery = MakeQueryOn(
-                "books",
-                new List<string> { "id" },
-                "id >= 2 AND id < 4",
-                GetDefaultSchema());
-
-            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+            JsonElement actualJsonElement = await GetGraphQLControllerResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
+            string actual = actualJsonElement.ToString();
+            string expected = @"{""errors"":[{
+                                   ""message"":""The argument \u0060_filterOData\u0060 does not exist."",
+                                   ""locations"":[{""line"":2,""column"":48}],
+                                   ""extensions"":{
+                                     ""type"":""Query"",
+                                     ""field"":""books"",
+                                     ""argument"":""_filterOData"",
+                                     ""specifiedBy"":""http://spec.graphql.org/October2021/#sec-Required-Arguments""}}]}";
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 

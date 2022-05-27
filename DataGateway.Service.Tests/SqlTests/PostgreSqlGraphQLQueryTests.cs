@@ -197,9 +197,9 @@ FROM
         /// Test if filter and filterOData param successfully filters the query results
         /// </summary>
         [TestMethod]
-        public override async Task TestFilterAndFilterODataParamForListQueries()
+        public override async Task TestFilterParamForListQueries()
         {
-            await base.TestFilterAndFilterODataParamForListQueries();
+            await base.TestFilterParamForListQueries();
         }
 
         /// <summary>

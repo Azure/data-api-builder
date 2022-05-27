@@ -280,7 +280,7 @@ namespace Azure.DataGateway.Service
             // Conditionally add authentication middleware in Production Mode
             if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Mode != HostModeType.Development)
             {
-                app.UseJwtAuthenticationMiddleware();
+                app.UseAuthenticationMiddleware();
             }
 
             app.UseAuthorization();

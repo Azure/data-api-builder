@@ -60,9 +60,9 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
     }
 
     // Extension method used to add the middleware to the HTTP request pipeline.
-    public static class JwtAuthenticationMiddlewareExtensions
+    public static class AuthenticationMiddlewareExtensions
     {
-        public static IApplicationBuilder UseJwtAuthenticationMiddleware(this IApplicationBuilder builder)
+        public static IApplicationBuilder UseAuthenticationMiddleware(this IApplicationBuilder builder)
         {
             return builder.UseMiddleware<AuthenticationMiddleware>();
         }

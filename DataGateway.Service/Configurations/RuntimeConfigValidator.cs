@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.IO.Abstractions;
 using Azure.DataGateway.Config;
 using Microsoft.Extensions.Options;
 
@@ -11,11 +12,13 @@ namespace Azure.DataGateway.Service.Configurations
     public class RuntimeConfigValidator : IConfigValidator
     {
         private readonly RuntimeConfig? _runtimeConfig;
+        private readonly IFileSystem _fileSystem;
 
         public RuntimeConfigValidator(
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
+            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath, IFileSystem fileSystem)
         {
             _runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue;
+            _fileSystem = fileSystem;
         }
 
         public RuntimeConfigValidator(RuntimeConfig config)
@@ -46,12 +49,22 @@ namespace Azure.DataGateway.Service.Configurations
                 throw new NotSupportedException($"The Connection String should be provided.");
             }
 
-            if (_runtimeConfig.DatabaseType.Equals(DatabaseType.cosmos) &&
-                ((_runtimeConfig.CosmosDb is null) ||
-                (string.IsNullOrWhiteSpace(_runtimeConfig.CosmosDb.ResolverConfigFile)) ||
-                (!File.Exists(_runtimeConfig.CosmosDb.ResolverConfigFile))))
+            if (_runtimeConfig.DatabaseType == DatabaseType.cosmos)
             {
-                throw new NotSupportedException("The resolver-config-file should be provided with the runtime config and must exist in the current directory when database type is cosmosdb.");
+                if (_runtimeConfig.CosmosDb is null)
+                {
+                    throw new NotSupportedException("CosmosDB is specified but no CosmosDB configuration information has been provided.");
+                }
+
+                if (string.IsNullOrEmpty(_runtimeConfig.CosmosDb.GraphQLSchemaPath))
+                {
+                    throw new NotSupportedException("No GraphQL schema file has been provided for CosmosDB. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.");
+                }
+
+                if (!_fileSystem.File.Exists(_runtimeConfig.CosmosDb.GraphQLSchemaPath))
+                {
+                    throw new FileNotFoundException($"The GraphQL schema file at '{_runtimeConfig.CosmosDb.GraphQLSchemaPath}' could not be found. Ensure that it is a path relative to run runtime.");
+                }
             }
 
             ValidateAuthenticationConfig();

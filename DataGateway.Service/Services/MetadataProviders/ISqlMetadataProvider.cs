@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Parsers;
+using Azure.DataGateway.Service.Resolvers;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -16,12 +17,12 @@ namespace Azure.DataGateway.Service.Services
         Task InitializeAsync();
 
         /// <summary>
-        /// Obtains the underlying source object's schema name.
+        /// Obtains the underlying source object's schema name (SQL) or container name (Cosmos).
         /// </summary>
         string GetSchemaName(string entityName);
 
         /// <summary>
-        /// Obtains the underlying source object's name.
+        /// Obtains the underlying source object's name (SQL table or Cosmos container).
         /// </summary>
         string GetDatabaseObjectName(string entityName);
 
@@ -30,10 +31,12 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         TableDefinition GetTableDefinition(string entityName);
 
-        FilterParser ODataFilterParser { get; }
-
         Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; }
 
+        FilterParser GetODataFilterParser();
+
         DatabaseType GetDatabaseType();
+
+        IQueryBuilder GetQueryBuilder();
     }
 }

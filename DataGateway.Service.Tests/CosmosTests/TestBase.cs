@@ -1,20 +1,21 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Abstractions.TestingHelpers;
 using System.Net.Http;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using Azure.DataGateway.Service.Services.MetadataProviders;
 using HotChocolate.Language;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.Cosmos;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Service.Tests.CosmosTests
@@ -24,7 +25,6 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         internal const string DATABASE_NAME = "graphqldb";
         internal static GraphQLService _graphQLService;
         internal static CosmosClientProvider _clientProvider;
-        internal static MetadataStoreProviderForTest _metadataStoreProvider;
         internal static CosmosQueryEngine _queryEngine;
         internal static CosmosMutationEngine _mutationEngine;
         internal static GraphQLController _controller;
@@ -34,7 +34,6 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         public static void Init(TestContext context)
         {
             _clientProvider = new CosmosClientProvider(TestHelper.ConfigPath);
-            _metadataStoreProvider = new MetadataStoreProviderForTest();
             string jsonString = @"
 type Character @model {
     id : ID,
@@ -51,18 +50,21 @@ type Planet @model {
     age : Int,
     dimension : String
 }";
+            MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>()
+            {
+                { @"./schema.gql", new MockFileData(jsonString) }
+            });
 
-            _metadataStoreProvider.GraphQLSchema = jsonString;
+            CosmosSqlMetadataProvider _metadataStoreProvider = new(TestHelper.ConfigPath, fileSystem);
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
-            _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
+            _mutationEngine = new CosmosMutationEngine(_clientProvider, TestHelper.ConfigPath, _metadataStoreProvider);
             _graphQLService = new GraphQLService(
                 TestHelper.ConfigPath,
                 _queryEngine,
                 _mutationEngine,
-                _metadataStoreProvider,
                 new DocumentCache(),
                 new Sha256DocumentHashProvider(),
-                sqlMetadataProvider: null);
+                _metadataStoreProvider);
             _controller = new GraphQLController(_graphQLService);
             Client = _clientProvider.Client;
         }
@@ -106,48 +108,18 @@ type Planet @model {
         }
 
         /// <summary>
-        /// Creates and registers a mutation resolver
+        /// Overrides the container than an entity will be saved to
         /// </summary>
-        /// <param name="id">name of the mutation</param>
-        /// <param name="databaseName">the database name</param>
+        /// <param name="entityName">name of the mutation</param>
         /// <param name="containerName">the container name</param>
-        /// <param name="operationType">the type of operation. Defaults to UPSERT</param>
-        internal static void RegisterMutationResolver(string id,
-           string databaseName,
-           string containerName,
-           string operationType = "UPSERT")
+        internal static void OverrideEntityContainer(string entityName, string containerName)
         {
-            string resolverJson = JObject.FromObject(new
-            {
-                id,
-                databaseName,
-                containerName,
-                operationType,
-            }).ToString();
-            MutationResolver mutationResolver = JsonConvert.DeserializeObject<MutationResolver>(resolverJson);
-            _metadataStoreProvider.StoreMutationResolver(mutationResolver);
-        }
+            Entity entity = TestHelper.ConfigPath.CurrentValue.ConfigValue.Entities[entityName];
 
-        /// <summary>
-        /// Creates and registers a GraphQLType
-        /// </summary>
-        /// <param name="id">name of the mutation</param>
-        /// <param name="databaseName">the database name</param>
-        /// <param name="containerName">the container name</param>
-        /// <param name="isPaginationType">is the type a pagination type</param>
-        internal static void RegisterGraphQLType(string id,
-           string databaseName,
-           string containerName,
-           bool isPaginationType = false)
-        {
-            string resolverJson = JObject.FromObject(new
-            {
-                databaseName,
-                containerName,
-                isPaginationType
-            }).ToString();
-            GraphQLType gqlType = JsonConvert.DeserializeObject<GraphQLType>(resolverJson);
-            _metadataStoreProvider.StoreGraphQLType(id, gqlType);
+            System.Reflection.PropertyInfo prop = entity.GetType().GetProperty("Source");
+            // Use reflection to set the entity Source (since `entity` is a record type and technically immutable)
+            // But it has to be a JsonElement, which we can only make by parsing JSON, so we do that then grab the property
+            prop.SetValue(entity, JsonDocument.Parse(@$"{{ ""value"": ""{containerName}"" }}").RootElement.GetProperty("value"));
         }
 
         /// <summary>

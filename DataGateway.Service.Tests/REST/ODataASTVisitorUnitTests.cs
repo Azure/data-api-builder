@@ -43,7 +43,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 schemaName: DEFAULT_SCHEMA_NAME,
                 tableName: DEFAULT_TABLE_NAME,
                 filterString: "?$filter=id eq null",
-                expected: "(id IS NULL)"
+                expected: "([id] IS NULL)"
                 );
         }
 
@@ -59,7 +59,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 schemaName: DEFAULT_SCHEMA_NAME,
                 tableName: DEFAULT_TABLE_NAME,
                 filterString: "?$filter=id ne null",
-                expected: "(id IS NOT NULL)"
+                expected: "([id] IS NOT NULL)"
                 );
         }
 
@@ -75,7 +75,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 schemaName: DEFAULT_SCHEMA_NAME,
                 tableName: DEFAULT_TABLE_NAME,
                 filterString: "?$filter=null eq id",
-                expected: "(id IS NULL)"
+                expected: "([id] IS NULL)"
                 );
         }
 
@@ -91,7 +91,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 schemaName: DEFAULT_SCHEMA_NAME,
                 tableName: DEFAULT_TABLE_NAME,
                 filterString: "?$filter=id gt null",
-                expected: "(id > NULL)"
+                expected: "([id] > NULL)"
                 );
         }
 
@@ -220,7 +220,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             string filterString,
             string expected)
         {
-            FilterClause ast = _sqlMetadataProvider.ODataFilterParser.
+            FilterClause ast = _sqlMetadataProvider.GetODataFilterParser().
                 GetFilterClause(filterString, $"{schemaName}.{tableName}");
             ODataASTVisitor visitor = CreateVisitor(entityName, schemaName, tableName);
             string actual = ast.Expression.Accept(visitor);
@@ -246,7 +246,7 @@ namespace Azure.DataGateway.Service.Tests.REST
             };
             FindRequestContext context = new(entityName, dbo, isList);
             Mock<SqlQueryStructure> structure = new(context, _sqlMetadataProvider);
-            return new ODataASTVisitor(structure.Object);
+            return new ODataASTVisitor(structure.Object, _sqlMetadataProvider);
         }
 
         /// <summary>

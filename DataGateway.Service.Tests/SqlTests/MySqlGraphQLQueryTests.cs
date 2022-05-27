@@ -26,7 +26,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _runtimeConfigPath,
                 _queryEngine,
                 _mutationEngine,
-                graphQLMetadataProvider: null,
                 new DocumentCache(),
                 new Sha256DocumentHashProvider(),
                 _sqlMetadataProvider);
@@ -184,12 +183,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <sumary>
-        /// Test if filter and filterOData param successfully filters the query results
+        /// Test if filter param successfully filters the query results
         /// </summary>
         [TestMethod]
-        public override async Task TestFilterAndFilterODataParamForListQueries()
+        public override async Task TestFilterParamForListQueries()
         {
-            await base.TestFilterAndFilterODataParamForListQueries();
+            await base.TestFilterParamForListQueries();
         }
 
         /// <summary>

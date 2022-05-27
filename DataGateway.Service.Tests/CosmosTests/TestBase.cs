@@ -117,6 +117,8 @@ type Planet @model {
             Entity entity = TestHelper.ConfigPath.CurrentValue.ConfigValue.Entities[entityName];
 
             System.Reflection.PropertyInfo prop = entity.GetType().GetProperty("Source");
+            // Use reflection to set the entity Source (since `entity` is a record type and technically immutable)
+            // But it has to be a JsonElement, which we can only make by parsing JSON, so we do that then grab the property
             prop.SetValue(entity, JsonDocument.Parse(@$"{{ ""value"": ""{containerName}"" }}").RootElement.GetProperty("value"));
         }
 

@@ -477,7 +477,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithFirstAndSpacedColumnOrderBy",
                 @"
-                  SELECT JSON_ARRAYAGG(JSON_OBJECT('ID Number', ID Number, 'First Name', First Name, 'Last Name', Last Name)) AS data
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('ID Number', `ID Number`, 'First Name', `First Name`, 'Last Name', `Last Name`)) AS data
                   FROM (
                       SELECT *
                       FROM " + _integrationTableHasColumnWithSpace + @"

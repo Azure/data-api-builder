@@ -1,5 +1,5 @@
 {
-  "$schema": "../../project-hawaii/playground/hawaii.draft-01.schema.json",
+  "$schema": "../schemas/hawaii.draft-01.schema.json",
   "data-source": {
     "database-type": "mssql",
     "connection-string": ""
@@ -15,7 +15,7 @@
       "allow-introspection": true
     },
     "host": {
-      "mode": "Development",
+      "mode": "development",
       "cors": {
         "origins": [ "1", "2" ],
         "allow-credentials": true

@@ -58,24 +58,18 @@ namespace Azure.DataGateway.Service.Resolvers
             Container container = client.GetDatabase(resolver.DatabaseName)
                                         .GetContainer(resolver.ContainerName);
 
-            ItemResponse<JObject>? response;
-            switch (resolver.OperationType)
+            ItemResponse<JObject>? response = resolver.OperationType switch
             {
-                case Operation.Upsert:
-                case Operation.Create:
-                    response = await HandleUpsertAsync(queryArgs, container);
-                    break;
-                case Operation.Delete:
-                    response = await HandleDeleteAsync(queryArgs, container);
-                    if (response.StatusCode == HttpStatusCode.NoContent)
-                    {
-                        // Delete item doesnt return the actual item, so we return emtpy json
-                        return new JObject();
-                    }
+                Operation.Upsert => await HandleUpsertAsync(queryArgs, container),
+                Operation.Create => await HandleCreateAsync(queryArgs, container),
+                Operation.Delete => await HandleDeleteAsync(queryArgs, container),
+                _ => throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}")
+            };
 
-                    break;
-                default:
-                    throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}");
+            if (response.StatusCode == HttpStatusCode.NoContent)
+            {
+                // Delete item doesnt return the actual item, so we return emtpy json
+                return new JObject();
             }
 
             return response.Resource;
@@ -145,6 +139,49 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return await container.UpsertItemAsync(JObject.FromObject(createInput));
+        }
+
+        private static async Task<ItemResponse<JObject>> HandleCreateAsync(IDictionary<string, object> queryArgs, Container container)
+        {
+            string? id = null;
+
+            object item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
+
+            // Variables were provided to the mutation
+            if (item is Dictionary<string, object?> createInput)
+            {
+                if (createInput.TryGetValue("id", out object? idObj))
+                {
+                    id = idObj?.ToString();
+                }
+            }
+            // An inline argument was set
+            else if (item is List<ObjectFieldNode> createInputRaw)
+            {
+                ObjectFieldNode? idObj = createInputRaw.FirstOrDefault(field => field.Name.Value == "id");
+
+                if (idObj != null && idObj.Value.Value != null)
+                {
+                    id = idObj.Value.Value.ToString();
+                }
+
+                createInput = new Dictionary<string, object?>();
+                foreach (ObjectFieldNode node in createInputRaw)
+                {
+                    createInput.Add(node.Name.Value, node.Value.Value);
+                }
+            }
+            else
+            {
+                throw new InvalidDataException("The type of argument for the provided data is unsupported.");
+            }
+
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new InvalidDataException("id field is mandatory");
+            }
+
+            return await container.CreateItemAsync(JObject.FromObject(createInput));
         }
 
         /// <summary>

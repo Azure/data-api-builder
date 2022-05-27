@@ -483,8 +483,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Test that filters applied by the typed filter and the OData filter
-        /// are AND-ed
+        /// Test verifies that when _filterOData is present we get
+        /// the correct error message.
         /// </summary>
         [TestMethod]
         public async Task TestIncludingFilterODataFails()

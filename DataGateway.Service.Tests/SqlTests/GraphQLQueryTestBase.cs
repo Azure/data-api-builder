@@ -504,7 +504,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <sumary>
-        /// Test if filter and filterOData param successfully filters the query results
+        /// Test if filter param successfully filters the query results
         /// </summary>
         [Ignore]
         [TestMethod]

@@ -11,7 +11,6 @@ using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
-using Microsoft.OData.UriParser;
 
 namespace Azure.DataGateway.Service.Resolvers
 {

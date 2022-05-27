@@ -33,7 +33,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
     ///   https://github.com/dotnet/aspnetcore/blob/main/src/Security/Authentication/JwtBearer/src/JwtBearerHandler.cs#L309-L339
     /// </summary>
     [TestClass]
-    public class JwtTokenMiddlewareUnitTests
+    public class JwtTokenAuthenticationUnitTests
     {
         private const string AUDIENCE = "d727a7e8-1af4-4ce0-8c56-f3107f10bbfd";
         private const string BAD_AUDIENCE = "1337-314159";
@@ -272,7 +272,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
                         .Configure(app =>
                         {
                             app.UseAuthentication();
-                            app.UseMiddleware<JwtAuthenticationMiddleware>();
+                            app.UseMiddleware<AuthenticationMiddleware>();
 
                             // app.Run acts as terminating middleware to return 200 if we reach it. Without this,
                             // the Middleware pipeline will return 404 by default.

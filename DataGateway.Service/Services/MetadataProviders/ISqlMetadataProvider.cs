@@ -17,12 +17,12 @@ namespace Azure.DataGateway.Service.Services
         Task InitializeAsync();
 
         /// <summary>
-        /// Obtains the underlying source object's schema name.
+        /// Obtains the underlying source object's schema name (SQL) or container name (Cosmos).
         /// </summary>
         string GetSchemaName(string entityName);
 
         /// <summary>
-        /// Obtains the underlying source object's name.
+        /// Obtains the underlying source object's name (SQL table or Cosmos container).
         /// </summary>
         string GetDatabaseObjectName(string entityName);
 

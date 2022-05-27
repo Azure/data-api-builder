@@ -466,7 +466,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 "FindTestWithQueryStringSpaceInNamesOrderByAsc",
                 @"
-                  SELECT JSON_ARRAYAGG(JSON_OBJECT('ID Number', ID Number, 'First Name', First Name, 'Last Name', Last Name)) AS data
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('ID Number', `ID Number`, 'First Name', `First Name`, 'Last Name', `Last Name`)) AS data
                   FROM (
                       SELECT *
                       FROM " + _integrationTableHasColumnWithSpace + @"
@@ -479,10 +479,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('ID Number', ID Number, 'First Name', First Name, 'Last Name', Last Name)) AS data
                   FROM (
-                      SELECT TOP 1 *
+                      SELECT *
                       FROM " + _integrationTableHasColumnWithSpace + @"
                       ORDER BY `Last Name`
-                      LIMIT 100
+                      LIMIT 1
                   ) AS subq"
             },
             {

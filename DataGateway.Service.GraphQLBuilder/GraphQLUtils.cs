@@ -5,9 +5,9 @@ using HotChocolate.Types;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder
 {
-    internal static class Utils
+    public static class GraphQLUtils
     {
-        const string DEFAULT_PRIMARY_KEY_NAME = "id";
+        public const string DEFAULT_PRIMARY_KEY_NAME = "id";
 
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {

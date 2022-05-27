@@ -1,7 +1,7 @@
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
 using HotChocolate.Types;
-using static Azure.DataGateway.Service.GraphQLBuilder.Utils;
+using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLUtils;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 {

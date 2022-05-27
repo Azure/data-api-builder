@@ -21,17 +21,14 @@ namespace Azure.DataGateway.Service.Services
         internal readonly FieldDelegate _next;
         internal readonly IQueryEngine _queryEngine;
         internal readonly IMutationEngine _mutationEngine;
-        internal readonly IGraphQLMetadataProvider? _metadataStoreProvider;
 
         public ResolverMiddleware(FieldDelegate next,
             IQueryEngine queryEngine,
-            IMutationEngine mutationEngine,
-            IGraphQLMetadataProvider? metadataStoreProvider)
+            IMutationEngine mutationEngine)
         {
             _next = next;
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
-            _metadataStoreProvider = metadataStoreProvider;
         }
 
         public async Task InvokeAsync(IMiddlewareContext context)

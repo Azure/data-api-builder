@@ -479,7 +479,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('ID Number', ID Number, 'First Name', First Name, 'Last Name', Last Name)) AS data
                   FROM (
-                      SELECT *
+                      SELECT TOP 1 *
                       FROM " + _integrationTableHasColumnWithSpace + @"
                       ORDER BY `Last Name`
                       LIMIT 100

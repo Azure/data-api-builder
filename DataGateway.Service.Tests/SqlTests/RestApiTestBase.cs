@@ -535,6 +535,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned and then sorting by
+        /// Last Name.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstAndSpacedColumnOrderBy()
+        {
+            string after = $"[{{\"Value\":\"Belfort\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"brokers\",\"ColumnName\":\"Last Name\"}}," +
+                            $"{{\"Value\":2,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"brokers\",\"ColumnName\":\"ID Number\"}}]";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=1&$orderby='Last Name'",
+                entity: _integrationEntityHasColumnWithSpace,
+                sqlQuery: GetQuery(nameof(FindTestWithFirstAndSpacedColumnOrderBy)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                paginated: true
+
+            );
+        }
+
+        /// <summary>
         /// Tests the REST Api for Find operation for all records
         /// order by publisher_id in descending order.
         /// </summary>
@@ -2358,27 +2380,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 primaryKeyRoute: string.Empty,
                 queryString: "?$orderby=null",
                 entity: _integrationEntityName,
-                sqlQuery: string.Empty,
-                controller: _restController,
-                exception: true,
-                expectedErrorMessage: "OrderBy property is not supported.",
-                expectedStatusCode: HttpStatusCode.BadRequest
-            );
-        }
-
-        /// <summary>
-        /// Tests the REST Api for Find operation using $first to
-        /// limit the number of records returned and then sorting by
-        /// ID Number, which will throw a DataGatewayException with
-        /// a message indicating this property is not supported.
-        /// </summary>
-        [TestMethod]
-        public async Task FindTestWithFirstAndSpacedColumnOrderBy()
-        {
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: string.Empty,
-                queryString: "?$first=1&$orderby='ID Number'",
-                entity: _integrationEntityHasColumnWithSpace,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,

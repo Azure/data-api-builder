@@ -355,13 +355,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ) AS subq"
             },
             {
-                "FindTestWithQueryStringSpaceInNamesOrderByAsc",
+                "FindTestWithFirstAndSpacedColumnOrderBy",
                 @"
                   SELECT json_agg(to_jsonb(subq)) AS data
                   FROM (
                       SELECT *
                       FROM " + _integrationTableHasColumnWithSpace + @"
-                      ORDER BY ""ID Number""
+                      ORDER BY ""Last Name""
                   ) AS subq"
             },
             {

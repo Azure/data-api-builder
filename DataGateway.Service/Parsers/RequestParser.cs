@@ -48,8 +48,10 @@ namespace Azure.DataGateway.Service.Parsers
 
                 if (primaryKeyValues.Length % 2 != 0)
                 {
-                    throw new NotImplementedException("Support for url template with implicit primary key" +
-                        " field names is not yet added.");
+                    throw new DataGatewayException(
+                        message: "Support for url template with implicit primary key field names is not yet added.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        DataGatewayException.SubStatusCodes.BadRequest);
                 }
 
                 for (int primaryKeyIndex = 0; primaryKeyIndex < primaryKeyValues.Length; primaryKeyIndex += 2)

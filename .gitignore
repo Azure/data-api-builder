@@ -5,6 +5,8 @@ system-commandline-sentinel-files/
 # only include appsettings for a few default environments
 appsettings.*.json
 hawaii-config.*.json
+hawaii-config.json
+!hawaii-config.template.json
 !hawaii-config.PostgreSql.json
 !hawaii-config.MsSql.json
 !hawaii-config.MySql.json

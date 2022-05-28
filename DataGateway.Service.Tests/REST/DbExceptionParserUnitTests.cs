@@ -1,9 +1,9 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Azure.DataGateway.Service.Resolvers;
 using System.Data.Common;
-using Microsoft.Data.SqlClient;
-using Azure.DataGateway.Config;
 using System.Reflection;
+using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Resolvers;
+using Microsoft.Data.SqlClient;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.REST
 {
@@ -15,7 +15,7 @@ namespace Azure.DataGateway.Service.Tests.REST
     {
         /// <summary>
         /// Verify that the DbExceptionParser returns the correct
-        /// messaging based on the mode sprovided as argument
+        /// messaging based on the mode provided as argument
         /// </summary>
         /// <param name="mode">Production or Developer.</param>
         /// <param name="expected">Expected error message.</param>

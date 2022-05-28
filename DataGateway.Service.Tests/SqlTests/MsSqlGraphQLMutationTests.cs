@@ -329,6 +329,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task InsertWithInvalidForeignKey()
         {
+            string expectedExceptionMessageSubString = "The INSERT statement conflicted";
             string msSqlQuery = @"
                 SELECT COUNT(*) AS count
                 FROM [books]
@@ -338,7 +339,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            await InsertWithInvalidForeignKey(msSqlQuery, DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE);
+            await InsertWithInvalidForeignKey(msSqlQuery, expectedExceptionMessageSubString);
         }
 
         /// <summary>
@@ -348,6 +349,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task UpdateWithInvalidForeignKey()
         {
+            string expectedErrorMessageSubString = "The UPDATE statement conflicted with the FOREIGN KEY constraint";
             string msSqlQuery = @"
                 SELECT COUNT(*) AS count
                 FROM [books]
@@ -358,7 +360,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            await UpdateWithInvalidForeignKey(msSqlQuery, DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE);
+            await UpdateWithInvalidForeignKey(msSqlQuery, expectedErrorMessageSubString);
         }
 
         /// <summary>
@@ -388,7 +390,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestViolatingOneToOneRelashionShip()
         {
-            await TestViolatingOneToOneRelashionShip(DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE);
+            string expectedErrorMessageSubString = "Violation of UNIQUE KEY constraint";
+            await TestViolatingOneToOneRelashionShip(expectedErrorMessageSubString);
         }
         #endregion
     }

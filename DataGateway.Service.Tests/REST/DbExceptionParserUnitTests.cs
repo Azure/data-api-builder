@@ -20,8 +20,8 @@ namespace Azure.DataGateway.Service.Tests.REST
         /// <param name="mode">Production or Developer.</param>
         /// <param name="expected">Expected error message.</param>
         [DataTestMethod]
-        [DataRow(HostModeType.Development, "While processing your request the database ran into an error.")]
-        [DataRow(HostModeType.Production, "Production Error Message.")]
+        [DataRow(HostModeType.Development, "Development Mode Error Message.")]
+        [DataRow(HostModeType.Production, "While processing your request the database ran into an error.")]
         public void VerifyCorrectErrorMessage(HostModeType mode, string expected)
         {
             DbExceptionParserBase parser = new();
@@ -51,7 +51,7 @@ namespace Azure.DataGateway.Service.Tests.REST
                 // reflection is used to override "_message"
                 typeof(SqlException)
                     .GetField("_message", BindingFlags.Instance | BindingFlags.NonPublic)
-                    .SetValue(ex, "Production Error Message.");
+                    .SetValue(ex, "Development Mode Error Message.");
                 e = ex;
             }
 

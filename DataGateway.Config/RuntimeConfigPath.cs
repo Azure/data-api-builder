@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 namespace Azure.DataGateway.Config
 {
     /// <summary>
@@ -59,11 +62,12 @@ namespace Azure.DataGateway.Config
             out HostModeType mode)
         {
             ConfigValue!.RuntimeSettings.TryGetValue(GlobalSettingsType.Host, out object? hostObject);
-
+            HostGlobalSettings host = JsonSerializer.Deserialize<HostGlobalSettings>(hostObject!.ToString()!,
+                                                                                     RuntimeConfig.GetDeserializationOptions())!;
             databaseType = ConfigValue!.DatabaseType;
             connectionString = ConfigValue!.ConnectionString;
             entities = ConfigValue!.Entities;
-            mode = (hostObject as HostGlobalSettings)!.Mode;
+            mode = host.Mode;
         }
 
         /// <summary>

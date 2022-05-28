@@ -1066,7 +1066,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// overrided. Therefore here we throw not implemented.
         /// </summary>
         /// <returns></returns>
-        public override string GetDbErrorMessage()
+        public override string GetUniqueDbErrorMessage()
         {
             throw new NotImplementedException();
         }

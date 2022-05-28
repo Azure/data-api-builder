@@ -14,7 +14,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public const string GENERIC_DB_EXCEPTION_MESSAGE = "While processing your request the database ran into an error.";
         public virtual Exception Parse(DbException e, HostModeType mode)
         {
-            string message = mode is HostModeType.Development ? GENERIC_DB_EXCEPTION_MESSAGE : e.Message;
+            string message = mode is HostModeType.Development ? e.Message : GENERIC_DB_EXCEPTION_MESSAGE;
             return new DataGatewayException(
                     message: message,
                     statusCode: HttpStatusCode.InternalServerError,

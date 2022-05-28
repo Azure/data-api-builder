@@ -1818,6 +1818,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 ""categoryName"":""comics""
             }";
+            string expectedErrorMessage = "Cannot insert the value NULL into column 'piecesRequired', " +
+                                          "table 'main.dbo.stocks'; column does not allow nulls. UPDATE fails.";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/1/pieceid/1",
                 queryString: string.Empty,
@@ -1827,7 +1829,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
                 exception: true,
-                expectedErrorMessage: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
+                expectedErrorMessage: expectedErrorMessage,
                 expectedStatusCode: HttpStatusCode.InternalServerError,
                 expectedSubStatusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
             );

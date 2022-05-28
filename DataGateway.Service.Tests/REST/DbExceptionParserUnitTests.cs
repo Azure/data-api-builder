@@ -15,7 +15,7 @@ namespace Azure.DataGateway.Service.Tests.REST
     {
         /// <summary>
         /// Verify that the DbExceptionParser returns the correct
-        /// messaging based on the mode provided as argument
+        /// messaging based on the mode provided as argument.
         /// </summary>
         /// <param name="mode">Production or Developer.</param>
         /// <param name="expected">Expected error message.</param>

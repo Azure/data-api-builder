@@ -19,7 +19,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     message: message,
                     statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed
-            ); 
+            );
         }
     }
 }

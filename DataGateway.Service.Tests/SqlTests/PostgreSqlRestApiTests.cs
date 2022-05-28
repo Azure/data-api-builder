@@ -957,5 +957,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             return _queryMap[key];
         }
+
+        /// <summary>
+        /// We have 1 test that is named
+        /// PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest
+        /// which will have Db specific error messages.
+        /// We return the postgres specific message here.
+        /// </summary>
+        /// <returns></returns>
+        public override string GetUniqueDbErrorMessage()
+        {
+            return "23502: null value in column \"piecesRequired\" of relation \"stocks\" violates not-null constraint";
+        }
     }
 }

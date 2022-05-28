@@ -625,5 +625,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             return _queryMap[key];
         }
+
+        /// <summary>
+        /// We have 1 test that is named
+        /// PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest
+        /// which will have Db specific error messages.
+        /// We return the mssql specific message here.
+        /// </summary>
+        /// <returns></returns>
+        public override string GetUniqueDbErrorMessage()
+        {
+            return "Cannot insert the value NULL into column 'piecesRequired', " +
+                   "table 'master.dbo.stocks'; column does not allow nulls. UPDATE fails.";
+        }
     }
 }

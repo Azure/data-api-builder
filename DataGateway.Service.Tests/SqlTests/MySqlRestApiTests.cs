@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
@@ -1054,6 +1055,20 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public override string GetQuery(string key)
         {
             return _queryMap[key];
+        }
+
+        /// <summary>
+        /// We have 1 test, which is named
+        /// PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest
+        /// that will have Db specific error messages, however mysql
+        /// has more unique constrainst and so instead of
+        /// returning the custom message, the function is entirely
+        /// overrided. Therefore here we throw not implemented.
+        /// </summary>
+        /// <returns></returns>
+        public override string GetDbErrorMessage()
+        {
+            throw new NotImplementedException();
         }
 
         [TestMethod]

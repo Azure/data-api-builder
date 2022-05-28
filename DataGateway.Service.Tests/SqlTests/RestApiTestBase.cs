@@ -44,6 +44,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public abstract string GetDefaultSchema();
         public abstract string GetDefaultSchemaForEdmModel();
         public abstract string GetQuery(string key);
+        public abstract string GetUniqueDbErrorMessage();
 
         #region Positive Tests
         /// <summary>
@@ -1818,8 +1819,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 ""categoryName"":""comics""
             }";
-            string expectedErrorMessage = "Cannot insert the value NULL into column 'piecesRequired', " +
-                                          "table 'master.dbo.stocks'; column does not allow nulls. UPDATE fails.";
+            string expectedErrorMessage = GetUniqueDbErrorMessage();
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/1/pieceid/1",
                 queryString: string.Empty,

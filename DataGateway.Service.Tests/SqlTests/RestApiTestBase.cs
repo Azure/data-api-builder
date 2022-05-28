@@ -1819,7 +1819,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 ""categoryName"":""comics""
             }";
             string expectedErrorMessage = "Cannot insert the value NULL into column 'piecesRequired', " +
-                                          "table 'main.dbo.stocks'; column does not allow nulls. UPDATE fails.";
+                                          "table 'master.dbo.stocks'; column does not allow nulls. UPDATE fails.";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/1/pieceid/1",
                 queryString: string.Empty,

@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
@@ -47,7 +48,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                         long value => new ObjectValueNode(new ObjectFieldNode("long", new IntValueNode(value))),
                         string value => new ObjectValueNode(new ObjectFieldNode("string", value)),
                         bool value => new ObjectValueNode(new ObjectFieldNode("boolean", value)),
-                        float value => new ObjectValueNode(new ObjectFieldNode("float", value)),
+                        float value => new ObjectValueNode(new ObjectFieldNode("single", new SingleType().ParseValue(value))),
+                        double value => new ObjectValueNode(new ObjectFieldNode("float", value)),
+                        decimal value => new ObjectValueNode(new ObjectFieldNode("decimal", new FloatValueNode(value))),
                         _ => throw new DataGatewayException($"The type {column.DefaultValue.GetType()} is not supported as a GraphQL default value", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.GraphQLMapping)
                     };
 
@@ -123,7 +126,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                 TypeCode.Int16 => "Short",
                 TypeCode.Int32 => "Int",
                 TypeCode.Int64 => "Long",
+                TypeCode.Single => "Single",
                 TypeCode.Double => "Float",
+                TypeCode.Decimal => "Decimal",
                 TypeCode.Boolean => "Boolean",
                 _ => throw new DataGatewayException(
                         $"Column type {type} not handled by case. Please add a case resolving {type} to the appropriate GraphQL type",

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using HotChocolate.Execution;
@@ -114,6 +115,10 @@ namespace Azure.DataGateway.Service.Services
             if (context.Selection.Field.Type is ByteType)
             {
                 return byte.Parse(leafJson);
+            }
+            else if (context.Selection.Field.Type is SingleType)
+            {
+                return Single.Parse(leafJson);
             }
 
             return leafJson;

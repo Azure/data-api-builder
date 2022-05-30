@@ -1,3 +1,4 @@
+using Azure.DataGateway.Service.GraphQLBuilder.CustomScalars;
 using HotChocolate.Language;
 using HotChocolate.Types;
 
@@ -99,6 +100,23 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 }
             );
 
+        public static InputObjectTypeDefinitionNode SingleInputType() =>
+            new(
+                null,
+                new NameNode("SingleFilterInput"),
+                new StringValueNode("Input type for adding Single filters"),
+                new List<DirectiveNode>(),
+                new List<InputValueDefinitionNode> {
+                    new InputValueDefinitionNode(null, new NameNode("eq"), new StringValueNode("Equals"), new SingleType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("gt"), new StringValueNode("Greater Than"), new SingleType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("gte"), new StringValueNode("Greater Than or Equal To"), new SingleType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("lt"), new StringValueNode("Less Than"), new SingleType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new SingleType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new SingleType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                }
+            );
+
         public static InputObjectTypeDefinitionNode FloatInputType() =>
             new(
                 null,
@@ -112,6 +130,23 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                     new InputValueDefinitionNode(null, new NameNode("lt"), new StringValueNode("Less Than"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new InputValueDefinitionNode(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                }
+            );
+
+        public static InputObjectTypeDefinitionNode DecimalInputType() =>
+            new(
+                null,
+                new NameNode("DecimalFilterInput"),
+                new StringValueNode("Input type for adding Decimal filters"),
+                new List<DirectiveNode>(),
+                new List<InputValueDefinitionNode> {
+                    new InputValueDefinitionNode(null, new NameNode("eq"), new StringValueNode("Equals"), new DecimalType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("gt"), new StringValueNode("Greater Than"), new DecimalType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("gte"), new StringValueNode("Greater Than or Equal To"), new DecimalType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("lt"), new StringValueNode("Less Than"), new DecimalType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new DecimalType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new DecimalType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new InputValueDefinitionNode(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
                 }
             );
@@ -141,7 +176,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             { "Short", ShortInputType() },
             { "Int", IntInputType() },
             { "Long", LongInputType() },
+            { "Single", SingleInputType() },
             { "Float", FloatInputType() },
+            { "Decimal", DecimalInputType() },
             { "Boolean", BooleanInputType() },
             { "String", StringInputType() }
         };

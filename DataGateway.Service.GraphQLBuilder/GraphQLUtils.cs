@@ -30,7 +30,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
                 "Short",
                 "Int",
                 "Long",
+                "Single",
                 "Float",
+                "Decimal",
                 "String",
                 "Boolean"
             };

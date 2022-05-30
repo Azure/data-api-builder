@@ -163,8 +163,12 @@ namespace Azure.DataGateway.Service.Resolvers
                         return int.Parse(param);
                     case TypeCode.Int64:
                         return long.Parse(param);
+                    case TypeCode.Single:
+                        return float.Parse(param);
                     case TypeCode.Double:
                         return double.Parse(param);
+                    case TypeCode.Decimal:
+                        return decimal.Parse(param);
                     case TypeCode.Boolean:
                         return Boolean.Parse(param);
                     default:

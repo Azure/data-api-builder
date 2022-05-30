@@ -1,3 +1,4 @@
+using Azure.DataGateway.Service.GraphQLBuilder.CustomScalars;
 using HotChocolate.Types;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes
@@ -14,7 +15,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes
             descriptor.Field("long").Type<LongType>();
             descriptor.Field("string").Type<StringType>();
             descriptor.Field("boolean").Type<BooleanType>();
+            descriptor.Field("single").Type<SingleType>();
             descriptor.Field("float").Type<FloatType>();
+            descriptor.Field("decimal").Type<DecimalType>();
         }
     }
 }

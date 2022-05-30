@@ -11,7 +11,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     /// Units testing for our connection string parser
     /// to retreive schema.
     /// </summary>
-    [TestClass, TestCategory(TestCategory.POSTGRESQL)]
+    [TestClass, TestCategory(TestCategory.MSSQL)]
     public class SqlMetadataProviderUnitTests : GraphQLMutationTestBase
     {
         /// <summary>
@@ -54,15 +54,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 new Sha256DocumentHashProvider(),
                 _sqlMetadataProvider);
             _graphQLController = new GraphQLController(_graphQLService);
-        }
-
-        /// <summary>
-        /// Runs after every test to reset the database state
-        /// </summary>
-        [TestCleanup]
-        public async Task TestCleanup()
-        {
-            await ResetDbStateAsync();
         }
 
         #endregion

@@ -35,12 +35,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             Assert.AreEqual(expected, actual);
         }
 
-        #region Test Fixture Setup
         /// <summary>
         /// Sets up test fixture
         /// </summary>
         /// <param name="testCategory"></param>
-
         public static async Task InitializeTestFixture(string testCategory)
         {
             await InitializeTestFixture(context: null, testCategory);
@@ -56,8 +54,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
-        #endregion
-
         /// <summary>
         /// <code>Do: </code> Fills the table definition with information of the foreign keys
         /// for all the tables based on the entities in runtimeConfig file.
@@ -72,7 +68,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             try
             {
                 await InitializeTestFixture(TestCategory.MSSQL);
-                await ResetDbStateAsync();
             }
             catch (Exception ex)
             {

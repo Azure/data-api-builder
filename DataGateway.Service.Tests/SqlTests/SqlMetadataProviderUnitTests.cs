@@ -11,7 +11,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     /// Units testing for our connection string parser
     /// to retreive schema.
     /// </summary>
-    [TestClass, TestCategory(TestCategory.MSSQL)]
+    [TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class SqlMetadataProviderUnitTests : GraphQLMutationTestBase
     {
         /// <summary>
@@ -72,6 +72,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             try
             {
                 await InitializeTestFixture(TestCategory.MSSQL);
+                await ResetDbStateAsync();
             }
             catch (Exception ex)
             {

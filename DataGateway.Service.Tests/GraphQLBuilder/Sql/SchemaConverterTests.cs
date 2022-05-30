@@ -127,8 +127,13 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
 
         [DataTestMethod]
         [DataRow(typeof(string), "String")]
+        [DataRow(typeof(byte), "Byte")]
+        [DataRow(typeof(short), "Short")]
         [DataRow(typeof(int), "Int")]
+        [DataRow(typeof(long), "Long")]
+        [DataRow(typeof(float), "Single")]
         [DataRow(typeof(double), "Float")]
+        [DataRow(typeof(decimal), "Decimal")]
         [DataRow(typeof(bool), "Boolean")]
         // TODO: Uncomment these once we have more GraphQL type support - https://github.com/Azure/hawaii-gql/issues/247
         //[DataRow(typeof(int), "Int")]
@@ -272,12 +277,24 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
         }
 
         [DataTestMethod]
+        [DataRow((byte)1, "byte", SyntaxKind.IntValue)]
+        [DataRow((short)1, "short", SyntaxKind.IntValue)]
         [DataRow(1, "int", SyntaxKind.IntValue)]
+        [DataRow(1L, "long", SyntaxKind.IntValue)]
         [DataRow("test", "string", SyntaxKind.StringValue)]
         [DataRow(true, "boolean", SyntaxKind.BooleanValue)]
-        [DataRow(1.2f, "float", SyntaxKind.FloatValue)]
+        [DataRow(1.2f, "single", SyntaxKind.FloatValue)]
+        [DataRow(1.2, "float", SyntaxKind.FloatValue)]
+        [DataRow(1.2, "decimal", SyntaxKind.FloatValue)]
         public void DefaultValueGetsSetOnDirective(object defaultValue, string fieldName, SyntaxKind kind)
         {
+            if (fieldName == "decimal")
+            {
+                // required since a decimal type cannot be put in the datarow
+                // since it is not considered constant
+                defaultValue = decimal.Parse(defaultValue.ToString());
+            }
+
             TableDefinition table = new();
             string columnName = "columnName";
             table.Columns.Add(columnName, new ColumnDefinition

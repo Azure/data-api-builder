@@ -63,7 +63,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task CheckNoExceptionForNoForiegnKey()
         {
-            //SetCustomTestConfig("hawaii-config.NoFkTest.json"); // This Config file has no relationship between entities
+            SqlTestBase.SetCustomTestConfig("hawaii-config.NoFkTest.json"); // This Config file has no relationship between entities
 
             try
             {

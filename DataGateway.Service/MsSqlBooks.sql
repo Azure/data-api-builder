@@ -103,7 +103,10 @@ CREATE TABLE brokers(
 
 CREATE TABLE type_table(
     id int IDENTITY(5001, 1) PRIMARY KEY,
+    byte_types tinyint,
+    short_types smallint,
     int_types int,
+    long_types bigint,
     string_types varchar(max),
     float_types float,
     boolean_types bit
@@ -174,7 +177,7 @@ INSERT INTO reviews(id, book_id, content) VALUES (567, 1, 'Indeed a great book')
 SET IDENTITY_INSERT reviews OFF
 
 SET IDENTITY_INSERT type_table ON
-INSERT INTO type_table(id, int_types, string_types, float_types, boolean_types) VALUES (1, 1, '', 0.33, 1), (2, -1, 'lksa;jdflasdf;alsdflksdfkldj', -9.2, 0), (3, 123456, 'null', 1555.99, 1), (4, NULL, NULL, NULL, NULL);
+INSERT INTO type_table(id, byte_types, short_types, int_types, long_types, string_types, float_types, boolean_types) VALUES (1, 1, 1, 1, 1, '', 0.33, 1), (2, 0, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', -9.2, 0), (3, 255, 32767, 2147483647, 9223372036854775807, 'null', 1555.99, 1), (4, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT type_table OFF
 
 INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95'), (5, 'null');

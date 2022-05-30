@@ -67,8 +67,17 @@ namespace Azure.DataGateway.Service.Parsers
                         case TypeCode.String:
                             type = EdmPrimitiveTypeKind.String;
                             break;
+                        case TypeCode.Byte:
+                            type = EdmPrimitiveTypeKind.Byte;
+                            break;
+                        case TypeCode.Int16:
+                            type = EdmPrimitiveTypeKind.Int16;
+                            break;
                         case TypeCode.Int32:
                             type = EdmPrimitiveTypeKind.Int32;
+                            break;
+                        case TypeCode.Int64:
+                            type = EdmPrimitiveTypeKind.Int64;
                             break;
                         case TypeCode.Double:
                             type = EdmPrimitiveTypeKind.Double;

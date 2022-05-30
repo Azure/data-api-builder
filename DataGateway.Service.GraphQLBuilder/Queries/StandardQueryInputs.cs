@@ -31,6 +31,40 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 }
             );
 
+        public static InputObjectTypeDefinitionNode ByteInputType() =>
+            new(
+                null,
+                new NameNode("ByteFilterInput"),
+                new StringValueNode("Input type for adding Byte filters"),
+                new List<DirectiveNode>(),
+                new List<InputValueDefinitionNode> {
+                    new InputValueDefinitionNode(null, new NameNode("eq"), new StringValueNode("Equals"), new ByteType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("gt"), new StringValueNode("Greater Than"), new ByteType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("gte"), new StringValueNode("Greater Than or Equal To"), new ByteType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("lt"), new StringValueNode("Less Than"), new ByteType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new ByteType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new ByteType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                }
+            );
+
+        public static InputObjectTypeDefinitionNode ShortInputType() =>
+            new(
+                null,
+                new NameNode("ShortFilterInput"),
+                new StringValueNode("Input type for adding Short filters"),
+                new List<DirectiveNode>(),
+                new List<InputValueDefinitionNode> {
+                    new InputValueDefinitionNode(null, new NameNode("eq"), new StringValueNode("Equals"), new ShortType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("gt"), new StringValueNode("Greater Than"), new ShortType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("gte"), new StringValueNode("Greater Than or Equal To"), new ShortType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("lt"), new StringValueNode("Less Than"), new ShortType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new ShortType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new ShortType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                }
+            );
+
         public static InputObjectTypeDefinitionNode IntInputType() =>
             new(
                 null,
@@ -44,6 +78,23 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                     new InputValueDefinitionNode(null, new NameNode("lt"), new StringValueNode("Less Than"), new IntType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new InputValueDefinitionNode(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new IntType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new IntType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                }
+            );
+
+        public static InputObjectTypeDefinitionNode LongInputType() =>
+            new(
+                null,
+                new NameNode("LongFilterInput"),
+                new StringValueNode("Input type for adding Long filters"),
+                new List<DirectiveNode>(),
+                new List<InputValueDefinitionNode> {
+                    new InputValueDefinitionNode(null, new NameNode("eq"), new StringValueNode("Equals"), new LongType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("gt"), new StringValueNode("Greater Than"), new LongType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("gte"), new StringValueNode("Greater Than or Equal To"), new LongType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("lt"), new StringValueNode("Less Than"), new LongType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new LongType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new LongType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new InputValueDefinitionNode(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
                 }
             );
@@ -86,7 +137,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         public static Dictionary<string, InputObjectTypeDefinitionNode> InputTypes = new()
         {
             { "ID", IdInputType() },
+            { "Byte", ByteInputType() },
+            { "Short", ShortInputType() },
             { "Int", IntInputType() },
+            { "Long", LongInputType() },
             { "Float", FloatInputType() },
             { "Boolean", BooleanInputType() },
             { "String", StringInputType() }

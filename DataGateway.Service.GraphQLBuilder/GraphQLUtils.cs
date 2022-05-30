@@ -23,13 +23,19 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
 
         public static bool IsBuiltInType(ITypeNode typeNode)
         {
-            string name = typeNode.NamedType().Name.Value;
-            if (name == "String" || name == "Int" || name == "Boolean" || name == "Float" || name == "ID")
+            HashSet<string> inBuiltTypes = new()
             {
-                return true;
-            }
-
-            return false;
+                "ID",
+                "Byte",
+                "Short",
+                "Int",
+                "Long",
+                "Float",
+                "String",
+                "Boolean"
+            };
+            string name = typeNode.NamedType().Name.Value;
+            return inBuiltTypes.Contains(name);
         }
 
         /// <summary>

@@ -45,5 +45,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    LIMIT 1) AS subq3
             ";
         }
+
+        protected override bool IsTypeSupportedType(string type)
+        {
+            return type switch
+            {
+                BYTE_TYPE => false,
+                _ => true
+            };
+        }
     }
 }

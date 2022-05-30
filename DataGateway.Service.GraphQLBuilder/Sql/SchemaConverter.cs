@@ -41,7 +41,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                 {
                     IValueNode arg = column.DefaultValue switch
                     {
+                        byte value => new ObjectValueNode(new ObjectFieldNode("byte", new IntValueNode(value))),
+                        short value => new ObjectValueNode(new ObjectFieldNode("short", new IntValueNode(value))),
                         int value => new ObjectValueNode(new ObjectFieldNode("int", value)),
+                        long value => new ObjectValueNode(new ObjectFieldNode("long", new IntValueNode(value))),
                         string value => new ObjectValueNode(new ObjectFieldNode("string", value)),
                         bool value => new ObjectValueNode(new ObjectFieldNode("boolean", value)),
                         float value => new ObjectValueNode(new ObjectFieldNode("float", value)),
@@ -116,7 +119,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
             return Type.GetTypeCode(type) switch
             {
                 TypeCode.String => "String",
+                TypeCode.Byte => "Byte",
+                TypeCode.Int16 => "Short",
                 TypeCode.Int32 => "Int",
+                TypeCode.Int64 => "Long",
                 TypeCode.Double => "Float",
                 TypeCode.Boolean => "Boolean",
                 _ => throw new DataGatewayException(

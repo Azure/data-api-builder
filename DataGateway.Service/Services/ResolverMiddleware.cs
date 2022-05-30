@@ -66,7 +66,7 @@ namespace Azure.DataGateway.Service.Services
                 // anything for it.
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
-                    context.Result = RepresentsNullValue(jsonElement) ? null : jsonElement.ToString();
+                    context.Result = RepresentsNullValue(jsonElement) ? null : PreParseLeaf(context, jsonElement.ToString());
                 }
             }
             else if (IsInnerObject(context))
@@ -97,6 +97,26 @@ namespace Azure.DataGateway.Service.Services
             }
 
             await _next(context);
+        }
+
+        /// <summary>
+        /// Preparse a string extracted from the json result representing a leaf.
+        /// This is helpful in cases when HotChocolate's internal resolvers cannot appropriately
+        /// parse the result so we preparse the result so it can be appropriately handled by HotChocolate
+        /// later
+        /// </summary>
+        /// <remarks>
+        /// e.g. "1" despite being a valid byte value is parsed properly by HotChocolate so we preparse it
+        /// to an actual byte value then feed the result to HotChocolate
+        /// </remarks>
+        private static object PreParseLeaf(IMiddlewareContext context, string leafJson)
+        {
+            if (context.Selection.Field.Type is ByteType)
+            {
+                return byte.Parse(leafJson);
+            }
+
+            return leafJson;
         }
 
         public static bool RepresentsNullValue(JsonElement element)

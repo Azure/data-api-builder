@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -21,6 +22,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected const string DECIMAL_TYPE = "decimal";
         protected const string STRING_TYPE = "string";
         protected const string BOOLEAN_TYPE = "boolean";
+        protected const string DATETIME_TYPE = "datetime";
 
         #region Test Fixture Setup
         protected static GraphQLService _graphQLService;
@@ -67,6 +69,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [DataRow(BOOLEAN_TYPE, 2)]
         [DataRow(BOOLEAN_TYPE, 3)]
         [DataRow(BOOLEAN_TYPE, 4)]
+        [DataRow(DATETIME_TYPE, 1)]
+        [DataRow(DATETIME_TYPE, 2)]
+        [DataRow(DATETIME_TYPE, 3)]
+        [DataRow(DATETIME_TYPE, 4)]
         public async Task QueryTypeColumn(string type, int id)
         {
             if (!IsTypeSupportedType(type))
@@ -85,6 +91,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)
             {
                 CompareFloatResults(type, actual, expected);
+            }
+            else if (type == DATETIME_TYPE)
+            {
+                CompareDateTimeResults(actual, expected);
             }
             else
             {
@@ -123,6 +133,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [DataRow(BOOLEAN_TYPE, "true")]
         [DataRow(BOOLEAN_TYPE, "false")]
         [DataRow(BOOLEAN_TYPE, "null")]
+        [DataRow(DATETIME_TYPE, "\"1999-01-08 10:23:54\"")]
+        [DataRow(DATETIME_TYPE, "\"1999-01-08 09:20:00\"")]
+        [DataRow(DATETIME_TYPE, "null")]
         public async Task InsertIntoTypeColumn(string type, string value)
         {
             if (!IsTypeSupportedType(type))
@@ -142,6 +155,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)
             {
                 CompareFloatResults(type, actual, expected);
+            }
+            else if (type == DATETIME_TYPE)
+            {
+                CompareDateTimeResults(actual, expected);
             }
             else
             {
@@ -182,6 +199,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [DataRow(BOOLEAN_TYPE, "true")]
         [DataRow(BOOLEAN_TYPE, "false")]
         [DataRow(BOOLEAN_TYPE, "null")]
+        [DataRow(DATETIME_TYPE, "\"1999-01-08 10:23:54\"")]
+        [DataRow(DATETIME_TYPE, "\"1999-01-08 09:20:00\"")]
+        [DataRow(DATETIME_TYPE, "null")]
         public async Task UpdateTypeColumn(string type, string value)
         {
             if (!IsTypeSupportedType(type))
@@ -201,6 +221,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)
             {
                 CompareFloatResults(type, actual, expected);
+            }
+            else if (type == DATETIME_TYPE)
+            {
+                CompareDateTimeResults(actual, expected);
             }
             else
             {
@@ -249,6 +273,31 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 default:
                     Assert.Fail($"Calling compare on unrecognized float type {floatType}");
                     break;
+            }
+        }
+
+        /// <summary>
+        /// Required due to different format between mysql datatime and HotChocolate datetime
+        /// result
+        /// </summary>
+        private static void CompareDateTimeResults(string actual, string expected)
+        {
+            string fieldName = "datetime_types";
+
+            using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
+            using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
+
+            string actualDateTime = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
+            string expectedDateTime = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
+
+            // handles cases when one of the values is null
+            if (string.IsNullOrEmpty(actualDateTime) || string.IsNullOrEmpty(expectedDateTime))
+            {
+                Assert.AreEqual(expectedDateTime, actualDateTime);
+            }
+            else
+            {
+                Assert.AreEqual(DateTime.Parse(expectedDateTime), DateTime.Parse(actualDateTime));
             }
         }
 

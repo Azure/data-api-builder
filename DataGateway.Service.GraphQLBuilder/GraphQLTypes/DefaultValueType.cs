@@ -18,6 +18,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes
             descriptor.Field("single").Type<SingleType>();
             descriptor.Field("float").Type<FloatType>();
             descriptor.Field("decimal").Type<DecimalType>();
+            descriptor.Field("datetime").Type<DateTimeType>();
         }
     }
 }

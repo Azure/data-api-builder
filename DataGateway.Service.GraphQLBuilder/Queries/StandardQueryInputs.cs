@@ -169,6 +169,23 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 }
             );
 
+        public static InputObjectTypeDefinitionNode DateTimeInputType() =>
+            new(
+                null,
+                new NameNode("DateTimeFilterInput"),
+                new StringValueNode("Input type for adding DateTime filters"),
+                new List<DirectiveNode>(),
+                new List<InputValueDefinitionNode> {
+                    new InputValueDefinitionNode(null, new NameNode("eq"), new StringValueNode("Equals"), new DateTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("gt"), new StringValueNode("Greater Than"), new DateTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("gte"), new StringValueNode("Greater Than or Equal To"), new DateTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("lt"), new StringValueNode("Less Than"), new DateTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new DateTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new DateTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                }
+            );
+
         public static Dictionary<string, InputObjectTypeDefinitionNode> InputTypes = new()
         {
             { "ID", IdInputType() },
@@ -180,7 +197,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             { "Float", FloatInputType() },
             { "Decimal", DecimalInputType() },
             { "Boolean", BooleanInputType() },
-            { "String", StringInputType() }
+            { "String", StringInputType() },
+            { "DateTime", DateTimeInputType() }
         };
     }
 }

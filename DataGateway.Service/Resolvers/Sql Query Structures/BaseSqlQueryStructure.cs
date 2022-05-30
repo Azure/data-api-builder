@@ -171,6 +171,8 @@ namespace Azure.DataGateway.Service.Resolvers
                         return decimal.Parse(param);
                     case TypeCode.Boolean:
                         return Boolean.Parse(param);
+                    case TypeCode.DateTime:
+                        return DateTime.Parse(param);
                     default:
                         // should never happen due to the config being validated for correct types
                         throw new NotSupportedException($"{systemType.Name} is not supported");

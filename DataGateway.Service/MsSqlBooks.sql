@@ -111,7 +111,8 @@ CREATE TABLE type_table(
     single_types real,
     float_types float,
     decimal_types decimal,
-    boolean_types bit
+    boolean_types bit,
+    datetime_types datetime
 );
 
 ALTER TABLE books
@@ -179,7 +180,11 @@ INSERT INTO reviews(id, book_id, content) VALUES (567, 1, 'Indeed a great book')
 SET IDENTITY_INSERT reviews OFF
 
 SET IDENTITY_INSERT type_table ON
-INSERT INTO type_table(id, byte_types, short_types, int_types, long_types, string_types, single_types, float_types, decimal_types, boolean_types) VALUES (1, 1, 1, 1, 1, '', 0.33, 0.33, 0.333333, 1), (2, 0, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', -9.2, -9.2, -9.292929, 0), (3, 255, 32767, 2147483647, 9223372036854775807, 'null', 2E35, 2E150, 2.929292E-100, 1), (4, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO type_table(id, byte_types, short_types, int_types, long_types, string_types, single_types, float_types, decimal_types, boolean_types, datetime_types) VALUES
+    (1, 1, 1, 1, 1, '', 0.33, 0.33, 0.333333, 1, '1999-01-08 10:23:54'),
+    (2, 0, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', -9.2, -9.2, -9.292929, 0, '1999-01-08 10:23:00'),
+    (3, 255, 32767, 2147483647, 9223372036854775807, 'null', 2E35, 2E150, 2.929292E-100, 1, '1999-01-08 10:23:00'),
+    (4, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT type_table OFF
 
 INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95'), (5, 'null');

@@ -112,16 +112,13 @@ namespace Azure.DataGateway.Service.Services
         /// </remarks>
         private static object PreParseLeaf(IMiddlewareContext context, string leafJson)
         {
-            if (context.Selection.Field.Type is ByteType)
+            return context.Selection.Field.Type switch
             {
-                return byte.Parse(leafJson);
-            }
-            else if (context.Selection.Field.Type is SingleType)
-            {
-                return Single.Parse(leafJson);
-            }
-
-            return leafJson;
+                ByteType => byte.Parse(leafJson),
+                SingleType => Single.Parse(leafJson),
+                DateTimeType => DateTime.Parse(leafJson),
+                _ => leafJson
+            };
         }
 
         public static bool RepresentsNullValue(JsonElement element)

@@ -91,6 +91,9 @@ namespace Azure.DataGateway.Service.Parsers
                         case TypeCode.Boolean:
                             type = EdmPrimitiveTypeKind.Boolean;
                             break;
+                        case TypeCode.DateTime:
+                            type = EdmPrimitiveTypeKind.Date;
+                            break;
                         default:
                             throw new ArgumentException($"Column type" +
                                 $" {columnSystemType.Name} not yet supported.");

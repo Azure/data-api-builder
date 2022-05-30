@@ -7,6 +7,7 @@ using Azure.DataGateway.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
+using HotChocolate.Types;
 using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLNaming;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
@@ -51,6 +52,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                         float value => new ObjectValueNode(new ObjectFieldNode("single", new SingleType().ParseValue(value))),
                         double value => new ObjectValueNode(new ObjectFieldNode("float", value)),
                         decimal value => new ObjectValueNode(new ObjectFieldNode("decimal", new FloatValueNode(value))),
+                        DateTime value => new ObjectValueNode(new ObjectFieldNode("datetime", new DateTimeType().ParseValue(DateTimeOffset.Parse(value.ToString())))),
                         _ => throw new DataGatewayException($"The type {column.DefaultValue.GetType()} is not supported as a GraphQL default value", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.GraphQLMapping)
                     };
 
@@ -130,6 +132,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                 TypeCode.Double => "Float",
                 TypeCode.Decimal => "Decimal",
                 TypeCode.Boolean => "Boolean",
+                TypeCode.DateTime => "DateTime",
                 _ => throw new DataGatewayException(
                         $"Column type {type} not handled by case. Please add a case resolving {type} to the appropriate GraphQL type",
                         HttpStatusCode.InternalServerError,

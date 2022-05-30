@@ -1,9 +1,9 @@
-using Azure.DataGateway.Service.Services;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
-using System;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
 {
@@ -12,7 +12,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     /// to retreive schema.
     /// </summary>
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
-    public class SqlMetadataProviderUnitTests:GraphQLMutationTestBase
+    public class SqlMetadataProviderUnitTests : GraphQLMutationTestBase
     {
         /// <summary>
         /// Verify we parse the connection string for the
@@ -74,9 +74,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Note: </code> This test is independent of DB, so any DB(POSTGRES,MSSQL,MYSQL) can be used.
         /// </summary>
         [TestMethod]
-        public async Task InsertMutation()
+        public async Task CheckNoExceptionForNoForiegnKey()
         {
-            SetCustomTestConfig("hawaii-config.NoFkTest.json");
+            SetCustomTestConfig("hawaii-config.NoFkTest.json"); // This Config file has no relationship between entities
 
             try
             {

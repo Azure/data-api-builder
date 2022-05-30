@@ -133,7 +133,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [DataRow(BOOLEAN_TYPE, "true")]
         [DataRow(BOOLEAN_TYPE, "false")]
         [DataRow(BOOLEAN_TYPE, "null")]
-        [DataRow(DATETIME_TYPE, "\"1999-01-08 10:23:54\"")]
+        [DataRow(DATETIME_TYPE, "\"1999-01-08 10:23:54+8:00\"")]
         [DataRow(DATETIME_TYPE, "\"1999-01-08 09:20:00\"")]
         [DataRow(DATETIME_TYPE, "null")]
         public async Task InsertIntoTypeColumn(string type, string value)
@@ -199,7 +199,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [DataRow(BOOLEAN_TYPE, "true")]
         [DataRow(BOOLEAN_TYPE, "false")]
         [DataRow(BOOLEAN_TYPE, "null")]
-        [DataRow(DATETIME_TYPE, "\"1999-01-08 10:23:54\"")]
+        [DataRow(DATETIME_TYPE, "\"1999-01-08 10:23:54+8:00\"")]
         [DataRow(DATETIME_TYPE, "\"1999-01-08 09:20:00\"")]
         [DataRow(DATETIME_TYPE, "null")]
         public async Task UpdateTypeColumn(string type, string value)
@@ -297,7 +297,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }
             else
             {
-                Assert.AreEqual(DateTime.Parse(expectedDateTime), DateTime.Parse(actualDateTime));
+                Assert.AreEqual(DateTimeOffset.Parse(expectedDateTime), DateTimeOffset.Parse(actualDateTime));
             }
         }
 

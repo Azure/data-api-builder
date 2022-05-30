@@ -52,7 +52,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                         float value => new ObjectValueNode(new ObjectFieldNode("single", new SingleType().ParseValue(value))),
                         double value => new ObjectValueNode(new ObjectFieldNode("float", value)),
                         decimal value => new ObjectValueNode(new ObjectFieldNode("decimal", new FloatValueNode(value))),
-                        DateTime value => new ObjectValueNode(new ObjectFieldNode("datetime", new DateTimeType().ParseValue(DateTimeOffset.Parse(value.ToString())))),
+                        DateTime value => new ObjectValueNode(new ObjectFieldNode("datetime", new DateTimeType().ParseResult(value))),
+                        DateTimeOffset value => new ObjectValueNode(new ObjectFieldNode("datetime", new DateTimeType().ParseResult(value))),
                         _ => throw new DataGatewayException($"The type {column.DefaultValue.GetType()} is not supported as a GraphQL default value", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.GraphQLMapping)
                     };
 

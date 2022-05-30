@@ -46,6 +46,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static string _defaultSchemaName;
         protected static string _defaultSchemaVersion;
         protected static IOptionsMonitor<RuntimeConfigPath> _runtimeConfigPath;
+        protected static string _customRuntimeConfig;
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run.
@@ -57,7 +58,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             _testCategory = testCategory;
 
-            _runtimeConfigPath = SqlTestHelper.LoadConfig($"{_testCategory}");
+            if (_customRuntimeConfig == null)
+            {
+                _runtimeConfigPath = SqlTestHelper.LoadConfig($"{_testCategory}");
+            }
+            else
+            {
+                _runtimeConfigPath = SqlTestHelper.LoadCustomConfig(_customRuntimeConfig);
+            }
+
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:
@@ -122,6 +131,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static async Task ResetDbStateAsync()
         {
             using DbDataReader _ = await _queryExecutor.ExecuteQueryAsync(File.ReadAllText($"{_testCategory}Books.sql"), parameters: null);
+        }
+
+        protected static void SetCustomTestConfig(string runtimeConfigFileName)
+        {
+            _customRuntimeConfig = runtimeConfigFileName;
         }
 
         /// <summary>

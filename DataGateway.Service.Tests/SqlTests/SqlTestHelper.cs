@@ -23,6 +23,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string configFileName = RuntimeConfigPath.GetFileNameForEnvironment(environment);
 
+            RuntimeConfigPath configPath = GetRuntimeConfigPath(configFileName);
+            configPath.SetRuntimeConfigValue();
+            AddMissingEntitiesToConfig(configPath);
+            return Mock.Of<IOptionsMonitor<RuntimeConfigPath>>(_ => _.CurrentValue == configPath);
+        }
+
+        public static RuntimeConfigPath GetRuntimeConfigPath(string configFileName)
+        {
             Dictionary<string, string> configFileNameMap = new()
             {
                 {
@@ -36,11 +44,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 .AddInMemoryCollection(configFileNameMap)
                 .Build();
 
-            RuntimeConfigPath configPath = config.Get<RuntimeConfigPath>();
-            configPath.SetRuntimeConfigValue();
-            AddMissingEntitiesToConfig(configPath);
-            return Mock.Of<IOptionsMonitor<RuntimeConfigPath>>(_ => _.CurrentValue == configPath);
+            return config.Get<RuntimeConfigPath>();
+        }
 
+        public static IOptionsMonitor<RuntimeConfigPath> LoadCustomConfig(string customRuntimeConfigFile)
+        {
+            RuntimeConfigPath configPath = GetRuntimeConfigPath(customRuntimeConfigFile);
+            configPath.SetRuntimeConfigValue();
+            return Mock.Of<IOptionsMonitor<RuntimeConfigPath>>(_ => _.CurrentValue == configPath);
         }
 
         /// <summary>
@@ -57,7 +68,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string magazineSource = configPath.ConfigValue.DatabaseType is DatabaseType.mysql ? "\"magazines\"" : "\"foo.magazines\"";
             string magazineEntityJsonString =
-              @"{ 
+              @"{
                     ""source"":  " + magazineSource + @",
                     ""graphql"": true,
                     ""permissions"": [

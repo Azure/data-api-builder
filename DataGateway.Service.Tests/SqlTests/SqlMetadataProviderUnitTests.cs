@@ -1,9 +1,13 @@
 using System;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
+using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Npgsql;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
 {
@@ -36,34 +40,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Sets up test fixture
-        /// </summary>
-        /// <param name="testCategory"></param>
-        public static async Task InitializeTestFixture(string testCategory)
-        {
-            await InitializeTestFixture(context: null, testCategory);
-            Console.WriteLine("Initialization Successful.");
-            // Setup GraphQL Components
-            _graphQLService = new GraphQLService(
-                _runtimeConfigPath,
-                _queryEngine,
-                _mutationEngine,
-                new DocumentCache(),
-                new Sha256DocumentHashProvider(),
-                _sqlMetadataProvider);
-            _graphQLController = new GraphQLController(_graphQLService);
-        }
-
-        /// <summary>
-        /// Clean up after completion of tests
-        /// </summary>
-        [TestCleanup]
-        public void TestCleanup()
-        {
-            SetCustomTestConfig(null);
-        }
-
-        /// <summary>
         /// <code>Do: </code> Fills the table definition with information of the foreign keys
         /// for all the tables based on the entities in runtimeConfig file.
         /// <code>Check: </code> Making sure no exception is thrown if there are no Foriegn Keys.
@@ -72,12 +48,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task CheckNoExceptionForNoForiegnKey()
         {
-            //SetCustomTestConfig("hawaii-config-test.PostgreSql.NoFk.json"); // This Config file has no relationship between entities
+            IQueryBuilder queryBuilder = new PostgresQueryBuilder();
+            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath = SqlTestHelper.LoadCustomConfig("hawaii-config-test.PostgreSql.NoFk.json");
+            DbExceptionParserBase dbExceptionParser = new PostgresDbExceptionParser();
+            IQueryExecutor queryExecutor = new QueryExecutor<NpgsqlConnection>(runtimeConfigPath, dbExceptionParser);
+            PostgreSqlMetadataProvider sqlMetadataProvider = new(runtimeConfigPath, queryExecutor, queryBuilder);
+
             Console.WriteLine("Custom Config file set successful.");
             try
             {
-                await InitializeTestFixture(TestCategory.POSTGRESQL);
-                Assert.Fail();
+                await sqlMetadataProvider.InitializeAsync();
             }
             catch (Exception ex)
             {

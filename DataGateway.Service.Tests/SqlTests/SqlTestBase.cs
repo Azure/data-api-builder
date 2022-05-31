@@ -58,14 +58,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             _testCategory = testCategory;
 
-            if (_customRuntimeConfig == null)
-            {
-                _runtimeConfigPath = SqlTestHelper.LoadConfig($"{_testCategory}");
-            }
-            else
-            {
-                _runtimeConfigPath = SqlTestHelper.LoadCustomConfig(_customRuntimeConfig);
-            }
+            _runtimeConfigPath = SqlTestHelper.LoadConfig($"{_testCategory}");
 
             Console.WriteLine("config file load successful.");
             switch (_testCategory)
@@ -139,11 +132,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static async Task ResetDbStateAsync()
         {
             using DbDataReader _ = await _queryExecutor.ExecuteQueryAsync(File.ReadAllText($"{_testCategory}Books.sql"), parameters: null);
-        }
-
-        protected static void SetCustomTestConfig(string runtimeConfigFileName)
-        {
-            _customRuntimeConfig = runtimeConfigFileName;
         }
 
         /// <summary>

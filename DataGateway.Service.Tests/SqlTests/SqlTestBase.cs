@@ -74,7 +74,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _queryBuilder = new PostgresQueryBuilder();
                     _defaultSchemaName = "public";
                     _dbExceptionParser = new PostgresDbExceptionParser();
+                    Console.WriteLine("bla-bla-1 successful.");
                     _queryExecutor = new QueryExecutor<NpgsqlConnection>(_runtimeConfigPath, _dbExceptionParser);
+                    Console.WriteLine("bla-bla-2 successful.");
                     _sqlMetadataProvider =
                         new PostgreSqlMetadataProvider(
                             _runtimeConfigPath,

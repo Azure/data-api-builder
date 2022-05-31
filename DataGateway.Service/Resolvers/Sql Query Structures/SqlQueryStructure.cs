@@ -533,7 +533,10 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     if (_ctx == null)
                     {
-                        throw new DataGatewayException("No GraphQL context exists", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
+                        throw new DataGatewayException(
+                            message: "No GraphQL context exists",
+                            statusCode: HttpStatusCode.InternalServerError,
+                            subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
                     }
 
                     IDictionary<string, object?> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);

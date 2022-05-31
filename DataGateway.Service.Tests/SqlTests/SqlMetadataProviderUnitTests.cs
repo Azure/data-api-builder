@@ -60,7 +60,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestCleanup]
         public void TestCleanup()
         {
-            _customRuntimeConfig = null;
+            SetCustomTestConfig(null);
         }
 
         /// <summary>
@@ -72,13 +72,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task CheckNoExceptionForNoForiegnKey()
         {
-            //await SetCustomTestConfig("hawaii-config.NoFkTest.json"); // This Config file has no relationship between entities
-            _customRuntimeConfig = "hawaii-config.NoFkTest.json";
+            SetCustomTestConfig("hawaii-config.NoFkTest.json"); // This Config file has no relationship between entities
             Console.WriteLine("Custom Config file set successful.");
             try
             {
                 await InitializeTestFixture(TestCategory.POSTGRESQL);
-                Assert.Fail();
             }
             catch (Exception ex)
             {

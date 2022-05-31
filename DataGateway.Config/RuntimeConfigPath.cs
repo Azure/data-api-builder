@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace Azure.DataGateway.Config
 {
     /// <summary>
@@ -31,6 +33,9 @@ namespace Azure.DataGateway.Config
             {
                 runtimeConfigJson = File.ReadAllText(ConfigFileName);
             }
+
+            Console.WriteLine("lets check");
+            Console.WriteLine(JsonSerializer.Serialize(runtimeConfigJson, new JsonSerializerOptions()));
 
             if (!string.IsNullOrEmpty(runtimeConfigJson))
             {

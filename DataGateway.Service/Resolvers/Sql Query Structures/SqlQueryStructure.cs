@@ -185,7 +185,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 // Similar to how we have added FilterPredicates above,
                 // we will add DbPolicyPredicates here.
-                ODataASTVisitor visitor = new(this,sqlMetadataProvider);
+                ODataASTVisitor visitor = new(this, sqlMetadataProvider);
                 try
                 {
                     DbPolicyPredicates = context.FilterClauseInDbPolicy.Expression.Accept<string>(visitor);

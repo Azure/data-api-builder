@@ -43,6 +43,12 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public string? FilterPredicates { get; set; }
 
+        /// <summary>
+        /// DbPolicyPredicates is a string that represents the filter portion of our query
+        /// in the WHERE Clause added by virtue of the database policy.
+        /// </summary>
+        public string? DbPolicyPredicates { get; set; }
+
         public BaseSqlQueryStructure(
             ISqlMetadataProvider sqlMetadataProvider,
             string entityName,

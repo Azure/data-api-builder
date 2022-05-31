@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Claims;
+using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
@@ -19,7 +23,7 @@ namespace Azure.DataGateway.Service.Authorization
     {
         private Dictionary<string, EntityMetadata> _entityPermissionMap = new();
         private const string WILDCARD = "*";
-        private static readonly HashSet<string> _validActions = new() { "Create", "Read", "Update", "Delete" };
+        private static readonly HashSet<string> _validActions = new() { "create", "read", "update", "delete" };
 
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
 
@@ -126,7 +130,48 @@ namespace Azure.DataGateway.Service.Authorization
         /// <inheritdoc />
         public bool DidProcessDBPolicy(string entityName, string roleName, string action, HttpContext httpContext)
         {
-            throw new NotImplementedException();
+            string dBpolicyWithClaimTypes = GetDBPolicyForRequest(entityName, roleName, action);
+            if (string.Empty.Equals(dBpolicyWithClaimTypes))
+            {
+                //No db policy specified in the config.
+                return true;
+            }
+
+            string dbPolicyWithClaimValues;
+            try
+            {
+                dbPolicyWithClaimValues = ProcessTokenClaimsForPolicy(dBpolicyWithClaimTypes, httpContext);
+            }
+            catch (DataGatewayException ex)
+            {
+                Console.WriteLine(ex.Message);
+                return false;
+            }
+
+            // Write policy to httpContext for use in downstream controllers/services.
+            httpContext.Items.Add(
+                    key: "X-DG-Policy",
+                    value: dbPolicyWithClaimValues
+                );
+            return true;
+        }
+
+        /// <summary>
+        /// Helper function to fetch the database policy associated with the current request based on the entity under
+        /// action, the role defined in the the request and the action to be executed.
+        /// </summary>
+        /// <param name="entityName">Entity from request</param>
+        /// <param name="roleName">Role defined in client role header</param>
+        /// <param name="action">Action type: create, read, update, delete</param>
+        /// <returns></returns>
+        private string GetDBPolicyForRequest(string entityName, string roleName, string action)
+        {
+            if (_entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action].policies.TryGetValue("Database", out string? dbPolicy))
+            {
+                return dbPolicy;
+            }
+
+            return string.Empty;
         }
 
         #region Helpers
@@ -178,11 +223,6 @@ namespace Azure.DataGateway.Service.Authorization
 
                                 if (actionObj.Policy is not null)
                                 {
-                                    if (actionObj.Policy.Request is not null)
-                                    {
-                                        actionToColumn.policies.Add(nameof(actionObj.Policy.Request), actionObj.Policy.Request);
-                                    }
-
                                     if (actionObj.Policy.Database is not null)
                                     {
                                         actionToColumn.policies.Add(nameof(actionObj.Policy.Database), actionObj.Policy.Database);
@@ -201,6 +241,11 @@ namespace Azure.DataGateway.Service.Authorization
             }
         }
 
+        /// <summary>
+        /// Helper method to check if the given actionName is valid/allowed.
+        /// </summary>
+        /// <param name="actionName">The actionName to be validated.</param>
+        /// <returns></returns>
         private static bool IsValidActionName(string actionName)
         {
             if (actionName.Equals(WILDCARD) || _validActions.Contains(actionName))
@@ -209,6 +254,125 @@ namespace Azure.DataGateway.Service.Authorization
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Helper method to process the given policy obtained from config, and convert it into an injectable format in
+        /// the HttpContext object by substituting/removing @claim./@item. directives.
+        /// </summary>
+        /// <param name="policy">The policy to be processed.</param>
+        /// <param name="context">HttpContext object used to extract all the claims available in the request.</param>
+        /// <returns>Processed policy string that can be injected into the HttpContext object.</returns>
+        private static string ProcessTokenClaimsForPolicy(string policy, HttpContext context)
+        {
+            Dictionary<string, Tuple<string, string>> claimsInRequestContext = new();
+            PopulateAllClaimsInReqCtxt(context, claimsInRequestContext);
+
+            //Process the policy string in 2 steps:
+            //1. Replace claim types with claim values
+            policy = GetPolicyWithClaimValues(policy, claimsInRequestContext);
+
+            //2. Replace @item.columnName by just the columnName.
+            policy = policy.Replace("@item.", "");
+
+            return policy;
+        }
+
+        /// <summary>
+        /// Helper method to extract all claims available in the HttpContext object and
+        /// add them all in the claimsInRequestContext dictionary which is used later for quick lookup
+        /// of different claimTypes and their corresponding claimValues.
+        /// </summary>
+        /// <param name="context">HttpContext object used to extract all the claims available in the request.</param>
+        /// <param name="claimsInRequestContext">Dictionary to hold all the claims available in the request.</param>
+        private static void PopulateAllClaimsInReqCtxt(HttpContext context, Dictionary<string, Tuple<string, string>> claimsInRequestContext)
+        {
+            ClaimsIdentity? identity = (ClaimsIdentity?)context.User.Identity;
+
+            if (identity == null)
+            {
+                return;
+            }
+
+            foreach (Claim claim in identity.Claims)
+            {
+                string type = claim.Type;
+                string value = claim.Value;
+                string valueType = claim.ValueType;
+                claimsInRequestContext.Add(type, new(value, valueType));
+            }
+        }
+
+        /// <summary>
+        /// Helper method to substitute all the claimTypes in the policy string with their corresponding
+        /// claimValues.
+        /// </summary>
+        /// <param name="policy">The policy to be processed.</param>
+        /// <param name="claimsInRequestContext">Dictionary holding all the claims available in the request.</param>
+        /// <returns></returns>
+        /// <exception cref="DataGatewayException"></exception>
+        private static string GetPolicyWithClaimValues(string policy, Dictionary<string, Tuple<string, string>> claimsInRequestContext)
+        {
+            string claimCharsRgx = @"@claims\.[^\s\)$]*"; //Regex used to extract all claimTypes in policy
+            string invalidChars = @"[^a-zA-Z0-9_\.]+";  //Regex to check if extracted claimType is invalid
+            Regex invalidCharsRgx = new(invalidChars, RegexOptions.Compiled);
+
+            //Find all the claimTypes from the policy
+            MatchCollection claimTypes = Regex.Matches(policy, claimCharsRgx);
+
+            StringBuilder policyWithClaims = new(policy.Length);
+            int parsedIdx = 0;
+            foreach (Match claimType in claimTypes)
+            {
+                string type = claimType.Value;
+
+                //Remove the prefix @claims. from the claimType
+                type = type.Substring("@claims.".Length);
+
+                if (invalidCharsRgx.IsMatch(type))
+                {
+                    // Not a valid claimType containing allowed characters
+                    throw new DataGatewayException(
+                        message: $"Invalid claim Type format supplied in policy.",
+                        statusCode: System.Net.HttpStatusCode.InternalServerError,
+                        subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError
+                        );
+                }
+
+                if (claimsInRequestContext.TryGetValue(type, out Tuple<string, string>? claim))
+                {
+                    string claimValue = claim.Item1;
+                    string claimValueType = claim.Item2;
+                    int claimIdx = claimType.Index;
+                    policyWithClaims.Append(policy.Substring(parsedIdx, claimIdx - parsedIdx));
+                    if (claimValueType.Equals(ClaimValueTypes.String))
+                    {
+                        policyWithClaims.Append($"'{ claimValue }'");
+                    }
+                    else
+                    {
+                        policyWithClaims.Append(claimValue);
+                    }
+
+                    parsedIdx = claimIdx + claimType.Value.Length;
+                }
+                else
+                {
+                    // User lacks a claim which is required to perform the action.
+                    throw new DataGatewayException(
+                        message: "User does not possess all the claims required to perform this action.",
+                        statusCode: System.Net.HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
+                        );
+                }
+            }
+
+            if (parsedIdx < policy.Length)
+            {
+                policyWithClaims.Append(policy.Substring(parsedIdx));
+            }
+
+            return policyWithClaims.ToString();
         }
         #endregion
     }

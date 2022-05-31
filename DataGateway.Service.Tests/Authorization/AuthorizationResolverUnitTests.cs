@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Claims;
 using System.Text.Json;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
+using Azure.DataGateway.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
@@ -17,7 +19,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
     {
         private const string TEST_ENTITY = "SampleEntity";
         private const string TEST_ROLE = "Writer";
-        private const string TEST_ACTION = "Create";
+        private const string TEST_ACTION = "create";
 
         #region Role Context Tests
         /// <summary>
@@ -64,7 +66,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             context.SetupGet(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(multipleValuesForHeader);
             context.Setup(x => x.User.IsInRole("Reader")).Returns(true);
             bool expected = false;
-
             Assert.AreEqual(authZResolver.IsValidRoleContext(context.Object), expected);
         }
 
@@ -90,9 +91,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// Request Action does not match an action defined for role (role has >=1 defined action) -> INVALID
         /// </summary>
         [DataTestMethod]
-        [DataRow("Writer", "Create", "Writer", "Create", true)]
-        [DataRow("Reader", "Create", "Reader", "", false)]
-        [DataRow("Writer", "Create", "Writer", "Update", false)]
+        [DataRow("Writer", "create", "Writer", "create", true)]
+        [DataRow("Reader", "create", "Reader", "", false)]
+        [DataRow("Writer", "create", "Writer", "update", false)]
         public void AreRoleAndActionDefinedForEntityTest(
             string configRole,
             string configAction,
@@ -342,6 +343,122 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(TEST_ENTITY, TEST_ROLE, TEST_ACTION, columns), expected);
         }
         #endregion
+
+        #region Tests to validate Database policy parsing
+
+        [DataTestMethod]
+        [DataRow("@claims.user_email ne @item.col1 and @claims.contact_no eq @item.col2 and not(@claims.name eq @item.col3)",
+            "'xyz@microsoft.com' ne col1 and 1234 eq col2 and not('Aaron' eq col3)")]
+        [DataRow("(@claims.isemployee eq @item.col1 and @item.col2 ne @claims.user_email) or" +
+            " ('David' ne @item.col3 and @claims.contact_no ne 4321)", "(true eq col1 and col2 ne 'xyz@microsoft.com') or" +
+            " ('David' ne col3 and 1234 ne 4321)")]
+        [DataRow("@item.rating gt @claims.emprating and @claims.isemployee eq true", "rating gt 4.2 and true eq true")]
+
+        public void ParseDatabasePolicy(string policy,string parsedPolicy)
+        {
+            RuntimeConfig runtimeConfig = InitRuntimeConfig(
+                TEST_ENTITY,
+                TEST_ROLE,
+                TEST_ACTION,
+                includedCols: new string[] { "col1", "col2", "col3" },
+                databasePolicy: policy
+                );
+            AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
+
+            Mock<HttpContext> context = new();
+
+            //Add identity object to the Mock context object.
+            ClaimsIdentity identity = new("Auth", "Name", "Role");
+            identity.AddClaim(new Claim("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
+            identity.AddClaim(new Claim("name", "Aaron", ClaimValueTypes.String));
+            identity.AddClaim(new Claim("contact_no", "1234", ClaimValueTypes.Integer64));
+            identity.AddClaim(new Claim("isemployee", "true", ClaimValueTypes.Boolean));
+            identity.AddClaim(new Claim("emprating", "4.2", ClaimValueTypes.Double));
+            ClaimsPrincipal principal = new(identity);
+            context.Setup(x => x.User).Returns(principal);
+
+            //Initiliaze Items dictionary within the Mock object.
+            context.Setup(x => x.Items).Returns(new Dictionary<object, object>());
+
+            authZResolver.DidProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_ACTION, context.Object);
+            Assert.AreEqual(context.Object.Items["X-DG-Policy"], parsedPolicy);
+        }
+
+        [DataTestMethod]
+        [DataRow("@claims.user_email eq @item.col1 and @claims.emprating eq @item.rating")]
+        [DataRow("@claims.user_email eq @item.col1 and not ( true eq @claims.isemployee or @claims.name eq 'Aaron')")]
+        public void UserNotPossessingAllClaimsRequiredByPolicy(string policy)
+        {
+            RuntimeConfig runtimeConfig = InitRuntimeConfig(
+                TEST_ENTITY,
+                TEST_ROLE,
+                TEST_ACTION,
+                includedCols: new string[] { "col1", "col2", "col3" },
+                databasePolicy: policy
+                );
+            AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
+
+            Mock<HttpContext> context = new();
+
+            //Add identity object to the Mock context object.
+            ClaimsIdentity identity = new("Auth", "Name", "Role");
+            identity.AddClaim(new Claim("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
+            identity.AddClaim(new Claim("isemployee", "true", ClaimValueTypes.Boolean));
+            ClaimsPrincipal principal = new(identity);
+            context.Setup(x => x.User).Returns(principal);
+
+            //Initiliaze Items dictionary within the Mock object.
+            context.Setup(x => x.Items).Returns(new Dictionary<object, object>());
+
+            try
+            {
+                authZResolver.DidProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_ACTION, context.Object);
+            }
+            catch(DataGatewayException ex)
+            {
+                int expectedStatusCode = 400;
+                Assert.AreEqual(expectedStatusCode, ex.StatusCode);
+                Assert.AreEqual("User does not possess all the claims required to perform this action.", ex.Message);
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow("@claims.user_email eq @item.col1 and @claims.emp/rating eq @item.col2")]
+        [DataRow("@claims.user_email eq @item.col1 and not ( true eq @claims.isemp%loyee or @claims.name eq 'Aaron')")]
+        [DataRow("@claims.user+email eq @item.col1 and @claims.isemployee eq @item.col2")]
+        public void InvalidClaimTypeFormatSuppliedInPolicy(string policy)
+        {
+            RuntimeConfig runtimeConfig = InitRuntimeConfig(
+                TEST_ENTITY,
+                TEST_ROLE,
+                TEST_ACTION,
+                includedCols: new string[] { "col1", "col2", "col3" },
+                databasePolicy: policy
+                );
+            AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
+
+            Mock<HttpContext> context = new();
+            //Add identity object to the Mock context object.
+            ClaimsIdentity identity = new("Auth", "Name", "Role");
+            identity.AddClaim(new Claim("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
+            identity.AddClaim(new Claim("isemployee", "true", ClaimValueTypes.Boolean));
+            ClaimsPrincipal principal = new(identity);
+            context.Setup(x => x.User).Returns(principal);
+
+            //Initiliaze Items dictionary within the Mock object.
+            context.Setup(x => x.Items).Returns(new Dictionary<object, object>());
+            try
+            {
+                authZResolver.DidProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_ACTION, context.Object);
+            }
+            catch (DataGatewayException ex)
+            {
+                int expectedStatusCode = 500;
+                Assert.AreEqual(expectedStatusCode, ex.StatusCode);
+                Assert.AreEqual("Invalid claim Type format supplied in policy.", ex.Message);
+            }
+        }
+        #endregion
         #region Helpers
         private static AuthorizationResolver InitAuthZResolver(RuntimeConfig runtimeConfig)
         {
@@ -358,7 +475,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         private static RuntimeConfig InitRuntimeConfig(
             string entityName = "SampleEntity",
             string roleName = "Reader",
-            string actionName = "Create",
+            string actionName = "create",
             string[] includedCols = null,
             string[] excludedCols = null,
             string requestPolicy = null,

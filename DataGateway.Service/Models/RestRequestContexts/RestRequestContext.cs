@@ -48,6 +48,11 @@ namespace Azure.DataGateway.Service.Models
         public virtual FilterClause? FilterClauseInUrl { get; set; }
 
         /// <summary>
+        /// AST that represents the filter part added to the query because of database policy.
+        /// </summary>
+        public virtual FilterClause? FilterClauseInDbPolicy { get; set; }
+
+        /// <summary>
         /// List of OrderBy Columns which represent the OrderByClause from the URL.
         /// Based on the operation type, this property may or may not be populated.
         /// </summary>
@@ -63,6 +68,11 @@ namespace Azure.DataGateway.Service.Models
         /// NVC stores the query string parsed into a NameValueCollection.
         /// </summary>
         public NameValueCollection? ParsedQueryString { get; set; } = new();
+
+        /// <summary>
+        /// NVC stores the database policy string parsed into a NameValueCollection.
+        /// </summary>
+        public NameValueCollection? ParsedDbPolicyString { get; set; } = new();
 
         /// <summary>
         /// String holds information needed for pagination.

@@ -125,6 +125,20 @@ namespace Azure.DataGateway.Service.Services
                     _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey);
             }
 
+            if (GetHttpContext().Items != null && GetHttpContext().Items.TryGetValue("X-DG-Policy", out object? val))
+            {
+                string? dbPolicy = val!.ToString();
+
+                // Since dbPolicy is nothing but filters to be added by virtue of database policy, we prefix it with
+                // ?$filter= so that it conforms with the format followed by other filter predicates.
+                dbPolicy = "?$filter=" + dbPolicy;
+                context.ParsedDbPolicyString = HttpUtility.ParseQueryString(dbPolicy);
+                RequestParser.ParseDbPolicyString(
+                context,
+                _sqlMetadataProvider.GetODataFilterParser(),
+                _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey);
+            }
+
             // At this point for DELETE, the primary key should be populated in the Request Context.
             RequestValidator.ValidateRequestContext(context, _sqlMetadataProvider);
 

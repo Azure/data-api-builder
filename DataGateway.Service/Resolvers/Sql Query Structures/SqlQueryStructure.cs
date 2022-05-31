@@ -182,6 +182,23 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
+            if (context.FilterClauseInDbPolicy is not null)
+            {
+                // Similar to how we have added FilterPredicates above,
+                // we will add DbPolicyPredicates here.
+                ODataASTVisitor visitor = new(this,sqlMetadataProvider);
+                try
+                {
+                    DbPolicyPredicates = context.FilterClauseInDbPolicy.Expression.Accept<string>(visitor);
+                }
+                catch
+                {
+                    throw new DataGatewayException(message: "$policy query parameter is not well formed.",
+                                                   statusCode: HttpStatusCode.BadRequest,
+                                                   subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                }
+            }
+
             if (!string.IsNullOrWhiteSpace(context.After))
             {
                 AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromJsonString(context.After, PaginationMetadata));

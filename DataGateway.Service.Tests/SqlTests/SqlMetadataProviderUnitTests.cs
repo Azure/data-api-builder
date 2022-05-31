@@ -42,7 +42,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public static async Task InitializeTestFixture(string testCategory)
         {
             await InitializeTestFixture(context: null, testCategory);
-
+            Console.WriteLine("Initialization Successful.");
             // Setup GraphQL Components
             _graphQLService = new GraphQLService(
                 _runtimeConfigPath,

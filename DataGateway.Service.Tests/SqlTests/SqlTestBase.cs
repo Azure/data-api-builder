@@ -67,6 +67,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _runtimeConfigPath = SqlTestHelper.LoadCustomConfig(_customRuntimeConfig);
             }
 
+            Console.WriteLine("config file load successful.");
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:
@@ -102,6 +103,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     break;
             }
 
+            Console.WriteLine("_sqlMetadataProvider successful");
+
             // Setup AuthorizationService to always return Authorized.
             _authorizationService = new Mock<IAuthorizationService>();
             _authorizationService.Setup(x => x.AuthorizeAsync(
@@ -124,8 +127,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _queryExecutor,
                 _queryBuilder,
                 _sqlMetadataProvider);
+            Console.WriteLine("query engine successful");
             await ResetDbStateAsync();
+            Console.WriteLine("resetDBaysnc successful");
             await _sqlMetadataProvider.InitializeAsync();
+            Console.WriteLine("InitializeAsync successful");
         }
 
         protected static async Task ResetDbStateAsync()

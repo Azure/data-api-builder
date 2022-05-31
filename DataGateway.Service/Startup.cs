@@ -29,6 +29,7 @@ namespace Azure.DataGateway.Service
 {
     public class Startup
     {
+        readonly string _allowAllOrigins = "_allowAllOrigins";
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -197,6 +198,20 @@ namespace Azure.DataGateway.Service
 
             ConfigureAuthentication(services);
 
+            // Configure CORS
+            services.AddCors(options =>
+            {
+                options.AddPolicy(name: _allowAllOrigins,
+                                  policy =>
+                                  {
+                                      policy.WithOrigins("*")
+                                      .AllowAnyHeader()
+                                      .AllowAnyMethod();
+                                      //("POST");
+                                  });
+            });
+
+
             services.AddAuthorization();
             services.AddSingleton<IAuthorizationHandler, RequestAuthorizationHandler>();
             services.AddControllers();
@@ -236,6 +251,11 @@ namespace Azure.DataGateway.Service
             app.UseHttpsRedirection();
 
             app.UseRouting();
+
+            //
+            app.UseCors(_allowAllOrigins);
+            //
+
             app.Use(async (context, next) =>
             {
                 bool isSettingConfig = context.Request.Path.StartsWithSegments("/configuration")

@@ -150,7 +150,7 @@ namespace Azure.DataGateway.Service.Parsers
                     throw new DataGatewayException(
                         message: "OrderBy property is not supported.",
                         statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode:DataGatewayException.SubStatusCodes.BadRequest);
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
                 else
                 {

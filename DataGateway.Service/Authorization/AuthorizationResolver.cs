@@ -347,7 +347,7 @@ namespace Azure.DataGateway.Service.Authorization
                     policyWithClaims.Append(policy.Substring(parsedIdx, claimIdx - parsedIdx));
                     if (claimValueType.Equals(ClaimValueTypes.String))
                     {
-                        policyWithClaims.Append($"'{ claimValue }'");
+                        policyWithClaims.Append($"'{claimValue}'");
                     }
                     else
                     {

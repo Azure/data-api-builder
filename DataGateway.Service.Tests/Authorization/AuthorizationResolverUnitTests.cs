@@ -354,7 +354,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             " ('David' ne col3 and 1234 ne 4321)")]
         [DataRow("@item.rating gt @claims.emprating and @claims.isemployee eq true", "rating gt 4.2 and true eq true")]
 
-        public void ParseDatabasePolicy(string policy,string parsedPolicy)
+        public void ParseDatabasePolicy(string policy, string parsedPolicy)
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
                 TEST_ENTITY,
@@ -414,7 +414,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             {
                 authZResolver.DidProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_ACTION, context.Object);
             }
-            catch(DataGatewayException ex)
+            catch (DataGatewayException ex)
             {
                 int expectedStatusCode = 400;
                 Assert.AreEqual(expectedStatusCode, ex.StatusCode);

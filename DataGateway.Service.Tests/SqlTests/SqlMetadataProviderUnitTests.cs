@@ -1,10 +1,10 @@
 using System;
+using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
-using HotChocolate.Language;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Npgsql;
@@ -48,8 +48,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task CheckNoExceptionForNoForiegnKey()
         {
+            string customRuntimeTestConfig = "hawaii-config-test.PostgreSql.NoFk.json";
+            
+            string originalJsonString = File.ReadAllText(RuntimeConfigPath.GetFileNameForEnvironment(TestCategory.POSTGRESQL));
+            JsonSerializerOptions options = RuntimeConfig.GetDeserializationOptions();
+
+            RuntimeConfig originalRuntimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(originalJsonString, options);
+
+            string customJsonString = File.ReadAllText(customRuntimeTestConfig);
+
+            RuntimeConfig customRuntimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(customJsonString, options);
+            customRuntimeConfig.ConnectionString = originalRuntimeConfig.ConnectionString;
+            string updatedJson = JsonSerializer.Serialize(customRuntimeConfig, options);
+            File.WriteAllText(customRuntimeTestConfig, updatedJson);
+
             IQueryBuilder queryBuilder = new PostgresQueryBuilder();
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath = SqlTestHelper.LoadCustomConfig("hawaii-config-test.PostgreSql.NoFk.json");
+            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath = SqlTestHelper.LoadCustomConfig(customRuntimeTestConfig);
             DbExceptionParserBase dbExceptionParser = new PostgresDbExceptionParser();
             IQueryExecutor queryExecutor = new QueryExecutor<NpgsqlConnection>(runtimeConfigPath, dbExceptionParser);
             PostgreSqlMetadataProvider sqlMetadataProvider = new(runtimeConfigPath, queryExecutor, queryBuilder);

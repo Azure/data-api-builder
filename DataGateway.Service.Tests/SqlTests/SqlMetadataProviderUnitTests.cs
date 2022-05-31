@@ -55,6 +55,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Clean up after completion of tests
+        /// </summary>
+        [TestCleanup]
+        public async Task TestCleanup()
+        {
+            SetCustomTestConfig(null);
+        }
+
+        /// <summary>
         /// <code>Do: </code> Fills the table definition with information of the foreign keys
         /// for all the tables based on the entities in runtimeConfig file.
         /// <code>Check: </code> Making sure no exception is thrown if there are no Foriegn Keys.
@@ -63,7 +72,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task CheckNoExceptionForNoForiegnKey()
         {
-            //SetCustomTestConfig("hawaii-config.NoFkTest.json"); // This Config file has no relationship between entities
+            SetCustomTestConfig("hawaii-config.NoFkTest.json"); // This Config file has no relationship between entities
             Console.WriteLine("Custom Config file set successful.");
             try
             {

@@ -141,7 +141,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             using DbDataReader _ = await _queryExecutor.ExecuteQueryAsync(File.ReadAllText($"{_testCategory}Books.sql"), parameters: null);
         }
 
-        protected static void SetCustomTestConfig(string runtimeConfigFileName)
+        protected static async void SetCustomTestConfig(string runtimeConfigFileName)
         {
             _customRuntimeConfig = runtimeConfigFileName;
         }

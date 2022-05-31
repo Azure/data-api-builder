@@ -5,7 +5,6 @@ using System.Data.Common;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Microsoft.Extensions.Options;
-using System.Text.Json;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -20,17 +19,13 @@ namespace Azure.DataGateway.Service.Resolvers
 
         public QueryExecutor(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath, DbExceptionParserBase dbExceptionParser)
         {
-            Console.WriteLine("bla-bla-11");
-            Console.WriteLine(JsonSerializer.Serialize(runtimeConfigPath, new JsonSerializerOptions()));
-            Console.WriteLine(JsonSerializer.Serialize(runtimeConfigPath.CurrentValue, new JsonSerializerOptions()));
             runtimeConfigPath.CurrentValue.
                 ExtractConfigValues(
                     out _,
                     out _connectionString,
                     out _);
-            Console.WriteLine("bla-bla-12");
+
             _dbExceptionParser = dbExceptionParser;
-            Console.WriteLine("bla-bla-13");
         }
 
         /// <summary>

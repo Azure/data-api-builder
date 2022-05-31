@@ -1,6 +1,4 @@
 using System;
-using System.IO;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Resolvers;
@@ -48,27 +46,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task CheckNoExceptionForNoForiegnKey()
         {
-            string customRuntimeTestConfig = "hawaii-config-test.PostgreSql.NoFk.json";
-            
-            string originalJsonString = File.ReadAllText(RuntimeConfigPath.GetFileNameForEnvironment(TestCategory.POSTGRESQL));
-            JsonSerializerOptions options = RuntimeConfig.GetDeserializationOptions();
-
-            RuntimeConfig originalRuntimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(originalJsonString, options);
-
-            string customJsonString = File.ReadAllText(customRuntimeTestConfig);
-
-            RuntimeConfig customRuntimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(customJsonString, options);
-            customRuntimeConfig.ConnectionString = originalRuntimeConfig.ConnectionString;
-            string updatedJson = JsonSerializer.Serialize(customRuntimeConfig, options);
-            File.WriteAllText(customRuntimeTestConfig, updatedJson);
+            string customRuntimeTestConfig = "hawaii-config-test.PostgreSql.NoFk.json"; //custom test config containing entities with no relationship.
 
             IQueryBuilder queryBuilder = new PostgresQueryBuilder();
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath = SqlTestHelper.LoadCustomConfig(customRuntimeTestConfig);
+            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath = SqlTestHelper.LoadCustomConfig(customRuntimeTestConfig, TestCategory.POSTGRESQL);
             DbExceptionParserBase dbExceptionParser = new PostgresDbExceptionParser();
             IQueryExecutor queryExecutor = new QueryExecutor<NpgsqlConnection>(runtimeConfigPath, dbExceptionParser);
             PostgreSqlMetadataProvider sqlMetadataProvider = new(runtimeConfigPath, queryExecutor, queryBuilder);
 
-            Console.WriteLine("Custom Config file set successful.");
+            Console.WriteLine("Custom Config file set successfully.");
             try
             {
                 await sqlMetadataProvider.InitializeAsync();

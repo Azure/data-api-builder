@@ -46,7 +46,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static string _defaultSchemaName;
         protected static string _defaultSchemaVersion;
         protected static IOptionsMonitor<RuntimeConfigPath> _runtimeConfigPath;
-        protected static string _customRuntimeConfig;
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run.
@@ -59,17 +58,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _testCategory = testCategory;
 
             _runtimeConfigPath = SqlTestHelper.LoadConfig($"{_testCategory}");
-
-            Console.WriteLine("config file load successful.");
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:
                     _queryBuilder = new PostgresQueryBuilder();
                     _defaultSchemaName = "public";
                     _dbExceptionParser = new PostgresDbExceptionParser();
-                    Console.WriteLine("bla-bla-1 successful.");
                     _queryExecutor = new QueryExecutor<NpgsqlConnection>(_runtimeConfigPath, _dbExceptionParser);
-                    Console.WriteLine("bla-bla-2 successful.");
                     _sqlMetadataProvider =
                         new PostgreSqlMetadataProvider(
                             _runtimeConfigPath,
@@ -98,8 +93,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     break;
             }
 
-            Console.WriteLine("_sqlMetadataProvider successful");
-
             // Setup AuthorizationService to always return Authorized.
             _authorizationService = new Mock<IAuthorizationService>();
             _authorizationService.Setup(x => x.AuthorizeAsync(
@@ -122,11 +115,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _queryExecutor,
                 _queryBuilder,
                 _sqlMetadataProvider);
-            Console.WriteLine("query engine successful");
             await ResetDbStateAsync();
-            Console.WriteLine("resetDBaysnc successful");
             await _sqlMetadataProvider.InitializeAsync();
-            Console.WriteLine("InitializeAsync successful");
         }
 
         protected static async Task ResetDbStateAsync()

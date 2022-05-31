@@ -47,12 +47,36 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             return config.Get<RuntimeConfigPath>();
         }
 
-        public static IOptionsMonitor<RuntimeConfigPath> LoadCustomConfig(string customRuntimeConfigFile)
+        /// <summary>
+        /// Helper function to load custom runtime config files.
+        /// </summary>
+        public static IOptionsMonitor<RuntimeConfigPath> LoadCustomConfig(string customRuntimeConfigFile, string testCategory)
         {
+            UpdateConnectionStringForCustomConfig(customRuntimeConfigFile, testCategory);
             RuntimeConfigPath configPath = GetRuntimeConfigPath(customRuntimeConfigFile);
-            Console.WriteLine("ConfigPath successful");
             configPath.SetRuntimeConfigValue();
             return Mock.Of<IOptionsMonitor<RuntimeConfigPath>>(_ => _.CurrentValue == configPath);
+        }
+
+        /// <summary>
+        /// Temporary Helper function to ensure that all custom configs
+        /// have the required connection string as the original one
+        /// to run locally as well as remotely.
+        /// It first gets the connection string from the original config file and set it in the custom config.
+        /// </summary>
+        public static void UpdateConnectionStringForCustomConfig(string customRuntimeTestConfig, string testCategory)
+        {
+            string originalJsonString = File.ReadAllText(RuntimeConfigPath.GetFileNameForEnvironment(testCategory));
+            JsonSerializerOptions options = RuntimeConfig.GetDeserializationOptions();
+
+            RuntimeConfig originalRuntimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(originalJsonString, options);
+
+            string customJsonString = File.ReadAllText(customRuntimeTestConfig);
+
+            RuntimeConfig customRuntimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(customJsonString, options);
+            customRuntimeConfig.ConnectionString = originalRuntimeConfig.ConnectionString;
+            string updatedConfig = JsonSerializer.Serialize(customRuntimeConfig, options);
+            File.WriteAllText(customRuntimeTestConfig, updatedConfig);
         }
 
         /// <summary>

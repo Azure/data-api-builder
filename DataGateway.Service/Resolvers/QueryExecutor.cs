@@ -19,13 +19,15 @@ namespace Azure.DataGateway.Service.Resolvers
 
         public QueryExecutor(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath, DbExceptionParserBase dbExceptionParser)
         {
+            Console.WriteLine("bla-bla-11");
             runtimeConfigPath.CurrentValue.
                 ExtractConfigValues(
                     out _,
                     out _connectionString,
                     out _);
-
+            Console.WriteLine("bla-bla-12");
             _dbExceptionParser = dbExceptionParser;
+            Console.WriteLine("bla-bla-13");
         }
 
         /// <summary>

@@ -144,6 +144,13 @@ namespace Azure.DataGateway.Service.Authorization
                     string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
                     IEnumerable<string> actions = HttpVerbToActions(httpContext.Request.Method);
 
+                    // Delete operations do not have column level restrictions.
+                    // If the operation is allowed for the role, the column requirement is implicitly successful.
+                    if (actions.Contains("delete"))
+                    {
+                        context.Succeed(requirement);
+                    }
+
                     if (restContext.TryCalculateCumulativeColumns())
                     {
                         // Two actions must be checked when HTTP operation is PUT or PATCH.
@@ -155,7 +162,7 @@ namespace Azure.DataGateway.Service.Authorization
 
                             // No cumulative columns indicates that this is a FindMany request.
                             // To resolve columns to return, check permissions for role.
-                            if (restContext.CumulativeColumns.Count == 0)
+                            if (restContext.OperationType == Operation.Find)
                             {
                                 columnsToCheck = _authorizationResolver.GetAllowedColumns(entityName, roleName, action);
                             }
@@ -167,10 +174,10 @@ namespace Azure.DataGateway.Service.Authorization
                             if (_authorizationResolver.AreColumnsAllowedForAction(entityName, roleName, action, columnsToCheck))
                             {
                                 // This check catches the FindMany variant with no filters or column references.
-                                if (restContext.FieldsToBeReturned.Count == 0 && restContext.IsMany)
+                                if (restContext.FieldsToBeReturned.Count == 0 && (restContext.IsMany || restContext.OperationType == Operation.Find))
                                 {
                                     // Union performed to avoid duplicate field names in FieldsToBeReturned.
-                                    restContext.FieldsToBeReturned.Union(columnsToCheck);
+                                    restContext.FieldsToBeReturned = restContext.FieldsToBeReturned.Union(columnsToCheck).ToList();
                                 }
                             }
                             else

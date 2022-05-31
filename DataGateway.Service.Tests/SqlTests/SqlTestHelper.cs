@@ -50,6 +50,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public static IOptionsMonitor<RuntimeConfigPath> LoadCustomConfig(string customRuntimeConfigFile)
         {
             RuntimeConfigPath configPath = GetRuntimeConfigPath(customRuntimeConfigFile);
+            Console.WriteLine("ConfigPath successful");
             configPath.SetRuntimeConfigValue();
             return Mock.Of<IOptionsMonitor<RuntimeConfigPath>>(_ => _.CurrentValue == configPath);
         }

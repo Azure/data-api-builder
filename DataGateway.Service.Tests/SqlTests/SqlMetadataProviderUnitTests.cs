@@ -67,7 +67,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             Console.WriteLine("Custom Config file set successful.");
             try
             {
-                await InitializeTestFixture(TestCategory.MSSQL);
+                await InitializeTestFixture(TestCategory.POSTGRESQL);
             }
             catch (Exception ex)
             {

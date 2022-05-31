@@ -1,4 +1,5 @@
 using System;
+using System.IO.Abstractions;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using Azure.DataGateway.Service.Services.MetadataProviders;
 using HotChocolate.Language;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -59,24 +61,6 @@ namespace Azure.DataGateway.Service
             }
 
             services.AddSingleton<RuntimeConfigValidator>();
-            services.AddSingleton<IGraphQLMetadataProvider>(implementationFactory: (serviceProvider) =>
-            {
-                IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
-                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
-                RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
-
-                switch (runtimeConfig.DatabaseType)
-                {
-                    case DatabaseType.cosmos:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<GraphQLFileMetadataProvider>(serviceProvider);
-                    case DatabaseType.mssql:
-                    case DatabaseType.postgresql:
-                    case DatabaseType.mysql:
-                        return null!;
-                    default:
-                        throw new NotSupportedException(runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
-                }
-            });
 
             services.AddSingleton<CosmosClientProvider>();
 
@@ -171,7 +155,7 @@ namespace Azure.DataGateway.Service
                 switch (runtimeConfig.DatabaseType)
                 {
                     case DatabaseType.cosmos:
-                        return null!;
+                        return ActivatorUtilities.GetServiceOrCreateInstance<CosmosSqlMetadataProvider>(serviceProvider);
                     case DatabaseType.mssql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlMetadataProvider>(serviceProvider);
                     case DatabaseType.postgresql:
@@ -208,6 +192,7 @@ namespace Azure.DataGateway.Service
             services.AddSingleton<IDocumentCache, DocumentCache>();
             services.AddSingleton<GraphQLService>();
             services.AddSingleton<RestService>();
+            services.AddSingleton<IFileSystem, FileSystem>();
 
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
@@ -282,14 +267,10 @@ namespace Azure.DataGateway.Service
             });
             app.UseAuthentication();
 
-            // Conditionally add EasyAuth middleware if no JwtAuth configuration supplied.
-            if (runtimeConfig is not null && runtimeConfig.IsEasyAuthAuthenticationProvider())
+            // Conditionally add authentication middleware in Production Mode
+            if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Mode != HostModeType.Development)
             {
-                app.UseEasyAuthMiddleware();
-            }
-            else
-            {
-                app.UseJwtAuthenticationMiddleware();
+                app.UseAuthenticationMiddleware();
             }
 
             app.UseAuthorization();
@@ -364,6 +345,13 @@ namespace Azure.DataGateway.Service
                     options.Audience = runtimeConfig.AuthNConfig.Jwt!.Audience;
                     options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
                 });
+            }
+            else if (runtimeConfig != null &&
+                runtimeConfig.AuthNConfig != null &&
+                runtimeConfig.IsEasyAuthAuthenticationProvider())
+            {
+                services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
+                    .AddEasyAuthAuthentication();
             }
         }
     }

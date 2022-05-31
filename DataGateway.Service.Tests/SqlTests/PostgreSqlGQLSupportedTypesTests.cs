@@ -27,7 +27,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _runtimeConfigPath,
                 _queryEngine,
                 _mutationEngine,
-                graphQLMetadataProvider: null,
                 new DocumentCache(),
                 new Sha256DocumentHashProvider(),
                 _sqlMetadataProvider);
@@ -36,7 +35,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         protected override string MakeQueryOnTypeTable(List<string> queriedColumns, int id)
         {
-
             return @"
                 SELECT to_jsonb(subq3) AS DATA
                 FROM

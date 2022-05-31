@@ -2,7 +2,7 @@
   "$schema": "../../project-hawaii/playground/hawaii.draft-01.schema.json",
   "data-source": {
     "database-type": "postgresql",
-    "connection-string": ""
+    "connection-string": "Test"
   },
   "runtime": {
     "rest": {

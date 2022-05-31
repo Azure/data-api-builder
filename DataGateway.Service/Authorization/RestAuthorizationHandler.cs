@@ -146,7 +146,7 @@ namespace Azure.DataGateway.Service.Authorization
 
                     // Delete operations do not have column level restrictions.
                     // If the operation is allowed for the role, the column requirement is implicitly successful.
-                    if (actions.Contains("delete"))
+                    if (actions.Contains(ActionType.DELETE))
                     {
                         context.Succeed(requirement);
                     }

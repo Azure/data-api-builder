@@ -35,6 +35,7 @@ namespace Azure.DataGateway.Config
                 runtimeConfigJson = File.ReadAllText(ConfigFileName);
             }
 
+            Console.WriteLine(runtimeConfigJson);
             Console.WriteLine("lets check");
             Console.WriteLine(JsonSerializer.Serialize(runtimeConfigJson, new JsonSerializerOptions()));
 

@@ -73,7 +73,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task CheckNoExceptionForNoForiegnKey()
         {
             //await SetCustomTestConfig("hawaii-config.NoFkTest.json"); // This Config file has no relationship between entities
-            //_customRuntimeConfig = "hawaii-config.NoFkTest.json";
+            _customRuntimeConfig = "hawaii-config.NoFkTest.json";
             Console.WriteLine("Custom Config file set successful.");
             try
             {

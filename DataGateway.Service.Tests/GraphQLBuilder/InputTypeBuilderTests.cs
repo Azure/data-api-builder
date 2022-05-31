@@ -28,7 +28,7 @@ type Foo @model {{
 
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes = new();
             ObjectTypeDefinitionNode node = root.Definitions[0] as ObjectTypeDefinitionNode;
-            InputTypeBuilder.GenerateInputTypeForObjectType(node, inputTypes);
+            InputTypeBuilder.GenerateFilterInputTypeForObjectType(node, inputTypes);
 
             Assert.AreEqual(expectedFilterName, inputTypes["Foo"].Fields.First(f => f.Name.Value == "id").Type.NamedType().Name.Value);
         }
@@ -54,7 +54,7 @@ type Publisher @model {
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes = new();
             foreach (ObjectTypeDefinitionNode node in root.Definitions)
             {
-                InputTypeBuilder.GenerateInputTypeForObjectType(node, inputTypes);
+                InputTypeBuilder.GenerateFilterInputTypeForObjectType(node, inputTypes);
             }
 
             InputObjectTypeDefinitionNode publisherFilterInput = inputTypes["Publisher"];

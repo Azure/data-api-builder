@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
@@ -204,7 +205,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// <param name="httpVerb"></param>
         /// <returns></returns>
         private static IEnumerable<string> HttpVerbToActions(string httpVerb)
-        {
+        { 
             switch (httpVerb)
             {
                 case "POST":

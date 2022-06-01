@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -40,6 +41,38 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
             bool actualAuthorizationResult = await IsAuthorizationSuccessful(
                 requirement: new RoleContextPermissionsRequirement(),
                 resource: httpContext,
+                resolver: authorizationResolver.Object,
+                httpContext: httpContext);
+
+            Assert.AreEqual(expectedAuthorizationResult, actualAuthorizationResult);
+        }
+
+        /// <summary>
+        /// Calls the AuthorizationResolver to evaluate whether a role and action are allowed.
+        ///     (1) HttpMethod resolves to one or two Actions, requirement fails when >0 Actions fails the AuthorizationResolver call.
+        ///     (2) Resource object not of type DatabaseObject will fail the requirement
+        /// </summary>
+        /// <param name="httpMethod"></param>
+        /// <param name="expectedAuthorizationResult"></param>
+        /// <param name="isValidRoleAction"></param>
+        /// <returns></returns>
+        [DataTestMethod]
+        [DataRow("POST", true, true, DisplayName = "Valid Role Context Succeeds Authorization")]
+        [DataRow("PUT", false, false, DisplayName = "Invalid Role Context Fails Authorization")]
+        [TestMethod]
+        public async Task EntityRoleActionPermissionsRequirementTest(string httpMethod, bool expectedAuthorizationResult, bool isValidRoleAction)
+        {
+            Mock<IAuthorizationResolver> authorizationResolver = new();
+            authorizationResolver.Setup(x => x.AreRoleAndActionDefinedForEntity(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()
+                )).Returns(isValidRoleAction);
+
+            HttpContext httpContext = CreateHttpContext();
+            DatabaseObject dbObject = new();
+
+            bool actualAuthorizationResult = await IsAuthorizationSuccessful(
+                requirement: new RoleContextPermissionsRequirement(),
+                resource: dbObject,
                 resolver: authorizationResolver.Object,
                 httpContext: httpContext);
 

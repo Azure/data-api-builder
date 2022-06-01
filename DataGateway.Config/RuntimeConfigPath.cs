@@ -32,8 +32,10 @@ namespace Azure.DataGateway.Config
                 if (File.Exists(ConfigFileName))
                 {
                     runtimeConfigJson = File.ReadAllText(ConfigFileName);
-                } else {
-                    throw new FileNotFoundException($"Requested configuration file {ConfigFileName} do not exists.");
+                }
+                else
+                {
+                    throw new FileNotFoundException($"Requested configuration file {ConfigFileName} do not exist.");
                 }
             }
 

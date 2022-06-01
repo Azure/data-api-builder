@@ -499,6 +499,20 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             }
         }
 
+        [TestMethod("Validates that an exception is thrown if config file for the runtime engine is not found.")]
+        public void TestConfigFileNotFound()
+        {
+            RuntimeConfigPath runtimeConfigPath = new()
+            {
+                ConfigFileName = "NonExistentConfigFile.json"
+            };
+
+            Exception ex = Assert.ThrowsException<FileNotFoundException>(() => runtimeConfigPath.SetRuntimeConfigValue());
+            Console.WriteLine(ex.Message);
+            Assert.AreEqual(ex.Message, "Requested configuration file NonExistentConfigFile.json do not exist.");
+
+        }
+
         [TestCleanup]
         public void Cleanup()
         {

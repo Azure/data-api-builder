@@ -8,11 +8,21 @@ DataGateway provides a consistent, productive abstraction for building GraphQL a
 
 ### 1. Clone Repository
 
+
+**Runtime Engine**:
+
 Clone the repository with your preferred method or locally navigate to where you'd like the repository to be and clone with the following command, make sure you replace `<directory name>`
 
 ```bash
 git clone https://github.com/Azure/hawaii-gql.git <directory name>
 ```
+
+**CLI-tool**:
+
+Clone the Hawaii-Cli repository: https://github.com/Azure/hawaii-cli.git
+
+For Installation of CLI tool, Refer [README:HAWAII-CLI](https://github.com/Azure/hawaii-cli#readme)
+
 
 ### 2. Configure Database Engine
 
@@ -30,6 +40,13 @@ Project startup requires a connection string to be defined (**Note:** Dynamic co
 In your editor of choice, locate template configuration files in the `DataGateway.Service` directory of the form `hawaii-config.XXX.json`.
 
 Supply a value `connection-string` for the project to be able to connect the service to your database. These connection strings will be specific to the instance of the database that you are running. Example connection strings are provided for assistance.
+
+**Using Cli-Tool**:
+
+Below command will let you generate the config file with the required database-type and connection-string (**Note:** --name denotes name of the generated config, do not add extension).
+```
+hawaii init --name hawaii-config.XXX --database-type <<DBTYPE>> --connection-string <<CONNSTRING>>
+```
 
 #### MsSql
 
@@ -137,6 +154,28 @@ Configure **Bearer token authentication** with identity providers like Azure AD.
   }
 ```
 
+**Using Cli-tool**:
+
+When we do `hawaii init`, it will automatically generate the default Host settings as well(**Note:** --host-mode is an optional flag that takes in the environment: Production/Development. Updating other keys are not supported currently).
+
+```json
+    "host": {
+      "mode": "development",
+      "cors": {
+        "origins": [],
+        "allow-credentials": true
+      },
+      "authentication": {
+        "provider": "EasyAuth",
+        "jwt": {
+          "audience": "",
+          "issuer": "",
+          "issuerkey": ""
+        }
+      }
+    }
+```
+
 HTTP requests must have the `Authorization` HTTP header set with the value `Bearer <JWT TOKEN>`. The token must be issued and signed for the DataGateway runtime.
 
 ### 4. Build and Run
@@ -166,7 +205,7 @@ HTTP requests must have the `Authorization` HTTP header set with the value `Bear
     d. By default, runtime will look for `hawaii-config.json`
 
 3. For any of the configuration file names determined for the environment, if there is another file with the `.overrides` suffix in the current directory, that overridden file name will instead be picked up.
-e.g. if both `hawaii-config.json` and `hawaii-config.overrides.json` are present, precedence will be given to `hawaii-config.overrides.json` - however, the runtime will still follow the above rules of precedence. 
+e.g. if both `hawaii-config.json` and `hawaii-config.overrides.json` are present, precedence will be given to `hawaii-config.overrides.json` - however, the runtime will still follow the above rules of precedence.
 e.g. When HAWAII_ENVIRONMENT is set as `Development` and if all three config files exist- `hawaii-config.Development.json`, `hawaii-config.json`, `hawaii-config.overrides.json`- the runtime will pick `hawaii-config.Development.json`.
 
 #### Command Line

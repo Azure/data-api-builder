@@ -333,7 +333,7 @@ namespace Azure.DataGateway.Service.Authorization
                 {
                     // Not a valid claimType containing allowed characters
                     throw new DataGatewayException(
-                        message: $"Invalid claim Type format supplied in policy.",
+                        message: $"Invalid format for claim type {type} supplied in policy.",
                         statusCode: System.Net.HttpStatusCode.InternalServerError,
                         subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError
                         );

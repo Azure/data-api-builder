@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
 using Azure.DataGateway.Config;
@@ -354,7 +355,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             " ('David' ne col3 and 1234 ne 4321)")]
         [DataRow("@item.rating gt @claims.emprating and @claims.isemployee eq true", "rating gt 4.2 and true eq true")]
 
-        public void ParseDatabasePolicy(string policy, string parsedPolicy)
+        public void ParseValidDbPolicy(string policy, string parsedPolicy)
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
                 TEST_ENTITY,
@@ -387,7 +388,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         [DataTestMethod]
         [DataRow("@claims.user_email eq @item.col1 and @claims.emprating eq @item.rating")]
         [DataRow("@claims.user_email eq @item.col1 and not ( true eq @claims.isemployee or @claims.name eq 'Aaron')")]
-        public void UserNotPossessingAllClaimsRequiredByPolicy(string policy)
+        public void ParseInvalidDbPolicyWithUserNotPossessingAllClaims(string policy)
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
                 TEST_ENTITY,
@@ -416,8 +417,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             }
             catch (DataGatewayException ex)
             {
-                int expectedStatusCode = 400;
-                Assert.AreEqual(expectedStatusCode, ex.StatusCode);
+                Assert.AreEqual(HttpStatusCode.BadRequest, ex.StatusCode);
                 Assert.AreEqual("User does not possess all the claims required to perform this action.", ex.Message);
             }
         }
@@ -426,7 +426,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         [DataRow("@claims.user_email eq @item.col1 and @claims.emp/rating eq @item.col2")]
         [DataRow("@claims.user_email eq @item.col1 and not ( true eq @claims.isemp%loyee or @claims.name eq 'Aaron')")]
         [DataRow("@claims.user+email eq @item.col1 and @claims.isemployee eq @item.col2")]
-        public void InvalidClaimTypeFormatSuppliedInPolicy(string policy)
+        public void ParseInvalidDbPolicyWithInvalidClaimTypeFormat(string policy)
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
                 TEST_ENTITY,
@@ -453,9 +453,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             }
             catch (DataGatewayException ex)
             {
-                int expectedStatusCode = 500;
-                Assert.AreEqual(expectedStatusCode, ex.StatusCode);
-                Assert.AreEqual("Invalid claim Type format supplied in policy.", ex.Message);
+                Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+                Assert.IsTrue(ex.Message.StartsWith("Invalid format for claim type"));
             }
         }
         #endregion

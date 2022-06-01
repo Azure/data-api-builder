@@ -127,9 +127,9 @@ namespace Azure.DataGateway.Service.Services
 
             if (GetHttpContext().Items != null && GetHttpContext().Items.TryGetValue("X-DG-Policy", out object? dbPolicyObj))
             {
-                // Because Items is a dictionary from object to object, we need to convert the dbPolicyObj to string
+                // Because Items is a dictionary of (object,object), we need to convert dbPolicyObj to string
                 // to get the database policy.
-                string dbPolicy = (dbPolicyObj!.ToString())!;
+                string dbPolicy = dbPolicyObj!.ToString()!;
 
                 // Since dbPolicy is nothing but filters to be added by virtue of database policy, we prefix it with
                 // ?$filter= so that it conforms with the format followed by other filter predicates.

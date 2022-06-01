@@ -134,7 +134,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static DefaultHttpContext GetRequestHttpContext(
             string queryStringUrl = null,
             IHeaderDictionary headers = null,
-            string bodyData = null)
+            string bodyData = null,
+            string dbPolicy = null)
         {
             DefaultHttpContext httpContext;
             if (headers is not null)
@@ -161,6 +162,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 MemoryStream stream = new(Encoding.UTF8.GetBytes(bodyData));
                 httpContext.Request.Body = stream;
                 httpContext.Request.ContentLength = stream.Length;
+            }
+
+            if (!string.IsNullOrEmpty(dbPolicy))
+            {
+                // We need to add an item to httpContext.Items dictionary to keep the database policy.
+                httpContext.Items = new Dictionary<object, object>();
+                httpContext.Items.Add("X-DG-Policy", dbPolicy);
             }
 
             return httpContext;
@@ -229,13 +237,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string expectedLocationHeader = null,
             string expectedAfterQueryString = "",
             bool paginated = false,
-            int verifyNumRecords = -1)
+            int verifyNumRecords = -1,
+            string dbPolicy = null)
         {
             ConfigureRestController(
                 controller,
                 queryString,
                 headers,
-                requestBody);
+                requestBody,
+                dbPolicy);
             string baseUrl = UriHelper.GetEncodedUrl(controller.HttpContext.Request);
             if (expectedLocationHeader != null)
             {
@@ -335,16 +345,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             RestController restController,
             string queryString,
             IHeaderDictionary headers = null,
-            string requestBody = null)
+            string requestBody = null,
+            string dbPolicy = null)
         {
             restController.ControllerContext.HttpContext =
                 GetRequestHttpContext(
                     queryString,
                     headers,
-                    bodyData: requestBody);
+                    bodyData: requestBody,
+                    dbPolicy: dbPolicy);
 
             // Set the mock context accessor's request same as the controller's request.
             _httpContextAccessor.Setup(x => x.HttpContext.Request).Returns(restController.ControllerContext.HttpContext.Request);
+
+            //Set the mock context accessor's Items same as the controller's Items
+            _httpContextAccessor.Setup(x => x.HttpContext.Items).Returns(restController.ControllerContext.HttpContext.Items);
         }
 
         /// <summary>

@@ -313,6 +313,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTestWithDbPolicyFiltersReturningMultipleRows",
+                $"SELECT [categoryid],[pieceid],[categoryName],[piecesAvailable]," +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
+                $"WHERE [categoryid] < 2 AND [pieceid] = 1 AND [piecesAvailable] < 1 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithDbPolicyFiltersReturningSingleRow",
+                $"SELECT [id],[publisher_id],[title] FROM { _integrationTableName } " +
+                $"WHERE [publisher_id] = 2345 AND [id] >=0 AND [id] < 4 AND [title] = 'Great wall of china explained' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "FindTestWithFirstMultiKeyPaginationAndOrderBy",
                 $"SELECT TOP 1 * FROM { _tableWithCompositePrimaryKey } " +
                 $"WHERE 1=1 " +

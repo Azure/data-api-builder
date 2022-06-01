@@ -497,6 +497,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "FindTestWithDbPolicyFiltersReturningMultipleRows",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid < 2 AND pieceid = 1 AND ""piecesAvailable"" < 1
+                            AND ""piecesAvailable"" = 0 AND ""piecesRequired"" = 0
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithDbPolicyFiltersReturningSingleRow",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE publisher_id = 2345 AND id >= 0 AND id < 4 AND title = 'Great wall of china explained'
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
                 "FindTestWithFirstMultiKeyPaginationAndOrderBy",
                 @"
                     SELECT to_jsonb(subq) AS data

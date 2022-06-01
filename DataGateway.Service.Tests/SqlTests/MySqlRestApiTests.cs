@@ -598,6 +598,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ) AS subq"
             },
             {
+                "FindTestWithDbPolicyFiltersReturningMultipleRows",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid,
+                           'categoryName', categoryName, 'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired)) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid < 2 AND pieceid = 1 AND  piecesAvailable < 1
+                        AND piecesRequired = 0
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithDbPolicyFiltersReturningSingleRow",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE publisher_id = 2345 AND id >=0 AND id < 4 AND title = 'Great wall of china explained'
+                    ) AS subq
+                "
+            },
+            {
                 "FindTestWithFirstMultiKeyPaginationAndOrderBy",
                 @"
                   SELECT JSON_OBJECT('id', id, 'content', content, 'book_id', book_id) AS data

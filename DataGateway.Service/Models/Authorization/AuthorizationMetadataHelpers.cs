@@ -38,6 +38,4 @@ namespace Azure.DataGateway.Service.Models.Authorization
         public HashSet<string> included = new();
         public HashSet<string> excluded = new();
     }
-
-    public record AuthorizationMetadata(string? RoleName, string? EntityName, string? ActionName, List<string>? Columns);
 }

@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace Azure.DataGateway.Config
 {
     /// <summary>

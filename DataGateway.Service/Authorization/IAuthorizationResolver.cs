@@ -40,14 +40,13 @@ namespace Azure.DataGateway.Service.Authorization
 
         /// <summary>
         /// Retrieves the policy of an action within an entity's role entry
-        /// within the permissions section of the runtime config.
+        /// within the permissions section of the runtime config, and tries to process
+        /// the policy such that it can be injected into the httpContext object.
         /// </summary>
         /// <param name="entityName">Entity from request</param>
         /// <param name="roleName">Role defined in client role header</param>
         /// <param name="action">Action type: Create, Read, Update, Delete</param>
         /// <param name="httpContext">Contains token claims of the authenticated user used in policy evaluation.</param>
-        /// <returns>True, if query predicates are successfully appended to the auto-generated database query.
-        /// or if a policy is not defined.</returns>
-        public bool DidProcessDBPolicy(string entityName, string roleName, string action, HttpContext httpContext);
+        public void TryProcessDBPolicy(string entityName, string roleName, string action, HttpContext httpContext);
     }
 }

@@ -128,32 +128,23 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <inheritdoc />
-        public bool DidProcessDBPolicy(string entityName, string roleName, string action, HttpContext httpContext)
+        public void TryProcessDBPolicy(string entityName, string roleName, string action, HttpContext httpContext)
         {
             string dBpolicyWithClaimTypes = GetDBPolicyForRequest(entityName, roleName, action);
-            if (string.Empty.Equals(dBpolicyWithClaimTypes))
+            if (string.IsNullOrWhiteSpace(dBpolicyWithClaimTypes))
             {
                 //No db policy specified in the config.
-                return true;
+                return;
             }
 
             string dbPolicyWithClaimValues;
-            try
-            {
-                dbPolicyWithClaimValues = ProcessTokenClaimsForPolicy(dBpolicyWithClaimTypes, httpContext);
-            }
-            catch (DataGatewayException ex)
-            {
-                Console.WriteLine(ex.Message);
-                return false;
-            }
+            dbPolicyWithClaimValues = ProcessTokenClaimsForPolicy(dBpolicyWithClaimTypes, httpContext);
 
             // Write policy to httpContext for use in downstream controllers/services.
             httpContext.Items.Add(
                     key: "X-DG-Policy",
                     value: dbPolicyWithClaimValues
                 );
-            return true;
         }
 
         /// <summary>
@@ -289,7 +280,7 @@ namespace Azure.DataGateway.Service.Authorization
         {
             ClaimsIdentity? identity = (ClaimsIdentity?)context.User.Identity;
 
-            if (identity == null)
+            if (identity is null)
             {
                 return;
             }
@@ -299,7 +290,9 @@ namespace Azure.DataGateway.Service.Authorization
                 string type = claim.Type;
                 string value = claim.Value;
                 string valueType = claim.ValueType;
-                claimsInRequestContext.Add(type, new(value, valueType));
+
+                //If there are duplicate claims, then only the first one will get inserted.
+                claimsInRequestContext.TryAdd(type, new(value, valueType));
             }
         }
 
@@ -309,7 +302,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// </summary>
         /// <param name="policy">The policy to be processed.</param>
         /// <param name="claimsInRequestContext">Dictionary holding all the claims available in the request.</param>
-        /// <returns></returns>
+        /// <returns>Processed policy with claim values substituted for claim types.</returns>
         /// <exception cref="DataGatewayException"></exception>
         private static string GetPolicyWithClaimValues(string policy, Dictionary<string, Tuple<string, string>> claimsInRequestContext)
         {
@@ -317,29 +310,33 @@ namespace Azure.DataGateway.Service.Authorization
             string invalidChars = @"[^a-zA-Z0-9_\.]+";  //Regex to check if extracted claimType is invalid
             Regex invalidCharsRgx = new(invalidChars, RegexOptions.Compiled);
 
-            //Find all the claimTypes from the policy
+            // Find all the claimTypes from the policy
             MatchCollection claimTypes = Regex.Matches(policy, claimCharsRgx);
 
             StringBuilder policyWithClaims = new(policy.Length);
+
+            // parsedIdx indicates the index from which we need to append to the
+            // resulting policy with claim values substituted.
             int parsedIdx = 0;
+
             foreach (Match claimType in claimTypes)
             {
-                string type = claimType.Value;
+                string typeOfClaim = claimType.Value;
 
-                //Remove the prefix @claims. from the claimType
-                type = type.Substring("@claims.".Length);
+                // Remove the prefix @claims. from the claimType
+                typeOfClaim = typeOfClaim.Substring("@claims.".Length);
 
-                if (invalidCharsRgx.IsMatch(type))
+                if (invalidCharsRgx.IsMatch(typeOfClaim))
                 {
                     // Not a valid claimType containing allowed characters
                     throw new DataGatewayException(
-                        message: $"Invalid format for claim type {type} supplied in policy.",
+                        message: $"Invalid format for claim type {typeOfClaim} supplied in policy.",
                         statusCode: System.Net.HttpStatusCode.InternalServerError,
                         subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError
                         );
                 }
 
-                if (claimsInRequestContext.TryGetValue(type, out Tuple<string, string>? claim))
+                if (claimsInRequestContext.TryGetValue(typeOfClaim, out Tuple<string, string>? claim))
                 {
                     string claimValue = claim.Item1;
                     string claimValueType = claim.Item2;
@@ -354,6 +351,7 @@ namespace Azure.DataGateway.Service.Authorization
                         policyWithClaims.Append(claimValue);
                     }
 
+                    // Move the parsedIdx to the index following a claimType in the policy string
                     parsedIdx = claimIdx + claimType.Value.Length;
                 }
                 else
@@ -361,12 +359,14 @@ namespace Azure.DataGateway.Service.Authorization
                     // User lacks a claim which is required to perform the action.
                     throw new DataGatewayException(
                         message: "User does not possess all the claims required to perform this action.",
-                        statusCode: System.Net.HttpStatusCode.BadRequest,
+                        statusCode: System.Net.HttpStatusCode.Forbidden,
                         subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
                         );
                 }
             }
 
+            // Check if there is still some part of policy string left to be appended to the result.
+            // Append if there is any.
             if (parsedIdx < policy.Length)
             {
                 policyWithClaims.Append(policy.Substring(parsedIdx));

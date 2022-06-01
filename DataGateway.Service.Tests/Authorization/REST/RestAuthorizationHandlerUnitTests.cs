@@ -3,6 +3,8 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
+using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -49,34 +51,117 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
 
         /// <summary>
         /// Calls the AuthorizationResolver to evaluate whether a role and action are allowed.
-        ///     (1) HttpMethod resolves to one or two Actions, requirement fails when >0 Actions fails the AuthorizationResolver call.
-        ///     (2) Resource object not of type DatabaseObject will fail the requirement
+        ///     (1) HttpMethod resolves to one or two CRUD Actions, requirement fails when >0 Actions fails the AuthorizationResolver call.
+        ///         i.e. PUT resolves to Create and Update
+        ///         i.e. GET resolves to Read
         /// </summary>
-        /// <param name="httpMethod"></param>
-        /// <param name="expectedAuthorizationResult"></param>
-        /// <param name="isValidRoleAction"></param>
+        /// <param name="httpMethod">Action type of request</param>
+        /// <param name="expectedAuthorizationResult">Whether authorization is expected to succeed.</param>
+        /// <param name="isValidCreateRoleAction">Whether Role/Action pair is allowed per authorization config.</param>
+        /// <param name="isValidReadRoleAction">Whether Role/Action pair is allowed per authorization config.</param>
+        /// <param name="isValidUpdateRoleAction">Whether Role/Action pair is allowed per authorization config.</param>
+        /// <param name="isValidDeleteRoleAction">Whether Role/Action pair is allowed per authorization config.</param>
         /// <returns></returns>
         [DataTestMethod]
-        [DataRow("POST", true, true, DisplayName = "Valid Role Context Succeeds Authorization")]
-        [DataRow("PUT", false, false, DisplayName = "Invalid Role Context Fails Authorization")]
+        // Positive Tests
+        [DataRow("POST", true, true, false, false, false, DisplayName = "POST Operation with Create Permissions")]
+        [DataRow("PATCH", true, true, false, true, false, DisplayName = "PATCH Operation with Create,Update permissions")]
+        [DataRow("PUT", true, true, false, true, false, DisplayName = "PUT Operation with create, update permissions.")]
+        [DataRow("GET", true, false, true, false, false, DisplayName = "GET Operation with read permissions")]
+        [DataRow("DELETE", true, false, false, false, true, DisplayName = "DELETE Operation with delete permissions")]
+        // Negative Tests
+        [DataRow("PUT", false, false, false, false, false, DisplayName = "PUT Operation with no permissions")]
+        [DataRow("PUT", false, true, false, false, false, DisplayName = "PUT Operation with create permissions")]
+        [DataRow("PUT", false, false, false, true, false, DisplayName = "PUT Operation with update permissions")]
+        [DataRow("PATCH", false, false, false, false, false, DisplayName = "PATCH Operation with no permissions")]
+        [DataRow("PATCH", false, true, false, false, false, DisplayName = "PATCH Operation with create permissions")]
+        [DataRow("PATCH", false, false, false, true, false, DisplayName = "PATCH Operation with update permissions")]
+        [DataRow("DELETE", false, false, false, false, false, DisplayName = "DELETE Operation with no permissions")]
+        [DataRow("GET", false, false, false, false, false, DisplayName = "GET Operation with create permissions")]
+        [DataRow("POST", false, false, false, false, false, DisplayName = "POST Operation with update permissions")]
         [TestMethod]
-        public async Task EntityRoleActionPermissionsRequirementTest(string httpMethod, bool expectedAuthorizationResult, bool isValidRoleAction)
+        public async Task EntityRoleActionPermissionsRequirementTest(
+            string httpMethod,
+            bool expectedAuthorizationResult,
+            bool isValidCreateRoleAction,
+            bool isValidReadRoleAction,
+            bool isValidUpdateRoleAction,
+            bool isValidDeleteRoleAction)
         {
             Mock<IAuthorizationResolver> authorizationResolver = new();
             authorizationResolver.Setup(x => x.AreRoleAndActionDefinedForEntity(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()
-                )).Returns(isValidRoleAction);
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                ActionType.CREATE
+                )).Returns(isValidCreateRoleAction);
+            authorizationResolver.Setup(x => x.AreRoleAndActionDefinedForEntity(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                ActionType.READ
+                )).Returns(isValidReadRoleAction);
+            authorizationResolver.Setup(x => x.AreRoleAndActionDefinedForEntity(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                ActionType.UPDATE
+                )).Returns(isValidUpdateRoleAction);
+            authorizationResolver.Setup(x => x.AreRoleAndActionDefinedForEntity(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                ActionType.DELETE
+                )).Returns(isValidDeleteRoleAction);
 
-            HttpContext httpContext = CreateHttpContext();
-            DatabaseObject dbObject = new();
+            HttpContext httpContext = CreateHttpContext(httpMethod);
+            TableDefinition tableDef = new();
+            tableDef.SourceEntityRelationshipMap.Add(AuthorizationHelpers.TEST_ENTITY, new());
+            DatabaseObject stubDbObj = new()
+            {
+                TableDefinition = tableDef
+            };
 
             bool actualAuthorizationResult = await IsAuthorizationSuccessful(
-                requirement: new RoleContextPermissionsRequirement(),
-                resource: dbObject,
+                requirement: new EntityRoleActionPermissionsRequirement(),
+                resource: stubDbObj,
                 resolver: authorizationResolver.Object,
                 httpContext: httpContext);
 
             Assert.AreEqual(expectedAuthorizationResult, actualAuthorizationResult);
+        }
+
+        /// <summary>
+        /// Validates that authorizing the EntityRoleActionPermissionsRequirement,
+        /// any resource that does not cast to DatabaseObject results in an exception.
+        /// </summary>
+        [TestMethod]
+        public async Task EntityRoleActionResourceTest()
+        {
+            Mock<IAuthorizationResolver> authorizationResolver = new();
+            HttpContext httpContext = CreateHttpContext();
+
+            bool actualAuthorizationResult = await IsAuthorizationSuccessful(
+                requirement: new EntityRoleActionPermissionsRequirement(),
+                resource: null,
+                resolver: authorizationResolver.Object,
+                httpContext: httpContext
+            );
+
+            Assert.AreEqual(false, actualAuthorizationResult);
+
+            bool actualExceptionThrown = false;
+            try
+            {
+                actualAuthorizationResult = await IsAuthorizationSuccessful(
+                    requirement: new EntityRoleActionPermissionsRequirement(),
+                    resource: new object(),
+                    resolver: authorizationResolver.Object,
+                    httpContext: httpContext
+                );
+            }
+            catch (DataGatewayException)
+            {
+                actualExceptionThrown = true;
+            }
+
+            Assert.AreEqual(true, actualExceptionThrown);
         }
 
         #region Helper Methods
@@ -109,9 +194,14 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
         /// Create Mock HttpContext object for use in test fixture.
         /// </summary>
         /// <returns></returns>
-        private static HttpContext CreateHttpContext()
+        private static HttpContext CreateHttpContext(
+            string httpMethod = "GET",
+            string clientRole = AuthorizationHelpers.TEST_ROLE)
         {
             Mock<HttpContext> httpContext = new();
+            httpContext.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER])
+                .Returns(clientRole);
+            httpContext.Setup(x => x.Request.Method).Returns(httpMethod);
             return httpContext.Object;
         }
         #endregion

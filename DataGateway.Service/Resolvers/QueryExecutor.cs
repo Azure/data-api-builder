@@ -16,7 +16,6 @@ namespace Azure.DataGateway.Service.Resolvers
     {
         private readonly string _connectionString;
         private readonly DbExceptionParserBase _dbExceptionParser;
-        private readonly HostModeType _mode;
 
         public QueryExecutor(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath, DbExceptionParserBase dbExceptionParser)
         {

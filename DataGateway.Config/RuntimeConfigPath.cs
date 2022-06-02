@@ -56,7 +56,7 @@ namespace Azure.DataGateway.Config
         /// is in developer mode.
         /// </summary>
         /// <returns>True for dev mode, false otherwise.</returns>
-        public bool IsDeveloperMode()
+        public virtual bool IsDeveloperMode()
         {
             return ConfigValue!.HostGlobalSettings.Mode is HostModeType.Development;
         }

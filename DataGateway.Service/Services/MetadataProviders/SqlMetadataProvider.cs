@@ -59,8 +59,7 @@ namespace Azure.DataGateway.Service.Services
                 ExtractConfigValues(
                     out _databaseType,
                     out string connectionString,
-                    out _entities,
-                    out _);
+                    out _entities);
             ConnectionString = connectionString;
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;

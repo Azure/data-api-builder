@@ -3,7 +3,9 @@ using System.Reflection;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataGateway.Service.Tests.REST
 {
@@ -17,16 +19,18 @@ namespace Azure.DataGateway.Service.Tests.REST
         /// Verify that the DbExceptionParser returns the correct
         /// messaging based on the mode provided as argument.
         /// </summary>
-        /// <param name="mode">Production or Developer.</param>
+        /// <param name="isDeveloperMode">true for developer mode, false otherwise.</param>
         /// <param name="expected">Expected error message.</param>
         [DataTestMethod]
-        [DataRow(HostModeType.Development, "Development Mode Error Message.")]
-        [DataRow(HostModeType.Production, "While processing your request the database ran into an error.")]
-        public void VerifyCorrectErrorMessage(HostModeType mode, string expected)
+        [DataRow(true, "Development Mode Error Message.")]
+        [DataRow(false, "While processing your request the database ran into an error.")]
+        public void VerifyCorrectErrorMessage(bool isDeveloperMode, string expected)
         {
-            DbExceptionParserBase parser = new();
+            Mock<IOptionsMonitor<RuntimeConfigPath>> runtimeConfigPath = new();
+            runtimeConfigPath.Setup(x => x.CurrentValue.IsDeveloperMode()).Returns(isDeveloperMode);
+            DbExceptionParserBase parser = new(runtimeConfigPath.Object);
             DbException e = CreateSqlException();
-            string actual = parser.Parse(e, mode).Message;
+            string actual = parser.Parse(e).Message;
             Assert.AreEqual(expected, actual);
         }
 

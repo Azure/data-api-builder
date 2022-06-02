@@ -45,6 +45,16 @@ namespace Azure.DataGateway.Config
         }
 
         /// <summary>
+        /// Returns whether or not this RuntimeConfigPath
+        /// is in developer mode.
+        /// </summary>
+        /// <returns>True for dev mode, false otherwise.</returns>
+        public bool IsDeveloperMode()
+        {
+            return ConfigValue!.HostGlobalSettings.Mode is HostModeType.Development;
+        }
+
+        /// <summary>
         /// Extract the values from the config file.
         /// Assumes the config value is set and non-null.
         /// </summary>
@@ -55,13 +65,11 @@ namespace Azure.DataGateway.Config
         public void ExtractConfigValues(
             out DatabaseType databaseType,
             out string connectionString,
-            out Dictionary<string, Entity> entities,
-            out HostModeType mode)
+            out Dictionary<string, Entity> entities)
         {
             databaseType = ConfigValue!.DatabaseType;
             connectionString = ConfigValue!.ConnectionString;
             entities = ConfigValue!.Entities;
-            mode = ConfigValue!.HostGlobalSettings.Mode;
         }
 
         /// <summary>

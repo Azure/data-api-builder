@@ -176,11 +176,11 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.cosmos:
                         return null!;
                     case DatabaseType.mssql:
-                        return new DbExceptionParserBase();
+                        return new DbExceptionParserBase(runtimeConfigPath);
                     case DatabaseType.postgresql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<PostgresDbExceptionParser>(serviceProvider);
+                        return ActivatorUtilities.CreateInstance<PostgresDbExceptionParser>(serviceProvider, runtimeConfigPath);
                     case DatabaseType.mysql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<MySqlDbExceptionParser>(serviceProvider);
+                        return ActivatorUtilities.CreateInstance<MySqlDbExceptionParser>(serviceProvider, runtimeConfig);
                     default:
                         throw new NotSupportedException(runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
                 }

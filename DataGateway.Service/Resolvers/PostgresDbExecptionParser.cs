@@ -3,6 +3,7 @@ using System.Data.Common;
 using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -13,7 +14,11 @@ namespace Azure.DataGateway.Service.Resolvers
         public const string UNQIUE_VIOLATION_MESSAGE = "PostgreSql Error 23505: Unique Constraint Violation.";
         public const string UNQIUE_VIOLATION_CODE = "23505";
 
-        public override Exception Parse(DbException e, HostModeType mode)
+        public PostgresDbExceptionParser(IOptionsMonitor<RuntimeConfigPath> config) : base(config)
+        {
+        }
+
+        public override Exception Parse(DbException e)
         {
             // refer to https://www.postgresql.org/docs/current/errcodes-appendix.html
             // for error codes
@@ -32,7 +37,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed
                     );
                 default:
-                    return base.Parse(e, mode);
+                    return base.Parse(e);
             }
         }
     }

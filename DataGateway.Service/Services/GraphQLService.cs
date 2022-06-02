@@ -49,8 +49,7 @@ namespace Azure.DataGateway.Service.Services
                 ExtractConfigValues(
                     out _databaseType,
                     out _,
-                    out _entities,
-                    out _);
+                    out _entities);
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
             _sqlMetadataProvider = sqlMetadataProvider;

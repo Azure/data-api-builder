@@ -3,6 +3,8 @@ using System.Data.Common;
 using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Microsoft.Extensions.Options;
+
 namespace Azure.DataGateway.Service.Resolvers
 {
     ///<summary>
@@ -12,9 +14,16 @@ namespace Azure.DataGateway.Service.Resolvers
     public class DbExceptionParserBase
     {
         public const string GENERIC_DB_EXCEPTION_MESSAGE = "While processing your request the database ran into an error.";
-        public virtual Exception Parse(DbException e, HostModeType mode)
+        private readonly bool _developerMode;
+
+        public DbExceptionParserBase(IOptionsMonitor<RuntimeConfigPath> config)
         {
-            string message = mode is HostModeType.Development ? e.Message : GENERIC_DB_EXCEPTION_MESSAGE;
+            _developerMode = config.CurrentValue.IsDeveloperMode();
+        }
+
+        public virtual Exception Parse(DbException e)
+        {
+            string message = _developerMode ? e.Message : GENERIC_DB_EXCEPTION_MESSAGE;
             return new DataGatewayException(
                     message: message,
                     statusCode: HttpStatusCode.InternalServerError,

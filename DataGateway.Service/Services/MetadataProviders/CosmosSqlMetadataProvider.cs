@@ -31,8 +31,7 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
                 ExtractConfigValues(
                     out _databaseType,
                     out _,
-                    out _entities,
-                    out _);
+                    out _entities);
 
             CosmosDbOptions? cosmosDb = _runtimeConfigPath.CurrentValue.ConfigValue!.CosmosDb;
 

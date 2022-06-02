@@ -24,8 +24,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 ExtractConfigValues(
                     out _,
                     out _connectionString,
-                    out _,
-                    out _mode);
+                    out _);
 
             _dbExceptionParser = dbExceptionParser;
         }
@@ -64,7 +63,7 @@ namespace Azure.DataGateway.Service.Resolvers
             catch (DbException e)
             {
                 Console.Error.WriteLine(e);
-                throw _dbExceptionParser.Parse(e, _mode);
+                throw _dbExceptionParser.Parse(e);
             }
         }
 
@@ -78,7 +77,7 @@ namespace Azure.DataGateway.Service.Resolvers
             catch (DbException e)
             {
                 Console.Error.WriteLine(e);
-                throw _dbExceptionParser.Parse(e, _mode);
+                throw _dbExceptionParser.Parse(e);
             }
         }
 

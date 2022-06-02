@@ -169,6 +169,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
         /// Tests column level authorization permissions for Find requests.
         /// </summary>
         /// <returns></returns>
+        # pragma warning disable format
         [DataTestMethod]
         [DataRow(new string[] { "col1", "col2", "col3", "col4" }, false, DisplayName = "Find - Request all of Allowed Columns")]
         [DataRow(new string[] { "col1", "col2", "col3"         }, false, DisplayName = "Find - Request 3/4 subset of Allowed Columns")]
@@ -180,7 +181,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
         [DataRow(new string[] { "col1", "col2"                 }, true, DisplayName = "FindMany - Request 2/4 subset of Allowed Columns")]
         [DataRow(new string[] { "col1"                         }, true, DisplayName = "FindMany - Request 1/4 subset of Allowed Columns")]
         [DataRow(new string[] {                                }, true, DisplayName = "FindMany - No column filter for results")]
-
+        # pragma warning restore format
         [TestMethod]
         public async Task FindColumnPermissionsTests(string[] columnsRequestedInput, bool isFindManyRequest)
         {

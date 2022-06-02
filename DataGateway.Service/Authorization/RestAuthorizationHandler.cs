@@ -204,7 +204,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// <param name="httpVerb"></param>
         /// <returns></returns>
         private static IEnumerable<string> HttpVerbToActions(string httpVerb)
-        { 
+        {
             switch (httpVerb)
             {
                 case "POST":

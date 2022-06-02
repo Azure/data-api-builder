@@ -509,7 +509,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
             Exception ex = Assert.ThrowsException<FileNotFoundException>(() => runtimeConfigPath.SetRuntimeConfigValue());
             Console.WriteLine(ex.Message);
-            Assert.AreEqual(ex.Message, "Requested configuration file NonExistentConfigFile.json do not exist.");
+            Assert.AreEqual(ex.Message, "Requested configuration file NonExistentConfigFile.json does not exist.");
 
         }
 

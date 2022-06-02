@@ -1,5 +1,8 @@
 namespace Azure.DataGateway.Service.Models
 {
+    /// <summary>
+    /// Represents the constant values of HTTP Methods.
+    /// </summary>
     public static class HttpConstants
     {
         public const string GET = "GET";

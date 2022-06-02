@@ -168,7 +168,7 @@ namespace Azure.DataGateway.Service.Authorization
                             }
                             else
                             {
-                                columnsToCheck = restContext.CumulativeColumns.ToList();
+                                columnsToCheck = restContext.CumulativeColumns;
                             }
 
                             if (_authorizationResolver.AreColumnsAllowedForAction(entityName, roleName, action, columnsToCheck))

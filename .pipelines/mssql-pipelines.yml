@@ -88,6 +88,7 @@ jobs:
     inputs:
       packageType: sdk
       version: 6.0.x
+
   - task: NuGetToolInstaller@1
 
   - task: NuGetCommand@2

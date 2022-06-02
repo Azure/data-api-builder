@@ -171,7 +171,7 @@ mutation {{
             const string newName = "new_name";
             mutation = $@"
 mutation {{
-    updatePlanet (id: ""{id}"", item: {{ name: ""{newName}"" }}) {{
+    updatePlanet (id: ""{id}"", _partitionKeyValue: ""{id}"", item: {{ id: ""{id}"", name: ""{newName}"" }}) {{
         id
         name
     }}
@@ -198,18 +198,19 @@ mutation {{
 
             const string newName = "new_name";
             string mutation = @"
-mutation ($id: ID!, $item: UpdatePlanetInput!) {
-    updatePlanet (id: $id, item: $item) {
+mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdatePlanetInput!) {
+    updatePlanet (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
         id
         name
      }
 }";
             var update = new
             {
+                id = id,
                 name = "new_name"
             };
 
-            JsonElement response = await ExecuteGraphQLRequestAsync("updatePlanet", mutation, variables: new() { { "id", id }, { "item", update } });
+            JsonElement response = await ExecuteGraphQLRequestAsync("updatePlanet", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } });
 
             // Validate results
             Assert.AreEqual(newName, response.GetProperty("name").GetString());

@@ -99,40 +99,6 @@ namespace Azure.DataGateway.Service.Resolvers
             return await container.DeleteItemAsync<JObject>(id, new PartitionKey(partitionKey));
         }
 
-        private static async Task<ItemResponse<JObject>> HandleUpsertAsync(IDictionary<string, object> queryArgs, Container container)
-        {
-            string? id = queryArgs.First(arg => arg.Key == GraphQLUtils.DEFAULT_PRIMARY_KEY_NAME).Value.ToString();
-
-            object item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
-
-            Dictionary<string, object?> createInput = new();
-            if (item is List<ObjectFieldNode> createInputRaw)
-            {
-                createInput = new Dictionary<string, object?>();
-                foreach (ObjectFieldNode node in createInputRaw)
-                {
-                    createInput.Add(node.Name.Value, node.Value.Value);
-                }
-            }
-            else if (item is Dictionary<string, object?> dict)
-            {
-                createInput = dict;
-            }
-            else
-            {
-                throw new InvalidDataException("The type of argument for the provided data is unsupported.");
-            }
-
-            if (string.IsNullOrEmpty(id))
-            {
-                throw new InvalidDataException($"{GraphQLUtils.DEFAULT_PRIMARY_KEY_NAME} field is mandatory");
-            }
-
-            createInput.Add(GraphQLUtils.DEFAULT_PRIMARY_KEY_NAME, id);
-
-            return await container.UpsertItemAsync(JObject.FromObject(createInput));
-        }
-
         private static async Task<ItemResponse<JObject>> HandleCreateAsync(IDictionary<string, object> queryArgs, Container container)
         {
             string? id = null;
@@ -202,18 +168,44 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             object item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
-            JObject? createInput = (JObject?) ParseInputItem(item);
 
-            return await container.ReplaceItemAsync<JObject>(createInput, id, new PartitionKey(partitionKey), new ItemRequestOptions());
+            JObject? input;
+            // Variables were provided to the mutation
+            if (item is Dictionary<string, object?>)
+            {
+                input = (JObject?)ParseVariableInputItem(item);
+            } else
+            {
+                // An inline argument was set
+                input = (JObject?)ParseInlineInputItem(item);
+            }
+
+            return await container.ReplaceItemAsync<JObject>(input, id, new PartitionKey(partitionKey), new ItemRequestOptions());
         }
 
-        private static object? ParseInputItem(object? item)
+        private static object? ParseVariableInputItem(object? item)
+        {
+            if (item is Dictionary<string, object?> inputItem)
+            {
+                JObject? createInput = new();
+
+                foreach (string key in inputItem.Keys)
+                {
+                    createInput.Add(new JProperty(key, ParseVariableInputItem(inputItem.GetValueOrDefault(key))));
+                }
+
+                return createInput;
+            }
+
+            return item;
+        }
+        private static object? ParseInlineInputItem(object? item)
         {
             JObject? createInput = new();
 
             if (item is ObjectFieldNode node)
             {
-                createInput.Add(new JProperty(node.Name.Value, ParseInputItem(node.Value.Value)));
+                createInput.Add(new JProperty(node.Name.Value, ParseInlineInputItem(node.Value.Value)));
                 return createInput;
             }
 
@@ -221,7 +213,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 foreach (ObjectFieldNode subfield in nodeList)
                 {
-                    createInput.Add(new JProperty(subfield.Name.Value, ParseInputItem(subfield.Value.Value)));
+                    createInput.Add(new JProperty(subfield.Name.Value, ParseInlineInputItem(subfield.Value.Value)));
                 }
 
                 return createInput;

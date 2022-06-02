@@ -65,21 +65,21 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
         /// <returns></returns>
         [DataTestMethod]
         // Positive Tests
-        [DataRow("POST", true, true, false, false, false, DisplayName = "POST Operation with Create Permissions")]
-        [DataRow("PATCH", true, true, false, true, false, DisplayName = "PATCH Operation with Create,Update permissions")]
-        [DataRow("PUT", true, true, false, true, false, DisplayName = "PUT Operation with create, update permissions.")]
-        [DataRow("GET", true, false, true, false, false, DisplayName = "GET Operation with read permissions")]
-        [DataRow("DELETE", true, false, false, false, true, DisplayName = "DELETE Operation with delete permissions")]
+        [DataRow(HttpConstants.POST, true, true, false, false, false, DisplayName = "POST Operation with Create Permissions")]
+        [DataRow(HttpConstants.PATCH, true, true, false, true, false, DisplayName = "PATCH Operation with Create,Update permissions")]
+        [DataRow(HttpConstants.PUT, true, true, false, true, false, DisplayName = "PUT Operation with create, update permissions.")]
+        [DataRow(HttpConstants.GET, true, false, true, false, false, DisplayName = "GET Operation with read permissions")]
+        [DataRow(HttpConstants.DELETE, true, false, false, false, true, DisplayName = "DELETE Operation with delete permissions")]
         // Negative Tests
-        [DataRow("PUT", false, false, false, false, false, DisplayName = "PUT Operation with no permissions")]
-        [DataRow("PUT", false, true, false, false, false, DisplayName = "PUT Operation with create permissions")]
-        [DataRow("PUT", false, false, false, true, false, DisplayName = "PUT Operation with update permissions")]
-        [DataRow("PATCH", false, false, false, false, false, DisplayName = "PATCH Operation with no permissions")]
-        [DataRow("PATCH", false, true, false, false, false, DisplayName = "PATCH Operation with create permissions")]
-        [DataRow("PATCH", false, false, false, true, false, DisplayName = "PATCH Operation with update permissions")]
-        [DataRow("DELETE", false, false, false, false, false, DisplayName = "DELETE Operation with no permissions")]
-        [DataRow("GET", false, false, false, false, false, DisplayName = "GET Operation with create permissions")]
-        [DataRow("POST", false, false, false, false, false, DisplayName = "POST Operation with update permissions")]
+        [DataRow(HttpConstants.PUT, false, false, false, false, false, DisplayName = "PUT Operation with no permissions")]
+        [DataRow(HttpConstants.PUT, false, true, false, false, false, DisplayName = "PUT Operation with create permissions")]
+        [DataRow(HttpConstants.PUT, false, false, false, true, false, DisplayName = "PUT Operation with update permissions")]
+        [DataRow(HttpConstants.PATCH, false, false, false, false, false, DisplayName = "PATCH Operation with no permissions")]
+        [DataRow(HttpConstants.PATCH, false, true, false, false, false, DisplayName = "PATCH Operation with create permissions")]
+        [DataRow(HttpConstants.PATCH, false, false, false, true, false, DisplayName = "PATCH Operation with update permissions")]
+        [DataRow(HttpConstants.DELETE, false, false, false, false, false, DisplayName = "DELETE Operation with no permissions")]
+        [DataRow(HttpConstants.GET, false, false, false, false, false, DisplayName = "GET Operation with create permissions")]
+        [DataRow(HttpConstants.POST, false, false, false, false, false, DisplayName = "POST Operation with update permissions")]
         [TestMethod]
         public async Task EntityRoleActionPermissionsRequirementTest(
             string httpMethod,
@@ -191,7 +191,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
                new string[] { "col1", "col2", "col3", "col4" });
             bool areColumnsAllowed = true;
             bool expectedAuthorizationResult = true;
-            string httpMethod = "GET";
+            string httpMethod = HttpConstants.GET;
 
             Mock<IAuthorizationResolver> authorizationResolver = new();
             authorizationResolver.Setup(x => x.AreColumnsAllowedForAction(
@@ -262,7 +262,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
         /// </summary>
         /// <returns></returns>
         private static HttpContext CreateHttpContext(
-            string httpMethod = "GET",
+            string httpMethod = HttpConstants.GET,
             string clientRole = AuthorizationHelpers.TEST_ROLE)
         {
             Mock<HttpContext> httpContext = new();

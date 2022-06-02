@@ -207,14 +207,14 @@ namespace Azure.DataGateway.Service.Authorization
         {
             switch (httpVerb)
             {
-                case "POST":
+                case HttpConstants.POST:
                     return new List<string>(new string[] { "create" });
-                case "PUT":
-                case "PATCH":
+                case HttpConstants.PUT:
+                case HttpConstants.PATCH:
                     return new List<string>(new string[] { "create", "update" });
-                case "DELETE":
+                case HttpConstants.DELETE:
                     return new List<string>(new string[] { "delete" });
-                case "GET":
+                case HttpConstants.GET:
                     return new List<string>(new string[] { "read" });
                 default:
                     break;

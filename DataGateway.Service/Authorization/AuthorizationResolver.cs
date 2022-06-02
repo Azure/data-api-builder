@@ -299,8 +299,19 @@ namespace Azure.DataGateway.Service.Authorization
                 string value = claim.Value;
                 string valueType = claim.ValueType;
 
-                //If there are duplicate claims, then only the first one will get inserted.
-                claimsInRequestContext.TryAdd(type, new(value, valueType));
+                if(!claimsInRequestContext.ContainsKey(type))
+                {
+                    claimsInRequestContext.Add(type, new(value, valueType));
+                }
+                else
+                {
+                    // If there are duplicate claims present in the request, return an exception.
+                    throw new DataGatewayException(
+                        message: $"Duplicate claims are not allowed within a request.",
+                        statusCode: System.Net.HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
+                        );
+                }
             }
         }
 

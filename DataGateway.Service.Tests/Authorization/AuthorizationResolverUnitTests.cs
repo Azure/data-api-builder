@@ -376,7 +376,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             //Add identity object to the Mock context object.
             ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_NAME_TYPE, TEST_ROLE_TYPE);
             identity.AddClaim(new Claim("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
-            identity.AddClaim(new Claim("user_email", "xyz@jj.com", ClaimValueTypes.String));
             identity.AddClaim(new Claim("name", "Aaron", ClaimValueTypes.String));
             identity.AddClaim(new Claim("contact_no", "1234", ClaimValueTypes.Integer64));
             identity.AddClaim(new Claim("isemployee", "true", ClaimValueTypes.Boolean));

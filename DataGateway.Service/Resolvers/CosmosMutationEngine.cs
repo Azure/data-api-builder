@@ -7,13 +7,16 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
+using HotChocolate.Types;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -21,16 +24,20 @@ namespace Azure.DataGateway.Service.Resolvers
     public class CosmosMutationEngine : IMutationEngine
     {
         private readonly CosmosClientProvider _clientProvider;
+        private readonly IOptionsMonitor<RuntimeConfigPath> _runtimeConfigPath;
+        private readonly ISqlMetadataProvider _metadataProvider;
 
-        private readonly IGraphQLMetadataProvider _metadataStoreProvider;
-
-        public CosmosMutationEngine(CosmosClientProvider clientProvider, IGraphQLMetadataProvider metadataStoreProvider)
+        public CosmosMutationEngine(
+            CosmosClientProvider clientProvider,
+            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,
+            ISqlMetadataProvider metadataProvider)
         {
             _clientProvider = clientProvider;
-            _metadataStoreProvider = metadataStoreProvider;
+            _runtimeConfigPath = runtimeConfigPath;
+            _metadataProvider = metadataProvider;
         }
 
-        private async Task<JObject> ExecuteAsync(IDictionary<string, object?> queryArgs, MutationResolver resolver)
+        private async Task<JObject> ExecuteAsync(IDictionary<string, object?> queryArgs, CosmosOperationMetadata resolver)
         {
             // TODO: add support for all mutation types
             // we only support CreateOrUpdate (Upsert) for now
@@ -45,29 +52,21 @@ namespace Azure.DataGateway.Service.Resolvers
             if (client == null)
             {
                 throw new DataGatewayException(
-                    "Cosmos DB has not been properly initialized",
-                    HttpStatusCode.InternalServerError,
-                    DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
+                    message: "Cosmos DB has not been properly initialized",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
             }
 
             Container container = client.GetDatabase(resolver.DatabaseName)
                                         .GetContainer(resolver.ContainerName);
 
-            ItemResponse<JObject>? response;
-            switch (resolver.OperationType)
+            ItemResponse<JObject>? response = resolver.OperationType switch
             {
-                case Operation.Upsert:
-                    response = await HandleUpsertAsync(queryArgs, container);
-                    break;
-                case Operation.Update:
-                    response = await HandleUpdateAsync(queryArgs, container);
-                    break;
-                case Operation.Delete:
-                    response = await HandleDeleteAsync(queryArgs, container);
-                    break;
-                default:
-                    throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}");
-            }
+                Operation.UpdateGraphQL => await HandleUpdateAsync(queryArgs, container),
+                Operation.Create => await HandleCreateAsync(queryArgs, container),
+                Operation.Delete => await HandleDeleteAsync(queryArgs, container),
+                _ => throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}")
+            };
 
             return response.Resource;
         }
@@ -101,6 +100,40 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         private static async Task<ItemResponse<JObject>> HandleUpsertAsync(IDictionary<string, object> queryArgs, Container container)
+        {
+            string? id = queryArgs.First(arg => arg.Key == GraphQLUtils.DEFAULT_PRIMARY_KEY_NAME).Value.ToString();
+
+            object item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
+
+            Dictionary<string, object?> createInput = new();
+            if (item is List<ObjectFieldNode> createInputRaw)
+            {
+                createInput = new Dictionary<string, object?>();
+                foreach (ObjectFieldNode node in createInputRaw)
+                {
+                    createInput.Add(node.Name.Value, node.Value.Value);
+                }
+            }
+            else if (item is Dictionary<string, object?> dict)
+            {
+                createInput = dict;
+            }
+            else
+            {
+                throw new InvalidDataException("The type of argument for the provided data is unsupported.");
+            }
+
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new InvalidDataException($"{GraphQLUtils.DEFAULT_PRIMARY_KEY_NAME} field is mandatory");
+            }
+
+            createInput.Add(GraphQLUtils.DEFAULT_PRIMARY_KEY_NAME, id);
+
+            return await container.UpsertItemAsync(JObject.FromObject(createInput));
+        }
+
+        private static async Task<ItemResponse<JObject>> HandleCreateAsync(IDictionary<string, object> queryArgs, Container container)
         {
             string? id = null;
 
@@ -140,7 +173,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 throw new InvalidDataException("id field is mandatory");
             }
 
-            return await container.UpsertItemAsync(JObject.FromObject(createInput));
+            return await container.CreateItemAsync(JObject.FromObject(createInput));
         }
 
         private static async Task<ItemResponse<JObject>> HandleUpdateAsync(IDictionary<string, object> queryArgs, Container container)
@@ -206,11 +239,27 @@ namespace Azure.DataGateway.Service.Resolvers
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context,
             IDictionary<string, object?> parameters)
         {
-            string graphQLMutationName = context.Selection.Field.Name.Value;
-            MutationResolver resolver = _metadataStoreProvider.GetMutationResolver(graphQLMutationName);
+            string entityName = context.Selection.Field.Type.NamedType().Name.Value;
+            RuntimeConfig? configValue = _runtimeConfigPath.CurrentValue.ConfigValue;
+            if (configValue is null)
+            {
+                throw new DataGatewayException(
+                    message: "Runtime config isn't setup.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            string databaseName = _metadataProvider.GetSchemaName(entityName);
+            string containerName = _metadataProvider.GetDatabaseObjectName(entityName);
+
+            string graphqlMutationName = context.Selection.Field.Name.Value;
+            Operation mutationOperation =
+                MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
+
+            CosmosOperationMetadata mutation = new(databaseName, containerName, mutationOperation);
             // TODO: we are doing multiple round of serialization/deserialization
             // fixme
-            JObject jObject = await ExecuteAsync(parameters, resolver);
+            JObject jObject = await ExecuteAsync(parameters, mutation);
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
             return new Tuple<JsonDocument, IMetadata>((jObject is null) ? null! : JsonDocument.Parse(jObject.ToString()), null);
 #pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.

@@ -12,6 +12,7 @@ using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.GraphQLBuilder.Sql;
 using Azure.DataGateway.Service.Resolvers;
+using Azure.DataGateway.Service.Services.MetadataProviders;
 using HotChocolate;
 using HotChocolate.Execution;
 using HotChocolate.Execution.Configuration;
@@ -29,7 +30,6 @@ namespace Azure.DataGateway.Service.Services
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly IDocumentCache _documentCache;
         private readonly IDocumentHashProvider _documentHashProvider;
-        private readonly IGraphQLMetadataProvider? _graphQLMetadataProvider;
         private readonly DatabaseType _databaseType;
         private readonly Dictionary<string, Entity> _entities;
 
@@ -40,7 +40,6 @@ namespace Azure.DataGateway.Service.Services
             IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
-            IGraphQLMetadataProvider? graphQLMetadataProvider,
             IDocumentCache documentCache,
             IDocumentHashProvider documentHashProvider,
             ISqlMetadataProvider sqlMetadataProvider)
@@ -53,13 +52,6 @@ namespace Azure.DataGateway.Service.Services
                     out _entities);
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
-            if (_databaseType == DatabaseType.cosmos && graphQLMetadataProvider is null)
-            {
-                throw new ArgumentNullException(nameof(GraphQLFileMetadataProvider),
-                    "GraphQLFileMetadataProvider is required when database type is cosmosdb.");
-            }
-
-            _graphQLMetadataProvider = graphQLMetadataProvider;
             _sqlMetadataProvider = sqlMetadataProvider;
             _documentCache = documentCache;
             _documentHashProvider = documentHashProvider;
@@ -89,7 +81,7 @@ namespace Azure.DataGateway.Service.Services
             Schema = sb
                 .AddAuthorizeDirectiveType()
                 .ModifyOptions(o => o.EnableOneOf = true)
-                .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine, _graphQLMetadataProvider))
+                .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine))
                 .Create();
 
             MakeSchemaExecutable();
@@ -210,11 +202,14 @@ namespace Azure.DataGateway.Service.Services
 
         private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateCosmosGraphQLObjects()
         {
-            string graphqlSchema = _graphQLMetadataProvider!.GetGraphQLSchema();
+            string graphqlSchema = ((CosmosSqlMetadataProvider)_sqlMetadataProvider).GraphQLSchema();
 
             if (string.IsNullOrEmpty(graphqlSchema))
             {
-                throw new DataGatewayException("No GraphQL object model was provided for CosmosDB. Please define a GraphQL object model and link it in the runtime config.", System.Net.HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
+                throw new DataGatewayException(
+                    message: "No GraphQL object model was provided for CosmosDB. Please define a GraphQL object model and link it in the runtime config.",
+                    statusCode: System.Net.HttpStatusCode.InternalServerError,
+                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
             }
 
             Dictionary<string, InputObjectTypeDefinitionNode> inputObjects = new();

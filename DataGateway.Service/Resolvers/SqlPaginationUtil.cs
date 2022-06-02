@@ -270,7 +270,10 @@ namespace Azure.DataGateway.Service.Resolvers
                     // consistency in using the pagination token opaquely
                     Console.Error.WriteLine(e);
                     string notValidString = $"{afterJsonString} is not a valid pagination token.";
-                    throw new DataGatewayException(notValidString, HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
+                    throw new DataGatewayException(
+                        message: notValidString,
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
                 else
                 {

@@ -7,344 +7,85 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     /// <summary>
     /// Test class for the schema parser. Verifies
     /// that EntitySourceNamesParser.ParseSchemaAndTable()
-    /// can handle a wide range of formats correctly,
-    /// and throws exceptions when expected.
+    /// can handle a wide range of valid formats correctly,
+    /// and throws exceptions for invalid formats as expected.
     /// </summary>
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class EntitySourceNamesParserUnitTests
     {
 
-        [TestMethod]
-        public void Table()
+        #region Positive Cases
+
+        /// <summary>
+        /// Verifies correct parsing for valid
+        /// schema and table formats.
+        /// </summary>
+        /// <param name="schemaTable">Schema and table name to be parsed.</param>
+        /// <param name="schema">Expected parsed schema.</param>
+        /// <param name="table">Expected parsed table.</param>
+        [DataTestMethod]
+        [DataRow("table", "", "table")]
+        [DataRow("schema.table", "schema", "table")]
+        [DataRow("[schema].table", "schema", "table")]
+        [DataRow("schema.[tabl.]", "schema", "tabl.")]
+        [DataRow("schema.[tabl.]]]", "schema", "tabl.]]")]
+        [DataRow("[[sche]].abc].table", "[sche]].abc", "table")]
+        [DataRow("[[sche.ma].table", "[sche.ma", "table")]
+        [DataRow("[[sche.ma]]].[table]]]", "[sche.ma]]", "table]]")]
+        [DataRow("[[schema]].[ta[ble]]]", "", "[schema]].[ta[ble]]")]
+        [DataRow("[sche]]].abc", "sche]]", "abc")]
+        [DataRow("[schem]].]].a].[tabl.]]]", "schem]].]].a", "tabl.]]")]
+        public void ParseValidSchemaAndTableNames(string schemaTable, string schema, string table)
         {
-            string schemaTable = "table";
-            (string, string) expected = ("", "table");
+            (string, string) expected = (schema, table);
             (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
             Assert.AreEqual(expected, actual);
         }
 
-        [TestMethod]
-        public void SchemaTable()
+        #endregion
+
+        #region Negative Cases
+
+        /// <summary>
+        /// Verifies correct exception for
+        /// invalid schema and table formats.
+        /// </summary>
+        /// <param name="schemaTable">An invalid schema and table name.</param>
+        [DataTestMethod]
+        [DataRow("abc.abc[abc]")]
+        [DataRow("abc.abc]")]
+        [DataRow("[abc.abc")]
+        [DataRow("a.[]")]
+        [DataRow("")]
+        [DataRow("[].[]")]
+        [DataRow("[a].[]")]
+        [DataRow("a.")]
+        [DataRow("[")]
+        [DataRow("]")]
+        [DataRow(".")]
+        [DataRow("]]")]
+        [DataRow("].")]
+        [DataRow(".")]
+        [DataRow(".].].].].]")]
+        [DataRow("[[]]]]]]]][")]
+        [DataRow("a].[abc]")]
+        [DataRow("a.a[b]c")]
+        [DataRow(null)]
+        [DataRow("[abc].")]
+        [DataRow("[abc.]abc.table")]
+        [DataRow("[abc.].[abc")]
+        [DataRow("abc.[tabl.].[extratoken]")]
+        [DataRow("[abc]...")]
+        [DataRow("[sche.ma].[tab]]")]
+        [DataRow("...f")]
+        [DataRow("[abc].fda[")]
+        [DataRow("[abc.fda")]
+        [DataRow("ab[c].fda")]
+        public void ParseInvalidSchemaAndTableNames(string schemaTable)
         {
-            string schemaTable = "schema.table";
-            (string, string) expected = ("schema", "table");
-            (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.AreEqual(expected, actual);
-        }
-
-        [TestMethod]
-        public void SchemaAndTable()
-        {
-            string schemaTable = "[schema].table";
-            (string, string) expected = ("schema", "table");
-            (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.AreEqual(expected, actual);
-        }
-
-        [TestMethod]
-        public void SchemaAndTable2()
-        {
-            string schemaTable = "schema.[tabl.]";
-            (string, string) expected = ("schema", "tabl.");
-            (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.AreEqual(expected, actual);
-        }
-
-        [TestMethod]
-        public void SchemaAndTable3()
-        {
-            string schemaTable = "schema.[tabl.]]]";
-            (string, string) expected = ("schema", "tabl.]]");
-            (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.AreEqual(expected, actual);
-        }
-
-        [TestMethod]
-        public void SchemaAndTable4()
-        {
-            string schemaTable = "[[sche]].abc].table";
-            (string, string) expected = ("[sche]].abc", "table");
-            (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.AreEqual(expected, actual);
-        }
-
-        [TestMethod]
-        public void SchemaAndTable5()
-        {
-            string schemaTable = "[[sche.ma].table";
-            (string, string) expected = ("[sche.ma", "table");
-            (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.AreEqual(expected, actual);
-        }
-
-        [TestMethod]
-        public void SchemaAndTable6()
-        {
-            string schemaTable = "[[sche.ma]]].[table]]]";
-            (string, string) expected = ("[sche.ma]]", "table]]");
-            (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.AreEqual(expected, actual);
-        }
-
-        [TestMethod]
-        public void Table2()
-        {
-            string schemaTable = "[[schema]].[ta[ble]]]";
-            (string, string) expected = ("", "[schema]].[ta[ble]]");
-            (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.AreEqual(expected, actual);
-        }
-
-        [TestMethod]
-        public void Table3()
-        {
-            string schemaTable = "[].[a]";
-            (string, string) expected = ("", "a");
-            (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.AreEqual(expected, actual);
-        }
-
-        [TestMethod]
-        public void SchemaAndTable7()
-        {
-            string schemaTable = "[sche]]].abc";
-            (string, string) expected = ("sche]]", "abc");
-            (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.AreEqual(expected, actual);
-        }
-
-        [TestMethod]
-        public void SchemaAndTable8()
-        {
-            string schemaTable = "[schem]].]].a].[tabl.]]]";
-            (string, string) expected = ("schem]].]].a", "tabl.]]");
-            (string, string) actual = EntitySourceNamesParser.ParseSchemaAndTable(schemaTable);
-            Assert.AreEqual(expected, actual);
-        }
-
-        [TestMethod]
-        public void ParseException1()
-        {
-            string schemaTable = "abc.abc[abc]";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
-        }
-
-        [TestMethod]
-        public void ParseException2()
-        {
-            string schemaTable = "abc.abc]";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
-        }
-
-        [TestMethod]
-        public void ParseException3()
-        {
-            string schemaTable = "[abc.abc";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
-        }
-
-        [TestMethod]
-        public void ParseException4()
-        {
-            string schemaTable = "a.[]";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
-        }
-
-        [TestMethod]
-        public void ParseException5()
-        {
-            string schemaTable = "[].[]";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
-        }
-
-        [TestMethod]
-        public void ParseException6()
-        {
-            string schemaTable = "[a].[]";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
-        }
-
-        [TestMethod]
-        public void ParseException8()
-        {
-            string schemaTable = "a.";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
-        }
-
-        [TestMethod]
-        public void ParseException9()
-        {
-            string schemaTable = "[";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
-        }
-
-        [TestMethod]
-        public void ParseException10()
-        {
-            string schemaTable = "]";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
-        }
-
-        [TestMethod]
-        public void ParseException11()
-        {
-            string schemaTable = ".";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
-        }
-
-        [TestMethod]
-        public void ParseException12()
-        {
-            string schemaTable = "]]";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
-        }
-
-        [TestMethod]
-        public void ParseException13()
-        {
-            string schemaTable = "].";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
-        }
-
-        [TestMethod]
-        public void ParseException14()
-        {
-            string schemaTable = ".";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
-        }
-
-        [TestMethod]
-        public void ParseException15()
-        {
-            string schemaTable = ".].].].].]";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
-        }
-
-        [TestMethod]
-        public void ParseException16()
-        {
-            string schemaTable = "[[]]]]]]]][";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
-        }
-
-        [TestMethod]
-        public void ParseException17()
-        {
-            string schemaTable = "a].[abc]";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
-        }
-
-        [TestMethod]
-        public void ParseException18()
-        {
-            string schemaTable = "a.a[b]c";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
-        }
-
-        [TestMethod]
-        public void ParseException20()
-        {
-            string schemaTable = null;
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
-        }
-
-        [TestMethod]
-        public void ParseException21()
-        {
-            string schemaTable = "[abc].";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
-        }
-
-        [TestMethod]
-        public void ParseException22()
-        {
-            string schemaTable = "[abc.]abc.table";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
-        }
-
-        [TestMethod]
-        public void ParseException23()
-        {
-            string schemaTable = "[abc.].[abc";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
-        }
-
-        [TestMethod]
-        public void ParseException24()
-        {
-            string schemaTable = "abc.[tabl.].[extratoken]";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-
-        }
-
-        [TestMethod]
-        public void ParseException25()
-        {
-            string schemaTable = "[abc]...";
             Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
         }
 
-        [TestMethod]
-        public void ParseException26()
-        {
-            string schemaTable = "[sche.ma].[tab]]";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-        }
-
-        [TestMethod]
-        public void ParseException27()
-        {
-            string schemaTable = "[";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-        }
-
-        [TestMethod]
-        public void ParseException28()
-        {
-            string schemaTable = "...f";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-        }
-
-        [TestMethod]
-        public void ParseException29()
-        {
-            string schemaTable = "[abc].fda[";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-        }
-
-        [TestMethod]
-        public void ParseException30()
-        {
-            string schemaTable = "[abc.fda";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-        }
-
-        [TestMethod]
-        public void ParseException31()
-        {
-            string schemaTable = "ab[c].fda";
-            Assert.ThrowsException<DataGatewayException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
-        }
+        #endregion
     }
 }

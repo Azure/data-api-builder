@@ -53,8 +53,7 @@ query{
             Client.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
             Client.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             _idList = CreateItems(DATABASE_NAME, _containerName, TOTAL_ITEM_COUNT);
-            RegisterGraphQLType("Planet", DATABASE_NAME, _containerName);
-            RegisterGraphQLType("PlanetConnection", DATABASE_NAME, _containerName, true);
+            OverrideEntityContainer("Planet", _containerName);
         }
 
         [TestMethod]

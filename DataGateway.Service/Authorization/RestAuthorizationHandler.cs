@@ -123,12 +123,6 @@ namespace Azure.DataGateway.Service.Authorization
             {
                 if (context.Resource is not null)
                 {
-                    // Get column list to authorize
-                    // FIND MANY: If includedColumns is *, add table definition columns to list.
-                    // If a requested column equals a listed exclude col, then
-                    // don't add that.
-                    // if included columns is finite/explicit, just add those columns.
-                    // All other request types will have columns listed, so no empty column checks will occur. Maybe check for this.
                     RestRequestContext? restContext = context.Resource as RestRequestContext;
 
                     if (restContext is null)
@@ -145,23 +139,29 @@ namespace Azure.DataGateway.Service.Authorization
                     IEnumerable<string> actions = HttpVerbToActions(httpContext.Request.Method);
 
                     // Delete operations do not have column level restrictions.
-                    // If the operation is allowed for the role, the column requirement is implicitly successful.
+                    // If the operation is allowed for the role, the column requirement is implicitly successful,
+                    // and the authorization check can be short circuited here.
                     if (actions.Contains(ActionType.DELETE))
                     {
                         context.Succeed(requirement);
+                        return Task.CompletedTask;
                     }
 
                     if (restContext.TryCalculateCumulativeColumns())
                     {
-                        // Two actions must be checked when HTTP operation is PUT or PATCH.
+                        // Two actions must be checked when HTTP operation is PUT or PATCH,
+                        // otherwise, just one action is checked.
                         // PUT and PATCH resolve to actions 'create' and 'update'.
-                        // A user must fulfill both actions' permissions requirements to proceed.
+                        // A user must fulfill all actions' permissions requirements to proceed.
                         foreach (string action in actions)
                         {
                             IEnumerable<string> columnsToCheck;
 
-                            // No cumulative columns indicates that this is a FindMany request.
-                            // To resolve columns to return, check permissions for role.
+                            // - Find operations typically return all metadata of a database record.
+                            // This check resolves all 'included' columns defined in permissions
+                            // so only those included columns are present in the result(s).
+                            // - For other operation types, columnsToCheck is a result of identifying
+                            // any reference to a column in all parts of a request (body, URL, querystring)
                             if (restContext.OperationType == Operation.Find)
                             {
                                 columnsToCheck = _authorizationResolver.GetAllowedColumns(entityName, roleName, action);
@@ -171,9 +171,12 @@ namespace Azure.DataGateway.Service.Authorization
                                 columnsToCheck = restContext.CumulativeColumns;
                             }
 
+                            // The authorizationResolver will gatekeep whether the ColumnsPermissionsRequirement should succeed.
                             if (_authorizationResolver.AreColumnsAllowedForAction(entityName, roleName, action, columnsToCheck))
                             {
-                                // This check catches the FindMany variant with no filters or column references.
+                                // Find operations with no column filter in the query string will have FieldsToBeReturned == 0.
+                                // Then, the "allowed columns" resolved earlier, will be set on FieldsToBeReturned.
+                                // When FieldsToBeReturned is originally >=1 column, the field is NOT modified here.
                                 if (restContext.FieldsToBeReturned.Count == 0 && restContext.OperationType == Operation.Find)
                                 {
                                     // Union performed to avoid duplicate field names in FieldsToBeReturned.

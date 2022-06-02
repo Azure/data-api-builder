@@ -167,23 +167,26 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
 
         /// <summary>
         /// Tests column level authorization permissions for Find requests.
+        /// - Any subset of columns requested, which are in the allowed list of columns -> Authorization successful
+        /// - Any column requested, which does not appear in the allowed list of columns -> Authorization failure
+        /// FORMAT WARNING Disabled: To make test input easier to read,
+        /// whitespace checking is ignored for the [DataRow] definitions.
         /// </summary>
-        /// <returns></returns>
+        /// <param name="columnsRequestedInput">List of columns that appear in a request {URL, QueryString, Body}</param>
         # pragma warning disable format
         [DataTestMethod]
-        [DataRow(new string[] { "col1", "col2", "col3", "col4" }, false, DisplayName = "Find - Request all of Allowed Columns")]
-        [DataRow(new string[] { "col1", "col2", "col3"         }, false, DisplayName = "Find - Request 3/4 subset of Allowed Columns")]
-        [DataRow(new string[] { "col1", "col2"                 }, false, DisplayName = "Find - Request 2/4 subset of Allowed Columns")]
-        [DataRow(new string[] { "col1"                         }, false, DisplayName = "Find - Request 1/4 subset of Allowed Columns")]
-        [DataRow(new string[] {                                }, false, DisplayName = "Find - No column filter for results")]
-        [DataRow(new string[] { "col1", "col2", "col3", "col4" }, true, DisplayName = "FindMany - Request all of Allowed Columns")]
-        [DataRow(new string[] { "col1", "col2", "col3"         }, true, DisplayName = "FindMany - Request 3/4 subset of Allowed Columns")]
-        [DataRow(new string[] { "col1", "col2"                 }, true, DisplayName = "FindMany - Request 2/4 subset of Allowed Columns")]
-        [DataRow(new string[] { "col1"                         }, true, DisplayName = "FindMany - Request 1/4 subset of Allowed Columns")]
-        [DataRow(new string[] {                                }, true, DisplayName = "FindMany - No column filter for results")]
-        # pragma warning restore format
+        // Positive Tests where authorization succeeds
+        [DataRow(new string[] { "col1", "col2", "col3", "col4" }, DisplayName = "Find - Request all of Allowed Columns")]
+        [DataRow(new string[] { "col1", "col2", "col3"         }, DisplayName = "Find - Request 3/4 subset of Allowed Columns")]
+        [DataRow(new string[] { "col1", "col2"                 }, DisplayName = "Find - Request 2/4 subset of Allowed Columns")]
+        [DataRow(new string[] { "col1"                         }, DisplayName = "Find - Request 1/4 subset of Allowed Columns")]
+        [DataRow(new string[] {                                }, DisplayName = "Find - No column filter for results")]
+        // Negative tests where authorization fails
+        [DataRow(new string[] { "col1", "col2", "col3", "col4", "col5" }, DisplayName = "Find - Request all allowed + 1 disallowed column(s)")]
+        [DataRow(new string[] { "col1", "col5", "col6", "col7", "col9" }, DisplayName = "Find - Request 1 allowed + > 1 disallowed column(s)")]
+        #pragma warning restore format
         [TestMethod]
-        public async Task FindColumnPermissionsTests(string[] columnsRequestedInput, bool isFindManyRequest)
+        public async Task FindColumnPermissionsTests(string[] columnsRequestedInput)
         {
             IEnumerable<string> columnsRequested = new List<string>(
                 columnsRequestedInput);
@@ -193,6 +196,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
             bool expectedAuthorizationResult = true;
             string httpMethod = HttpConstants.GET;
 
+            // Creates Mock AuthorizationResolver to return a preset result based on [TestMethod] input.
             Mock<IAuthorizationResolver> authorizationResolver = new();
             authorizationResolver.Setup(x => x.AreColumnsAllowedForAction(
                 AuthorizationHelpers.TEST_ENTITY,
@@ -228,7 +232,10 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
                httpContext: httpContext);
 
             Assert.AreEqual(expectedAuthorizationResult, actualAuthorizationResult, message: "Unexpected Authorization Result.");
-            CollectionAssert.AreEquivalent((ICollection)allowedColumns, stubRestContext.FieldsToBeReturned, message: "FieldsToBeReturned not subset of allowed columns.");
+
+            // Ensure the FieldsToBeReturned, which the AuthorizationResolver modifies for Find requests,
+            // is equivalent to the allowedColumns list
+            CollectionAssert.AreEquivalent(expected: (ICollection)allowedColumns, actual: stubRestContext.FieldsToBeReturned, message: "FieldsToBeReturned not subset of allowed columns.");
         }
 
         #region Helper Methods

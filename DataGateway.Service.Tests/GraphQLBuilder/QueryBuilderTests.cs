@@ -30,7 +30,7 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode queryRoot = QueryBuilder.Build(root, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
+            DocumentNode queryRoot = QueryBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"foo_by_pk"));
@@ -50,16 +50,17 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode queryRoot = QueryBuilder.Build(root, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
+            DocumentNode queryRoot = QueryBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"foo_by_pk");
             IReadOnlyList<InputValueDefinitionNode> args = field.Arguments;
 
-            Assert.AreEqual(1, args.Count);
-            Assert.IsTrue(args.All(a => a.Name.Value == "id"));
+            Assert.AreEqual(2, args.Count);
+            Assert.IsTrue(args.Any(a => a.Name.Value == "id"));
             Assert.AreEqual("ID", args.First(a => a.Name.Value == "id").Type.InnerType().NamedType().Name.Value);
-            Assert.IsTrue(args.First(a => a.Name.Value == "id").Type.IsNonNullType());
+            Assert.IsTrue(args.Any(a => a.Name.Value == "_partitionKeyValue"));
+            Assert.AreEqual("String", args.First(a => a.Name.Value == "_partitionKeyValue").Type.InnerType().NamedType().Name.Value);
         }
 
         [TestMethod]
@@ -76,7 +77,7 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode queryRoot = QueryBuilder.Build(root, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
+            DocumentNode queryRoot = QueryBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"foos"));
@@ -96,7 +97,7 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode queryRoot = QueryBuilder.Build(root, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
+            DocumentNode queryRoot = QueryBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             string returnTypeName = query.Fields.First(f => f.Name.Value == $"foos").Type.NamedType().Name.Value;
@@ -122,11 +123,31 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode queryRoot = QueryBuilder.Build(root, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
+            DocumentNode queryRoot = QueryBuilder.Build(root, DatabaseType.mssql, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             FieldDefinitionNode byIdQuery = query.Fields.First(f => f.Name.Value == $"foo_by_pk");
             Assert.AreEqual("foo_id", byIdQuery.Arguments[0].Name.Value);
+        }
+
+        [TestMethod]
+        public void PrimaryKeyFieldAsQueryInputCosmos()
+        {
+            string gql =
+                @"
+type Foo @model {
+    foo_id: Int!
+}
+";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
+            DocumentNode queryRoot = QueryBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
+
+            ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
+            FieldDefinitionNode byIdQuery = query.Fields.First(f => f.Name.Value == $"foo_by_pk");
+            Assert.AreEqual("id", byIdQuery.Arguments[0].Name.Value);
+            Assert.AreEqual("_partitionKeyValue", byIdQuery.Arguments[1].Name.Value);
         }
 
         [TestMethod]

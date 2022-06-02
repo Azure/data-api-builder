@@ -1,3 +1,4 @@
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
@@ -8,6 +9,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
     internal static class Utils
     {
         const string DEFAULT_PRIMARY_KEY_NAME = "id";
+        const string DEFAULT_PARTITION_KEY_NAME = "_partitionKeyValue";
 
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
@@ -38,30 +40,51 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
         /// If no directives present, default to a field named "id" as the primary key.
         /// If even that doesn't exist, throw an exception in initialization.
         /// </summary>
-        public static List<FieldDefinitionNode> FindPrimaryKeyFields(ObjectTypeDefinitionNode node)
+        public static List<FieldDefinitionNode> FindPrimaryKeyFields(ObjectTypeDefinitionNode node, DatabaseType databaseType)
         {
-            List<FieldDefinitionNode> fieldDefinitionNodes =
-                new(node.Fields.Where(f => f.Directives.Any(d => d.Name.Value == PrimaryKeyDirectiveType.DirectiveName)));
+            List<FieldDefinitionNode> fieldDefinitionNodes = new();
 
-            // By convention we look for a `@primaryKey` directive, if that didn't exist
-            // fallback to using an expected field name on the GraphQL object
-            if (fieldDefinitionNodes.Count == 0)
+            if (databaseType == DatabaseType.cosmos)
             {
-                FieldDefinitionNode? fieldDefinitionNode =
-                    node.Fields.FirstOrDefault(f => f.Name.Value == DEFAULT_PRIMARY_KEY_NAME);
-                if (fieldDefinitionNode is not null)
+                fieldDefinitionNodes.Add(
+                    new FieldDefinitionNode(
+                        location: null,
+                        new NameNode(DEFAULT_PRIMARY_KEY_NAME),
+                        new StringValueNode("Id value to provide to delete a cosmos db record"),
+                        new List<InputValueDefinitionNode>(),
+                        new IdType().ToTypeNode(),
+                        new List<DirectiveNode>()));
+
+                fieldDefinitionNodes.Add(
+                    new FieldDefinitionNode(
+                        location: null,
+                        new NameNode(DEFAULT_PARTITION_KEY_NAME),
+                        new StringValueNode("Partition key value to provide to delete a cosmos db record"),
+                        new List<InputValueDefinitionNode>(),
+                        new StringType().ToTypeNode(),
+                        new List<DirectiveNode>()));
+            } else {
+               fieldDefinitionNodes = new(node.Fields.Where(f => f.Directives.Any(d => d.Name.Value == PrimaryKeyDirectiveType.DirectiveName)));
+
+                // By convention we look for a `@primaryKey` directive, if that didn't exist
+                // fallback to using an expected field name on the GraphQL object
+                if (fieldDefinitionNodes.Count == 0)
                 {
-                    fieldDefinitionNodes.Add(fieldDefinitionNode);
-                }
-            }
+                    FieldDefinitionNode? fieldDefinitionNode =
+                        node.Fields.FirstOrDefault(f => f.Name.Value == DEFAULT_PRIMARY_KEY_NAME);
+                    if (fieldDefinitionNode is not null)
+                    {
+                        fieldDefinitionNodes.Add(fieldDefinitionNode);
+                    } else
+                    {
+                        // Nothing explicitly defined nor could we find anything using our conventions, fail out
+                        throw new DataGatewayException(
+                               message: "No primary key defined and conventions couldn't locate a fallback",
+                               subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization,
+                               statusCode: System.Net.HttpStatusCode.ServiceUnavailable);
+                    }
 
-            // Nothing explicitly defined nor could we find anything using our conventions, fail out
-            if (fieldDefinitionNodes.Count == 0)
-            {
-                throw new DataGatewayException(
-                    message: "No primary key defined and conventions couldn't locate a fallback",
-                    subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization,
-                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable);
+                }
             }
 
             return fieldDefinitionNodes;

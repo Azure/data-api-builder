@@ -3,10 +3,16 @@
   "GraphQLSchemaFile": "schema.gql",
   "MutationResolvers": [
     {
-      "id": "addPlanet",
+      "id": "createPlanet",
       "databaseName": "graphqldb",
       "containerName": "planet",
       "operationType": "Upsert"
+    },
+    {
+      "id": "updatePlanet",
+      "databaseName": "graphqldb",
+      "containerName": "planet",
+      "operationType": "Update"
     },
     {
       "id": "deletePlanet",

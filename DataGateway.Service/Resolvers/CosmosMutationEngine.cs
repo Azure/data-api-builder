@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
+using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
@@ -58,14 +59,11 @@ namespace Azure.DataGateway.Service.Resolvers
                 case Operation.Upsert:
                     response = await HandleUpsertAsync(queryArgs, container);
                     break;
+                case Operation.Update:
+                    response = await HandleUpdateAsync(queryArgs, container);
+                    break;
                 case Operation.Delete:
                     response = await HandleDeleteAsync(queryArgs, container);
-                    if (response.StatusCode == HttpStatusCode.NoContent)
-                    {
-                        // Delete item doesnt return the actual item, so we return emtpy json
-                        return new JObject();
-                    }
-
                     break;
                 default:
                     throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}");
@@ -76,11 +74,10 @@ namespace Azure.DataGateway.Service.Resolvers
 
         private static async Task<ItemResponse<JObject>> HandleDeleteAsync(IDictionary<string, object> queryArgs, Container container)
         {
-            // TODO: As of now id is the partition key. This has to be changed when partition key support is added. Issue #215
-            PartitionKey partitionKey;
+            string? partitionKey = null;
             string? id = null;
 
-            if (queryArgs.TryGetValue("id", out object? idObj))
+            if (queryArgs.TryGetValue(QueryBuilder.ID_FIELD_NAME, out object? idObj))
             {
                 id = idObj.ToString();
             }
@@ -89,12 +86,18 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 throw new InvalidDataException("id field is mandatory");
             }
-            else
+
+            if (queryArgs.TryGetValue(QueryBuilder.PARTITION_KEY_FIELD_NAME, out object? partitionKeyObj))
             {
-                partitionKey = new(id);
+                partitionKey = partitionKeyObj.ToString();
             }
 
-            return await container.DeleteItemAsync<JObject>(id, partitionKey);
+            if (string.IsNullOrEmpty(partitionKey))
+            {
+                throw new InvalidDataException("Partition Key field is mandatory");
+            }
+
+            return await container.DeleteItemAsync<JObject>(id, new PartitionKey(partitionKey));
         }
 
         private static async Task<ItemResponse<JObject>> HandleUpsertAsync(IDictionary<string, object> queryArgs, Container container)
@@ -140,6 +143,60 @@ namespace Azure.DataGateway.Service.Resolvers
             return await container.UpsertItemAsync(JObject.FromObject(createInput));
         }
 
+        private static async Task<ItemResponse<JObject>> HandleUpdateAsync(IDictionary<string, object> queryArgs, Container container)
+        {
+            string? partitionKey = null;
+            string? id = null;
+
+            if (queryArgs.TryGetValue(QueryBuilder.ID_FIELD_NAME, out object? idObj))
+            {
+                id = idObj.ToString();
+            }
+
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new InvalidDataException("id field is mandatory");
+            }
+
+            if (queryArgs.TryGetValue(QueryBuilder.PARTITION_KEY_FIELD_NAME, out object? partitionKeyObj))
+            {
+                partitionKey = partitionKeyObj.ToString();
+            }
+
+            if (string.IsNullOrEmpty(partitionKey))
+            {
+                throw new InvalidDataException("Partition Key field is mandatory");
+            }
+
+            object item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
+            JObject? createInput = (JObject?) ParseInputItem(item);
+
+            return await container.ReplaceItemAsync<JObject>(createInput, id, new PartitionKey(partitionKey), new ItemRequestOptions());
+        }
+
+        private static object? ParseInputItem(object? item)
+        {
+            JObject? createInput = new();
+
+            if (item is ObjectFieldNode node)
+            {
+                createInput.Add(new JProperty(node.Name.Value, ParseInputItem(node.Value.Value)));
+                return createInput;
+            }
+
+            if (item is List<ObjectFieldNode> nodeList)
+            {
+                foreach (ObjectFieldNode subfield in nodeList)
+                {
+                    createInput.Add(new JProperty(subfield.Name.Value, ParseInputItem(subfield.Value.Value)));
+                }
+
+                return createInput;
+            }
+
+            return item;
+        }
+
         /// <summary>
         /// Executes the mutation query and return result as JSON object asynchronously.
         /// </summary>
@@ -155,7 +212,7 @@ namespace Azure.DataGateway.Service.Resolvers
             // fixme
             JObject jObject = await ExecuteAsync(parameters, resolver);
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
-            return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(jObject.ToString()), null);
+            return new Tuple<JsonDocument, IMetadata>((jObject is null) ? null! : JsonDocument.Parse(jObject.ToString()), null);
 #pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
         }
 

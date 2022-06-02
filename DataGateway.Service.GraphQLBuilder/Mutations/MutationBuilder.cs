@@ -22,7 +22,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
                     mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entity));
                     mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entity, databaseType));
-                    mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entity));
+                    mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entity, databaseType));
                 }
             }
 

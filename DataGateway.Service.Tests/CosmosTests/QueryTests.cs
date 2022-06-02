@@ -14,8 +14,8 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         private static readonly string _containerName = Guid.NewGuid().ToString();
 
         public static readonly string PlanetByPKQuery = @"
-query ($id: ID) {
-    planet_by_pk (id: $id) {
+query ($id: ID, $partitionKeyValue: String) {
+    planet_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue) {
         id
         name
     }
@@ -62,7 +62,7 @@ query{
         {
             // Run query
             string id = _idList[0];
-            JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", PlanetByPKQuery, new() { { "id", id } });
+            JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", PlanetByPKQuery, new() { { "id", id }, { "partitionKeyValue" , id } });
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
@@ -96,7 +96,7 @@ query{
             string id = _idList[0];
             string query = @$"
 query {{
-    planet_by_pk (id: ""{id}"") {{
+    planet_by_pk (id: ""{id}"", _partitionKeyValue: ""{id}"") {{
         id
         name
     }}
@@ -139,6 +139,40 @@ query {{
             Assert.AreEqual(TOTAL_ITEM_COUNT, totalElementsFromPaginatedQuery);
         }
 
+        [TestMethod]
+        public async Task GetPaginatedWithSinglePartition()
+        {
+            // Run paginated query
+            const int pagesize = TOTAL_ITEM_COUNT / 2;
+            int totalElementsFromPaginatedQuery = 0;
+            string afterToken = null;
+            List<string> pagedResponse = new();
+            string id = _idList[0];
+
+            do
+            {
+                string planetConnectionQueryStringFormat = @$"
+query {{
+    planets (first: {pagesize}, after: {(afterToken == null ? "null" : "\"" + afterToken + "\"")}, _filter: {{ id: {{eq: ""{id}""}} }}) {{
+        items {{
+            id
+            name
+        }}
+        endCursor
+        hasNextPage
+    }}
+}}";
+                JsonElement page = await ExecuteGraphQLRequestAsync("planets", planetConnectionQueryStringFormat, variables: new());
+                JsonElement after = page.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME);
+                afterToken = after.ToString();
+                totalElementsFromPaginatedQuery += page.GetProperty(QueryBuilder.PAGINATION_FIELD_NAME).GetArrayLength();
+                ConvertJsonElementToStringList(page.GetProperty(QueryBuilder.PAGINATION_FIELD_NAME), pagedResponse);
+            } while (!string.IsNullOrEmpty(afterToken));
+
+            Assert.AreEqual(1, totalElementsFromPaginatedQuery);
+        }
+
+
         /// <summary>
         /// Query result with nested object
         /// </summary>
@@ -150,7 +184,7 @@ query {{
             string id = _idList[0];
             string query = @$"
 query {{
-    planet_by_pk (id: ""{id}"") {{
+    planet_by_pk (id: ""{id}"", _partitionKeyValue: ""{id}"") {{
         id
         name
         character {{

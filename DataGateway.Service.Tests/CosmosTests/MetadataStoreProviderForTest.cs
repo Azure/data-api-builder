@@ -9,6 +9,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         public string GraphQLSchema { get; set; }
         public Dictionary<string, MutationResolver> MutationResolvers { get; set; } = new();
         public Dictionary<string, GraphQLType> GraphQLTypes { get; set; } = new();
+        public Dictionary<string, string> PartitionKeyPaths { get; set; } = new();
 
         public string GetGraphQLSchema()
         {
@@ -35,6 +36,20 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         public GraphQLType GetGraphQLType(string name)
         {
             return GraphQLTypes.TryGetValue(name, out GraphQLType graphqlType) ? graphqlType : null;
+        }
+
+        public string? GetPartitionKeyPath(string database, string container)
+        {
+            PartitionKeyPaths.TryGetValue($"{database}/{container}", out string? partitionKeyPath);
+            return partitionKeyPath;
+        }
+
+        public void SetPartitionKeyPath(string database, string container, string partitionKeyPath)
+        {
+            if (!PartitionKeyPaths.TryAdd($"{database}/{container}", partitionKeyPath))
+            {
+                PartitionKeyPaths[$"{database}/{container}"] = partitionKeyPath;
+            }
         }
     }
 }

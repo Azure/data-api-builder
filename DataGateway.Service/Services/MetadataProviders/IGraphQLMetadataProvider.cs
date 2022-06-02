@@ -24,5 +24,15 @@ namespace Azure.DataGateway.Service.Services
         /// name.
         /// </summary>
         GraphQLType GetGraphQLType(string name);
+
+        /// <summary>
+        /// Gets Partition Key Path of a database container.
+        /// </summary>
+        string? GetPartitionKeyPath(string database, string container);
+
+        /// <summary>
+        /// Sets Partition Key Path of a database container.
+        /// </summary>
+        void SetPartitionKeyPath(string database, string container, string partitionKeyPath);
     }
 }

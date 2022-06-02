@@ -1,5 +1,5 @@
 type Character @model {
-    id : ID,
+    id : ID, 
     name : String,
     type: String,
     homePlanet: Int,

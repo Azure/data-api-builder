@@ -22,6 +22,7 @@ namespace Azure.DataGateway.Service.Services
         /// Stores mutation resolvers contained in configuration file.
         /// </summary>
         private Dictionary<string, MutationResolver> _mutationResolvers;
+        private Dictionary<string, string> _partitionKeyPaths;
 
         public GraphQLFileMetadataProvider(
             IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
@@ -66,6 +67,8 @@ namespace Azure.DataGateway.Service.Services
             {
                 _mutationResolvers.Add(resolver.Id, resolver);
             }
+
+            _partitionKeyPaths = new();
         }
 
         /// <summary>
@@ -77,6 +80,7 @@ namespace Azure.DataGateway.Service.Services
         {
             GraphQLResolverConfig = source.GraphQLResolverConfig;
             _mutationResolvers = source._mutationResolvers;
+            _partitionKeyPaths = source._partitionKeyPaths;
         }
 
         /// Default Constructor for Mock tests.
@@ -84,6 +88,7 @@ namespace Azure.DataGateway.Service.Services
         {
             GraphQLResolverConfig = new(string.Empty, string.Empty);
             _mutationResolvers = new();
+            _partitionKeyPaths = new();
         }
 
         /// <summary>
@@ -103,6 +108,20 @@ namespace Azure.DataGateway.Service.Services
             }
 
             return resolver;
+        }
+
+        public string? GetPartitionKeyPath(string database, string container)
+        {
+            _partitionKeyPaths.TryGetValue($"{database}/{container}", out string? partitionKeyPath);
+            return partitionKeyPath;
+        }
+
+        public void SetPartitionKeyPath(string database, string container, string partitionKeyPath)
+        {
+            if (!_partitionKeyPaths.TryAdd($"{database}/{container}", partitionKeyPath))
+            {
+                _partitionKeyPaths[$"{database}/{container}"] = partitionKeyPath;
+            }
         }
 
         /// <summary>

@@ -17,8 +17,8 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
                                                     }
                                                 }";
         private static readonly string _deletePlanetMutation = @"
-                                                mutation ($id: ID!) {
-                                                    deletePlanet (id: $id) {
+                                                mutation ($id: ID!, $partitionKeyValue: String!) {
+                                                    deletePlanet (id: $id, _partitionKeyValue: $partitionKeyValue) {
                                                         id
                                                         name
                                                     }
@@ -68,10 +68,10 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             _ = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } });
 
             // Run mutation delete item;
-            JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanet", _deletePlanetMutation, new() { { "id", id } });
+            JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanet", _deletePlanetMutation, new() { { "id", id }, { "partitionKeyValue", id } });
 
             // Validate results
-            Assert.IsNull(response.GetProperty("id").GetString());
+            Assert.IsNull(response.GetString());
         }
 
         [TestMethod]
@@ -111,7 +111,7 @@ mutation {{
             // Run mutation delete item;
             string deleteMutation = $@"
 mutation {{
-    deletePlanet (id: ""{id}"") {{
+    deletePlanet (id: ""{id}"", _partitionKeyValue: ""{id}"") {{
         id
         name
     }}
@@ -119,7 +119,7 @@ mutation {{
             JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanet", deleteMutation, variables: new());
 
             // Validate results
-            Assert.IsNull(response.GetProperty("id").GetString());
+            Assert.IsNull(response.GetString());
         }
 
         [TestMethod]
@@ -152,6 +152,22 @@ mutation {{
 }}";
             JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
             Assert.AreEqual("id field is mandatory", response[0].GetProperty("message").ToString());
+        }
+
+        [TestMethod]
+        public async Task MutationMissingRequiredPartitionKeyValueReturnError()
+        {
+            // Run mutation Add planet without id
+            string id = Guid.NewGuid().ToString();
+            string mutation = $@"
+mutation {{
+    deletePlanet (id: ""{id}"") {{
+        id
+        name
+    }}
+}}";
+            JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanet", mutation, variables: new());
+            Assert.AreEqual("The argument `_partitionKeyValue` is required.", response[0].GetProperty("message").ToString());
         }
 
         /// <summary>

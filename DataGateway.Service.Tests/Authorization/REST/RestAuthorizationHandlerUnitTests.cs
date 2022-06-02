@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -162,6 +163,71 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
             }
 
             Assert.AreEqual(true, actualExceptionThrown);
+        }
+
+        /// <summary>
+        /// Tests column level authorization permissions for Find requests.
+        /// </summary>
+        /// <returns></returns>
+        [DataTestMethod]
+        [DataRow(new string[] { "col1", "col2", "col3", "col4" }, false, DisplayName = "Find - Request all of Allowed Columns")]
+        [DataRow(new string[] { "col1", "col2", "col3"         }, false, DisplayName = "Find - Request 3/4 subset of Allowed Columns")]
+        [DataRow(new string[] { "col1", "col2"                 }, false, DisplayName = "Find - Request 2/4 subset of Allowed Columns")]
+        [DataRow(new string[] { "col1"                         }, false, DisplayName = "Find - Request 1/4 subset of Allowed Columns")]
+        [DataRow(new string[] {                                }, false, DisplayName = "Find - No column filter for results")]
+        [DataRow(new string[] { "col1", "col2", "col3", "col4" }, true, DisplayName = "FindMany - Request all of Allowed Columns")]
+        [DataRow(new string[] { "col1", "col2", "col3"         }, true, DisplayName = "FindMany - Request 3/4 subset of Allowed Columns")]
+        [DataRow(new string[] { "col1", "col2"                 }, true, DisplayName = "FindMany - Request 2/4 subset of Allowed Columns")]
+        [DataRow(new string[] { "col1"                         }, true, DisplayName = "FindMany - Request 1/4 subset of Allowed Columns")]
+        [DataRow(new string[] {                                }, true, DisplayName = "FindMany - No column filter for results")]
+
+        [TestMethod]
+        public async Task FindColumnPermissionsTests(string[] columnsRequestedInput, bool isFindManyRequest)
+        {
+            IEnumerable<string> columnsRequested = new List<string>(
+                columnsRequestedInput);
+            IEnumerable<string> allowedColumns = new List<string>(
+               new string[] { "col1", "col2", "col3", "col4" });
+            bool areColumnsAllowed = true;
+            bool expectedAuthorizationResult = true;
+            string httpMethod = "GET";
+
+            Mock<IAuthorizationResolver> authorizationResolver = new();
+            authorizationResolver.Setup(x => x.AreColumnsAllowedForAction(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                ActionType.READ,
+                It.IsAny<IEnumerable<string>>() //Can be any IEnumerable<string>, as find request result field list is depedent on AllowedColumns.
+                )).Returns(areColumnsAllowed);
+            authorizationResolver.Setup(x => x.GetAllowedColumns(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                ActionType.READ
+                )).Returns(allowedColumns);
+
+            HttpContext httpContext = CreateHttpContext(httpMethod);
+            TableDefinition tableDef = new();
+            tableDef.SourceEntityRelationshipMap.Add(AuthorizationHelpers.TEST_ENTITY, new());
+            DatabaseObject stubDbObj = new()
+            {
+                TableDefinition = tableDef
+            };
+
+            RestRequestContext stubRestContext = new FindRequestContext(
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                dbo: stubDbObj,
+                isList: false
+                );
+            stubRestContext.CumulativeColumns.UnionWith(columnsRequested);
+
+            bool actualAuthorizationResult = await IsAuthorizationSuccessful(
+               requirement: new ColumnsPermissionsRequirement(),
+               resource: stubRestContext,
+               resolver: authorizationResolver.Object,
+               httpContext: httpContext);
+
+            Assert.AreEqual(expectedAuthorizationResult, actualAuthorizationResult, message: "Unexpected Authorization Result.");
+            CollectionAssert.AreEquivalent((ICollection)allowedColumns, stubRestContext.FieldsToBeReturned, message: "FieldsToBeReturned not subset of allowed columns.");
         }
 
         #region Helper Methods

@@ -174,7 +174,7 @@ namespace Azure.DataGateway.Service.Authorization
                             if (_authorizationResolver.AreColumnsAllowedForAction(entityName, roleName, action, columnsToCheck))
                             {
                                 // This check catches the FindMany variant with no filters or column references.
-                                if (restContext.FieldsToBeReturned.Count == 0 && (restContext.IsMany || restContext.OperationType == Operation.Find))
+                                if (restContext.FieldsToBeReturned.Count == 0 && restContext.OperationType == Operation.Find)
                                 {
                                     // Union performed to avoid duplicate field names in FieldsToBeReturned.
                                     restContext.FieldsToBeReturned = restContext.FieldsToBeReturned.Union(columnsToCheck).ToList();

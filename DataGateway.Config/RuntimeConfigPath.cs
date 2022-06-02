@@ -35,7 +35,7 @@ namespace Azure.DataGateway.Config
                 }
                 else
                 {
-                    throw new FileNotFoundException($"Requested configuration file {ConfigFileName} do not exist.");
+                    throw new FileNotFoundException($"Requested configuration file {ConfigFileName} does not exist.");
                 }
             }
 

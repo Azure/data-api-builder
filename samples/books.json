@@ -19,71 +19,31 @@
     }
   },
   "entities": {
-    "todo": {
-      "source": "s003.todos",
+    "book": {
+      "source": "dbo.books",
       "relationships": {
         "category": {
           "cardinality": "one",
           "target.entity": "category"
-        },
-        "tags": {
-          "cardinality": "many",
-          "linking.object": "s003.todos_tags",
-          "target.entity": "tag"
         }
       },
-      "permissions": [
-        {
+      "permissions": [{
           "role": "anonymous",
-          "actions": [
-            "*"
-          ]
-        }
-      ]
+          "actions": [ "*" ]
+        }]
     },
     "category": {
-      "source": "s003.categories",
+      "source": "dbo.categories",
       "relationships": {
-        "todos": {
+        "book": {
           "cardinality": "many",
-          "target.entity": "todo"
+          "target.entity": "book"
         }
       },
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [
-            "*"
-          ]
-        }
-      ]
-    },
-    "tag": {
-      "source": "s003.tags",
-      "relationships": {
-        "todos": {
-          "cardinality": "many",
-          "linking.object": "s003.todos_tags",
-          "linking.source.fields": [
-            "tag_id"
-          ],
-          "linking.target.fields": [
-            "todo_id"
-          ],
-          "target.entity": "todo",
-          "target.fields": [
-            "id"
-          ]
-        }
-      },
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [
-            "*"
-          ]
-        }
-      ]
+      "permissions": [{
+        "role": "anonymous",
+        "actions": [ "*" ]
+        }]
     }
   }
 }

@@ -206,7 +206,10 @@ namespace Azure.DataGateway.Service.Services
 
             if (string.IsNullOrEmpty(graphqlSchema))
             {
-                throw new DataGatewayException("No GraphQL object model was provided for CosmosDB. Please define a GraphQL object model and link it in the runtime config.", System.Net.HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
+                throw new DataGatewayException(
+                    message: "No GraphQL object model was provided for CosmosDB. Please define a GraphQL object model and link it in the runtime config.",
+                    statusCode: System.Net.HttpStatusCode.InternalServerError,
+                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
             }
 
             Dictionary<string, InputObjectTypeDefinitionNode> inputObjects = new();

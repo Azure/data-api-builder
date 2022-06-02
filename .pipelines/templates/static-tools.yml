@@ -14,6 +14,12 @@ jobs:
   - checkout: self  # self represents the repo where the initial Pipelines YAML file was found
     clean: true  # if true, execute `execute git clean -ffdx && git reset --hard HEAD` before fetching
 
+  - task: UseDotNet@2
+    displayName: Setup .NET SDK v6.0.x
+    inputs:
+      packageType: sdk
+      version: 6.0.x
+
   #Analyze source code for type of content and target types to help determine which tools to run
   - task: securedevelopmentteam.vss-secure-development-tools.build-task-autoapplicability.AutoApplicability@1
     displayName: 'AutoApplicability'

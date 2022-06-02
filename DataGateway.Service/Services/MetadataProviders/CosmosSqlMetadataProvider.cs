@@ -37,7 +37,10 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
 
             if (cosmosDb is null)
             {
-                throw new DataGatewayException("No CosmosDB configuration provided but CosmosDB is the specified database.", System.Net.HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.ErrorInInitialization);
+                throw new DataGatewayException(
+                    message: "No CosmosDB configuration provided but CosmosDB is the specified database.",
+                    statusCode: System.Net.HttpStatusCode.InternalServerError,
+                    subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
             }
 
             _cosmosDb = cosmosDb;
@@ -55,7 +58,10 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
                 string s when string.IsNullOrEmpty(s) && !string.IsNullOrEmpty(_cosmosDb.Container) => _cosmosDb.Container,
                 string s when !string.IsNullOrEmpty(s) => EntitySourceNamesParser.ParseSchemaAndTable(entitySource).Item2,
                 string s => s,
-                _ => throw new DataGatewayException($"No container provided for {entityName}", System.Net.HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.ErrorInInitialization)
+                _ => throw new DataGatewayException(
+                        message: $"No container provided for {entityName}",
+                        statusCode: System.Net.HttpStatusCode.InternalServerError,
+                        subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization)
             };
         }
 
@@ -83,7 +89,10 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
             {
                 string s when string.IsNullOrEmpty(s) && !string.IsNullOrEmpty(_cosmosDb.Container) => _cosmosDb.Database,
                 string s => s,
-                _ => throw new DataGatewayException($"No container provided for {entityName}", System.Net.HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.ErrorInInitialization)
+                _ => throw new DataGatewayException(
+                        message: $"No container provided for {entityName}",
+                        statusCode: System.Net.HttpStatusCode.InternalServerError,
+                        subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization)
             };
         }
 

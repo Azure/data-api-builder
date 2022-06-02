@@ -299,7 +299,7 @@ namespace Azure.DataGateway.Service.Authorization
                 string value = claim.Value;
                 string valueType = claim.ValueType;
 
-                if(!claimsInRequestContext.ContainsKey(type))
+                if (!claimsInRequestContext.ContainsKey(type))
                 {
                     claimsInRequestContext.Add(type, new(value, valueType));
                 }
@@ -332,7 +332,7 @@ namespace Azure.DataGateway.Service.Authorization
             // Find all the claimTypes from the policy
             MatchCollection claimTypes = Regex.Matches(policy, claimCharsRgx);
 
-            StringBuilder policyWithClaims = new(2*policy.Length);
+            StringBuilder policyWithClaims = new(2 * policy.Length);
 
             // parsedIdx indicates the index from which we need to append to the
             // resulting policy with claim values substituted.
@@ -365,7 +365,7 @@ namespace Azure.DataGateway.Service.Authorization
                     {
                         policyWithClaims.Append($"'{claimValue}'");
                     }
-                    else if(claimValueType.Equals(ClaimValueTypes.Boolean) || claimValueType.Equals(ClaimValueTypes.Integer32)
+                    else if (claimValueType.Equals(ClaimValueTypes.Boolean) || claimValueType.Equals(ClaimValueTypes.Integer32)
                         || claimValueType.Equals(ClaimValueTypes.Integer64) || claimValueType.Equals(ClaimValueTypes.Double))
                     {
                         policyWithClaims.Append(claimValue);

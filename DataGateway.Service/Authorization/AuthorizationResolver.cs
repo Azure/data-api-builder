@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Models.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
@@ -84,10 +85,10 @@ namespace Azure.DataGateway.Service.Authorization
         {
             if (_entityPermissionMap.TryGetValue(entityName, out EntityMetadata? valueOfEntityToRole))
             {
-                if (valueOfEntityToRole.RoleToActionMap.TryGetValue(roleName, out RoleMetadata valueOfRoleToAction))
+                if (valueOfEntityToRole.RoleToActionMap.TryGetValue(roleName, out RoleMetadata? valueOfRoleToAction))
                 {
-                    if (valueOfRoleToAction.ActionToColumnMap.ContainsKey(WILDCARD) ||
-                        valueOfRoleToAction.ActionToColumnMap.ContainsKey(action))
+                    if (valueOfRoleToAction!.ActionToColumnMap.ContainsKey(WILDCARD) ||
+                        valueOfRoleToAction!.ActionToColumnMap.ContainsKey(action))
                     {
                         return true;
                     }
@@ -142,7 +143,7 @@ namespace Azure.DataGateway.Service.Authorization
 
             // Write policy to httpContext for use in downstream controllers/services.
             httpContext.Items.Add(
-                    key: "X-DG-Policy",
+                    key: Constants.DB_POLICY_HEADER,
                     value: dbPolicyWithClaimValues
                 );
         }
@@ -157,7 +158,8 @@ namespace Azure.DataGateway.Service.Authorization
         /// <returns></returns>
         private string GetDBPolicyForRequest(string entityName, string roleName, string action)
         {
-            if (_entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action].policies.TryGetValue("Database", out string? dbPolicy))
+            string? dbPolicy = _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action].database;
+            if (dbPolicy is not null)
             {
                 return dbPolicy;
             }
@@ -216,7 +218,7 @@ namespace Azure.DataGateway.Service.Authorization
                                 {
                                     if (actionObj.Policy.Database is not null)
                                     {
-                                        actionToColumn.policies.Add(nameof(actionObj.Policy.Database), actionObj.Policy.Database);
+                                        actionToColumn.database = actionObj.Policy.Database;
                                     }
                                 }
                             }
@@ -287,6 +289,12 @@ namespace Azure.DataGateway.Service.Authorization
 
             foreach (Claim claim in identity.Claims)
             {
+                /*
+                 * An example claim would be of format:
+                 * claim.Type: "user_email"
+                 * claim.Value: "authz@microsoft.com"
+                 * claim.ValueType: "string"
+                 */
                 string type = claim.Type;
                 string value = claim.Value;
                 string valueType = claim.ValueType;
@@ -313,7 +321,7 @@ namespace Azure.DataGateway.Service.Authorization
             // Find all the claimTypes from the policy
             MatchCollection claimTypes = Regex.Matches(policy, claimCharsRgx);
 
-            StringBuilder policyWithClaims = new(policy.Length);
+            StringBuilder policyWithClaims = new(2*policy.Length);
 
             // parsedIdx indicates the index from which we need to append to the
             // resulting policy with claim values substituted.
@@ -346,9 +354,19 @@ namespace Azure.DataGateway.Service.Authorization
                     {
                         policyWithClaims.Append($"'{claimValue}'");
                     }
-                    else
+                    else if(claimValueType.Equals(ClaimValueTypes.Boolean) || claimValueType.Equals(ClaimValueTypes.Integer32)
+                        || claimValueType.Equals(ClaimValueTypes.Integer64) || claimValueType.Equals(ClaimValueTypes.Double))
                     {
                         policyWithClaims.Append(claimValue);
+                    }
+                    else
+                    {
+                        // One of the claims in the request had unsupported data type.
+                        throw new DataGatewayException(
+                            message: "One or more claims have data types which are not supported yet.",
+                            statusCode: System.Net.HttpStatusCode.BadRequest,
+                            subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
+                        );
                     }
 
                     // Move the parsedIdx to the index following a claimType in the policy string

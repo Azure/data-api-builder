@@ -192,9 +192,9 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
                 catch
                 {
-                    throw new DataGatewayException(message: "$policy query parameter is not well formed.",
-                                                   statusCode: HttpStatusCode.BadRequest,
-                                                   subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                    throw new DataGatewayException(message: "Policy query parameter is not well formed.",
+                                                   statusCode: HttpStatusCode.Forbidden,
+                                                   subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed);
                 }
             }
 

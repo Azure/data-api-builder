@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Web;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -168,7 +169,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 // We need to add an item to httpContext.Items dictionary to keep the database policy.
                 httpContext.Items = new Dictionary<object, object>();
-                httpContext.Items.Add("X-DG-Policy", dbPolicy);
+                httpContext.Items.Add(Constants.DB_POLICY_HEADER, dbPolicy);
             }
 
             return httpContext;

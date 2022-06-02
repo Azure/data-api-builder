@@ -125,7 +125,7 @@ namespace Azure.DataGateway.Service.Services
                     _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey);
             }
 
-            if (GetHttpContext().Items != null && GetHttpContext().Items.TryGetValue("X-DG-Policy", out object? dbPolicyObj))
+            if (GetHttpContext().Items is not null && GetHttpContext().Items.TryGetValue(Constants.DB_POLICY_HEADER, out object? dbPolicyObj))
             {
                 // Because Items is a dictionary of (object,object), we need to convert dbPolicyObj to string
                 // to get the database policy.

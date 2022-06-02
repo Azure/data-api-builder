@@ -2240,6 +2240,27 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Tests the REST Api for FindById operation with non-explicit Primary Key
+        /// explicit FindById: GET /<entity>/<primarykeyname>/<primarykeyvalue>/
+        /// implicit FindById: GET /<entity>/<primarykeyvalue>/
+        /// Expected behavior: 400 Bad Request
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestImplicitPrimaryKey()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "1",
+                queryString: string.Empty,
+                entity: _integrationEntityName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "Support for url template with implicit primary key field names is not yet added.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+                );
+        }
+
+        /// <summary>
         /// Tests the REST Api for FindById operation with a query string
         /// having invalid field names.
         /// </summary>

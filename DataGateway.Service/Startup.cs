@@ -180,7 +180,7 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.postgresql:
                         return ActivatorUtilities.CreateInstance<PostgresDbExceptionParser>(serviceProvider, runtimeConfigPath);
                     case DatabaseType.mysql:
-                        return ActivatorUtilities.CreateInstance<MySqlDbExceptionParser>(serviceProvider, runtimeConfig);
+                        return ActivatorUtilities.CreateInstance<MySqlDbExceptionParser>(serviceProvider, runtimeConfigPath);
                     default:
                         throw new NotSupportedException(runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
                 }

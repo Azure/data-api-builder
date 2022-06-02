@@ -7,7 +7,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.GraphQLBuilder;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
@@ -174,7 +173,8 @@ namespace Azure.DataGateway.Service.Resolvers
             if (item is Dictionary<string, object?>)
             {
                 input = (JObject?)ParseVariableInputItem(item);
-            } else
+            }
+            else
             {
                 // An inline argument was set
                 input = (JObject?)ParseInlineInputItem(item);

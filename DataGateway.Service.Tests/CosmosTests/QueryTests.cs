@@ -61,7 +61,7 @@ query{
         {
             // Run query
             string id = _idList[0];
-            JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", PlanetByPKQuery, new() { { "id", id }, { "partitionKeyValue" , id } });
+            JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", PlanetByPKQuery, new() { { "id", id }, { "partitionKeyValue", id } });
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
@@ -170,7 +170,6 @@ query {{
 
             Assert.AreEqual(1, totalElementsFromPaginatedQuery);
         }
-
 
         /// <summary>
         /// Query result with nested object

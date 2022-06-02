@@ -63,8 +63,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
                         new List<InputValueDefinitionNode>(),
                         new StringType().ToTypeNode(),
                         new List<DirectiveNode>()));
-            } else {
-               fieldDefinitionNodes = new(node.Fields.Where(f => f.Directives.Any(d => d.Name.Value == PrimaryKeyDirectiveType.DirectiveName)));
+            }
+            else
+            {
+                fieldDefinitionNodes = new(node.Fields.Where(f => f.Directives.Any(d => d.Name.Value == PrimaryKeyDirectiveType.DirectiveName)));
 
                 // By convention we look for a `@primaryKey` directive, if that didn't exist
                 // fallback to using an expected field name on the GraphQL object
@@ -75,7 +77,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
                     if (fieldDefinitionNode is not null)
                     {
                         fieldDefinitionNodes.Add(fieldDefinitionNode);
-                    } else
+                    }
+                    else
                     {
                         // Nothing explicitly defined nor could we find anything using our conventions, fail out
                         throw new DataGatewayException(

@@ -124,7 +124,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                 f.Name,
                 new StringValueNode($"Input for field {f.Name} on type {inputTypeName}"),
                 (databaseType == DatabaseType.cosmos) ?
-                    new NamedTypeNode(node.Name):
+                    new NamedTypeNode(node.Name) :
                     new NonNullTypeNode(new NamedTypeNode(node.Name)), // TODO - figure out how to properly walk the graph, so you can do [Foo!]!
                 defaultValue: null,
                 f.Directives

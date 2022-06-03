@@ -151,19 +151,40 @@ namespace Azure.DataGateway.Service.Parsers
             // node is null
             while (node is not null)
             {
-                // Column name is stored in node.Expression as a SingleValuePropertyAccessNode
-                SingleValuePropertyAccessNode? expression = node.Expression as SingleValuePropertyAccessNode;
+                // Column name is stored in node.Expression either as SingleValuePropertyNode, or ConstantNode
+                // ConstantNode is used in the case of spaces in column names, and can also be used to support
+                // column name of null. ie: $orderby='hello world', or $orderby=null
+                // note: null support is not currently implemented.
+                QueryNode? expression = node.Expression is not null ? node.Expression :
+                                        throw new DataGatewayException(message: "OrderBy property is not supported.",
+                                                                       HttpStatusCode.BadRequest,
+                                                                       DataGatewayException.SubStatusCodes.BadRequest);
+
                 string columnName;
-                if (expression is null)
+                if (expression.Kind is QueryNodeKind.SingleValuePropertyAccess)
                 {
-                    throw new DataGatewayException(
-                        message: "OrderBy property is not supported.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                    // if name is in SingleValuePropertyAccess node it matches our model and we will
+                    // always be able to get backing column successfully
+                    sqlMetadataProvider.TryGetBackingColumn(context.EntityName, ((SingleValuePropertyAccessNode)expression).Property.Name, out columnName!);
+                }
+                else if (expression.Kind is QueryNodeKind.Constant &&
+                        ((ConstantNode)expression).Value is not null)
+                {
+                    // since this comes from constant node, it was not checked against our model
+                    // so this may return false in which case we throw for a bad request
+                    if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, ((ConstantNode)expression).Value.ToString()!, out columnName!))
+                    {
+                        throw new DataGatewayException(
+                            message: $"Invalid orderby column requested: {((ConstantNode)expression).Value.ToString()!}.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                    }
                 }
                 else
                 {
-                    sqlMetadataProvider.TryGetBackingColumn(context.EntityName, expression.Property.Name, out columnName!);
+                    throw new DataGatewayException(message: "OrderBy property is not supported.",
+                                                   HttpStatusCode.BadRequest,
+                                                   DataGatewayException.SubStatusCodes.BadRequest);
                 }
 
                 // Sorting order is stored in node.Direction as OrderByDirection Enum

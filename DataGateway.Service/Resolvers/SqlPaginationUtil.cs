@@ -258,7 +258,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         // these columns to exist.
                         string safeColumnName = GetColumnName(entityName, columnName, sqlMetadataProvider);
                         throw new DataGatewayException(
-                                    message:$"Could not match order by column {safeColumnName} with a column in the pagination token with the same name and direction.",
+                                    message: $"Could not match order by column {safeColumnName} with a column in the pagination token with the same name and direction.",
                                     statusCode: HttpStatusCode.BadRequest,
                                     subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }

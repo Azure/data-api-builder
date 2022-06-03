@@ -23,6 +23,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected const string STRING_TYPE = "string";
         protected const string BOOLEAN_TYPE = "boolean";
         protected const string DATETIME_TYPE = "datetime";
+        protected const string BYTEARRAY_TYPE = "bytearray";
 
         #region Test Fixture Setup
         protected static GraphQLService _graphQLService;
@@ -73,6 +74,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [DataRow(DATETIME_TYPE, 2)]
         [DataRow(DATETIME_TYPE, 3)]
         [DataRow(DATETIME_TYPE, 4)]
+        [DataRow(BYTEARRAY_TYPE, 1)]
+        [DataRow(BYTEARRAY_TYPE, 2)]
+        [DataRow(BYTEARRAY_TYPE, 3)]
+        [DataRow(BYTEARRAY_TYPE, 4)]
         public async Task QueryTypeColumn(string type, int id)
         {
             if (!IsTypeSupportedType(type))
@@ -116,7 +121,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [DataRow(INT_TYPE, "null")]
         [DataRow(LONG_TYPE, "0")]
         [DataRow(LONG_TYPE, "9000000000000000000")]
-        [DataRow(LONG_TYPE, "9000000000000000000")]
+        [DataRow(LONG_TYPE, "-9000000000000000000")]
         [DataRow(LONG_TYPE, "null")]
         [DataRow(STRING_TYPE, "\"aaaaaaaaaa\"")]
         [DataRow(STRING_TYPE, "\"\"")]
@@ -135,10 +140,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [DataRow(BOOLEAN_TYPE, "null")]
         [DataRow(DATETIME_TYPE, "\"1999-01-08 10:23:54+8:00\"")]
         [DataRow(DATETIME_TYPE, "\"1999-01-08 09:20:00\"")]
+        [DataRow(DATETIME_TYPE, "\"1999-01-08\"")]
         [DataRow(DATETIME_TYPE, "null")]
+        [DataRow(BYTEARRAY_TYPE, "\"U3RyaW5neQ==\"")]
+        [DataRow(BYTEARRAY_TYPE, "\"V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=\"")]
+        [DataRow(BYTEARRAY_TYPE, "null")]
         public async Task InsertIntoTypeColumn(string type, string value)
         {
-            if (!IsTypeSupportedType(type))
+            if (!IsTypeSupportedType(type, value))
             {
                 return;
             }
@@ -182,7 +191,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [DataRow(INT_TYPE, "null")]
         [DataRow(LONG_TYPE, "0")]
         [DataRow(LONG_TYPE, "9000000000000000000")]
-        [DataRow(LONG_TYPE, "9000000000000000000")]
+        [DataRow(LONG_TYPE, "-9000000000000000000")]
         [DataRow(LONG_TYPE, "null")]
         [DataRow(STRING_TYPE, "\"aaaaaaaaaa\"")]
         [DataRow(STRING_TYPE, "\"\"")]
@@ -201,10 +210,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [DataRow(BOOLEAN_TYPE, "null")]
         [DataRow(DATETIME_TYPE, "\"1999-01-08 10:23:54+8:00\"")]
         [DataRow(DATETIME_TYPE, "\"1999-01-08 09:20:00\"")]
+        [DataRow(DATETIME_TYPE, "\"1999-01-08\"")]
         [DataRow(DATETIME_TYPE, "null")]
+        [DataRow(BYTEARRAY_TYPE, "\"U3RyaW5neQ==\"")]
+        [DataRow(BYTEARRAY_TYPE, "\"V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=\"")]
+        [DataRow(BYTEARRAY_TYPE, "null")]
         public async Task UpdateTypeColumn(string type, string value)
         {
-            if (!IsTypeSupportedType(type))
+            if (!IsTypeSupportedType(type, value))
             {
                 return;
             }
@@ -302,7 +315,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         protected abstract string MakeQueryOnTypeTable(List<string> columnsToQuery, int id);
-        protected virtual bool IsTypeSupportedType(string type)
+        protected virtual bool IsTypeSupportedType(string type, string value = null)
         {
             return true;
         }

@@ -117,6 +117,7 @@ namespace Azure.DataGateway.Service.Services
                 ByteType => byte.Parse(leafJson),
                 SingleType => Single.Parse(leafJson),
                 DateTimeType => DateTimeOffset.Parse(leafJson),
+                ByteArrayType => Convert.FromBase64String(leafJson),
                 _ => leafJson
             };
         }

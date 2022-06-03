@@ -35,7 +35,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
                 "Decimal",
                 "String",
                 "Boolean",
-                "DateTime"
+                "DateTime",
+                "ByteArray"
             };
             string name = typeNode.NamedType().Name.Value;
             return inBuiltTypes.Contains(name);

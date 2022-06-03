@@ -44,5 +44,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     INCLUDE_NULL_VALUES
             ";
         }
+
+        /// <summary>
+        /// Explicitly declaring a parameter for a bytearray type is not possible rn due to:
+        /// https://stackoverflow.com/questions/29254690/why-does-dbnull-value-require-a-proper-sqldbtype
+        /// </summary>
+        protected override bool IsTypeSupportedType(string type, string value = null)
+        {
+            if (type == BYTEARRAY_TYPE && value == "null")
+            {
+                return false;
+            }
+
+            return true;
+        }
     }
 }

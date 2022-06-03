@@ -37,7 +37,7 @@ namespace Azure.DataGateway.Service.Resolvers
                                     Build(structure.Predicates),
                                     Build(structure.PaginationMetadata.PaginationPredicate));
 
-            string query = $"SELECT {Build(structure.Columns)}"
+            string query = $"SELECT {MakeSelectColumns(structure)}"
                 + $" FROM {fromSql}"
                 + $" WHERE {predicates}"
                 + $" ORDER BY {Build(structure.OrderByColumns)}"
@@ -154,6 +154,30 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             throw new ArgumentException($"Invalid {UPSERT_IDENTIFIER_COLUMN_NAME} column value.");
+        }
+
+        /// <summary>
+        /// Encode byte array columns to base64 strings instead of hex strings
+        /// when parsing the results into json
+        /// </summary>
+        private string MakeSelectColumns(SqlQueryStructure structure)
+        {
+            List<string> builtColumns = new();
+
+            foreach (LabelledColumn column in structure.Columns)
+            {
+                if (column.ColumnName != SqlQueryStructure.DATA_IDENT &&
+                    structure.GetColumnSystemType(column.ColumnName) == typeof(byte[]))
+                {
+                    builtColumns.Add($"encode({Build(column as Column)}, 'base64') AS {QuoteIdentifier(column.Label)}");
+                }
+                else
+                {
+                    builtColumns.Add(Build(column));
+                }
+            }
+
+            return string.Join(", ", builtColumns);
         }
     }
 }

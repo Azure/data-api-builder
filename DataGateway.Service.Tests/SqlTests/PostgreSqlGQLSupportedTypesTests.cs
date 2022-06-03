@@ -38,7 +38,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             return @"
                 SELECT to_jsonb(subq3) AS DATA
                 FROM
-                  (SELECT " + string.Join(", ", queriedColumns.Select(c => $"\"{c}\"")) + @"
+                  (SELECT " + string.Join(", ", queriedColumns.Select(c => ProperlyFormatTypeTableColumn(c) + $" AS {c}")) + @"
                    FROM public.type_table AS table0
                    WHERE id = " + id + @"
                    ORDER BY id
@@ -46,13 +46,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             ";
         }
 
-        protected override bool IsTypeSupportedType(string type)
+        protected override bool IsTypeSupportedType(string type, string value = null)
         {
             return type switch
             {
                 BYTE_TYPE => false,
                 _ => true
             };
+        }
+
+        /// <summary>
+        /// Appends parsing logic to some columns which need it
+        /// </summary>
+        private static string ProperlyFormatTypeTableColumn(string columnName)
+        {
+            if (columnName.Contains(BYTEARRAY_TYPE))
+            {
+                return $"encode({columnName}, 'base64')";
+            }
+            else
+            {
+                return columnName;
+            }
         }
     }
 }

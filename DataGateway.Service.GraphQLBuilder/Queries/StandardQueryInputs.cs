@@ -186,6 +186,17 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 }
             );
 
+        public static InputObjectTypeDefinitionNode ByteArrayInputType() =>
+            new(
+                null,
+                new NameNode("ByteArrayFilterInput"),
+                new StringValueNode("Input type for adding ByteArray filters"),
+                new List<DirectiveNode>(),
+                new List<InputValueDefinitionNode> {
+                    new InputValueDefinitionNode(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                }
+            );
+
         public static Dictionary<string, InputObjectTypeDefinitionNode> InputTypes = new()
         {
             { "ID", IdInputType() },
@@ -198,7 +209,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             { "Decimal", DecimalInputType() },
             { "Boolean", BooleanInputType() },
             { "String", StringInputType() },
-            { "DateTime", DateTimeInputType() }
+            { "DateTime", DateTimeInputType() },
+            { "ByteArray", ByteArrayInputType() }
         };
     }
 }

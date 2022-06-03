@@ -136,11 +136,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
         [DataRow(typeof(decimal), "Decimal")]
         [DataRow(typeof(bool), "Boolean")]
         [DataRow(typeof(DateTime), "DateTime")]
-        // TODO: Uncomment these once we have more GraphQL type support - https://github.com/Azure/hawaii-gql/issues/247
-        //[DataRow(typeof(int), "Int")]
-        //[DataRow(typeof(short), "Int")]
-        //[DataRow(typeof(float), "Float")]
-        //[DataRow(typeof(decimal), "Float")]
+        [DataRow(typeof(byte[]), "ByteArray")]
         public void SystemTypeMapsToCorrectGraphQLType(Type systemType, string graphQLType)
         {
             TableDefinition table = new();
@@ -288,6 +284,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
         [DataRow(1.2, "float", SyntaxKind.FloatValue)]
         [DataRow(1.2, "decimal", SyntaxKind.FloatValue)]
         [DataRow("1999-01-08 10:23:54", "datetime", SyntaxKind.StringValue)]
+        [DataRow("U3RyaW5neQ==", SyntaxKind.StringValue)]
         public void DefaultValueGetsSetOnDirective(object defaultValue, string fieldName, SyntaxKind kind)
         {
             if (fieldName == "decimal")

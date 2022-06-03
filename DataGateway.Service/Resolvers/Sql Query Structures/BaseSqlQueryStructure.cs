@@ -151,32 +151,21 @@ namespace Azure.DataGateway.Service.Resolvers
             Type systemType = GetColumnSystemType(columnName);
             try
             {
-                switch (Type.GetTypeCode(systemType))
+                return systemType.Name switch
                 {
-                    case TypeCode.String:
-                        return param;
-                    case TypeCode.Byte:
-                        return byte.Parse(param);
-                    case TypeCode.Int16:
-                        return short.Parse(param);
-                    case TypeCode.Int32:
-                        return int.Parse(param);
-                    case TypeCode.Int64:
-                        return long.Parse(param);
-                    case TypeCode.Single:
-                        return float.Parse(param);
-                    case TypeCode.Double:
-                        return double.Parse(param);
-                    case TypeCode.Decimal:
-                        return decimal.Parse(param);
-                    case TypeCode.Boolean:
-                        return Boolean.Parse(param);
-                    case TypeCode.DateTime:
-                        return DateTimeOffset.Parse(param);
-                    default:
-                        // should never happen due to the config being validated for correct types
-                        throw new NotSupportedException($"{systemType.Name} is not supported");
-                }
+                    "String" => param,
+                    "Byte" => byte.Parse(param),
+                    "Byte[]" => Convert.FromBase64String(param),
+                    "Int16" => short.Parse(param),
+                    "Int32" => int.Parse(param),
+                    "Int64" => long.Parse(param),
+                    "Single" => float.Parse(param),
+                    "Double" => double.Parse(param),
+                    "Decimal" => decimal.Parse(param),
+                    "Boolean" => bool.Parse(param),
+                    "DateTime" => DateTimeOffset.Parse(param),
+                    _ => throw new NotSupportedException($"{systemType.Name} is not supported")
+                };
             }
             catch (Exception e)
             {

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
@@ -461,6 +462,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                       FROM " + _integrationTableName + @"
                       ORDER BY title, id
                       LIMIT 100
+                  ) AS subq"
+            },
+            {
+                "FindTestWithQueryStringSpaceInNamesOrderByAsc",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('ID Number', `ID Number`, 'First Name', `First Name`, 'Last Name', `Last Name`)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableHasColumnWithSpace + @"
+                      ORDER BY `ID Number`
+                      LIMIT 100
+                  ) AS subq"
+            },
+            {
+                "FindTestWithFirstAndSpacedColumnOrderBy",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('ID Number', `ID Number`, 'First Name', `First Name`, 'Last Name', `Last Name`)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableHasColumnWithSpace + @"
+                      ORDER BY `Last Name`
+                      LIMIT 1
                   ) AS subq"
             },
             {
@@ -1054,6 +1077,20 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public override string GetQuery(string key)
         {
             return _queryMap[key];
+        }
+
+        /// <summary>
+        /// We have 1 test, which is named
+        /// PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest
+        /// that will have Db specific error messages, however mysql
+        /// has more unique constrainst and so instead of
+        /// returning the custom message, the function is entirely
+        /// overridden. Therefore here we throw not implemented.
+        /// </summary>
+        /// <returns></returns>
+        public override string GetUniqueDbErrorMessage()
+        {
+            throw new NotImplementedException();
         }
 
         [TestMethod]

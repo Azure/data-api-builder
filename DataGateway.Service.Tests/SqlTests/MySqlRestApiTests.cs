@@ -656,6 +656,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ) AS subq"
             },
             {
+            "FindTestWithDifferentMappingFirstSingleKeyPaginationAndOrderBy",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'fancyName', species, 'region', region, 'height', height)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationMappingTable + @"
+                      ORDER BY species
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
                 "InsertOneTest",
                 @"
                     SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data

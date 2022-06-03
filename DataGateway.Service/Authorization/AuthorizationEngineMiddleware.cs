@@ -32,11 +32,9 @@ namespace Azure.DataGateway.Service.Authorization
 
             if (!authorizationResult.Succeeded)
             {
-                //Handle authorization failure
-                throw new DataGatewayException(
-                    message: "Authorization Failed",
-                    statusCode: HttpStatusCode.Forbidden,
-                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed);
+                //Handle authorization failure and terminate the request.
+                httpContext.Response.StatusCode = 403;
+                return;
             }
 
             await _next(httpContext);

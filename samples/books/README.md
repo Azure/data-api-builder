@@ -140,6 +140,11 @@ Once the configuration has been updated, you can navigate the relationships via 
 
 ### Add an Author entity
 
+Books are written by authors, and therefore we need to expose the `author` entity in order to allow developers to manage authors:
+
+```
+```
+
 ### Create a M:N relationship between Books and Authors
 
 ### Enrich the relatioship between Books and Authors

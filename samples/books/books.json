@@ -1,5 +1,5 @@
 {
-  "$schema": "../schemas/hawaii.draft-01.schema.json",
+  "$schema": "../../schemas/hawaii.draft-01.schema.json",
   "data-source": {
     "database-type": "mssql",
     "connection-string": "Server=localhost;Database=HawaiiTest;User ID=sa;Password=Passw0rd!;TrustServerCertificate=true"
@@ -27,10 +27,14 @@
           "target.entity": "category"
         }
       },
-      "permissions": [{
+      "permissions": [
+        {
           "role": "anonymous",
-          "actions": [ "*" ]
-        }]
+          "actions": [
+            "*"
+          ]
+        }
+      ]
     },
     "category": {
       "source": "dbo.categories",
@@ -40,10 +44,30 @@
           "target.entity": "book"
         }
       },
-      "permissions": [{
-        "role": "anonymous",
-        "actions": [ "*" ]
-        }]
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        }
+      ]
+    },
+    "authors": {
+      "source": "dbo.authors",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*",
+              "fields": {
+                "exclude": [ "full_name" ]
+              }
+            }
+          ]
+        }
+      ]
     }
   }
 }

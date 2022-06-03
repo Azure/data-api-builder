@@ -208,20 +208,20 @@ namespace Azure.DataGateway.Service.Authorization
         /// matching CRUD operation(s), to facilitate authorization checks.
         /// </summary>
         /// <param name="httpVerb"></param>
-        /// <returns></returns>
+        /// <returns>A collection of ActionTypes resolved from the http verb type of the request.</returns>
         private static IEnumerable<string> HttpVerbToActions(string httpVerb)
         {
             switch (httpVerb)
             {
                 case HttpConstants.POST:
-                    return new List<string>(new string[] { "create" });
+                    return new List<string>(new string[] { ActionType.CREATE });
                 case HttpConstants.PUT:
                 case HttpConstants.PATCH:
-                    return new List<string>(new string[] { "create", "update" });
+                    return new List<string>(new string[] { ActionType.CREATE, ActionType.UPDATE });
                 case HttpConstants.DELETE:
-                    return new List<string>(new string[] { "delete" });
+                    return new List<string>(new string[] { ActionType.DELETE });
                 case HttpConstants.GET:
-                    return new List<string>(new string[] { "read" });
+                    return new List<string>(new string[] { ActionType.READ });
                 default:
                     break;
             }

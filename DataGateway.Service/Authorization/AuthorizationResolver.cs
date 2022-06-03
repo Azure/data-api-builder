@@ -235,7 +235,7 @@ namespace Azure.DataGateway.Service.Authorization
                 }
             }
 
-            return includedColumns.ToList();
+            return includedColumns;
         }
 
         /// <summary>
@@ -260,10 +260,10 @@ namespace Azure.DataGateway.Service.Authorization
         /// from the metadataProvider.
         /// </summary>
         /// <param name="entityName">Used to lookup table definition of specific entity</param>
-        /// <returns>List of columns in table definition.</returns>
+        /// <returns>Collection of columns in table definition.</returns>
         private IEnumerable<string> ResolveTableDefinitionColumns(string entityName)
         {
-            return _metadataProvider.GetTableDefinition(entityName).Columns.Keys.ToList();
+            return _metadataProvider.GetTableDefinition(entityName).Columns.Keys;
         }
         #endregion
     }

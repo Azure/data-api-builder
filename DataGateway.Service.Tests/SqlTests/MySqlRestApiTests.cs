@@ -652,7 +652,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   FROM (
                       SELECT *
                       FROM " + _integrationMappingTable + @"
-                      ORDER BY species
+                      ORDER BY species ASC
+                      LIMIT 100
                   ) AS subq"
             },
             {

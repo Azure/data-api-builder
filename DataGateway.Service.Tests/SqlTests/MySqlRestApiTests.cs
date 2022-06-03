@@ -1085,7 +1085,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// that will have Db specific error messages, however mysql
         /// has more unique constrainst and so instead of
         /// returning the custom message, the function is entirely
-        /// overriden. Therefore here we throw not implemented.
+        /// overridden. Therefore here we throw not implemented.
         /// </summary>
         /// <returns></returns>
         public override string GetUniqueDbErrorMessage()

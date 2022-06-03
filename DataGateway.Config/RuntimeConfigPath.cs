@@ -68,7 +68,6 @@ namespace Azure.DataGateway.Config
         /// <param name="databaseType"></param>
         /// <param name="connectionString"></param>
         /// <param name="entities"></param>
-        /// <param name="mode"></param>
         public void ExtractConfigValues(
             out DatabaseType databaseType,
             out string connectionString,

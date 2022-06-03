@@ -16,11 +16,11 @@ The `dbo.books` table needs to be exposed as a REST and GraphQL endpoint. To do 
 
 ```json
 "book": {
-    "source": "dbo.books",
-    "permissions": [{
-        "role": "anonymous",
-        "actions": [ "*" ]
-    }]
+  "source": "dbo.books",
+  "permissions": [{
+    "role": "anonymous",
+    "actions": [ "*" ]
+  }]
 }
 ```
 
@@ -55,11 +55,11 @@ Each book will be able to be categorized into one category, so a category entity
 
 ```json
 "category": {
-    "source": "dbo.categories",
-    "permissions": [{
-        "role": "anonymous",
-        "actions": [ "*" ]
-    }]
+  "source": "dbo.categories",
+  "permissions": [{
+    "role": "anonymous",
+    "actions": [ "*" ]
+  }]
 }
 ```
 
@@ -94,17 +94,17 @@ To add the one-to-many relatioship between categories and books, update the `cat
 
 ```json
 "category": {
-    "source": "dbo.categories",
-    "relationships": {
-        "book": {
-            "cardinality": "many",
-            "target.entity": "book"
-        }
-    },
-    "permissions": [{
-        "role": "anonymous",
-        "actions": [ "*" ]
-    }]
+  "source": "dbo.categories",
+  "relationships": {
+    "book": {
+      "cardinality": "many",
+      "target.entity": "book"
+    }
+  },
+  "permissions": [{
+    "role": "anonymous",
+    "actions": [ "*" ]
+  }]
 }
 ```
 
@@ -112,17 +112,17 @@ in the same way, the `book` entity needs to be updated:
 
 ```json
 "book": {
-    "source": "dbo.books",
-    "relationships": {
-        "category": {
-            "cardinality": "one",
-            "target.entity": "category"
-        }
-    },
-    "permissions": [{
-        "role": "anonymous",
-        "actions": [ "*" ]
-    }]
+  "source": "dbo.books",
+  "relationships": {
+    "category": {
+      "cardinality": "one",
+      "target.entity": "category"
+    }
+  },
+  "permissions": [{
+    "role": "anonymous",
+    "actions": [ "*" ]
+  }]
 }
 ```
 
@@ -150,13 +150,13 @@ Books are written by authors, and therefore we need to expose the `author` entit
 
 ```json
 "author": {
-    "source": "dbo.authors",
-    "permissions": [{
-        "role": "anonymous",
-        "actions": [{
-            "action": "*"
-        }]
+  "source": "dbo.authors",
+  "permissions": [{
+    "role": "anonymous",
+    "actions": [{
+      "action": "*"
     }]
+  }]
 }
 ```
 
@@ -168,15 +168,15 @@ The `book` entity needs to be updated using the following configuration:
 
 ```json
 "book": {
+  ...
+  "relationships": {
     ...
-    "relationships": {
-        ...
-        "authors": {
-            "cardinality": "many",
-            "linking.object": "dbo.books_authors",
-            "target.entity": "author"
-        }
+    "authors": {
+      "cardinality": "many",
+      "linking.object": "dbo.books_authors",
+      "target.entity": "author"
     }
+  }
 }
 ```
 
@@ -202,15 +202,15 @@ Of course, also the `author` entity needs to be updated, to allow navigation fro
 
 ```json
 "author": {
+  ...
+  "relationships": {
     ...
-    "relationships": {
-        ...
-        "books": {
-            "cardinality": "many",
-            "linking.object": "dbo.books_authors",
-            "target.entity": "book"
-        }
+    "books": {
+      "cardinality": "many",
+      "linking.object": "dbo.books_authors",
+      "target.entity": "book"
     }
+  }
 }
 ```
 

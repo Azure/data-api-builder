@@ -166,22 +166,24 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
         }
 
         /// <summary>
-        /// Tests column level authorization permissions for Find requests.
-        /// - Any subset of columns requested, which are in the allowed list of columns -> Authorization successful
-        /// - Any column requested, which does not appear in the allowed list of columns -> Authorization failure
+        /// Tests column level authorization permissions for Find requests with no _f filter query string parameter.
+        /// - Request contains any subset of columns requested, which are in the allowed list of columns -> Authorization successful
+        /// - Request contains any column requested, which does not appear in the allowed list of columns -> Authorization failure
+        /// - After authorization, RestAuthorizationHandler modifies FieldsToBeReturned with list of allowed columns, so that results
+        ///   only contain fields allowed by permissions.
         /// FORMAT WARNING Disabled: To make test input easier to read,
         /// whitespace checking is ignored for the [DataRow] definitions.
         /// </summary>
         /// <param name="columnsRequestedInput">List of columns that appear in a request {URL, QueryString, Body}</param>
         # pragma warning disable format
         [DataTestMethod]
-        // Positive Tests where authorization succeeds
+        // Positive Tests where authorization succeeds for Find requests with no _f filter query string parameter
         [DataRow(new string[] { "col1", "col2", "col3", "col4" }, DisplayName = "Find - Request all of Allowed Columns")]
         [DataRow(new string[] { "col1", "col2", "col3"         }, DisplayName = "Find - Request 3/4 subset of Allowed Columns")]
         [DataRow(new string[] { "col1", "col2"                 }, DisplayName = "Find - Request 2/4 subset of Allowed Columns")]
         [DataRow(new string[] { "col1"                         }, DisplayName = "Find - Request 1/4 subset of Allowed Columns")]
         [DataRow(new string[] {                                }, DisplayName = "Find - No column filter for results")]
-        // Negative tests where authorization fails
+        // Negative tests where authorization fails for Find requests with no _f filter query string parameter
         [DataRow(new string[] { "col1", "col2", "col3", "col4", "col5" }, DisplayName = "Find - Request all allowed + 1 disallowed column(s)")]
         [DataRow(new string[] { "col1", "col5", "col6", "col7", "col9" }, DisplayName = "Find - Request 1 allowed + > 1 disallowed column(s)")]
         #pragma warning restore format
@@ -194,7 +196,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
                new string[] { "col1", "col2", "col3", "col4" });
             bool areColumnsAllowed = true;
             bool expectedAuthorizationResult = true;
-            string httpMethod = HttpConstants.GET;
 
             // Creates Mock AuthorizationResolver to return a preset result based on [TestMethod] input.
             Mock<IAuthorizationResolver> authorizationResolver = new();
@@ -210,32 +211,22 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
                 ActionType.READ
                 )).Returns(allowedColumns);
 
+            string httpMethod = HttpConstants.GET;
             HttpContext httpContext = CreateHttpContext(httpMethod);
-            TableDefinition tableDef = new();
-            tableDef.SourceEntityRelationshipMap.Add(AuthorizationHelpers.TEST_ENTITY, new());
-            DatabaseObject stubDbObj = new()
-            {
-                TableDefinition = tableDef
-            };
+            RestRequestContext stubRestRequestContext = CreateRestRequestContext(columnsRequested);
 
-            RestRequestContext stubRestContext = new FindRequestContext(
-                entityName: AuthorizationHelpers.TEST_ENTITY,
-                dbo: stubDbObj,
-                isList: false
-                );
-            stubRestContext.CumulativeColumns.UnionWith(columnsRequested);
-
+            // Perform Authorization Check, the result is used to validate behavior.
             bool actualAuthorizationResult = await IsAuthorizationSuccessful(
                requirement: new ColumnsPermissionsRequirement(),
-               resource: stubRestContext,
+               resource: stubRestRequestContext,
                resolver: authorizationResolver.Object,
                httpContext: httpContext);
 
             Assert.AreEqual(expectedAuthorizationResult, actualAuthorizationResult, message: "Unexpected Authorization Result.");
 
             // Ensure the FieldsToBeReturned, which the AuthorizationResolver modifies for Find requests,
-            // is equivalent to the allowedColumns list
-            CollectionAssert.AreEquivalent(expected: (ICollection)allowedColumns, actual: stubRestContext.FieldsToBeReturned, message: "FieldsToBeReturned not subset of allowed columns.");
+            // is equivalent to the allowedColumns list. This test *does not* mock requests which predefine a query string field filter (_f)
+            CollectionAssert.AreEquivalent(expected: (ICollection)allowedColumns, actual: stubRestRequestContext.FieldsToBeReturned, message: "FieldsToBeReturned not subset of allowed columns.");
         }
 
         #region Helper Methods
@@ -244,7 +235,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
         /// </summary>
         /// <param name="entityName">Table/Entity that is being queried.</param>
         /// <param name="user">ClaimsPrincipal / user that has authentication status defined.</param>
-        /// <returns></returns>
+        /// <returns>True/False whether Authorization Result Succeeded</returns>
         private static async Task<bool> IsAuthorizationSuccessful(
             IAuthorizationRequirement requirement,
             object resource,
@@ -267,7 +258,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
         /// <summary>
         /// Create Mock HttpContext object for use in test fixture.
         /// </summary>
-        /// <returns></returns>
+        /// <param name="httpMethod">Optionally set the httpVerb of the request.</param>
+        /// <param name="clientRole">Optionally set the role membership of the authenticated role.</param>
+        /// <returns>Mocked HttpContext object</returns>
         private static HttpContext CreateHttpContext(
             string httpMethod = HttpConstants.GET,
             string clientRole = AuthorizationHelpers.TEST_ROLE)
@@ -277,6 +270,33 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
                 .Returns(clientRole);
             httpContext.Setup(x => x.Request.Method).Returns(httpMethod);
             return httpContext.Object;
+        }
+
+        /// <summary>
+        /// Creates RestRequestContext with test input defined columns, with TableDefinition and DatabaseObject
+        /// created for usage within the RestAuthorizationHandler's ColumnsPermissionsRequirement handling.
+        /// </summary>
+        /// <param name="columnsRequested">Cumulative list of columns present in a request.</param>
+        /// <returns>Stubbed RestRequestContext object</returns>
+        private static RestRequestContext CreateRestRequestContext(
+            IEnumerable<string> columnsRequested
+            )
+        {
+            TableDefinition tableDef = new();
+            tableDef.SourceEntityRelationshipMap.Add(AuthorizationHelpers.TEST_ENTITY, new());
+            DatabaseObject stubDbObj = new()
+            {
+                TableDefinition = tableDef
+            };
+
+            RestRequestContext stubRestContext = new FindRequestContext(
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                dbo: stubDbObj,
+                isList: false
+                );
+            stubRestContext.CumulativeColumns.UnionWith(columnsRequested);
+
+            return stubRestContext;
         }
         #endregion
     }

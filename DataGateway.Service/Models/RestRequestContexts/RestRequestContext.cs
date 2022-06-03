@@ -113,7 +113,6 @@ namespace Azure.DataGateway.Service.Models
         /// </returns>
         public bool TryCalculateCumulativeColumns()
         {
-            ODataASTFieldVisitor visitor = new();
             try
             {
                 if (PrimaryKeyValuePairs is not null && PrimaryKeyValuePairs.Count > 0)
@@ -128,6 +127,7 @@ namespace Azure.DataGateway.Service.Models
 
                 if (FilterClauseInUrl is not null)
                 {
+                    ODataASTFieldVisitor visitor = new();
                     FilterClauseInUrl.Expression.Accept(visitor);
                     CumulativeColumns.UnionWith(visitor.CumulativeColumns);
                 }

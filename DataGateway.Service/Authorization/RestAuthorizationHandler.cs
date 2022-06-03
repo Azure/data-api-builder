@@ -105,6 +105,7 @@ namespace Azure.DataGateway.Service.Authorization
                         if (!isAuthorized)
                         {
                             context.Fail();
+                            break;
                         }
                     }
 
@@ -141,7 +142,7 @@ namespace Azure.DataGateway.Service.Authorization
                     // Delete operations do not have column level restrictions.
                     // If the operation is allowed for the role, the column requirement is implicitly successful,
                     // and the authorization check can be short circuited here.
-                    if (actions.Contains(ActionType.DELETE))
+                    if (actions.Count() == 1 && actions.Contains(ActionType.DELETE))
                     {
                         context.Succeed(requirement);
                         return Task.CompletedTask;
@@ -155,33 +156,35 @@ namespace Azure.DataGateway.Service.Authorization
                         // A user must fulfill all actions' permissions requirements to proceed.
                         foreach (string action in actions)
                         {
-                            IEnumerable<string> columnsToCheck;
+                            // Get a list of all columns present in a request that need to be authorized.
+                            IEnumerable<string> columnsToCheck = restContext.CumulativeColumns;
 
-                            // - Find operations typically return all metadata of a database record.
-                            // This check resolves all 'included' columns defined in permissions
-                            // so only those included columns are present in the result(s).
-                            // - For other operation types, columnsToCheck is a result of identifying
-                            // any reference to a column in all parts of a request (body, URL, querystring)
-                            if (restContext.OperationType == Operation.Find)
-                            {
-                                columnsToCheck = _authorizationResolver.GetAllowedColumns(entityName, roleName, action);
-                            }
-                            else
-                            {
-                                columnsToCheck = restContext.CumulativeColumns;
-                            }
+                            // When Issue #XX for REST Column Aliases is merged, the request field names(which may be aliases)
+                            // will be converted to field names denoted in the permissions config.
+                            // i.e. columnsToCheck = convertExposedNamesToBackingColumns()
 
-                            // The authorizationResolver will gatekeep whether the ColumnsPermissionsRequirement should succeed.
-                            if (_authorizationResolver.AreColumnsAllowedForAction(entityName, roleName, action, columnsToCheck))
+                            // Authorize field names present in a request.
+                            if (columnsToCheck.Count() > 0 && _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName, action, columnsToCheck))
                             {
                                 // Find operations with no column filter in the query string will have FieldsToBeReturned == 0.
-                                // Then, the "allowed columns" resolved earlier, will be set on FieldsToBeReturned.
+                                // Then, the "allowed columns" resolved, will be set on FieldsToBeReturned.
                                 // When FieldsToBeReturned is originally >=1 column, the field is NOT modified here.
                                 if (restContext.FieldsToBeReturned.Count == 0 && restContext.OperationType == Operation.Find)
                                 {
                                     // Union performed to avoid duplicate field names in FieldsToBeReturned.
-                                    restContext.FieldsToBeReturned = restContext.FieldsToBeReturned.Union(columnsToCheck).ToList();
+                                    IEnumerable<string> fieldsReturnedForFind = _authorizationResolver.GetAllowedColumns(entityName, roleName, action);
+                                    restContext.FieldsToBeReturned = restContext.FieldsToBeReturned.Union(fieldsReturnedForFind).ToList();
                                 }
+                            }
+                            else if (columnsToCheck.Count() == 0 && restContext.OperationType is Operation.Find)
+                            {
+                                // - Find operations typically return all metadata of a database record.
+                                // This check resolves all 'included' columns defined in permissions
+                                // so only those included columns are present in the result(s).
+                                // - For other operation types, columnsToCheck is a result of identifying
+                                // any reference to a column in all parts of a request (body, URL, querystring)
+                                IEnumerable<string> fieldsReturnedForFind = _authorizationResolver.GetAllowedColumns(entityName, roleName, action);
+                                restContext.FieldsToBeReturned = restContext.FieldsToBeReturned.Union(fieldsReturnedForFind).ToList();
                             }
                             else
                             {

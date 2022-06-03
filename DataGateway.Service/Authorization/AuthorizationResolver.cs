@@ -182,6 +182,10 @@ namespace Azure.DataGateway.Service.Authorization
 
                                 if (actionObj.Fields!.Include is not null)
                                 {
+                                    // When a wildcard (*) is defined for Included columns, all of the table's
+                                    // columns must be resolved and placed in the actionToColumn Key/Value store.
+                                    // This is especially relevant for find requests, where actual column names must be
+                                    // resolved when no columns were included in a request.
                                     if (actionObj.Fields.Include.Length == 1 && actionObj.Fields.Include[0] == WILDCARD)
                                     {
                                         actionToColumn.included.UnionWith(ResolveTableDefinitionColumns(entityName));
@@ -194,6 +198,8 @@ namespace Azure.DataGateway.Service.Authorization
 
                                 if (actionObj.Fields!.Exclude is not null)
                                 {
+                                    // When a wildcard (*) is defined for Excluded columns, all of the table's
+                                    // columns must be resolved and placed in the actionToColumn Key/Value store.
                                     if (actionObj.Fields.Exclude.Length == 1 && actionObj.Fields.Exclude[0] == WILDCARD)
                                     {
                                         actionToColumn.excluded.UnionWith(ResolveTableDefinitionColumns(entityName));

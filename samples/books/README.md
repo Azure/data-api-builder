@@ -1,8 +1,14 @@
-# Project Hawaii
-
-## Azure SQL DB & SQL Server Sample
+# Books Catalog Sample
 
 TDB: Describe the sample scenario
+
+## Backend Database
+
+This sample uses Azure SQL DB or SQL Server Sample as the backed database. Use the `book.sql` file to create the database objects used by the sample.
+
+## Hawaii Configuration
+
+TDB
 
 ### Add a Book entity
 

@@ -25,5 +25,6 @@ Project Hawaii need a minimal configuration in order to get started. Create a ne
 An alternative to manual configuration of the configuration file is to use [Hawaii CLI](https://github.com/Azure/hawaii-cli), that will help you to quickly define an maintain the configuation file.
 
 
+### 4. Use a sample
 
-
+In the `samples` folder you can find some samples on how to use Hawaii.

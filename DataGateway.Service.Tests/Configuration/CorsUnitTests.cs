@@ -1,18 +1,18 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
-using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Primitives;
-using Microsoft.AspNetCore.TestHost;
+using Azure.DataGateway.Config;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Cors.Infrastructure;
-using Azure.DataGateway.Config;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Primitives;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.Configuration
 {
@@ -57,7 +57,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         {
             CorsPolicy parsedPolicy =
                 new CorsPolicyBuilder()
-                .WithOrigins(new string[] {"*"})
+                .WithOrigins(new string[] { "*" })
                 .AllowAnyMethod()
                 .AllowAnyHeader()
                 .SetIsOriginAllowedToAllowWildcardSubdomains()
@@ -125,7 +125,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [DataTestMethod]
         [DataRow(new string[] { "" })]
         [DataRow(new string[] { "https://localhost:3000" })]
-        [DataRow(new string[] { "*", ""})]
+        [DataRow(new string[] { "*", "" })]
         public async Task TestAllowOriginHeaderAbsent(string[] allowedOrigins)
         {
             IHost host = await CreateCorsConfiguredWebHost(allowedOrigins, false);
@@ -158,11 +158,11 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 .SetIsOriginAllowedToAllowWildcardSubdomains()
                 .AllowCredentials()
                 .Build();
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 Assert.IsInstanceOfType(ex, typeof(InvalidOperationException));
-            }
-                
+            }                
         }
         #endregion
 

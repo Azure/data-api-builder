@@ -88,7 +88,10 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (searchParams == null)
                 {
                     string searchedPK = '<' + string.Join(", ", tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
-                    throw new DataGatewayException($"Could not find entity with {searchedPK}", HttpStatusCode.NotFound, DataGatewayException.SubStatusCodes.EntityNotFound);
+                    throw new DataGatewayException(
+                        message: $"Could not find entity with {searchedPK}",
+                        statusCode: HttpStatusCode.NotFound,
+                        subStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound);
                 }
 
                 result = await _queryEngine.ExecuteAsync(
@@ -98,7 +101,10 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (result == null)
             {
-                throw new DataGatewayException("Failed to resolve any query based on the current configuration.", HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.UnexpectedError);
+                throw new DataGatewayException(
+                    message: "Failed to resolve any query based on the current configuration.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
             }
 
             return result;

@@ -55,7 +55,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                         DateTime value => new ObjectValueNode(new ObjectFieldNode("datetime", new DateTimeType().ParseValue(value))),
                         DateTimeOffset value => new ObjectValueNode(new ObjectFieldNode("datetime", new DateTimeType().ParseValue(value))),
                         byte[] value => new ObjectValueNode(new ObjectFieldNode("bytearray", new ByteArrayType().ParseValue(value))),
-                        _ => throw new DataGatewayException($"The type {column.DefaultValue.GetType()} is not supported as a GraphQL default value", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.GraphQLMapping)
+                        _ => throw new DataGatewayException(
+                            message: $"The type {column.DefaultValue.GetType()} is not supported as a GraphQL default value",
+                            statusCode: HttpStatusCode.InternalServerError,
+                            subStatusCode: DataGatewayException.SubStatusCodes.GraphQLMapping)
                     };
 
                     directives.Add(new DirectiveNode(DefaultValueDirectiveType.DirectiveName, new ArgumentNode("value", arg)));
@@ -89,7 +92,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                         Cardinality.Many =>
                             new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(FormatNameForObject(targetEntityName, referencedEntity))),
                         _ =>
-                            throw new DataGatewayException("Specified cardinality isn't supported", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.GraphQLMapping),
+                            throw new DataGatewayException(
+                                message: "Specified cardinality isn't supported",
+                                statusCode: HttpStatusCode.InternalServerError,
+                                subStatusCode: DataGatewayException.SubStatusCodes.GraphQLMapping),
                     };
 
                     FieldDefinitionNode relationshipField = new(
@@ -137,9 +143,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                 "DateTime" => "DateTime",
                 "Byte[]" => "ByteArray",
                 _ => throw new DataGatewayException(
-                        $"Column type {type} not handled by case. Please add a case resolving {type} to the appropriate GraphQL type",
-                        HttpStatusCode.InternalServerError,
-                        DataGatewayException.SubStatusCodes.GraphQLMapping)
+                        message: $"Column type {type} not handled by case. Please add a case resolving {type} to the appropriate GraphQL type",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataGatewayException.SubStatusCodes.GraphQLMapping)
             };
         }
     }

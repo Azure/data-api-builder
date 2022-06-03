@@ -11,6 +11,7 @@ using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Services.MetadataProviders;
 using HotChocolate.Language;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -261,14 +262,10 @@ namespace Azure.DataGateway.Service
             });
             app.UseAuthentication();
 
-            // Conditionally add EasyAuth middleware if no JwtAuth configuration supplied.
-            if (runtimeConfig is not null && runtimeConfig.IsEasyAuthAuthenticationProvider())
+            // Conditionally add authentication middleware in Production Mode
+            if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Mode != HostModeType.Development)
             {
-                app.UseEasyAuthMiddleware();
-            }
-            else
-            {
-                app.UseJwtAuthenticationMiddleware();
+                app.UseAuthenticationMiddleware();
             }
 
             app.UseAuthorization();
@@ -326,12 +323,19 @@ namespace Azure.DataGateway.Service
                 runtimeConfig.AuthNConfig != null &&
                 !runtimeConfig.IsEasyAuthAuthenticationProvider())
             {
-                services.AddAuthentication()
+                services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
                     options.Audience = runtimeConfig.AuthNConfig.Jwt!.Audience;
                     options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
                 });
+            }
+            else if (runtimeConfig != null &&
+                runtimeConfig.AuthNConfig != null &&
+                runtimeConfig.IsEasyAuthAuthenticationProvider())
+            {
+                services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
+                    .AddEasyAuthAuthentication();
             }
         }
     }

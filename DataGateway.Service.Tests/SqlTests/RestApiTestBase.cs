@@ -537,7 +537,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Tests the REST Api for Find operation using $first to
         /// limit the number of records returned and then sorting by
-        /// Last Name.
+        /// Last Name. Validate that the "after" section in the respond
+        /// is well formed.
         /// </summary>
         [TestMethod]
         public async Task FindTestWithFirstAndSpacedColumnOrderBy()

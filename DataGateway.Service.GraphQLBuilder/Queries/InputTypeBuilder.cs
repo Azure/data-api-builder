@@ -163,7 +163,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             return GenerateObjectInputOrderByName(node.Name.Value);
         }
 
-        private static string GenerateObjectInputFilterName(INamedSyntaxNode node)
+        private static string GenerateObjectInputFilterName(ObjectTypeDefinitionNode node)
         {
             return GenerateObjectInputFilterName(node.Name.Value);
         }

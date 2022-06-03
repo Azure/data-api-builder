@@ -4,7 +4,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes
 {
     public class OrderByType : EnumType<OrderBy>
     {
-        public static string EnumName { get; } = "OrderBy";
+        public static string EnumName { get; } = nameof(OrderBy);
 
         protected override void Configure(IEnumTypeDescriptor<OrderBy> descriptor)
         {

@@ -1,0 +1,223 @@
+using System;
+using System.IO;
+using System.Text.Json;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Primitives;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Cors.Infrastructure;
+using Azure.DataGateway.Config;
+
+namespace Azure.DataGateway.Service.Tests.Configuration
+{
+    /// <summary>
+    /// Tests that Cors is read correctly from configuration and server is configured as expected
+    /// Server configuration is verified through sending HTTP requests to generated test server
+    /// and comparing expected and received header values
+    ///
+    /// Behavior of origins:["*"] resolving to "AllowAllOrigins" vs origins:["*", "any other specific host"] not doing so
+    /// is verified through testing. Only documentation found relating to this:
+    /// https://docs.microsoft.com/en-us/cli/azure/webapp/cors?view=azure-cli-latest
+    /// """To allow all, use "*" and remove all other origins from the list"""
+    /// </summary>
+    [TestClass]
+    public class CorsUnitTests
+    {
+
+        #region Positive Tests
+
+        /// <summary>
+        /// Verify correct deserialization of Cors record
+        /// </summary>
+        [TestMethod]
+        public void TestCorsConfigReadCorrectly()
+        {
+            string jsonString = File.ReadAllText(RuntimeConfigPath.DefaultName);
+            JsonSerializerOptions options = RuntimeConfig.GetDeserializationOptions();
+            RuntimeConfig runtimeConfig =
+                    JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
+            HostGlobalSettings hostGlobalSettings =
+                JsonSerializer.Deserialize<HostGlobalSettings>((JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.Host], options);
+
+            Assert.IsInstanceOfType(hostGlobalSettings.Cors.Origins, typeof(string[]));
+            Assert.IsInstanceOfType(hostGlobalSettings.Cors.AllowCredentials, typeof(bool));
+        }
+
+        /// <summary>
+        /// Verify supplying "origins": ["*"] resolves to allowing all origins
+        /// </summary>
+        [TestMethod]
+        public void TestWildcardResolvesAsAllOrigins()
+        {
+            CorsPolicy parsedPolicy =
+                new CorsPolicyBuilder()
+                .WithOrigins(new string[] {"*"})
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .SetIsOriginAllowedToAllowWildcardSubdomains()
+                .Build();
+
+            Assert.IsTrue(parsedPolicy.AllowAnyOrigin);
+        }
+
+        /// <summary>
+        /// Testing against the simulated test server whether an Access-Control-Allow-Origin header is present on the response
+        /// <param name="allowedOrigins"> the allowed origins for the server to check against </param>
+        /// DataRow 1: valid because all origins accepted
+        /// DataRow 2: valid because specific host present in origins list
+        /// DataRow 3: valid because specific host present in origins list (wildcard ignored - expected behavior, see line 26)
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(new string[] { "*" })]
+        [DataRow(new string[] { "http://localhost:3000" })]
+        [DataRow(new string[] { "*", "invalid host", "http://localhost:3000" })]
+        public async Task TestAllowedOriginHeaderPresent(string[] allowedOrigins)
+        {
+            IHost host = await CreateCorsConfiguredWebHost(allowedOrigins, false);
+
+            TestServer server = host.GetTestServer();
+            HttpContext returnContext = await server.SendAsync(context =>
+            {
+                KeyValuePair<string, StringValues> originHeader = new("Origin", "http://localhost:3000");
+                context.Request.Headers.Add(originHeader);
+            });
+
+            Assert.IsNotNull(returnContext.Response.Headers.AccessControlAllowOrigin);
+            Assert.IsTrue(returnContext.Response.Headers.AccessControlAllowOrigin == allowedOrigins[0]);
+        }
+
+        /// <summary>
+        /// Simple test if AllowCredentials option correctly toggles Access-Control-Allow-Credentials header
+        /// Here, a credential is simulated with a cookie
+        /// </summary>
+        [TestMethod]
+        public async Task TestAllowedCredentialsHeaderPresent()
+        {
+            IHost host = await CreateCorsConfiguredWebHost(new string[] { "http://localhost:3000" }, true);
+
+            TestServer server = host.GetTestServer();
+            HttpContext returnContext = await server.SendAsync(context =>
+            {
+                KeyValuePair<string, StringValues> originHeader = new("Origin", "http://localhost:3000");
+                context.Request.Headers.Add(originHeader);
+            });
+
+            Assert.IsTrue(returnContext.Response.Headers.AccessControlAllowCredentials == "true");
+        }
+
+        #endregion
+
+        #region Negative Tests
+
+        /// <summary>
+        /// Testing against the simulated test server whether an Access-Control-Allow-Origin header is present on the response
+        /// <param name="allowedOrigins"> the allowed origins for the server to check against </param>
+        /// DataRow 1: invalid because no origins present
+        /// DataRow 2: invalid because of mismatched scheme (http vs https)
+        /// DataRow 3: invalid because specific host is not present (* does not resolve to all origins if it is not the sole value supplied - expected, see line 26)
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(new string[] { "" })]
+        [DataRow(new string[] { "https://localhost:3000" })]
+        [DataRow(new string[] { "*", ""})]
+        public async Task TestAllowOriginHeaderAbsent(string[] allowedOrigins)
+        {
+            IHost host = await CreateCorsConfiguredWebHost(allowedOrigins, false);
+
+            TestServer server = host.GetTestServer();
+            HttpContext returnContext = await server.SendAsync(context =>
+            {
+                KeyValuePair<string, StringValues> originHeader = new("Origin", "http://localhost:3000");
+                context.Request.Headers.Add(originHeader);
+            });
+            Assert.IsTrue(returnContext.Response.Headers.AccessControlAllowOrigin.Count == 0);
+        }
+
+        /// <summary>
+        /// Ensures this potentially dangerous combination is caught and will throw an InvalidOperationException
+        /// From Microsoft Docs (https://docs.microsoft.com/en-us/aspnet/core/security/cors?view=aspnetcore-6.0#:~:text=to%20the%20app.-,Note,-Specifying%20AllowAnyOrigin%20and)
+        /// """Specifying AllowAnyOrigin and AllowCredentials is an insecure configuration and can result in cross-site request forgery.
+        /// The CORS service returns an invalid CORS response when an app is configured with both methods."""
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public void TestAllowCredentialsAndAllowAnyOrigin()
+        {
+            try
+            {
+                new CorsPolicyBuilder()
+                .WithOrigins(new string[] { "*" })
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .SetIsOriginAllowedToAllowWildcardSubdomains()
+                .AllowCredentials()
+                .Build();
+            } catch (Exception ex)
+            {
+                Assert.IsInstanceOfType(ex, typeof(InvalidOperationException));
+            }
+                
+        }
+        #endregion
+
+        #region Helpers
+
+        /// <summary>
+        /// Spins up a minimal Cors-configured WebHost
+        /// <param name="testOrigins"/> The allowed origins the test server will respond with an Access-Control-Allow-Origin header </param>
+        /// <param name="allowCredentials"/> Whether the test server should allow credentials to be included in requests </param>
+        /// </summary>
+        public static async Task<IHost> CreateCorsConfiguredWebHost(string[] testOrigins, bool allowCredentials)
+        {
+            string MyAllowSpecificOrigins = "MyAllowSpecificOrigins";
+            return await new HostBuilder()
+                .ConfigureWebHost(webBuilder =>
+                {
+                    webBuilder
+                        .UseTestServer()
+                        .ConfigureServices(services =>
+                        {
+                            services.AddCors(options =>
+                            {
+                                options.AddPolicy(name: MyAllowSpecificOrigins,
+                                    CORSPolicyBuilder =>
+                                    {
+                                        if (allowCredentials)
+                                        {
+                                            CORSPolicyBuilder
+                                            .WithOrigins(testOrigins)
+                                            .AllowAnyMethod()
+                                            .AllowAnyHeader()
+                                            .SetIsOriginAllowedToAllowWildcardSubdomains()
+                                            .AllowCredentials();
+                                        }
+                                        else
+                                        {
+                                            CORSPolicyBuilder
+                                            .WithOrigins(testOrigins)
+                                            .AllowAnyMethod()
+                                            .AllowAnyHeader()
+                                            .SetIsOriginAllowedToAllowWildcardSubdomains();
+                                        }
+                                    });
+                            });
+                        })
+                        .Configure(app =>
+                        {
+                            app.UseCors(MyAllowSpecificOrigins);
+                        });
+                })
+                .StartAsync();
+
+        }
+
+        #endregion
+
+    }
+}

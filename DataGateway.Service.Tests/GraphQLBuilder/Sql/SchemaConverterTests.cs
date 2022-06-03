@@ -284,7 +284,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
         [DataRow(1.2, "float", SyntaxKind.FloatValue)]
         [DataRow(1.2, "decimal", SyntaxKind.FloatValue)]
         [DataRow("1999-01-08 10:23:54", "datetime", SyntaxKind.StringValue)]
-        [DataRow("U3RyaW5neQ==", SyntaxKind.StringValue)]
+        [DataRow("U3RyaW5neQ==", "bytearray", SyntaxKind.StringValue)]
         public void DefaultValueGetsSetOnDirective(object defaultValue, string fieldName, SyntaxKind kind)
         {
             if (fieldName == "decimal")
@@ -294,6 +294,10 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             else if (fieldName == "datetime")
             {
                 defaultValue = DateTime.Parse(defaultValue.ToString());
+            }
+            else if (fieldName == "bytearray")
+            {
+                defaultValue = Convert.FromBase64String(defaultValue.ToString());
             }
 
             TableDefinition table = new();

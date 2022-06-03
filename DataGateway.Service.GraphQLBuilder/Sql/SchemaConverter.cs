@@ -52,7 +52,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                         float value => new ObjectValueNode(new ObjectFieldNode("single", new SingleType().ParseValue(value))),
                         double value => new ObjectValueNode(new ObjectFieldNode("float", value)),
                         decimal value => new ObjectValueNode(new ObjectFieldNode("decimal", new FloatValueNode(value))),
-                        DateTime value => new ObjectValueNode(new ObjectFieldNode("datetime", new DateTimeType().ParseValue(value))),
+                        DateTime value => new ObjectValueNode(new ObjectFieldNode("datetime", new DateTimeType().ParseResult(value))),
                         DateTimeOffset value => new ObjectValueNode(new ObjectFieldNode("datetime", new DateTimeType().ParseValue(value))),
                         byte[] value => new ObjectValueNode(new ObjectFieldNode("bytearray", new ByteArrayType().ParseValue(value))),
                         _ => throw new DataGatewayException(

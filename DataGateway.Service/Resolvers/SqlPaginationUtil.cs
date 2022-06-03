@@ -9,6 +9,7 @@ using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
+using Microsoft.AspNetCore.Server.IIS.Core;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -216,6 +217,11 @@ namespace Azure.DataGateway.Service.Resolvers
                     string columnName;
                     if (sqlMetadataProvider is not null)
                     {
+                        // REST calls this function with a non null sqlMetadataProvider
+                        // so we must get the exposed name for safe messaging in the response.
+                        // Since we are looking for pagination columns from the $after query
+                        // param, we expect this column to exist as the $after query param
+                        // was formed from a previous response with a nextLink.
                         sqlMetadataProvider.TryGetBackingColumn(entityName, column.ColumnName, out columnName!);
                     }
                     else
@@ -237,6 +243,10 @@ namespace Azure.DataGateway.Service.Resolvers
                         string safePK;
                         if (sqlMetadataProvider is not null)
                         {
+                            // REST calls this function with a non null sqlMetadataProvider
+                            // so we must get the exposed name for safe messaging in the response.
+                            // Since we are looking for primary keys we expect these columns to
+                            // exist.
                             sqlMetadataProvider.TryGetExposedColumnName(entityName, pk, out safePK!);
                         }
                         else
@@ -244,7 +254,9 @@ namespace Azure.DataGateway.Service.Resolvers
                             safePK = pk;
                         }
 
-                        throw new ArgumentException($"Cursor for Pagination Predicates is not well formed, missing primary key column: {safePK}");
+                        throw new DataGatewayException(message: $"Cursor for Pagination Predicates is not well formed, missing primary key column: {safePK}",
+                                                       statusCode: HttpStatusCode.BadRequest,
+                                                       subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }
                 }
 
@@ -307,7 +319,10 @@ namespace Azure.DataGateway.Service.Resolvers
                     // consistency in using the pagination token opaquely
                     Console.Error.WriteLine(e);
                     string notValidString = $"{afterJsonString} is not a valid pagination token.";
-                    throw new DataGatewayException(notValidString, HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
+                    throw new DataGatewayException(
+                        message: notValidString,
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
                 else
                 {

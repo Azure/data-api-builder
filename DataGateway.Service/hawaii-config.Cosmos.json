@@ -6,7 +6,8 @@
   },
   "cosmos": {
     "database": "graphqldb",
-    "resolver-config-file": "cosmos-config.json"
+    "container": "planet",
+    "schema": "schema.gql"
   },
   "runtime": {
     "rest": {
@@ -30,7 +31,6 @@
   },
   "entities": {
     "Planet": {
-      "source": "planet"
     },
     "Character": {
       "source": "character"

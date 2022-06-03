@@ -49,8 +49,10 @@ namespace Azure.DataGateway.Service.Parsers
 
                 if (primaryKeyValues.Length % 2 != 0)
                 {
-                    throw new NotImplementedException("Support for url template with implicit primary key" +
-                        " field names is not yet added.");
+                    throw new DataGatewayException(
+                        message: "Support for url template with implicit primary key field names is not yet added.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
 
                 for (int primaryKeyIndex = 0; primaryKeyIndex < primaryKeyValues.Length; primaryKeyIndex += 2)
@@ -62,7 +64,7 @@ namespace Azure.DataGateway.Service.Parsers
                         throw new DataGatewayException(
                             message: "The request is invalid since it contains a primary key with no value specified.",
                             statusCode: HttpStatusCode.BadRequest,
-                            DataGatewayException.SubStatusCodes.BadRequest);
+                            subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }
 
                     if (!context.PrimaryKeyValuePairs.ContainsKey(primaryKey))
@@ -75,7 +77,7 @@ namespace Azure.DataGateway.Service.Parsers
                         throw new DataGatewayException(
                             message: "The request is invalid since it contains duplicate primary keys.",
                             statusCode: HttpStatusCode.BadRequest,
-                            DataGatewayException.SubStatusCodes.BadRequest);
+                            subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }
                 }
             }
@@ -102,7 +104,7 @@ namespace Azure.DataGateway.Service.Parsers
                         // save the AST that represents the filter for the query
                         // ?$filter=<filter clause using microsoft api guidelines>
                         string filterQueryString = $"?{FILTER_URL}={context.ParsedQueryString[key]}";
-                        context.FilterClauseInUrl = sqlMetadataProvider.ODataFilterParser.GetFilterClause(filterQueryString, $"{context.EntityName}.{context.DatabaseObject.FullName}");
+                        context.FilterClauseInUrl = sqlMetadataProvider.GetODataFilterParser().GetFilterClause(filterQueryString, $"{context.EntityName}.{context.DatabaseObject.FullName}");
                         break;
                     case SORT_URL:
                         string sortQueryString = $"?{SORT_URL}={context.ParsedQueryString[key]}";
@@ -137,7 +139,7 @@ namespace Azure.DataGateway.Service.Parsers
             string schemaName = context.DatabaseObject.SchemaName;
             string tableName = context.DatabaseObject.Name;
 
-            OrderByClause node = sqlMetadataProvider.ODataFilterParser.GetOrderByClause(sortQueryString, $"{context.EntityName}.{context.DatabaseObject.FullName}");
+            OrderByClause node = sqlMetadataProvider.GetODataFilterParser().GetOrderByClause(sortQueryString, $"{context.EntityName}.{context.DatabaseObject.FullName}");
             List<string> primaryKeys = sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey;
 
             // used for performant Remove operations
@@ -154,7 +156,10 @@ namespace Azure.DataGateway.Service.Parsers
                 string columnName;
                 if (expression is null)
                 {
-                    throw new DataGatewayException(message: "OrderBy property is not supported.", HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
+                    throw new DataGatewayException(
+                        message: "OrderBy property is not supported.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
                 else
                 {

@@ -10,10 +10,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 {
 
     [TestClass, TestCategory(TestCategory.MYSQL)]
-    public class MySqlGQLFilterTests : GraphQLFilterTestBase
+    public class MySqlGQLSupportedTypesTests : GraphQLSupportedTypesTestBase
     {
-        protected static string DEFAULT_SCHEMA = string.Empty;
-
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
         /// MSTest decorator.
@@ -35,32 +33,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
-        /// <summary>
-        /// Gets the default schema for
-        /// MySql.
-        /// </summary>
-        /// <returns></returns>
-        protected override string GetDefaultSchema()
+        protected override string MakeQueryOnTypeTable(List<string> queriedColumns, int id)
         {
-            return DEFAULT_SCHEMA;
-        }
-
-        protected override string MakeQueryOn(string table, List<string> queriedColumns, string predicate, string schema, List<string> pkColumns)
-        {
-            if (pkColumns == null)
-            {
-                pkColumns = new() { "id" };
-            }
-
-            string orderBy = string.Join(", ", pkColumns.Select(c => $"`table0`.`{c}`"));
-
             return @"
-                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT(" + string.Join(", ", queriedColumns.Select(c => $"\"{c}\", {c}")) + @")), JSON_ARRAY()) AS `data`
+                SELECT JSON_OBJECT(" + string.Join(", ", queriedColumns.Select(c => c.Contains("boolean") ? $"\"{c}\", cast({c} is true as json)" : $"\"{c}\", {c}")) + @") AS `data`
                 FROM (
                     SELECT " + string.Join(", ", queriedColumns) + @"
-                    FROM `" + table + @"` AS `table0`
-                    WHERE " + predicate + @"
-                    ORDER BY " + orderBy + @" LIMIT 100
+                    FROM type_table AS `table0`
+                    WHERE id = " + id + @"
+                    ORDER BY id
+                    LIMIT 1
                     ) AS `subq3`
             ";
         }

@@ -10,10 +10,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 {
 
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
-    public class PostgreSqlGQLFilterTests : GraphQLFilterTestBase
+    public class PostgreSqlGQLSupportedTypesTests : GraphQLSupportedTypesTestBase
     {
-        protected static string DEFAULT_SCHEMA = "public";
-
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
         /// MSTest decorator.
@@ -35,34 +33,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
-        /// <summary>
-        /// Gets the default schema for
-        /// PostgreSql.
-        /// </summary>
-        /// <returns></returns>
-        protected override string GetDefaultSchema()
+        protected override string MakeQueryOnTypeTable(List<string> queriedColumns, int id)
         {
-            return DEFAULT_SCHEMA;
-        }
-
-        protected override string MakeQueryOn(string table, List<string> queriedColumns, string predicate, string schema, List<string> pkColumns)
-        {
-            if (pkColumns == null)
-            {
-                pkColumns = new() { "id" };
-            }
-
-            string schemaAndTable = $"{schema}.{table}";
-            string orderBy = string.Join(", ", pkColumns.Select(c => $"\"table0\".\"{c}\""));
-
             return @"
-                SELECT COALESCE(jsonb_agg(to_jsonb(subq3)), '[]') AS DATA
+                SELECT to_jsonb(subq3) AS DATA
                 FROM
                   (SELECT " + string.Join(", ", queriedColumns.Select(c => $"\"{c}\"")) + @"
-                   FROM " + schemaAndTable + @" AS table0
-                   WHERE " + predicate + @"
-                   ORDER BY " + orderBy + @"
-                   LIMIT 100) AS subq3
+                   FROM public.type_table AS table0
+                   WHERE id = " + id + @"
+                   ORDER BY id
+                   LIMIT 1) AS subq3
             ";
         }
     }

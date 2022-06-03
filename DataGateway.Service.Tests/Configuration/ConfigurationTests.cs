@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Abstractions.TestingHelpers;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -12,6 +13,7 @@ using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using Azure.DataGateway.Service.Services.MetadataProviders;
 using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
@@ -31,6 +33,15 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         private const string MSSQL_ENVIRONMENT = TestCategory.MSSQL;
         private const string MYSQL_ENVIRONMENT = TestCategory.MYSQL;
         private const string POSTGRESQL_ENVIRONMENT = TestCategory.POSTGRESQL;
+
+        public TestContext TestContext { get; set; }
+
+        [TestInitialize]
+        public void Setup()
+        {
+            TestContext.Properties.Add(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, Environment.GetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME));
+            TestContext.Properties.Add(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, Environment.GetEnvironmentVariable(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME));
+        }
 
         [DataTestMethod]
         [DataRow(new string[] { })]
@@ -460,7 +471,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         {
             IOptionsMonitor<RuntimeConfigPath> configPath =
                 SqlTestHelper.LoadConfig(MSSQL_ENVIRONMENT);
-            IConfigValidator configValidator = new RuntimeConfigValidator(configPath);
+            IConfigValidator configValidator = new RuntimeConfigValidator(configPath, new MockFileSystem());
             configValidator.ValidateConfig();
         }
 
@@ -488,16 +499,31 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             }
         }
 
+        [TestMethod("Validates that an exception is thrown if config file for the runtime engine is not found.")]
+        public void TestConfigFileNotFound()
+        {
+            RuntimeConfigPath runtimeConfigPath = new()
+            {
+                ConfigFileName = "NonExistentConfigFile.json"
+            };
+
+            Exception ex = Assert.ThrowsException<FileNotFoundException>(() => runtimeConfigPath.SetRuntimeConfigValue());
+            Console.WriteLine(ex.Message);
+            Assert.AreEqual(ex.Message, "Requested configuration file NonExistentConfigFile.json does not exist.");
+
+        }
+
         [TestCleanup]
         public void Cleanup()
         {
-            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "");
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, (string)TestContext.Properties[ASP_NET_CORE_ENVIRONMENT_VAR_NAME]);
+            Environment.SetEnvironmentVariable(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, (string)TestContext.Properties[RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME]);
         }
 
         private static void ValidateCosmosDbSetup(TestServer server)
         {
-            object metadataProvider = server.Services.GetService(typeof(IGraphQLMetadataProvider));
-            Assert.IsInstanceOfType(metadataProvider, typeof(GraphQLFileMetadataProvider));
+            object metadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
+            Assert.IsInstanceOfType(metadataProvider, typeof(CosmosSqlMetadataProvider));
 
             object queryEngine = server.Services.GetService(typeof(IQueryEngine));
             Assert.IsInstanceOfType(queryEngine, typeof(CosmosQueryEngine));

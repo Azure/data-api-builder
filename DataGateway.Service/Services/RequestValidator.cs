@@ -28,6 +28,7 @@ namespace Azure.DataGateway.Service.Services
         {
             foreach (string field in context.FieldsToBeReturned)
             {
+                // Get backing column and check that column is valid
                 if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, field, out string? backingColumn) ||
                     !sqlMetadataProvider.GetTableDefinition(context.EntityName).Columns.ContainsKey(backingColumn!))
                 {

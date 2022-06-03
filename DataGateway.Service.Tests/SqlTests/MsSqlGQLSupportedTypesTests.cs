@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Services;
@@ -10,10 +9,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 {
 
     [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class MsSqlGQLFilterTests : GraphQLFilterTestBase
+    public class MsSqlGQLSupportedTypesTests : GraphQLSupportedTypesTestBase
     {
-        protected static string DEFAULT_SCHEMA = "dbo";
-
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
         /// MSTest decorator.
@@ -35,32 +32,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _graphQLController = new GraphQLController(_graphQLService);
         }
 
-        /// <summary>
-        /// Gets the default schema for
-        /// MsSql.
-        /// </summary>
-        /// <returns></returns>
-        protected override string GetDefaultSchema()
+        protected override string MakeQueryOnTypeTable(List<string> queriedColumns, int id)
         {
-            return DEFAULT_SCHEMA;
-        }
-
-        protected override string MakeQueryOn(string table, List<string> queriedColumns, string predicate, string schema, List<string> pkColumns)
-        {
-            if (pkColumns == null)
-            {
-                pkColumns = new() { "id" };
-            }
-
-            string schemaAndTable = $"[{schema}].[{table}]";
-            string orderBy = string.Join(", ", pkColumns.Select(c => $"[table0].[{c}]"));
-
             return @"
-                SELECT TOP 100 " + string.Join(", ", queriedColumns) + @"
-                FROM " + schemaAndTable + @" AS [table0]
-                WHERE " + predicate + @"
-                ORDER BY " + orderBy + @"
+                SELECT TOP 1 " + string.Join(", ", queriedColumns) + @"
+                FROM type_table AS [table0]
+                WHERE id = " + id + @"
+                ORDER BY id
                 FOR JSON PATH,
+                    WITHOUT_ARRAY_WRAPPER,
                     INCLUDE_NULL_VALUES
             ";
         }

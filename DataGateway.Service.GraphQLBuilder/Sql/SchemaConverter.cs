@@ -45,7 +45,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                         string value => new ObjectValueNode(new ObjectFieldNode("string", value)),
                         bool value => new ObjectValueNode(new ObjectFieldNode("boolean", value)),
                         float value => new ObjectValueNode(new ObjectFieldNode("float", value)),
-                        _ => throw new DataGatewayException($"The type {column.DefaultValue.GetType()} is not supported as a GraphQL default value", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.GraphQLMapping)
+                        _ => throw new DataGatewayException(
+                                message: $"The type {column.DefaultValue.GetType()} is not supported as a GraphQL default value",
+                                statusCode: HttpStatusCode.InternalServerError,
+                                subStatusCode: DataGatewayException.SubStatusCodes.GraphQLMapping)
                     };
 
                     directives.Add(new DirectiveNode(DefaultValueDirectiveType.DirectiveName, new ArgumentNode("value", arg)));
@@ -79,7 +82,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                         Cardinality.Many =>
                             new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(FormatNameForObject(targetEntityName, referencedEntity))),
                         _ =>
-                            throw new DataGatewayException("Specified cardinality isn't supported", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.GraphQLMapping),
+                            throw new DataGatewayException(
+                                message: "Specified cardinality isn't supported",
+                                statusCode: HttpStatusCode.InternalServerError,
+                                subStatusCode: DataGatewayException.SubStatusCodes.GraphQLMapping),
                     };
 
                     FieldDefinitionNode relationshipField = new(
@@ -111,13 +117,18 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
         /// <summary>
         /// Get the GraphQL type equivalent from ColumnType
         /// </summary>
-        private static string GetGraphQLTypeForColumnType(Type type)
+        public static string GetGraphQLTypeForColumnType(Type type)
         {
             return Type.GetTypeCode(type) switch
             {
                 TypeCode.String => "String",
-                TypeCode.Int64 => "Int",
-                _ => throw new DataGatewayException($"ColumnType {type} not handled by case. Please add a case resolving {type} to the appropriate GraphQL type", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.GraphQLMapping),
+                TypeCode.Int32 => "Int",
+                TypeCode.Double => "Float",
+                TypeCode.Boolean => "Boolean",
+                _ => throw new DataGatewayException(
+                        message: $"Column type {type} not handled by case. Please add a case resolving {type} to the appropriate GraphQL type",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataGatewayException.SubStatusCodes.GraphQLMapping)
             };
         }
     }

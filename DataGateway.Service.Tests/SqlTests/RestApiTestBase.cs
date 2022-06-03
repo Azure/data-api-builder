@@ -370,7 +370,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 controller: _restController,
                 exception: true,
                 expectedErrorMessage: "A binary operator with incompatible types was detected. " +
-                    "Found operand types 'Edm.Int64' and 'Edm.Boolean' for operator kind 'Equal'.",
+                    "Found operand types 'Edm.Int32' and 'Edm.Boolean' for operator kind 'Equal'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }
@@ -1774,7 +1774,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 exception: true,
-                expectedErrorMessage: "Parameter \"[1234, 4321]\" cannot be resolved as column \"publisher_id\" with type \"Int64\".",
+                expectedErrorMessage: "Parameter \"[1234, 4321]\" cannot be resolved as column \"publisher_id\" with type \"Int32\".",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
             );
@@ -2356,6 +2356,27 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 expectedErrorMessage: "The request is invalid since it contains a primary key with no value specified.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for FindById operation with non-explicit Primary Key
+        /// explicit FindById: GET /<entity>/<primarykeyname>/<primarykeyvalue>/
+        /// implicit FindById: GET /<entity>/<primarykeyvalue>/
+        /// Expected behavior: 400 Bad Request
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestImplicitPrimaryKey()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "1",
+                queryString: string.Empty,
+                entity: _integrationEntityName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "Support for url template with implicit primary key field names is not yet added.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+                );
         }
 
         /// <summary>

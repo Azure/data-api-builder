@@ -17,8 +17,8 @@
     "host": {
       "mode": "Development",
       "cors": {
-        "origins": [ "1", "2" ],
-        "allow-credentials": true
+        "origins": [ "http://localhost:3000" ],
+        "allow-credentials": false
       },
       "authentication": {
         "provider": "EasyAuth",

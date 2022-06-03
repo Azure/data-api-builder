@@ -25,6 +25,11 @@
         "category": {
           "cardinality": "one",
           "target.entity": "category"
+        },
+        "authors": {
+          "cardinality": "many",
+          "linking.object": "dbo.books_authors",
+          "target.entity": "author"
         }
       },
       "permissions": [
@@ -53,8 +58,15 @@
         }
       ]
     },
-    "authors": {
+    "author": {
       "source": "dbo.authors",
+      "relationships": {
+        "books": {
+          "cardinality": "many",
+          "linking.object": "dbo.books_authors",
+          "target.entity": "book"
+        }
+      },
       "permissions": [
         {
           "role": "anonymous",

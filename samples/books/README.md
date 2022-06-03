@@ -148,9 +148,70 @@ Once the configuration has been updated, you can navigate the relationships via 
 
 Books are written by authors, and therefore we need to expose the `author` entity in order to allow developers to manage authors:
 
-```
+```json
+"author": {
+    "source": "dbo.authors",
+    "permissions": [{
+        "role": "anonymous",
+        "actions": [{
+            "action": "*"
+        }]
+    }]
+}
 ```
 
 ### Create a M:N relationship between Books and Authors
+
+Between authors andf books entities there is a many-to-many relationship. To model such relationship the database contains a table named `` that connects books with their authors. Since this table is just used to sustain that relationship is not useful to expose it as a REST or GraphQL object. So the configuration will tell Hawaii that this table has to be used but not exposed.
+
+The `book` entity needs to be updated using the following configuration:
+
+```json
+"book": {
+    ...
+    "relationships": {
+        ...
+        "authors": {
+            "cardinality": "many",
+            "linking.object": "dbo.books_authors",
+            "target.entity": "author"
+        }
+    }
+}
+```
+
+the above configuration it telling Hawaii that a `book` entity will have a `authors` property thjat will connected it to an `author` entity with a cardinalit of `many` and that such relatioship is implemented via `dbo.book_authors` in the underlying database. A sample of the GraphQL that can be used to query books and related authors is:
+
+```graphql
+{
+  books {
+    items {
+      id
+      title
+      authors {
+        items {
+          full_name
+        }
+      }
+    }
+  }
+}
+```
+
+Of course, also the `author` entity needs to be updated, to allow navigation from authors to the books they have written. The `relationship` section of the `author` entity must be changed by adding the relationship with `book` entity, similarly to what was done before:
+
+```json
+"author": {
+    ...
+    "relationships": {
+        ...
+        "books": {
+            "cardinality": "many",
+            "linking.object": "dbo.books_authors",
+            "target.entity": "book"
+        }
+    }
+}
+```
 
 ### Enrich the relatioship between Books and Authors

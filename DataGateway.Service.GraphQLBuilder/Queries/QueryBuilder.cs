@@ -93,7 +93,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             if (!inputTypes.ContainsKey(orderByInputName))
             {
                 InputTypeBuilder.GenerateOrderByInputTypeForObjectType(objectTypeDefinitionNode, inputTypes);
-            } 
+            }
 
             // Query field for the parent object type
             // Generates a file like:

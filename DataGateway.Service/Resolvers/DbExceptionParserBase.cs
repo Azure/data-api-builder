@@ -25,9 +25,9 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             string message = _developerMode ? e.Message : GENERIC_DB_EXCEPTION_MESSAGE;
             return new DataGatewayException(
-                    message: message,
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed
+                message: message,
+                statusCode: HttpStatusCode.InternalServerError,
+                subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed
             );
         }
     }

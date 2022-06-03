@@ -89,7 +89,7 @@ namespace Azure.DataGateway.Service.Parsers
         /// later generate queries in the given RestRequestContext.
         /// </summary>
         /// <param name="context">The RestRequestContext holding the major components of the query.</param>
-        /// <param name="sqlMetadataProvider">The SqlMetadataProvider holds mny of the components needed to parse the query.</param>
+        /// <param name="sqlMetadataProvider">The SqlMetadataProvider holds many of the components needed to parse the query.</param>
         public static void ParseQueryString(RestRequestContext context, ISqlMetadataProvider sqlMetadataProvider)
         {
             foreach (string key in context.ParsedQueryString!.Keys)

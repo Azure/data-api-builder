@@ -213,21 +213,12 @@ namespace Azure.DataGateway.Service.Resolvers
                 Dictionary<string, PaginationColumn> afterDict = new();
                 foreach (PaginationColumn column in after)
                 {
-                    string columnName;
-                    if (sqlMetadataProvider is not null)
-                    {
-                        // REST calls this function with a non null sqlMetadataProvider
-                        // so we must get the exposed name for safe messaging in the response.
-                        // Since we are looking for pagination columns from the $after query
-                        // param, we expect this column to exist as the $after query param
-                        // was formed from a previous response with a nextLink.
-                        sqlMetadataProvider.TryGetBackingColumn(entityName, column.ColumnName, out columnName!);
-                    }
-                    else
-                    {
-                        columnName = column.ColumnName;
-                    }
-
+                    // REST calls this function with a non null sqlMetadataProvider
+                    // which will get the exposed name for safe messaging in the response.
+                    // Since we are looking for pagination columns from the $after query
+                    // param, we expect this column to exist as the $after query param
+                    // was formed from a previous response with a nextLink.
+                    string columnName = GetColumnName(entityName, column.ColumnName, sqlMetadataProvider);
                     afterDict.Add(columnName, column);
                 }
 
@@ -239,20 +230,11 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     if (!afterDict.ContainsKey(pk))
                     {
-                        string safePK;
-                        if (sqlMetadataProvider is not null)
-                        {
-                            // REST calls this function with a non null sqlMetadataProvider
-                            // so we must get the exposed name for safe messaging in the response.
-                            // Since we are looking for primary keys we expect these columns to
-                            // exist.
-                            sqlMetadataProvider.TryGetExposedColumnName(entityName, pk, out safePK!);
-                        }
-                        else
-                        {
-                            safePK = pk;
-                        }
-
+                        // REST calls this function with a non null sqlMetadataProvider
+                        // which will get the exposed name for safe messaging in the response.
+                        // Since we are looking for primary keys we expect these columns to
+                        // exist.
+                        string safePK = GetColumnName(entityName, pk, sqlMetadataProvider);
                         throw new DataGatewayException(message: $"Cursor for Pagination Predicates is not well formed, missing primary key column: {safePK}",
                                                        statusCode: HttpStatusCode.BadRequest,
                                                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
@@ -270,18 +252,15 @@ namespace Azure.DataGateway.Service.Resolvers
                     if (!afterDict.ContainsKey(columnName) ||
                         afterDict[columnName].Direction != column.Direction)
                     {
-                        string safeColumnName;
-                        if (sqlMetadataProvider is not null)
-                        {
-                            sqlMetadataProvider.TryGetExposedColumnName(entityName, columnName, out safeColumnName!);
-                        }
-                        else
-                        {
-                            safeColumnName = columnName;
-                        }
-
-                        throw new ArgumentException(
-                            $"Could not match order by column {safeColumnName} with a column in the pagination token with the same name and direction.");
+                        // REST calls this function with a non null sqlMetadataProvider
+                        // which will get the exposed name for safe messaging in the response.
+                        // Since we are looking for valid orderby columns we expect
+                        // these columns to exist.
+                        string safeColumnName = GetColumnName(entityName, columnName, sqlMetadataProvider);
+                        throw new DataGatewayException(
+                                    message:$"Could not match order by column {safeColumnName} with a column in the pagination token with the same name and direction.",
+                                    statusCode: HttpStatusCode.BadRequest,
+                                    subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }
 
                     orderByColumnCount++;

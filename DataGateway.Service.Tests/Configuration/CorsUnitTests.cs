@@ -162,7 +162,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             catch (Exception ex)
             {
                 Assert.IsInstanceOfType(ex, typeof(InvalidOperationException));
-            }                
+            }
         }
         #endregion
 

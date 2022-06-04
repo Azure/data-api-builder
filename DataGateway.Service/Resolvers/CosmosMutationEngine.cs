@@ -51,9 +51,9 @@ namespace Azure.DataGateway.Service.Resolvers
             if (client == null)
             {
                 throw new DataGatewayException(
-                    "Cosmos DB has not been properly initialized",
-                    HttpStatusCode.InternalServerError,
-                    DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
+                    message: "Cosmos DB has not been properly initialized",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
             }
 
             Container container = client.GetDatabase(resolver.DatabaseName)
@@ -189,7 +189,10 @@ namespace Azure.DataGateway.Service.Resolvers
             RuntimeConfig? configValue = _runtimeConfigPath.CurrentValue.ConfigValue;
             if (configValue is null)
             {
-                throw new DataGatewayException("Runtime config isn't setup.", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.ErrorInInitialization);
+                throw new DataGatewayException(
+                    message: "Runtime config isn't setup.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
             }
 
             string databaseName = _metadataProvider.GetSchemaName(entityName);

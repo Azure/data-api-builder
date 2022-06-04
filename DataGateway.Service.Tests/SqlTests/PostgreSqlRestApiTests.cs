@@ -355,6 +355,27 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                   ) AS subq"
             },
             {
+                "FindTestWithFirstAndSpacedColumnOrderBy",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableHasColumnWithSpace + @"
+                      ORDER BY ""Last Name""
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
+                "FindTestWithQueryStringSpaceInNamesOrderByAsc",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableHasColumnWithSpace + @"
+                      ORDER BY ""ID Number""
+                  ) AS subq"
+            },
+            {
                 "FindTestWithQueryStringAllFieldsOrderByDesc",
                 @"
                   SELECT json_agg(to_jsonb(subq)) AS data
@@ -956,6 +977,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public override string GetQuery(string key)
         {
             return _queryMap[key];
+        }
+
+        /// <summary>
+        /// We have 1 test that is named
+        /// PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest
+        /// which will have Db specific error messages.
+        /// We return the postgres specific message here.
+        /// </summary>
+        /// <returns></returns>
+        public override string GetUniqueDbErrorMessage()
+        {
+            return "23502: null value in column \"piecesRequired\" of relation \"stocks\" violates not-null constraint";
         }
     }
 }

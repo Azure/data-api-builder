@@ -44,6 +44,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public abstract string GetDefaultSchema();
         public abstract string GetDefaultSchemaForEdmModel();
         public abstract string GetQuery(string key);
+        public abstract string GetUniqueDbErrorMessage();
 
         #region Positive Tests
         /// <summary>
@@ -502,7 +503,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Tests the REST Api for Find operation for all records
+        /// Tests the REST Api for Find operation for all records.
         /// order by title in ascending order.
         /// </summary>
         [TestMethod]
@@ -514,6 +515,46 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithQueryStringAllFieldsOrderByAsc)),
                 controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation for all records
+        /// when there is a space in the column name.
+        /// order by "ID Number" in ascending order.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithQueryStringSpaceInNamesOrderByAsc()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby='ID Number'",
+                entity: _integrationEntityHasColumnWithSpace,
+                sqlQuery: GetQuery(nameof(FindTestWithQueryStringSpaceInNamesOrderByAsc)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first to
+        /// limit the number of records returned and then sorting by
+        /// Last Name. Validate that the "after" section in the respond
+        /// is well formed.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFirstAndSpacedColumnOrderBy()
+        {
+            string after = $"[{{\"Value\":\"Belfort\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"brokers\",\"ColumnName\":\"Last Name\"}}," +
+                            $"{{\"Value\":2,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"brokers\",\"ColumnName\":\"ID Number\"}}]";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=1&$orderby='Last Name'",
+                entity: _integrationEntityHasColumnWithSpace,
+                sqlQuery: GetQuery(nameof(FindTestWithFirstAndSpacedColumnOrderBy)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                paginated: true
+
             );
         }
 
@@ -1844,6 +1885,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 ""categoryName"":""comics""
             }";
+            string expectedErrorMessage = GetUniqueDbErrorMessage();
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/1/pieceid/1",
                 queryString: string.Empty,
@@ -1853,7 +1895,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
                 exception: true,
-                expectedErrorMessage: DbExceptionParserBase.GENERIC_DB_EXCEPTION_MESSAGE,
+                expectedErrorMessage: expectedErrorMessage,
                 expectedStatusCode: HttpStatusCode.InternalServerError,
                 expectedSubStatusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
             );
@@ -2264,6 +2306,27 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Tests the REST Api for FindById operation with non-explicit Primary Key
+        /// explicit FindById: GET /<entity>/<primarykeyname>/<primarykeyvalue>/
+        /// implicit FindById: GET /<entity>/<primarykeyvalue>/
+        /// Expected behavior: 400 Bad Request
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestImplicitPrimaryKey()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "1",
+                queryString: string.Empty,
+                entity: _integrationEntityName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "Support for url template with implicit primary key field names is not yet added.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+                );
+        }
+
+        /// <summary>
         /// Tests the REST Api for FindById operation with a query string
         /// having invalid field names.
         /// </summary>
@@ -2339,6 +2402,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Tests the REST Api for Find operation with an invalid column name for sorting
+        /// that contains spaces.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestInvalidOrderBySpaceInColumn()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby='Large Pinecone'",
+                entity: _integrationEntityHasColumnWithSpace,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: $"Invalid orderby column requested: Large Pinecone.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
         /// Tests the REST Api for Find operation with a null for sorting.
         /// </summary>
         [TestMethod]
@@ -2348,27 +2430,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 primaryKeyRoute: string.Empty,
                 queryString: "?$orderby=null",
                 entity: _integrationEntityName,
-                sqlQuery: string.Empty,
-                controller: _restController,
-                exception: true,
-                expectedErrorMessage: "OrderBy property is not supported.",
-                expectedStatusCode: HttpStatusCode.BadRequest
-            );
-        }
-
-        /// <summary>
-        /// Tests the REST Api for Find operation using $first to
-        /// limit the number of records returned and then sorting by
-        /// ID Number, which will throw a DataGatewayException with
-        /// a message indicating this property is not supported.
-        /// </summary>
-        [TestMethod]
-        public async Task FindTestWithFirstAndSpacedColumnOrderBy()
-        {
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: string.Empty,
-                queryString: "?$first=1&$orderby='ID Number'",
-                entity: _integrationEntityHasColumnWithSpace,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,

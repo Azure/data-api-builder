@@ -6,6 +6,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -168,7 +169,7 @@ namespace Azure.DataGateway.Service.Resolvers
                                                         tableName: tableName,
                                                         columnName,
                                                         ResolveJsonElementToScalarVariable(element.GetProperty(column)),
-                                                        direction: OrderByDir.Asc));
+                                                        direction: OrderBy.ASC));
                     remainingKeys.Remove(column);
                 }
             }

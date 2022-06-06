@@ -12,14 +12,16 @@ C#
  - Let the user to run locally in any environment
  
 ## Install
-You can install the CLI using `yarn` by running the following command. This will add the `graphql` binary to your path.
-
-```sh
-yarn global add graphql-cli
+If you have the .nuget package, run the below command to install directly:
+```
+dotnet tool install -g --add-source ./ hawaii-cli --version <<version_number>>
 ```
 
-The equivalent npm global install will also work.
-
+Else, you can go to the root directory of the project and create your own nuget package and then install:
+```
+dotnet pack
+dotnet tool install -g --add-source ./nupkg hawaii-cli --version <<version_number>>
+```
 
 ## Usage / Initialization
 

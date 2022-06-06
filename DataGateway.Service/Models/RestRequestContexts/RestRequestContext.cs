@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Linq;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Parsers;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
@@ -133,10 +134,7 @@ namespace Azure.DataGateway.Service.Models
 
                 if (OrderByClauseInUrl is not null)
                 {
-                    foreach (Column col in OrderByClauseInUrl)
-                    {
-                        CumulativeColumns.Add(col.ColumnName);
-                    }
+                    CumulativeColumns.UnionWith(OrderByClauseInUrl.Select(col => col.ColumnName));
                 }
 
                 if (FieldValuePairsInBody is not null && FieldValuePairsInBody.Count > 0)

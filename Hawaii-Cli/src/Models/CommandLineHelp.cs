@@ -20,8 +20,13 @@ namespace Hawaii.Cli.Models
             string help = HelpText.AutoBuild(result, helpText =>
             {
                 helpText.AdditionalNewLineAfterOption = false;
-                helpText.Heading = "See all the available options";
-
+                helpText.AddPreOptionsLine("\nCommands:");
+                string[] commandList = {
+                    "init    :   this command is used to initialize the configuration file.",
+                    "add     :   this command is used to add a new entitiy.",
+                    "update  :   this command is used to update an entity."};
+                helpText.AddPreOptionsLines(commandList);
+                helpText.AddPreOptionsLine("\nOptions:");
                 return HelpText.DefaultParsingErrorsHandler(result, helpText);
 
             }, e => e);

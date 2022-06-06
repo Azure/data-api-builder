@@ -23,7 +23,7 @@ namespace Hawaii.Cli.Models
                 helpText.AddPreOptionsLine("\nCommands:");
                 string[] commandList = {
                     "init    :   this command is used to initialize the configuration file.",
-                    "add     :   this command is used to add a new entitiy.",
+                    "add     :   this command is used to add a new entity.",
                     "update  :   this command is used to update an entity."};
                 helpText.AddPreOptionsLines(commandList);
                 helpText.AddPreOptionsLine("\nOptions:");

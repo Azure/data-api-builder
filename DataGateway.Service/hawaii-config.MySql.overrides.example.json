@@ -23,8 +23,8 @@
       "authentication": {
         "provider": "EasyAuth",
         "jwt": {
-          "audience": "bbff8fdb-c073-4466-9463-170744cbd2e2",
-          "issuer": "https://login.microsoftonline.com/291bf275-ea78-4cde-84ea-21309a43a567/v2.0",
+          "audience": "",
+          "issuer": "",
           "issuer-key": ""
         }
       }

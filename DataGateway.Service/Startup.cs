@@ -237,29 +237,33 @@ namespace Azure.DataGateway.Service
             app.UseRouting();
 
             // Adding CORS Middleware
-            string[] Origins = runtimeConfig!.HostGlobalSettings!.Cors!.Origins!;
-            bool AllowCredentials = runtimeConfig!.HostGlobalSettings!.Cors!.AllowCredentials!;
-
-            app.UseCors(CORSPolicyBuilder =>
+            if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Cors is not null)
             {
-                if (AllowCredentials)
+                Cors corsConfig = runtimeConfig.HostGlobalSettings.Cors;
+                string[] Origins = corsConfig.Origins is not null ? corsConfig.Origins : new string[] { "" };
+                bool AllowCredentials = corsConfig.AllowCredentials;
+
+                app.UseCors(CORSPolicyBuilder =>
                 {
-                    CORSPolicyBuilder
-                   .WithOrigins(Origins)
-                   .AllowAnyMethod()
-                   .AllowAnyHeader()
-                   .SetIsOriginAllowedToAllowWildcardSubdomains()
-                   .AllowCredentials();
-                }
-                else
-                {
-                    CORSPolicyBuilder
-                    .WithOrigins(Origins)
-                    .AllowAnyMethod()
-                    .AllowAnyHeader()
-                    .SetIsOriginAllowedToAllowWildcardSubdomains();
-                }
-            });
+                    if (AllowCredentials)
+                    {
+                        CORSPolicyBuilder
+                       .WithOrigins(Origins)
+                       .AllowAnyMethod()
+                       .AllowAnyHeader()
+                       .SetIsOriginAllowedToAllowWildcardSubdomains()
+                       .AllowCredentials();
+                    }
+                    else
+                    {
+                        CORSPolicyBuilder
+                        .WithOrigins(Origins)
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .SetIsOriginAllowedToAllowWildcardSubdomains();
+                    }
+                });
+            }
 
             app.Use(async (context, next) =>
             {

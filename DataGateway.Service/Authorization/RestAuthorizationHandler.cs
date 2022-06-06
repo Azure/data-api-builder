@@ -43,7 +43,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// to determine an authorization decision. </param>
         /// <returns>No object is returned.</returns>
         /// <exception cref="DataGatewayException"></exception>
-        public Task HandleAsync(AuthorizationHandlerContext context)
+        public async Task HandleAsync(AuthorizationHandlerContext context)
         {
             // Catch clause to ensure multiple requirements are not sent at one time, to ensure
             // that requirements are evaluated in order, and fail the request upon first requirement failure.

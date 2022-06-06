@@ -8,14 +8,12 @@
     "host": {
       "mode": "development",
       "authentication": {
-        "provider": "EasyAuth"
+        "provider": "AzureAD",
+        "jwt": {
+          "audience": "",
+          "issuer": ""
+        }
       }
-    },
-    "rest": {
-      "enabled": true
-    },
-    "graphql": {
-      "enabled": true
     }
   },
   "entities": {

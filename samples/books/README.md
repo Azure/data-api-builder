@@ -77,12 +77,12 @@ or as GraphQL object at the `/graphql` endpoint:
 
 ```graphql
 {
-	categories {
-		items {
-			id
-			title
-		}
-	}
+  categories {
+    items {
+      id
+      title
+    }
+  }
 }
 ```
 

@@ -145,7 +145,7 @@ namespace Azure.DataGateway.Service.Authorization
                     if (actions.Count() == 1 && actions.Contains(ActionType.DELETE))
                     {
                         context.Succeed(requirement);
-                        return Task.CompletedTask;
+                        return;
                     }
 
                     if (restContext.TryCalculateCumulativeColumns())
@@ -200,7 +200,7 @@ namespace Azure.DataGateway.Service.Authorization
                 }
             }
 
-            return Task.CompletedTask;
+            return;
         }
 
         /// <summary>

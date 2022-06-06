@@ -41,7 +41,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
 
             HttpContext httpContext = CreateHttpContext();
 
-            bool actualAuthorizationResult = await IsAuthorizationSuccessful(
+            bool actualAuthorizationResult = await IsAuthorizationSuccessfulAsync(
                 requirement: new RoleContextPermissionsRequirement(),
                 resource: httpContext,
                 resolver: authorizationResolver.Object,
@@ -119,7 +119,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
                 TableDefinition = tableDef
             };
 
-            bool actualAuthorizationResult = await IsAuthorizationSuccessful(
+            bool actualAuthorizationResult = await IsAuthorizationSuccessfulAsync(
                 requirement: new EntityRoleActionPermissionsRequirement(),
                 resource: stubDbObj,
                 resolver: authorizationResolver.Object,
@@ -138,7 +138,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
             Mock<IAuthorizationResolver> authorizationResolver = new();
             HttpContext httpContext = CreateHttpContext();
 
-            bool actualAuthorizationResult = await IsAuthorizationSuccessful(
+            bool actualAuthorizationResult = await IsAuthorizationSuccessfulAsync(
                 requirement: new EntityRoleActionPermissionsRequirement(),
                 resource: null,
                 resolver: authorizationResolver.Object,
@@ -150,7 +150,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
             bool actualExceptionThrown = false;
             try
             {
-                actualAuthorizationResult = await IsAuthorizationSuccessful(
+                actualAuthorizationResult = await IsAuthorizationSuccessfulAsync(
                     requirement: new EntityRoleActionPermissionsRequirement(),
                     resource: new object(),
                     resolver: authorizationResolver.Object,
@@ -216,7 +216,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
             RestRequestContext stubRestRequestContext = CreateRestRequestContext(columnsRequested);
 
             // Perform Authorization Check, the result is used to validate behavior.
-            bool actualAuthorizationResult = await IsAuthorizationSuccessful(
+            bool actualAuthorizationResult = await IsAuthorizationSuccessfulAsync(
                requirement: new ColumnsPermissionsRequirement(),
                resource: stubRestRequestContext,
                resolver: authorizationResolver.Object,

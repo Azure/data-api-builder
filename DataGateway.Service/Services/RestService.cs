@@ -61,7 +61,7 @@ namespace Azure.DataGateway.Service.Services
             RequestValidator.ValidateEntity(entityName, _sqlMetadataProvider.EntityToDatabaseObject.Keys);
             DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[entityName];
 
-            await AuthorizationCheckForRequirement(resource: dbObject, requirement: new EntityRoleActionPermissionsRequirement());
+            await AuthorizationCheckForRequirementAsync(resource: dbObject, requirement: new EntityRoleActionPermissionsRequirement());
 
             QueryString? query = GetHttpContext().Request.QueryString;
             string queryString = query is null ? string.Empty : GetHttpContext().Request.QueryString.ToString();
@@ -264,11 +264,11 @@ namespace Azure.DataGateway.Service.Services
         /// for requirements which need one.</exception>
         /// <exception cref="DataGatewayException">Thrown when authorization fails.
         /// Results in server returning 403 Unauthorized.</exception>
-        public async Task AuthorizationCheckForRequirement(object? resource, IAuthorizationRequirement requirement)
+        public async Task AuthorizationCheckForRequirementAsync(object? resource, IAuthorizationRequirement requirement)
         {
             if (requirement is not RoleContextPermissionsRequirement && resource is null)
             {
-                throw new ArgumentNullException(paramName: "resource", message: "Resource can't be null for this requirement.");
+                throw new ArgumentNullException(paramName: "resource", message: $"Resource can't be null for the requirement: {requirement.GetType}");
             }
 
             AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(

@@ -236,7 +236,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
         /// <param name="entityName">Table/Entity that is being queried.</param>
         /// <param name="user">ClaimsPrincipal / user that has authentication status defined.</param>
         /// <returns>True/False whether Authorization Result Succeeded</returns>
-        private static async Task<bool> IsAuthorizationSuccessful(
+        private static async Task<bool> IsAuthorizationSuccessfulAsync(
             IAuthorizationRequirement requirement,
             object resource,
             IAuthorizationResolver resolver,

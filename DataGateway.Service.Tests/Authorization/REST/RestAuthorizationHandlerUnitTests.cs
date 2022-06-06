@@ -58,7 +58,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
         /// </summary>
         /// <param name="httpMethod">Action type of request</param>
         /// <param name="expectedAuthorizationResult">Whether authorization is expected to succeed.</param>
-        /// <param name="isValidCreateRoleAction">Whether Role/Action pair is allowed per authorization config.</param>
+        /// <param name="isValidCreateRoleAction">Whether Role/Action pair is allowed for Read authorization config.</param>
         /// <param name="isValidReadRoleAction">Whether Role/Action pair is allowed per authorization config.</param>
         /// <param name="isValidUpdateRoleAction">Whether Role/Action pair is allowed per authorization config.</param>
         /// <param name="isValidDeleteRoleAction">Whether Role/Action pair is allowed per authorization config.</param>
@@ -166,7 +166,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
         }
 
         /// <summary>
-        /// Tests column level authorization permissions for Find requests with no _f filter query string parameter.
+        /// Tests column level authorization permissions for Find requests with no $f filter query string parameter.
         /// - Request contains any subset of columns requested, which are in the allowed list of columns -> Authorization successful
         /// - Request contains any column requested, which does not appear in the allowed list of columns -> Authorization failure
         /// - After authorization, RestAuthorizationHandler modifies FieldsToBeReturned with list of allowed columns, so that results
@@ -177,13 +177,13 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
         /// <param name="columnsRequestedInput">List of columns that appear in a request {URL, QueryString, Body}</param>
         # pragma warning disable format
         [DataTestMethod]
-        // Positive Tests where authorization succeeds for Find requests with no _f filter query string parameter
+        // Positive Tests where authorization succeeds for Find requests with no $f filter query string parameter
         [DataRow(new string[] { "col1", "col2", "col3", "col4" }, DisplayName = "Find - Request all of Allowed Columns")]
         [DataRow(new string[] { "col1", "col2", "col3"         }, DisplayName = "Find - Request 3/4 subset of Allowed Columns")]
         [DataRow(new string[] { "col1", "col2"                 }, DisplayName = "Find - Request 2/4 subset of Allowed Columns")]
         [DataRow(new string[] { "col1"                         }, DisplayName = "Find - Request 1/4 subset of Allowed Columns")]
         [DataRow(new string[] {                                }, DisplayName = "Find - No column filter for results")]
-        // Negative tests where authorization fails for Find requests with no _f filter query string parameter
+        // Negative tests where authorization fails for Find requests with no $f filter query string parameter
         [DataRow(new string[] { "col1", "col2", "col3", "col4", "col5" }, DisplayName = "Find - Request all allowed + 1 disallowed column(s)")]
         [DataRow(new string[] { "col1", "col5", "col6", "col7", "col9" }, DisplayName = "Find - Request 1 allowed + > 1 disallowed column(s)")]
         #pragma warning restore format
@@ -203,7 +203,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.READ,
-                It.IsAny<IEnumerable<string>>() //Can be any IEnumerable<string>, as find request result field list is depedent on AllowedColumns.
+                It.IsAny<IEnumerable<string>>() // Can be any IEnumerable<string>, as find request result field list is depedent on AllowedColumns.
                 )).Returns(areColumnsAllowed);
             authorizationResolver.Setup(x => x.GetAllowedColumns(
                 AuthorizationHelpers.TEST_ENTITY,
@@ -225,7 +225,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
             Assert.AreEqual(expectedAuthorizationResult, actualAuthorizationResult, message: "Unexpected Authorization Result.");
 
             // Ensure the FieldsToBeReturned, which the AuthorizationResolver modifies for Find requests,
-            // is equivalent to the allowedColumns list. This test *does not* mock requests which predefine a query string field filter (_f)
+            // is equivalent to the allowedColumns list. This test *does not* mock requests which predefine a query string field filter ($f)
             CollectionAssert.AreEquivalent(expected: (ICollection)allowedColumns, actual: stubRestRequestContext.FieldsToBeReturned, message: "FieldsToBeReturned not subset of allowed columns.");
         }
 

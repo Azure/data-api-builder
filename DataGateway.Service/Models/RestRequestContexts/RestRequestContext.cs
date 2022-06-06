@@ -106,7 +106,6 @@ namespace Azure.DataGateway.Service.Models
         /// # URL Route Components: PrimaryKey Key/Value Pairs
         /// # Query String components: $f (Column filter), $filter (FilterClause /row filter), $orderby clause
         /// # Request Body: FieldValuePairs in body
-        /// -> Failure r
         /// </summary>
         /// <returns>
         /// Returns true on success, false on failure.

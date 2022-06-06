@@ -361,7 +361,7 @@ namespace Azure.DataGateway.Service.Authorization
                     string claimValue = claim.Value;
                     string claimValueType = claim.ValueType;
                     int claimIdx = claimType.Index;
-                    policyWithClaims.Append(policy.Substring(parsedIdx, claimIdx - parsedIdx).Replace("@item.",""));
+                    policyWithClaims.Append(policy.Substring(parsedIdx, claimIdx - parsedIdx).Replace("@item.", ""));
                     if (claimValueType.Equals(ClaimValueTypes.String))
                     {
                         policyWithClaims.Append($"'{claimValue}'");

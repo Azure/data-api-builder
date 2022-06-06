@@ -276,7 +276,6 @@ FROM
         /// <summary>
         /// Tests orderBy on a list query
         /// </summary>
-        [Ignore]
         [TestMethod]
         public async Task TestOrderByInListQuery()
         {
@@ -287,7 +286,6 @@ FROM
         /// <summary>
         /// Use multiple order options and order an entity with a composite pk
         /// </summary>
-        [Ignore]
         [TestMethod]
         public async Task TestOrderByInListQueryOnCompPkType()
         {
@@ -300,7 +298,6 @@ FROM
         /// meaning that null pk columns are included in the ORDER BY clause
         /// as ASC by default while null non-pk columns are completely ignored
         /// </summary>
-        [Ignore]
         [TestMethod]
         public async Task TestNullFieldsInOrderByAreIgnored()
         {
@@ -311,7 +308,6 @@ FROM
         /// <summary>
         /// Tests that an orderBy with only null fields results in default pk sorting
         /// </summary>
-        [Ignore]
         [TestMethod]
         public async Task TestOrderByWithOnlyNullFieldsDefaultsToPkSorting()
         {

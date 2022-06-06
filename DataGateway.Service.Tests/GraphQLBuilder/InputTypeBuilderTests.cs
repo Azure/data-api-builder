@@ -30,7 +30,7 @@ type Foo @model {{
             ObjectTypeDefinitionNode node = root.Definitions[0] as ObjectTypeDefinitionNode;
             InputTypeBuilder.GenerateFilterInputTypeForObjectType(node, inputTypes);
 
-            Assert.AreEqual(expectedFilterName, inputTypes["Foo"].Fields.First(f => f.Name.Value == "id").Type.NamedType().Name.Value);
+            Assert.AreEqual(expectedFilterName, inputTypes["FooFilterInput"].Fields.First(f => f.Name.Value == "id").Type.NamedType().Name.Value);
         }
 
         [TestMethod]
@@ -57,9 +57,9 @@ type Publisher @model {
                 InputTypeBuilder.GenerateFilterInputTypeForObjectType(node, inputTypes);
             }
 
-            InputObjectTypeDefinitionNode publisherFilterInput = inputTypes["Publisher"];
+            InputObjectTypeDefinitionNode publisherFilterInput = inputTypes["PublisherFilterInput"];
 
-            CollectionAssert.AreEquivalent(new[] { "Int", "Book", "Publisher" }, inputTypes.Keys);
+            CollectionAssert.AreEquivalent(new[] { "Int", "BookFilterInput", "PublisherFilterInput" }, inputTypes.Keys);
             Assert.AreEqual(4, publisherFilterInput.Fields.Count);
             Assert.IsTrue(publisherFilterInput.Fields.Any(f => f.Type.NamedType().Name.Value == "BookFilterInput"), "No field found for BookFilterInput");
         }

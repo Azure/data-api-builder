@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using Microsoft.OData.UriParser;
@@ -110,6 +111,10 @@ namespace Azure.DataGateway.Service.Parsers
                                                                          context.DatabaseObject.SchemaName,
                                                                          context.DatabaseObject.Name,
                                                                          primaryKeys);
+                        // to allow spaces in columns we accept constant value node
+                        // which means the model no longer validates all columns
+                        // automatically, so we must do so explicitly
+                        RequestValidator.CheckOrderByValidity(context);
                         break;
                     case AFTER_URL:
                         context.After = context.ParsedQueryString[key];
@@ -142,24 +147,39 @@ namespace Azure.DataGateway.Service.Parsers
             // node is null
             while (node is not null)
             {
-                // Column name is stored in node.Expression as a SingleValuePropertyAccessNode
-                SingleValuePropertyAccessNode? expression = node.Expression as SingleValuePropertyAccessNode;
+                // Column name is stored in node.Expression either as SingleValuePropertyNode, or ConstantNode
+                // ConstantNode is used in the case of spaces in column names, and can also be used to support
+                // column name of null. ie: $orderby='hello world', or $orderby=null
+                // note: null support is not currently implemented.
+                QueryNode? expression = node.Expression is not null ? node.Expression :
+                                        throw new DataGatewayException(message: "OrderBy property is not supported.",
+                                                                       HttpStatusCode.BadRequest,
+                                                                       DataGatewayException.SubStatusCodes.BadRequest);
+
                 string columnName;
-                if (expression is null)
+                if (expression.Kind is QueryNodeKind.SingleValuePropertyAccess)
                 {
-                    throw new DataGatewayException(
-                        message: "OrderBy property is not supported.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                    // assignment of columnName will need to change when mapping work item merges
+                    // see: https://github.com/Azure/hawaii-gql/pull/421
+                    columnName = ((SingleValuePropertyAccessNode)expression).Property.Name;
+                }
+                else if (expression.Kind is QueryNodeKind.Constant &&
+                        ((ConstantNode)expression).Value is not null)
+                {
+                    // assignment of columnName will need to change when mapping work item merges
+                    // see: https://github.com/Azure/hawaii-gql/pull/421
+                    columnName = ((ConstantNode)expression).Value.ToString()!;
                 }
                 else
                 {
-                    columnName = expression.Property.Name;
+                    throw new DataGatewayException(message: "OrderBy property is not supported.",
+                                                   HttpStatusCode.BadRequest,
+                                                   DataGatewayException.SubStatusCodes.BadRequest);
                 }
 
                 // Sorting order is stored in node.Direction as OrderByDirection Enum
                 // We convert to an Enum of our own that matches the SQL text we want
-                Models.OrderByDir direction = GetDirection(node.Direction);
+                OrderBy direction = GetDirection(node.Direction);
                 // Add OrderByColumn and remove any matching columns from our primary key set
                 orderByList.Add(new OrderByColumn(schemaName, tableName, columnName, direction: direction));
                 remainingKeys.Remove(columnName);
@@ -185,14 +205,14 @@ namespace Azure.DataGateway.Service.Parsers
         /// </summary>
         /// <param name="direction">String reprenting the orderby direction.</param>
         /// <returns>Enum representing the direction.</returns>
-        private static Models.OrderByDir GetDirection(OrderByDirection direction)
+        private static OrderBy GetDirection(OrderByDirection direction)
         {
             switch (direction)
             {
                 case OrderByDirection.Descending:
-                    return Models.OrderByDir.Desc;
+                    return OrderBy.DESC;
                 case OrderByDirection.Ascending:
-                    return Models.OrderByDir.Asc;
+                    return OrderBy.ASC;
                 default:
                     throw new DataGatewayException(message: "Invalid order specified in the OrderBy clause.",
                                                    statusCode: HttpStatusCode.BadRequest,

@@ -268,7 +268,7 @@ namespace Azure.DataGateway.Service
             app.UseAuthentication();
 
             // Conditionally add authentication middleware in Production Mode
-            if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Mode != HostModeType.Development)
+            if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Mode == HostModeType.Production)
             {
                 app.UseAuthenticationMiddleware();
             }

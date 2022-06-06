@@ -115,12 +115,12 @@ namespace Azure.DataGateway.Service.Models
         {
             try
             {
-                if (PrimaryKeyValuePairs is not null && PrimaryKeyValuePairs.Count > 0)
+                if (PrimaryKeyValuePairs.Count > 0)
                 {
                     CumulativeColumns.UnionWith(PrimaryKeyValuePairs.Keys);
                 }
 
-                if (FieldsToBeReturned is not null && FieldsToBeReturned.Count > 0)
+                if (FieldsToBeReturned.Count > 0)
                 {
                     CumulativeColumns.UnionWith(FieldsToBeReturned);
                 }
@@ -137,7 +137,7 @@ namespace Azure.DataGateway.Service.Models
                     CumulativeColumns.UnionWith(OrderByClauseInUrl.Select(col => col.ColumnName));
                 }
 
-                if (FieldValuePairsInBody is not null && FieldValuePairsInBody.Count > 0)
+                if (FieldValuePairsInBody.Count > 0)
                 {
                     CumulativeColumns.UnionWith(FieldValuePairsInBody.Keys);
                 }
@@ -155,5 +155,13 @@ namespace Azure.DataGateway.Service.Models
             }
         }
 
+        /// <summary>
+        /// Modifies the contents of FieldsToBeReturned.
+        /// </summary>
+        /// <param name="fields">Collection of fields to be returned.</param>
+        public void UpdateReturnFields(IEnumerable<string> fields)
+        {
+            FieldsToBeReturned = FieldsToBeReturned.Union(fields).ToList();
+        }
     }
 }

@@ -223,10 +223,12 @@ namespace Azure.DataGateway.Service.Authorization
                 case HttpConstants.GET:
                     return new List<string>(new string[] { ActionType.READ });
                 default:
-                    break;
+                    throw new DataGatewayException(
+                        message: "Unsupported operation type.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest
+                    );
             }
-
-            return new List<string>();
         }
     }
 }

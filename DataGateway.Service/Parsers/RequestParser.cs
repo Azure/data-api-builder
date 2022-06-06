@@ -128,23 +128,6 @@ namespace Azure.DataGateway.Service.Parsers
         }
 
         /// <summary>
-        /// Helper function used to parse the database policy string provided
-        /// in config file for the given http request. It parses and saves the values that are needed to
-        /// later generate queries in the given RestRequestContext.
-        /// </summary>
-        /// <param name="context">The RestRequestContext holding the major components of the query.</param>
-        /// <param name="filterParser">Object storing the model that can store customer data
-        /// and parse the filter clause generated from that model.</param>
-        public static void ParseDbPolicyString(RestRequestContext context, FilterParser filterParser)
-        {
-            if (context.ParsedDbPolicyString is not null)
-            {
-                string dbPolicyString = $"?{FILTER_URL}={context.ParsedDbPolicyString[FILTER_URL]}";
-                context.FilterClauseInDbPolicy = filterParser.GetFilterClause(dbPolicyString, $"{context.DatabaseObject.FullName}");
-            }
-        }
-
-        /// <summary>
         /// Create List of OrderByColumn from an OrderByClause Abstract Syntax Tree
         /// and return that list as List<Column> since OrderByColumn is a Column.
         /// </summary>

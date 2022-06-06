@@ -138,8 +138,7 @@ namespace Azure.DataGateway.Service.Authorization
                 return;
             }
 
-            string dbPolicyWithClaimValues;
-            dbPolicyWithClaimValues = ProcessTokenClaimsForPolicy(dBpolicyWithClaimTypes, httpContext);
+            string dbPolicyWithClaimValues = ProcessTokenClaimsForPolicy(dBpolicyWithClaimTypes, httpContext);
 
             // Write policy to httpContext for use in downstream controllers/services.
             httpContext.Items.Add(
@@ -258,16 +257,9 @@ namespace Azure.DataGateway.Service.Authorization
         /// <returns>Processed policy string that can be injected into the HttpContext object.</returns>
         private static string ProcessTokenClaimsForPolicy(string policy, HttpContext context)
         {
-            Dictionary<string, Tuple<string, string>> claimsInRequestContext = new();
+            Dictionary<string, Claim> claimsInRequestContext = new();
             PopulateAllClaimsInReqCtxt(context, claimsInRequestContext);
-
-            //Process the policy string in 2 steps:
-            //1. Replace claim types with claim values
             policy = GetPolicyWithClaimValues(policy, claimsInRequestContext);
-
-            //2. Replace @item.columnName by just the columnName.
-            policy = policy.Replace("@item.", "");
-
             return policy;
         }
 
@@ -278,7 +270,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// </summary>
         /// <param name="context">HttpContext object used to extract all the claims available in the request.</param>
         /// <param name="claimsInRequestContext">Dictionary to hold all the claims available in the request.</param>
-        private static void PopulateAllClaimsInReqCtxt(HttpContext context, Dictionary<string, Tuple<string, string>> claimsInRequestContext)
+        private static void PopulateAllClaimsInReqCtxt(HttpContext context, Dictionary<string, Claim> claimsInRequestContext)
         {
             ClaimsIdentity? identity = (ClaimsIdentity?)context.User.Identity;
 
@@ -296,12 +288,10 @@ namespace Azure.DataGateway.Service.Authorization
                  * claim.ValueType: "string"
                  */
                 string type = claim.Type;
-                string value = claim.Value;
-                string valueType = claim.ValueType;
 
                 if (!claimsInRequestContext.ContainsKey(type))
                 {
-                    claimsInRequestContext.Add(type, new(value, valueType));
+                    claimsInRequestContext.Add(type, claim);
                 }
                 else
                 {
@@ -323,10 +313,15 @@ namespace Azure.DataGateway.Service.Authorization
         /// <param name="claimsInRequestContext">Dictionary holding all the claims available in the request.</param>
         /// <returns>Processed policy with claim values substituted for claim types.</returns>
         /// <exception cref="DataGatewayException"></exception>
-        private static string GetPolicyWithClaimValues(string policy, Dictionary<string, Tuple<string, string>> claimsInRequestContext)
+        private static string GetPolicyWithClaimValues(string policy, Dictionary<string, Claim> claimsInRequestContext)
         {
-            string claimCharsRgx = @"@claims\.[^\s\)$]*"; //Regex used to extract all claimTypes in policy
-            string invalidChars = @"[^a-zA-Z0-9_\.]+";  //Regex to check if extracted claimType is invalid
+            // Regex used to extract all claimTypes in policy. It finds all the substrings which are
+            // of the form @claims.*** delimited by space character,end of the line or end of the string.
+            string claimCharsRgx = @"@claims\.[^\s\)$]*";
+
+            // Regex to check if extracted claimType is invalid. It checks if the string contains any character
+            // other than a-z,A-Z,0-9,_,. .. if it does, than thats an invalid claimType.
+            string invalidChars = @"[^a-zA-Z0-9_\.]+";
             Regex invalidCharsRgx = new(invalidChars, RegexOptions.Compiled);
 
             // Find all the claimTypes from the policy
@@ -355,12 +350,18 @@ namespace Azure.DataGateway.Service.Authorization
                         );
                 }
 
-                if (claimsInRequestContext.TryGetValue(typeOfClaim, out Tuple<string, string>? claim))
+                if (claimsInRequestContext.TryGetValue(typeOfClaim, out Claim? claim))
                 {
-                    string claimValue = claim.Item1;
-                    string claimValueType = claim.Item2;
+                    /* An example claim would be of format:
+                     * claim.Type: "user_email"
+                     * claim.Value: "authz@microsoft.com"
+                     * claim.ValueType: "string"
+                     */
+
+                    string claimValue = claim.Value;
+                    string claimValueType = claim.ValueType;
                     int claimIdx = claimType.Index;
-                    policyWithClaims.Append(policy.Substring(parsedIdx, claimIdx - parsedIdx));
+                    policyWithClaims.Append(policy.Substring(parsedIdx, claimIdx - parsedIdx).Replace("@item.",""));
                     if (claimValueType.Equals(ClaimValueTypes.String))
                     {
                         policyWithClaims.Append($"'{claimValue}'");
@@ -398,7 +399,7 @@ namespace Azure.DataGateway.Service.Authorization
             // Append if there is any.
             if (parsedIdx < policy.Length)
             {
-                policyWithClaims.Append(policy.Substring(parsedIdx));
+                policyWithClaims.Append(policy.Substring(parsedIdx).Replace("@item.", ""));
             }
 
             return policyWithClaims.ToString();

@@ -70,11 +70,6 @@ namespace Azure.DataGateway.Service.Models
         public NameValueCollection? ParsedQueryString { get; set; } = new();
 
         /// <summary>
-        /// NVC stores the database policy string parsed into a NameValueCollection.
-        /// </summary>
-        public NameValueCollection? ParsedDbPolicyString { get; set; } = new();
-
-        /// <summary>
         /// String holds information needed for pagination.
         /// Based on request this property may or may not be populated.
         /// </summary>

@@ -135,10 +135,9 @@ namespace Azure.DataGateway.Service.Services
                 // ?$filter= so that it conforms with the format followed by other filter predicates.
                 // This helps the ODataVisitor helpers to parse the policy text properly.
                 dbPolicy = "?$filter=" + dbPolicy;
-                context.ParsedDbPolicyString = HttpUtility.ParseQueryString(dbPolicy);
-                RequestParser.ParseDbPolicyString(
-                    context,
-                    _sqlMetadataProvider.GetODataFilterParser());
+
+                // Parse and saves the values that are needed to later generate queries in the given RestRequestContext.
+                context.FilterClauseInDbPolicy = _sqlMetadataProvider.GetODataFilterParser().GetFilterClause(dbPolicy, $"{context.DatabaseObject.FullName}");
             }
 
             // At this point for DELETE, the primary key should be populated in the Request Context.

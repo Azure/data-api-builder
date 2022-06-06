@@ -689,8 +689,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
                 books(first: 100 orderBy: {title: DESC}) {
-                    id
-                    title
+                    items {
+                        id
+                        title
+                    }
                 }
             }";
 
@@ -709,8 +711,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "reviews";
             string graphQLQuery = @"{
                 reviews(orderBy: {content: ASC id: DESC}) {
-                    id
-                    content
+                    items {
+                        id
+                        content
+                    }
                 }
             }";
 
@@ -731,8 +735,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
                 books(first: 100 orderBy: {title: DESC id: null publisher_id: null}) {
-                    id
-                    title
+                    items {
+                        id
+                        title
+                    }
                 }
             }";
 

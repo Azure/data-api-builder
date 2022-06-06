@@ -43,7 +43,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// to determine an authorization decision. </param>
         /// <returns>No object is returned.</returns>
         /// <exception cref="DataGatewayException"></exception>
-        public async Task HandleAsync(AuthorizationHandlerContext context)
+        public Task HandleAsync(AuthorizationHandlerContext context)
         {
             // Catch clause to ensure multiple requirements are not sent at one time, to ensure
             // that requirements are evaluated in order, and fail the request upon first requirement failure.
@@ -145,7 +145,7 @@ namespace Azure.DataGateway.Service.Authorization
                     if (actions.Count() == 1 && actions.Contains(ActionType.DELETE))
                     {
                         context.Succeed(requirement);
-                        return;
+                        return Task.CompletedTask;
                     }
 
                     if (restContext.TryCalculateCumulativeColumns())
@@ -173,7 +173,7 @@ namespace Azure.DataGateway.Service.Authorization
                                 {
                                     // Union performed to avoid duplicate field names in FieldsToBeReturned.
                                     IEnumerable<string> fieldsReturnedForFind = _authorizationResolver.GetAllowedColumns(entityName, roleName, action);
-                                    restContext.FieldsToBeReturned = restContext.FieldsToBeReturned.Union(fieldsReturnedForFind).ToList();
+                                    restContext.UpdateReturnFields(fieldsReturnedForFind);
                                 }
                             }
                             else if (columnsToCheck.Count() == 0 && restContext.OperationType is Operation.Find)
@@ -184,7 +184,7 @@ namespace Azure.DataGateway.Service.Authorization
                                 // - For other operation types, columnsToCheck is a result of identifying
                                 // any reference to a column in all parts of a request (body, URL, querystring)
                                 IEnumerable<string> fieldsReturnedForFind = _authorizationResolver.GetAllowedColumns(entityName, roleName, action);
-                                restContext.FieldsToBeReturned = restContext.FieldsToBeReturned.Union(fieldsReturnedForFind).ToList();
+                                restContext.UpdateReturnFields(fieldsReturnedForFind);
                             }
                             else
                             {
@@ -200,7 +200,7 @@ namespace Azure.DataGateway.Service.Authorization
                 }
             }
 
-            return;
+            return Task.CompletedTask;
         }
 
         /// <summary>

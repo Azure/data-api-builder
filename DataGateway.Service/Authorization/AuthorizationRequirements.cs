@@ -24,7 +24,7 @@ namespace Azure.DataGateway.Service.Authorization
     /// <summary>
     /// Instructs the authorization handler to check that:
     ///     - The columns included in the request are allowed to be accessed by the authenticated user.
-    /// For requests on *Many requests, retricts the results to only include fields allowed to be
+    /// For requests on *Many requests, restricts the results to only include fields allowed to be
     /// accessed by the authenticated user.
     ///
     /// Implements IAuthorizationRequirement, which is an empty marker interface.

@@ -33,7 +33,7 @@ namespace Azure.DataGateway.Service.Authorization
             if (!authorizationResult.Succeeded)
             {
                 //Handle authorization failure and terminate the request.
-                httpContext.Response.StatusCode = 403;
+                httpContext.Response.StatusCode = HttpStatusCode.Forbidden;
                 return;
             }
 

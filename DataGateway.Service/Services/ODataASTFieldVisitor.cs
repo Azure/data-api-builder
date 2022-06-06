@@ -14,7 +14,7 @@ namespace Azure.DataGateway.Service.Services
     public class ODataASTFieldVisitor : QueryNodeVisitor<object?>
     {
         /// <summary>
-        /// A collection of all unique columns names present in the Abstract Syntax Tree (AST).
+        /// A collection of all unique column names present in the Abstract Syntax Tree (AST).
         /// </summary>
         public HashSet<string> CumulativeColumns { get; } = new();
 
@@ -37,7 +37,6 @@ namespace Azure.DataGateway.Service.Services
         /// operators such as NOT.
         /// </summary>
         /// <param name="nodeIn">The node visisted.</param>
-        /// <returns>String concatenation of (op children)</returns>
         public override object? Visit(UnaryOperatorNode nodeIn)
         {
             nodeIn.Operand.Accept(this);
@@ -49,7 +48,6 @@ namespace Azure.DataGateway.Service.Services
         /// holds a field name in the AST.
         /// </summary>
         /// <param name="nodeIn">The node visited.</param>
-        /// <returns>String representing the Field name</returns>
         public override object? Visit(SingleValuePropertyAccessNode nodeIn)
         {
             CumulativeColumns.Add(nodeIn.Property.Name);
@@ -61,7 +59,6 @@ namespace Azure.DataGateway.Service.Services
         /// holds a value in the AST. 
         /// </summary>
         /// <param name="nodeIn">The node visited.</param>
-        /// <returns>String representing param that holds given value.</returns>
         public override object? Visit(ConstantNode nodeIn)
         {
             return null;

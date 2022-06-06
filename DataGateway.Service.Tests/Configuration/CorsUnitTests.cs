@@ -1,11 +1,9 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
@@ -50,23 +48,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Verify supplying "origins": ["*"] resolves to allowing all origins
-        /// </summary>
-        [TestMethod]
-        public void TestWildcardResolvesAsAllOrigins()
-        {
-            CorsPolicy parsedPolicy =
-                new CorsPolicyBuilder()
-                .WithOrigins(new string[] { "*" })
-                .AllowAnyMethod()
-                .AllowAnyHeader()
-                .SetIsOriginAllowedToAllowWildcardSubdomains()
-                .Build();
-
-            Assert.IsTrue(parsedPolicy.AllowAnyOrigin);
-        }
-
-        /// <summary>
         /// Testing against the simulated test server whether an Access-Control-Allow-Origin header is present on the response
         /// <param name="allowedOrigins"> the allowed origins for the server to check against </param>
         /// DataRow 1: valid because all origins accepted
@@ -74,9 +55,9 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         /// DataRow 3: valid because specific host present in origins list (wildcard ignored - expected behavior, see line 26)
         /// </summary>
         [DataTestMethod]
-        [DataRow(new string[] { "*" })]
-        [DataRow(new string[] { "http://localhost:3000" })]
-        [DataRow(new string[] { "*", "invalid host", "http://localhost:3000" })]
+        [DataRow(new string[] { "*" }, DisplayName = "Test allow origin with wildcard")]
+        [DataRow(new string[] { "http://localhost:3000" }, DisplayName = "Test allow specific origin")]
+        [DataRow(new string[] { "http://localhost:3000", "*", "invalid host" }, DisplayName = "Test allow specific origin with wilcard")]
         public async Task TestAllowedOriginHeaderPresent(string[] allowedOrigins)
         {
             IHost host = await CreateCorsConfiguredWebHost(allowedOrigins, false);
@@ -94,7 +75,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
         /// <summary>
         /// Simple test if AllowCredentials option correctly toggles Access-Control-Allow-Credentials header
-        /// Here, a credential is simulated with a cookie
         /// </summary>
         [TestMethod]
         public async Task TestAllowedCredentialsHeaderPresent()
@@ -123,9 +103,9 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         /// DataRow 3: invalid because specific host is not present (* does not resolve to all origins if it is not the sole value supplied - expected, see line 26)
         /// </summary>
         [DataTestMethod]
-        [DataRow(new string[] { "" })]
-        [DataRow(new string[] { "https://localhost:3000" })]
-        [DataRow(new string[] { "*", "" })]
+        [DataRow(new string[] { "" }, DisplayName = "Test invalid origin empty origins")]
+        [DataRow(new string[] { "https://localhost:3000" }, DisplayName = "Test invalid origin mismatch scheme")]
+        [DataRow(new string[] { "*", "" }, DisplayName = "Test invalid origin ignored wildcard")]
         public async Task TestAllowOriginHeaderAbsent(string[] allowedOrigins)
         {
             IHost host = await CreateCorsConfiguredWebHost(allowedOrigins, false);
@@ -139,37 +119,12 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Assert.IsTrue(returnContext.Response.Headers.AccessControlAllowOrigin.Count == 0);
         }
 
-        /// <summary>
-        /// Ensures this potentially dangerous combination is caught and will throw an InvalidOperationException
-        /// From Microsoft Docs (https://docs.microsoft.com/en-us/aspnet/core/security/cors?view=aspnetcore-6.0#:~:text=to%20the%20app.-,Note,-Specifying%20AllowAnyOrigin%20and)
-        /// """Specifying AllowAnyOrigin and AllowCredentials is an insecure configuration and can result in cross-site request forgery.
-        /// The CORS service returns an invalid CORS response when an app is configured with both methods."""
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public void TestAllowCredentialsAndAllowAnyOrigin()
-        {
-            try
-            {
-                new CorsPolicyBuilder()
-                .WithOrigins(new string[] { "*" })
-                .AllowAnyMethod()
-                .AllowAnyHeader()
-                .SetIsOriginAllowedToAllowWildcardSubdomains()
-                .AllowCredentials()
-                .Build();
-            }
-            catch (Exception ex)
-            {
-                Assert.IsInstanceOfType(ex, typeof(InvalidOperationException));
-            }
-        }
         #endregion
 
         #region Helpers
 
         /// <summary>
-        /// Spins up a minimal Cors-configured WebHost
+        /// Spins up a minimal Cors-configured WebHost using the same method as Startup
         /// <param name="testOrigins"/> The allowed origins the test server will respond with an Access-Control-Allow-Origin header </param>
         /// <param name="allowCredentials"/> Whether the test server should allow credentials to be included in requests </param>
         /// </summary>
@@ -188,23 +143,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                                 options.AddPolicy(name: MyAllowSpecificOrigins,
                                     CORSPolicyBuilder =>
                                     {
-                                        if (allowCredentials)
-                                        {
-                                            CORSPolicyBuilder
-                                            .WithOrigins(testOrigins)
-                                            .AllowAnyMethod()
-                                            .AllowAnyHeader()
-                                            .SetIsOriginAllowedToAllowWildcardSubdomains()
-                                            .AllowCredentials();
-                                        }
-                                        else
-                                        {
-                                            CORSPolicyBuilder
-                                            .WithOrigins(testOrigins)
-                                            .AllowAnyMethod()
-                                            .AllowAnyHeader()
-                                            .SetIsOriginAllowedToAllowWildcardSubdomains();
-                                        }
+                                        Startup.ConfigureCors(CORSPolicyBuilder, new Cors(testOrigins, allowCredentials));
                                     });
                             });
                         })

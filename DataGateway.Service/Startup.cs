@@ -14,6 +14,7 @@ using HotChocolate.Language;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
@@ -239,29 +240,10 @@ namespace Azure.DataGateway.Service
             // Adding CORS Middleware
             if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Cors is not null)
             {
-                Cors corsConfig = runtimeConfig.HostGlobalSettings.Cors;
-                string[] Origins = corsConfig.Origins is not null ? corsConfig.Origins : new string[] { "" };
-                bool AllowCredentials = corsConfig.AllowCredentials;
-
                 app.UseCors(CORSPolicyBuilder =>
                 {
-                    if (AllowCredentials)
-                    {
-                        CORSPolicyBuilder
-                       .WithOrigins(Origins)
-                       .AllowAnyMethod()
-                       .AllowAnyHeader()
-                       .SetIsOriginAllowedToAllowWildcardSubdomains()
-                       .AllowCredentials();
-                    }
-                    else
-                    {
-                        CORSPolicyBuilder
-                        .WithOrigins(Origins)
-                        .AllowAnyMethod()
-                        .AllowAnyHeader()
-                        .SetIsOriginAllowedToAllowWildcardSubdomains();
-                    }
+                    Cors corsConfig = runtimeConfig.HostGlobalSettings.Cors;
+                    ConfigureCors(CORSPolicyBuilder, corsConfig);
                 });
             }
 
@@ -365,6 +347,38 @@ namespace Azure.DataGateway.Service
             {
                 services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
                     .AddEasyAuthAuthentication();
+            }
+        }
+
+        /// <summary>
+        /// Build a CorsPolicy to be consumed by the useCors function, allowing requests with any methods or headers 
+        /// Used both for app startup and testing purposes
+        /// </summary>
+        /// <param name="builder"> The CorsPolicyBuilder that will be used to build the policy </param>
+        /// <param name="corsConfig"> The cors runtime configuration specifying the allowed origins and whether credentials can be included in requests </param>
+        /// <returns> The built cors policy </returns>
+        public static CorsPolicy ConfigureCors(CorsPolicyBuilder builder, Cors corsConfig)
+        {
+            string[] Origins = corsConfig.Origins is not null ? corsConfig.Origins : new string[] { "" };
+            bool AllowCredentials = corsConfig.AllowCredentials;
+            if (AllowCredentials)
+            {
+                return builder
+                .WithOrigins(Origins)
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .SetIsOriginAllowedToAllowWildcardSubdomains()
+                .AllowCredentials()
+                .Build();
+            }
+            else
+            {
+                return builder
+                .WithOrigins(Origins)
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .SetIsOriginAllowedToAllowWildcardSubdomains()
+                .Build();
             }
         }
     }

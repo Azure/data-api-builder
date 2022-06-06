@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Services;
+using Azure.DataGateway.Service.Parsers;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.OData.UriParser;
 

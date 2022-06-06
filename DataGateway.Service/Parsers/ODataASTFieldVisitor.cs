@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Microsoft.OData.UriParser;
 
-namespace Azure.DataGateway.Service.Services
+namespace Azure.DataGateway.Service.Parsers
 {
     /// <summary>
     /// OData Visitor implementation which traverses the abstract syntax tree (AST)
@@ -14,7 +14,7 @@ namespace Azure.DataGateway.Service.Services
     public class ODataASTFieldVisitor : QueryNodeVisitor<object?>
     {
         /// <summary>
-        /// A collection of all unique columns names present in the Abstract Syntax Tree (AST).
+        /// A collection of all unique column names present in the Abstract Syntax Tree (AST).
         /// </summary>
         public HashSet<string> CumulativeColumns { get; } = new();
 

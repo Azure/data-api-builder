@@ -114,7 +114,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             for (int count = 1; count <= columnCount; count++)
             {
-                string columnName = "col" + count;
+                string columnName = $"col{count}";
                 tableDefinition.Columns.Add(key: columnName, value: new ColumnDefinition());
             }
 

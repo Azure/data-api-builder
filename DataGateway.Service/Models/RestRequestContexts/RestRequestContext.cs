@@ -95,7 +95,7 @@ namespace Azure.DataGateway.Service.Models
         public Operation OperationType { get; set; }
 
         /// <summary>
-        /// A collection of all unique columns names present in the request.
+        /// A collection of all unique column names present in the request.
         /// </summary>
         public ISet<string> CumulativeColumns { get; } = new HashSet<string>();
 

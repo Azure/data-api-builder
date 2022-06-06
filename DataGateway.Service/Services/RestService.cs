@@ -133,7 +133,7 @@ namespace Azure.DataGateway.Service.Services
             RequestValidator.ValidateRequestContext(context, _sqlMetadataProvider);
 
             // The final authorization check on columns occurs after the request is fully parsed and validated.
-            await AuthorizationCheckForRequirement(resource: context, requirement: new ColumnsPermissionsRequirement());
+            await AuthorizationCheckForRequirementAsync(resource: context, requirement: new ColumnsPermissionsRequirement());
 
             switch (operationType)
             {

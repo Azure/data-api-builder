@@ -40,7 +40,7 @@ namespace Azure.DataGateway.Service
         private void OnConfigurationChanged(object state)
         {
             RuntimeConfigPath runtimeConfigPath = new();
-            Console.WriteLine("Config Change: Reading file: " + runtimeConfigPath.ConfigFileName);
+            Console.WriteLine($"Config Change: Reading file: {runtimeConfigPath.ConfigFileName}");
             Configuration.Bind(runtimeConfigPath);
             runtimeConfigPath.SetRuntimeConfigValue();
         }

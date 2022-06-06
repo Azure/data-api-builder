@@ -206,12 +206,13 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             RuntimeConfigProvider configProvider = server.Services.GetService<RuntimeConfigProvider>();
 
             Assert.IsNotNull(configProvider, "Configuration Provider shouldn't be null after setting the configuration at runtime.");
-            Assert.IsNotNull(configProvider.GetRuntimeConfiguration(), "Configuration Provider shouldn't be null after setting the configuration at runtime.");
+            Assert.IsNotNull(configProvider.GetRuntimeConfiguration(), "Runtime Configuration shouldn't be null after setting the configuration at runtime.");
             RuntimeConfig configuration;
             bool isConfigSet = configProvider.TryGetRuntimeConfiguration(out configuration);
             Assert.IsNotNull(configuration, "TryGetRuntimeConfiguration should set the config in the out parameter.");
             Assert.IsTrue(isConfigSet, "TryGetRuntimeConfiguration should return true when the config is set.");
 
+            Assert.AreEqual(DatabaseType.cosmos, configuration.DatabaseType, "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
             Assert.AreEqual(config.Schema, configuration.Schema, "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
             Assert.AreEqual(config.ConnectionString, configuration.ConnectionString, "Expected the connection string in the configuration to match the one sent to the configuration endpoint.");
         }
@@ -419,7 +420,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 ConfigFileName = "NonExistentConfigFile.json"
             };
 
-            // TODO: Matt fix this.
             Exception ex = Assert.ThrowsException<FileNotFoundException>(() => runtimeConfigPath.LoadRuntimeConfigValue());
             Console.WriteLine(ex.Message);
             Assert.AreEqual(ex.Message, "Requested configuration file NonExistentConfigFile.json does not exist.");

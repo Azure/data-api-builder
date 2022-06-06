@@ -6,7 +6,6 @@ using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
@@ -16,7 +15,6 @@ using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using Microsoft.Azure.Cosmos;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -24,16 +22,13 @@ namespace Azure.DataGateway.Service.Resolvers
     public class CosmosMutationEngine : IMutationEngine
     {
         private readonly CosmosClientProvider _clientProvider;
-        private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly ISqlMetadataProvider _metadataProvider;
 
         public CosmosMutationEngine(
             CosmosClientProvider clientProvider,
-            RuntimeConfigProvider runtimeConfigProvider,
             ISqlMetadataProvider metadataProvider)
         {
             _clientProvider = clientProvider;
-            _runtimeConfigProvider = runtimeConfigProvider;
             _metadataProvider = metadataProvider;
         }
 

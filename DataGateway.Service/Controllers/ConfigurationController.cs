@@ -41,11 +41,11 @@ namespace Azure.DataGateway.Service.Controllers
     /// The required parameters required to configure the runtime.
     /// </summary>
     /// <param name="Configuration">The runtime configuration.</param>
-    /// <param name="Schema">The GraphQL schema.</param>
+    /// <param name="Schema">The GraphQL schema. Can be left empty for SQL databases.</param>
     /// <param name="ConnectionString">The database connection string.</param>
     public record class ConfigurationPostParameters(
         string Configuration,
-        string Schema,
+        string? Schema,
         string ConnectionString)
     { }
 }

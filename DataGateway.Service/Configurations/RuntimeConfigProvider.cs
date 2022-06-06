@@ -26,7 +26,13 @@ namespace Azure.DataGateway.Service.Configurations
             }
         }
 
-        public void Initialize(string configuration, string schema, string connectionString)
+        /// <summary>
+        /// Initialize the runtime configuration provider with the specified configurations.
+        /// </summary>
+        /// <param name="configuration">The engine configuration.</param>
+        /// <param name="schema">The GraphQL Schema. Can be left null for SQL configurations.</param>
+        /// <param name="connectionString">The connection string to the database.</param>
+        public void Initialize(string configuration, string? schema, string connectionString)
         {
             if (string.IsNullOrEmpty(connectionString))
             {
@@ -38,15 +44,19 @@ namespace Azure.DataGateway.Service.Configurations
                 throw new ArgumentException($"'{nameof(configuration)}' cannot be null or empty.", nameof(configuration));
             }
 
-            if (string.IsNullOrEmpty(schema))
-            {
-                throw new ArgumentException($"'{nameof(schema)}' cannot be null or empty.", nameof(schema));
-            }
-
             RuntimeConfiguration = RuntimeConfig.GetDeserializedConfig<RuntimeConfig>(configuration);
             RuntimeConfiguration.DetermineGlobalSettings();
             RuntimeConfiguration.ConnectionString = connectionString;
-            RuntimeConfiguration = RuntimeConfiguration with { Schema = schema };
+
+            if (RuntimeConfiguration.DatabaseType == DatabaseType.cosmos)
+            {
+                if (string.IsNullOrEmpty(schema))
+                {
+                    throw new ArgumentException($"'{nameof(schema)}' cannot be null or empty.", nameof(schema));
+                }
+
+                RuntimeConfiguration = RuntimeConfiguration with { Schema = schema };
+            }
 
             EventHandler<RuntimeConfig>? handlers = RuntimeConfigLoaded;
             if (handlers != null)

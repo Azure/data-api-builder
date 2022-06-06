@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.IO.Abstractions;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Models;
 
 namespace Azure.DataGateway.Service.Configurations
 {

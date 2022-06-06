@@ -686,9 +686,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestOrderByInListQuery(string dbQuery)
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                getBooks(first: 100 orderBy: {title: DESC}) {
+                books(first: 100 orderBy: {title: DESC}) {
                     id
                     title
                 }
@@ -706,9 +706,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestOrderByInListQueryOnCompPkType(string dbQuery)
         {
-            string graphQLQueryName = "getReviews";
+            string graphQLQueryName = "reviews";
             string graphQLQuery = @"{
-                getReviews(orderBy: {content: Asc id: DESC}) {
+                reviews(orderBy: {content: ASC id: DESC}) {
                     id
                     content
                 }
@@ -728,9 +728,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestNullFieldsInOrderByAreIgnored(string dbQuery)
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                getBooks(first: 100 orderBy: {title: DESC id: null publisher_id: null}) {
+                books(first: 100 orderBy: {title: DESC id: null publisher_id: null}) {
                     id
                     title
                 }

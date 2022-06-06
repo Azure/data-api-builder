@@ -279,7 +279,7 @@ namespace Azure.DataGateway.Service
             // include proper auth headers.
             // - {Authorization header + Client role header for JWT}
             // - {X-MS-CLIENT-PRINCIPAL + Client role header for EasyAuth}
-            // When enabled, the MW will prevent BCP from loading
+            // When enabled, the MW will prevent Banana Cake Pop(GraphQL client) from loading
             // without proper authorization headers.
             if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Mode == HostModeType.Production)
             {

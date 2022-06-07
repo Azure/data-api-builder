@@ -70,7 +70,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             });
 
             Assert.IsNotNull(returnContext.Response.Headers.AccessControlAllowOrigin);
-            Assert.IsTrue(returnContext.Response.Headers.AccessControlAllowOrigin == allowedOrigins[0]);
+            Assert.AreEqual<string>(expected: allowedOrigins[0], actual: returnContext.Response.Headers.AccessControlAllowOrigin);
         }
 
         /// <summary>
@@ -88,7 +88,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 context.Request.Headers.Add(originHeader);
             });
 
-            Assert.IsTrue(returnContext.Response.Headers.AccessControlAllowCredentials == "true");
+            Assert.AreEqual<string>(expected: "true", actual: returnContext.Response.Headers.AccessControlAllowCredentials);
         }
 
         #endregion
@@ -116,7 +116,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 KeyValuePair<string, StringValues> originHeader = new("Origin", "http://localhost:3000");
                 context.Request.Headers.Add(originHeader);
             });
-            Assert.IsTrue(returnContext.Response.Headers.AccessControlAllowOrigin.Count == 0);
+            Assert.AreEqual<int>(expected: 0, actual: returnContext.Response.Headers.AccessControlAllowOrigin.Count);
         }
 
         #endregion

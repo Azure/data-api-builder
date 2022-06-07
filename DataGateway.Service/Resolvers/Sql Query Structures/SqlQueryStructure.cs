@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Parsers;
@@ -533,7 +534,10 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     if (_ctx == null)
                     {
-                        throw new DataGatewayException("No GraphQL context exists", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.UnexpectedError);
+                        throw new DataGatewayException(
+                            message: "No GraphQL context exists",
+                            statusCode: HttpStatusCode.InternalServerError,
+                            subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
                     }
 
                     IDictionary<string, object?> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
@@ -721,13 +725,13 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 EnumValueNode enumValue = (EnumValueNode)field.Value;
 
-                if (enumValue.Value == $"{OrderByDir.Desc}")
+                if (enumValue.Value == $"{OrderBy.DESC}")
                 {
                     orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
                                                              tableName: DatabaseObject.Name,
                                                              columnName: fieldName,
                                                              tableAlias: TableAlias,
-                                                             direction: OrderByDir.Desc));
+                                                             direction: OrderBy.DESC));
                 }
                 else
                 {

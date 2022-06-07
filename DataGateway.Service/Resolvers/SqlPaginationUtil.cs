@@ -6,6 +6,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 
@@ -163,7 +164,7 @@ namespace Azure.DataGateway.Service.Resolvers
                                                         tableName: tableName,
                                                         column,
                                                         ResolveJsonElementToScalarVariable(element.GetProperty(column)),
-                                                        direction: OrderByDir.Asc));
+                                                        direction: OrderBy.ASC));
                     remainingKeys.Remove(column);
                 }
 
@@ -270,7 +271,10 @@ namespace Azure.DataGateway.Service.Resolvers
                     // consistency in using the pagination token opaquely
                     Console.Error.WriteLine(e);
                     string notValidString = $"{afterJsonString} is not a valid pagination token.";
-                    throw new DataGatewayException(notValidString, HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
+                    throw new DataGatewayException(
+                        message: notValidString,
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
                 else
                 {

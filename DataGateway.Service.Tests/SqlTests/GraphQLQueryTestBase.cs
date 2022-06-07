@@ -683,15 +683,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Tests orderBy on a list query
         /// </summary>
-        [Ignore]
         [TestMethod]
         public async Task TestOrderByInListQuery(string dbQuery)
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                getBooks(first: 100 orderBy: {title: Desc}) {
-                    id
-                    title
+                books(first: 100 orderBy: {title: DESC}) {
+                    items {
+                        id
+                        title
+                    }
                 }
             }";
 
@@ -704,15 +705,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Use multiple order options and order an entity with a composite pk
         /// </summary>
-        [Ignore]
         [TestMethod]
         public async Task TestOrderByInListQueryOnCompPkType(string dbQuery)
         {
-            string graphQLQueryName = "getReviews";
+            string graphQLQueryName = "reviews";
             string graphQLQuery = @"{
-                getReviews(orderBy: {content: Asc id: Desc}) {
-                    id
-                    content
+                reviews(orderBy: {content: ASC id: DESC}) {
+                    items {
+                        id
+                        content
+                    }
                 }
             }";
 
@@ -727,15 +729,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// meaning that null pk columns are included in the ORDER BY clause
         /// as ASC by default while null non-pk columns are completely ignored
         /// </summary>
-        [Ignore]
         [TestMethod]
         public async Task TestNullFieldsInOrderByAreIgnored(string dbQuery)
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                getBooks(first: 100 orderBy: {title: Desc id: null publisher_id: null}) {
-                    id
-                    title
+                books(first: 100 orderBy: {title: DESC id: null publisher_id: null}) {
+                    items {
+                        id
+                        title
+                    }
                 }
             }";
 
@@ -748,7 +751,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Tests that an orderBy with only null fields results in default pk sorting
         /// </summary>
-        [Ignore]
         [TestMethod]
         public async Task TestOrderByWithOnlyNullFieldsDefaultsToPkSorting(string dbQuery)
         {

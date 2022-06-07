@@ -359,26 +359,26 @@ namespace Azure.DataGateway.Service
         /// <returns> The built cors policy </returns>
         public static CorsPolicy ConfigureCors(CorsPolicyBuilder builder, Cors corsConfig)
         {
-            string[] Origins = corsConfig.Origins is not null ? corsConfig.Origins : new string[] { "" };
+            string[] Origins = corsConfig.Origins is not null ? corsConfig.Origins : Array.Empty<string>();
             bool AllowCredentials = corsConfig.AllowCredentials;
             if (AllowCredentials)
             {
                 return builder
-                .WithOrigins(Origins)
-                .AllowAnyMethod()
-                .AllowAnyHeader()
-                .SetIsOriginAllowedToAllowWildcardSubdomains()
-                .AllowCredentials()
-                .Build();
+                    .WithOrigins(Origins)
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .SetIsOriginAllowedToAllowWildcardSubdomains()
+                    .AllowCredentials()
+                    .Build();
             }
             else
             {
                 return builder
-                .WithOrigins(Origins)
-                .AllowAnyMethod()
-                .AllowAnyHeader()
-                .SetIsOriginAllowedToAllowWildcardSubdomains()
-                .Build();
+                    .WithOrigins(Origins)
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .SetIsOriginAllowedToAllowWildcardSubdomains()
+                    .Build();
             }
         }
     }

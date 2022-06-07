@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Models.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
@@ -27,6 +26,7 @@ namespace Azure.DataGateway.Service.Authorization
         private static readonly HashSet<string> _validActions = new() { "create", "read", "update", "delete" };
 
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
+        public const string DB_POLICY_HEADER = "X-DG-Policy";
 
         public AuthorizationResolver(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
         {
@@ -142,7 +142,7 @@ namespace Azure.DataGateway.Service.Authorization
 
             // Write policy to httpContext for use in downstream controllers/services.
             httpContext.Items.Add(
-                    key: Constants.DB_POLICY_HEADER,
+                    key: DB_POLICY_HEADER,
                     value: dbPolicyWithClaimValues
                 );
         }
@@ -298,7 +298,7 @@ namespace Azure.DataGateway.Service.Authorization
                     // If there are duplicate claims present in the request, return an exception.
                     throw new DataGatewayException(
                         message: $"Duplicate claims are not allowed within a request.",
-                        statusCode: System.Net.HttpStatusCode.BadRequest,
+                        statusCode: System.Net.HttpStatusCode.Forbidden,
                         subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
                         );
                 }
@@ -327,6 +327,8 @@ namespace Azure.DataGateway.Service.Authorization
             // Find all the claimTypes from the policy
             MatchCollection claimTypes = Regex.Matches(policy, claimCharsRgx);
 
+            // The resultant parsed policy string is likely to be greater than the original policy
+            // string, hence starting with an estimate of 2*length.
             StringBuilder policyWithClaims = new(2 * policy.Length);
 
             // parsedIdx indicates the index from which we need to append to the
@@ -376,7 +378,7 @@ namespace Azure.DataGateway.Service.Authorization
                         // One of the claims in the request had unsupported data type.
                         throw new DataGatewayException(
                             message: "One or more claims have data types which are not supported yet.",
-                            statusCode: System.Net.HttpStatusCode.BadRequest,
+                            statusCode: System.Net.HttpStatusCode.Forbidden,
                             subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
                         );
                     }

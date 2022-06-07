@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
@@ -169,7 +170,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 // We need to add an item to httpContext.Items dictionary to keep the database policy.
                 httpContext.Items = new Dictionary<object, object>();
-                httpContext.Items.Add(Constants.DB_POLICY_HEADER, dbPolicy);
+                httpContext.Items.Add(AuthorizationResolver.DB_POLICY_HEADER, dbPolicy);
             }
 
             return httpContext;

@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Parsers;
@@ -125,7 +126,7 @@ namespace Azure.DataGateway.Service.Services
                     _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey);
             }
 
-            if (GetHttpContext().Items is not null && GetHttpContext().Items.TryGetValue(Constants.DB_POLICY_HEADER, out object? dbPolicyObj))
+            if (GetHttpContext().Items is not null && GetHttpContext().Items.TryGetValue(AuthorizationResolver.DB_POLICY_HEADER, out object? dbPolicyObj))
             {
                 // Because Items is a dictionary of (object,object), we need to convert dbPolicyObj to string
                 // to get the database policy.

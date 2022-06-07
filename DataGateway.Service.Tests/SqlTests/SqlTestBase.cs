@@ -41,7 +41,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static IMutationEngine _mutationEngine;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
-        protected static DbExceptionParserBase _dbExceptionParser;
+        protected static DbExceptionParser _dbExceptionParser;
         protected static ISqlMetadataProvider _sqlMetadataProvider;
         protected static string _defaultSchemaName;
         protected static string _defaultSchemaVersion;
@@ -63,7 +63,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case TestCategory.POSTGRESQL:
                     _queryBuilder = new PostgresQueryBuilder();
                     _defaultSchemaName = "public";
-                    _dbExceptionParser = new PostgresDbExceptionParser(_runtimeConfigPath);
+                    _dbExceptionParser = new DbExceptionParser(_runtimeConfigPath);
                     _queryExecutor = new QueryExecutor<NpgsqlConnection>(_runtimeConfigPath, _dbExceptionParser);
                     _sqlMetadataProvider =
                         new PostgreSqlMetadataProvider(
@@ -74,7 +74,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case TestCategory.MSSQL:
                     _queryBuilder = new MsSqlQueryBuilder();
                     _defaultSchemaName = "dbo";
-                    _dbExceptionParser = new DbExceptionParserBase(_runtimeConfigPath);
+                    _dbExceptionParser = new DbExceptionParser(_runtimeConfigPath);
                     _queryExecutor = new QueryExecutor<SqlConnection>(_runtimeConfigPath, _dbExceptionParser);
                     _sqlMetadataProvider = new MsSqlMetadataProvider(
                         _runtimeConfigPath,
@@ -83,7 +83,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case TestCategory.MYSQL:
                     _queryBuilder = new MySqlQueryBuilder();
                     _defaultSchemaName = "mysql";
-                    _dbExceptionParser = new MySqlDbExceptionParser(_runtimeConfigPath);
+                    _dbExceptionParser = new DbExceptionParser(_runtimeConfigPath);
                     _queryExecutor = new QueryExecutor<MySqlConnection>(_runtimeConfigPath, _dbExceptionParser);
                     _sqlMetadataProvider =
                          new MySqlMetadataProvider(

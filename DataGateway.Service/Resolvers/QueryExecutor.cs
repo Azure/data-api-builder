@@ -15,9 +15,9 @@ namespace Azure.DataGateway.Service.Resolvers
         where ConnectionT : DbConnection, new()
     {
         private readonly string _connectionString;
-        private readonly DbExceptionParserBase _dbExceptionParser;
+        private readonly DbExceptionParser _dbExceptionParser;
 
-        public QueryExecutor(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath, DbExceptionParserBase dbExceptionParser)
+        public QueryExecutor(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath, DbExceptionParser dbExceptionParser)
         {
             runtimeConfigPath.CurrentValue.
                 ExtractConfigValues(

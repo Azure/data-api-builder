@@ -11,12 +11,12 @@ namespace Azure.DataGateway.Service.Resolvers
     /// Parses some db exceptions and converts them to useful exceptions that can be reported
     /// to the user
     ///</summary>
-    public class DbExceptionParserBase
+    public class DbExceptionParser
     {
         public const string GENERIC_DB_EXCEPTION_MESSAGE = "While processing your request the database ran into an error.";
         private readonly bool _developerMode;
 
-        public DbExceptionParserBase(IOptionsMonitor<RuntimeConfigPath> config)
+        public DbExceptionParser(IOptionsMonitor<RuntimeConfigPath> config)
         {
             _developerMode = config.CurrentValue.IsDeveloperMode();
         }

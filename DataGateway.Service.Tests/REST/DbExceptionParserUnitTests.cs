@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         {
             Mock<IOptionsMonitor<RuntimeConfigPath>> runtimeConfigPath = new();
             runtimeConfigPath.Setup(x => x.CurrentValue.IsDeveloperMode()).Returns(isDeveloperMode);
-            DbExceptionParserBase parser = new(runtimeConfigPath.Object);
+            DbExceptionParser parser = new(runtimeConfigPath.Object);
             DbException e = CreateSqlException();
             string actual = parser.Parse(e).Message;
             Assert.AreEqual(expected, actual);

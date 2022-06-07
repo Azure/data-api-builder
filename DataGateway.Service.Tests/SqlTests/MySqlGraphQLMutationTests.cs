@@ -11,6 +11,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     [TestClass, TestCategory(TestCategory.MYSQL)]
     public class MySqlGraphQLMutationTests : GraphQLMutationTestBase
     {
+        public const string INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE = "MySql Error 23000: Integrity Contraint Violation.";
 
         #region Test Fixture Setup
         /// <summary>
@@ -331,7 +332,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq`
             ";
 
-            await InsertWithInvalidForeignKey(mySqlQuery, MySqlDbExceptionParser.INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE);
+            await InsertWithInvalidForeignKey(mySqlQuery, INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE);
         }
 
         /// <summary>
@@ -351,7 +352,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     ) AS `subq`
             ";
 
-            await UpdateWithInvalidForeignKey(mySqlQuery, MySqlDbExceptionParser.INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE);
+            await UpdateWithInvalidForeignKey(mySqlQuery, INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE);
         }
 
         /// <summary>
@@ -381,7 +382,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestViolatingOneToOneRelashionShip()
         {
-            await TestViolatingOneToOneRelashionShip(MySqlDbExceptionParser.INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE);
+            await TestViolatingOneToOneRelashionShip(INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE);
         }
         #endregion
     }

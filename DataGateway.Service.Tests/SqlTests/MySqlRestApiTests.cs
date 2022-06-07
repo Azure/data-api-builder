@@ -1082,37 +1082,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// We have 1 test, which is named
         /// PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest
-        /// that will have Db specific error messages, however mysql
-        /// has more unique constrainst and so instead of
-        /// returning the custom message, the function is entirely
-        /// overridden. Therefore here we throw not implemented.
+        /// that will have Db specific error messages.
+        /// We return the mysql specific message here.
         /// </summary>
         /// <returns></returns>
         public override string GetUniqueDbErrorMessage()
         {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        public override async Task PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest()
-        {
-            string requestBody = @"
-            {
-                ""categoryName"":""comics""
-            }";
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: "categoryid/1/pieceid/1",
-                queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK_EntityName,
-                sqlQuery: string.Empty,
-                controller: _restController,
-                operationType: Operation.Upsert,
-                requestBody: requestBody,
-                exception: true,
-                expectedErrorMessage: MySqlDbExceptionParser.INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE,
-                expectedStatusCode: HttpStatusCode.Conflict,
-                expectedSubStatusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
-            );
+            return "Column 'piecesRequired' cannot be null";
         }
     }
 }

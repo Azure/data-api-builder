@@ -11,6 +11,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class PostgreSqlGraphQLMutationTests : GraphQLMutationTestBase
     {
+        public const string FK_VIOLATION_MESSAGE = "PostgreSql Error 23503: Foreign Key Constraint Violation.";
+        public const string UNQIUE_VIOLATION_MESSAGE = "PostgreSql Error 23505: Unique Constraint Violation.";
 
         #region Test Fixture Setup
         /// <summary>
@@ -332,7 +334,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    WHERE publisher_id = -1 ) AS subq
             ";
 
-            await InsertWithInvalidForeignKey(postgresQuery, PostgresDbExceptionParser.FK_VIOLATION_MESSAGE);
+            await InsertWithInvalidForeignKey(postgresQuery, FK_VIOLATION_MESSAGE);
         }
 
         /// <summary>
@@ -350,7 +352,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                    WHERE id = 1 AND publisher_id = -1 ) AS subq
             ";
 
-            await UpdateWithInvalidForeignKey(postgresQuery, PostgresDbExceptionParser.FK_VIOLATION_MESSAGE);
+            await UpdateWithInvalidForeignKey(postgresQuery, FK_VIOLATION_MESSAGE);
         }
 
         /// <summary>
@@ -380,7 +382,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task TestViolatingOneToOneRelashionShip()
         {
-            await TestViolatingOneToOneRelashionShip(PostgresDbExceptionParser.UNQIUE_VIOLATION_MESSAGE);
+            await TestViolatingOneToOneRelashionShip(UNQIUE_VIOLATION_MESSAGE);
         }
         #endregion
     }

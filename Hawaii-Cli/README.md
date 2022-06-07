@@ -46,7 +46,7 @@ The Generated config will be in the current directory as todo-001.json
 ```	
 hawaii add todo --source s001.todo --rest todo --graphql todo --permission "anonymous:*"
 ```
-Entity will be added to the config with given rest route, graphql type and prermissions.
+Entity will be added to the config with given rest route, graphql type and permissions.
 ```	
 hawaii update todo --permission "authenticate:create" --fields.include "id,name,category"
 ```

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -56,6 +57,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             RuntimeConfigPath configPath = GetRuntimeConfigPath(customRuntimeConfigFile);
             configPath.SetRuntimeConfigValue();
             return Mock.Of<IOptionsMonitor<RuntimeConfigPath>>(_ => _.CurrentValue == configPath);
+        }
+
+        public static void RemoveAllRelationshipBetweenEntities(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
+        {
+
+            RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue;
+
+            foreach ((string entityName, Entity entity) in runtimeConfig.Entities.ToList())
+            {
+                Entity updatedEntity = new(entity.Source, entity.Rest, entity.GraphQL, entity.Permissions, Relationships: null, Mappings: null);
+                runtimeConfig.Entities.Remove(entityName);
+                runtimeConfig.Entities.Add(entityName, updatedEntity);
+            }
+
+            Console.WriteLine(JsonSerializer.Serialize<RuntimeConfig>(runtimeConfig, RuntimeConfig.GetDeserializationOptions()));
         }
 
         /// <summary>

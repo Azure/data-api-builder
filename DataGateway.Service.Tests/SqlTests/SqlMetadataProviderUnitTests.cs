@@ -1,11 +1,9 @@
 using System;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Npgsql;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
 {
@@ -13,7 +11,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     /// Units testing for our connection string parser
     /// to retreive schema.
     /// </summary>
-    [TestClass, TestCategory(TestCategory.POSTGRESQL)]
+    [TestClass]
     public class SqlMetadataProviderUnitTests : GraphQLMutationTestBase
     {
         /// <summary>
@@ -46,18 +44,54 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [TestMethod]
         public async Task CheckNoExceptionForNoForiegnKey()
         {
-            string customRuntimeTestConfig = "hawaii-config-test.PostgreSql.NoFk.json"; //custom test config containing entities with no relationship.
-
-            IQueryBuilder queryBuilder = new PostgresQueryBuilder();
+            // POSTGRESQL
+            string customRuntimeTestConfig = "hawaii-config.PostgreSql.json";
             IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath = SqlTestHelper.LoadCustomConfig(customRuntimeTestConfig, TestCategory.POSTGRESQL);
-            DbExceptionParserBase dbExceptionParser = new PostgresDbExceptionParser();
-            IQueryExecutor queryExecutor = new QueryExecutor<NpgsqlConnection>(runtimeConfigPath, dbExceptionParser);
-            PostgreSqlMetadataProvider sqlMetadataProvider = new(runtimeConfigPath, queryExecutor, queryBuilder);
+            SqlTestHelper.RemoveAllRelationshipBetweenEntities(runtimeConfigPath);
+            SetUpSQLMetadataProvider(runtimeConfigPath, TestCategory.POSTGRESQL);
 
-            Console.WriteLine("Custom Config file set successfully.");
+            PostgreSqlMetadataProvider postgreSqlMetadataProvider = new(runtimeConfigPath, _queryExecutor, _queryBuilder);
+            Console.WriteLine("Custom Config file for Postgres set successfully.");
+
             try
             {
-                await sqlMetadataProvider.InitializeAsync();
+                await postgreSqlMetadataProvider.InitializeAsync();
+            }
+            catch (Exception ex)
+            {
+                Assert.Fail("Expected no exception, but got: " + ex.Message);
+            }
+
+            // MSSQL
+            customRuntimeTestConfig = "hawaii-config.MsSql.json";
+            runtimeConfigPath = SqlTestHelper.LoadCustomConfig(customRuntimeTestConfig, TestCategory.MSSQL);
+            SqlTestHelper.RemoveAllRelationshipBetweenEntities(runtimeConfigPath);
+            SetUpSQLMetadataProvider(runtimeConfigPath, TestCategory.MSSQL);
+
+            MsSqlMetadataProvider msSqlMetadataProvider = new(runtimeConfigPath, _queryExecutor, _queryBuilder);
+            Console.WriteLine("Custom Config file for MsSql set successfully.");
+
+            try
+            {
+                await msSqlMetadataProvider.InitializeAsync();
+            }
+            catch (Exception ex)
+            {
+                Assert.Fail("Expected no exception, but got: " + ex.Message);
+            }
+
+            // MYSQL
+            customRuntimeTestConfig = "hawaii-config.MySql.json";
+            runtimeConfigPath = SqlTestHelper.LoadCustomConfig(customRuntimeTestConfig, TestCategory.MYSQL);
+            SqlTestHelper.RemoveAllRelationshipBetweenEntities(runtimeConfigPath);
+            SetUpSQLMetadataProvider(runtimeConfigPath, TestCategory.MYSQL);
+
+            MySqlMetadataProvider mySqlMetadataProvider = new(runtimeConfigPath, _queryExecutor, _queryBuilder);
+            Console.WriteLine("Custom Config file set for MySql successfully.");
+
+            try
+            {
+                await mySqlMetadataProvider.InitializeAsync();
             }
             catch (Exception ex)
             {

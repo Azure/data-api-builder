@@ -12,7 +12,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     /// to retreive schema.
     /// </summary>
     [TestClass]
-    public class SqlMetadataProviderUnitTests : GraphQLMutationTestBase
+    public class SqlMetadataProviderUnitTests : SqlTestBase
     {
         /// <summary>
         /// Verify we parse the connection string for the
@@ -45,8 +45,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public async Task CheckNoExceptionForNoForiegnKey()
         {
             // POSTGRESQL
-            string customRuntimeTestConfig = "hawaii-config.PostgreSql.json";
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath = SqlTestHelper.LoadCustomConfig(customRuntimeTestConfig, TestCategory.POSTGRESQL);
+            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath = SqlTestHelper.LoadConfig(TestCategory.POSTGRESQL);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(runtimeConfigPath);
             SetUpSQLMetadataProvider(runtimeConfigPath, TestCategory.POSTGRESQL);
 
@@ -63,8 +62,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }
 
             // MSSQL
-            customRuntimeTestConfig = "hawaii-config.MsSql.json";
-            runtimeConfigPath = SqlTestHelper.LoadCustomConfig(customRuntimeTestConfig, TestCategory.MSSQL);
+            runtimeConfigPath = SqlTestHelper.LoadConfig(TestCategory.MSSQL);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(runtimeConfigPath);
             SetUpSQLMetadataProvider(runtimeConfigPath, TestCategory.MSSQL);
 
@@ -81,8 +79,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }
 
             // MYSQL
-            customRuntimeTestConfig = "hawaii-config.MySql.json";
-            runtimeConfigPath = SqlTestHelper.LoadCustomConfig(customRuntimeTestConfig, TestCategory.MYSQL);
+            runtimeConfigPath = SqlTestHelper.LoadConfig(TestCategory.MYSQL);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(runtimeConfigPath);
             SetUpSQLMetadataProvider(runtimeConfigPath, TestCategory.MYSQL);
 

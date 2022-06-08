@@ -225,17 +225,9 @@ namespace Azure.DataGateway.Service.Authorization
         /// <inheritdoc />
         public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, string action)
         {
-            HashSet<string> includedColumns = _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action].included;
+            ActionMetadata actionMetadata = _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action];
 
-            foreach (string excludedColumnName in _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action].excluded)
-            {
-                if (includedColumns.Contains(excludedColumnName))
-                {
-                    includedColumns.Remove(excludedColumnName);
-                }
-            }
-
-            return includedColumns;
+            return actionMetadata.included.Except(actionMetadata.excluded);
         }
 
         /// <summary>

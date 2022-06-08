@@ -259,17 +259,24 @@ namespace Hawaii.Cli.Models
                                 else
                                 {
                                     List<object> action_list = new();
+                                    bool existing_action_element = false;
                                     foreach (JsonElement action_element in permission.Actions)
                                     {
                                         operation = GetCRUDOperation(action_element);
                                         if (new_action_element.Equals(operation))
                                         {
                                             action_list.Add(GetAction(operation, fieldsToInclude, fieldsToExclude));
+                                            existing_action_element = true;
                                         }
                                         else
                                         {
                                             action_list.Add(action_element);
                                         }
+                                    }
+
+                                    if (!existing_action_element)
+                                    {
+                                        action_list.Add(GetAction(new_action_element, fieldsToInclude, fieldsToExclude));
                                     }
 
                                     permissionSettingsList.Add(new PermissionSetting(permission.Role, action_list.ToArray()));

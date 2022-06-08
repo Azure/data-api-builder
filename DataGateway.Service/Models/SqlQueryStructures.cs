@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes;
 
 namespace Azure.DataGateway.Service.Models
 {
@@ -40,8 +41,8 @@ namespace Azure.DataGateway.Service.Models
     /// </summary>
     public class OrderByColumn : Column
     {
-        public OrderByDir Direction { get; }
-        public OrderByColumn(string tableSchema, string tableName, string columnName, string? tableAlias = null, OrderByDir direction = OrderByDir.Asc)
+        public OrderBy Direction { get; }
+        public OrderByColumn(string tableSchema, string tableName, string columnName, string? tableAlias = null, OrderBy direction = OrderBy.ASC)
             : base(tableSchema, tableName, columnName, tableAlias)
         {
             Direction = direction;
@@ -61,7 +62,7 @@ namespace Azure.DataGateway.Service.Models
                                 string columnName,
                                 object? value,
                                 string? tableAlias = null,
-                                OrderByDir direction = OrderByDir.Asc,
+                                OrderBy direction = OrderBy.ASC,
                                 string? paramName = null)
             : base(tableSchema, tableName, columnName, tableAlias, direction)
         {
@@ -85,14 +86,6 @@ namespace Azure.DataGateway.Service.Models
         {
             Label = label;
         }
-    }
-
-    /// <summary>
-    /// Represents the directions an OrderByColumn can have.
-    /// </summary>
-    public enum OrderByDir
-    {
-        Asc, Desc
     }
 
     /// <summary>

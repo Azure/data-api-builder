@@ -27,9 +27,16 @@ namespace Azure.DataGateway.Config
         public void SetRuntimeConfigValue()
         {
             string? runtimeConfigJson = null;
-            if (!string.IsNullOrEmpty(ConfigFileName) && File.Exists(ConfigFileName))
+            if (!string.IsNullOrEmpty(ConfigFileName))
             {
-                runtimeConfigJson = File.ReadAllText(ConfigFileName);
+                if (File.Exists(ConfigFileName))
+                {
+                    runtimeConfigJson = File.ReadAllText(ConfigFileName);
+                }
+                else
+                {
+                    throw new FileNotFoundException($"Requested configuration file {ConfigFileName} does not exist.");
+                }
             }
 
             if (!string.IsNullOrEmpty(runtimeConfigJson))
@@ -42,6 +49,16 @@ namespace Azure.DataGateway.Config
                     ConfigValue.ConnectionString = CONNSTRING;
                 }
             }
+        }
+
+        /// <summary>
+        /// Returns whether or not this RuntimeConfigPath
+        /// is in developer mode.
+        /// </summary>
+        /// <returns>True for dev mode, false otherwise.</returns>
+        public virtual bool IsDeveloperMode()
+        {
+            return ConfigValue!.HostGlobalSettings.Mode is HostModeType.Development;
         }
 
         /// <summary>

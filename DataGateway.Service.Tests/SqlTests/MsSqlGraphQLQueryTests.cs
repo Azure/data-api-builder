@@ -241,7 +241,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Tests orderBy on a list query
         /// </summary>
-        [Ignore]
         [TestMethod]
         public async Task TestOrderByInListQuery()
         {
@@ -252,7 +251,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Use multiple order options and order an entity with a composite pk
         /// </summary>
-        [Ignore]
         [TestMethod]
         public async Task TestOrderByInListQueryOnCompPkType()
         {
@@ -265,7 +263,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// meaning that null pk columns are included in the ORDER BY clause
         /// as ASC by default while null non-pk columns are completely ignored
         /// </summary>
-        [Ignore]
         [TestMethod]
         public async Task TestNullFieldsInOrderByAreIgnored()
         {
@@ -276,7 +273,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Tests that an orderBy with only null fields results in default pk sorting
         /// </summary>
-        [Ignore]
         [TestMethod]
         public async Task TestOrderByWithOnlyNullFieldsDefaultsToPkSorting()
         {

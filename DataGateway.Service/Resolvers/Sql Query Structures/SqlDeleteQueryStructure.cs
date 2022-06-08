@@ -27,9 +27,9 @@ namespace Azure.DataGateway.Service.Resolvers
                 {
                     // Should never happen since delete mutations expect non nullable pk params
                     throw new DataGatewayException(
-                        $"Unexpected {param.Key} null argument.",
-                        HttpStatusCode.BadRequest,
-                        DataGatewayException.SubStatusCodes.BadRequest);
+                        message: $"Unexpected {param.Key} null argument.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
 
                 // primary keys used as predicates

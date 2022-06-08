@@ -1,6 +1,5 @@
 using System.Net;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;

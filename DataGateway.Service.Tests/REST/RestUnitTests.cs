@@ -36,7 +36,8 @@ namespace Azure.DataGateway.Service.Tests.REST
                 _mutationEngine,
                 _sqlMetadataProvider,
                 _httpContextAccessor.Object,
-                _authorizationService.Object);
+                _authorizationService.Object,
+                _authZResolver);
             _restController = new(restService);
         }
 

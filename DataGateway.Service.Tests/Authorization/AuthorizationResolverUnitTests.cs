@@ -386,8 +386,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             //Initiliaze Items dictionary within the Mock object.
             context.Setup(x => x.Items).Returns(new Dictionary<object, object>());
 
-            authZResolver.TryProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_ACTION, context.Object);
-            Assert.AreEqual(context.Object.Items["X-DG-Policy"], expectedParsedPolicy);
+            string parsedPolicy = authZResolver.TryProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_ACTION, context.Object);
+            Assert.AreEqual(parsedPolicy, expectedParsedPolicy);
         }
 
         /// <summary>
@@ -474,7 +474,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         }
         #endregion
         #region Helpers
-        private static AuthorizationResolver InitAuthZResolver(RuntimeConfig runtimeConfig)
+        public static AuthorizationResolver InitAuthZResolver(RuntimeConfig runtimeConfig)
         {
             RuntimeConfigPath configPath = new()
             {
@@ -486,7 +486,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             return new AuthorizationResolver(runtimeConfigProvider.Object);
         }
-        private static RuntimeConfig InitRuntimeConfig(
+        public static RuntimeConfig InitRuntimeConfig(
             string entityName = "SampleEntity",
             string roleName = "Reader",
             string actionName = "create",

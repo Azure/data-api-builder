@@ -129,22 +129,18 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <inheritdoc />
-        public void TryProcessDBPolicy(string entityName, string roleName, string action, HttpContext httpContext)
+        public string TryProcessDBPolicy(string entityName, string roleName, string action, HttpContext httpContext)
         {
             string dBpolicyWithClaimTypes = GetDBPolicyForRequest(entityName, roleName, action);
             if (string.IsNullOrWhiteSpace(dBpolicyWithClaimTypes))
             {
                 //No db policy specified in the config.
-                return;
+                return String.Empty;
             }
 
             string dbPolicyWithClaimValues = ProcessTokenClaimsForPolicy(dBpolicyWithClaimTypes, httpContext);
 
-            // Write policy to httpContext for use in downstream controllers/services.
-            httpContext.Items.Add(
-                    key: DB_POLICY_HEADER,
-                    value: dbPolicyWithClaimValues
-                );
+            return dbPolicyWithClaimValues;
         }
 
         /// <summary>

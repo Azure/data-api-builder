@@ -772,32 +772,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Tests the REST Api for Find Operation when there are database policy predicates
-        /// to be added to the query.
-        /// </summary>
-        [TestMethod]
-        public async Task FindTestWithDbPolicyFilters()
-        {
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: string.Empty,
-                queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK_EntityName,
-                sqlQuery: GetQuery("FindTestWithDbPolicyFiltersReturningMultipleRows"),
-                controller: _restController,
-                dbPolicy: "1 eq pieceid and not (categoryid ge 2) and piecesAvailable lt 1"
-            );
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: string.Empty,
-                queryString: string.Empty,
-                entity: _integrationEntityName,
-                sqlQuery: GetQuery("FindTestWithDbPolicyFiltersReturningSingleRow"),
-                controller: _restController,
-                dbPolicy: "publisher_id eq 2345 and id ge 0 and id lt 4 and title eq 'Great wall of china explained'"
-            );
-        }
-
-        /// <summary>
         /// Tests the REST Api for Find operation using with $orderby
         /// where if order of the columns in the orderby must be maintained
         /// to generate the correct result.

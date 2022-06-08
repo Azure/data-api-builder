@@ -12,9 +12,9 @@ using System.Web;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using Azure.DataGateway.Service.Tests.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -48,6 +48,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static string _defaultSchemaName;
         protected static string _defaultSchemaVersion;
         protected static IOptionsMonitor<RuntimeConfigPath> _runtimeConfigPath;
+        protected static IAuthorizationResolver _authZResolver;
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run.
@@ -57,8 +58,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="context"></param>
         protected static async Task InitializeTestFixture(TestContext context, string testCategory)
         {
+
             _testCategory = testCategory;
 
+            //Init AuthorizationResolver object
+            RuntimeConfig runtimeConfig = AuthorizationResolverUnitTests.InitRuntimeConfig();
+            _authZResolver = AuthorizationResolverUnitTests.InitAuthZResolver(runtimeConfig);
             _runtimeConfigPath = SqlTestHelper.LoadConfig($"{_testCategory}");
             switch (_testCategory)
             {

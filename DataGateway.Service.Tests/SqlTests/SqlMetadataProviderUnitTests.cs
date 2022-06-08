@@ -11,7 +11,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     /// Units testing for our connection string parser
     /// to retreive schema.
     /// </summary>
-    [TestClass]
+    [TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class SqlMetadataProviderUnitTests : SqlTestBase
     {
         /// <summary>

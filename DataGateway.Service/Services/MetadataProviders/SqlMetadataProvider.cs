@@ -140,7 +140,7 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <inheritdoc />
-        public IEnumerable<KeyValuePair<string, DatabaseObject>> GetEntitiesAndDbObjects()
+        public IEnumerable<KeyValuePair<string, DatabaseObject>> GetEntityNamesAndDbObjects()
         {
             return EntityToDatabaseObject.ToList();
         }

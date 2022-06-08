@@ -131,7 +131,7 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
             throw new NotImplementedException();
         }
 
-        public IEnumerable<KeyValuePair<string, DatabaseObject>> GetEntitiesAndDbObjects()
+        public IEnumerable<KeyValuePair<string, DatabaseObject>> GetEntityNamesAndDbObjects()
         {
             throw new NotImplementedException();
         }

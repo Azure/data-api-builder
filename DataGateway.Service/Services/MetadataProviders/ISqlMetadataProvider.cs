@@ -41,7 +41,7 @@ namespace Azure.DataGateway.Service.Services
 
         /// <summary>
         /// For the entity that is provided as an argument,
-        /// try to get the underlying exposed name associated
+        /// try to get the exposed name associated
         /// with the provided field, if it exists, save in out
         /// parameter, and return true, otherwise return false.
         /// </summary>
@@ -72,10 +72,10 @@ namespace Azure.DataGateway.Service.Services
         IQueryBuilder GetQueryBuilder();
 
         /// <summary>
-        /// Returns a collection of (Entity, DatabaseObject) without
+        /// Returns a collection of (EntityName, DatabaseObject) without
         /// exposing the internal representation.
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<KeyValuePair<string, DatabaseObject>> GetEntitiesAndDbObjects();
+        public IEnumerable<KeyValuePair<string, DatabaseObject>> GetEntityNamesAndDbObjects();
     }
 }

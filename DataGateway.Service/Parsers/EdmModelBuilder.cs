@@ -46,7 +46,7 @@ namespace Azure.DataGateway.Service.Parsers
             // since we allow for aliases to be used in place of the names of the actual
             // columns of the database object (such as table's columns), we need to
             // account for these potential aliases in our EDM Model.
-            foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in sqlMetadataProvider.GetEntitiesAndDbObjects())
+            foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in sqlMetadataProvider.GetEntityNamesAndDbObjects())
             {
                 // given an entity Publisher with schema.table of dbo.publishers
                 // entitySourceName = dbo.publishers
@@ -131,7 +131,7 @@ namespace Azure.DataGateway.Service.Parsers
 
             // Entity set is a collection of the same entity, if we think of an entity as a row of data
             // that has a key, then an entity set can be thought of as a table made up of those rows.
-            foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in sqlMetadataProvider.GetEntitiesAndDbObjects())
+            foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in sqlMetadataProvider.GetEntityNamesAndDbObjects())
             {
                 string entityName = $"{entityAndDbObject.Value.FullName}";
                 container.AddEntitySet(name: $"{entityAndDbObject.Key}.{entityName}", _entities[$"{entityAndDbObject.Key}.{entityName}"]);

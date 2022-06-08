@@ -213,10 +213,10 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="sqlMetadataProvider">Provides the mapping of exposed names to backing columns.</param>
         private void AddFields(RestRequestContext context, ISqlMetadataProvider sqlMetadataProvider)
         {
-            foreach (string field in context.FieldsToBeReturned)
+            foreach (string exposedFieldName in context.FieldsToBeReturned)
             {
-                sqlMetadataProvider.TryGetBackingColumn(EntityName, field, out string? backingColumn);
-                AddColumn(backingColumn!, field);
+                sqlMetadataProvider.TryGetBackingColumn(EntityName, exposedFieldName, out string? backingColumn);
+                AddColumn(backingColumn!, exposedFieldName);
             }
         }
 
@@ -817,6 +817,8 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// Adds a labelled column to this query's columns.
+        /// <param name="columnName">The backing column name.</param>
+        /// <param name="labelName">The exposed name.</param>
         /// </summary>
         protected void AddColumn(string columnName, string labelName)
         {

@@ -138,11 +138,11 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 foreach (OrderByColumn column in orderByColumns)
                 {
-                    string? columnName = GetExposedColumnName(entityName, column.ColumnName, sqlMetadataProvider);
-                    object value = ResolveJsonElementToScalarVariable(element.GetProperty(columnName));
+                    string? exposedColumnName = GetExposedColumnName(entityName, column.ColumnName, sqlMetadataProvider);
+                    object value = ResolveJsonElementToScalarVariable(element.GetProperty(exposedColumnName));
                     cursorJson.Add(new PaginationColumn(tableSchema: schemaName,
                                                         tableName: tableName,
-                                                        columnName,
+                                                        exposedColumnName,
                                                         value,
                                                         tableAlias: null,
                                                         direction: column.Direction));
@@ -164,10 +164,10 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 if (remainingKeys.Contains(column))
                 {
-                    string? columnName = GetExposedColumnName(entityName, column, sqlMetadataProvider);
+                    string? exposedColumnName = GetExposedColumnName(entityName, column, sqlMetadataProvider);
                     cursorJson.Add(new PaginationColumn(tableSchema: schemaName,
                                                         tableName: tableName,
-                                                        columnName,
+                                                        exposedColumnName,
                                                         ResolveJsonElementToScalarVariable(element.GetProperty(column)),
                                                         direction: OrderBy.ASC));
                     remainingKeys.Remove(column);
@@ -218,9 +218,19 @@ namespace Azure.DataGateway.Service.Resolvers
                     // which will get the exposed name for safe messaging in the response.
                     // Since we are looking for pagination columns from the $after query
                     // param, we expect this column to exist as the $after query param
-                    // was formed from a previous response with a nextLink.
+                    // was formed from a previous response with a nextLink. If the nextLink
+                    // has been modified and backingColumn is null we throw exception.
                     string backingColumnName = GetBackingColumnName(entityName, column.ColumnName, sqlMetadataProvider);
+                    if (backingColumnName is null)
+                    {
+                        throw new DataGatewayException(message: $"Cursor for Pagination Predicates is not well formed, {column.ColumnName} is not valid.",
+                                                       statusCode: HttpStatusCode.BadRequest,
+                                                       subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                    }
+
+                    // holds exposed name mapped to exposed pagination column
                     afterDict.Add(column.ColumnName, column);
+                    // overwrite with backing column's name for query generation
                     column.ColumnName = backingColumnName;
                 }
 
@@ -319,7 +329,9 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         /// <param name="entityName">String holds the name of the entity.</param>
         /// <param name="exposedColumnName">String holds the name of the exposed column.</param>
-        /// <param name="sqlMetadataProvider">Holds the sqlmetadataprovider for REST requests.</param>
+        /// <param name="sqlMetadataProvider">Holds the sqlmetadataprovider for REST requests,
+        /// which provides mechanisms to resolve exposedName -> backingColumnName and
+        /// backingColumnName -> exposedName.</param>
         /// <returns>the backing column name.</returns>
         /// <returns></returns>
         private static string GetBackingColumnName(string entityName, string exposedColumnName, ISqlMetadataProvider? sqlMetadataProvider)

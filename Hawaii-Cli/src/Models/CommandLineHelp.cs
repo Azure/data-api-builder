@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using CommandLine;
 using CommandLine.Text;
@@ -20,13 +20,13 @@ namespace Hawaii.Cli.Models
             string help = HelpText.AutoBuild(result, helpText =>
             {
                 helpText.AdditionalNewLineAfterOption = false;
-                helpText.AddPreOptionsLine("\nCommands:");
+                _ = helpText.AddPreOptionsLine("\nCommands:");
                 string[] commandList = {
                     "init    :   this command is used to initialize the configuration file.",
                     "add     :   this command is used to add a new entity.",
                     "update  :   this command is used to update an entity."};
-                helpText.AddPreOptionsLines(commandList);
-                helpText.AddPreOptionsLine("\nOptions:");
+                _ = helpText.AddPreOptionsLines(commandList);
+                _ = helpText.AddPreOptionsLine("\nOptions:");
                 return HelpText.DefaultParsingErrorsHandler(result, helpText);
 
             }, e => e);
@@ -41,13 +41,14 @@ namespace Hawaii.Cli.Models
         /// <param name="args">incoming program arguments</param>
         public static void ParseArguments(string[] args)
         {
-            Parser parser = new CommandLine.Parser();
+            Parser? parser = new();
 
-            ParserResult<CommandLineOptions> results = parser.ParseArguments<CommandLineOptions>(args);
+            ParserResult<CommandLineOptions>? results = parser.ParseArguments<CommandLineOptions>(args);
 
             string? command, entity;
-            results.WithParsed(options => {
-                command = options.command;
+            _ = results.WithParsed(options =>
+            {
+                command = options.Command;
                 switch (command)
                 {
                     case "init":
@@ -55,8 +56,9 @@ namespace Hawaii.Cli.Models
                         break;
 
                     case "add":
-                        entity = options.entity;
-                        if(entity==null) {
+                        entity = options.Entity;
+                        if (entity is null)
+                        {
                             Console.WriteLine("Please provide a valid Entity.");
                             break;
                         }
@@ -65,12 +67,13 @@ namespace Hawaii.Cli.Models
                         break;
 
                     case "update":
-                        entity = options.entity;
-                        if(entity==null) {
+                        entity = options.Entity;
+                        if (entity is null)
+                        {
                             Console.WriteLine("Please provide a valid Entity.");
                             break;
                         }
-                        
+
                         Operations.Update(entity, options);
                         break;
 

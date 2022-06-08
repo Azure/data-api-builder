@@ -9,7 +9,8 @@ using ConfigAction = Azure.DataGateway.Config.Action;
 /// </summary>
 namespace Hawaii.Cli.Models
 {
-    public enum CRUD {
+    public enum CRUD
+    {
         create,
         read,
         update,
@@ -20,22 +21,27 @@ namespace Hawaii.Cli.Models
         /// <summary>
         /// checks if the string value is either true or false
         /// </summary>
-        public static bool IsBooleanValue(string str) {
-            return str=="true" || str=="false";
+        public static bool IsBooleanValue(string str)
+        {
+            return str.Equals("true", StringComparison.OrdinalIgnoreCase)
+                || str.Equals("false", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
         /// creates the rest object which can be either a boolean value
         /// or a dictionary containing api route based on the input
         /// </summary>
-        public static object? GetRestDetails(object? rest) {
-            object? rest_detail = null;
-            if(rest == null || Utils.IsBooleanValue(rest.ToString())) {
+        public static object? GetRestDetails(string? rest)
+        {
+            object? rest_detail;
+            if (rest is null || Utils.IsBooleanValue(rest))
+            {
                 rest_detail = rest;
             }
-            else {
-                Dictionary<string, string> route_details = new Dictionary<string, string>();
-                route_details.Add("route", "/"+rest);
+            else
+            {
+                Dictionary<string, string>? route_details = new();
+                route_details.Add("route", "/" + rest);
                 rest_detail = route_details;
             }
 
@@ -46,17 +52,20 @@ namespace Hawaii.Cli.Models
         /// creates the graphql object which can be either a boolean value
         /// or a dictionary containing graphql type {singular, plural} based on the input
         /// </summary>
-        public static object? GetGraphQLDetails(object? graphQL) {
-            object? graphQL_detail = null;
-            if(graphQL == null || Utils.IsBooleanValue(graphQL.ToString())) {
+        public static object? GetGraphQLDetails(string? graphQL)
+        {
+            object? graphQL_detail;
+            if (graphQL is null || Utils.IsBooleanValue(graphQL))
+            {
                 graphQL_detail = graphQL;
             }
-            else {
-                Dictionary<string, object> type_details = new Dictionary<string, object>();
-                Dictionary<string, string> singular_plural = new Dictionary<string, string>();
+            else
+            {
+                Dictionary<string, object>? type_details = new();
+                Dictionary<string, string>? singular_plural = new();
                 string? graphQLType = graphQL.ToString();
-                singular_plural.Add("singular", graphQLType.Singularize(inputIsKnownToBePlural:false));
-                singular_plural.Add("plural", graphQLType.Pluralize(inputIsKnownToBeSingular:false));
+                singular_plural.Add("singular", graphQLType.Singularize(inputIsKnownToBePlural: false));
+                singular_plural.Add("plural", graphQLType.Pluralize(inputIsKnownToBeSingular: false));
                 type_details.Add("type", singular_plural);
                 graphQL_detail = type_details;
             }
@@ -68,9 +77,11 @@ namespace Hawaii.Cli.Models
         /// creates an Action element which contains one of the CRUD operation and 
         /// fields to which this action is allowed as permission setting.
         /// </summary>
-        public static ConfigAction GetAction(string action, string? fieldsToInclude, string? fieldsToExclude) {
-            ConfigAction actionObject = new ConfigAction(action, Policy: null, Fields: null);
-            if(fieldsToInclude is not null || fieldsToExclude is not null) {
+        public static ConfigAction GetAction(string action, string? fieldsToInclude, string? fieldsToExclude)
+        {
+            ConfigAction? actionObject = new(action, Policy: null, Fields: null);
+            if (fieldsToInclude is not null || fieldsToExclude is not null)
+            {
                 string[]? fieldsToIncludeArray = fieldsToInclude is not null ? fieldsToInclude.Split(",") : null;
                 string[]? fieldsToExcludeArray = fieldsToExclude is not null ? fieldsToExclude.Split(",") : null;
                 actionObject = new ConfigAction(action, Policy: null, Fields: new Field(fieldsToIncludeArray, fieldsToExcludeArray));
@@ -92,24 +103,34 @@ namespace Hawaii.Cli.Models
         /// creates an array of Action element which contains one of the CRUD operation and 
         /// fields to which this action is allowed as permission setting based on the given input.
         /// </summary>
-        public static object[] CreateActions(string actions, string? fieldsToInclude, string? fieldsToExclude) {
+        public static object[] CreateActions(string actions, string? fieldsToInclude, string? fieldsToExclude)
+        {
             object[] action_items;
-            if(fieldsToInclude==null && fieldsToExclude==null) {
+            if (fieldsToInclude is null && fieldsToExclude is null)
+            {
                 return actions.Split(",");
             }
 
-            if("*".Equals(actions)){
-                action_items =  new object[]{GetAction(actions, fieldsToInclude, fieldsToExclude)};
-            } else {
-                string[] action_elements = actions.Split(",");
-                if(fieldsToInclude is not null || fieldsToExclude is not null ) {
-                    List<object> action_list = new List<object>();
-                    foreach(string action_element in action_elements) {
-                        ConfigAction action_item = GetAction(action_element, fieldsToInclude, fieldsToExclude);
+            if ("*".Equals(actions))
+            {
+                action_items = new object[] { GetAction(actions, fieldsToInclude, fieldsToExclude) };
+            }
+            else
+            {
+                string[]? action_elements = actions.Split(",");
+                if (fieldsToInclude is not null || fieldsToExclude is not null)
+                {
+                    List<object>? action_list = new();
+                    foreach (string? action_element in action_elements)
+                    {
+                        ConfigAction? action_item = GetAction(action_element, fieldsToInclude, fieldsToExclude);
                         action_list.Add(action_item);
                     }
-                    action_items =  action_list.ToArray();
-                } else {
+
+                    action_items = action_list.ToArray();
+                }
+                else
+                {
                     action_items = action_elements;
                 }
             }
@@ -120,7 +141,8 @@ namespace Hawaii.Cli.Models
         /// <summary>
         /// creates a single PermissionSetting Object based on role, actions, fieldsToInclude, and fieldsToExclude.
         /// </summary>
-        public static PermissionSetting CreatePermissions(string role, string actions, string? fieldsToInclude, string? fieldsToExclude) {
+        public static PermissionSetting CreatePermissions(string role, string actions, string? fieldsToInclude, string? fieldsToExclude)
+        {
             return new PermissionSetting(role, CreateActions(actions, fieldsToInclude, fieldsToExclude));
         }
 
@@ -128,9 +150,10 @@ namespace Hawaii.Cli.Models
         /// Add a new PermissionSetting object(based on role, actions, fieldsToInclude, and fieldsToExclude) in the existing array of PermissionSetting.
         /// returns the updated array of PermissionSetting.
         /// </summary>
-        public static PermissionSetting[] AddNewPermissions(PermissionSetting[] currentPermissions, string role, string actions, string? fieldsToInclude, string? fieldsToExclude) {
-            List<PermissionSetting> currentPermissionsList = currentPermissions.ToList();
-            PermissionSetting permissionSetting = CreatePermissions(role, actions, fieldsToInclude, fieldsToExclude);
+        public static PermissionSetting[] AddNewPermissions(PermissionSetting[] currentPermissions, string role, string actions, string? fieldsToInclude, string? fieldsToExclude)
+        {
+            List<PermissionSetting>? currentPermissionsList = currentPermissions.ToList();
+            PermissionSetting? permissionSetting = CreatePermissions(role, actions, fieldsToInclude, fieldsToExclude);
             currentPermissionsList.Add(permissionSetting);
             return currentPermissionsList.ToArray();
         }
@@ -142,7 +165,7 @@ namespace Hawaii.Cli.Models
         {
             public override string ConvertName(string name) => name.ToLower();
 
-            public string ConvertName(Enum name) => name.ToString().ToLower();
+            public static string ConvertName(Enum name) => name.ToString().ToLower();
         }
 
         /// <summary>
@@ -150,9 +173,10 @@ namespace Hawaii.Cli.Models
         /// Ignoring properties with null values.
         /// Keeping all the keys in lowercase.
         /// </summary>
-        public static JsonSerializerOptions GetSerializationOptions() {
-            JsonSerializerOptions options = new JsonSerializerOptions 
-            { 
+        public static JsonSerializerOptions GetSerializationOptions()
+        {
+            JsonSerializerOptions? options = new()
+            {
                 WriteIndented = true,
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
                 PropertyNamingPolicy = new LowerCaseNamingPolicy(),
@@ -166,8 +190,10 @@ namespace Hawaii.Cli.Models
         /// <summary>
         /// returns the Action name from the parsed JsonElement from Config file.
         /// </summary>
-        public static string GetCRUDOperation(JsonElement op) {
-            if(JsonValueKind.String.Equals(op.ValueKind)) {
+        public static string GetCRUDOperation(JsonElement op)
+        {
+            if (JsonValueKind.String.Equals(op.ValueKind))
+            {
                 return op.ToString();
             }
 
@@ -177,10 +203,14 @@ namespace Hawaii.Cli.Models
         /// <summary>
         /// returns the Cardinality from the given string(one, or many).
         /// </summary>
-        public static Cardinality GetCardinalityTypeFromString(string cardinality) {
-            if("one".Equals(cardinality, StringComparison.OrdinalIgnoreCase)) return Cardinality.One;
-            else if("many".Equals(cardinality, StringComparison.OrdinalIgnoreCase)) return Cardinality.Many;
-            else {
+        public static Cardinality GetCardinalityTypeFromString(string cardinality)
+        {
+            if ("one".Equals(cardinality, StringComparison.OrdinalIgnoreCase))
+                return Cardinality.One;
+            else if ("many".Equals(cardinality, StringComparison.OrdinalIgnoreCase))
+                return Cardinality.Many;
+            else
+            {
                 throw new NotSupportedException();
             }
         }
@@ -188,14 +218,18 @@ namespace Hawaii.Cli.Models
         /// <summary>
         /// returns the default global settings based on dbType.
         /// </summary>
-        public static Dictionary<GlobalSettingsType, object> GetDefaultGlobalSettings(DatabaseType dbType, string? hostMode) {
-            Dictionary<GlobalSettingsType, object> defaultGlobalSettings = new ();
-            if(DatabaseType.cosmos.Equals(dbType)) {
+        public static Dictionary<GlobalSettingsType, object> GetDefaultGlobalSettings(DatabaseType dbType, string? hostMode)
+        {
+            Dictionary<GlobalSettingsType, object> defaultGlobalSettings = new();
+            if (DatabaseType.cosmos.Equals(dbType))
+            {
                 defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings(Enabled: false));
-            } else {
+            }
+            else
+            {
                 defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings());
             }
-            
+
             defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings());
             defaultGlobalSettings.Add(GlobalSettingsType.Host, GetDefaultHostGlobalSettings(hostMode));
             return defaultGlobalSettings;
@@ -221,22 +255,29 @@ namespace Hawaii.Cli.Models
         //     }
         // }
         /// </summary>
-        public static HostGlobalSettings GetDefaultHostGlobalSettings(string? hostMode) {
+        public static HostGlobalSettings GetDefaultHostGlobalSettings(string? hostMode)
+        {
             HostModeType hostModeType;
-            try {
-                if(hostMode is null) {  // host mode not specified by user
+            try
+            {
+                if (hostMode is null)
+                {  // host mode not specified by user
                     hostModeType = HostModeType.Production;
-                } else {
-                    hostModeType = Enum.Parse<HostModeType>(hostMode,true);
                 }
-            } catch(Exception) {
+                else
+                {
+                    hostModeType = Enum.Parse<HostModeType>(hostMode, true);
+                }
+            }
+            catch (Exception)
+            {
                 Console.WriteLine($"Unsupported hostMode: {hostMode}. Supported values: Production/Development");
                 throw new NotSupportedException("Invalid Host Mode provided.");
             }
 
-            string[] origins = {};
-            Cors cors = new Cors(origins);
-            AuthenticationConfig authenticationConfig = new AuthenticationConfig(Jwt: new Jwt(Audience: String.Empty, Issuer: String.Empty, IssuerKey: String.Empty));
+            string[] origins = { };
+            Cors? cors = new(origins);
+            AuthenticationConfig? authenticationConfig = new(Jwt: new Jwt(Audience: String.Empty, Issuer: String.Empty, IssuerKey: String.Empty));
             return new HostGlobalSettings(hostModeType, cors, authenticationConfig);
         }
     }

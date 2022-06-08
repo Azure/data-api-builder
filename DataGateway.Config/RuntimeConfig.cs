@@ -149,11 +149,6 @@ namespace Azure.DataGateway.Config
                     : false;
         }
 
-        public bool IsDeveloperMode()
-        {
-            return HostGlobalSettings.Mode is HostModeType.Development;
-        }
-
         [JsonIgnore]
         public DatabaseType DatabaseType
         {

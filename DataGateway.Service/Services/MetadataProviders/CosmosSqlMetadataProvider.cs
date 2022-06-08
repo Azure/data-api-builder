@@ -15,8 +15,8 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
         private readonly IFileSystem _fileSystem;
         private readonly DatabaseType _databaseType;
         private readonly Dictionary<string, Entity> _entities;
-        private readonly CosmosDbOptions _cosmosDb;
-
+        private CosmosDbOptions _cosmosDb;
+        private readonly RuntimeConfig _runtimeConfig;
         public FilterParser ODataFilterParser => new();
 
         /// <inheritdoc />
@@ -25,12 +25,12 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
         public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem)
         {
             _fileSystem = fileSystem;
-            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
+            _runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
 
-            _databaseType = runtimeConfig.DatabaseType;
-            _entities = runtimeConfig.Entities;
+            _databaseType = _runtimeConfig.DatabaseType;
+            _entities = _runtimeConfig.Entities;
 
-            CosmosDbOptions? cosmosDb = runtimeConfig.CosmosDb;
+            CosmosDbOptions? cosmosDb = _runtimeConfig.CosmosDb;
 
             if (cosmosDb is null)
             {
@@ -105,7 +105,20 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
 
         public string GraphQLSchema()
         {
-            return _fileSystem.File.ReadAllText(_cosmosDb.GraphQLSchemaPath);
+            if (_cosmosDb.GraphQLSchema is null && _fileSystem.File.Exists(_cosmosDb.GraphQLSchemaPath))
+            {
+                _cosmosDb = _cosmosDb with { GraphQLSchema = _fileSystem.File.ReadAllText(_cosmosDb.GraphQLSchemaPath) };
+            }
+
+            if (_cosmosDb.GraphQLSchema is null)
+            {
+                throw new DataGatewayException(
+                    "GraphQL Schema isn't set.",
+                    System.Net.HttpStatusCode.InternalServerError,
+                    DataGatewayException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            return _cosmosDb.GraphQLSchema;
         }
 
         public FilterParser GetODataFilterParser()

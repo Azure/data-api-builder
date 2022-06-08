@@ -227,7 +227,7 @@ namespace Azure.DataGateway.Service
             app.UseAuthentication();
 
             // Conditionally add authentication middleware in Production Mode
-            if (runtimeConfig is not null && !runtimeConfig.IsDeveloperMode())
+            if (runtimeConfig is not null && !runtimeConfigProvider.IsDeveloperMode())
             {
                 app.UseAuthenticationMiddleware();
             }

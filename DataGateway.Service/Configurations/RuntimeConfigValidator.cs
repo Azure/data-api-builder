@@ -45,14 +45,17 @@ namespace Azure.DataGateway.Service.Configurations
                     throw new NotSupportedException("CosmosDB is specified but no CosmosDB configuration information has been provided.");
                 }
 
-                if (string.IsNullOrEmpty(runtimeConfig.CosmosDb.GraphQLSchemaPath))
+                if (string.IsNullOrEmpty(runtimeConfig.CosmosDb.GraphQLSchema))
                 {
-                    throw new NotSupportedException("No GraphQL schema file has been provided for CosmosDB. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.");
-                }
+                    if (string.IsNullOrEmpty(runtimeConfig.CosmosDb.GraphQLSchemaPath))
+                    {
+                        throw new NotSupportedException("No GraphQL schema file has been provided for CosmosDB. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.");
+                    }
 
-                if (!_fileSystem.File.Exists(runtimeConfig.CosmosDb.GraphQLSchemaPath))
-                {
-                    throw new FileNotFoundException($"The GraphQL schema file at '{runtimeConfig.CosmosDb.GraphQLSchemaPath}' could not be found. Ensure that it is a path relative to run runtime.");
+                    if (!_fileSystem.File.Exists(runtimeConfig.CosmosDb.GraphQLSchemaPath))
+                    {
+                        throw new FileNotFoundException($"The GraphQL schema file at '{runtimeConfig.CosmosDb.GraphQLSchemaPath}' could not be found. Ensure that it is a path relative to the runtime.");
+                    }
                 }
             }
 

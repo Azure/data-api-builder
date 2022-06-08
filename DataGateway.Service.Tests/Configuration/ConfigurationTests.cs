@@ -212,8 +212,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Assert.IsNotNull(configuration, "TryGetRuntimeConfiguration should set the config in the out parameter.");
             Assert.IsTrue(isConfigSet, "TryGetRuntimeConfiguration should return true when the config is set.");
 
-            Assert.AreEqual(DatabaseType.cosmos, configuration.DatabaseType, "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
-            Assert.AreEqual(config.Schema, configuration.Schema, "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
+            Assert.AreEqual(DatabaseType.cosmos, configuration.DatabaseType, "Expected cosmos database type after configuring the runtime with cosmos settings.");
+            Assert.AreEqual(config.Schema, configuration.CosmosDb.GraphQLSchema, "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
             Assert.AreEqual(config.ConnectionString, configuration.ConnectionString, "Expected the connection string in the configuration to match the one sent to the configuration endpoint.");
         }
 

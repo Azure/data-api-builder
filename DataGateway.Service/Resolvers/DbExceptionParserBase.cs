@@ -18,8 +18,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
         public DbExceptionParserBase(RuntimeConfigProvider configProvider)
         {
-            RuntimeConfig configuration = configProvider.GetRuntimeConfiguration();
-            _developerMode = configuration.IsDeveloperMode();
+            _developerMode = configProvider.IsDeveloperMode();
         }
 
         public virtual Exception Parse(DbException e)

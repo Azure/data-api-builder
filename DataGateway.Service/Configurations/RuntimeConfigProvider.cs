@@ -55,7 +55,8 @@ namespace Azure.DataGateway.Service.Configurations
                     throw new ArgumentException($"'{nameof(schema)}' cannot be null or empty.", nameof(schema));
                 }
 
-                RuntimeConfiguration = RuntimeConfiguration with { Schema = schema };
+                CosmosDbOptions? cosmosDb = RuntimeConfiguration.CosmosDb! with { GraphQLSchema = schema };
+                RuntimeConfiguration = RuntimeConfiguration with { CosmosDb = cosmosDb };
             }
 
             EventHandler<RuntimeConfig>? handlers = RuntimeConfigLoaded;
@@ -82,6 +83,11 @@ namespace Azure.DataGateway.Service.Configurations
         {
             runtimeConfig = RuntimeConfiguration;
             return RuntimeConfiguration is not null;
+        }
+
+        public virtual bool IsDeveloperMode()
+        {
+            return RuntimeConfiguration?.HostGlobalSettings.Mode is HostModeType.Development;
         }
     }
 }

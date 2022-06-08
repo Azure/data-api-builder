@@ -46,10 +46,10 @@ namespace Azure.DataGateway.Service.Services
         /// parameter, and return true, otherwise return false.
         /// </summary>
         /// <param name="entityName">The entity whose mapping we lookup.</param>
-        /// <param name="field">The field used for the lookup in the mapping.</param>
+        /// <param name="backingFieldName">The field used for the lookup in the mapping.</param>
         /// <param name="name">Out parameter in which we will save exposed name.</param>
         /// <returns>True if exists, false otherwise.</returns>
-        bool TryGetExposedColumnName(string entityName, string field, out string? name);
+        bool TryGetExposedColumnName(string entityName, string backingFieldName, out string? name);
 
         /// <summary>
         /// For the entity that is provided as an argument,

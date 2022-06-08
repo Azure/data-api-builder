@@ -138,7 +138,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 foreach (OrderByColumn column in orderByColumns)
                 {
-                    string? columnName = GetColumnName(entityName, column.ColumnName, sqlMetadataProvider);
+                    string? columnName = GetExposedColumnName(entityName, column.ColumnName, sqlMetadataProvider);
                     object value = ResolveJsonElementToScalarVariable(element.GetProperty(columnName));
                     cursorJson.Add(new PaginationColumn(tableSchema: schemaName,
                                                         tableName: tableName,
@@ -164,7 +164,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 if (remainingKeys.Contains(column))
                 {
-                    string? columnName = GetColumnName(entityName, column, sqlMetadataProvider);
+                    string? columnName = GetExposedColumnName(entityName, column, sqlMetadataProvider);
                     cursorJson.Add(new PaginationColumn(tableSchema: schemaName,
                                                         tableName: tableName,
                                                         columnName,
@@ -219,7 +219,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     // Since we are looking for pagination columns from the $after query
                     // param, we expect this column to exist as the $after query param
                     // was formed from a previous response with a nextLink.
-                    string columnName = GetColumnName(entityName, column.ColumnName, sqlMetadataProvider);
+                    string columnName = GetExposedColumnName(entityName, column.ColumnName, sqlMetadataProvider);
                     afterDict.Add(columnName, column);
                 }
 
@@ -229,13 +229,13 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 foreach (string pk in primaryKeys)
                 {
-                    if (!afterDict.ContainsKey(pk))
+                    // REST calls this function with a non null sqlMetadataProvider
+                    // which will get the exposed name for safe messaging in the response.
+                    // Since we are looking for primary keys we expect these columns to
+                    // exist.
+                    string safePK = GetExposedColumnName(entityName, pk, sqlMetadataProvider);
+                    if (!afterDict.ContainsKey(safePK))
                     {
-                        // REST calls this function with a non null sqlMetadataProvider
-                        // which will get the exposed name for safe messaging in the response.
-                        // Since we are looking for primary keys we expect these columns to
-                        // exist.
-                        string safePK = GetColumnName(entityName, pk, sqlMetadataProvider);
                         throw new DataGatewayException(message: $"Cursor for Pagination Predicates is not well formed, missing primary key column: {safePK}",
                                                        statusCode: HttpStatusCode.BadRequest,
                                                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
@@ -257,7 +257,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         // which will get the exposed name for safe messaging in the response.
                         // Since we are looking for valid orderby columns we expect
                         // these columns to exist.
-                        string safeColumnName = GetColumnName(entityName, columnName, sqlMetadataProvider);
+                        string safeColumnName = GetExposedColumnName(entityName, columnName, sqlMetadataProvider);
                         throw new DataGatewayException(
                                     message: $"Could not match order by column {safeColumnName} with a column in the pagination token with the same name and direction.",
                                     statusCode: HttpStatusCode.BadRequest,
@@ -318,17 +318,17 @@ namespace Azure.DataGateway.Service.Resolvers
         /// use the exposed names in requests and responses.
         /// </summary>
         /// <param name="entityName">String holds the name of the entity.</param>
-        /// <param name="column">String holds the name of the backing column.</param>
+        /// <param name="backingColumn">String holds the name of the backing column.</param>
         /// <param name="sqlMetadataProvider">Holds the sqlmetadataprovider for REST requests.</param>
         /// <returns>the exposed name</returns>
-        private static string GetColumnName(string entityName, string column, ISqlMetadataProvider? sqlMetadataProvider)
+        private static string GetExposedColumnName(string entityName, string backingColumn, ISqlMetadataProvider? sqlMetadataProvider)
         {
             if (sqlMetadataProvider is not null)
             {
-                sqlMetadataProvider.TryGetExposedColumnName(entityName, column, out column!);
+                sqlMetadataProvider.TryGetExposedColumnName(entityName, backingColumn, out backingColumn!);
             }
 
-            return column;
+            return backingColumn;
         }
 
         /// <summary>

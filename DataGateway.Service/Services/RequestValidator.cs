@@ -16,7 +16,7 @@ namespace Azure.DataGateway.Service.Services
     {
         /// <summary>
         /// Validates the given request by ensuring:
-        /// - each field to be returned is one of the exposed name for the entity.
+        /// - each field to be returned is one of the exposed names for the entity.
         /// - extra fields specified in the body, will be discarded.
         /// </summary>
         /// <param name="context">Request context containing the REST operation fields and their values.</param>
@@ -33,9 +33,9 @@ namespace Azure.DataGateway.Service.Services
                     !sqlMetadataProvider.GetTableDefinition(context.EntityName).Columns.ContainsKey(backingColumn!))
                 {
                     throw new DataGatewayException(
-                            message: "Invalid field to be returned requested: " + field,
-                            statusCode: HttpStatusCode.BadRequest,
-                            subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                        message: "Invalid field to be returned requested: " + field,
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
             }
         }

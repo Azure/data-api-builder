@@ -49,7 +49,7 @@ namespace Azure.DataGateway.Service.Parsers
 
         /// <summary>
         /// Represents visiting a SingleValuePropertyAccessNode, which is what
-        /// holds a field name in the AST. We return the value associated with
+        /// holds an exposed field name in the AST. We return the value associated with
         /// the name in the aliasings so that we have the backing column even
         /// in the case where an alias is used in the request.
         /// </summary>
@@ -57,8 +57,8 @@ namespace Azure.DataGateway.Service.Parsers
         /// <returns>String representing the Field name</returns>
         public override string Visit(SingleValuePropertyAccessNode nodeIn)
         {
-            _metadataProvider.TryGetBackingColumn(_struct.EntityName, nodeIn.Property.Name, out string? name);
-            return _metadataProvider.GetQueryBuilder().QuoteIdentifier(name);
+            _metadataProvider.TryGetBackingColumn(_struct.EntityName, nodeIn.Property.Name, out string? backingColumnName);
+            return _metadataProvider.GetQueryBuilder().QuoteIdentifier(backingColumnName!);
         }
 
         /// <summary>

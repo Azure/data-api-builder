@@ -44,9 +44,13 @@ namespace Azure.DataGateway.Service.Parsers
         private EdmModelBuilder BuildEntityTypes(ISqlMetadataProvider sqlMetadataProvider)
         {
             // since we allow for aliases to be used in place of the names of the actual
-            // database object, we need to account for these potential aliases in our EDM Model.
+            // columns of the database object (such as table's columns), we need to
+            // account for these potential aliases in our EDM Model.
             foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in sqlMetadataProvider.GetEntitiesAndDbObjects())
             {
+                // given an entity Publisher with schema.table of dbo.publishers
+                // entitySourceName = dbo.publishers
+                // newENtityKey = Publisher.dbo.publishers
                 string entitySourceName = $"{entityAndDbObject.Value.FullName}";
                 string newEntityKey = $"{entityAndDbObject.Key}.{entitySourceName}";
                 EdmEntityType newEntity = new(DEFAULT_NAMESPACE, newEntityKey);
@@ -88,19 +92,19 @@ namespace Azure.DataGateway.Service.Parsers
                     // here we must use the correct aliasing for the column name
                     // which is on a per entity basis.
                     // if column is in our list of keys we add as a key to entity
-                    string columnName;
+                    string exposedColumnName;
                     if (tableDefinition.PrimaryKey.Contains(column))
                     {
-                        sqlMetadataProvider.TryGetExposedColumnName(entityAndDbObject.Key, column, out columnName!);
-                        newEntity.AddKeys(newEntity.AddStructuralProperty(name: columnName,
+                        sqlMetadataProvider.TryGetExposedColumnName(entityAndDbObject.Key, column, out exposedColumnName!);
+                        newEntity.AddKeys(newEntity.AddStructuralProperty(name: exposedColumnName,
                                                                           type,
                                                                           isNullable: false));
                     }
                     else
                     {
                         // not a key just add the property
-                        sqlMetadataProvider.TryGetExposedColumnName(entityAndDbObject.Key, column, out columnName!);
-                        newEntity.AddStructuralProperty(name: columnName,
+                        sqlMetadataProvider.TryGetExposedColumnName(entityAndDbObject.Key, column, out exposedColumnName!);
+                        newEntity.AddStructuralProperty(name: exposedColumnName,
                                                         type,
                                                         isNullable: true);
                     }

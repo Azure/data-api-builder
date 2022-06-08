@@ -373,7 +373,7 @@ namespace Azure.DataGateway.Service.Tests.REST
         /// <summary>
         /// Needed for the callback that is required
         /// to make use of out parameter with mocking.
-        /// This delegate if for the callback used
+        /// This delegate is for the callback used
         /// with the mocked SqlMetadataProvider.
         /// </summary>
         /// <param name="s"></param>

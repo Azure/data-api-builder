@@ -27,6 +27,7 @@ namespace Azure.DataGateway.Service.Services
     {
         // use for more than just filter parsing
         // rename to _oDataParser
+        // tracked in https://github.com/Azure/hawaii-gql/issues/486
         private FilterParser _oDataFilterParser = new();
 
         private readonly DatabaseType _databaseType;
@@ -127,9 +128,9 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <inheritdoc />
-        public bool TryGetExposedColumnName(string entityName, string field, out string? name)
+        public bool TryGetExposedColumnName(string entityName, string backingFieldName, out string? name)
         {
-            return EntityBackingColumnsToExposedNames[entityName].TryGetValue(field, out name);
+            return EntityBackingColumnsToExposedNames[entityName].TryGetValue(backingFieldName, out name);
         }
 
         /// <inheritdoc />
@@ -502,7 +503,7 @@ namespace Azure.DataGateway.Service.Services
             {
                 Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
                 EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
-                EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames![entityName].ToDictionary(x => x.Value, x => x.Key);
+                EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
                 foreach (string column in EntityToDatabaseObject[entityName].TableDefinition.Columns.Keys)
                 {
                     if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(column) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(column))

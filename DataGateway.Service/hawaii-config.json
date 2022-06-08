@@ -241,7 +241,7 @@
         }
       ],
       "mappings": {
-        "species": "fancy name"
+        "species": "fancyName"
       }
     },
     "Fungus": {

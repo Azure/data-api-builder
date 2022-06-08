@@ -161,19 +161,19 @@ namespace Azure.DataGateway.Service.Parsers
                                                                        HttpStatusCode.BadRequest,
                                                                        DataGatewayException.SubStatusCodes.BadRequest);
 
-                string columnName;
+                string backingColumnName;
                 if (expression.Kind is QueryNodeKind.SingleValuePropertyAccess)
                 {
                     // if name is in SingleValuePropertyAccess node it matches our model and we will
                     // always be able to get backing column successfully
-                    sqlMetadataProvider.TryGetBackingColumn(context.EntityName, ((SingleValuePropertyAccessNode)expression).Property.Name, out columnName!);
+                    sqlMetadataProvider.TryGetBackingColumn(context.EntityName, ((SingleValuePropertyAccessNode)expression).Property.Name, out backingColumnName!);
                 }
                 else if (expression.Kind is QueryNodeKind.Constant &&
                         ((ConstantNode)expression).Value is not null)
                 {
                     // since this comes from constant node, it was not checked against our model
                     // so this may return false in which case we throw for a bad request
-                    if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, ((ConstantNode)expression).Value.ToString()!, out columnName!))
+                    if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, ((ConstantNode)expression).Value.ToString()!, out backingColumnName!))
                     {
                         throw new DataGatewayException(
                             message: $"Invalid orderby column requested: {((ConstantNode)expression).Value.ToString()!}.",
@@ -192,8 +192,8 @@ namespace Azure.DataGateway.Service.Parsers
                 // We convert to an Enum of our own that matches the SQL text we want
                 OrderBy direction = GetDirection(node.Direction);
                 // Add OrderByColumn and remove any matching columns from our primary key set
-                orderByList.Add(new OrderByColumn(schemaName, tableName, columnName, direction: direction));
-                remainingKeys.Remove(columnName);
+                orderByList.Add(new OrderByColumn(schemaName, tableName, backingColumnName, direction: direction));
+                remainingKeys.Remove(backingColumnName);
                 node = node.ThenBy;
             }
 

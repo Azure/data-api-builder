@@ -67,7 +67,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                       },
                       {
                         ""role"": ""authenticated"",
-                        ""actions"": [ ""create"", ""read"", ""delete"" ]
+                        ""actions"": [ ""create"", ""read"", ""delete"", ""update"" ]
                       }
                     ]
                 }";

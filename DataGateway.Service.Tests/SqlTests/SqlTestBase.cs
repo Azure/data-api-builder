@@ -62,9 +62,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _testCategory = testCategory;
 
             //Init AuthorizationResolver object
-            RuntimeConfig runtimeConfig = AuthorizationResolverUnitTests.InitRuntimeConfig();
-            _authZResolver = AuthorizationResolverUnitTests.InitAuthZResolver(runtimeConfig);
             _runtimeConfigPath = SqlTestHelper.LoadConfig($"{_testCategory}");
+            _authZResolver = AuthorizationResolverUnitTests.InitAuthZResolver(_runtimeConfigPath.CurrentValue.ConfigValue);
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:
@@ -141,8 +140,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static DefaultHttpContext GetRequestHttpContext(
             string queryStringUrl = null,
             IHeaderDictionary headers = null,
-            string bodyData = null,
-            string dbPolicy = null)
+            string bodyData = null)
         {
             DefaultHttpContext httpContext;
             if (headers is not null)
@@ -171,12 +169,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 httpContext.Request.ContentLength = stream.Length;
             }
 
-            if (!string.IsNullOrEmpty(dbPolicy))
-            {
-                // We need to add an item to httpContext.Items dictionary to keep the database policy.
-                httpContext.Items = new Dictionary<object, object>();
-                httpContext.Items.Add(AuthorizationResolver.DB_POLICY_HEADER, dbPolicy);
-            }
+            // Set the user role as authenticated to allow tests to execute with max privileges.
+            httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = "authenticated";
 
             return httpContext;
         }
@@ -244,15 +238,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string expectedLocationHeader = null,
             string expectedAfterQueryString = "",
             bool paginated = false,
-            int verifyNumRecords = -1,
-            string dbPolicy = null)
+            int verifyNumRecords = -1)
         {
             ConfigureRestController(
                 controller,
                 queryString,
                 headers,
-                requestBody,
-                dbPolicy);
+                requestBody);
             string baseUrl = UriHelper.GetEncodedUrl(controller.HttpContext.Request);
             if (expectedLocationHeader != null)
             {
@@ -352,15 +344,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             RestController restController,
             string queryString,
             IHeaderDictionary headers = null,
-            string requestBody = null,
-            string dbPolicy = null)
+            string requestBody = null)
         {
             restController.ControllerContext.HttpContext =
                 GetRequestHttpContext(
                     queryString,
                     headers,
-                    bodyData: requestBody,
-                    dbPolicy: dbPolicy);
+                    bodyData: requestBody);
 
             // Set the mock context accessor's request same as the controller's request.
             _httpContextAccessor.Setup(x => x.HttpContext.Request).Returns(restController.ControllerContext.HttpContext.Request);

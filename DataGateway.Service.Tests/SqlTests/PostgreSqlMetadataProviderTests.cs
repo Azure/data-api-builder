@@ -21,11 +21,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath = SqlTestHelper.LoadConfig(TestCategory.POSTGRESQL);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(runtimeConfigPath);
             SetUpSQLMetadataProvider(runtimeConfigPath, TestCategory.POSTGRESQL);
-            PostgreSqlMetadataProvider sqlMetadataProvider = new(runtimeConfigPath, _queryExecutor, _queryBuilder);
+            _sqlMetadataProvider = new PostgreSqlMetadataProvider(runtimeConfigPath, _queryExecutor, _queryBuilder);
 
             try
             {
-                await sqlMetadataProvider.InitializeAsync();
+                await _sqlMetadataProvider.InitializeAsync();
             }
             catch (Exception ex)
             {

@@ -21,11 +21,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath = SqlTestHelper.LoadConfig(TestCategory.MYSQL);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(runtimeConfigPath);
             SetUpSQLMetadataProvider(runtimeConfigPath, TestCategory.MYSQL);
-            MySqlMetadataProvider sqlMetadataProvider = new(runtimeConfigPath, _queryExecutor, _queryBuilder);
+            _sqlMetadataProvider = new MySqlMetadataProvider(runtimeConfigPath, _queryExecutor, _queryBuilder);
 
             try
             {
-                await sqlMetadataProvider.InitializeAsync();
+                await _sqlMetadataProvider.InitializeAsync();
             }
             catch (Exception ex)
             {

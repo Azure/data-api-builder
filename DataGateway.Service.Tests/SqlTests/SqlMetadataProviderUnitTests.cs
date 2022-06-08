@@ -11,7 +11,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     /// Units testing for our connection string parser
     /// to retreive schema.
     /// </summary>
-    [TestClass, TestCategory(TestCategory.POSTGRESQL)]
+    [TestClass]
     public class SqlMetadataProviderUnitTests : SqlTestBase
     {
         /// <summary>
@@ -41,6 +41,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code> Making sure no exception is thrown if there are no Foriegn Keys.
         /// <code>Note: </code> This test is independent of DB, so any DB(POSTGRES,MSSQL,MYSQL) can be used.
         /// </summary>
+        [TestCategory(TestCategory.POSTGRESQL), TestCategory(TestCategory.MYSQL), TestCategory(TestCategory.MSSQL)]
         [DataTestMethod]
         [DataRow("PostgreSql")]
         [DataRow("MsSql")]
@@ -51,27 +52,26 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(runtimeConfigPath);
             SetUpSQLMetadataProvider(runtimeConfigPath, testCategory);
 
+            switch (testCategory)
+            {
+                case TestCategory.POSTGRESQL:
+                    _sqlMetadataProvider = new PostgreSqlMetadataProvider(runtimeConfigPath, _queryExecutor, _queryBuilder);
+                    break;
+
+                case TestCategory.MSSQL:
+                    _sqlMetadataProvider = new MsSqlMetadataProvider(runtimeConfigPath, _queryExecutor, _queryBuilder);
+                    break;
+
+                case TestCategory.MYSQL:
+                    _sqlMetadataProvider = new MySqlMetadataProvider(runtimeConfigPath, _queryExecutor, _queryBuilder);
+                    break;
+                default:
+                    throw new Exception($"{testCategory} not supported.");
+            }
+
             try
             {
-                switch (testCategory)
-                {
-                    case TestCategory.POSTGRESQL:
-                        PostgreSqlMetadataProvider postgreSqlMetadataProvider = new(runtimeConfigPath, _queryExecutor, _queryBuilder);
-                        await postgreSqlMetadataProvider.InitializeAsync();
-                        break;
-
-                    case TestCategory.MSSQL:
-                        MsSqlMetadataProvider msSqlMetadataProvider = new(runtimeConfigPath, _queryExecutor, _queryBuilder);
-                        await msSqlMetadataProvider.InitializeAsync();
-                        break;
-
-                    case TestCategory.MYSQL:
-                        MySqlMetadataProvider mySqlMetadataProvider = new(runtimeConfigPath, _queryExecutor, _queryBuilder);
-                        await mySqlMetadataProvider.InitializeAsync();
-                        break;
-                    default:
-                        throw new Exception($"{testCategory} not supported.");
-                }
+                await _sqlMetadataProvider.InitializeAsync();
             }
             catch (Exception ex)
             {

@@ -44,7 +44,11 @@ namespace Azure.DataGateway.Service.Exceptions
             /// <summary>
             /// Error encountered while initializing.
             /// </summary>
-            ErrorInInitialization
+            ErrorInInitialization,
+            /// <summary>
+            /// Cumulative column check of QueryString (OData filter parsing) failure.
+            /// </summary>
+            AuthorizationCumulativeColumnCheckFailed
         }
 
         public HttpStatusCode StatusCode { get; }

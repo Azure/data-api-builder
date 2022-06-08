@@ -147,54 +147,54 @@ namespace Azure.DataGateway.Service.Authorization
                         return Task.CompletedTask;
                     }
 
-                    if (restContext.TryCalculateCumulativeColumns())
+                    // Attempts to get list of unique columns present in request metadata.
+                    restContext.CalculateCumulativeColumns();
+
+                    // Two actions must be checked when HTTP operation is PUT or PATCH,
+                    // otherwise, just one action is checked.
+                    // PUT and PATCH resolve to actions 'create' and 'update'.
+                    // A user must fulfill all actions' permissions requirements to proceed.
+                    foreach (string action in actions)
                     {
-                        // Two actions must be checked when HTTP operation is PUT or PATCH,
-                        // otherwise, just one action is checked.
-                        // PUT and PATCH resolve to actions 'create' and 'update'.
-                        // A user must fulfill all actions' permissions requirements to proceed.
-                        foreach (string action in actions)
+                        // Get a list of all columns present in a request that need to be authorized.
+                        IEnumerable<string> columnsToCheck = restContext.CumulativeColumns;
+
+                        // When Issue #XX for REST Column Aliases is merged, the request field names(which may be aliases)
+                        // will be converted to field names denoted in the permissions config.
+                        // i.e. columnsToCheck = convertExposedNamesToBackingColumns()
+
+                        // Authorize field names present in a request.
+                        if (columnsToCheck.Count() > 0 && _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName, action, columnsToCheck))
                         {
-                            // Get a list of all columns present in a request that need to be authorized.
-                            IEnumerable<string> columnsToCheck = restContext.CumulativeColumns;
-
-                            // When Issue #XX for REST Column Aliases is merged, the request field names(which may be aliases)
-                            // will be converted to field names denoted in the permissions config.
-                            // i.e. columnsToCheck = convertExposedNamesToBackingColumns()
-
-                            // Authorize field names present in a request.
-                            if (columnsToCheck.Count() > 0 && _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName, action, columnsToCheck))
+                            // Find operations with no column filter in the query string will have FieldsToBeReturned == 0.
+                            // Then, the "allowed columns" resolved, will be set on FieldsToBeReturned.
+                            // When FieldsToBeReturned is originally >=1 column, the field is NOT modified here.
+                            if (restContext.FieldsToBeReturned.Count == 0 && restContext.OperationType == Operation.Find)
                             {
-                                // Find operations with no column filter in the query string will have FieldsToBeReturned == 0.
-                                // Then, the "allowed columns" resolved, will be set on FieldsToBeReturned.
-                                // When FieldsToBeReturned is originally >=1 column, the field is NOT modified here.
-                                if (restContext.FieldsToBeReturned.Count == 0 && restContext.OperationType == Operation.Find)
-                                {
-                                    // Union performed to avoid duplicate field names in FieldsToBeReturned.
-                                    IEnumerable<string> fieldsReturnedForFind = _authorizationResolver.GetAllowedColumns(entityName, roleName, action);
-                                    restContext.UpdateReturnFields(fieldsReturnedForFind);
-                                }
-                            }
-                            else if (columnsToCheck.Count() == 0 && restContext.OperationType is Operation.Find)
-                            {
-                                // - Find operations typically return all metadata of a database record.
-                                // This check resolves all 'included' columns defined in permissions
-                                // so only those included columns are present in the result(s).
-                                // - For other operation types, columnsToCheck is a result of identifying
-                                // any reference to a column in all parts of a request (body, URL, querystring)
+                                // Union performed to avoid duplicate field names in FieldsToBeReturned.
                                 IEnumerable<string> fieldsReturnedForFind = _authorizationResolver.GetAllowedColumns(entityName, roleName, action);
                                 restContext.UpdateReturnFields(fieldsReturnedForFind);
                             }
-                            else
-                            {
-                                context.Fail();
-                            }
                         }
-
-                        if (!context.HasFailed)
+                        else if (columnsToCheck.Count() == 0 && restContext.OperationType is Operation.Find)
                         {
-                            context.Succeed(requirement);
+                            // - Find operations typically return all metadata of a database record.
+                            // This check resolves all 'included' columns defined in permissions
+                            // so only those included columns are present in the result(s).
+                            // - For other operation types, columnsToCheck is a result of identifying
+                            // any reference to a column in all parts of a request (body, URL, querystring)
+                            IEnumerable<string> fieldsReturnedForFind = _authorizationResolver.GetAllowedColumns(entityName, roleName, action);
+                            restContext.UpdateReturnFields(fieldsReturnedForFind);
                         }
+                        else
+                        {
+                            context.Fail();
+                        }
+                    }
+
+                    if (!context.HasFailed)
+                    {
+                        context.Succeed(requirement);
                     }
                 }
             }

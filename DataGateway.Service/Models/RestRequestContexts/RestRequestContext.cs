@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Net;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Parsers;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.OData.UriParser;
@@ -111,7 +113,7 @@ namespace Azure.DataGateway.Service.Models
         /// <returns>
         /// Returns true on success, false on failure.
         /// </returns>
-        public bool TryCalculateCumulativeColumns()
+        public void CalculateCumulativeColumns()
         {
             try
             {
@@ -141,8 +143,6 @@ namespace Azure.DataGateway.Service.Models
                 {
                     CumulativeColumns.UnionWith(FieldValuePairsInBody.Keys);
                 }
-
-                return true;
             }
             catch (Exception e)
             {
@@ -151,7 +151,10 @@ namespace Azure.DataGateway.Service.Models
                 Console.Error.WriteLine("ERROR IN ODATA_AST_COLUMN_VISITOR TRAVERSAL");
                 Console.Error.WriteLine(e.Message);
                 Console.Error.WriteLine(e.StackTrace);
-                return false;
+                throw new DataGatewayException(
+                    message: "Request content invalid.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCumulativeColumnCheckFailed);
             }
         }
 

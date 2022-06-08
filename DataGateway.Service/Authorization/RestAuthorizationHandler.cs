@@ -84,18 +84,17 @@ namespace Azure.DataGateway.Service.Authorization
             {
                 if (context.Resource is not null)
                 {
-                    DatabaseObject? dbObject = context.Resource as DatabaseObject;
+                    string? entityName = context.Resource as string;
 
-                    if (dbObject is null)
+                    if (entityName is null)
                     {
                         throw new DataGatewayException(
-                            message: "DbObject Resource Null, Something went wrong",
-                            statusCode: System.Net.HttpStatusCode.Unauthorized,
+                            message: "restContext Resource Null, Something went wrong",
+                            statusCode: HttpStatusCode.Unauthorized,
                             subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError
                         );
                     }
 
-                    string entityName = dbObject.TableDefinition.SourceEntityRelationshipMap.Keys.First();
                     string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
                     IEnumerable<string> actions = HttpVerbToActions(httpContext.Request.Method);
 
@@ -135,7 +134,7 @@ namespace Azure.DataGateway.Service.Authorization
                         );
                     }
 
-                    string entityName = restContext.DatabaseObject.TableDefinition.SourceEntityRelationshipMap.Keys.First();
+                    string entityName = restContext.EntityName;
                     string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
                     IEnumerable<string> actions = HttpVerbToActions(httpContext.Request.Method);
 

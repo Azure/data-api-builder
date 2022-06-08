@@ -112,16 +112,10 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
                 )).Returns(isValidDeleteRoleAction);
 
             HttpContext httpContext = CreateHttpContext(httpMethod);
-            TableDefinition tableDef = new();
-            tableDef.SourceEntityRelationshipMap.Add(AuthorizationHelpers.TEST_ENTITY, new());
-            DatabaseObject stubDbObj = new()
-            {
-                TableDefinition = tableDef
-            };
 
             bool actualAuthorizationResult = await IsAuthorizationSuccessfulAsync(
                 requirement: new EntityRoleActionPermissionsRequirement(),
-                resource: stubDbObj,
+                resource: AuthorizationHelpers.TEST_ENTITY,
                 resolver: authorizationResolver.Object,
                 httpContext: httpContext);
 

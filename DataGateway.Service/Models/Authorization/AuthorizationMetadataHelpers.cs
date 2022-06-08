@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace Azure.DataGateway.Service.Models.Authorization
@@ -12,7 +13,7 @@ namespace Azure.DataGateway.Service.Models.Authorization
         /// <summary>
         /// Given the key (roleName) returns the associated RoleDS object.
         /// </summary>
-        public Dictionary<string, RoleMetadata> RoleToActionMap = new();
+        public Dictionary<string, RoleMetadata> RoleToActionMap = new(StringComparer.InvariantCultureIgnoreCase);
     }
 
     /// <summary>

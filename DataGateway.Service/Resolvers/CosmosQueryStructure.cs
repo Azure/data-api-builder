@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -162,9 +163,9 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 EnumValueNode enumValue = (EnumValueNode)field.Value;
 
-                if (enumValue.Value == $"{OrderByDir.Desc}")
+                if (enumValue.Value == $"{OrderBy.DESC}")
                 {
-                    orderByColumnsList.Add(new OrderByColumn(tableSchema: string.Empty, _containerAlias, fieldName, direction: OrderByDir.Desc));
+                    orderByColumnsList.Add(new OrderByColumn(tableSchema: string.Empty, _containerAlias, fieldName, direction: OrderBy.DESC));
                 }
                 else
                 {

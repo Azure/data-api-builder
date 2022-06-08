@@ -588,13 +588,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Test paginating while ordering by a subset of columns of a composite pk
         /// </summary>
-        [Ignore]
         [TestMethod]
         public async Task TestPaginationWithOrderByWithPartialPk()
         {
             string graphQLQueryName = "stocks";
             string graphQLQuery = @"{
-                stocks(first: 2 orderBy: {pieceid: Desc}) {
+                stocks(first: 2 orderBy: {pieceid: DESC}) {
                     items {
                         pieceid
                         categoryid
@@ -618,7 +617,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
               ],
               ""endCursor"": """ + SqlPaginationUtil.Base64Encode(
                   "[{\"Value\":1,\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"pieceid\"}," +
-                  "{\"Value\":1,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"categoryid\"}]") + @""",
+                  "{\"Value\":0,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"categoryid\"}]") + @""",
               ""hasNextPage"": true
             }";
 
@@ -629,13 +628,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Paginate first two entries then paginate again with the returned after token.
         /// Verify both pagination query results
         /// </summary>
-        [Ignore]
         [TestMethod]
         public async Task TestCallingPaginationTwiceWithOrderBy()
         {
             string graphQLQueryName = "books";
             string graphQLQuery1 = @"{
-                books(first: 2 orderBy: {title: Desc publisher_id: Asc id: Desc}) {
+                books(first: 2 orderBy: {title: DESC publisher_id: ASC id: DESC}) {
                     items {
                         id
                         title
@@ -673,7 +671,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected1, actual1);
 
             string graphQLQuery2 = @"{
-                books(first: 2, after: """ + expectedAfter1 + @""" orderBy: {title: Desc publisher_id: Asc id: Desc}) {
+                books(first: 2, after: """ + expectedAfter1 + @""" orderBy: {title: DESC publisher_id: ASC id: DESC}) {
                     items {
                         id
                         title
@@ -715,13 +713,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Paginate ordering with a column for which multiple entries
         /// have the same value, and check that the column tie break is resolved properly
         /// </summary>
-        [Ignore]
         [TestMethod]
         public async Task TestColumnTieBreak()
         {
             string graphQLQueryName = "books";
             string graphQLQuery1 = @"{
-                books(first: 4 orderBy: {publisher_id: Desc}) {
+                books(first: 4 orderBy: {publisher_id: DESC}) {
                     items {
                         id
                         publisher_id
@@ -763,7 +760,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected1, actual1);
 
             string graphQLQuery2 = @"{
-                books(first: 2, after: """ + expectedAfter1 + @""" orderBy: {publisher_id: Desc}) {
+                books(first: 2, after: """ + expectedAfter1 + @""" orderBy: {publisher_id: DESC}) {
                     items {
                         id
                         publisher_id
@@ -922,14 +919,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Test with after which does not include all orderBy columns
         /// </summary>
-        [Ignore]
         [TestMethod]
         public async Task RequestInvalidAfterWithUnmatchingOrderByColumns1()
         {
             string graphQLQueryName = "books";
             string after = SqlPaginationUtil.Base64Encode("[{\"Value\":2,\"Direction\":0,\"ColumnName\":\"id\"}]");
             string graphQLQuery = @"{
-                 books(" + $"after: \"{after}\"" + @" orderBy: {id: Asc title: Desc}) {
+                 books(" + $"after: \"{after}\"" + @" orderBy: {id: ASC title: DESC}) {
                     items {
                         id
                         title
@@ -944,7 +940,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Test with after which has unnecessary columns
         /// </summary>
-        [Ignore]
         [TestMethod]
         public async Task RequestInvalidAfterWithUnmatchingOrderByColumns2()
         {
@@ -953,7 +948,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "[{\"Value\":2,\"Direction\":0,\"ColumnName\":\"id\"}," +
                 "{\"Value\":1234,\"Direction\":1,\"ColumnName\":\"publisher_id\"}]");
             string graphQLQuery = @"{
-                 books(" + $"after: \"{after}\"" + @" orderBy: {id: Asc title: Desc}) {
+                 books(" + $"after: \"{after}\"" + @" orderBy: {id: ASC title: DESC}) {
                     items {
                         id
                         title
@@ -969,14 +964,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// Test with after which has columns which don't match the direction of
         /// orderby columns
         /// </summary>
-        [Ignore]
         [TestMethod]
         public async Task RequestInvalidAfterWithUnmatchingOrderByColumns3()
         {
             string graphQLQueryName = "books";
             string after = SqlPaginationUtil.Base64Encode("[{\"Value\":2,\"Direction\":0,\"ColumnName\":\"id\"}]");
             string graphQLQuery = @"{
-                 books(" + $"after: \"{after}\"" + @" orderBy: {id: Desc}) {
+                 books(" + $"after: \"{after}\"" + @" orderBy: {id: DESC}) {
                     items {
                         id
                         title

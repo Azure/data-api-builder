@@ -104,6 +104,9 @@ namespace Azure.DataGateway.Service.Authorization
         /// <inheritdoc />
         public bool AreColumnsAllowedForAction(string entityName, string roleName, string actionName, IEnumerable<string> columns)
         {
+            // Columns.Count() will never be zero because this method is called after a check ensures Count() > 0
+            Assert.IsTrue(columns.Count() == 0, message: "columns.Count() should not be greater than 0.");
+
             ActionMetadata actionToColumnMap;
             RoleMetadata roleInEntity = _entityPermissionMap[entityName].RoleToActionMap[roleName];
 

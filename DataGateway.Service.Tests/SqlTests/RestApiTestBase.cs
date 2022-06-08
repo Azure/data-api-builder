@@ -940,6 +940,27 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Tests the REST Api for Find operation when the target
+        /// entity has mapped fields that are different from another
+        /// entity which shares the same source table, and we include
+        /// after in the request, along with orderby.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy()
+        {
+            string after = $"[{{\"Value\":\"Pseudotsuga menziesii\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"trees\",\"ColumnName\":\"fancyName\"}}," +
+                            $"{{\"Value\":2,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"trees\",\"ColumnName\":\"treeId\"}}]";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: $"?$orderby=fancyName,treeId&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                entity: _integrationMappingDifferentEntity,
+                sqlQuery: GetQuery(nameof(FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
         /// Tests the InsertOne functionality with a REST POST request.
         /// </summary>
         [TestMethod]

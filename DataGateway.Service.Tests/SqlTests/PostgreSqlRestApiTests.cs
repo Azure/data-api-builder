@@ -594,6 +594,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 "
             },
             {
+                "FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT  ""treeId"", ""species"" AS ""fancyName"", ""region"", ""height""
+                        FROM " + _integrationMappingTable + @"
+                        WHERE ""treeId"" < 2
+                        ORDER BY species, ""treeId""
+                        LIMIT 101
+                    ) AS subq
+                "
+            },
+            {
                 "InsertOneTest",
                 @"
                     SELECT to_jsonb(subq) AS data

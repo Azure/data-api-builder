@@ -219,8 +219,9 @@ namespace Azure.DataGateway.Service.Resolvers
                     // Since we are looking for pagination columns from the $after query
                     // param, we expect this column to exist as the $after query param
                     // was formed from a previous response with a nextLink.
-                    string columnName = GetExposedColumnName(entityName, column.ColumnName, sqlMetadataProvider);
-                    afterDict.Add(columnName, column);
+                    string backingColumnName = GetBackingColumnName(entityName, column.ColumnName, sqlMetadataProvider);
+                    afterDict.Add(column.ColumnName, column);
+                    column.ColumnName = backingColumnName;
                 }
 
                 // verify that primary keys is a sub set of after's column names
@@ -248,7 +249,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 SqlQueryStructure structure = paginationMetadata.Structure!;
                 foreach (OrderByColumn column in structure.OrderByColumns)
                 {
-                    string columnName = column.ColumnName;
+                    string columnName = GetExposedColumnName(entityName, column.ColumnName, sqlMetadataProvider);
 
                     if (!afterDict.ContainsKey(columnName) ||
                         afterDict[columnName].Direction != column.Direction)
@@ -310,6 +311,25 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return after;
+        }
+
+        /// <summary>
+        /// Helper function will return the backing column name, which is
+        /// what is used to form pagination columns in the query.
+        /// </summary>
+        /// <param name="entityName">String holds the name of the entity.</param>
+        /// <param name="exposedColumnName">String holds the name of the exposed column.</param>
+        /// <param name="sqlMetadataProvider">Holds the sqlmetadataprovider for REST requests.</param>
+        /// <returns>the backing column name.</returns>
+        /// <returns></returns>
+        private static string GetBackingColumnName(string entityName, string exposedColumnName, ISqlMetadataProvider? sqlMetadataProvider)
+        {
+            if (sqlMetadataProvider is not null)
+            {
+                sqlMetadataProvider.TryGetBackingColumn(entityName, exposedColumnName, out exposedColumnName!);
+            }
+
+            return exposedColumnName;
         }
 
         /// <summary>

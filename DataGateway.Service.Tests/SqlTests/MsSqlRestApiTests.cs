@@ -365,6 +365,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy",
+                $"SELECT TOP 101 [treeId], [species] AS [fancyName], [region], [height] FROM { _integrationMappingTable } " +
+                $"WHERE [trees].[treeId] < 2 " +
+                $"ORDER BY [trees].[species], [trees].[treeId] " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "InsertOneTest",
                 // This query is the query for the result we get back from the database
                 // after the insert operation. Not the query that we generate to perform

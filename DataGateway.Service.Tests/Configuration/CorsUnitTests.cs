@@ -32,6 +32,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
         /// <summary>
         /// Verify correct deserialization of Cors record
+        /// This function will attempt to read hawaii-config.json (must be present)
         /// </summary>
         [TestMethod]
         public void TestCorsConfigReadCorrectly()
@@ -52,7 +53,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         /// <param name="allowedOrigins"> the allowed origins for the server to check against </param>
         /// DataRow 1: valid because all origins accepted
         /// DataRow 2: valid because specific host present in origins list
-        /// DataRow 3: valid because specific host present in origins list (wildcard ignored - expected behavior, see line 26)
+        /// DataRow 3: valid because specific host present in origins list (wildcard ignored - expected behavior, see https://docs.microsoft.com/en-us/cli/azure/webapp/cors?view=azure-cli-latest)
         /// </summary>
         [DataTestMethod]
         [DataRow(new string[] { "*" }, DisplayName = "Test allow origin with wildcard")]
@@ -100,7 +101,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         /// <param name="allowedOrigins"> the allowed origins for the server to check against </param>
         /// DataRow 1: invalid because no origins present
         /// DataRow 2: invalid because of mismatched scheme (http vs https)
-        /// DataRow 3: invalid because specific host is not present (* does not resolve to all origins if it is not the sole value supplied - expected, see line 26)
+        /// DataRow 3: invalid because specific host is not present (* does not resolve to all origins if it is not the sole value supplied - expected, see https://docs.microsoft.com/en-us/cli/azure/webapp/cors?view=azure-cli-latest)
         /// </summary>
         [DataTestMethod]
         [DataRow(new string[] { "" }, DisplayName = "Test invalid origin empty origins")]

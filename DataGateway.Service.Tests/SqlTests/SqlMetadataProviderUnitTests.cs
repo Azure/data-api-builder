@@ -41,11 +41,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code> Making sure no exception is thrown if there are no Foriegn Keys.
         /// <code>Note: </code> This test is independent of DB, so any DB(POSTGRES,MSSQL,MYSQL) can be used.
         /// </summary>
-        [TestCategory(TestCategory.POSTGRESQL), TestCategory(TestCategory.MYSQL), TestCategory(TestCategory.MSSQL)]
         [DataTestMethod]
-        [DataRow("PostgreSql")]
-        [DataRow("MsSql")]
-        [DataRow("MySql")]
+        [TestCategory(TestCategory.POSTGRESQL), DataRow("PostgreSql")]
+        [TestCategory(TestCategory.MSSQL), DataRow("MsSql")]
+        [TestCategory(TestCategory.MYSQL), DataRow("MySql")]
         public async Task CheckNoExceptionForNoForiegnKey(string testCategory)
         {
             IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath = SqlTestHelper.LoadConfig(testCategory);

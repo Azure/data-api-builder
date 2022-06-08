@@ -50,7 +50,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         public static void RemoveAllRelationshipBetweenEntities(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
         {
-
             RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue;
 
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities.ToList())
@@ -59,8 +58,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 runtimeConfig.Entities.Remove(entityName);
                 runtimeConfig.Entities.Add(entityName, updatedEntity);
             }
-
-            Console.WriteLine(JsonSerializer.Serialize<RuntimeConfig>(runtimeConfig, RuntimeConfig.GetDeserializationOptions()));
         }
 
         /// <summary>

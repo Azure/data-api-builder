@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Microsoft.Extensions.Options;
@@ -20,14 +19,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath = SqlTestHelper.LoadConfig(TestCategory.MSSQL);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(runtimeConfigPath);
             SetUpSQLMetadataProvider(runtimeConfigPath, TestCategory.MSSQL);
-            try
-            {
-                await _sqlMetadataProvider.InitializeAsync();
-            }
-            catch (Exception ex)
-            {
-                Assert.Fail("Expected no exception, but got: " + ex.Message);
-            }
+            await _sqlMetadataProvider.InitializeAsync();
         }
     }
 }

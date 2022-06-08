@@ -41,54 +41,37 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code> Making sure no exception is thrown if there are no Foriegn Keys.
         /// <code>Note: </code> This test is independent of DB, so any DB(POSTGRES,MSSQL,MYSQL) can be used.
         /// </summary>
-        [TestMethod]
-        public async Task CheckNoExceptionForNoForiegnKey()
+        [DataTestMethod]
+        [DataRow("PostgreSql")]
+        [DataRow("MsSql")]
+        [DataRow("MySql")]
+        public async Task CheckNoExceptionForNoForiegnKey(string testCategory)
         {
-            // POSTGRESQL
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath = SqlTestHelper.LoadConfig(TestCategory.POSTGRESQL);
+            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath = SqlTestHelper.LoadConfig(testCategory);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(runtimeConfigPath);
-            SetUpSQLMetadataProvider(runtimeConfigPath, TestCategory.POSTGRESQL);
-
-            PostgreSqlMetadataProvider postgreSqlMetadataProvider = new(runtimeConfigPath, _queryExecutor, _queryBuilder);
-            Console.WriteLine("Custom Config file for Postgres set successfully.");
+            SetUpSQLMetadataProvider(runtimeConfigPath, testCategory);
 
             try
             {
-                await postgreSqlMetadataProvider.InitializeAsync();
-            }
-            catch (Exception ex)
-            {
-                Assert.Fail("Expected no exception, but got: " + ex.Message);
-            }
+                switch (testCategory)
+                {
+                    case TestCategory.POSTGRESQL:
+                        PostgreSqlMetadataProvider postgreSqlMetadataProvider = new(runtimeConfigPath, _queryExecutor, _queryBuilder);
+                        await postgreSqlMetadataProvider.InitializeAsync();
+                        break;
 
-            // MSSQL
-            runtimeConfigPath = SqlTestHelper.LoadConfig(TestCategory.MSSQL);
-            SqlTestHelper.RemoveAllRelationshipBetweenEntities(runtimeConfigPath);
-            SetUpSQLMetadataProvider(runtimeConfigPath, TestCategory.MSSQL);
+                    case TestCategory.MSSQL:
+                        MsSqlMetadataProvider msSqlMetadataProvider = new(runtimeConfigPath, _queryExecutor, _queryBuilder);
+                        await msSqlMetadataProvider.InitializeAsync();
+                        break;
 
-            MsSqlMetadataProvider msSqlMetadataProvider = new(runtimeConfigPath, _queryExecutor, _queryBuilder);
-            Console.WriteLine("Custom Config file for MsSql set successfully.");
-
-            try
-            {
-                await msSqlMetadataProvider.InitializeAsync();
-            }
-            catch (Exception ex)
-            {
-                Assert.Fail("Expected no exception, but got: " + ex.Message);
-            }
-
-            // MYSQL
-            runtimeConfigPath = SqlTestHelper.LoadConfig(TestCategory.MYSQL);
-            SqlTestHelper.RemoveAllRelationshipBetweenEntities(runtimeConfigPath);
-            SetUpSQLMetadataProvider(runtimeConfigPath, TestCategory.MYSQL);
-
-            MySqlMetadataProvider mySqlMetadataProvider = new(runtimeConfigPath, _queryExecutor, _queryBuilder);
-            Console.WriteLine("Custom Config file set for MySql successfully.");
-
-            try
-            {
-                await mySqlMetadataProvider.InitializeAsync();
+                    case TestCategory.MYSQL:
+                        MySqlMetadataProvider mySqlMetadataProvider = new(runtimeConfigPath, _queryExecutor, _queryBuilder);
+                        await mySqlMetadataProvider.InitializeAsync();
+                        break;
+                    default:
+                        throw new Exception($"{testCategory} not supported.");
+                }
             }
             catch (Exception ex)
             {

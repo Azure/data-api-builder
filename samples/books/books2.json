@@ -20,10 +20,9 @@
           "cardinality": "one",
           "target.entity": "category"
         },
-        "authors": {
+        "bookAuthors": {
           "cardinality": "many",
-          "linking.object": "dbo.books_authors",
-          "target.entity": "author"
+          "target.entity": "bookAuthor"
         }
       },
       "permissions": [
@@ -55,10 +54,9 @@
     "author": {
       "source": "dbo.authors",
       "relationships": {
-        "books": {
+        "bookAuthor": {
           "cardinality": "many",
-          "linking.object": "dbo.books_authors",
-          "target.entity": "book"
+          "target.entity": "bookAuthor"
         }
       },
       "permissions": [
@@ -72,6 +70,25 @@
               }
             }
           ]
+        }
+      ]
+    },
+    "bookAuthor": {
+      "source": "dbo.books_authors",
+      "relationships": {
+        "book": {
+          "cardinality": "one",
+          "target.entity": "book"
+        },
+        "author": {
+          "cardinality": "one",
+          "target.entity": "author"
+        }
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
         }
       ]
     }

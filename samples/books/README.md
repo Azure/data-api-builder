@@ -1,14 +1,20 @@
 # Books Catalog Sample
 
-TDB: Describe the sample scenario
+This sample is about managing a personal library. You want to keep track of the books you have. Each book as a category (eg:Science Fiction, Historical, etc.) and can be written by one or more authors.
 
 ## Backend Database
 
-This sample uses Azure SQL DB or SQL Server Sample as the backed database. Use the `book.sql` file to create the database objects used by the sample.
+This sample uses Azure SQL DB or SQL Server Sample as the backend database. Use the `book.sql` file to create the database objects used by the sample.
 
 ## Hawaii Configuration
 
-TDB
+Create a new Hawaii configuration file starting from the `hawaii-config.template.json` provided in the root folder. Make a copy of that file and name it `my-book.json`.
+
+Alternatively you can create a new Hawaii configuration file using Hawaii CLI. To install the Hawaii CLI read the instructions here: [TDB].
+
+```
+
+```
 
 ### Add a Book entity
 

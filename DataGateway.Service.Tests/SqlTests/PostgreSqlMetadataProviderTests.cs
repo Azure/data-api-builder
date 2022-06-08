@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Services;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -21,7 +20,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath = SqlTestHelper.LoadConfig(TestCategory.POSTGRESQL);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(runtimeConfigPath);
             SetUpSQLMetadataProvider(runtimeConfigPath, TestCategory.POSTGRESQL);
-            _sqlMetadataProvider = new PostgreSqlMetadataProvider(runtimeConfigPath, _queryExecutor, _queryBuilder);
 
             try
             {

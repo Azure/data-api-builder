@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Services;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -21,8 +20,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath = SqlTestHelper.LoadConfig(TestCategory.MSSQL);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(runtimeConfigPath);
             SetUpSQLMetadataProvider(runtimeConfigPath, TestCategory.MSSQL);
-            _sqlMetadataProvider = new MsSqlMetadataProvider(runtimeConfigPath, _queryExecutor, _queryBuilder);
-
             try
             {
                 await _sqlMetadataProvider.InitializeAsync();

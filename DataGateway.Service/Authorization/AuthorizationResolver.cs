@@ -26,7 +26,6 @@ namespace Azure.DataGateway.Service.Authorization
         private static readonly HashSet<string> _validActions = new() { "create", "read", "update", "delete" };
 
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
-        public const string DB_POLICY_HEADER = "X-DG-Policy";
 
         public AuthorizationResolver(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
         {

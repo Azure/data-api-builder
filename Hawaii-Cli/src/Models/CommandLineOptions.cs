@@ -1,76 +1,213 @@
-using System;
+using Azure.DataGateway.Config;
 using CommandLine;
 
 namespace Hawaii.Cli.Models
 {
     /// <summary>
-    /// Contains different options that are supported by this Cli tool.
+    /// Common options for all the commands
     /// </summary>
-    public sealed class CommandLineOptions
+    public class Options
     {
-        [Value(0, Required = false, HelpText = "Specify the command - init/add/update.")]
-        public string? Command { get; set; }
+        public Options(string name)
+        {
+            this.Name = name;
+        }
 
-        [Value(1, Required = false, HelpText = "Specify the name of entity for adding or updating an entity.")]
-        public string? Entity { get; set; }
+        [Option('n', "name", Default = (string)RuntimeConfigPath.CONFIGFILE_NAME, Required = false, HelpText = "Config file name")]
+        public string Name { get; }
+    }
 
-        [Option('n', "name", Required = false, HelpText = "Specify the file name, Default value = hawaii-config.")]
-        public string? Name { get; set; }
+    /// <summary>
+    /// Init command options
+    /// </summary>
+    [Verb("init", isDefault: false, HelpText = "Initialize configuration file.", Hidden = false)]
+    public class InitOptions : Options
+    {
+        public InitOptions(DatabaseType databaseType, string connectionString, string resolverConfigFile, HostModeType hostMode, string name)
+            : base(name)
+        {
+            this.DatabaseType = databaseType;
+            this.ConnectionString = connectionString;
+            this.ResolverConfigFile = resolverConfigFile;
+            this.HostMode = hostMode;
+        }
 
-        [Option("database-type", Required = false, HelpText = "Type of database to connect.")]
-        public string? DatabaseType { get; set; }
+        [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmos, mysql, postgresql")]
+        public DatabaseType DatabaseType { get; }
 
-        [Option("connection-string", Required = false, HelpText = "Connection details to connect to database.")]
-        public string? ConnectionString { get; set; }
+        [Option("connection-string", Required = true, HelpText = "Connection details to connect to database.")]
+        public string ConnectionString { get; }
 
-        [Option("resolver-config-file", Required = false, HelpText = "Path of the file to resolve the configuration for CosmosDB.")]
-        public string? ResolverConfigFile { get; set; }
+        [Option("resolver-config-file", Default = (string)"hawaii-resolver-config.json", Required = false, HelpText = "Path of the file to resolve the configuration for CosmosDB.")]
+        public string ResolverConfigFile { get; }
 
-        [Option("host-mode", Required = false, HelpText = "Specify the Host mode - Development/Production. Default value = Production")]
-        public string? HostMode { get; set; }
+        [Option("host-mode", Default = HostModeType.Production, Required = false, HelpText = "Specify the Host mode - Development or Production")]
+        public HostModeType HostMode { get; }
+    }
 
-        //TODO: Link options with Specidied commands
-        // we need to make sure certain options are only required with certain commands.
-        // for example: source is required only with add/update and not init
+    /// <summary>
+    /// Commond options for entitiy manipulation.
+    /// </summary>
+    public class EntityOptions : Options
+    {
+        public EntityOptions(
+            string entity,
+            string? restRoute,
+            string? graphQLType,
+            string? fieldsToInclude,
+            string? fieldsToExclude,
+            string? relationship,
+            string? cardinality,
+            string? targetEntity,
+            string? linkingObject,
+            string? linkingSourceFields,
+            string? linkingTargetFields,
+            string? mappingFields,
+            string name)
+            : base(name)
+        {
+            this.Entity = entity;
+            this.RestRoute = restRoute;
+            this.GraphQLType = graphQLType;
+            this.FieldsToInclude = fieldsToInclude;
+            this.FieldsToExclude = fieldsToExclude;
+            this.Relationship = relationship;
+            this.Cardinality = cardinality;
+            this.TargetEntity = targetEntity;
+            this.LinkingObject = linkingObject;
+            this.LinkingSourceFields = linkingSourceFields;
+            this.LinkingTargetFields = linkingTargetFields;
+            this.MappingFields = mappingFields;
+        }
 
-        [Option('s', "source", Required = false, HelpText = "Name of the table.")]
-        public string? Source { get; set; }
+        [Value(0, MetaName = "Entity", Required = true, HelpText = "Name of the entity.")]
+        public string Entity { get; }
 
         [Option("rest", Required = false, HelpText = "Route for rest api.")]
-        public string? RestRoute { get; set; }
+        public string? RestRoute { get; }
 
         [Option("graphql", Required = false, HelpText = "Type of graphQL.")]
-        public string? GraphQLType { get; set; }
-
-        [Option("permission", Required = false, HelpText = "Permission required to acess source table.")]
-        public string? Permission { get; set; }
+        public string? GraphQLType { get; }
 
         [Option("fields.include", Required = false, HelpText = "Fields that are allowed access to permission.")]
-        public string? FieldsToInclude { get; set; }
+        public string? FieldsToInclude { get; }
 
         [Option("fields.exclude", Required = false, HelpText = "Fields that are excluded from the action lists.")]
-        public string? FieldsToExclude { get; set; }
+        public string? FieldsToExclude { get; }
 
         [Option("relationship", Required = false, HelpText = "Specify relationship between two entities.")]
-        public string? Relationship { get; set; }
+        public string? Relationship { get; }
 
         [Option("cardinality", Required = false, HelpText = "Specify cardinality between two entities.")]
-        public string? Cardinality { get; set; }
+        public string? Cardinality { get; }
 
         [Option("target.entity", Required = false, HelpText = "Another exposed entity to which the source entity relates to.")]
-        public string? TargetEntity { get; set; }
+        public string? TargetEntity { get; }
 
         [Option("linking.object", Required = false, HelpText = "Database object that is used to support an M:N relationship.")]
-        public string? LinkingObject { get; set; }
+        public string? LinkingObject { get; }
 
         [Option("linking.source.fields", Required = false, HelpText = "Database fields in the linking object to connect to the related item in the source entity.")]
-        public string? LinkingSourceFields { get; set; }
+        public string? LinkingSourceFields { get; }
 
         [Option("linking.target.fields", Required = false, HelpText = "Database fields in the linking object to connect to the related item in the target entity.")]
-        public string? LinkingTargetFields { get; set; }
+        public string? LinkingTargetFields { get; }
 
         [Option("mapping.fields", Required = false, HelpText = "Specify fields to be used for mapping the entities.")]
-        public string? MappingFields { get; set; }
+        public string? MappingFields { get; }
+    }
 
+    /// <summary>
+    /// Add command options
+    /// </summary>
+    [Verb("add", isDefault: false, HelpText = "Add a new entity to the configuration file.", Hidden = false)]
+    public class AddOptions : EntityOptions
+    {
+        public AddOptions(
+            string source,
+            string permissions,
+            string entity,
+            string? restRoute,
+            string? graphQLType,
+            string? fieldsToInclude,
+            string? fieldsToExclude,
+            string? relationship,
+            string? cardinality,
+            string? targetEntity,
+            string? linkingObject,
+            string? linkingSourceFields,
+            string? linkingTargetFields,
+            string? mappingFields,
+            string name)
+            : base(entity,
+                  restRoute,
+                  graphQLType,
+                  fieldsToInclude,
+                  fieldsToExclude,
+                  relationship,
+                  cardinality,
+                  targetEntity,
+                  linkingObject,
+                  linkingSourceFields,
+                  linkingTargetFields,
+                  mappingFields,
+                  name)
+        {
+            this.Source = source;
+            this.Permissions = permissions;
+        }
+
+        [Option('s', "source", Required = true, HelpText = "Name of the source table or container.")]
+        public string Source { get; }
+
+        [Option("permissions", Required = true, HelpText = "Permissions required to access the source table or container.")]
+        public string Permissions { get; }
+    }
+
+    /// <summary>
+    /// Update command options
+    /// </summary>
+    [Verb("update", isDefault: false, HelpText = "Update an existing entity in the configuration file.", Hidden = false)]
+    public class UpdateOptions : EntityOptions
+    {
+        public UpdateOptions(
+            string? source,
+            string? permissions,
+            string entity,
+            string? restRoute,
+            string? graphQLType,
+            string? fieldsToInclude,
+            string? fieldsToExclude,
+            string? relationship,
+            string? cardinality,
+            string? targetEntity,
+            string? linkingObject,
+            string? linkingSourceFields,
+            string? linkingTargetFields,
+            string? mappingFields,
+            string name)
+            : base(entity,
+                  restRoute,
+                  graphQLType,
+                  fieldsToInclude,
+                  fieldsToExclude,
+                  relationship,
+                  cardinality,
+                  targetEntity,
+                  linkingObject,
+                  linkingSourceFields,
+                  linkingTargetFields,
+                  mappingFields,
+                  name)
+        {
+            this.Source = source;
+            this.Permissions = permissions;
+        }
+
+        [Option('s', "source", Required = false, HelpText = "Name of the source table or container.")]
+        public string? Source { get; }
+
+        [Option("permissions", Required = false, HelpText = "Permissions required to access the source table or container.")]
+        public string? Permissions { get; }
     }
 }

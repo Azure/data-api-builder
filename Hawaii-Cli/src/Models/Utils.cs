@@ -218,7 +218,7 @@ namespace Hawaii.Cli.Models
         /// <summary>
         /// returns the default global settings based on dbType.
         /// </summary>
-        public static Dictionary<GlobalSettingsType, object> GetDefaultGlobalSettings(DatabaseType dbType, string? hostMode)
+        public static Dictionary<GlobalSettingsType, object> GetDefaultGlobalSettings(DatabaseType dbType, HostModeType hostMode)
         {
             Dictionary<GlobalSettingsType, object> defaultGlobalSettings = new();
             if (DatabaseType.cosmos.Equals(dbType))
@@ -255,30 +255,11 @@ namespace Hawaii.Cli.Models
         //     }
         // }
         /// </summary>
-        public static HostGlobalSettings GetDefaultHostGlobalSettings(string? hostMode)
+        public static HostGlobalSettings GetDefaultHostGlobalSettings(HostModeType hostMode)
         {
-            HostModeType hostModeType;
-            try
-            {
-                if (hostMode is null)
-                {  // host mode not specified by user
-                    hostModeType = HostModeType.Production;
-                }
-                else
-                {
-                    hostModeType = Enum.Parse<HostModeType>(hostMode, true);
-                }
-            }
-            catch (Exception)
-            {
-                Console.WriteLine($"Unsupported hostMode: {hostMode}. Supported values: Production/Development");
-                throw new NotSupportedException("Invalid Host Mode provided.");
-            }
-
-            string[] origins = { };
-            Cors? cors = new(origins);
-            AuthenticationConfig? authenticationConfig = new(Jwt: new Jwt(Audience: String.Empty, Issuer: String.Empty, IssuerKey: String.Empty));
-            return new HostGlobalSettings(hostModeType, cors, authenticationConfig);
+            Cors cors = new(new string[] { });
+            AuthenticationConfig authenticationConfig = new(Jwt: new Jwt(Audience: string.Empty, Issuer: string.Empty, IssuerKey: string.Empty));
+            return new HostGlobalSettings(hostMode, cors, authenticationConfig);
         }
     }
 }

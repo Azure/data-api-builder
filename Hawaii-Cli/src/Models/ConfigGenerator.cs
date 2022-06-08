@@ -13,28 +13,21 @@ namespace Hawaii.Cli.Models
         /// <summary>
         /// This method will generate the initial config with databaseType and connection-string.
         /// </summary>
-        public static bool GenerateConfig(string fileName, string? resolverConfigFile, string database_type, string connection_string, string? hostMode)
+        public static bool GenerateConfig(InitOptions options)
         {
-            DatabaseType dbType;
+            string connectionString = options.ConnectionString;
+            string? resolverConfigFile = options.ResolverConfigFile;
 
-            try
-            {
-                dbType = Enum.Parse<DatabaseType>(database_type.ToLower());
-            }
-            catch (Exception)
-            {
-                Console.WriteLine($"Unsupported databaseType: {database_type}. Supported values: mssql,cosomos,mysql,postgresql");
-                return false;
-            }
+            DatabaseType dbType = options.DatabaseType;
 
-            DataSource? dataSource = new(dbType)
+            DataSource dataSource = new(dbType)
             {
-                ConnectionString = connection_string
+                ConnectionString = connectionString
             };
 
-            string? file = $"{fileName}.json";
+            string file = $"{options.Name}.json";
 
-            string? schema = RuntimeConfig.SCHEMA;
+            string schema = RuntimeConfig.SCHEMA;
 
             CosmosDbOptions? cosmosDbOptions = null;
             MsSqlOptions? msSqlOptions = null;
@@ -50,7 +43,7 @@ namespace Hawaii.Cli.Models
                         return false;
                     }
 
-                    cosmosDbOptions = new CosmosDbOptions(database_type, resolverConfigFile);
+                    cosmosDbOptions = new CosmosDbOptions(dbType.ToString(), resolverConfigFile);
                     break;
 
                 case DatabaseType.mssql:
@@ -66,7 +59,7 @@ namespace Hawaii.Cli.Models
                     break;
 
                 default:
-                    Console.WriteLine($"DatabaseType: ${database_type} not supported.Please provide a valid database-type.");
+                    Console.WriteLine($"DatabaseType: ${dbType} not supported.Please provide a valid database-type.");
                     return false;
             }
 
@@ -75,7 +68,7 @@ namespace Hawaii.Cli.Models
             {
                 runtimeConfig = new RuntimeConfig(schema, dataSource, CosmosDb: cosmosDbOptions, MsSql: msSqlOptions,
                                                     PostgreSql: postgreSqlOptions, MySql: mySqlOptions,
-                                                    GetDefaultGlobalSettings(dbType, hostMode), new Dictionary<string, Entity>());
+                                                    GetDefaultGlobalSettings(dbType, options.HostMode), new Dictionary<string, Entity>());
             }
             catch (NotSupportedException e)
             {
@@ -83,7 +76,7 @@ namespace Hawaii.Cli.Models
                 return false;
             }
 
-            string? JSONresult = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
+            string JSONresult = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
 
             if (File.Exists(file))
             {
@@ -98,12 +91,16 @@ namespace Hawaii.Cli.Models
         /// This method will add a new Entity with the given REST and GraphQL endpoints, source, and permissions.
         /// It also supports fields that needs to be included or excluded for a given role and action.
         /// </summary>
-        public static bool AddEntitiesToConfig(string fileName, string entity,
-                                            object source, string permissions,
-                                            string? rest, string? graphQL,
-                                            string? fieldsToInclude, string? fieldsToExclude)
+        public static bool AddEntitiesToConfig(AddOptions options)
         {
-            string? file = $"{fileName}.json";
+            string source = options.Source;
+            string? rest = options.RestRoute;
+            string? graphQL = options.GraphQLType;
+            string permissions = options.Permissions;
+            string? fieldsToInclude = options.FieldsToInclude;
+            string? fieldsToExclude = options.FieldsToExclude;
+
+            string file = $"{options.Name}.json";
 
             if (!File.Exists(file))
             {
@@ -112,31 +109,31 @@ namespace Hawaii.Cli.Models
                 return false;
             }
 
-            string[]? permission_array = permissions.Split(":");
+            string[] permission_array = permissions.Split(":");
             if (permission_array.Length is not 2)
             {
                 Console.WriteLine("Please add permission in the following format. --permission \"<<role>>:<<actions>>\"");
                 return false;
             }
 
-            string? role = permission_array[0];
-            string? actions = permission_array[1];
-            PermissionSetting[]? permissionSettings = new PermissionSetting[] { CreatePermissions(role, actions, fieldsToInclude, fieldsToExclude) };
-            Entity? entity_details = new(source, GetRestDetails(rest), GetGraphQLDetails(graphQL), permissionSettings, Relationships: null, Mappings: null);
+            string role = permission_array[0];
+            string actions = permission_array[1];
+            PermissionSetting[] permissionSettings = new PermissionSetting[] { CreatePermissions(role, actions, fieldsToInclude, fieldsToExclude) };
+            Entity entity_details = new(source, GetRestDetails(rest), GetGraphQLDetails(graphQL), permissionSettings, Relationships: null, Mappings: null);
 
-            string? jsonString = File.ReadAllText(file);
-            JsonSerializerOptions? options = GetSerializationOptions();
+            string jsonString = File.ReadAllText(file);
+            JsonSerializerOptions jsonOption = GetSerializationOptions();
 
-            RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
+            RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(jsonString, jsonOption);
 
-            if (runtimeConfig!.Entities.ContainsKey(entity))
+            if (runtimeConfig.Entities.ContainsKey(options.Entity))
             {
-                Console.WriteLine($"WARNING: Entity-{entity} is already present. No new changes are added to Config.");
+                Console.WriteLine($"WARNING: Entity-{options.Entity} is already present. No new changes are added to Config.");
                 return false;
             }
 
-            runtimeConfig.Entities.Add(entity, entity_details);
-            string? JSONresult = JsonSerializer.Serialize(runtimeConfig, options);
+            runtimeConfig.Entities.Add(options.Entity, entity_details);
+            string JSONresult = JsonSerializer.Serialize(runtimeConfig, jsonOption);
             File.WriteAllText(file, JSONresult);
             return true;
         }
@@ -145,28 +142,36 @@ namespace Hawaii.Cli.Models
         /// This method will update an existing Entity with the given REST and GraphQL endpoints, source, and permissions.
         /// It also supports adding a new relationship as well as updating an existing one.
         /// </summary>
-        public static bool UpdateEntity(string fileName, string entity,
-                                            object? source, string? permissions,
-                                            string? rest, string? graphQL,
-                                            string? fieldsToInclude, string? fieldsToExclude,
-                                            string? relationship, string? cardinality,
-                                            string? targetEntity, string? linkingObject,
-                                            string? linkingSourceFields, string? linkingTargetFields,
-                                            string? mappingFields)
+        public static bool UpdateEntity(UpdateOptions options)
         {
 
-            string? file = $"{fileName}.json";
-            string? jsonString = File.ReadAllText(file);
-            JsonSerializerOptions? options = GetSerializationOptions();
+            string? source = options.Source;
+            string? rest = options.RestRoute;
+            string? graphQL = options.GraphQLType;
+            string? permissions = options.Permissions;
+            string? fieldsToInclude = options.FieldsToInclude;
+            string? fieldsToExclude = options.FieldsToExclude;
+            string? relationship = options.Relationship;
+            string? cardinality = options.Cardinality;
+            string? targetEntity = options.TargetEntity;
+            string? linkingObject = options.LinkingObject;
+            string? linkingSourceFields = options.LinkingSourceFields;
+            string? linkingTargetFields = options.LinkingTargetFields;
+            string? mappingFields = options.MappingFields;
 
-            RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
-            if (!runtimeConfig!.Entities.ContainsKey(entity))
+            string file = $"{options.Name}.json";
+            string jsonString = File.ReadAllText(file);
+
+            JsonSerializerOptions jsonOptions = GetSerializationOptions();
+
+            RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(jsonString, jsonOptions);
+            if (!runtimeConfig.Entities.ContainsKey(options.Entity))
             {
-                Console.WriteLine($"Entity:{entity} is not present. No new changes are added to Config.");
+                Console.WriteLine($"Entity:{options.Entity} is not present. No new changes are added to Config.");
                 return false;
             }
 
-            Entity? updatedEntity = runtimeConfig.Entities[entity];
+            Entity updatedEntity = runtimeConfig.Entities[options.Entity];
             if (source is not null)
             {
                 updatedEntity = new Entity(source, updatedEntity.Rest, updatedEntity.GraphQL, updatedEntity.Permissions, updatedEntity.Relationships, updatedEntity.Mappings);
@@ -184,37 +189,37 @@ namespace Hawaii.Cli.Models
 
             if (permissions is not null)
             {
-                string[]? permission_array = permissions.Split(":");
+                string[] permission_array = permissions.Split(":");
                 if (permission_array.Length is not 2)
                 {
                     Console.WriteLine("Please add permission in the following format. --permission \"<<role>>:<<actions>>\"");
                     return false;
                 }
 
-                string? new_role = permission_array[0];
-                string? new_action = permission_array[1];
+                string new_role = permission_array[0];
+                string new_action = permission_array[1];
                 PermissionSetting? dict = Array.Find(updatedEntity.Permissions, item => item.Role == new_role);
                 PermissionSetting[] updatedPermissions;
-                List<PermissionSetting>? permissionSettingsList = new();
+                List<PermissionSetting> permissionSettingsList = new();
                 if (dict is null)
                 {
                     updatedPermissions = AddNewPermissions(updatedEntity.Permissions, new_role, new_action, fieldsToInclude, fieldsToExclude);
                 }
                 else
                 {
-                    string[]? new_action_elements = new_action.Split(",");
+                    string[] new_action_elements = new_action.Split(",");
                     if (new_action_elements.Length > 1)
                     {
                         Console.WriteLine($"ERROR: we currently support updating only one action operation.");
                         return false;
                     }
 
-                    string? new_action_element = new_action;
-                    foreach (PermissionSetting? permission in updatedEntity.Permissions)
+                    string new_action_element = new_action;
+                    foreach (PermissionSetting permission in updatedEntity.Permissions)
                     {    //Loop through current permissions for an entity.
                         if (permission.Role == new_role)
                         { // Updating an existing permission
-                            string? operation = GetCRUDOperation((JsonElement)permission.Actions[0]);
+                            string operation = GetCRUDOperation((JsonElement)permission.Actions[0]);
                             if (permission.Actions.Length == 1 && "*".Equals(operation))
                             { // if the role had only one action and that is "*"
                                 if (operation == new_action_element)
@@ -222,24 +227,22 @@ namespace Hawaii.Cli.Models
                                     permissionSettingsList.Add(CreatePermissions(permission.Role, "*", fieldsToInclude, fieldsToExclude));
                                 }
                                 else
-                                {
-                                    // if the new action is other than "*"
-                                    List<ConfigAction>? action_list = new();
-
-                                    // Looping through all the CRUD operations and updating the one which is asked
-                                    foreach (string op in Enum.GetNames(typeof(CRUD)))
-                                    {
-                                        // If the current crud operation is equal to the asked crud operation
-                                        if (op.Equals(new_action_element, StringComparison.OrdinalIgnoreCase))
-                                        {
+                                { // if the new action is other than "*"
+                                    List<ConfigAction> action_list = new();
+                                    foreach (object crud in Enum.GetValues(typeof(CRUD)))
+                                    {      //looping through all the CRUD operations and updating the one which is asked
+                                        string op = crud.ToString();
+                                        if (op.Equals(new_action_element))
+                                        { //if the current crud operation is equal to the asked crud operation
                                             action_list.Add(GetAction(op, fieldsToInclude, fieldsToExclude));
                                         }
-                                        // Else we just create a new node and add it with existing properties
                                         else
-                                        {
+                                        {    // else we just create a new node and add it with existing properties
+                                            string[]? currentFieldsToInclude = null;
+                                            string[]? currentFieldsToExclude = null;
                                             if (!JsonValueKind.String.Equals(((JsonElement)permission.Actions[0]).ValueKind))
                                             {
-                                                Field? fields_dict = ((ConfigAction)permission.Actions[0]).Fields;
+                                                Field fields_dict = ((ConfigAction)permission.Actions[0]).Fields;
                                                 action_list.Add(new ConfigAction(op, Policy: null, Fields: new Field(fields_dict.Include, fields_dict.Exclude)));
                                             }
 
@@ -308,9 +311,9 @@ namespace Hawaii.Cli.Models
                 //if it's an existing relation
                 if (updatedEntity.Relationships is not null && updatedEntity.Relationships.ContainsKey(relationship))
                 {
-                    Relationship? currentRelationship = updatedEntity.Relationships[relationship];
-                    Dictionary<string, Relationship>? relationship_mapping = new();
-                    Relationship? updatedRelationship = currentRelationship;
+                    Relationship currentRelationship = updatedEntity.Relationships[relationship];
+                    Dictionary<string, Relationship> relationship_mapping = new();
+                    Relationship updatedRelationship = currentRelationship;
                     if (cardinality is not null)
                     {
                         Cardinality cardinalityType;
@@ -343,7 +346,7 @@ namespace Hawaii.Cli.Models
                 {    // if it's a new relationship
                     if (cardinality is not null && targetEntity is not null)
                     {
-                        Dictionary<string, Relationship>? relationship_mapping = updatedEntity.Relationships is null ? new Dictionary<string, Relationship>() : updatedEntity.Relationships;
+                        Dictionary<string, Relationship> relationship_mapping = updatedEntity.Relationships is null ? new Dictionary<string, Relationship>() : updatedEntity.Relationships;
                         Cardinality cardinalityType;
                         try
                         {
@@ -391,7 +394,7 @@ namespace Hawaii.Cli.Models
                     sourceFields = sourceAndTargetFields[0].Split(",");
                     targetFields = sourceAndTargetFields[1].Split(",");
 
-                    Relationship? updatedRelationship = updatedEntity.Relationships[relationship];
+                    Relationship updatedRelationship = updatedEntity.Relationships[relationship];
                     updatedRelationship = new Relationship(updatedRelationship.Cardinality, updatedRelationship.TargetEntity,
                                                             sourceFields, targetFields, updatedRelationship.LinkingObject,
                                                             updatedRelationship.LinkingSourceFields, updatedRelationship.LinkingTargetFields);
@@ -401,10 +404,10 @@ namespace Hawaii.Cli.Models
 
                 if (linkingObject is not null && linkingSourceFields is not null && linkingTargetFields is not null)
                 {
-                    string[]? linkingSourceFieldsArray = linkingSourceFields.Split(",");
-                    string[]? linkingTargetFieldsArray = linkingTargetFields.Split(",");
+                    string[] linkingSourceFieldsArray = linkingSourceFields.Split(",");
+                    string[] linkingTargetFieldsArray = linkingTargetFields.Split(",");
 
-                    Relationship? updatedRelationship = updatedEntity.Relationships[relationship];
+                    Relationship updatedRelationship = updatedEntity.Relationships[relationship];
                     updatedRelationship = new Relationship(updatedRelationship.Cardinality, updatedRelationship.TargetEntity,
                                                             updatedRelationship.SourceFields, updatedRelationship.TargetFields,
                                                             linkingObject, linkingSourceFieldsArray, linkingTargetFieldsArray);
@@ -419,8 +422,8 @@ namespace Hawaii.Cli.Models
 
             }
 
-            runtimeConfig.Entities[entity] = updatedEntity;
-            string? JSONresult = JsonSerializer.Serialize(runtimeConfig, options);
+            runtimeConfig.Entities[options.Entity] = updatedEntity;
+            string JSONresult = JsonSerializer.Serialize(runtimeConfig, jsonOptions);
             File.WriteAllText(file, JSONresult);
             return true;
         }

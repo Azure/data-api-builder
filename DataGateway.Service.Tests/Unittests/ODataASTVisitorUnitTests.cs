@@ -11,7 +11,7 @@ using Microsoft.OData.UriParser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
-namespace Azure.DataGateway.Service.Tests.Unittests
+namespace Azure.DataGateway.Service.Tests.UnitTests
 {
     /// <summary>
     /// Unit tests for ODataASTVisitor.cs.

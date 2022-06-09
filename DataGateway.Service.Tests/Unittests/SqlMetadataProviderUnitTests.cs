@@ -1,7 +1,7 @@
 using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataGateway.Service.Tests.Unittests
+namespace Azure.DataGateway.Service.Tests.UnitTests
 {
     /// <summary>
     /// Units testing for our connection string parser

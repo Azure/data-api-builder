@@ -9,7 +9,7 @@ using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
-namespace Azure.DataGateway.Service.Tests.Unittests
+namespace Azure.DataGateway.Service.Tests.UnitTests
 {
     /// <summary>
     /// Unit tests for RequestValidator.cs. Makes sure the proper primary key validation

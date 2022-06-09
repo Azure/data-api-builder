@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
-namespace Azure.DataGateway.Service.Tests.Unittests
+namespace Azure.DataGateway.Service.Tests.UnitTests
 {
     /// <summary>
     /// Unit Test class for DbExceptionParserBase

@@ -6,7 +6,7 @@ using Azure.DataGateway.Service.Models;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataGateway.Service.Tests.Unittests
+namespace Azure.DataGateway.Service.Tests.UnitTests
 {
     /// <summary>
     /// Unit Tests for targetting code paths in Request

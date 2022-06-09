@@ -160,11 +160,12 @@ namespace Azure.DataGateway.Service.Models
 
         /// <summary>
         /// Modifies the contents of FieldsToBeReturned.
+        /// This method is only called when FieldsToBeReturned is empty.
         /// </summary>
         /// <param name="fields">Collection of fields to be returned.</param>
         public void UpdateReturnFields(IEnumerable<string> fields)
         {
-            FieldsToBeReturned = FieldsToBeReturned.Union(fields).ToList();
+            FieldsToBeReturned = fields.ToList();
         }
     }
 }

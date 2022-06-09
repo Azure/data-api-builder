@@ -140,7 +140,7 @@ namespace Azure.DataGateway.Service.Services
                 // This helps the ODataVisitor helpers to parse the policy text properly.
                 dbPolicy = "?$filter=" + dbPolicy;
 
-                // Parse and saves the values that are needed to later generate queries in the given RestRequestContext.
+                // Parse and save the values that are needed to later generate queries in the given RestRequestContext.
                 context.FilterClauseInDbPolicy = _sqlMetadataProvider.GetODataFilterParser().GetFilterClause(dbPolicy, $"{context.DatabaseObject.FullName}");
 
             }
@@ -287,10 +287,10 @@ namespace Azure.DataGateway.Service.Services
 
         /// <summary>
         /// Converts httpverb type of a RestRequestContext object to the
-        /// matching CRUD operation(s), to facilitate authorization checks.
+        /// matching CRUD operation, to facilitate authorization checks.
         /// </summary>
         /// <param name="httpVerb"></param>
-        /// <returns>A collection of ActionTypes resolved from the http verb type of the request.</returns>
+        /// <returns>The CRUD operation for the given httpverb.</returns>
         private static string HttpVerbToActions(OperationAuthorizationRequirement httpVerb)
         {
             string httpVerbName = httpVerb.Name;
@@ -301,6 +301,8 @@ namespace Azure.DataGateway.Service.Services
 
             if (httpVerbName.Equals("PUT") || httpVerbName.Equals("PATCH"))
             {
+                // Please refer to the use of this method, which is to look out for policy based on crud operation type.
+                // Since create doesn't need filters, PUT/PATCH would resolve to update operation.
                 return "update";
             }
 

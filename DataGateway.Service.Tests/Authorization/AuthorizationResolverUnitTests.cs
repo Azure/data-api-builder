@@ -183,8 +183,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 TEST_ROLE,
                 TEST_ACTION,
                 includedCols: new string[] { "*" },
-                excludedCols: new string[] { "col1", "col2" },
-                databasePolicy: "@claims.col2 eq @item.col2"
+                excludedCols: new string[] { "col1", "col2" }
                 );
             AuthorizationResolver authZResolver = InitAuthZResolver(runtimeConfig);
 

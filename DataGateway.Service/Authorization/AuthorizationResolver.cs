@@ -358,7 +358,10 @@ namespace Azure.DataGateway.Service.Authorization
                     string claimValue = claim.Value;
                     string claimValueType = claim.ValueType;
                     int claimIdx = claimType.Index;
-                    policyWithClaims.Append(policy.Substring(parsedIdx, claimIdx - parsedIdx).Replace("@item.", ""));
+                    policyWithClaims.Append(policy.Substring(parsedIdx, claimIdx - parsedIdx));
+
+                    // Check if the claim has an allowed data type. If it does, add it to the policyWithClaims string,
+                    // throw an exception otherwise.
                     if (claimValueType.Equals(ClaimValueTypes.String))
                     {
                         policyWithClaims.Append($"'{claimValue}'");
@@ -396,9 +399,11 @@ namespace Azure.DataGateway.Service.Authorization
             // Append if there is any.
             if (parsedIdx < policy.Length)
             {
-                policyWithClaims.Append(policy.Substring(parsedIdx).Replace("@item.", ""));
+                policyWithClaims.Append(policy.Substring(parsedIdx));
             }
 
+            //Remove @item. occurences from the policy string
+            policyWithClaims.Replace("@item.", "");
             return policyWithClaims.ToString();
         }
         #endregion

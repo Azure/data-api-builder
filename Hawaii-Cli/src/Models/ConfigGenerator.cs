@@ -16,7 +16,6 @@ namespace Hawaii.Cli.Models
         public static bool GenerateConfig(InitOptions options)
         {
             string connectionString = options.ConnectionString;
-            string? resolverConfigFile = options.ResolverConfigFile;
 
             DatabaseType dbType = options.DatabaseType;
 
@@ -37,13 +36,16 @@ namespace Hawaii.Cli.Models
             switch (dbType)
             {
                 case DatabaseType.cosmos:
-                    if (resolverConfigFile is null)
+                    string? cosmosDatabase = options.CosmosDatabase;
+                    string? cosmosContainer = options.CosmosContainer;
+                    string? graphQLSchemaPath = options.GraphQLSchemaPath;
+                    if (string.IsNullOrEmpty(cosmosDatabase) || string.IsNullOrEmpty(graphQLSchemaPath))
                     {
-                        Console.WriteLine($"resolver-config-file: ${resolverConfigFile} not supported.Please provide a valid Resolver Config File for CosmosDB.");
+                        Console.WriteLine($"Please provide all the mandatory options for CosmosDB: --cosmos-database, --graphql-schema");
                         return false;
                     }
 
-                    cosmosDbOptions = new CosmosDbOptions(dbType.ToString(), resolverConfigFile);
+                    cosmosDbOptions = new CosmosDbOptions(cosmosDatabase, cosmosContainer, graphQLSchemaPath);
                     break;
 
                 case DatabaseType.mssql:
@@ -238,15 +240,14 @@ namespace Hawaii.Cli.Models
                                         }
                                         else
                                         {    // else we just create a new node and add it with existing properties
-                                            string[]? currentFieldsToInclude = null;
-                                            string[]? currentFieldsToExclude = null;
                                             if (!JsonValueKind.String.Equals(((JsonElement)permission.Actions[0]).ValueKind))
                                             {
-                                                Field fields_dict = ((ConfigAction)permission.Actions[0]).Fields;
+                                                Field fields_dict = (ToActionObject((JsonElement)permission.Actions[0])).Fields;
                                                 action_list.Add(new ConfigAction(op, Policy: null, Fields: new Field(fields_dict.Include, fields_dict.Exclude)));
                                             }
-
-                                            action_list.Add(new ConfigAction(op, Policy: null, Fields: null));
+                                            else {
+                                                action_list.Add(new ConfigAction(op, Policy: null, Fields: null));
+                                            }
                                         }
                                     }
 

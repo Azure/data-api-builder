@@ -6,7 +6,7 @@ namespace Hawaii.Cli
     /// <summary>
     /// Main class for CLI
     /// </summary>
-    class Program
+    public class Program
     {
         /// <summary>
         /// Main CLI entry point

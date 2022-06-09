@@ -14,7 +14,7 @@
 *.code-workspace
 
 # Nuget package
-/nupkg
+**/nupkg
 
 #generated json file for testing
 *.json

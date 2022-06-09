@@ -1,4 +1,4 @@
-using Azure.DataGateway.Config;
+﻿using Azure.DataGateway.Config;
 using CommandLine;
 
 namespace Hawaii.Cli.Models
@@ -23,23 +23,38 @@ namespace Hawaii.Cli.Models
     [Verb("init", isDefault: false, HelpText = "Initialize configuration file.", Hidden = false)]
     public class InitOptions : Options
     {
-        public InitOptions(DatabaseType databaseType, string connectionString, string resolverConfigFile, HostModeType hostMode, string name)
+        public InitOptions(
+            DatabaseType databaseType,
+            string connectionString,
+            string? cosmosDatabase,
+            string? cosmosContainer,
+            string? graphQLSchemaPath,
+            HostModeType hostMode,
+            string name)
             : base(name)
         {
             this.DatabaseType = databaseType;
             this.ConnectionString = connectionString;
-            this.ResolverConfigFile = resolverConfigFile;
+            this.CosmosDatabase = cosmosDatabase;
+            this.CosmosContainer = cosmosContainer;
+            this.GraphQLSchemaPath = graphQLSchemaPath;
             this.HostMode = hostMode;
         }
 
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmos, mysql, postgresql")]
         public DatabaseType DatabaseType { get; }
 
-        [Option("connection-string", Required = true, HelpText = "Connection details to connect to database.")]
+        [Option("connection-string", Required = true, HelpText = "Connection details to connect to the database.")]
         public string ConnectionString { get; }
 
-        [Option("resolver-config-file", Default = (string)"hawaii-resolver-config.json", Required = false, HelpText = "Path of the file to resolve the configuration for CosmosDB.")]
-        public string ResolverConfigFile { get; }
+        [Option("cosmos-database", Required = false, HelpText = "Database name for Cosmos DB.")]
+        public string? CosmosDatabase { get; }
+
+        [Option("cosmos-container", Required = false, HelpText = "Container name for Cosmos DB.")]
+        public string? CosmosContainer { get; }
+
+        [Option("graphql-schema", Required = false, HelpText = "GraphQL schema Path.")]
+        public string? GraphQLSchemaPath { get; }
 
         [Option("host-mode", Default = HostModeType.Production, Required = false, HelpText = "Specify the Host mode - Development or Production")]
         public HostModeType HostMode { get; }

@@ -1,12 +1,10 @@
 using System.Threading.Tasks;
-using Azure.DataGateway.Config;
-using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
 {
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
-    public class PostgreSqlMetadataProviderTests : SqlTestBase
+    public class PostgreSqlMetadataProviderTests : SqlMetadataProviderUnitTests
     {
         /// <summary>
         /// <code>Do: </code> Fills the table definition with information of the foreign keys
@@ -14,12 +12,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code> Making sure no exception is thrown if there are no Foriegn Keys.
         /// </summary>
         [TestMethod]
-        public async Task CheckNoExceptionForNoForiegnKey()
+        public async Task CheckNoExceptionForNoForiegnKeyPostgreSql()
         {
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath = SqlTestHelper.LoadConfig(TestCategory.POSTGRESQL);
-            SqlTestHelper.RemoveAllRelationshipBetweenEntities(runtimeConfigPath);
-            SetUpSQLMetadataProvider(runtimeConfigPath, TestCategory.POSTGRESQL);
-            await _sqlMetadataProvider.InitializeAsync();
+            await CheckNoExceptionForNoForiegnKey(TestCategory.POSTGRESQL);
         }
     }
 }

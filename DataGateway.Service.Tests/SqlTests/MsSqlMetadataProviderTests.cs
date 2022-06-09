@@ -6,7 +6,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Azure.DataGateway.Service.Tests.SqlTests
 {
     [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class MsSqlMetadataProviderTests : SqlTestBase
+    public class MsSqlMetadataProviderTests : SqlMetadataProviderUnitTests
     {
         /// <summary>
         /// <code>Do: </code> Fills the table definition with information of the foreign keys
@@ -14,12 +14,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <code>Check: </code> Making sure no exception is thrown if there are no Foriegn Keys.
         /// </summary>
         [TestMethod]
-        public async Task CheckNoExceptionForNoForiegnKey()
+        public async Task CheckNoExceptionForNoForiegnKeyMsSql()
         {
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath = SqlTestHelper.LoadConfig(TestCategory.MSSQL);
-            SqlTestHelper.RemoveAllRelationshipBetweenEntities(runtimeConfigPath);
-            SetUpSQLMetadataProvider(runtimeConfigPath, TestCategory.MSSQL);
-            await _sqlMetadataProvider.InitializeAsync();
+            await CheckNoExceptionForNoForiegnKey(TestCategory.MSSQL);
         }
     }
 }

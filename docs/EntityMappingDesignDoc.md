@@ -36,7 +36,7 @@ This example is given to highlight some of the potential pitfalls when dealing w
 | ident             | ident             | identity        |
 | num               | num               | number          |
 | number            |                   |                 |
-| address           | address           | adress          |
+| address           | address           | address          |
 
 ### FilterParser.cs
 >This class is called as a part of model generation and so must pass along the mappings that we need to pull out the correct aliasing.

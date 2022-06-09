@@ -310,7 +310,8 @@ namespace Azure.DataGateway.Service.Authorization
             // Pre-process the policy to replace "( " with "(", i.e. remove
             // extra spaces after opening parenthesis. This will prevent allowed claimTypes
             // from being invalidated.
-            policy = policy.Replace("( ", "(");
+            string reduntantSpaceRgx = @"\(\s*";
+            policy = Regex.Replace(policy, reduntantSpaceRgx, "(");
             // Find all the claimTypes from the policy
             MatchCollection claimTypes = Regex.Matches(policy, claimCharsRgx);
 
@@ -327,7 +328,7 @@ namespace Azure.DataGateway.Service.Authorization
                 // Remove the prefix @claims. from the claimType
                 string typeOfClaimWithOpParenthesis = claimType.Value.Substring("@claims.".Length);
 
-                //typeOfClaimWithParenthesis may contain parenthesis. typeOfClaim would be devoid of it.
+                //Process typeOfClaimWithParenthesis to remove opening parenthesis.
                 string typeOfClaim = GetClaimTypeWithoutOpeningParenthesis(typeOfClaimWithOpParenthesis);
 
                 if (string.Empty.Equals(typeOfClaim))

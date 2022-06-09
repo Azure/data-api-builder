@@ -358,7 +358,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         [DataRow("(@claims.isemployee eq @item.col1 and @item.col2 ne @claims.user_email) or" +
             " ('David' ne @item.col3 and @claims.(((contact_no))) ne 4321)", "(true eq col1 and col2 ne 'xyz@microsoft.com') or" +
             " ('David' ne col3 and 1234 ne 4321)")]
-        [DataRow("(@item.rating gt @claims.( ((emprating)))) and (@claims.((((isemployee)))) eq true)", "(rating gt 4.2) and (true eq true)")]
+        [DataRow("(@item.rating gt @claims.(  ((emprating)))) and (@claims.((((isemployee)))) eq true)", "(rating gt 4.2) and (true eq true)")]
         [DataRow("@item.rating eq @claims.(emprating))","rating eq 4.2)")]
         public void ParseValidDbPolicy(string policy, string expectedParsedPolicy)
         {

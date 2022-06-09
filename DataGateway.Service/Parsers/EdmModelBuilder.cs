@@ -50,7 +50,7 @@ namespace Azure.DataGateway.Service.Parsers
             {
                 // given an entity Publisher with schema.table of dbo.publishers
                 // entitySourceName = dbo.publishers
-                // newENtityKey = Publisher.dbo.publishers
+                // newEntityKey = Publisher.dbo.publishers
                 string entitySourceName = $"{entityAndDbObject.Value.FullName}";
                 string newEntityKey = $"{entityAndDbObject.Key}.{entitySourceName}";
                 EdmEntityType newEntity = new(DEFAULT_NAMESPACE, newEntityKey);

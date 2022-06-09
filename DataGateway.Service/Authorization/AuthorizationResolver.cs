@@ -131,34 +131,28 @@ namespace Azure.DataGateway.Service.Authorization
         public string TryProcessDBPolicy(string entityName, string roleName, string action, HttpContext httpContext)
         {
             string dBpolicyWithClaimTypes = GetDBPolicyForRequest(entityName, roleName, action);
-            if (string.IsNullOrWhiteSpace(dBpolicyWithClaimTypes))
-            {
-                //No db policy specified in the config.
-                return String.Empty;
-            }
-
-            string dbPolicyWithClaimValues = ProcessTokenClaimsForPolicy(dBpolicyWithClaimTypes, httpContext);
-
-            return dbPolicyWithClaimValues;
+            return string.IsNullOrWhiteSpace(dBpolicyWithClaimTypes) ? string.Empty :
+                   ProcessTokenClaimsForPolicy(dBpolicyWithClaimTypes, httpContext);
         }
 
         /// <summary>
         /// Helper function to fetch the database policy associated with the current request based on the entity under
         /// action, the role defined in the the request and the action to be executed.
         /// </summary>
-        /// <param name="entityName">Entity from request</param>
-        /// <param name="roleName">Role defined in client role header</param>
-        /// <param name="action">Action type: create, read, update, delete</param>
+        /// <param name="entityName">Entity from request.</param>
+        /// <param name="roleName">Role defined in client role header.</param>
+        /// <param name="action">Action type: create, read, update, delete.</param>
         /// <returns></returns>
         private string GetDBPolicyForRequest(string entityName, string roleName, string action)
         {
-            string? dbPolicy = _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action].database;
-            if (dbPolicy is not null)
-            {
-                return dbPolicy;
-            }
+            // Fetch the database policy by using the sequence of following steps:
+            // _entityPermissionMap[entityName] finds the entityMetaData for the current entityName
+            // entityMetaData.RoleToActionMap[roleName] finds the roleMetaData for the current roleName
+            // roleMetaData.ActionToColumnMap[action] finds the actionMetaData for the current action
+            // actionMetaData.database finds the required database policy
 
-            return string.Empty;
+            string? dbPolicy = _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action].database;
+            return dbPolicy is not null ? dbPolicy : string.Empty;
         }
 
         #region Helpers
@@ -208,12 +202,9 @@ namespace Azure.DataGateway.Service.Authorization
                                     actionToColumn.excluded = new(actionObj.Fields.Exclude);
                                 }
 
-                                if (actionObj.Policy is not null)
+                                if (actionObj.Policy is not null && actionObj.Policy.Database is not null)
                                 {
-                                    if (actionObj.Policy.Database is not null)
-                                    {
-                                        actionToColumn.database = actionObj.Policy.Database;
-                                    }
+                                    actionToColumn.database = actionObj.Policy.Database;
                                 }
                             }
                         }
@@ -235,12 +226,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// <returns></returns>
         private static bool IsValidActionName(string actionName)
         {
-            if (actionName.Equals(WILDCARD) || _validActions.Contains(actionName))
-            {
-                return true;
-            }
-
-            return false;
+            return actionName.Equals(WILDCARD) || _validActions.Contains(actionName);
         }
 
         /// <summary>
@@ -252,8 +238,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// <returns>Processed policy string that can be injected into the HttpContext object.</returns>
         private static string ProcessTokenClaimsForPolicy(string policy, HttpContext context)
         {
-            Dictionary<string, Claim> claimsInRequestContext = new();
-            PopulateAllClaimsInReqCtxt(context, claimsInRequestContext);
+            Dictionary<string, Claim> claimsInRequestContext = PopulateAllClaimsInReqCtxt(context);
             policy = GetPolicyWithClaimValues(policy, claimsInRequestContext);
             return policy;
         }
@@ -265,13 +250,14 @@ namespace Azure.DataGateway.Service.Authorization
         /// </summary>
         /// <param name="context">HttpContext object used to extract all the claims available in the request.</param>
         /// <param name="claimsInRequestContext">Dictionary to hold all the claims available in the request.</param>
-        private static void PopulateAllClaimsInReqCtxt(HttpContext context, Dictionary<string, Claim> claimsInRequestContext)
+        private static Dictionary<string, Claim> PopulateAllClaimsInReqCtxt(HttpContext context)
         {
+            Dictionary<string, Claim> claimsInRequestContext = new();
             ClaimsIdentity? identity = (ClaimsIdentity?)context.User.Identity;
 
             if (identity is null)
             {
-                return;
+                return claimsInRequestContext;
             }
 
             foreach (Claim claim in identity.Claims)
@@ -298,6 +284,8 @@ namespace Azure.DataGateway.Service.Authorization
                         );
                 }
             }
+
+            return claimsInRequestContext;
         }
 
         /// <summary>
@@ -349,37 +337,14 @@ namespace Azure.DataGateway.Service.Authorization
 
                 if (claimsInRequestContext.TryGetValue(typeOfClaim, out Claim? claim))
                 {
-                    /* An example claim would be of format:
-                     * claim.Type: "user_email"
-                     * claim.Value: "authz@microsoft.com"
-                     * claim.ValueType: "string"
-                     */
-
-                    string claimValue = claim.Value;
-                    string claimValueType = claim.ValueType;
                     int claimIdx = claimType.Index;
+
+                    // Append the portion of policy string between the current and the previous @claims.*** claimType
+                    // to the resulting policy string
                     policyWithClaims.Append(policy.Substring(parsedIdx, claimIdx - parsedIdx));
 
-                    // Check if the claim has an allowed data type. If it does, add it to the policyWithClaims string,
-                    // throw an exception otherwise.
-                    if (claimValueType.Equals(ClaimValueTypes.String))
-                    {
-                        policyWithClaims.Append($"'{claimValue}'");
-                    }
-                    else if (claimValueType.Equals(ClaimValueTypes.Boolean) || claimValueType.Equals(ClaimValueTypes.Integer32)
-                        || claimValueType.Equals(ClaimValueTypes.Integer64) || claimValueType.Equals(ClaimValueTypes.Double))
-                    {
-                        policyWithClaims.Append(claimValue);
-                    }
-                    else
-                    {
-                        // One of the claims in the request had unsupported data type.
-                        throw new DataGatewayException(
-                            message: "One or more claims have data types which are not supported yet.",
-                            statusCode: System.Net.HttpStatusCode.Forbidden,
-                            subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
-                        );
-                    }
+                    // Append the claimValue to the resulting policy string
+                    policyWithClaims.Append(GetClaimValueByDataType(claim));
 
                     // Move the parsedIdx to the index following a claimType in the policy string
                     parsedIdx = claimIdx + claimType.Value.Length;
@@ -405,6 +370,35 @@ namespace Azure.DataGateway.Service.Authorization
             //Remove @item. occurences from the policy string
             policyWithClaims.Replace("@item.", "");
             return policyWithClaims.ToString();
+        }
+        private static string GetClaimValueByDataType(Claim claim)
+        {
+            /* An example claim would be of format:
+             * claim.Type: "user_email"
+             * claim.Value: "authz@microsoft.com"
+             * claim.ValueType: "string"
+             */
+
+            string claimValue = claim.Value;
+            string claimValueType = claim.ValueType;
+
+            switch (claimValueType)
+            {
+                case ClaimValueTypes.String:
+                    return $"'{claimValue}'";
+                case ClaimValueTypes.Boolean:
+                case ClaimValueTypes.Integer32:
+                case ClaimValueTypes.Integer64:
+                case ClaimValueTypes.Double:
+                    return claimValue;
+                default:
+                    // One of the claims in the request had unsupported data type.
+                    throw new DataGatewayException(
+                        message: "One or more claims have data types which are not supported yet.",
+                        statusCode: System.Net.HttpStatusCode.Forbidden,
+                        subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
+                    );
+            }
         }
         #endregion
     }

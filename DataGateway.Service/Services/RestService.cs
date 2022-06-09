@@ -129,10 +129,9 @@ namespace Azure.DataGateway.Service.Services
                     _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey);
             }
 
-            string entity = context.EntityName;
             string role = GetHttpContext().Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-            string action = HttpVerbToActions(GetHttpVerb(operationType));
-            string dbPolicy = _authorizationResolver.TryProcessDBPolicy(entity, role, action, GetHttpContext());
+            string action = HttpVerbToActions(GetHttpVerb(operationType).Name);
+            string dbPolicy = _authorizationResolver.TryProcessDBPolicy(entityName, role, action, GetHttpContext());
             if (!string.IsNullOrEmpty(dbPolicy))
             {
                 // Since dbPolicy is nothing but filters to be added by virtue of database policy, we prefix it with
@@ -141,6 +140,7 @@ namespace Azure.DataGateway.Service.Services
                 dbPolicy = "?$filter=" + dbPolicy;
 
                 // Parse and save the values that are needed to later generate queries in the given RestRequestContext.
+                // FilterClauseInDbPolicy is an Abstract Syntax Tree representing the parsed policy text.
                 context.FilterClauseInDbPolicy = _sqlMetadataProvider.GetODataFilterParser().GetFilterClause(dbPolicy, $"{context.DatabaseObject.FullName}");
 
             }
@@ -291,36 +291,28 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="httpVerb"></param>
         /// <returns>The CRUD operation for the given httpverb.</returns>
-        private static string HttpVerbToActions(OperationAuthorizationRequirement httpVerb)
+        private static string HttpVerbToActions(string httpVerbName)
         {
-            string httpVerbName = httpVerb.Name;
-            if (httpVerbName.Equals("POST"))
+            switch (httpVerbName)
             {
-                return "create";
-            }
-
-            if (httpVerbName.Equals("PUT") || httpVerbName.Equals("PATCH"))
-            {
-                // Please refer to the use of this method, which is to look out for policy based on crud operation type.
-                // Since create doesn't need filters, PUT/PATCH would resolve to update operation.
-                return "update";
-            }
-
-            if (httpVerbName.Equals("DELETE"))
-            {
-                return "delete";
-            }
-
-            if (httpVerbName.Equals("GET"))
-            {
-                return "read";
-            }
-
-            throw new DataGatewayException(
+                case "POST":
+                    return "create";
+                case "PUT":
+                case "PATCH":
+                    // Please refer to the use of this method, which is to look out for policy based on crud operation type.
+                    // Since create doesn't need filters, PUT/PATCH would resolve to update operation.
+                    return "update";
+                case "DELETE":
+                    return "delete";
+                case "GET":
+                    return "read";
+                default:
+                    throw new DataGatewayException(
                         message: "Unsupported operation type.",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataGatewayException.SubStatusCodes.BadRequest
                     );
+            }
         }
     }
 }

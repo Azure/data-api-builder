@@ -52,6 +52,16 @@ namespace Azure.DataGateway.Config
         }
 
         /// <summary>
+        /// Returns whether or not this RuntimeConfigPath
+        /// is in developer mode.
+        /// </summary>
+        /// <returns>True for dev mode, false otherwise.</returns>
+        public virtual bool IsDeveloperMode()
+        {
+            return ConfigValue!.HostGlobalSettings.Mode is HostModeType.Development;
+        }
+
+        /// <summary>
         /// Extract the values from the config file.
         /// Assumes the config value is set and non-null.
         /// </summary>

@@ -1,7 +1,6 @@
 using System;
 using System.Data.Common;
 using System.Net;
-using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 

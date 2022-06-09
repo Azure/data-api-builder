@@ -356,9 +356,10 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         [DataRow("@claims.user_email ne @item.col1 and @claims.contact_no eq @item.col2 and not(@claims.name eq @item.col3)",
             "'xyz@microsoft.com' ne col1 and 1234 eq col2 and not('Aaron' eq col3)")]
         [DataRow("(@claims.isemployee eq @item.col1 and @item.col2 ne @claims.user_email) or" +
-            " ('David' ne @item.col3 and @claims.contact_no ne 4321)", "(true eq col1 and col2 ne 'xyz@microsoft.com') or" +
+            " ('David' ne @item.col3 and @claims.(((contact_no))) ne 4321)", "(true eq col1 and col2 ne 'xyz@microsoft.com') or" +
             " ('David' ne col3 and 1234 ne 4321)")]
-        [DataRow("@item.rating gt @claims.emprating and @claims.isemployee eq true", "rating gt 4.2 and true eq true")]
+        [DataRow("(@item.rating gt @claims.( ((emprating)))) and (@claims.((((isemployee)))) eq true)", "(rating gt 4.2) and (true eq true)")]
+        [DataRow("@item.rating eq @claims.(emprating))","rating eq 4.2)")]
         public void ParseValidDbPolicy(string policy, string expectedParsedPolicy)
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
@@ -438,8 +439,11 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// <param name="policy">The policy to be parsed.</param>
         [DataTestMethod]
         [DataRow("@claims.user_email eq @item.col1 and @claims.emp/rating eq @item.col2")]
+        [DataRow("@claims.user$email eq @item.col1 and @claims.emp_rating eq @item.col2")]
         [DataRow("@claims.user_email eq @item.col1 and not ( true eq @claims.isemp%loyee or @claims.name eq 'Aaron')")]
         [DataRow("@claims.user+email eq @item.col1 and @claims.isemployee eq @item.col2")]
+        [DataRow("@claims.user_email eq @item.col1 and @claims.((isemployee eq @item.col2")]
+        [DataRow("@claims.user_email eq @item.col1 and @item.col2 eq @claims.((isemployee ))")]
         public void ParseInvalidDbPolicyWithInvalidClaimTypeFormat(string policy)
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(

@@ -25,6 +25,11 @@ namespace Azure.DataGateway.Service.Authorization
         private const string WILDCARD = "*";
         private static readonly HashSet<string> _validActions = new() { "create", "read", "update", "delete" };
 
+        // Regex to check if extracted claimType is invalid. It checks if the string contains any character
+        // other than a-z,A-Z,0-9,_,. .. if it does, than thats an invalid claimType.
+        private static readonly string _invalidChars = @"[^a-zA-Z0-9_\.]+";
+        private static readonly Regex _invalidCharsRgx = new(_invalidChars, RegexOptions.Compiled);
+
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
 
         public AuthorizationResolver(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
@@ -300,13 +305,12 @@ namespace Azure.DataGateway.Service.Authorization
         {
             // Regex used to extract all claimTypes in policy. It finds all the substrings which are
             // of the form @claims.*** delimited by space character,end of the line or end of the string.
-            string claimCharsRgx = @"@claims\.[^\s\)$]*";
+            string claimCharsRgx = @"@claims\.[^\s\)]*";
 
-            // Regex to check if extracted claimType is invalid. It checks if the string contains any character
-            // other than a-z,A-Z,0-9,_,. .. if it does, than thats an invalid claimType.
-            string invalidChars = @"[^a-zA-Z0-9_\.]+";
-            Regex invalidCharsRgx = new(invalidChars, RegexOptions.Compiled);
-
+            // Pre-process the policy to replace "( " with "(", i.e. remove
+            // extra spaces after opening parenthesis. This will prevent allowed claimTypes
+            // from being invalidated.
+            policy = policy.Replace("( ", "(");
             // Find all the claimTypes from the policy
             MatchCollection claimTypes = Regex.Matches(policy, claimCharsRgx);
 
@@ -314,18 +318,29 @@ namespace Azure.DataGateway.Service.Authorization
             // string, hence starting with an estimate of 2*length.
             StringBuilder policyWithClaims = new(2 * policy.Length);
 
-            // parsedIdx indicates the index from which we need to append to the
-            // resulting policy with claim values substituted.
+            // parsedIdx indicates the last index int the policy string from which we need to append to the
+            // resulting policy.
             int parsedIdx = 0;
 
             foreach (Match claimType in claimTypes)
             {
-                string typeOfClaim = claimType.Value;
-
                 // Remove the prefix @claims. from the claimType
-                typeOfClaim = typeOfClaim.Substring("@claims.".Length);
+                string typeOfClaimWithOpParenthesis = claimType.Value.Substring("@claims.".Length);
 
-                if (invalidCharsRgx.IsMatch(typeOfClaim))
+                //typeOfClaimWithParenthesis may contain parenthesis. typeOfClaim would be devoid of it.
+                string typeOfClaim = GetClaimTypeWithoutOpeningParenthesis(typeOfClaimWithOpParenthesis);
+
+                if (string.Empty.Equals(typeOfClaim))
+                {
+                    // Empty claimType is not allowed
+                    throw new DataGatewayException(
+                        message: $"Invalid format for claim type {typeOfClaim} supplied in policy.",
+                        statusCode: System.Net.HttpStatusCode.InternalServerError,
+                        subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError
+                        );
+                }
+
+                if (_invalidCharsRgx.IsMatch(typeOfClaim))
                 {
                     // Not a valid claimType containing allowed characters
                     throw new DataGatewayException(
@@ -348,6 +363,37 @@ namespace Azure.DataGateway.Service.Authorization
 
                     // Move the parsedIdx to the index following a claimType in the policy string
                     parsedIdx = claimIdx + claimType.Value.Length;
+
+                    // Expected number of closing parenthesis after the claimType,
+                    // equal to the number of opening parenthesis before the claimType.
+                    int expNumClosingParenthesis = typeOfClaimWithOpParenthesis.Length - typeOfClaim.Length ;
+
+                    // Ensure that there are atleast expectedNumClosingParenthesis following
+                    // a claim type. However we don't need to include unnecessary parenthesis
+                    // in our parsed policy, so we don't append.
+                    while (expNumClosingParenthesis > 0)
+                    {
+                        if (parsedIdx >= policy.Length || (policy[parsedIdx] != ')' && policy[parsedIdx] != ' '))
+                        {
+                            // No. of closing parenthesis is less than opening parenthesis,
+                            // which does not form a valid claimType.
+                            throw new DataGatewayException(
+                                message: $"Invalid format for claim type {typeOfClaim} supplied in policy.",
+                                statusCode: System.Net.HttpStatusCode.InternalServerError,
+                                subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError
+                                );
+                        }
+
+                        // If the code reaches here, either the character is ')' or ' '.
+                        // If its a ' ', we ignore as it is an extra space.
+                        // If its a ')', we decrement the required closing parenthesis by 1.
+                        if (policy[parsedIdx] == ')')
+                        {
+                            expNumClosingParenthesis--;
+                        }
+
+                        parsedIdx++;
+                    }
                 }
                 else
                 {
@@ -360,17 +406,43 @@ namespace Azure.DataGateway.Service.Authorization
                 }
             }
 
-            // Check if there is still some part of policy string left to be appended to the result.
-            // Append if there is any.
             if (parsedIdx < policy.Length)
             {
+                // Append if there is still some part of policy string left to be appended to the result.
                 policyWithClaims.Append(policy.Substring(parsedIdx));
             }
 
             //Remove @item. occurences from the policy string
             policyWithClaims.Replace("@item.", "");
+
             return policyWithClaims.ToString();
         }
+
+        /// <summary>
+        /// Helper method to extract the claimType without opening parenthesis from
+        /// the typeOfClaimWithParenthesis.
+        /// </summary>
+        /// <param name="typeOfClaimWithParenthesis">The claimType which potentially has opening parenthesis</param>
+        /// <returns>claimType without opening parenthesis</returns>
+        private static string GetClaimTypeWithoutOpeningParenthesis(string typeOfClaimWithParenthesis)
+        {
+            // Find the index of first non parenthesis character in the claimType
+            int idx = 0;
+            while (idx < typeOfClaimWithParenthesis.Length && typeOfClaimWithParenthesis[idx] == '(')
+            {
+                idx++;
+            }
+
+            return typeOfClaimWithParenthesis.Substring(idx);
+        }
+
+        /// <summary>
+        /// Helper function to return the claim value alongwith the required additonal
+        /// quotes if required.
+        /// </summary>
+        /// <param name="claim">The claim whose value is to be returned.</param>
+        /// <returns>Processed claim value based on its data type.</returns>
+        /// <exception cref="DataGatewayException">Exception thrown when the claim's datatype is not supported.</exception>
         private static string GetClaimValueByDataType(Claim claim)
         {
             /* An example claim would be of format:

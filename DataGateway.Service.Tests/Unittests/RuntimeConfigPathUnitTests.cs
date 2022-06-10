@@ -10,11 +10,10 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
     /// <summary>
     /// Unit tests for the environment variable
     /// parser for the runtime configuration. These
-    /// tests verify that we parse the config correcltly
-    /// when replacing envinroment variables. Also verify
+    /// tests verify that we parse the config correctly
+    /// when replacing environment variables. Also verify
     /// we throw the right exception when environment
-    /// variable names not found.
-    /// to retreive schema.
+    /// variable names are not found.
     /// </summary>
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class RuntimeConfigPathUnitTests
@@ -23,12 +22,12 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
 
         /// <summary>
         /// Test valid cases for parsing the runtime config.
-        /// These cases have string close to the pattern we
+        /// These cases have strings close to the pattern we
         /// match when looking to replace parts of the config,
         /// strings that match said pattern, and other edge
         /// cases to reveal if the pattern matching is working.
         /// The pattern we look to match is @env('') where we take
-        /// what is inside of the '<match>'. The match is then
+        /// what is inside of the '', ie: @env('<match>'). The match is then
         /// used to get the associated environment variable.
         /// </summary>
         /// <param name="repKeys">Replacement used as key to get environment variable.</param>
@@ -69,7 +68,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         /// <summary>
         /// When we have a match that does not correspond
         /// to a valid environment variable we throw an exception.
-        /// This tests verifies this happens correctly.
+        /// These tests verify this happens correctly.
         /// </summary>
         /// <param name="invalidEnvVarName">A match that is not a valid environment variable name.</param>
         [DataTestMethod]

@@ -133,7 +133,7 @@ namespace Azure.DataGateway.Config
         /// with that name, throwing an exception if none is found.
         /// </summary>
         /// <param name="match">The match holding the environment variable name.</param>
-        /// <returns>The environment variable associate with the provided name.</returns>
+        /// <returns>The environment variable associated with the provided name.</returns>
         /// <exception cref="DataGatewayException"></exception>
         private static string ReplaceWithEnvVariable(Match match)
         {

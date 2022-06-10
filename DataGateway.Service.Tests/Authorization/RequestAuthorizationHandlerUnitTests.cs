@@ -138,7 +138,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             DatabaseObject dbo = new()
             {
                 SchemaName = schemaName,
-                Name = tableName
+                Name = tableName,
+                TableDefinition = new()
             };
 
             FindRequestContext request = new(entityName, dbo, isList: false);

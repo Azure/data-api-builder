@@ -97,10 +97,12 @@
                   "description": "Allowed origins",
                   "items": {
                     "type": "string"
-                  }
+                  },
+                  "default": []
                 },
                 "credentials": {
                   "type": "boolean",
+                  "default": "true",
                   "description": "Set value for Access-Control-Allow-Credentials header"
                 }
               }

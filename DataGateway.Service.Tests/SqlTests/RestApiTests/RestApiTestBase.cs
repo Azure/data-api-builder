@@ -114,7 +114,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/1",
-                queryString: "?$f=id,title",
+                queryString: "?$select=id,title",
                 entity: _simple_all_books,
                 sqlQuery: GetQuery("FindByIdTestWithQueryStringFieldsOnView"),
                 controller: _restController
@@ -151,7 +151,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/1",
-                queryString: "?$f=id,title",
+                queryString: "?$select=id,title",
                 entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindByIdTestWithQueryStringFields)),
                 controller: _restController
@@ -167,7 +167,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$f=id",
+                queryString: "?$select=id",
                 entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithQueryStringOneField)),
                 controller: _restController);
@@ -381,7 +381,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/567/book_id/1",
-                queryString: "?$f=id,content",
+                queryString: "?$select=id,content",
                 entity: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithPrimaryKeyContainingForeignKey)),
                 controller: _restController
@@ -853,7 +853,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$f=Scientific Name",
+                queryString: "?$select=Scientific Name",
                 entity: _integrationMappingEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithSingleMappedFieldsToBeReturned)),
                 controller: _restController
@@ -872,7 +872,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$f=treeId",
+                queryString: "?$select=treeId",
                 entity: _integrationMappingEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithUnMappedFieldsToBeReturned)),
                 controller: _restController
@@ -2451,7 +2451,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/5671",
-                queryString: "?$f=id,content",
+                queryString: "?$select=id,content",
                 entity: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
@@ -2470,7 +2470,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$f=id,null",
+                queryString: "?$select=id,null",
                 entity: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
@@ -2589,7 +2589,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$f=hazards",
+                queryString: "?$select=hazards",
                 entity: _integrationBrokenMappingEntity,
                 sqlQuery: string.Empty,
                 controller: _restController,
@@ -2611,7 +2611,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$f=species",
+                queryString: "?$select=species",
                 entity: _integrationMappingEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithUnMappedFieldsToBeReturned)),
                 controller: _restController,
@@ -2630,7 +2630,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$f=id,content",
+                queryString: "?$select=id,content",
                 entity: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,

@@ -25,7 +25,7 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Name of the column
         /// </summary>
-        public string ColumnName { get; }
+        public string ColumnName { get; set; }
 
         public Column(string tableSchema, string tableName, string columnName, string? tableAlias = null)
         {

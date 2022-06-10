@@ -36,6 +36,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _integrationTableHasColumnWithSpace = "brokers";
         protected static readonly string _integrationTieBreakEntity = "Author";
         protected static readonly string _integrationTieBreakTable = "authors";
+        protected static readonly string _integrationMappingEntity = "Tree";
+        protected static readonly string _integrationMappingTable = "trees";
+        protected static readonly string _integrationMappingDifferentEntity = "Shrub";
+        protected static readonly string _integrationBrokenMappingEntity = "Fungus";
         protected static readonly string _simple_all_books = "books_view_all";
         protected static readonly string _simple_subset_stocks = "stocks_view_selected";
         protected static readonly string _composite_subset_bookPub = "books_publishers_view_composite";
@@ -819,6 +823,144 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         }
 
         /// <summary>
+        /// Tests the REST Api for Find operation when the target
+        /// entity has mapped fields. Verify that we return the
+        /// correct names from the mapping, as well as the names
+        /// of the unmapped fields.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task FindTestWithMappedFieldsToBeReturned()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _integrationMappingEntity,
+                sqlQuery: GetQuery(nameof(FindTestWithMappedFieldsToBeReturned)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation when the target
+        /// entity has mapped fields. Verify that we return the
+        /// correct name from a single mapped field without
+        /// unmapped fields included.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task FindTestWithSingleMappedFieldsToBeReturned()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$f=Scientific Name",
+                entity: _integrationMappingEntity,
+                sqlQuery: GetQuery(nameof(FindTestWithSingleMappedFieldsToBeReturned)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation when the target
+        /// entity has mapped fields. Verify that we return the
+        /// correct name from a single unmapped field without
+        /// mapped fields included.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task FindTestWithUnMappedFieldsToBeReturned()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$f=treeId",
+                entity: _integrationMappingEntity,
+                sqlQuery: GetQuery(nameof(FindTestWithUnMappedFieldsToBeReturned)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation when the target
+        /// entity has mapped fields that are different from another
+        /// entity which shares the same source table.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task FindTestWithDifferentMappedFieldsAndFilter()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=fancyName eq 'Tsuga terophylla'",
+                entity: _integrationMappingDifferentEntity,
+                sqlQuery: GetQuery(nameof(FindTestWithDifferentMappedFieldsAndFilter)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation when the target
+        /// entity has mapped fields that are different from another
+        /// entity which shares the same source table, and we include
+        /// orderby in the request.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task FindTestWithDifferentMappedFieldsAndOrderBy()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby=fancyName",
+                entity: _integrationMappingDifferentEntity,
+                sqlQuery: GetQuery(nameof(FindTestWithDifferentMappedFieldsAndOrderBy)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation when the target
+        /// entity has mapped fields that are different from another
+        /// entity which shares the same source table, and we include
+        /// orderby in the request, along with pagination.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task FindTestWithDifferentMappingFirstSingleKeyPaginationAndOrderBy()
+        {
+            string after = $"[{{\"Value\":\"Pseudotsuga menziesii\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"trees\",\"ColumnName\":\"fancyName\"}}," +
+                            $"{{\"Value\":2,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"trees\",\"ColumnName\":\"treeId\"}}]";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=1&$orderby=fancyName",
+                entity: _integrationMappingDifferentEntity,
+                sqlQuery: GetQuery(nameof(FindTestWithDifferentMappingFirstSingleKeyPaginationAndOrderBy)),
+                controller: _restController,
+                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation when the target
+        /// entity has mapped fields that are different from another
+        /// entity which shares the same source table, and we include
+        /// after in the request, along with orderby.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy()
+        {
+            string after = $"[{{\"Value\":\"Pseudotsuga menziesii\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"trees\",\"ColumnName\":\"fancyName\"}}," +
+                            $"{{\"Value\":2,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"trees\",\"ColumnName\":\"treeId\"}}]";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: $"?$orderby=fancyName,treeId&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                entity: _integrationMappingDifferentEntity,
+                sqlQuery: GetQuery(nameof(FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
         /// Tests the InsertOne functionality with a REST POST request.
         /// </summary>
         [TestMethod]
@@ -1593,7 +1735,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: $"Could not find a property named 'pq' on type 'default_namespace.{GetDefaultSchemaForEdmModel()}books_view_all'.",
+                expectedErrorMessage: $"Could not find a property named 'pq' on type 'default_namespace.{_simple_all_books}.{GetDefaultSchemaForEdmModel()}books_view_all'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
 
@@ -1604,7 +1746,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: $"Could not find a property named 'pq' on type 'default_namespace.{GetDefaultSchemaForEdmModel()}stocks_view_selected'.",
+                expectedErrorMessage: $"Could not find a property named 'pq' on type 'default_namespace.{_simple_subset_stocks}.{GetDefaultSchemaForEdmModel()}stocks_view_selected'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
 
@@ -1616,7 +1758,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: $"Could not find a property named 'title' on type 'default_namespace.{GetDefaultSchemaForEdmModel()}books_publishers_view_composite'.",
+                expectedErrorMessage: $"Could not find a property named 'title' on type 'default_namespace.{_composite_subset_bookPub}.{GetDefaultSchemaForEdmModel()}books_publishers_view_composite'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
         }
@@ -2314,7 +2456,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: "Invalid Column name requested: content",
+                expectedErrorMessage: "Invalid field to be returned requested: content",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }
@@ -2370,7 +2512,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: $"Could not find a property named 'Pinecone' on type 'default_namespace.{GetDefaultSchemaForEdmModel()}books'.",
+                expectedErrorMessage: $"Could not find a property named 'Pinecone' on type 'default_namespace.{_integrationEntityName}.{GetDefaultSchemaForEdmModel()}books'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }
@@ -2413,6 +2555,73 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         }
 
         /// <summary>
+        /// Verifies that we throw exception when primary key
+        /// route contains an exposed name that maps to a
+        /// backing column name that does not exist in the
+        /// table.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task FindOneTestWithInvalidMapping()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "hazards/black_mold_spores",
+                queryString: string.Empty,
+                entity: _integrationBrokenMappingEntity,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "The request is invalid since the primary keys: spores requested were not found in the entity definition.",
+                expectedStatusCode: HttpStatusCode.NotFound,
+                expectedSubStatusCode: "EntityNotFound"
+                );
+        }
+
+        /// <summary>
+        /// Verifies that we throw exception when field
+        /// requested is an exposed name that maps to a
+        /// backing column name that does not exist in
+        /// the table.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task FindTestWithInvalidMapping()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$f=hazards",
+                entity: _integrationBrokenMappingEntity,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "Invalid field to be returned requested: hazards",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: "BadRequest"
+                );
+        }
+
+        /// <summary>
+        /// Validate that we throw exception when we have a mapped
+        /// field but we do not use the correct mapping that
+        /// has been assigned.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task FindTestWithConflictingMappedFieldsToBeReturned()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$f=species",
+                entity: _integrationMappingEntity,
+                sqlQuery: GetQuery(nameof(FindTestWithUnMappedFieldsToBeReturned)),
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "Invalid field to be returned requested: species",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
         /// Tests the REST Api for the correct error condition format when
         /// a DataGatewayException is thrown
         /// </summary>
@@ -2426,7 +2635,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: "Invalid Column name requested: content",
+                expectedErrorMessage: "Invalid field to be returned requested: content",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

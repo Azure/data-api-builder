@@ -10,7 +10,7 @@ This sample uses Azure SQL DB or SQL Server Sample as the backend database. Use 
 
 Create a new Hawaii configuration file starting from the `hawaii-config.template.json` provided in the root folder. Make a copy of that file and name it `my-book.json`.
 
-Alternatively you can create a new Hawaii configuration file using Hawaii CLI. To install the Hawaii CLI read the instructions here: [TDB].
+Alternatively you can create a new Hawaii configuration file using Hawaii CLI. To install the Hawaii CLI read the instructions here:
 
 ```sh
 hawaii init --name my-books --host-mode development --database-type mssql --connection-string "Server=;Database=;User ID=;Password=;TrustServerCertificate=true"

@@ -853,7 +853,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$f=Scientific Name",
+                queryString: "?$select=Scientific Name",
                 entity: _integrationMappingEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithSingleMappedFieldsToBeReturned)),
                 controller: _restController
@@ -872,7 +872,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$f=treeId",
+                queryString: "?$select=treeId",
                 entity: _integrationMappingEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithUnMappedFieldsToBeReturned)),
                 controller: _restController
@@ -2589,7 +2589,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$f=hazards",
+                queryString: "?$select=hazards",
                 entity: _integrationBrokenMappingEntity,
                 sqlQuery: string.Empty,
                 controller: _restController,
@@ -2611,7 +2611,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$f=species",
+                queryString: "?$select=species",
                 entity: _integrationMappingEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithUnMappedFieldsToBeReturned)),
                 controller: _restController,

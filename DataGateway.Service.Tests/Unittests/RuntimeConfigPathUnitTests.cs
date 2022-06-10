@@ -80,7 +80,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         [DataRow("''envVarName''")]
         public void CheckConfigEnvParsingThrowExceptions(string invalidEnvVarName)
         {
-            string json =@"{ ""foo"" : ""@env('envVarName'), @env('" + invalidEnvVarName + @"')"" }";
+            string json = @"{ ""foo"" : ""@env('envVarName'), @env('" + invalidEnvVarName + @"')"" }";
             SetEnvVariables();
             Assert.ThrowsException<DataGatewayException>(() => RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(json));
         }

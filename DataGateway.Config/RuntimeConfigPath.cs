@@ -88,7 +88,7 @@ namespace Azure.DataGateway.Config
             // getting the environment variable for replacement.
             while (reader.Read())
             {
-                if (reader.Value != null)
+                if (reader.Value is not null)
                 {
                     switch (reader.TokenType)
                     {

@@ -530,6 +530,83 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 "
             },
             {
+                "FindTestWithMappedFieldsToBeReturned",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT  ""treeId"", ""species"" AS ""Scientific Name"", ""region"" AS ""United State's Region"", ""height""
+                        FROM " + _integrationMappingTable + @"
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithSingleMappedFieldsToBeReturned",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT  ""species"" AS ""Scientific Name""
+                        FROM " + _integrationMappingTable + @"
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithUnMappedFieldsToBeReturned",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT  ""treeId""
+                        FROM " + _integrationMappingTable + @"
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithDifferentMappedFieldsAndFilter",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT  ""treeId"", ""species"" AS ""fancyName"", ""region"", ""height""
+                        FROM " + _integrationMappingTable + @"
+                        WHERE species = 'Tsuga terophylla'
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithDifferentMappedFieldsAndOrderBy",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT  ""treeId"", ""species"" AS ""fancyName"", ""region"", ""height""
+                        FROM " + _integrationMappingTable + @"
+                        ORDER BY species
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithDifferentMappingFirstSingleKeyPaginationAndOrderBy",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT  ""treeId"", ""species"" AS ""fancyName"", ""region"", ""height""
+                        FROM " + _integrationMappingTable + @"
+                        ORDER BY species
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT  ""treeId"", ""species"" AS ""fancyName"", ""region"", ""height""
+                        FROM " + _integrationMappingTable + @"
+                        WHERE ""treeId"" < 2
+                        ORDER BY species, ""treeId""
+                        LIMIT 101
+                    ) AS subq
+                "
+            },
+            {
                 "InsertOneTest",
                 @"
                     SELECT to_jsonb(subq) AS data

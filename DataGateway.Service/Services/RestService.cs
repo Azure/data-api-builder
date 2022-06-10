@@ -99,7 +99,11 @@ namespace Azure.DataGateway.Service.Services
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
                     JsonElement upsertPayloadRoot = RequestValidator.ValidateUpdateOrUpsertRequest(primaryKeyRoute, requestBody);
-                    context = new UpsertRequestContext(entityName, dbo: dbObject, upsertPayloadRoot, GetHttpVerb(operationType), operationType);
+                    context = new UpsertRequestContext(entityName,
+                                                       dbo: dbObject,
+                                                       upsertPayloadRoot,
+                                                       GetHttpVerb(operationType),
+                                                       operationType);
                     RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
                     break;
                 default:
@@ -119,10 +123,7 @@ namespace Azure.DataGateway.Service.Services
             if (!string.IsNullOrWhiteSpace(queryString))
             {
                 context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
-                RequestParser.ParseQueryString(
-                    context,
-                    _sqlMetadataProvider.GetODataFilterParser(),
-                    _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey);
+                RequestParser.ParseQueryString(context, _sqlMetadataProvider);
             }
 
             // At this point for DELETE, the primary key should be populated in the Request Context.
@@ -196,8 +197,10 @@ namespace Azure.DataGateway.Service.Services
                                element: rootEnumerated.Last(),
                                orderByColumns: context.OrderByClauseInUrl,
                                primaryKey: _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey,
+                               entityName: context.EntityName,
                                schemaName: context.DatabaseObject.SchemaName,
-                               tableName: context.DatabaseObject.Name);
+                               tableName: context.DatabaseObject.Name,
+                               sqlMetadataProvider: _sqlMetadataProvider);
 
             // nextLink is the URL needed to get the next page of records using the same query options
             // with $after base64 encoded for opaqueness

@@ -120,5 +120,20 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
         {
             throw new NotImplementedException();
         }
+
+        public bool TryGetExposedColumnName(string entityName, string field, out string? name)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool TryGetBackingColumn(string entityName, string field, out string? name)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEnumerable<KeyValuePair<string, DatabaseObject>> GetEntityNamesAndDbObjects()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

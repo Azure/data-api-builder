@@ -12,9 +12,11 @@ Create a new Hawaii configuration file starting from the `hawaii-config.template
 
 Alternatively you can create a new Hawaii configuration file using Hawaii CLI. To install the Hawaii CLI read the instructions here: [TDB].
 
+```sh
+hawaii init --name my-books --host-mode development --database-type mssql --connection-string "Server=;Database=;User ID=;Password=;TrustServerCertificate=true"
 ```
 
-```
+Make sure you use the correct connection string for your enviroment. Once the command completes, you'll have a file named `my-books.json` created for you.
 
 ### Add a Book entity
 
@@ -34,7 +36,9 @@ The above configuration, will tell Hawaii that the anyone, even those request wh
 
 The same configuration can also be defined via CLI, instead of writing the JSON manually:
 
-TDB
+```sh
+hawaii add book --name my-books --source "dbo.books" --permission "anonymous:*"
+```
 
 The `book` entity will be available as a REST endpoint at `/api/book`:
 
@@ -44,26 +48,31 @@ curl -X GET http://localhost:5000/api/book
 
 The REST endpoint support the following querystring parameter to limit and define the resultset:
 
-- `$orderby`
-
+- `$select`: select what field you want to be returned
+- `$orderby`: define the sorting criteria
+- `$filter`: filter items
+- `$first`: limit the return items to the top "n"
 
 For example, you can run something like
 
 ```sh
+GET /api/book?$orderby=title desc&$select=id,title&$filter=category_id eq 1&$first=2
 ```
 
-to get all the book that are not in category_id 2,....TDB
+to get the `id` and the `title` of the first two books, ordered by title, that are in `category` 1
 
 or as GraphQL object at the `/graphql` endpoint:
 
 ```graphql
 {
-	books {
-		items {
-			id
-			title
-		}
-	}
+  books(first: 2,  _filter: { category_id: {eq: 1}}, orderBy: {title: DESC}) {
+    items {
+      id
+      title
+    }
+    hasNextPage
+    endCursor
+  }
 }
 ```
 

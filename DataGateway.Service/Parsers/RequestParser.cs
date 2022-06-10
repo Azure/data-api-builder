@@ -18,7 +18,7 @@ namespace Azure.DataGateway.Service.Parsers
         /// <summary>
         /// Prefix used for specifying the fields in the query string of the URL.
         /// </summary>
-        private const string FIELDS_URL = "$f";
+        private const string FIELDS_URL = "$select";
         /// <summary>
         /// Prefix used for specifying the fields to be used to sort the result in the query string of the URL.
         /// </summary>

@@ -323,6 +323,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
         [TestMethod]
         public async Task InsertWithInvalidForeignKey()
         {
+            string errorMessage = "Cannot add or update a child row: a foreign key constraint fails";
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('count', `subq`.`count`) AS `data`
                 FROM (
@@ -332,7 +333,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                     ) AS `subq`
             ";
 
-            await InsertWithInvalidForeignKey(mySqlQuery, INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE);
+            await InsertWithInvalidForeignKey(mySqlQuery, errorMessage);
         }
 
         /// <summary>
@@ -352,7 +353,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                     ) AS `subq`
             ";
 
-            await UpdateWithInvalidForeignKey(mySqlQuery, INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE);
+            await UpdateWithInvalidForeignKey(mySqlQuery, "Cannot add or update a child row: a foreign key constraint fails (\\u0060master\\u0060.\\u0060books\\u0060");
         }
 
         /// <summary>
@@ -382,7 +383,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
         [TestMethod]
         public async Task TestViolatingOneToOneRelashionShip()
         {
-            await TestViolatingOneToOneRelashionShip(INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE);
+            await TestViolatingOneToOneRelashionShip("Duplicate entry \\u00271\\u0027 for key \\u0027book_website_placements.book_id\\u0027\"");
         }
         #endregion
     }

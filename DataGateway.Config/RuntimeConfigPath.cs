@@ -1,3 +1,8 @@
+using System.Text;
+using System.Text.RegularExpressions;
+using Azure.DataGateway.Service.Exceptions;
+using Newtonsoft.Json;
+
 namespace Azure.DataGateway.Config
 {
     /// <summary>
@@ -31,7 +36,7 @@ namespace Azure.DataGateway.Config
             {
                 if (File.Exists(ConfigFileName))
                 {
-                    runtimeConfigJson = File.ReadAllText(ConfigFileName);
+                    runtimeConfigJson = ParseConfigJsonAndReplaceEnvVariables(File.ReadAllText(ConfigFileName));
                 }
                 else
                 {
@@ -49,6 +54,102 @@ namespace Azure.DataGateway.Config
                     ConfigValue.ConnectionString = CONNSTRING;
                 }
             }
+        }
+
+        /// <summary>
+        /// Parse Json and replace @env('ENVIRONMENT_VARIABLE_NAME') with
+        /// the environment variable that corresponds to ENVIRONMENT_VARIABLE_NAME.
+        /// If no environment variable is found with that name, throw exception.
+        /// </summary>
+        /// <param name="json">Json string representing the runtime config file.</param>
+        /// <returns>Parsed json string.</returns>
+        public static string? ParseConfigJsonAndReplaceEnvVariables(string json)
+        {
+            StringBuilder stringBuilder = new();
+            StringWriter stringWriter = new(stringBuilder);
+            JsonTextReader reader = new(new StringReader(json));
+            JsonTextWriter writer = new(stringWriter)
+            {
+                Formatting = Formatting.Indented
+            };
+
+            // @env     : match @env('
+            // .*?      : lazy match any character except newline 0 or more times
+            // (?='\))  : look ahead for ') which will combine with our lazy match
+            //            ie: in @env('hello')goodbye') we match @env('hello')
+            // '\)      : consume the ') into the match (look ahead doesn't capture)
+            // This pattern lazy matches any string that starts with @env(' and ends with ')
+            // ie: fooBAR@env('hello-world')bash)FOO')  match: @env('hello-world')  @env(('hello-world')
+            string envPattern = @"@env\('.*?(?='\))'\)";
+
+            // The approach for parsing is to re-write the Json to a new string
+            // as we read, using regex.replace for the matches we get from our
+            // pattern. We call a helper function for each match that handles
+            // getting the environment variable for replacement.
+            while (reader.Read())
+            {
+                if (reader.Value != null)
+                {
+                    switch (reader.TokenType)
+                    {
+                        case JsonToken.PropertyName:
+                            writer.WritePropertyName(reader.Value.ToString()!);
+                            break;
+                        case JsonToken.String:
+                            string valueToWrite = Regex.Replace(reader.Value.ToString()!, envPattern, new MatchEvaluator(ReplaceWithEnvVariable));
+                            writer.WriteValue(valueToWrite);
+                            break;
+                        default:
+                            writer.WriteValue(reader.Value);
+                            break;
+                    }
+                }
+                else
+                {
+                    switch (reader.TokenType)
+                    {
+                        case JsonToken.StartObject:
+                            writer.WriteStartObject();
+                            break;
+                        case JsonToken.StartArray:
+                            writer.WriteStartArray();
+                            break;
+                        case JsonToken.EndArray:
+                            writer.WriteEndArray();
+                            break;
+                        case JsonToken.EndObject:
+                            writer.WriteEndObject();
+                            break;
+                    }
+                }
+            }
+
+            return stringBuilder.ToString();
+        }
+
+        /// <summary>
+        /// Retrieves the name of the environment variable
+        /// and then returns the environment variable associated
+        /// with that name, throwing an exception if none is found.
+        /// </summary>
+        /// <param name="match">The match holding the environment variable name.</param>
+        /// <returns>The environment variable associate with the provided name.</returns>
+        /// <exception cref="DataGatewayException"></exception>
+        private static string ReplaceWithEnvVariable(Match match)
+        {
+            // [^@env\(]   :  any substring that is not @env(
+            // .*          :  any char except newline any number of times
+            // (?=\))      :  look ahead for end char of )
+            // This pattern greedy matches all characters that are not a part of @env()
+            // ie: @env('hello@env('goodbye')world') match: 'hello@env('goodbye')world'
+            string innerPattern = @"[^@env\(].*(?=\))";
+
+            // strip's first and last characters, ie: '''hello'' --> ''hello'
+            string envName = Regex.Match(match.Value, innerPattern).Value[1..^1];
+            string? envValue = Environment.GetEnvironmentVariable(envName);
+            return envValue is not null ? envValue : throw new DataGatewayException(message: $"Environmental Variable, {envName}, not found.",
+                                                                                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                                                                    subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
         }
 
         /// <summary>

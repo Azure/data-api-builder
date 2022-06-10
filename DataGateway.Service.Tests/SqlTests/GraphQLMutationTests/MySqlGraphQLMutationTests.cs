@@ -1,6 +1,5 @@
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -342,7 +341,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
         public async Task UpdateWithInvalidForeignKey()
         {
             string errorMessage = "Cannot add or update a child row: a foreign key constraint fails " +
-                                  "(\\u0060master\\u0060.\\u0060books\\u0060";
+                                  "(\\u0060datagateway\\u0060.\\u0060books\\u0060";
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('count', `subq`.`count`) AS `data`
                 FROM (

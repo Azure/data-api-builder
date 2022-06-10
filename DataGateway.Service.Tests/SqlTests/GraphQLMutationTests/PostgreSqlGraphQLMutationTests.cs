@@ -322,7 +322,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
         [TestMethod]
         public async Task InsertWithInvalidForeignKey()
         {
-            string errorMessage = "PostgreSql Error 23503: Foreign Key Constraint Violation.";
+            string errorMessage = "23503: insert or update on table \\u0022books\\u0022 " +
+                                  "violates foreign key constraint \\u0022book_publisher_fk\\u0022\"";
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
                 FROM

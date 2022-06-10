@@ -50,6 +50,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
         /// <summary>
         /// Testing against the simulated test server whether an Access-Control-Allow-Origin header is present on the response
+        /// Expect the server to populate and send back the Access-Control-Allow-Origin header since http://localhost:3000 should be present in the origins list
+        /// Access-Control-Allow-Origin echos specific origin of request, unless server configured to allow all origins, in which case it will respond with '*'
         /// <param name="allowedOrigins"> the allowed origins for the server to check against </param>
         /// DataRow 1: valid because all origins accepted
         /// DataRow 2: valid because specific host present in origins list
@@ -76,6 +78,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
         /// <summary>
         /// Simple test if AllowCredentials option correctly toggles Access-Control-Allow-Credentials header
+        /// Access-Control-Allow-Credentials header should be toggled to "true" on server config allowing credentials
+        /// Only requests from valid origins (based on server's allowed origins) receive this header
         /// </summary>
         [TestMethod]
         public async Task TestAllowedCredentialsHeaderPresent()
@@ -98,6 +102,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
         /// <summary>
         /// Testing against the simulated test server whether an Access-Control-Allow-Origin header is present on the response
+        /// Expect header to exist but be empty on response to requests from origins not present in server's origins list
         /// <param name="allowedOrigins"> the allowed origins for the server to check against </param>
         /// DataRow 1: invalid because no origins present
         /// DataRow 2: invalid because of mismatched scheme (http vs https)

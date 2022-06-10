@@ -360,8 +360,7 @@ namespace Azure.DataGateway.Service
         public static CorsPolicy ConfigureCors(CorsPolicyBuilder builder, Cors corsConfig)
         {
             string[] Origins = corsConfig.Origins is not null ? corsConfig.Origins : Array.Empty<string>();
-            bool AllowCredentials = corsConfig.AllowCredentials;
-            if (AllowCredentials)
+            if (corsConfig.AllowCredentials)
             {
                 return builder
                     .WithOrigins(Origins)

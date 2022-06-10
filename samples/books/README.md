@@ -42,6 +42,18 @@ The `book` entity will be available as a REST endpoint at `/api/book`:
 curl -X GET http://localhost:5000/api/book
 ```
 
+The REST endpoint support the following querystring parameter to limit and define the resultset:
+
+- `$orderby`
+
+
+For example, you can run something like
+
+```sh
+```
+
+to get all the book that are not in category_id 2,....TDB
+
 or as GraphQL object at the `/graphql` endpoint:
 
 ```graphql

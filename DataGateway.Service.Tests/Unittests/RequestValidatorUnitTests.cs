@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Text;
 using Azure.DataGateway.Config;
@@ -21,6 +22,17 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         private static Mock<ISqlMetadataProvider> _mockMetadataStore;
         private const string DEFAULT_NAME = "entity";
         private const string DEFAULT_SCHEMA = "dbo";
+        private static Dictionary<string, Dictionary<string, string>> _defaultMapping = new()
+        {
+            { "entity", new()
+                {
+                    { "id", "id" },
+                    { "title", "title" },
+                    { "publisher_id", "publisher_id" },
+                    { "isbn", "isbn" }
+                }
+            }
+        };
 
         [ClassInitialize]
         public static void InitializeTestFixture(TestContext context)
@@ -41,8 +53,12 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             {
                 PrimaryKey = new(primaryKeys)
             };
-            _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
 
+            string outParam;
+            _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            _mockMetadataStore.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out outParam))
+                              .Callback(new metaDataCallback((string entity, string exposedField, out string backingColumn) => _ = _defaultMapping[entity].TryGetValue(exposedField, out backingColumn)))
+                              .Returns((string entity, string exposedField, string backingColumn) => _defaultMapping[entity].TryGetValue(exposedField, out backingColumn));
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
             string primaryKeyRoute = "id/1";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
@@ -62,7 +78,12 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             {
                 PrimaryKey = new(primaryKeys)
             };
+
+            string outParam;
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            _mockMetadataStore.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out outParam))
+                              .Callback(new metaDataCallback((string entity, string exposedField, out string backingColumn) => _ = _defaultMapping[entity].TryGetValue(exposedField, out backingColumn)))
+                              .Returns((string entity, string exposedField, string backingColumn) => _defaultMapping[entity].TryGetValue(exposedField, out backingColumn));
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
             string primaryKeyRoute = "id/2/isbn/12345";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
@@ -83,6 +104,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             {
                 PrimaryKey = new(primaryKeys)
             };
+
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
             string primaryKeyRoute = "isbn/12345/id/2";
@@ -106,6 +128,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             {
                 PrimaryKey = new(primaryKeys)
             };
+
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
             string primaryKeyRoute = "name/Catch22";
@@ -153,6 +176,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             {
                 PrimaryKey = new(primaryKeys)
             };
+
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
             string primaryKeyRoute = "name/1";
@@ -173,6 +197,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             {
                 PrimaryKey = new(primaryKeys)
             };
+
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
             string primaryKeyRoute = "id/12345/name/2";
@@ -196,6 +221,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             {
                 PrimaryKey = new(primaryKeys)
             };
+
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
             string primaryKeyRoute = "id/12345/isbn/2/name/TwoTowers";
@@ -334,6 +360,19 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         #endregion
 
         /// <summary>
+        /// Needed for the callback that is required
+        /// to make use of out parameter with mocking.
+        /// Without use of delegate the out param will
+        /// not be populated with the correct value.
+        /// This delegate is for the callback used
+        /// with the mocked SqlMetadataProvider.
+        /// </summary>
+        /// <param name="entity">Name of entity.</param>
+        /// <param name="exposedField">Exposed field name.</param>
+        /// <param name="backingColumn">Out param for backing column name.</param>
+        delegate void metaDataCallback(string entity, string exposedField, out string backingColumn);
+
+        /// <summary>
         /// Make a new DatabaseObject set fields and return.
         /// </summary>
         /// <param name="schema">the dbo's schema.</param>
@@ -344,7 +383,8 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             return new DatabaseObject()
             {
                 SchemaName = schema,
-                Name = name
+                Name = name,
+                TableDefinition = new()
             };
         }
     }

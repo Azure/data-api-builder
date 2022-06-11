@@ -201,6 +201,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 return new Tuple<JsonDocument, IMetadata>(null, null);
             }
         }
+
         private async Task<string> GetPartitionKeyPath(Container container)
         {
             string partitionKeyPath = _metadataStoreProvider.GetPartitionKeyPath(container.Database.Id, container.Id);

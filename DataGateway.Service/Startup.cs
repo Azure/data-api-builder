@@ -41,6 +41,7 @@ namespace Azure.DataGateway.Service
         private void OnConfigurationChanged(object state)
         {
             RuntimeConfigPath runtimeConfigPath = new();
+            Console.WriteLine($"Config Change: Reading file: {runtimeConfigPath.ConfigFileName}");
             Configuration.Bind(runtimeConfigPath);
             runtimeConfigPath.SetRuntimeConfigValue();
         }
@@ -88,6 +89,7 @@ namespace Azure.DataGateway.Service
                 IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
                 RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
+                Console.WriteLine("Initial Config: Reading file: " + runtimeConfigPath.CurrentValue.ConfigFileName);
 
                 switch (runtimeConfig.DatabaseType)
                 {
@@ -199,6 +201,9 @@ namespace Azure.DataGateway.Service
             ConfigureAuthentication(services);
             services.AddAuthorization();
             services.AddSingleton<IAuthorizationHandler, RequestAuthorizationHandler>();
+            services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
+            services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
+
             services.AddControllers();
         }
 
@@ -274,17 +279,28 @@ namespace Azure.DataGateway.Service
             app.UseAuthentication();
 
             // Conditionally add authentication middleware in Production Mode
-            if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Mode != HostModeType.Development)
+            if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Mode == HostModeType.Production)
             {
                 app.UseAuthenticationMiddleware();
             }
 
             app.UseAuthorization();
 
+            // Authorization Engine middleware enforces that all requests (including introspection)
+            // include proper auth headers.
+            // - {Authorization header + Client role header for JWT}
+            // - {X-MS-CLIENT-PRINCIPAL + Client role header for EasyAuth}
+            // When enabled, the middleware will prevent Banana Cake Pop(GraphQL client) from loading
+            // without proper authorization headers.
+            if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Mode == HostModeType.Production)
+            {
+                app.UseAuthorizationEngineMiddleware();
+            }
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                endpoints.MapBananaCakePop("/graphql");
+                endpoints.MapBananaCakePop(toolPath: "/graphql");
             });
         }
 

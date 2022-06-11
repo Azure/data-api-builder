@@ -245,7 +245,7 @@ namespace Azure.DataGateway.Service.Authorization
             IEnumerable<string> allowedDBColumns = actionMetadata.included.Except(actionMetadata.excluded);
             List<string> allowedExposedColumns = new();
 
-            foreach ( string dbColumn in allowedDBColumns )
+            foreach (string dbColumn in allowedDBColumns)
             {
                 if (_metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: dbColumn, out string? exposedName))
                 {

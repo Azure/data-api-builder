@@ -100,45 +100,21 @@ namespace Azure.DataGateway.Service.Resolvers
 
         private static async Task<ItemResponse<JObject>> HandleCreateAsync(IDictionary<string, object> queryArgs, Container container)
         {
-            string? id = null;
-
             object item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
 
+            JObject? input;
             // Variables were provided to the mutation
-            if (item is Dictionary<string, object?> createInput)
+            if (item is Dictionary<string, object?>)
             {
-                if (createInput.TryGetValue("id", out object? idObj))
-                {
-                    id = idObj?.ToString();
-                }
-            }
-            // An inline argument was set
-            else if (item is List<ObjectFieldNode> createInputRaw)
-            {
-                ObjectFieldNode? idObj = createInputRaw.FirstOrDefault(field => field.Name.Value == "id");
-
-                if (idObj != null && idObj.Value.Value != null)
-                {
-                    id = idObj.Value.Value.ToString();
-                }
-
-                createInput = new Dictionary<string, object?>();
-                foreach (ObjectFieldNode node in createInputRaw)
-                {
-                    createInput.Add(node.Name.Value, node.Value.Value);
-                }
+                input = (JObject?)ParseVariableInputItem(item);
             }
             else
             {
-                throw new InvalidDataException("The type of argument for the provided data is unsupported.");
+                // An inline argument was set
+                input = (JObject?)ParseInlineInputItem(item);
             }
 
-            if (string.IsNullOrEmpty(id))
-            {
-                throw new InvalidDataException("id field is mandatory");
-            }
-
-            return await container.CreateItemAsync(JObject.FromObject(createInput));
+            return await container.CreateItemAsync(input);
         }
 
         private static async Task<ItemResponse<JObject>> HandleUpdateAsync(IDictionary<string, object> queryArgs, Container container)
@@ -191,11 +167,26 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 foreach (string key in inputItem.Keys)
                 {
-                    createInput.Add(new JProperty(key, ParseVariableInputItem(inputItem.GetValueOrDefault(key))));
+                    if (inputItem.TryGetValue(key, out object? value) && value != null)
+                    {
+                        createInput.Add(new JProperty(key, JToken.FromObject(inputItem.GetValueOrDefault(key)!)));
+                    }
                 }
 
                 return createInput;
             }
+
+            //if (item is List<Dictionary<string, object?>> inputArray)
+            //{
+            //    JArray jarrayObj = new();
+
+            //    foreach (Dictionary<string, object?> subfield in inputArray)
+            //    {
+            //        jarrayObj.Add(ParseVariableInputItem(subfield));
+            //    }
+
+            //    return jarrayObj;
+            //}
 
             return item;
         }
@@ -217,6 +208,19 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
 
                 return createInput;
+            }
+
+            // For nested array objects
+            if (item is List<IValueNode> nodeArray)
+            {
+                JArray jarrayObj = new();
+
+                foreach (IValueNode subfield in nodeArray)
+                {
+                    jarrayObj.Add(ParseInlineInputItem(subfield.Value));
+                }
+
+                return jarrayObj;
             }
 
             return item;

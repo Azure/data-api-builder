@@ -119,16 +119,45 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                 node = inputs[inputTypeName];
             }
 
+            ITypeNode type = new NamedTypeNode(node.Name);
+
+            // For a type like [Bar!]! we have to first unpack the outer non-null
+            if (f.Type.IsNonNullType())
+            {
+                // The innerType is the raw List, scalar or object type without null settings
+                ITypeNode innerType = f.Type.InnerType();
+
+                if (innerType.IsListType())
+                {
+                    type = GenerateListType(type, innerType);
+                }
+
+                // Wrap the input with non-null to match the field definition
+                type = new NonNullTypeNode((INullableTypeNode)type);
+            }
+            else if (f.Type.IsListType())
+            {
+                type = GenerateListType(type, f.Type);
+            }
+
+
             return new(
                 location: null,
                 f.Name,
                 new StringValueNode($"Input for field {f.Name} on type {inputTypeName}"),
-                (databaseType == DatabaseType.cosmos) ?
-                    new NamedTypeNode(node.Name) :
-                    new NonNullTypeNode(new NamedTypeNode(node.Name)), // TODO - figure out how to properly walk the graph, so you can do [Foo!]!
+                type,
                 defaultValue: null,
                 f.Directives
             );
+        }
+
+        private static ITypeNode GenerateListType(ITypeNode type, ITypeNode fieldType)
+        {
+            // Look at the inner type of the list type, eg: [Bar]'s inner type is Bar
+            // and if it's nullable, make the input also nullable
+            return fieldType.InnerType().IsNonNullType()
+                ? new ListTypeNode(new NonNullTypeNode((INullableTypeNode)type))
+                : new ListTypeNode(type);
         }
 
         private static NameNode GenerateInputTypeName(string typeName, Entity entity)

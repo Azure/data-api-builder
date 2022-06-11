@@ -574,8 +574,9 @@ type Baz @model {
             Assert.AreEqual(1, field.Arguments.Count);
 
             InputObjectTypeDefinitionNode argType = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is INamedSyntaxNode node && node.Name == field.Arguments[0].Type.NamedType().Name);
-            Assert.AreEqual(1, argType.Fields.Count);
+            Assert.AreEqual(2, argType.Fields.Count);
             Assert.AreEqual("id", argType.Fields[0].Name.Value);
+            Assert.AreEqual("baz", argType.Fields[1].Name.Value);
         }
 
         [DataTestMethod]

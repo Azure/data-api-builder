@@ -48,7 +48,13 @@ type Planet @model {
     name : String,
     character: Character,
     age : Int,
-    dimension : String
+    dimension : String,
+    stars: [Star]
+}
+
+type Star @model {
+    id : ID,
+    name : String
 }";
             MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>()
             {

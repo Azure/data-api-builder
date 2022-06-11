@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text.Json;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Models.Authorization;
 using Azure.DataGateway.Service.Services;
@@ -119,15 +121,32 @@ namespace Azure.DataGateway.Service.Authorization
                 actionToColumnMap = roleInEntity.ActionToColumnMap[actionName];
             }
 
-            foreach (string column in columns)
+            // Each column present in the request is an "exposedColumn".
+            // Authorization permissions reference "backingColumns"
+            // Resolve backingColumn name to check authorization.
+            // Failure indicates that request contain invalid exposedColumn for entity.
+            foreach (string exposedColumn in columns)
             {
-                if (actionToColumnMap.excluded.Contains(column) || actionToColumnMap.excluded.Contains(WILDCARD) ||
-                    !(actionToColumnMap.included.Contains(WILDCARD) || actionToColumnMap.included.Contains(column)))
+                if (_metadataProvider.TryGetBackingColumn(entityName, field: exposedColumn, out string? backingColumn))
                 {
-                    // If column is present in excluded OR excluded='*'
-                    // If column is absent from included and included!=*
-                    // return false
-                    return false;
+                    // backingColumn will not be null when TryGetBackingColumn() is true. 
+                    if (actionToColumnMap.excluded.Contains(backingColumn!) || actionToColumnMap.excluded.Contains(WILDCARD) ||
+                    !(actionToColumnMap.included.Contains(WILDCARD) || actionToColumnMap.included.Contains(backingColumn!)))
+                    {
+                        // If column is present in excluded OR excluded='*'
+                        // If column is absent from included and included!=*
+                        // return false
+                        return false;
+                    }
+                }
+                else
+                {
+                    // This check will not be needed once exposedName mapping validation is added.
+                    throw new DataGatewayException(
+                        message: "Invalid field name provided.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.ExposedColumnNameMappingError
+                        );
                 }
             }
 
@@ -223,8 +242,18 @@ namespace Azure.DataGateway.Service.Authorization
         public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, string action)
         {
             ActionMetadata actionMetadata = _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action];
+            IEnumerable<string> allowedDBColumns = actionMetadata.included.Except(actionMetadata.excluded);
+            List<string> allowedExposedColumns = new();
 
-            return actionMetadata.included.Except(actionMetadata.excluded);
+            foreach ( string dbColumn in allowedDBColumns )
+            {
+                if (_metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: dbColumn, out string? exposedName))
+                {
+                    allowedExposedColumns.Append(exposedName);
+                }
+            }
+
+            return allowedExposedColumns;
         }
 
         /// <summary>

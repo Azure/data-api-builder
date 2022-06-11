@@ -48,7 +48,11 @@ namespace Azure.DataGateway.Service.Exceptions
             /// <summary>
             /// Cumulative column check of QueryString (OData filter parsing) failure.
             /// </summary>
-            AuthorizationCumulativeColumnCheckFailed
+            AuthorizationCumulativeColumnCheckFailed,
+            /// <summary>
+            /// Requested exposedColumnName does not map to backingColumnName for entity.
+            /// </summary>
+            ExposedColumnNameMappingError
         }
 
         public HttpStatusCode StatusCode { get; }

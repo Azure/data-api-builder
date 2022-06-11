@@ -221,7 +221,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             string expected)
         {
             FilterClause ast = _sqlMetadataProvider.GetODataFilterParser().
-                GetFilterClause(filterString, $"{schemaName}.{tableName}");
+                GetFilterClause(filterString, $"{entityName}.{schemaName}.{tableName}");
             ODataASTVisitor visitor = CreateVisitor(entityName, schemaName, tableName);
             string actual = ast.Expression.Accept(visitor);
             Assert.AreEqual(expected, actual);
@@ -231,6 +231,8 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         /// Create and return an ODataASTVisitor.
         /// </summary>
         /// <param name="entityName">String represents the entity name.</param>
+        /// <param name="schemaName">String represents the schema of the source entity.</param>
+        /// <param name="tableName">String represents the table name of the source entity.</param>
         /// <param name="isList">bool represents if the context is a list.</param>
         /// <returns></returns>
         private static ODataASTVisitor CreateVisitor(

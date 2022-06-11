@@ -18,7 +18,7 @@ namespace Azure.DataGateway.Service.Parsers
         /// <summary>
         /// Prefix used for specifying the fields in the query string of the URL.
         /// </summary>
-        private const string FIELDS_URL = "$f";
+        private const string FIELDS_URL = "$select";
         /// <summary>
         /// Prefix used for specifying the fields to be used to sort the result in the query string of the URL.
         /// </summary>
@@ -35,6 +35,7 @@ namespace Azure.DataGateway.Service.Parsers
         /// Prefix used for specifying paging in the query string of the URL.
         /// </summary>
         private const string AFTER_URL = "$after";
+
         /// <summary>
         /// Parses the primary key string to identify the field names composing the key
         /// and their values.
@@ -89,7 +90,8 @@ namespace Azure.DataGateway.Service.Parsers
         /// later generate queries in the given RestRequestContext.
         /// </summary>
         /// <param name="context">The RestRequestContext holding the major components of the query.</param>
-        public static void ParseQueryString(RestRequestContext context, FilterParser filterParser, List<string> primaryKeys)
+        /// <param name="sqlMetadataProvider">The SqlMetadataProvider holds many of the components needed to parse the query.</param>
+        public static void ParseQueryString(RestRequestContext context, ISqlMetadataProvider sqlMetadataProvider)
         {
             foreach (string key in context.ParsedQueryString!.Keys)
             {
@@ -103,18 +105,11 @@ namespace Azure.DataGateway.Service.Parsers
                         // save the AST that represents the filter for the query
                         // ?$filter=<filter clause using microsoft api guidelines>
                         string filterQueryString = $"?{FILTER_URL}={context.ParsedQueryString[key]}";
-                        context.FilterClauseInUrl = filterParser.GetFilterClause(filterQueryString, $"{context.DatabaseObject.FullName}");
+                        context.FilterClauseInUrl = sqlMetadataProvider.GetODataFilterParser().GetFilterClause(filterQueryString, $"{context.EntityName}.{context.DatabaseObject.FullName}");
                         break;
                     case SORT_URL:
                         string sortQueryString = $"?{SORT_URL}={context.ParsedQueryString[key]}";
-                        context.OrderByClauseInUrl = GenerateOrderByList(filterParser.GetOrderByClause(sortQueryString, $"{context.DatabaseObject.FullName}"),
-                                                                         context.DatabaseObject.SchemaName,
-                                                                         context.DatabaseObject.Name,
-                                                                         primaryKeys);
-                        // to allow spaces in columns we accept constant value node
-                        // which means the model no longer validates all columns
-                        // automatically, so we must do so explicitly
-                        RequestValidator.CheckOrderByValidity(context);
+                        context.OrderByClauseInUrl = GenerateOrderByList(context, sqlMetadataProvider, sortQueryString);
                         break;
                     case AFTER_URL:
                         context.After = context.ParsedQueryString[key];
@@ -132,12 +127,22 @@ namespace Azure.DataGateway.Service.Parsers
         /// Create List of OrderByColumn from an OrderByClause Abstract Syntax Tree
         /// and return that list as List<Column> since OrderByColumn is a Column.
         /// </summary>
-        /// <param name="node">The OrderByClause.</param>
-        /// <param name="tableAlias">The name of the Table the columns are from.</param>
-        /// <paramref name="primaryKeys">A list of the primaryKeys of the given table.</paramref>/>
+        /// <param name="context">The request context.</param>
+        /// <param name="sqlMetadataProvider">The meta data provider.</param>
+        /// <param name="sortQueryString">String represents the section of the query string
+        /// associated with the sort param.</param>
         /// <returns>A List<OrderByColumns></returns>
-        private static List<OrderByColumn>? GenerateOrderByList(OrderByClause node, string schemaName, string tableName, List<string> primaryKeys)
+        /// <exception cref="DataGatewayException"></exception>
+        private static List<OrderByColumn>? GenerateOrderByList(RestRequestContext context,
+                                                                ISqlMetadataProvider sqlMetadataProvider,
+                                                                string sortQueryString)
         {
+            string schemaName = context.DatabaseObject.SchemaName;
+            string tableName = context.DatabaseObject.Name;
+
+            OrderByClause node = sqlMetadataProvider.GetODataFilterParser().GetOrderByClause(sortQueryString, $"{context.EntityName}.{context.DatabaseObject.FullName}");
+            List<string> primaryKeys = sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey;
+
             // used for performant Remove operations
             HashSet<string> remainingKeys = new(primaryKeys);
 
@@ -156,19 +161,25 @@ namespace Azure.DataGateway.Service.Parsers
                                                                        HttpStatusCode.BadRequest,
                                                                        DataGatewayException.SubStatusCodes.BadRequest);
 
-                string columnName;
+                string backingColumnName;
                 if (expression.Kind is QueryNodeKind.SingleValuePropertyAccess)
                 {
-                    // assignment of columnName will need to change when mapping work item merges
-                    // see: https://github.com/Azure/hawaii-gql/pull/421
-                    columnName = ((SingleValuePropertyAccessNode)expression).Property.Name;
+                    // if name is in SingleValuePropertyAccess node it matches our model and we will
+                    // always be able to get backing column successfully
+                    sqlMetadataProvider.TryGetBackingColumn(context.EntityName, ((SingleValuePropertyAccessNode)expression).Property.Name, out backingColumnName!);
                 }
                 else if (expression.Kind is QueryNodeKind.Constant &&
                         ((ConstantNode)expression).Value is not null)
                 {
-                    // assignment of columnName will need to change when mapping work item merges
-                    // see: https://github.com/Azure/hawaii-gql/pull/421
-                    columnName = ((ConstantNode)expression).Value.ToString()!;
+                    // since this comes from constant node, it was not checked against our model
+                    // so this may return false in which case we throw for a bad request
+                    if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, ((ConstantNode)expression).Value.ToString()!, out backingColumnName!))
+                    {
+                        throw new DataGatewayException(
+                            message: $"Invalid orderby column requested: {((ConstantNode)expression).Value.ToString()!}.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                    }
                 }
                 else
                 {
@@ -181,8 +192,8 @@ namespace Azure.DataGateway.Service.Parsers
                 // We convert to an Enum of our own that matches the SQL text we want
                 OrderBy direction = GetDirection(node.Direction);
                 // Add OrderByColumn and remove any matching columns from our primary key set
-                orderByList.Add(new OrderByColumn(schemaName, tableName, columnName, direction: direction));
-                remainingKeys.Remove(columnName);
+                orderByList.Add(new OrderByColumn(schemaName, tableName, backingColumnName, direction: direction));
+                remainingKeys.Remove(backingColumnName);
                 node = node.ThenBy;
             }
 

@@ -85,6 +85,15 @@
         {
           "role": "authenticated",
           "actions": [ "create", "update", "delete" ]
+        },
+        {
+          "role": "Author",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
         }
       ],
       "relationships": {

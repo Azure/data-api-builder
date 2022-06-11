@@ -39,6 +39,12 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             TableDefinition sampleTable = CreateSampleTable();
             metadataProvider.Setup(x => x.GetTableDefinition(TEST_ENTITY)).Returns(sampleTable);
 
+            string outParam;
+            Dictionary<string, Dictionary<string, string>> _exposedNameToBackingColumnMapping = CreateColumnMappingTable();
+            metadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out outParam))
+                              .Callback(new metaDataCallback((string entity, string exposedField, out string backingColumn) => _ = _exposedNameToBackingColumnMapping[entity].TryGetValue(exposedField, out backingColumn)))
+                              .Returns((string entity, string exposedField, string backingColumn) => _exposedNameToBackingColumnMapping[entity].TryGetValue(exposedField, out backingColumn));
+
             return new AuthorizationResolver(runtimeConfigProvider.Object, metadataProvider.Object);
         }
 
@@ -120,5 +126,41 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             return tableDefinition;
         }
+
+        /// <summary>
+        /// Creates Mock mapping of ExposedColumnNames to BackingColumnNames.
+        /// Requests only contain ExposedColumnNames and must be translated
+        /// to BackingColumnNames since authorization configuration denotes
+        /// BackingColumnNames
+        /// </summary>
+        /// <param name="columnCount">Number of columns to create.
+        /// Defaults to 6 to account for max number of columns testsed in AuthorizationResolverUnitTests.</param>
+        /// <returns>ExposedColumnNames to BackingColumnNames Dictionary.</returns>
+        public static Dictionary<string, Dictionary<string, string>> CreateColumnMappingTable(int columnCount = 6)
+        {
+            Dictionary<string, Dictionary<string, string>> _exposedNameToBackingColumnMapping = new();
+            _exposedNameToBackingColumnMapping.Add(key: TEST_ENTITY, value: new());
+
+            for (int count = 1; count <= columnCount; count++)
+            {
+                string columnName = $"col{count}";
+                _exposedNameToBackingColumnMapping[TEST_ENTITY].Add(key: columnName, value: columnName);
+            }
+
+            return _exposedNameToBackingColumnMapping;
+        }
+
+        /// <summary>
+        /// Needed for the callback that is required
+        /// to make use of out parameter with mocking.
+        /// Without use of delegate the out param will
+        /// not be populated with the correct value.
+        /// This delegate is for the callback used
+        /// with the mocked SqlMetadataProvider.
+        /// </summary>
+        /// <param name="entity">Name of entity.</param>
+        /// <param name="exposedField">Exposed field name.</param>
+        /// <param name="backingColumn">Out param for backing column name.</param>
+        delegate void metaDataCallback(string entity, string exposedField, out string backingColumn);
     }
 }

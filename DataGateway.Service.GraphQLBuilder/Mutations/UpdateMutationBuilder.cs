@@ -140,7 +140,6 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                 type = GenerateListType(type, f.Type);
             }
 
-
             return new(
                 location: null,
                 f.Name,

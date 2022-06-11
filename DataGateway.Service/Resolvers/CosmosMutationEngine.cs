@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -175,18 +174,6 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 return createInput;
             }
-
-            //if (item is List<Dictionary<string, object?>> inputArray)
-            //{
-            //    JArray jarrayObj = new();
-
-            //    foreach (Dictionary<string, object?> subfield in inputArray)
-            //    {
-            //        jarrayObj.Add(ParseVariableInputItem(subfield));
-            //    }
-
-            //    return jarrayObj;
-            //}
 
             return item;
         }

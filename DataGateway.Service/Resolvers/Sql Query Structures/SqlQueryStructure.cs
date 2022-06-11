@@ -130,24 +130,34 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             IsListQuery = context.IsMany;
             TableAlias = $"{DatabaseObject.SchemaName}_{DatabaseObject.Name}";
-            context.FieldsToBeReturned.ForEach(fieldName => AddColumn(fieldName));
+            AddFields(context, sqlMetadataProvider);
             if (Columns.Count == 0)
             {
                 TableDefinition tableDefinition = GetUnderlyingTableDefinition();
                 foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
                 {
-                    AddColumn(column.Key);
+                    // We only include columns that are exposed for use in requests
+                    if (sqlMetadataProvider.TryGetExposedColumnName(EntityName, column.Key, out string? name))
+                    {
+                        AddColumn(column.Key, name!);
+                    }
                 }
             }
 
             foreach (KeyValuePair<string, object> predicate in context.PrimaryKeyValuePairs)
             {
-                PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
+                sqlMetadataProvider.TryGetBackingColumn(EntityName, predicate.Key, out string? backingColumn);
+                PopulateParamsAndPredicates(field: predicate.Key,
+                                            backingColumn: backingColumn!,
+                                            value: predicate.Value);
             }
 
             foreach (KeyValuePair<string, object?> predicate in context.FieldValuePairsInBody)
             {
-                PopulateParamsAndPredicates(field: predicate.Key, value: predicate.Value);
+                sqlMetadataProvider.TryGetBackingColumn(EntityName, predicate.Key, out string? backingColumn);
+                PopulateParamsAndPredicates(field: predicate.Key,
+                                            backingColumn: backingColumn!,
+                                            value: predicate.Value);
             }
 
             // context.OrderByColumnsInUrl will lack TableAlias because it is created in RequestParser
@@ -184,11 +194,30 @@ namespace Azure.DataGateway.Service.Resolvers
 
             if (!string.IsNullOrWhiteSpace(context.After))
             {
-                AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromJsonString(context.After, PaginationMetadata));
+                AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromJsonString(context.After,
+                                                                                  PaginationMetadata,
+                                                                                  EntityName,
+                                                                                  sqlMetadataProvider));
             }
 
             _limit = context.First is not null ? context.First + 1 : DEFAULT_LIST_LIMIT + 1;
             ParametrizeColumns();
+        }
+
+        /// <summary>
+        /// Use the mapping of exposed names to
+        /// backing columns to add column with
+        /// the correct name and label.
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="sqlMetadataProvider">Provides the mapping of exposed names to backing columns.</param>
+        private void AddFields(RestRequestContext context, ISqlMetadataProvider sqlMetadataProvider)
+        {
+            foreach (string exposedFieldName in context.FieldsToBeReturned)
+            {
+                sqlMetadataProvider.TryGetBackingColumn(EntityName, exposedFieldName, out string? backingColumn);
+                AddColumn(backingColumn!, exposedFieldName);
+            }
         }
 
         /// <summary>
@@ -413,9 +442,10 @@ namespace Azure.DataGateway.Service.Resolvers
         ///  populates the Parameters and Predicates properties.
         /// </summary>
         /// <param name="field">The string representing a field.</param>
+        /// <param name="backingColumn">string represents the backing column of the field.</param>
         /// <param name="value">The value associated with a given field.</param>
         /// <param name="op">The predicate operation representing the comparison between field and value.</param>
-        private void PopulateParamsAndPredicates(string field, object? value, PredicateOperation op = PredicateOperation.Equal)
+        private void PopulateParamsAndPredicates(string field, string backingColumn, object? value, PredicateOperation op = PredicateOperation.Equal)
         {
             try
             {
@@ -423,9 +453,9 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (value != null)
                 {
                     parameterName = MakeParamWithValue(
-                        GetParamAsColumnSystemType(value.ToString()!, field));
+                        GetParamAsColumnSystemType(value.ToString()!, backingColumn));
                     Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, field, TableAlias)),
+                        new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, TableAlias)),
                         op,
                         new PredicateOperand($"@{parameterName}")));
                 }
@@ -776,11 +806,23 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Adds a labelled column to this query's columns
+        /// Adds a labelled column to this query's columns, where
+        /// the column name is all that is provided, and we add
+        /// a labeled column with a label equal to column name.
         /// </summary>
         protected void AddColumn(string columnName)
         {
-            Columns.Add(new LabelledColumn(DatabaseObject.SchemaName, DatabaseObject.Name, columnName, label: columnName, TableAlias));
+            AddColumn(columnName, columnName);
+        }
+
+        /// <summary>
+        /// Adds a labelled column to this query's columns.
+        /// <param name="columnName">The backing column name.</param>
+        /// <param name="labelName">The exposed name.</param>
+        /// </summary>
+        protected void AddColumn(string columnName, string labelName)
+        {
+            Columns.Add(new LabelledColumn(DatabaseObject.SchemaName, DatabaseObject.Name, columnName, label: labelName, TableAlias));
         }
 
         /// <summary>

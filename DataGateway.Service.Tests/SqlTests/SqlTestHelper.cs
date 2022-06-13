@@ -24,14 +24,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string configFileName = RuntimeConfigPath.GetFileNameForEnvironment(environment);
 
-            RuntimeConfigPath configPath = GetRuntimeConfigPath(configFileName);
-            configPath.SetRuntimeConfigValue();
-            AddMissingEntitiesToConfig(configPath);
-            return Mock.Of<IOptionsMonitor<RuntimeConfigPath>>(_ => _.CurrentValue == configPath);
-        }
-
-        public static RuntimeConfigPath GetRuntimeConfigPath(string configFileName)
-        {
             Dictionary<string, string> configFileNameMap = new()
             {
                 {
@@ -39,13 +31,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     configFileName
                 }
             };
-
             IConfigurationRoot config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddInMemoryCollection(configFileNameMap)
                 .Build();
 
-            return config.Get<RuntimeConfigPath>();
+            RuntimeConfigPath configPath = config.Get<RuntimeConfigPath>();
+            configPath.SetRuntimeConfigValue();
+            AddMissingEntitiesToConfig(configPath);
+            return Mock.Of<IOptionsMonitor<RuntimeConfigPath>>(_ => _.CurrentValue == configPath);
         }
 
         public static void RemoveAllRelationshipBetweenEntities(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)

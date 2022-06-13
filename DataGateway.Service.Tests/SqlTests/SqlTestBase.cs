@@ -58,36 +58,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _testCategory = testCategory;
 
             _runtimeConfigPath = SqlTestHelper.LoadConfig($"{_testCategory}");
-            SetUpSQLMetadataProvider(_runtimeConfigPath, _testCategory);
-
-            // Setup AuthorizationService to always return Authorized.
-            _authorizationService = new Mock<IAuthorizationService>();
-            _authorizationService.Setup(x => x.AuthorizeAsync(
-                It.IsAny<ClaimsPrincipal>(),
-                It.IsAny<object>(),
-                It.IsAny<IEnumerable<IAuthorizationRequirement>>()
-                ).Result).Returns(AuthorizationResult.Success);
-
-            // Setup Mock HttpContextAccess to return user as required when calling AuthorizationService.AuthorizeAsync
-            _httpContextAccessor = new Mock<IHttpContextAccessor>();
-            _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
-
-            _queryEngine = new SqlQueryEngine(
-                _queryExecutor,
-                _queryBuilder,
-                _sqlMetadataProvider);
-            _mutationEngine =
-                new SqlMutationEngine(
-                _queryEngine,
-                _queryExecutor,
-                _queryBuilder,
-                _sqlMetadataProvider);
-            await ResetDbStateAsync();
-            await _sqlMetadataProvider.InitializeAsync();
-        }
-
-        protected static void SetUpSQLMetadataProvider(IOptionsMonitor<RuntimeConfigPath> _runtimeConfigPath, string _testCategory)
-        {
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:
@@ -122,6 +92,31 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                              _queryBuilder);
                     break;
             }
+
+            // Setup AuthorizationService to always return Authorized.
+            _authorizationService = new Mock<IAuthorizationService>();
+            _authorizationService.Setup(x => x.AuthorizeAsync(
+                It.IsAny<ClaimsPrincipal>(),
+                It.IsAny<object>(),
+                It.IsAny<IEnumerable<IAuthorizationRequirement>>()
+                ).Result).Returns(AuthorizationResult.Success);
+
+            // Setup Mock HttpContextAccess to return user as required when calling AuthorizationService.AuthorizeAsync
+            _httpContextAccessor = new Mock<IHttpContextAccessor>();
+            _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
+
+            _queryEngine = new SqlQueryEngine(
+                _queryExecutor,
+                _queryBuilder,
+                _sqlMetadataProvider);
+            _mutationEngine =
+                new SqlMutationEngine(
+                _queryEngine,
+                _queryExecutor,
+                _queryBuilder,
+                _sqlMetadataProvider);
+            await ResetDbStateAsync();
+            await _sqlMetadataProvider.InitializeAsync();
         }
 
         protected static async Task ResetDbStateAsync()

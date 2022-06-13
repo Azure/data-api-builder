@@ -2462,6 +2462,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         }
 
         /// <summary>
+        /// Tests the REST Api for Find operation on an entity that does not exist
+        /// No sqlQuery provided as error should be thrown prior to database query
+        /// Expects a 404 Not Found error
+        /// </summary>
+        [TestMethod]
+        public async Task FindNonExistentEntity()
+        {
+            const string NonExistentEntityName = "!@#$%^&*()_+definitely_nonexistent_entity!@#$%^&*()_+";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: NonExistentEntityName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: $"{NonExistentEntityName} is not a valid entity.",
+                expectedStatusCode: HttpStatusCode.NotFound,
+                expectedSubStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound.ToString()
+            );
+        }
+
+        /// <summary>
         /// Tests the REST Api for Find operation with a query string that has an invalid field
         /// having invalid field names.
         /// </summary>

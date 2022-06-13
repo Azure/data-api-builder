@@ -44,8 +44,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         }
 
         [DataTestMethod]
-        [DataRow(new string[] { })]
-        [DataRow(new string[] { "--ConfigFileName=" })]
+        [DataRow(new string[] { }, DisplayName = "No config returns 503 - config file flag absent")]
+        [DataRow(new string[] { "--ConfigFileName=" }, DisplayName = "No config returns 503 - empty config file option")]
         [TestMethod("Validates that queries before runtime is configured returns a 503.")]
         public async Task TestNoConfigReturnsServiceUnavailable(string[] args)
         {

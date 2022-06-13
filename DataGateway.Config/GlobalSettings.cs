@@ -67,7 +67,9 @@ namespace Azure.DataGateway.Config
     /// <param name="Origins">List of allowed origins.</param>
     /// <param name="AllowCredentials">
     /// Whether to set Access-Control-Allow-Credentials CORS header.</param>
-    public record Cors(string[]? Origins,
+    public record Cors(
+        [property: JsonPropertyName("origins")]
+        string[]? Origins,
         [property: JsonPropertyName("allow-credentials")]
         bool AllowCredentials = true);
 

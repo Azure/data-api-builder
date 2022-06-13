@@ -17,8 +17,8 @@
     "host": {
       "mode": "Development",
       "cors": {
-        "origins": [ "1", "2" ],
-        "allow-credentials": true
+        "origins": [ "http://localhost:3000" ],
+        "allow-credentials": false
       },
       "authentication": {
         "provider": "EasyAuth",
@@ -107,6 +107,10 @@
           "linking.source.fields": [ "book_id" ],
           "linking.target.fields": [ "author_id" ]
         }
+      },
+      "mappings": {
+        "id": "id",
+        "title": "title"
       }
     },
     "BookWebsitePlacement": {
@@ -228,6 +232,58 @@
       "source": "type_table",
       "rest": false,
       "permissions": []
+    },
+    "Tree": {
+      "source": "trees",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "mappings": {
+        "species": "Scientific Name",
+        "region": "United State's Region"
+      }
+    },
+    "Shrub": {
+      "source": "trees",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "mappings": {
+        "species": "fancyName"
+      }
+    },
+    "Fungus": {
+      "source": "fungi",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "mappings": {
+        "spores": "hazards"
+      }
     }
   }
 }

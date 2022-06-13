@@ -60,10 +60,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
 
             _testCategory = testCategory;
-
-            //Init AuthorizationResolver object
             _runtimeConfigPath = SqlTestHelper.LoadConfig($"{_testCategory}");
-            _authZResolver = AuthorizationResolverUnitTests.InitAuthZResolver(_runtimeConfigPath.CurrentValue.ConfigValue);
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:
@@ -98,7 +95,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                              _queryBuilder);
                     break;
             }
-
             // Setup AuthorizationService to always return Authorized.
             _authorizationService = new Mock<IAuthorizationService>();
             _authorizationService.Setup(x => x.AuthorizeAsync(
@@ -123,6 +119,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _sqlMetadataProvider);
             await ResetDbStateAsync();
             await _sqlMetadataProvider.InitializeAsync();
+
+            //Initialize the authorization resolver object
+            _authZResolver = new AuthorizationResolver(_runtimeConfigPath, _sqlMetadataProvider);
         }
 
         protected static async Task ResetDbStateAsync()

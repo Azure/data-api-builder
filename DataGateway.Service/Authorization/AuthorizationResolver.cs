@@ -427,7 +427,7 @@ namespace Azure.DataGateway.Service.Authorization
 
                     // Expected number of closing parenthesis after the claimType,
                     // equal to the number of opening parenthesis before the claimType.
-                    int expNumClosingParenthesis = typeOfClaimWithOpParenthesis.Length - typeOfClaim.Length ;
+                    int expNumClosingParenthesis = typeOfClaimWithOpParenthesis.Length - typeOfClaim.Length;
 
                     // Ensure that there are atleast expectedNumClosingParenthesis following
                     // a claim type. However we don't need to include unnecessary parenthesis

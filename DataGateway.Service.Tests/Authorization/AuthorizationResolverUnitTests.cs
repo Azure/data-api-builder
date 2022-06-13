@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using Microsoft.Extensions.Options;
 using Action = Azure.DataGateway.Config.Action;
 
 namespace Azure.DataGateway.Service.Tests.Authorization
@@ -360,7 +359,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             " ('David' ne @item.col3 and @claims.(((contact_no))) ne 4321)", "(true eq col1 and col2 ne 'xyz@microsoft.com') or" +
             " ('David' ne col3 and 1234 ne 4321)")]
         [DataRow("(@item.rating gt @claims.(  ((emprating)))) and (@claims.((((isemployee)))) eq true)", "(rating gt 4.2) and (true eq true)")]
-        [DataRow("@item.rating eq @claims.(emprating))","rating eq 4.2)")]
+        [DataRow("@item.rating eq @claims.(emprating))", "rating eq 4.2)")]
         public void ParseValidDbPolicy(string policy, string expectedParsedPolicy)
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(

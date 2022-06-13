@@ -1,6 +1,5 @@
 using System.Threading.Tasks;
-using Azure.DataGateway.Config;
-using Microsoft.Extensions.Options;
+using Azure.DataGateway.Service.Tests.UnitTests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests

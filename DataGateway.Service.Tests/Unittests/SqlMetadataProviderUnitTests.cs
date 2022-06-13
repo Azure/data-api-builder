@@ -1,7 +1,8 @@
-using Azure.DataGateway.Service.Services;
-using Azure.DataGateway.Config;
-using Microsoft.Extensions.Options;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Services;
+using Azure.DataGateway.Service.Tests.SqlTests;
+using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.UnitTests
@@ -10,8 +11,8 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
     /// Units testing for our connection string parser
     /// to retreive schema.
     /// </summary>
-    [TestClass]
-    public class SqlMetadataProviderUnitTests:SqlTestBase
+    [TestClass, TestCategory(TestCategory.MSSQL)]
+    public class SqlMetadataProviderUnitTests : SqlTestBase
     {
         /// <summary>
         /// Verify we parse the connection string for the
@@ -39,7 +40,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         /// for all the tables based on the entities relationship.
         /// <code>Check: </code> Making sure no exception is thrown if there are no Foriegn Keys.
         /// </summary>
-        
+
         public static async Task CheckNoExceptionForNoForiegnKey(string testCategory)
         {
             IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath = SqlTestHelper.LoadConfig(testCategory);

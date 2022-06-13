@@ -159,7 +159,9 @@ namespace Azure.DataGateway.Service.Resolvers
             }
             else
             {
+                // if no rows returned, return empty json array instead of null 
                 Console.WriteLine("Did not return enough rows in the JSON result.");
+                jsonDocument = JsonDocument.Parse("[]");
             }
 
             return jsonDocument;

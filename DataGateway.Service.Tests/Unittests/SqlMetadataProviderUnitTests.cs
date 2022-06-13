@@ -11,7 +11,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
     /// Units testing for our connection string parser
     /// to retreive schema.
     /// </summary>
-    [TestClass, TestCategory(TestCategory.MSSQL)]
+    [TestClass]
     public class SqlMetadataProviderUnitTests : SqlTestBase
     {
         /// <summary>
@@ -31,7 +31,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         [DataRow("", "SearchPath=\"\";Host=localhost;Database=graphql")]
         public void CheckConnectionStringParsingTest(string expected, string connectionString)
         {
-            MsSqlMetadataProvider.TryGetSchemaFromConnectionString(out string actual, connectionString);
+            PostgreSqlMetadataProvider.TryGetSchemaFromConnectionString(out string actual, connectionString);
             Assert.AreEqual(expected, actual);
         }
 

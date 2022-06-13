@@ -31,6 +31,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     configFileName
                 }
             };
+
             IConfigurationRoot config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddInMemoryCollection(configFileNameMap)

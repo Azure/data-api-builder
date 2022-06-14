@@ -185,7 +185,7 @@ namespace Azure.DataGateway.Service.Authorization
             // roleMetaData.ActionToColumnMap[action] finds the actionMetaData for the current action
             // actionMetaData.database finds the required database policy
 
-            string? dbPolicy = _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action].database;
+            string? dbPolicy = _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action].databasePolicy;
             return dbPolicy is not null ? dbPolicy : string.Empty;
         }
 
@@ -249,7 +249,7 @@ namespace Azure.DataGateway.Service.Authorization
 
                                 if (actionObj.Policy is not null && actionObj.Policy.Database is not null)
                                 {
-                                    actionToColumn.database = actionObj.Policy.Database;
+                                    actionToColumn.databasePolicy = actionObj.Policy.Database;
                                 }
                             }
                         }
@@ -303,7 +303,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// <returns>Processed policy string that can be injected into the HttpContext object.</returns>
         private static string ProcessTokenClaimsForPolicy(string policy, HttpContext context)
         {
-            Dictionary<string, Claim> claimsInRequestContext = PopulateAllClaimsInReqCtxt(context);
+            Dictionary<string, Claim> claimsInRequestContext = GetAllUserClaims(context);
             policy = GetPolicyWithClaimValues(policy, claimsInRequestContext);
             return policy;
         }
@@ -315,7 +315,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// </summary>
         /// <param name="context">HttpContext object used to extract all the claims available in the request.</param>
         /// <param name="claimsInRequestContext">Dictionary to hold all the claims available in the request.</param>
-        private static Dictionary<string, Claim> PopulateAllClaimsInReqCtxt(HttpContext context)
+        private static Dictionary<string, Claim> GetAllUserClaims(HttpContext context)
         {
             Dictionary<string, Claim> claimsInRequestContext = new();
             ClaimsIdentity? identity = (ClaimsIdentity?)context.User.Identity;
@@ -379,17 +379,17 @@ namespace Azure.DataGateway.Service.Authorization
             // string, hence starting with an estimate of 2*length.
             StringBuilder policyWithClaims = new(2 * policy.Length);
 
-            // parsedIdx indicates the last index int the policy string from which we need to append to the
+            // parsedIdx indicates the last index in the policy string from which we need to append to the
             // resulting policy.
             int parsedIdx = 0;
 
             foreach (Match claimType in claimTypes)
             {
                 // Remove the prefix @claims. from the claimType
-                string typeOfClaimWithOpParenthesis = claimType.Value.Substring("@claims.".Length);
+                string typeOfClaimWithOpenParenthesis = claimType.Value.Substring("@claims.".Length);
 
                 //Process typeOfClaimWithParenthesis to remove opening parenthesis.
-                string typeOfClaim = GetClaimTypeWithoutOpeningParenthesis(typeOfClaimWithOpParenthesis);
+                string typeOfClaim = GetClaimTypeWithoutOpeningParenthesis(typeOfClaimWithOpenParenthesis);
 
                 if (string.Empty.Equals(typeOfClaim))
                 {
@@ -427,7 +427,7 @@ namespace Azure.DataGateway.Service.Authorization
 
                     // Expected number of closing parenthesis after the claimType,
                     // equal to the number of opening parenthesis before the claimType.
-                    int expNumClosingParenthesis = typeOfClaimWithOpParenthesis.Length - typeOfClaim.Length;
+                    int expNumClosingParenthesis = typeOfClaimWithOpenParenthesis.Length - typeOfClaim.Length;
 
                     // Ensure that there are atleast expectedNumClosingParenthesis following
                     // a claim type. However we don't need to include unnecessary parenthesis
@@ -499,7 +499,8 @@ namespace Azure.DataGateway.Service.Authorization
 
         /// <summary>
         /// Helper function to return the claim value alongwith the required additonal
-        /// quotes if required.
+        /// quotes if required. This makes sure we adhere to JSON specifications where
+        /// strings are enclosed in single quotes while int,bool,double etc are not.
         /// </summary>
         /// <param name="claim">The claim whose value is to be returned.</param>
         /// <returns>Processed claim value based on its data type.</returns>
@@ -512,18 +513,15 @@ namespace Azure.DataGateway.Service.Authorization
              * claim.ValueType: "string"
              */
 
-            string claimValue = claim.Value;
-            string claimValueType = claim.ValueType;
-
-            switch (claimValueType)
+            switch (claim.ValueType)
             {
                 case ClaimValueTypes.String:
-                    return $"'{claimValue}'";
+                    return $"'{claim.Value}'";
                 case ClaimValueTypes.Boolean:
                 case ClaimValueTypes.Integer32:
                 case ClaimValueTypes.Integer64:
                 case ClaimValueTypes.Double:
-                    return claimValue;
+                    return claim.Value;
                 default:
                     // One of the claims in the request had unsupported data type.
                     throw new DataGatewayException(

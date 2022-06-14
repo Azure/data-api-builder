@@ -145,7 +145,7 @@ namespace Azure.DataGateway.Service.Services
 
                 // Parse and save the values that are needed to later generate queries in the given RestRequestContext.
                 // FilterClauseInDbPolicy is an Abstract Syntax Tree representing the parsed policy text.
-                context.FilterClauseInDbPolicy = _sqlMetadataProvider.GetODataFilterParser().GetFilterClause(dbPolicy, $"{context.DatabaseObject.FullName}");
+                context.DbPolicyClause = _sqlMetadataProvider.GetODataFilterParser().GetFilterClause(dbPolicy, $"{context.DatabaseObject.FullName}");
 
             }
 

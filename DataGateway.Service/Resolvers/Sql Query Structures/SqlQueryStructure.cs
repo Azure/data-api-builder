@@ -192,14 +192,14 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            if (context.FilterClauseInDbPolicy is not null)
+            if (context.DbPolicyClause is not null)
             {
                 // Similar to how we have added FilterPredicates above,
                 // we will add DbPolicyPredicates here.
                 ODataASTVisitor visitor = new(this, sqlMetadataProvider);
                 try
                 {
-                    DbPolicyPredicates = context.FilterClauseInDbPolicy.Expression.Accept<string>(visitor);
+                    DbPolicyPredicates = context.DbPolicyClause.Expression.Accept<string>(visitor);
                 }
                 catch
                 {

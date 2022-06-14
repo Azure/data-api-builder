@@ -194,7 +194,6 @@ namespace Azure.DataGateway.Service
             services.AddSingleton<GraphQLService>();
             services.AddSingleton<RestService>();
             services.AddSingleton<IFileSystem, FileSystem>();
-            services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
 
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();

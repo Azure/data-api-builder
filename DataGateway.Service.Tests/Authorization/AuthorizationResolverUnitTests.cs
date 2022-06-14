@@ -391,7 +391,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         }
 
         /// <summary>
-        /// Test to validate that we are correctly spitting out appropriate exception when the user request
+        /// Test to validate that we are correctly throwing an appropriate exception when the user request
         /// lacks a claim required by the policy.
         /// </summary>
         /// <param name="policy">The policy to be parsed.</param>
@@ -433,7 +433,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         }
 
         /// <summary>
-        /// Test to validate that we are correctly spitting out appropriate exception when the database policy
+        /// Test to validate that we are correctly throwing an appropriate exception when the database policy
         /// contains one or more claims with invalid format.
         /// </summary>
         /// <param name="policy">The policy to be parsed.</param>

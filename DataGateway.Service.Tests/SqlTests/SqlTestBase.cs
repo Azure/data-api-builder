@@ -34,7 +34,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     [TestClass]
     public abstract class SqlTestBase
     {
-        private static string _testCategory;
+        protected static string _testCategory;
         protected static IQueryExecutor _queryExecutor;
         protected static IQueryBuilder _queryBuilder;
         protected static IQueryEngine _queryEngine;
@@ -58,7 +58,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _testCategory = testCategory;
 
             _runtimeConfigPath = SqlTestHelper.LoadConfig($"{_testCategory}");
-            SetUpSQLMetadataProvider(_runtimeConfigPath, _testCategory);
+            SetUpSQLMetadataProvider();
 
             // Setup AuthorizationService to always return Authorized.
             _authorizationService = new Mock<IAuthorizationService>();
@@ -86,7 +86,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await _sqlMetadataProvider.InitializeAsync();
         }
 
-        protected static void SetUpSQLMetadataProvider(IOptionsMonitor<RuntimeConfigPath> _runtimeConfigPath, string _testCategory)
+        protected static void SetUpSQLMetadataProvider()
         {
             switch (_testCategory)
             {

@@ -43,9 +43,11 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
 
         public static async Task CheckNoExceptionForNoForiegnKey(string testCategory)
         {
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath = SqlTestHelper.LoadConfig(testCategory);
-            //SqlTestHelper.RemoveAllRelationshipBetweenEntities(runtimeConfigPath);
-            SetUpSQLMetadataProvider(runtimeConfigPath, testCategory);
+            _testCategory = testCategory;
+            _runtimeConfigPath = SqlTestHelper.LoadConfig(testCategory);
+            SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfigPath);
+            SetUpSQLMetadataProvider();
+            await ResetDbStateAsync();
             await _sqlMetadataProvider.InitializeAsync();
         }
     }

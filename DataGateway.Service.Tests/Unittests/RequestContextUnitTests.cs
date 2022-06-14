@@ -16,6 +16,13 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class RequestContextUnitTests
     {
+        private static DatabaseObject _defaultDbObject = new()
+        {
+            SchemaName = string.Empty,
+            Name = string.Empty,
+            TableDefinition = new()
+        };
+
         /// <summary>
         /// Verify that if a payload does not Deserialize
         /// when constructing an InsertRequestContext that the
@@ -32,7 +39,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             try
             {
                 InsertRequestContext context = new(entityName: string.Empty,
-                                                    dbo: new DatabaseObject(),
+                                                    dbo: _defaultDbObject,
                                                     insertPayloadRoot: payload,
                                                     httpVerb: verb,
                                                     operationType: Operation.Insert);
@@ -59,7 +66,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             JsonElement payload = JsonSerializer.Deserialize<JsonElement>("null");
             OperationAuthorizationRequirement verb = new();
             InsertRequestContext context = new(entityName: string.Empty,
-                                                dbo: new DatabaseObject(),
+                                                dbo: _defaultDbObject,
                                                 insertPayloadRoot: payload,
                                                 httpVerb: verb,
                                                 operationType: Operation.Insert);

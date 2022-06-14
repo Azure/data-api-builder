@@ -341,6 +341,46 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTestWithMappedFieldsToBeReturned",
+                $"SELECT [treeId], [species] AS [Scientific Name], [region] AS [United State's Region], [height] FROM { _integrationMappingTable } " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithSingleMappedFieldsToBeReturned",
+                $"SELECT [species] AS [Scientific Name] FROM { _integrationMappingTable } " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithUnMappedFieldsToBeReturned",
+                $"SELECT [treeId] FROM { _integrationMappingTable } " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithDifferentMappedFieldsAndFilter",
+                $"SELECT [treeId], [species] AS [fancyName], [region], [height] FROM { _integrationMappingTable } " +
+                $"WHERE [species] = 'Tsuga terophylla' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithDifferentMappedFieldsAndOrderBy",
+                $"SELECT [treeId], [species] AS [fancyName], [region], [height] FROM { _integrationMappingTable } " +
+                $"ORDER BY [trees].[species] " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithDifferentMappingFirstSingleKeyPaginationAndOrderBy",
+                $"SELECT TOP 1 [treeId], [species] AS [fancyName], [region], [height] FROM { _integrationMappingTable } " +
+                $"ORDER BY [trees].[species] " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy",
+                $"SELECT TOP 101 [treeId], [species] AS [fancyName], [region], [height] FROM { _integrationMappingTable } " +
+                $"WHERE [trees].[treeId] < 2 " +
+                $"ORDER BY [trees].[species], [trees].[treeId] " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "InsertOneTest",
                 // This query is the query for the result we get back from the database
                 // after the insert operation. Not the query that we generate to perform

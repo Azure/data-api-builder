@@ -14,6 +14,7 @@ using HotChocolate.Language;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
@@ -40,6 +41,7 @@ namespace Azure.DataGateway.Service
         private void OnConfigurationChanged(object state)
         {
             RuntimeConfigPath runtimeConfigPath = new();
+            Console.WriteLine($"Config Change: Reading file: {runtimeConfigPath.ConfigFileName}");
             Configuration.Bind(runtimeConfigPath);
             runtimeConfigPath.SetRuntimeConfigValue();
         }
@@ -87,6 +89,7 @@ namespace Azure.DataGateway.Service
                 IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath
                    = ActivatorUtilities.GetServiceOrCreateInstance<IOptionsMonitor<RuntimeConfigPath>>(serviceProvider);
                 RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue!;
+                Console.WriteLine("Initial Config: Reading file: " + runtimeConfigPath.CurrentValue.ConfigFileName);
 
                 switch (runtimeConfig.DatabaseType)
                 {
@@ -176,11 +179,11 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.cosmos:
                         return null!;
                     case DatabaseType.mssql:
-                        return new DbExceptionParserBase();
+                        return new DbExceptionParserBase(runtimeConfigPath);
                     case DatabaseType.postgresql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<PostgresDbExceptionParser>(serviceProvider);
+                        return ActivatorUtilities.CreateInstance<PostgresDbExceptionParser>(serviceProvider, runtimeConfigPath);
                     case DatabaseType.mysql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<MySqlDbExceptionParser>(serviceProvider);
+                        return ActivatorUtilities.CreateInstance<MySqlDbExceptionParser>(serviceProvider, runtimeConfigPath);
                     default:
                         throw new NotSupportedException(runtimeConfig.DataSource.GetDatabaseTypeNotSupportedMessage());
                 }
@@ -196,9 +199,11 @@ namespace Azure.DataGateway.Service
             services.AddHttpContextAccessor();
 
             ConfigureAuthentication(services);
-
             services.AddAuthorization();
             services.AddSingleton<IAuthorizationHandler, RequestAuthorizationHandler>();
+            services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
+            services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
+
             services.AddControllers();
         }
 
@@ -236,6 +241,17 @@ namespace Azure.DataGateway.Service
             app.UseHttpsRedirection();
 
             app.UseRouting();
+
+            // Adding CORS Middleware
+            if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Cors is not null)
+            {
+                app.UseCors(CORSPolicyBuilder =>
+                {
+                    Cors corsConfig = runtimeConfig.HostGlobalSettings.Cors;
+                    ConfigureCors(CORSPolicyBuilder, corsConfig);
+                });
+            }
+
             app.Use(async (context, next) =>
             {
                 bool isSettingConfig = context.Request.Path.StartsWithSegments("/configuration")
@@ -263,17 +279,28 @@ namespace Azure.DataGateway.Service
             app.UseAuthentication();
 
             // Conditionally add authentication middleware in Production Mode
-            if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Mode != HostModeType.Development)
+            if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Mode == HostModeType.Production)
             {
                 app.UseAuthenticationMiddleware();
             }
 
             app.UseAuthorization();
 
+            // Authorization Engine middleware enforces that all requests (including introspection)
+            // include proper auth headers.
+            // - {Authorization header + Client role header for JWT}
+            // - {X-MS-CLIENT-PRINCIPAL + Client role header for EasyAuth}
+            // When enabled, the middleware will prevent Banana Cake Pop(GraphQL client) from loading
+            // without proper authorization headers.
+            if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Mode == HostModeType.Production)
+            {
+                app.UseAuthorizationEngineMiddleware();
+            }
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                endpoints.MapBananaCakePop("/graphql");
+                endpoints.MapBananaCakePop(toolPath: "/graphql");
             });
         }
 
@@ -336,6 +363,37 @@ namespace Azure.DataGateway.Service
             {
                 services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
                     .AddEasyAuthAuthentication();
+            }
+        }
+
+        /// <summary>
+        /// Build a CorsPolicy to be consumed by the useCors function, allowing requests with any methods or headers 
+        /// Used both for app startup and testing purposes
+        /// </summary>
+        /// <param name="builder"> The CorsPolicyBuilder that will be used to build the policy </param>
+        /// <param name="corsConfig"> The cors runtime configuration specifying the allowed origins and whether credentials can be included in requests </param>
+        /// <returns> The built cors policy </returns>
+        public static CorsPolicy ConfigureCors(CorsPolicyBuilder builder, Cors corsConfig)
+        {
+            string[] Origins = corsConfig.Origins is not null ? corsConfig.Origins : Array.Empty<string>();
+            if (corsConfig.AllowCredentials)
+            {
+                return builder
+                    .WithOrigins(Origins)
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .SetIsOriginAllowedToAllowWildcardSubdomains()
+                    .AllowCredentials()
+                    .Build();
+            }
+            else
+            {
+                return builder
+                    .WithOrigins(Origins)
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .SetIsOriginAllowedToAllowWildcardSubdomains()
+                    .Build();
             }
         }
     }

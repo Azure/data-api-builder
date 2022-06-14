@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
@@ -354,12 +355,13 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// <param name="expectedParsedPolicy">The policy which is expected to be generated after parsing.</param>
         [DataTestMethod]
         [DataRow("@claims.user_email ne @item.col1 and @claims.contact_no eq @item.col2 and not(@claims.name eq @item.col3)",
-            "'xyz@microsoft.com' ne col1 and 1234 eq col2 and not('Aaron' eq col3)")]
+            "('xyz@microsoft.com') ne col1 and (1234) eq col2 and not(('Aaron') eq col3)", DisplayName = "Valid policy parsing test 1")]
         [DataRow("(@claims.isemployee eq @item.col1 and @item.col2 ne @claims.user_email) or" +
-            " ('David' ne @item.col3 and @claims.(((contact_no))) ne 4321)", "(true eq col1 and col2 ne 'xyz@microsoft.com') or" +
-            " ('David' ne col3 and 1234 ne 4321)")]
-        [DataRow("(@item.rating gt @claims.(  ((emprating)))) and (@claims.((((isemployee)))) eq true)", "(rating gt 4.2) and (true eq true)")]
-        [DataRow("@item.rating eq @claims.(emprating))", "rating eq 4.2)")]
+            " ('David' ne @item.col3 and @claims.(((contact_no))) ne 4321)", "((true) eq col1 and col2 ne ('xyz@microsoft.com')) or" +
+            " ('David' ne col3 and (1234) ne 4321)", DisplayName = "Valid policy parsing test 2")]
+        [DataRow("(@item.rating gt @claims.(  ((emprating)))) and (@claims.((((isemployee)))) eq true)",
+            "(rating gt (4.2)) and ((true) eq true)", DisplayName = "Valid policy parsing test 3")]
+        [DataRow("@item.rating eq @claims.(emprating))", "rating eq (4.2))", DisplayName = "Valid policy parsing test 4")]
         public void ParseValidDbPolicy(string policy, string expectedParsedPolicy)
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
@@ -396,8 +398,10 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// </summary>
         /// <param name="policy">The policy to be parsed.</param>
         [DataTestMethod]
-        [DataRow("@claims.user_email eq @item.col1 and @claims.emprating eq @item.rating")]
-        [DataRow("@claims.user_email eq @item.col1 and not ( true eq @claims.isemployee or @claims.name eq 'Aaron')")]
+        [DataRow("@claims.user_email eq @item.col1 and @claims.emprating eq @item.rating",
+            DisplayName = "'emprating' claim missing from request")]
+        [DataRow("@claims.user_email eq @item.col1 and not ( true eq @claims.isemployee or @claims.name eq 'Aaron')",
+            DisplayName = "'name' claim missing from request")]
         public void ParseInvalidDbPolicyWithUserNotPossessingAllClaims(string policy)
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
@@ -438,12 +442,12 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// </summary>
         /// <param name="policy">The policy to be parsed.</param>
         [DataTestMethod]
-        [DataRow("@claims.user_email eq @item.col1 and @claims.emp/rating eq @item.col2")]
-        [DataRow("@claims.user$email eq @item.col1 and @claims.emp_rating eq @item.col2")]
-        [DataRow("@claims.user_email eq @item.col1 and not ( true eq @claims.isemp%loyee or @claims.name eq 'Aaron')")]
-        [DataRow("@claims.user+email eq @item.col1 and @claims.isemployee eq @item.col2")]
-        [DataRow("@claims.user_email eq @item.col1 and @claims.((isemployee eq @item.col2")]
-        [DataRow("@claims.user_email eq @item.col1 and @item.col2 eq @claims.((isemployee ))")]
+        [DataRow("@claims.user_email eq @item.col1 and @claims.emp/rating eq @item.col2", DisplayName = "/ in claimType")]
+        [DataRow("@claims.user$email eq @item.col1 and @claims.emp_rating eq @item.col2", DisplayName = "$ in claimType")]
+        [DataRow("@claims.user_email eq @item.col1 and not ( true eq @claims.isemp%loyee or @claims.name eq 'Aaron')"
+            , DisplayName = "% in claimType")]
+        [DataRow("@claims.user+email eq @item.col1 and @claims.isemployee eq @item.col2", DisplayName = "+ in claimType")]
+        [DataRow("@claims.user_email eq @item.col1 and @claims.((isemployee eq @item.col2", DisplayName = "unbalanced parenthesis in claimType")]
         public void ParseInvalidDbPolicyWithInvalidClaimTypeFormat(string policy)
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(

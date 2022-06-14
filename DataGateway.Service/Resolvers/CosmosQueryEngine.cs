@@ -179,6 +179,14 @@ namespace Azure.DataGateway.Service.Resolvers
             return JsonSerializer.Deserialize<List<JsonDocument>>(element.ToString());
         }
 
+        /// <summary>
+        /// Query cosmos container using a single partition key. 
+        /// </summary>
+        /// <param name="container"></param>
+        /// <param name="idValue"></param>
+        /// <param name="partitionKeyValue"></param>
+        /// <param name="IsPaginated"></param>
+        /// <returns></returns>
         private static async Task<Tuple<JsonDocument, IMetadata>> QueryByIdAndPartitionKey(Container container, string idValue, string partitionKeyValue, bool IsPaginated)
         {
             try
@@ -216,27 +224,26 @@ namespace Azure.DataGateway.Service.Resolvers
 
             return partitionKeyPath;
         }
-
-        private async Task<(string idValue, string partitionKeyValue)> GetIdAndPartitionKey(IDictionary<string, object?> parameters, Container container, CosmosQueryStructure structure)
+#nullable enable
+        private async Task<(string? idValue, string? partitionKeyValue)> GetIdAndPartitionKey(IDictionary<string, object?> parameters, Container container, CosmosQueryStructure structure)
         {
-            string partitionKeyValue = null;
-            string idValue = null;
+#nullable enable
+            string? partitionKeyValue = null, idValue = null;
             string partitionKeyPath = await GetPartitionKeyPath(container);
 
-            foreach (KeyValuePair<string, object> parameterEntry in parameters)
+            foreach (KeyValuePair<string, object?> parameterEntry in parameters)
             {
-                // Mapping partitionKey and id value from _filter object if _filter keywords exists in args
-                if (parameterEntry.Key == QueryBuilder.FILTER_FIELD_NAME)
-                {
-                    partitionKeyValue = GetPartitionKeyValue(partitionKeyPath, parameterEntry.Value);
-
-                    idValue = GetIdValue(parameterEntry.Value);
-                }
-
-                // Set id value if id is passed in as an argument
+                // id and _filter args can't exist at the same time
                 if (parameterEntry.Key == QueryBuilder.ID_FIELD_NAME)
                 {
-                    idValue = parameterEntry.Value.ToString();
+                    // Set id value if id is passed in as an argument
+                    idValue = parameterEntry.Value?.ToString();
+                }
+                else if (parameterEntry.Key == QueryBuilder.FILTER_FIELD_NAME)
+                {
+                    // Mapping partitionKey and id value from _filter object if _filter keywords exists in args
+                    partitionKeyValue = GetPartitionKeyValue(partitionKeyPath, parameterEntry.Value);
+                    idValue = GetIdValue(parameterEntry.Value);
                 }
             }
 
@@ -250,7 +257,8 @@ namespace Azure.DataGateway.Service.Resolvers
             return new(idValue, partitionKeyValue);
         }
 
-        private string GetPartitionKeyValue(string partitionKeyPath, object parameter)
+#nullable enable
+        private string? GetPartitionKeyValue(string partitionKeyPath, object? parameter)
         {
             if (parameter == null || partitionKeyPath == null)
             {
@@ -280,14 +288,18 @@ namespace Azure.DataGateway.Service.Resolvers
             return null;
         }
 
-        private static string GetIdValue(object parameter)
+#nullable enable
+        private static string? GetIdValue(object? parameter)
         {
-            foreach (ObjectFieldNode item in (IList<ObjectFieldNode>)parameter)
+            if (parameter != null)
             {
-                if (string.Equals(item.Name.Value, "id", StringComparison.OrdinalIgnoreCase))
+                foreach (ObjectFieldNode item in (IList<ObjectFieldNode>)parameter)
                 {
-                    IList<ObjectFieldNode> idValueObj = (IList<ObjectFieldNode>)item.Value.Value;
-                    return idValueObj.FirstOrDefault(x => x.Name.Value == "eq")?.Value.Value.ToString();
+                    if (string.Equals(item.Name.Value, "id", StringComparison.OrdinalIgnoreCase))
+                    {
+                        IList<ObjectFieldNode> idValueObj = (IList<ObjectFieldNode>)item.Value.Value;
+                        return idValueObj.FirstOrDefault(x => x.Name.Value == "eq")?.Value.Value.ToString();
+                    }
                 }
             }
 

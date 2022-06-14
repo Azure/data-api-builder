@@ -137,12 +137,14 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
             throw new NotImplementedException();
         }
 
+        /// <inheritdoc />
         public string? GetPartitionKeyPath(string database, string container)
         {
             _partitionKeyPaths.TryGetValue($"{database}/{container}", out string? partitionKeyPath);
             return partitionKeyPath;
         }
 
+        /// <inheritdoc />
         public void SetPartitionKeyPath(string database, string container, string partitionKeyPath)
         {
             if (!_partitionKeyPaths.TryAdd($"{database}/{container}", partitionKeyPath))

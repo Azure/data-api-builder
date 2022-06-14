@@ -181,10 +181,12 @@ namespace Azure.DataGateway.Service.Authorization
                     {
                         string actionName = string.Empty;
                         ActionMetadata actionToColumn = new();
+                        IEnumerable<string> allTableColumns = ResolveTableDefinitionColumns(entityName);
                         if (actionElement.ValueKind == JsonValueKind.String)
                         {
                             actionName = actionElement.ToString();
-                            actionToColumn.included.UnionWith(ResolveTableDefinitionColumns(entityName));
+                            actionToColumn.included.UnionWith(allTableColumns);
+                            actionToColumn.allowed.UnionWith(allTableColumns);
                         }
                         else if (actionElement.ValueKind == JsonValueKind.Object)
                         {
@@ -225,6 +227,9 @@ namespace Azure.DataGateway.Service.Authorization
                                         actionToColumn.excluded = new(actionObj.Fields.Exclude);
                                     }
                                 }
+
+                                // Calculate the set of allowed backing column names.
+                                actionToColumn.allowed.UnionWith(actionToColumn.included.Except(actionToColumn.excluded));
                             }
                         }
 
@@ -242,7 +247,7 @@ namespace Azure.DataGateway.Service.Authorization
         public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, string action)
         {
             ActionMetadata actionMetadata = _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action];
-            IEnumerable<string> allowedDBColumns = actionMetadata.included.Except(actionMetadata.excluded);
+            IEnumerable<string> allowedDBColumns = actionMetadata.allowed;
             List<string> allowedExposedColumns = new();
 
             foreach (string dbColumn in allowedDBColumns)

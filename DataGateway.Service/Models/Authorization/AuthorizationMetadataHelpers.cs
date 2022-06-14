@@ -37,5 +37,6 @@ namespace Azure.DataGateway.Service.Models.Authorization
     {
         public HashSet<string> included = new();
         public HashSet<string> excluded = new();
+        public HashSet<string> allowed = new();
     }
 }

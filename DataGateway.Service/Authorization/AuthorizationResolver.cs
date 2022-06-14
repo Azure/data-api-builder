@@ -420,7 +420,7 @@ namespace Azure.DataGateway.Service.Authorization
                     policyWithClaims.Append(policy.Substring(parsedIdx, claimIdx - parsedIdx));
 
                     // Append the claimValue to the resulting policy string
-                    policyWithClaims.Append(GetClaimValueByDataType(claim));
+                    policyWithClaims.Append($"({GetClaimValueByDataType(claim)})");
 
                     // Move the parsedIdx to the index following a claimType in the policy string
                     parsedIdx = claimIdx + claimType.Value.Length;

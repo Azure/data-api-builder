@@ -57,7 +57,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="context"></param>
         protected static async Task InitializeTestFixture(TestContext context, string testCategory)
         {
-
             _testCategory = testCategory;
             _runtimeConfigPath = SqlTestHelper.LoadConfig($"{_testCategory}");
             switch (_testCategory)
@@ -167,7 +166,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 httpContext.Request.ContentLength = stream.Length;
             }
 
-            // Set the user role as authenticated to allow tests to execute with max privileges.
+            // Set the user role as authenticated to allow tests to execute with all privileges.
             httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = "authenticated";
 
             return httpContext;

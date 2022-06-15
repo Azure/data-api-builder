@@ -5,7 +5,6 @@ using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
-using HotChocolate.AspNetCore.Authorization;
 using HotChocolate.Language;
 using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLNaming;
 

@@ -6,9 +6,9 @@ using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLUtils;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 {
-    internal static class DeleteMutationBuilder
+    public static class DeleteMutationBuilder
     {
-        public static FieldDefinitionNode Build(NameNode name, ObjectTypeDefinitionNode objectTypeDefinitionNode, Entity configEntity)
+        public static FieldDefinitionNode Build(NameNode name, ObjectTypeDefinitionNode objectTypeDefinitionNode, Entity configEntity, IEnumerable<string>? rolesAllowedForMutation = null)
         {
             List<FieldDefinitionNode> idFields = FindPrimaryKeyFields(objectTypeDefinitionNode);
             string description;
@@ -33,13 +33,20 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                     new List<DirectiveNode>()));
             }
 
+            // Create authorize directive denoting allowed roles
+            List<DirectiveNode> fieldDefinitionNodeDirectives = new();
+            if (rolesAllowedForMutation is not null)
+            {
+                fieldDefinitionNodeDirectives.Add(CreateAuthorizationDirective(rolesAllowedForMutation));
+            }
+
             return new(
                 null,
                 new NameNode($"delete{FormatNameForObject(name, configEntity)}"),
                 new StringValueNode($"Delete a {name}"),
                 inputValues,
                 new NamedTypeNode(FormatNameForObject(name, configEntity)),
-                new List<DirectiveNode>()
+                directives: fieldDefinitionNodeDirectives
             );
         }
     }

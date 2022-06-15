@@ -84,7 +84,7 @@ namespace Azure.DataGateway.Service.Services
                 .AddType<OrderByType>()
                 .AddType<DefaultValueType>()
                 .AddDocument(PrepareQueryBuilder(root, _entities, inputTypes))
-                .AddDocument(MutationBuilder.Build(root, _databaseType, _entities));
+                .AddDocument(PrepareMutationBuilder(root, _databaseType, _entities));
 
             Schema = sb
                 .ModifyOptions(o => o.EnableOneOf = true)
@@ -135,6 +135,41 @@ namespace Azure.DataGateway.Service.Services
             }
 
             return QueryBuilder.BuildDocumentNode(queryFields, returnTypes);
+        }
+
+        /// <summary>
+        /// Creates a DocumentNode containing FieldDefinitionNodes representing mutations
+        /// </summary>
+        /// <param name="root">Root of GraphQL schema</param>
+        /// <param name="databaseType">i.e. MSSQL, MySQL, Postgres, Cosmos</param>
+        /// <param name="entities">Map of entityName -> EntityMetadata</param>
+        /// <returns></returns>
+        private DocumentNode PrepareMutationBuilder(DocumentNode root, DatabaseType databaseType, IDictionary<string, Entity> entities)
+        {
+            List<FieldDefinitionNode> mutationFields = new();
+            Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs = new();
+
+            foreach (IDefinitionNode definition in root.Definitions)
+            {
+                if (definition is ObjectTypeDefinitionNode objectTypeDefinitionNode && GraphQLUtils.IsModelType(objectTypeDefinitionNode))
+                {
+                    NameNode name = objectTypeDefinitionNode.Name;
+                    string dbEntityName = GraphQLNaming.ObjectTypeToEntityName(objectTypeDefinitionNode);
+                    Entity entity = entities[dbEntityName];
+
+                    // Get Roles for mutation actionType on Entity
+                    IEnumerable<string> rolesAllowedForMutation = _authorizationResolver.GetRolesForAction(dbEntityName, actionName: ActionType.CREATE);
+                    mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entity, rolesAllowedForMutation));
+
+                    rolesAllowedForMutation = _authorizationResolver.GetRolesForAction(dbEntityName, actionName: ActionType.UPDATE);
+                    mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entity, databaseType, rolesAllowedForMutation));
+
+                    rolesAllowedForMutation = _authorizationResolver.GetRolesForAction(dbEntityName, actionName: ActionType.DELETE);
+                    mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entity, rolesAllowedForMutation));
+                }
+            }
+
+            return MutationBuilder.BuildDocumentNode(mutationFields, inputs);
         }
 
         private void MakeSchemaExecutable()

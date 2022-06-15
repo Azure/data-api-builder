@@ -7,6 +7,13 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 {
     public static class MutationBuilder
     {
+        /// <summary>
+        /// Creates a DocumentNode containing FieldDefinitionNodes representing mutations
+        /// </summary>
+        /// <param name="root">Root of GraphQL schema</param>
+        /// <param name="databaseType">i.e. MSSQL, MySQL, Postgres, Cosmos</param>
+        /// <param name="entities">Map of entityName -> EntityMetadata</param>
+        /// <returns></returns>
         public static DocumentNode Build(DocumentNode root, DatabaseType databaseType, IDictionary<string, Entity> entities)
         {
             List<FieldDefinitionNode> mutationFields = new();
@@ -26,10 +33,22 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                 }
             }
 
+            return BuildDocumentNode(mutationFields, inputs);
+        }
+
+        /// <summary>
+        /// Creates the DocumentNode with the provided mutationFields and inputs.
+        /// </summary>
+        /// <param name="mutationFields">such as createBook(){}</param>
+        /// <param name="inputs">Such as CreateBookInput</param>
+        /// <returns></returns>
+        public static DocumentNode BuildDocumentNode(List<FieldDefinitionNode> mutationFields, Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs)
+        {
             List<IDefinitionNode> definitionNodes = new()
             {
                 new ObjectTypeDefinitionNode(null, new NameNode("Mutation"), null, new List<DirectiveNode>(), new List<NamedTypeNode>(), mutationFields),
             };
+
             definitionNodes.AddRange(inputs.Values);
             return new(definitionNodes);
         }

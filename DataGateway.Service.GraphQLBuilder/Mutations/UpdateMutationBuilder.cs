@@ -155,7 +155,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
             DocumentNode root,
             Entity entity,
-            DatabaseType databaseType)
+            DatabaseType databaseType,
+            IEnumerable<string>? rolesAllowedForMutation = null)
         {
             InputObjectTypeDefinitionNode input = GenerateUpdateInputType(inputs, objectTypeDefinitionNode, name, root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>(), entity, databaseType);
             List<FieldDefinitionNode> idFields = FindPrimaryKeyFields(objectTypeDefinitionNode);
@@ -189,13 +190,20 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                     defaultValue: null,
                     new List<DirectiveNode>()));
 
+            // Create authorize directive denoting allowed roles
+            List<DirectiveNode> fieldDefinitionNodeDirectives = new();
+            if (rolesAllowedForMutation is not null)
+            {
+                fieldDefinitionNodeDirectives.Add(CreateAuthorizationDirective(rolesAllowedForMutation));
+            }
+
             return new(
                 location: null,
                 new NameNode($"update{FormatNameForObject(name, entity)}"),
                 new StringValueNode($"Updates a {name}"),
                 inputValues,
                 new NamedTypeNode(FormatNameForObject(name, entity)),
-                new List<DirectiveNode>()
+                directives: fieldDefinitionNodeDirectives
             );
         }
     }

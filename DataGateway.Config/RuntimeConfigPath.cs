@@ -67,8 +67,8 @@ namespace Azure.DataGateway.Config
         {
             StringBuilder stringBuilder = new();
             StringWriter stringWriter = new(stringBuilder);
-            JsonTextReader reader = new(new StringReader(json));
-            JsonTextWriter writer = new(stringWriter)
+            using JsonTextReader reader = new(new StringReader(json));
+            using JsonTextWriter writer = new(stringWriter)
             {
                 Formatting = Formatting.Indented
             };
@@ -120,6 +120,9 @@ namespace Azure.DataGateway.Config
                         case JsonToken.EndObject:
                             writer.WriteEndObject();
                             break;
+                        case JsonToken.Null:
+                            writer.WriteNull();
+                            break;
                     }
                 }
             }
@@ -147,9 +150,10 @@ namespace Azure.DataGateway.Config
             // strip's first and last characters, ie: '''hello'' --> ''hello'
             string envName = Regex.Match(match.Value, innerPattern).Value[1..^1];
             string? envValue = Environment.GetEnvironmentVariable(envName);
-            return envValue is not null ? envValue : throw new DataGatewayException(message: $"Environmental Variable, {envName}, not found.",
-                                                                                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                                                                                    subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
+            return envValue is not null ? envValue :
+                throw new DataGatewayException(message: $"Environmental Variable, {envName}, not found.",
+                                               statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                               subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
         }
 
         /// <summary>

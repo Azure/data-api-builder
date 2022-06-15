@@ -120,134 +120,134 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
   },
   ""runtime"": {
     ""rest"": {
-        ""enabled"": """ + reps[++index % reps.Length] + @""",
+      ""enabled"": """ + reps[++index % reps.Length] + @""",
       ""path"": ""/" + reps[++index % reps.Length] + @"""
     },
     ""graphql"": {
-        ""enabled"": true,
+      ""enabled"": true,
       ""path"": """ + reps[++index % reps.Length] + @""",
       ""allow-introspection"": true
     },
     ""host"": {
-        ""mode"": """ + reps[++index % reps.Length] + @""",
+      ""mode"": """ + reps[++index % reps.Length] + @""",
       ""cors"": {
-            ""origins"": [ """ + reps[++index % reps.Length] + @""", """ + reps[++index % reps.Length] + @""" ],
+        ""origins"": [ """ + reps[++index % reps.Length] + @""", """ + reps[++index % reps.Length] + @""" ],
         ""allow-credentials"": """ + reps[++index % reps.Length] + @"""
       },
       ""authentication"": {
-            ""provider"": """ + reps[++index % reps.Length] + @""",
+        ""provider"": """ + reps[++index % reps.Length] + @""",
         ""jwt"": {
                 ""audience"": """",
           ""issuer"": """",
           ""issuer-key"": """ + reps[++index % reps.Length] + @"""
         }
-        }
+      }
     }
-},
+  },
   ""entities"": {
     ""Publisher"": {
-        ""source"": """ + reps[++index % reps.Length] + @"." + reps[++index % reps.Length] + @""",
+      ""source"": """ + reps[++index % reps.Length] + @"." + reps[++index % reps.Length] + @""",
       ""rest"": """ + reps[++index % reps.Length] + @""",
       ""graphql"": """ + reps[++index % reps.Length] + @""",
       ""permissions"": [
         {
-            ""role"": ""anonymous"",
+          ""role"": ""anonymous"",
           ""actions"": [ """ + reps[++index % reps.Length] + @""" ]
         },
         {
-            ""role"": ""authenticated"",
+          ""role"": ""authenticated"",
           ""actions"": [ ""create"", """ + reps[++index % reps.Length] + @""", ""update"", ""delete"" ]
         }
       ],
       ""relationships"": {
-            ""books"": {
-                ""cardinality"": ""many"",
+        ""books"": {
+          ""cardinality"": ""many"",
           ""target.entity"": """ + reps[++index % reps.Length] + @"""
-            }
         }
+      }
     },
     ""Stock"": {
-        ""source"": """ + reps[++index % reps.Length] + @""",
-      ""rest"": true,
+      ""source"": """ + reps[++index % reps.Length] + @""",
+      ""rest"": null,
       ""graphql"": """ + reps[++index % reps.Length] + @""",
       ""permissions"": [
         {
-            ""role"": """ + reps[++index % reps.Length] + @""",
+          ""role"": """ + reps[++index % reps.Length] + @""",
           ""actions"": [ """ + reps[++index % reps.Length] + @""" ]
         },
         {
-            ""role"": ""authenticated"",
+          ""role"": ""authenticated"",
           ""actions"": [ """ + reps[++index % reps.Length] + @""", ""read"", ""update"" ]
         }
       ],
       ""relationships"": {
-            ""comics"": {
-                ""cardinality"": ""many"",
+        ""comics"": {
+          ""cardinality"": ""many"",
           ""target.entity"": """ + reps[++index % reps.Length] + @""",
           ""source.fields"": [ ""categoryName"" ],
           ""target.fields"": [ """ + reps[++index % reps.Length] + @""" ]
         }
-        }
+      }
     },
     ""Book"": {
-        ""source"": """ + reps[++index % reps.Length] + @""",
+      ""source"": """ + reps[++index % reps.Length] + @""",
       ""permissions"": [
         {
-            ""role"": ""anonymous"",
+          ""role"": ""anonymous"",
           ""actions"": [ """ + reps[++index % reps.Length] + @""" ]
         },
         {
-            ""role"": ""authenticated"",
+          ""role"": ""authenticated"",
           ""actions"": [ """ + reps[++index % reps.Length] + @""", ""update"", """ + reps[++index % reps.Length] + @""" ]
         }
       ],
       ""relationships"": {
-            ""publishers"": {
-                ""cardinality"": """ + reps[++index % reps.Length] + @""",
+        ""publishers"": {
+          ""cardinality"": """ + reps[++index % reps.Length] + @""",
           ""target.entity"": """ + reps[++index % reps.Length] + @"""
-            },
+        },
         ""websiteplacement"": {
-                ""cardinality"": ""one"",
+          ""cardinality"": ""one"",
           ""target.entity"": """ + reps[++index % reps.Length] + @"""
         },
         ""reviews"": {
-                ""cardinality"": ""many"",
+          ""cardinality"": ""many"",
           ""target.entity"": """ + reps[++index % reps.Length] + @"""
         },
         ""authors"": {
-                ""cardinality"": """ + reps[++index % reps.Length] + @""",
+          ""cardinality"": """ + reps[++index % reps.Length] + @""",
           ""target.entity"": ""Author"",
           ""linking.object"": ""book_author_link"",
           ""linking.source.fields"": [ ""book_id"" ],
           ""linking.target.fields"": [ """ + reps[++index % reps.Length] + @""" ]
         }
-        },
+      },
       ""mappings"": {
-            ""id"": """ + reps[++index % reps.Length] + @""",
+        ""id"": """ + reps[++index % reps.Length] + @""",
         ""title"": """ + reps[++index % reps.Length] + @"""
       }
     },
     ""BookWebsitePlacement"": {
-        ""source"": ""book_website_placements"",
+      ""source"": ""book_website_placements"",
       ""rest"": """ + reps[++index % reps.Length] + @""",
       ""graphql"": """ + reps[++index % reps.Length] + @""",
       ""permissions"": [
         {
-            ""role"": """ + reps[++index % reps.Length] + @""",
+          ""role"": """ + reps[++index % reps.Length] + @""",
           ""actions"": [ """ + reps[++index % reps.Length] + @""" ]
         },
         {
-            ""role"": """ + reps[++index % reps.Length] + @""",
+          ""role"": """ + reps[++index % reps.Length] + @""",
           ""actions"": [
             """ + reps[++index % reps.Length] + @""",
             """ + reps[++index % reps.Length] + @""",
             {
-                ""action"": ""delete"",
+              ""action"": ""delete"",
               ""policy"": {
-                    ""database"": ""@claims.id eq @item.id""
+                ""database"": ""@claims.id eq @item.id""
               },
               ""fields"": {
-                    ""include"": [ ""*"" ],
+                ""include"": [ ""*"" ],
                 ""exclude"": [ """ + reps[++index % reps.Length] + @""" ]
               }
             }
@@ -255,54 +255,54 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         }
       ],
       ""relationships"": {
-            ""books"": {
-                ""cardinality"": ""one"",
+        ""books"": {
+          ""cardinality"": ""one"",
           ""target.entity"": """ + reps[++index % reps.Length] + @"""
-            }
         }
+      }
     },
     ""Author"": {
-        ""source"": """ + reps[++index % reps.Length] + @""",
+      ""source"": """ + reps[++index % reps.Length] + @""",
       ""rest"": true,
       ""graphql"": """ + reps[++index % reps.Length] + @""",
       ""permissions"": [
         {
-            ""role"": """ + reps[++index % reps.Length] + @""",
+          ""role"": """ + reps[++index % reps.Length] + @""",
           ""actions"": [ ""read"" ]
         }
       ],
       ""relationships"": {
-            ""books"": {
-                ""cardinality"": ""many"",
+        ""books"": {
+          ""cardinality"": ""many"",
           ""target.entity"": """ + reps[++index % reps.Length] + @""",
           ""linking.object"": ""book_author_link""
-            }
         }
+      }
     },
     ""Review"": {
-        ""source"": """ + reps[++index % reps.Length] + @""",
+      ""source"": """ + reps[++index % reps.Length] + @""",
       ""rest"": true,
       ""permissions"": [
         {
-            ""role"": ""anonymous"",
+          ""role"": ""anonymous"",
           ""actions"": [ """ + reps[++index % reps.Length] + @""" ]
         }
       ],
       ""relationships"": {
-            ""books"": {
-                ""cardinality"": """ + reps[++index % reps.Length] + @""",
+        ""books"": {
+          ""cardinality"": """ + reps[++index % reps.Length] + @""",
           ""target.entity"": """ + reps[++index % reps.Length] + @"""
-            }
         }
+      }
     },
     ""Comic"": {
-        ""source"": ""comics"",
+      ""source"": ""comics"",
       ""rest"": true,
-      ""graphql"": false,
+      ""graphql"": null,
       ""permissions"": [
         {
-            ""role"": """ + reps[++index % reps.Length] + @""",
-          ""actions"": [ ""read"" ]
+          ""role"": """ + reps[++index % reps.Length] + @""",
+          ""actions"": [ null ]
         },
         {
             ""role"": ""authenticated"",
@@ -311,81 +311,81 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
       ]
     },
     ""Broker"": {
-        ""source"": ""brokers"",
+      ""source"": ""brokers"",
       ""graphql"": false,
       ""permissions"": [
         {
-            ""role"": """ + reps[++index % reps.Length] + @""",
+          ""role"": """ + reps[++index % reps.Length] + @""",
           ""actions"": [ """ + reps[++index % reps.Length] + @""" ]
         }
       ]
     },
     ""WebsiteUser"": {
-        ""source"": """ + reps[++index % reps.Length] + @""",
+      ""source"": """ + reps[++index % reps.Length] + @""",
       ""rest"": false,
       ""permissions"": []
     },
     ""SupportedType"": {
-        ""source"": """ + reps[++index % reps.Length] + @""",
+      ""source"": """ + reps[++index % reps.Length] + @""",
       ""rest"": false,
       ""permissions"": []
     },
     ""stocks_price"": {
-        ""source"": """ + reps[++index % reps.Length] + @""",
+      ""source"": """ + reps[++index % reps.Length] + @""",
       ""rest"": """ + reps[++index % reps.Length] + @""",
       ""permissions"": []
     },
     ""Tree"": {
-        ""source"": """ + reps[++index % reps.Length] + @""",
+      ""source"": """ + reps[++index % reps.Length] + @""",
       ""rest"": """ + reps[++index % reps.Length] + @""",
       ""permissions"": [
         {
-            ""role"": """ + reps[++index % reps.Length] + @""",
+          ""role"": """ + reps[++index % reps.Length] + @""",
           ""actions"": [ ""create"", """ + reps[++index % reps.Length] + @""", ""update"", ""delete"" ]
         }
       ],
       ""mappings"": {
-            ""species"": ""Scientific Name"",
+        ""species"": ""Scientific Name"",
         ""region"": ""United State's " + reps[++index % reps.Length] + @"""
       }
     },
     ""Shrub"": {
-        ""source"": ""trees"",
+      ""source"": ""trees"",
       ""rest"": true,
       ""permissions"": [
         {
-            ""role"": """ + reps[++index % reps.Length] + @""",
+          ""role"": """ + reps[++index % reps.Length] + @""",
           ""actions"": [ ""create"", ""read"", """ + reps[++index % reps.Length] + @""", ""delete"" ]
         }
       ],
       ""mappings"": {
-            ""species"": """ + reps[++index % reps.Length] + @"""
+        ""species"": """ + reps[++index % reps.Length] + @"""
       }
     },
     ""Fungus"": {
-        ""source"": ""fungi"",
+      ""source"": ""fungi"",
       ""rest"": true,
       ""permissions"": [
         {
-            ""role"": ""anonymous"",
+          ""role"": ""anonymous"",
           ""actions"": [ """ + reps[++index % reps.Length] + @""", ""read"", """ + reps[++index % reps.Length] + @""", ""delete"" ]
         }
       ],
       ""mappings"": {
-            ""spores"": ""hazards""
+        ""spores"": ""hazards""
       }
     },
     ""books_view_all"": {
-        ""source"": """ + reps[++index % reps.Length] + @""",
+      ""source"": """ + reps[++index % reps.Length] + @""",
       ""rest"": true,
       ""graphql"": true,
       ""permissions"": [
         {
-            ""role"": ""anonymous"",
+          ""role"": ""anonymous"",
           ""actions"": [ """ + reps[++index % reps.Length] + @""" ]
         },
         {
-            ""role"": """ + reps[++index % reps.Length] + @""",
+          ""role"": """ + reps[++index % reps.Length] + @""",
           ""actions"": [ ""read"" ]
         }
       ],
@@ -393,38 +393,38 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         }
     },
     ""stocks_view_selected"": {
-        ""source"": """ + reps[++index % reps.Length] + @""",
+      ""source"": """ + reps[++index % reps.Length] + @""",
       ""rest"": true,
       ""graphql"": true,
       ""permissions"": [
         {
-            ""role"": ""anonymous"",
+          ""role"": ""anonymous"",
           ""actions"": [ ""read"" ]
         },
         {
-            ""role"": """ + reps[++index % reps.Length] + @""",
+          ""role"": """ + reps[++index % reps.Length] + @""",
           ""actions"": [ ""read"" ]
         }
       ],
       ""relationships"": {
-        }
+      }
     },
     ""books_publishers_view_composite"": {
-        ""source"": """ + reps[++index % reps.Length] + @""",
+      ""source"": """ + reps[++index % reps.Length] + @""",
       ""rest"": true,
       ""graphql"": true,
       ""permissions"": [
         {
-            ""role"": ""anonymous"",
+          ""role"": ""anonymous"",
           ""actions"": [ """ + reps[++index % reps.Length] + @""" ]
         },
         {
-            ""role"": ""authenticated"",
+          ""role"": ""authenticated"",
           ""actions"": [ """ + reps[++index % reps.Length] + @""" ]
         }
       ],
       ""relationships"": {
-        }
+      }
     }
   }
 }

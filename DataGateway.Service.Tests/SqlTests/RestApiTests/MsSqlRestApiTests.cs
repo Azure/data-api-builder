@@ -30,6 +30,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "FindEmptyTable",
+                $"SELECT * FROM {_emptyTableTableName}"
+            },
+            {
                 "FindViewAll",
                 $"SELECT * FROM { _simple_all_books } " +
                 $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"

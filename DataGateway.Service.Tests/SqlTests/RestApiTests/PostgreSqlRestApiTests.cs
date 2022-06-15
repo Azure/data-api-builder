@@ -27,6 +27,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                   ) AS subq"
             },
             {
+                "FindEmptyTable",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _emptyTableTableName + @"
+                    ) AS subq"
+            },
+            {
                 "FindTestWithQueryStringOneField",
                 @"
                   SELECT json_agg(to_jsonb(subq)) AS data

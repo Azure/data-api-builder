@@ -41,6 +41,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _integrationMappingDifferentEntity = "Shrub";
         protected static readonly string _integrationBrokenMappingEntity = "Fungus";
         protected static readonly string _nonExistentEntityName = "!@#$%^&*()_+definitely_nonexistent_entity!@#$%^&*()_+";
+        protected static readonly string _emptyTableEntityName = "Empty";
+        protected static readonly string _emptyTableTableName = "empty_table";
         protected static readonly string _simple_all_books = "books_view_all";
         protected static readonly string _simple_subset_stocks = "stocks_view_selected";
         protected static readonly string _composite_subset_bookPub = "books_publishers_view_composite";
@@ -65,6 +67,24 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 sqlQuery: GetQuery(nameof(FindByIdTest)),
                 controller: _restController
             );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation on an entity with no rows (empty table)
+        /// Should be a 200 response with an empty array
+        /// </summary>
+        [TestMethod]
+        public async Task FindEmptyResultSet()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _emptyTableEntityName,
+                sqlQuery: GetQuery("FindEmptyTable"),
+                controller: _restController
+            );
+
+            //TODO: add find tests on non-empty tables that are filtered to empty result sets
         }
 
         ///<summary>

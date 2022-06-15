@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Web;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
@@ -20,7 +21,6 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
@@ -46,7 +46,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static ISqlMetadataProvider _sqlMetadataProvider;
         protected static string _defaultSchemaName;
         protected static string _defaultSchemaVersion;
-        protected static IOptionsMonitor<RuntimeConfigPath> _runtimeConfigPath;
+        protected static RuntimeConfigProvider _runtimeConfigProvider;
         protected static IAuthorizationResolver _authZResolver;
 
         /// <summary>
@@ -58,37 +58,43 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static async Task InitializeTestFixture(TestContext context, string testCategory)
         {
             _testCategory = testCategory;
-            _runtimeConfigPath = SqlTestHelper.LoadConfig($"{_testCategory}");
+            RuntimeConfig _runtimeConfig = SqlTestHelper.LoadConfig($"{_testCategory}").CurrentValue;
+            Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new();
+            mockRuntimeConfigProvider.Setup(x => x.IsDeveloperMode()).Returns(true);
+            mockRuntimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out _runtimeConfig)).Returns(true);
+            mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(_runtimeConfig);
+            _runtimeConfigProvider = mockRuntimeConfigProvider.Object;
+
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:
                     _queryBuilder = new PostgresQueryBuilder();
                     _defaultSchemaName = "public";
-                    _dbExceptionParser = new PostgresDbExceptionParser(_runtimeConfigPath);
-                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(_runtimeConfigPath, _dbExceptionParser);
+                    _dbExceptionParser = new PostgresDbExceptionParser(_runtimeConfigProvider);
+                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(_runtimeConfigProvider, _dbExceptionParser);
                     _sqlMetadataProvider =
                         new PostgreSqlMetadataProvider(
-                            _runtimeConfigPath,
+                            _runtimeConfigProvider,
                             _queryExecutor,
                             _queryBuilder);
                     break;
                 case TestCategory.MSSQL:
                     _queryBuilder = new MsSqlQueryBuilder();
                     _defaultSchemaName = "dbo";
-                    _dbExceptionParser = new DbExceptionParserBase(_runtimeConfigPath);
-                    _queryExecutor = new QueryExecutor<SqlConnection>(_runtimeConfigPath, _dbExceptionParser);
+                    _dbExceptionParser = new DbExceptionParserBase(_runtimeConfigProvider);
+                    _queryExecutor = new QueryExecutor<SqlConnection>(_runtimeConfigProvider, _dbExceptionParser);
                     _sqlMetadataProvider = new MsSqlMetadataProvider(
-                        _runtimeConfigPath,
+                        _runtimeConfigProvider,
                         _queryExecutor, _queryBuilder);
                     break;
                 case TestCategory.MYSQL:
                     _queryBuilder = new MySqlQueryBuilder();
                     _defaultSchemaName = "mysql";
-                    _dbExceptionParser = new MySqlDbExceptionParser(_runtimeConfigPath);
-                    _queryExecutor = new QueryExecutor<MySqlConnection>(_runtimeConfigPath, _dbExceptionParser);
+                    _dbExceptionParser = new MySqlDbExceptionParser(_runtimeConfigProvider);
+                    _queryExecutor = new QueryExecutor<MySqlConnection>(_runtimeConfigProvider, _dbExceptionParser);
                     _sqlMetadataProvider =
                          new MySqlMetadataProvider(
-                             _runtimeConfigPath,
+                             _runtimeConfigProvider,
                              _queryExecutor,
                              _queryBuilder);
                     break;
@@ -119,7 +125,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await _sqlMetadataProvider.InitializeAsync();
 
             //Initialize the authorization resolver object
-            _authZResolver = new AuthorizationResolver(_runtimeConfigPath, _sqlMetadataProvider);
+            _authZResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
         }
 
         protected static async Task ResetDbStateAsync()

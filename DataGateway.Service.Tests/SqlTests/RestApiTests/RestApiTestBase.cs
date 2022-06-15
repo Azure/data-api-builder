@@ -2537,6 +2537,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         }
 
         /// <summary>
+        /// Regression test to verify we have the correct exception when an invalid
+        /// query param is used.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestInvalidQueryParam()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?orderby=id",
+                entity: _integrationEntityName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: $"Invalid Query Parameter: orderby",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
         /// Tests the REST Api for Find operation with a null for sorting.
         /// </summary>
         [TestMethod]

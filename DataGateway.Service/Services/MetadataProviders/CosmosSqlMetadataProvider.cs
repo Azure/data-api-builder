@@ -3,37 +3,34 @@ using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
-using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Services.MetadataProviders
 {
     public class CosmosSqlMetadataProvider : ISqlMetadataProvider
     {
-        private readonly IOptionsMonitor<RuntimeConfigPath> _runtimeConfigPath;
         private readonly IFileSystem _fileSystem;
         private readonly DatabaseType _databaseType;
         private readonly Dictionary<string, Entity> _entities;
-        private readonly CosmosDbOptions _cosmosDb;
-
+        private CosmosDbOptions _cosmosDb;
+        private readonly RuntimeConfig _runtimeConfig;
         public FilterParser ODataFilterParser => new();
 
         /// <inheritdoc />
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } = new(StringComparer.InvariantCultureIgnoreCase);
 
-        public CosmosSqlMetadataProvider(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath, IFileSystem fileSystem)
+        public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem)
         {
-            _runtimeConfigPath = runtimeConfigPath;
             _fileSystem = fileSystem;
-            runtimeConfigPath.CurrentValue.
-                ExtractConfigValues(
-                    out _databaseType,
-                    out _,
-                    out _entities);
+            _runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
 
-            CosmosDbOptions? cosmosDb = _runtimeConfigPath.CurrentValue.ConfigValue!.CosmosDb;
+            _databaseType = _runtimeConfig.DatabaseType;
+            _entities = _runtimeConfig.Entities;
+
+            CosmosDbOptions? cosmosDb = _runtimeConfig.CosmosDb;
 
             if (cosmosDb is null)
             {
@@ -108,7 +105,20 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
 
         public string GraphQLSchema()
         {
-            return _fileSystem.File.ReadAllText(_cosmosDb.GraphQLSchemaPath);
+            if (_cosmosDb.GraphQLSchema is null && _fileSystem.File.Exists(_cosmosDb.GraphQLSchemaPath))
+            {
+                _cosmosDb = _cosmosDb with { GraphQLSchema = _fileSystem.File.ReadAllText(_cosmosDb.GraphQLSchemaPath) };
+            }
+
+            if (_cosmosDb.GraphQLSchema is null)
+            {
+                throw new DataGatewayException(
+                    "GraphQL Schema isn't set.",
+                    System.Net.HttpStatusCode.InternalServerError,
+                    DataGatewayException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            return _cosmosDb.GraphQLSchema;
         }
 
         public FilterParser GetODataFilterParser()

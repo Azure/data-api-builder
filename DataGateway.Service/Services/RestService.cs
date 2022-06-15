@@ -166,7 +166,7 @@ namespace Azure.DataGateway.Service.Services
         /// <exception cref="DataGatewayException"></exception>
         public (string, string) GetEntityNameAndPrimaryKeyRouteFromRoute(string route)
         {
-            if (_sqlMetadataProvider.TryGetRestPath(out string path) && !route.StartsWith(path[1..]))
+            if (_sqlMetadataProvider.TryGetRestPath(out string path) && !route.StartsWith(path.TrimStart('/')))
             {
                 throw new DataGatewayException(message: $"Invalid Path: {route}.",
                                                statusCode: HttpStatusCode.BadRequest,

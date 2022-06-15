@@ -10,8 +10,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
     [TestClass, TestCategory(TestCategory.MYSQL)]
     public class MySqlGraphQLMutationTests : GraphQLMutationTestBase
     {
-        public const string INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE = "MySql Error 23000: Integrity Contraint Violation.";
-
         #region Test Fixture Setup
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
@@ -322,6 +320,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
         [TestMethod]
         public async Task InsertWithInvalidForeignKey()
         {
+            string errorMessage = "Cannot add or update a child row: a foreign key constraint fails";
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('count', `subq`.`count`) AS `data`
                 FROM (
@@ -331,7 +330,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                     ) AS `subq`
             ";
 
-            await InsertWithInvalidForeignKey(mySqlQuery, INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE);
+            await InsertWithInvalidForeignKey(mySqlQuery, errorMessage);
         }
 
         /// <summary>
@@ -341,6 +340,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
         [TestMethod]
         public async Task UpdateWithInvalidForeignKey()
         {
+            string errorMessage = "Cannot add or update a child row: a foreign key constraint fails " +
+                                  "(\\u0060datagateway\\u0060.\\u0060books\\u0060";
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('count', `subq`.`count`) AS `data`
                 FROM (
@@ -351,7 +352,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                     ) AS `subq`
             ";
 
-            await UpdateWithInvalidForeignKey(mySqlQuery, INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE);
+            await UpdateWithInvalidForeignKey(mySqlQuery, errorMessage);
         }
 
         /// <summary>
@@ -381,7 +382,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
         [TestMethod]
         public async Task TestViolatingOneToOneRelashionShip()
         {
-            await TestViolatingOneToOneRelashionShip(INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE);
+            string errorMessage = "Duplicate entry \\u00271\\u0027 for key " +
+                                  "\\u0027book_website_placements.book_id\\u0027\"";
+            await TestViolatingOneToOneRelashionShip(errorMessage);
         }
         #endregion
     }

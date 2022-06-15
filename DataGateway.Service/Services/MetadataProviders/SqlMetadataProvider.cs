@@ -152,7 +152,6 @@ namespace Azure.DataGateway.Service.Services
             GenerateDatabaseObjectForEntities();
             await PopulateTableDefinitionForEntities();
             GenerateExposedToBackingColumnMapsForEntities();
-            ProcessEntityPermissions();
             InitFilterParser();
             timer.Stop();
             Console.WriteLine($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
@@ -527,60 +526,9 @@ namespace Azure.DataGateway.Service.Services
             return entity is not null ? entity.Mappings : null;
         }
 
-        /// <summary>
-        /// Processes permissions for all the entities.
-        /// </summary>
-        private void ProcessEntityPermissions()
-        {
-            foreach ((string entityName, Entity entity) in _entities)
-            {
-                DetermineHttpVerbPermissions(entityName, entity.Permissions);
-            }
-        }
-
         private void InitFilterParser()
         {
             _oDataFilterParser.BuildModel(this);
-        }
-
-        /// <summary>
-        /// Determines the allowed HttpRest Verbs and
-        /// their authorization rules for this entity.
-        /// </summary>
-        private void DetermineHttpVerbPermissions(string entityName, PermissionSetting[] permissions)
-        {
-            TableDefinition tableDefinition = GetTableDefinition(entityName);
-            foreach (PermissionSetting permission in permissions)
-            {
-                foreach (object action in permission.Actions)
-                {
-                    string actionName;
-                    if (((JsonElement)action).ValueKind == JsonValueKind.Object)
-                    {
-                        Config.Action configAction =
-                            ((JsonElement)action).Deserialize<Config.Action>()!;
-                        actionName = configAction.Name;
-                    }
-                    else
-                    {
-                        actionName = ((JsonElement)action).Deserialize<string>()!;
-                    }
-
-                    OperationAuthorizationRequirement restVerb
-                            = HttpRestVerbs.GetVerb(actionName);
-                    if (!tableDefinition.HttpVerbs.ContainsKey(restVerb.Name.ToString()!))
-                    {
-                        AuthorizationRule rule = new()
-                        {
-                            AuthorizationType =
-                              (AuthorizationType)Enum.Parse(
-                                  typeof(AuthorizationType), permission.Role, ignoreCase: true)
-                        };
-
-                        tableDefinition.HttpVerbs.Add(restVerb.Name.ToString()!, rule);
-                    }
-                }
-            }
         }
 
         /// <summary>

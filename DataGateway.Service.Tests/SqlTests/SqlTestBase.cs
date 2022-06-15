@@ -60,6 +60,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             RuntimeConfig _runtimeConfig = SqlTestHelper.LoadConfig($"{_testCategory}").CurrentValue;
 
             Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new();
+            mockRuntimeConfigProvider.Setup(x => x.IsDeveloperMode()).Returns(true);
             mockRuntimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out _runtimeConfig)).Returns(true);
             mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(_runtimeConfig);
             _runtimeConfigProvider = mockRuntimeConfigProvider.Object;

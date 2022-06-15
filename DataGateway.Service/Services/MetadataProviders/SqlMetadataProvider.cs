@@ -134,7 +134,7 @@ namespace Azure.DataGateway.Service.Services
         /// <inheritdoc />
         public string GetRestPath()
         {
-            return _restPath[1..];
+            return _restPath!;
         }
 
         /// <inheritdoc />

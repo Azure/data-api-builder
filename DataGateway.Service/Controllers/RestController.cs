@@ -108,12 +108,12 @@ namespace Azure.DataGateway.Service.Controllers
         /// Find action serving the HttpGet verb.
         /// </summary>
         /// <param name="route">The entire route which gets
-        /// its content from the route attribute {*path},
-        /// asterisk(*) here is a wild-card/catch all.
+        /// its content from the route attribute {*route} defined
+        /// for the class, asterisk(*) here is a wild-card/catch all.
         /// Expected URL template is of the following form:
-        /// MsSql/PgSql: URL template: /<entityName>/[<primary_key_column_name>/<primary_key_value>
+        /// MsSql/PgSql: URL template: <path>/<entityName>/[<primary_key_column_name>/<primary_key_value>
         /// URL MUST NOT contain a queryString
-        /// URL example: /Books </param>
+        /// URL example: api/Books </param>
         [HttpGet]
         [Produces("application/json")]
         public async Task<IActionResult> Find(
@@ -129,9 +129,9 @@ namespace Azure.DataGateway.Service.Controllers
         /// </summary>
         /// <param name="route">Path and entity.</param>
         /// Expected URL template is of the following form:
-        /// CosmosDb/MsSql/PgSql: URL template: /<entityName>
+        /// CosmosDb/MsSql/PgSql: URL template: <path>/<entityName>
         /// URL MUST NOT contain a queryString
-        /// URL example: /SalesOrders </param>
+        /// URL example: api/SalesOrders </param>
         [HttpPost]
         [Produces("application/json")]
         public async Task<IActionResult> Insert(
@@ -146,12 +146,12 @@ namespace Azure.DataGateway.Service.Controllers
         /// Delete action serving the HttpDelete verb.
         /// </summary>
         /// <param name="route">The entire route which gets
-        /// its content from the route attribute {*path},
-        /// asterisk(*) here is a wild-card/catch all.
+        /// its content from the route attribute {*route} defined
+        /// for the class, asterisk(*) here is a wild-card/catch all.
         /// Expected URL template is of the following form:
-        /// MsSql/PgSql: URL template: /<entityName>/[<primary_key_column_name>/<primary_key_value>
+        /// MsSql/PgSql: URL template: <path>/<entityName>/[<primary_key_column_name>/<primary_key_value>
         /// URL MUST NOT contain a queryString
-        /// URL example: /Books </param>
+        /// URL example: api/Books </param>
         [HttpDelete]
         [Produces("application/json")]
         public async Task<IActionResult> Delete(
@@ -166,12 +166,12 @@ namespace Azure.DataGateway.Service.Controllers
         /// Replacement Update/Insert action serving the HttpPut verb
         /// </summary>
         /// <param name="route">The entire route which gets
-        /// its content from the route attribute {*path},
-        /// asterisk(*) here is a wild-card/catch all.
+        /// its content from the route attribute {*route} defined
+        /// for the class, asterisk(*) here is a wild-card/catch all.
         /// Expected URL template is of the following form:
-        /// MsSql/PgSql: URL template: /<entityName>/[<primary_key_column_name>/<primary_key_value>
+        /// MsSql/PgSql: URL template: <path>/<entityName>/[<primary_key_column_name>/<primary_key_value>
         /// URL MUST NOT contain a queryString
-        /// URL example: /Books </param>
+        /// URL example: api/Books </param>
         [HttpPut]
         [Produces("application/json")]
         public async Task<IActionResult> Upsert(
@@ -186,12 +186,12 @@ namespace Azure.DataGateway.Service.Controllers
         /// Incremental Update/Insert action serving the HttpPatch verb
         /// </summary>
         /// <param name="route">The entire route which gets
-        /// its content from the route attribute {*path},
-        /// asterisk(*) here is a wild-card/catch all.
+        /// its content from the route attribute {*route} defined
+        /// for the class, asterisk(*) here is a wild-card/catch all.
         /// Expected URL template is of the following form:
-        /// MsSql/PgSql: URL template: /<entityName>/[<primary_key_column_name>/<primary_key_value>
+        /// MsSql/PgSql: URL template: <path>/<entityName>/[<primary_key_column_name>/<primary_key_value>
         /// URL MUST NOT contain a queryString
-        /// URL example: /Books </param>
+        /// URL example: api/Books </param>
         [HttpPatch]
         [Produces("application/json")]
         public async Task<IActionResult> UpsertIncremental(
@@ -205,7 +205,7 @@ namespace Azure.DataGateway.Service.Controllers
         /// <summary>
         /// Handle the given operation.
         /// </summary>
-        /// <param name="path">The entire route.</param>
+        /// <param name="route">The entire route.</param>
         /// <param name="operationType">The kind of operation to handle.</param>
         private async Task<IActionResult> HandleOperation(
             string route,
@@ -213,7 +213,7 @@ namespace Azure.DataGateway.Service.Controllers
         {
             try
             {
-                (string entityName, string primaryKeyRoute) = _restService.TryGetEntityAndPrimaryKeyRouteNameFromPath(route);
+                (string entityName, string primaryKeyRoute) = _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(route);
                 // Utilizes C#8 using syntax which does not require brackets.
                 using JsonDocument? result
                     = await _restService.ExecuteAsync(

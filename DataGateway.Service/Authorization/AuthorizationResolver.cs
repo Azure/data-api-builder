@@ -28,14 +28,8 @@ namespace Azure.DataGateway.Service.Authorization
         private ISqlMetadataProvider _metadataProvider;
         private Dictionary<string, EntityMetadata> _entityPermissionMap = new();
         private const string WILDCARD = "*";
-        private static readonly HashSet<string> _validActions = new() { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE };
-
-        // Regex to check if extracted claimType is invalid. It checks if the string contains any character
-        // other than a-z,A-Z,0-9,_,. .. if it does, than thats an invalid claimType.
-        private static readonly string _invalidChars = @"[^a-zA-Z0-9_\.]+";
-        private static readonly Regex _invalidCharsRgx = new(_invalidChars, RegexOptions.Compiled);
-
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
+        private static readonly HashSet<string> _validActions = new() { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE };
 
         public AuthorizationResolver(
             IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,

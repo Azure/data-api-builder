@@ -18,13 +18,11 @@ namespace Azure.DataGateway.Config
 
         public string? CONNSTRING { get; set; }
 
-        public RuntimeConfig? ConfigValue { get; set; }
-
         /// <summary>
         /// Reads the contents of the json config file if it exists,
         /// and sets the deserialized RuntimeConfig object.
         /// </summary>
-        public void SetRuntimeConfigValue()
+        public RuntimeConfig? LoadRuntimeConfigValue()
         {
             string? runtimeConfigJson = null;
             if (!string.IsNullOrEmpty(ConfigFileName))
@@ -41,41 +39,18 @@ namespace Azure.DataGateway.Config
 
             if (!string.IsNullOrEmpty(runtimeConfigJson))
             {
-                ConfigValue = RuntimeConfig.GetDeserializedConfig<RuntimeConfig>(runtimeConfigJson);
-                ConfigValue.DetermineGlobalSettings();
+                RuntimeConfig configValue = RuntimeConfig.GetDeserializedConfig<RuntimeConfig>(runtimeConfigJson);
+                configValue.DetermineGlobalSettings();
 
                 if (!string.IsNullOrWhiteSpace(CONNSTRING))
                 {
-                    ConfigValue.ConnectionString = CONNSTRING;
+                    configValue.ConnectionString = CONNSTRING;
                 }
+
+                return configValue;
             }
-        }
 
-        /// <summary>
-        /// Returns whether or not this RuntimeConfigPath
-        /// is in developer mode.
-        /// </summary>
-        /// <returns>True for dev mode, false otherwise.</returns>
-        public virtual bool IsDeveloperMode()
-        {
-            return ConfigValue!.HostGlobalSettings.Mode is HostModeType.Development;
-        }
-
-        /// <summary>
-        /// Extract the values from the config file.
-        /// Assumes the config value is set and non-null.
-        /// </summary>
-        /// <param name="databaseType"></param>
-        /// <param name="connectionString"></param>
-        /// <param name="entities"></param>
-        public void ExtractConfigValues(
-            out DatabaseType databaseType,
-            out string connectionString,
-            out Dictionary<string, Entity> entities)
-        {
-            databaseType = ConfigValue!.DatabaseType;
-            connectionString = ConfigValue!.ConnectionString;
-            entities = ConfigValue!.Entities;
+            return null;
         }
 
         /// <summary>

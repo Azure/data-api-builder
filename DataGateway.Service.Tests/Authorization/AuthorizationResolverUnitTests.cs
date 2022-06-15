@@ -22,7 +22,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         private const string TEST_ROLE = "Writer";
         private const string TEST_ACTION = "create";
         private const string TEST_AUTHENTICATION_TYPE = "TestAuth";
-        private const string TEST_NAME_TYPE = "TestName";
+        private const string TEST_CLAIMTYPE_NAME = "TestName";
         private const string TEST_ROLE_TYPE = "TestRole";
 
         #region Role Context Tests
@@ -356,11 +356,11 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         [DataRow("@claims.user_email ne @item.col1 and @claims.contact_no eq @item.col2 and not(@claims.name eq @item.col3)",
             "('xyz@microsoft.com') ne col1 and (1234) eq col2 and not(('Aaron') eq col3)", DisplayName = "Valid policy parsing test 1")]
         [DataRow("(@claims.isemployee eq @item.col1 and @item.col2 ne @claims.user_email) or" +
-            " ('David' ne @item.col3 and @claims.(((contact_no))) ne 4321)", "((true) eq col1 and col2 ne ('xyz@microsoft.com')) or" +
+            " ('David' ne @item.col3 and @claims.contact_no ne 4321)", "((true) eq col1 and col2 ne ('xyz@microsoft.com')) or" +
             " ('David' ne col3 and (1234) ne 4321)", DisplayName = "Valid policy parsing test 2")]
-        [DataRow("(@item.rating gt @claims.(  ((emprating)))) and (@claims.((((isemployee)))) eq true)",
+        [DataRow("(@item.rating gt @claims.emprating) and (@claims.isemployee eq true)",
             "(rating gt (4.2)) and ((true) eq true)", DisplayName = "Valid policy parsing test 3")]
-        [DataRow("@item.rating eq @claims.(emprating))", "rating eq (4.2))", DisplayName = "Valid policy parsing test 4")]
+        [DataRow("@item.rating eq @claims.emprating)", "rating eq (4.2))", DisplayName = "Valid policy parsing test 4")]
         public void ParseValidDbPolicy(string policy, string expectedParsedPolicy)
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
@@ -375,7 +375,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             Mock<HttpContext> context = new();
 
             //Add identity object to the Mock context object.
-            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_NAME_TYPE, TEST_ROLE_TYPE);
+            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, TEST_ROLE_TYPE);
             identity.AddClaim(new Claim("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
             identity.AddClaim(new Claim("name", "Aaron", ClaimValueTypes.String));
             identity.AddClaim(new Claim("contact_no", "1234", ClaimValueTypes.Integer64));
@@ -383,9 +383,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             identity.AddClaim(new Claim("emprating", "4.2", ClaimValueTypes.Double));
             ClaimsPrincipal principal = new(identity);
             context.Setup(x => x.User).Returns(principal);
-
-            //Initiliaze Items dictionary within the Mock object.
-            context.Setup(x => x.Items).Returns(new Dictionary<object, object>());
 
             string parsedPolicy = authZResolver.TryProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_ACTION, context.Object);
             Assert.AreEqual(parsedPolicy, expectedParsedPolicy);
@@ -415,14 +412,11 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             Mock<HttpContext> context = new();
 
             //Add identity object to the Mock context object.
-            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_NAME_TYPE, TEST_ROLE_TYPE);
+            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, TEST_ROLE_TYPE);
             identity.AddClaim(new Claim("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
             identity.AddClaim(new Claim("isemployee", "true", ClaimValueTypes.Boolean));
             ClaimsPrincipal principal = new(identity);
             context.Setup(x => x.User).Returns(principal);
-
-            //Initiliaze Items dictionary within the Mock object.
-            context.Setup(x => x.Items).Returns(new Dictionary<object, object>());
 
             try
             {
@@ -432,50 +426,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             {
                 Assert.AreEqual(HttpStatusCode.Forbidden, ex.StatusCode);
                 Assert.AreEqual("User does not possess all the claims required to perform this action.", ex.Message);
-            }
-        }
-
-        /// <summary>
-        /// Test to validate that we are correctly throwing an appropriate exception when the database policy
-        /// contains one or more claims with invalid format.
-        /// </summary>
-        /// <param name="policy">The policy to be parsed.</param>
-        [DataTestMethod]
-        [DataRow("@claims.user_email eq @item.col1 and @claims.emp/rating eq @item.col2", DisplayName = "/ in claimType")]
-        [DataRow("@claims.user$email eq @item.col1 and @claims.emp_rating eq @item.col2", DisplayName = "$ in claimType")]
-        [DataRow("@claims.user_email eq @item.col1 and not ( true eq @claims.isemp%loyee or @claims.name eq 'Aaron')"
-            , DisplayName = "% in claimType")]
-        [DataRow("@claims.user+email eq @item.col1 and @claims.isemployee eq @item.col2", DisplayName = "+ in claimType")]
-        [DataRow("@claims.user_email eq @item.col1 and @claims.((isemployee eq @item.col2", DisplayName = "unbalanced parenthesis in claimType")]
-        public void ParseInvalidDbPolicyWithInvalidClaimTypeFormat(string policy)
-        {
-            RuntimeConfig runtimeConfig = InitRuntimeConfig(
-                TEST_ENTITY,
-                TEST_ROLE,
-                TEST_ACTION,
-                includedCols: new string[] { "col1", "col2", "col3" },
-                databasePolicy: policy
-                );
-            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
-
-            Mock<HttpContext> context = new();
-            //Add identity object to the Mock context object.
-            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_NAME_TYPE, TEST_ROLE_TYPE);
-            identity.AddClaim(new Claim("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
-            identity.AddClaim(new Claim("isemployee", "true", ClaimValueTypes.Boolean));
-            ClaimsPrincipal principal = new(identity);
-            context.Setup(x => x.User).Returns(principal);
-
-            //Initiliaze Items dictionary within the Mock object.
-            context.Setup(x => x.Items).Returns(new Dictionary<object, object>());
-            try
-            {
-                authZResolver.TryProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_ACTION, context.Object);
-            }
-            catch (DataGatewayException ex)
-            {
-                Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
-                Assert.IsTrue(ex.Message.StartsWith("Invalid format for claim type"));
             }
         }
         #endregion

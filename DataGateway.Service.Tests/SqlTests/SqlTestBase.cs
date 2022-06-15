@@ -63,6 +63,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             mockRuntimeConfigProvider.Setup(x => x.IsDeveloperMode()).Returns(true);
             mockRuntimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out _runtimeConfig)).Returns(true);
             mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(_runtimeConfig);
+            mockRuntimeConfigProvider.Setup(x => x.RestPath).Returns("/api");
             _runtimeConfigProvider = mockRuntimeConfigProvider.Object;
 
             switch (_testCategory)

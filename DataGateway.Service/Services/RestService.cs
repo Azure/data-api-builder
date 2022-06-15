@@ -166,7 +166,7 @@ namespace Azure.DataGateway.Service.Services
         /// <exception cref="DataGatewayException"></exception>
         public (string, string) GetEntityNameAndPrimaryKeyRouteFromRoute(string route)
         {
-            if (_sqlMetadataProvider.TryGetRestPath(out string path) && !route.StartsWith(path))
+            if (_sqlMetadataProvider.TryGetRestPath(out string path) && !route.StartsWith(path[1..]))
             {
                 throw new DataGatewayException(message: $"Invalid Path: {route}.",
                                                statusCode: HttpStatusCode.BadRequest,
@@ -174,7 +174,7 @@ namespace Azure.DataGateway.Service.Services
             }
 
             // get substring from after the end of path to the end of string
-            string entityName = string.IsNullOrEmpty(path) ? route : route.Substring(path.Length + 1);
+            string entityName = string.IsNullOrEmpty(path) ? route : route.Substring(path.Length);
             string primaryKeyRoute = string.Empty;
             // a '/' remaining in this substring means we have a primary key route
             if (entityName.Contains('/'))

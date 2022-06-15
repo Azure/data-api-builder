@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <PackageReference Include="HotChocolate" Version="$(HotChocolateVersion)" />
+    <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="12.8.2" />
     <PackageReference Include="Humanizer" Version="$(HumanizerVersion)" />
   </ItemGroup>
 

@@ -39,6 +39,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 }
             }
 
+            //DirectiveNode anAuthNode = new();
+
             List<IDefinitionNode> definitionNodes = new()
             {
                 new ObjectTypeDefinitionNode(location: null, new NameNode("Query"), description: null, new List<DirectiveNode>(), new List<NamedTypeNode>(), queryFields),

@@ -24,7 +24,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
 
             // Setup GraphQL Components
             _graphQLService = new GraphQLService(
-                _runtimeConfigPath,
+                _runtimeConfigProvider,
                 _queryEngine,
                 _mutationEngine,
                 new DocumentCache(),

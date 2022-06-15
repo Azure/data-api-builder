@@ -14,10 +14,21 @@ namespace Azure.DataGateway.Service.Models.Authorization
         /// To retrieve all roles associated with an entity -> RoleToActionMap.Keys()
         /// </summary>
         public Dictionary<string, RoleMetadata> RoleToActionMap = new();
+
         /// <summary>
         /// Given the key (actionName) returns a key/value collection of fieldName to Roles
+        /// i.e. READ action
+        /// Key(field): id -> Value(collection): permitted in {Role1, Role2, ..., RoleN}
+        /// Key(field): title -> Value(collection): permitted in {Role1}
         /// </summary>
         public Dictionary<string, Dictionary<string, IEnumerable<string>>> FieldToRolesMap = new();
+
+        /// <summary>
+        /// Given the key (actionName) returns a collection of roles
+        /// defining config permissions for the action.
+        /// i.e. READ action is permitted in {Role1, Role2, ..., RoleN}
+        /// </summary>
+        public Dictionary<string, List<string>> ActionToRolesMap = new();
     }
 
     /// <summary>

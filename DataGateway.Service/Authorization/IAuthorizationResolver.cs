@@ -69,5 +69,14 @@ namespace Azure.DataGateway.Service.Authorization
         /// <param name="entityName">Name of entity.</param>
         /// <returns>Collection of role names.</returns>
         public IEnumerable<string> GetRolesForEntity(string entityName);
+
+        /// <summary>
+        /// Returns a list of roles which define permissions for the provided action.
+        /// i.e. list of roles which allow the action "read" on entityName.
+        /// </summary>
+        /// <param name="entityName">Entity to lookup permissions</param>
+        /// <param name="actionName">Action to lookup applicable roles</param>
+        /// <returns>Collection of roles.</returns>
+        public IEnumerable<string> GetRolesForAction(string entityName, string actionName);
     }
 }

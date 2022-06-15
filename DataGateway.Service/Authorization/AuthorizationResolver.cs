@@ -233,6 +233,13 @@ namespace Azure.DataGateway.Service.Authorization
                             }
                         }
 
+                        // Try to add the actionName to the map if not present.
+                        // Builds up mapping: i.e. ActionType.CREATE permitted in {Role1, Role2, ..., RoleN}
+                        if (!string.IsNullOrWhiteSpace(actionName) && !entityToRoleMap.ActionToRolesMap.TryAdd(actionName, new List<string>(new string[] { role })))
+                        {
+                            entityToRoleMap.ActionToRolesMap[actionName].Add(role);
+                        }
+
                         roleToAction.ActionToColumnMap[actionName] = actionToColumn;
                     }
 
@@ -287,6 +294,23 @@ namespace Azure.DataGateway.Service.Authorization
         public IEnumerable<string> GetRolesForEntity(string entityName)
         {
             return _entityPermissionMap[entityName].RoleToActionMap.Keys;
+        }
+
+        /// <summary>
+        /// Returns a list of roles which define permissions for the provided action.
+        /// i.e. list of roles which allow the action "read" on entityName.
+        /// </summary>
+        /// <param name="entityName">Entity to lookup permissions</param>
+        /// <param name="actionName">Action to lookup applicable roles</param>
+        /// <returns>Collection of roles.</returns>
+        public IEnumerable<string> GetRolesForAction(string entityName, string actionName)
+        {
+            if (_entityPermissionMap[entityName].ActionToRolesMap.TryGetValue(actionName, out List<string>? roleList) && roleList is not null)
+            {
+                return roleList;
+            }
+
+            return new List<string>();
         }
 
         /// <summary>

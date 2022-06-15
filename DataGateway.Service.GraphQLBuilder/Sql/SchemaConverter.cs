@@ -118,14 +118,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
             // taking the form: @authorize(roles: [“role1”, ..., “roleN”]) 
             if (rolesAllowedForEntity is not null)
             {
-                List<IValueNode> roleList = new();
-                foreach (string rolename in rolesAllowedForEntity)
-                {
-                    roleList.Add(new StringValueNode(rolename));
-                }
-
-                ListValueNode roleListNode = new(items: roleList);
-                objectTypeDirectives.Add(new(name: "authorize", new ArgumentNode(name: "roles", roleListNode)));
+                objectTypeDirectives.Add(GraphQLUtils.CreateAuthorizationDirective(rolesAllowedForEntity));
             }
 
             return new ObjectTypeDefinitionNode(

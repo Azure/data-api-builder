@@ -18,7 +18,18 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         public const string FILTER_FIELD_NAME = "_filter";
         public const string ORDER_BY_FIELD_NAME = "orderBy";
 
-        public static DocumentNode Build(DocumentNode root, IDictionary<string, Entity> entities, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
+        /// <summary>
+        /// Creates a DocumentNode containing FieldDefinitionNodes representing the FindByPK and FindAll queries
+        /// Also populates the DocumentNode with return types.
+        /// </summary>
+        /// <param name="root"></param>
+        /// <param name="entities"></param>
+        /// <param name="inputTypes"></param>
+        /// <returns></returns>
+        public static DocumentNode Build(
+            DocumentNode root,
+            IDictionary<string, Entity> entities,
+            Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
         {
             List<FieldDefinitionNode> queryFields = new();
             List<ObjectTypeDefinitionNode> returnTypes = new();
@@ -39,8 +50,17 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 }
             }
 
-            //DirectiveNode anAuthNode = new();
+            return BuildDocumentNode(queryFields, returnTypes);
+        }
 
+        /// <summary>
+        /// Creates the DocumentNode with the provided queryFields and returnTypes.
+        /// </summary>
+        /// <param name="queryFields">Such as books_by_pk() {}</param>
+        /// <param name="returnTypes">Such as pagination token or Connection</param>
+        /// <returns></returns>
+        public static DocumentNode BuildDocumentNode(List<FieldDefinitionNode> queryFields, List<ObjectTypeDefinitionNode> returnTypes)
+        {
             List<IDefinitionNode> definitionNodes = new()
             {
                 new ObjectTypeDefinitionNode(location: null, new NameNode("Query"), description: null, new List<DirectiveNode>(), new List<NamedTypeNode>(), queryFields),
@@ -49,11 +69,17 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             return new(definitionNodes);
         }
 
-        private static FieldDefinitionNode GenerateByPKQuery(ObjectTypeDefinitionNode objectTypeDefinitionNode, NameNode name)
+        public static FieldDefinitionNode GenerateByPKQuery(ObjectTypeDefinitionNode objectTypeDefinitionNode, NameNode name, IEnumerable<string>? rolesAllowedForRead = null)
         {
             IEnumerable<FieldDefinitionNode> primaryKeyFields =
                 FindPrimaryKeyFields(objectTypeDefinitionNode);
             List<InputValueDefinitionNode> inputValues = new();
+            List<DirectiveNode> fieldDefinitionNodeDirectives = new();
+
+            if (rolesAllowedForRead is not null)
+            {
+                fieldDefinitionNodeDirectives.Add(CreateAuthorizationDirective(rolesAllowedForRead));
+            }
 
             foreach (FieldDefinitionNode primaryKeyField in primaryKeyFields)
             {
@@ -72,16 +98,17 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 new StringValueNode($"Get a {name} from the database by its ID/primary key"),
                 inputValues,
                 new NamedTypeNode(name),
-                new List<DirectiveNode>()
+                directives: fieldDefinitionNodeDirectives
             );
         }
 
-        private static FieldDefinitionNode GenerateGetAllQuery(
+        public static FieldDefinitionNode GenerateGetAllQuery(
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
             NameNode name,
             ObjectTypeDefinitionNode returnType,
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes,
-            Entity entity)
+            Entity entity,
+            IEnumerable<string>? rolesAllowedForRead = null)
         {
             string filterInputName = InputTypeBuilder.GenerateObjectInputFilterName(objectTypeDefinitionNode.Name.Value);
 
@@ -97,6 +124,12 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 InputTypeBuilder.GenerateOrderByInputTypeForObjectType(objectTypeDefinitionNode, inputTypes);
             }
 
+            List<DirectiveNode> fieldDefinitionNodeDirectives = new();
+            if (rolesAllowedForRead is not null)
+            {
+                fieldDefinitionNodeDirectives.Add(CreateAuthorizationDirective(rolesAllowedForRead));
+            }
+
             // Query field for the parent object type
             // Generates a file like:
             //    books(first: Int, after: String, _filter: BooksFilterInput, orderBy: BooksOrderByInput): BooksConnection!
@@ -106,11 +139,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 new StringValueNode($"Get a list of all the {name} items from the database"),
                 QueryArgumentsForField(filterInputName, orderByInputName),
                 new NonNullTypeNode(new NamedTypeNode(returnType.Name)),
-                new List<DirectiveNode>()
+                directives: fieldDefinitionNodeDirectives
             );
         }
 
-        private static List<InputValueDefinitionNode> QueryArgumentsForField(string filterInputName, string orderByInputName)
+        public static List<InputValueDefinitionNode> QueryArgumentsForField(string filterInputName, string orderByInputName)
         {
             return new()
             {
@@ -168,7 +201,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             return objectType.Name.Value.EndsWith(PAGINATION_OBJECT_TYPE_SUFFIX);
         }
 
-        private static ObjectTypeDefinitionNode GenerateReturnType(NameNode name)
+        public static ObjectTypeDefinitionNode GenerateReturnType(NameNode name)
         {
             return new(
                 location: null,

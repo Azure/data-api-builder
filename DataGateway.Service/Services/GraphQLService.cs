@@ -7,11 +7,13 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.GraphQLBuilder.Sql;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services.MetadataProviders;
 using HotChocolate;
@@ -81,16 +83,58 @@ namespace Azure.DataGateway.Service.Services
                 .AddAuthorizeDirectiveType()
                 .AddType<OrderByType>()
                 .AddType<DefaultValueType>()
-                .AddDocument(QueryBuilder.Build(root, _entities, inputTypes))
+                .AddDocument(PrepareQueryBuilder(root, _entities, inputTypes))
                 .AddDocument(MutationBuilder.Build(root, _databaseType, _entities));
 
             Schema = sb
-                //.AddAuthorizeDirectiveType()
                 .ModifyOptions(o => o.EnableOneOf = true)
                 .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine))
                 .Create();
 
             MakeSchemaExecutable();
+        }
+
+        /// <summary>
+        /// Creates a DocumentNode containing FieldDefinitionNodes representing the FindByPK and FindAll queries
+        /// Also populates the DocumentNode with return types.
+        /// Needed to be moved here from GraphQLBuilder project to avoid circular project dependency.
+        /// </summary>
+        /// <param name="root"></param>
+        /// <param name="entities"></param>
+        /// <param name="inputTypes"></param>
+        /// <returns></returns>
+        private DocumentNode PrepareQueryBuilder(
+            DocumentNode root,
+            IDictionary<string, Entity> entities,
+            Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
+        {
+            List<FieldDefinitionNode> queryFields = new();
+            List<ObjectTypeDefinitionNode> returnTypes = new();
+
+            foreach (IDefinitionNode definition in root.Definitions)
+            {
+                if (definition is ObjectTypeDefinitionNode objectTypeDefinitionNode && GraphQLUtils.IsModelType(objectTypeDefinitionNode))
+                {
+                    NameNode name = objectTypeDefinitionNode.Name;
+                    string entityName = GraphQLNaming.ObjectTypeToEntityName(objectTypeDefinitionNode);
+                    Entity entity = entities[entityName];
+
+                    ObjectTypeDefinitionNode returnType = QueryBuilder.GenerateReturnType(name);
+                    returnTypes.Add(returnType);
+
+                    // Get Roles for READ action on Entity
+                    IEnumerable<string> rolesAllowedForRead = _authorizationResolver.GetRolesForAction(entityName, actionName: ActionType.READ);
+
+                    // If no roles define READ permissions for this entity, then these queries should not be added to the schema.
+                    if (rolesAllowedForRead.Any())
+                    {
+                        queryFields.Add(QueryBuilder.GenerateGetAllQuery(objectTypeDefinitionNode, name, returnType, inputTypes, entity, rolesAllowedForRead));
+                        queryFields.Add(QueryBuilder.GenerateByPKQuery(objectTypeDefinitionNode, name, rolesAllowedForRead));
+                    }
+                }
+            }
+
+            return QueryBuilder.BuildDocumentNode(queryFields, returnTypes);
         }
 
         private void MakeSchemaExecutable()

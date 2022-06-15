@@ -118,7 +118,9 @@ namespace Azure.DataGateway.Service.Parsers
                         context.First = RequestValidator.CheckFirstValidity(context.ParsedQueryString[key]!);
                         break;
                     default:
-                        throw new ArgumentException($"Invalid Query Parameter: {key.ToString()}");
+                        throw new DataGatewayException(message: $"Invalid Query Parameter: {key.ToString()}",
+                                                       statusCode: HttpStatusCode.BadRequest,
+                                                       subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
             }
         }

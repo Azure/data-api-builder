@@ -36,7 +36,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// <param name="action">Action type: Create, Read, Update, Delete</param>
         /// <param name="columns">Compiled list of any column referenced in a request</param>
         /// <returns></returns>
-        public bool AreColumnsAllowedForAction(string entityName, string roleName, string action, List<string> columns);
+        public bool AreColumnsAllowedForAction(string entityName, string roleName, string action, IEnumerable<string> columns);
 
         /// <summary>
         /// Retrieves the policy of an action within an entity's role entry
@@ -49,5 +49,17 @@ namespace Azure.DataGateway.Service.Authorization
         /// <returns>True, if query predicates are successfully appended to the auto-generated database query.
         /// or if a policy is not defined.</returns>
         public bool DidProcessDBPolicy(string entityName, string roleName, string action, HttpContext httpContext);
+
+        /// <summary>
+        /// From the given parameters, processes the included and excluded column permissions to output
+        /// a list of columns that are "allowed".
+        /// -- IncludedColumns minus ExcludedColumns == Allowed Columns
+        /// -- Does not yet account for either being wildcard (*).
+        /// </summary>
+        /// <param name="entityName">Entity from request</param>
+        /// <param name="roleName">Role defined in client role header</param>
+        /// <param name="action">Action type: Create, Read, Update, Delete</param>
+        /// <returns></returns>
+        public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, string action);
     }
 }

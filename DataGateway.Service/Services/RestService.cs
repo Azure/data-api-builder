@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Parsers;
@@ -59,6 +60,9 @@ namespace Azure.DataGateway.Service.Services
         {
             RequestValidator.ValidateEntity(entityName, _sqlMetadataProvider.EntityToDatabaseObject.Keys);
             DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[entityName];
+
+            await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new EntityRoleActionPermissionsRequirement());
+
             QueryString? query = GetHttpContext().Request.QueryString;
             string queryString = query is null ? string.Empty : GetHttpContext().Request.QueryString.ToString();
 
@@ -99,7 +103,11 @@ namespace Azure.DataGateway.Service.Services
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
                     JsonElement upsertPayloadRoot = RequestValidator.ValidateUpdateOrUpsertRequest(primaryKeyRoute, requestBody);
-                    context = new UpsertRequestContext(entityName, dbo: dbObject, upsertPayloadRoot, GetHttpVerb(operationType), operationType);
+                    context = new UpsertRequestContext(entityName,
+                                                       dbo: dbObject,
+                                                       upsertPayloadRoot,
+                                                       GetHttpVerb(operationType),
+                                                       operationType);
                     RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
                     break;
                 default:
@@ -119,48 +127,29 @@ namespace Azure.DataGateway.Service.Services
             if (!string.IsNullOrWhiteSpace(queryString))
             {
                 context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
-                RequestParser.ParseQueryString(
-                    context,
-                    _sqlMetadataProvider.GetODataFilterParser(),
-                    _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey);
+                RequestParser.ParseQueryString(context, _sqlMetadataProvider);
             }
 
             // At this point for DELETE, the primary key should be populated in the Request Context.
             RequestValidator.ValidateRequestContext(context, _sqlMetadataProvider);
 
-            // RestRequestContext is finalized for QueryBuilding and QueryExecution.
-            // Perform Authorization check prior to moving forward in request pipeline.
-            // RESTAuthorizationService
-            AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
-                user: GetHttpContext().User,
-                resource: context,
-                requirements: new[] { context.HttpVerb });
+            // The final authorization check on columns occurs after the request is fully parsed and validated.
+            await AuthorizationCheckForRequirementAsync(resource: context, requirement: new ColumnsPermissionsRequirement());
 
-            if (authorizationResult.Succeeded)
+            switch (operationType)
             {
-                switch (operationType)
-                {
-                    case Operation.Find:
-                        return FormatFindResult(await _queryEngine.ExecuteAsync(context), (FindRequestContext)context);
-                    case Operation.Insert:
-                    case Operation.Delete:
-                    case Operation.Update:
-                    case Operation.UpdateIncremental:
-                    case Operation.Upsert:
-                    case Operation.UpsertIncremental:
-                        return await _mutationEngine.ExecuteAsync(context);
-                    default:
-                        throw new NotSupportedException("This operation is not yet supported.");
-                };
-            }
-            else
-            {
-                throw new DataGatewayException(
-                    message: "Forbidden",
-                    statusCode: HttpStatusCode.Forbidden,
-                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
-                );
-            }
+                case Operation.Find:
+                    return FormatFindResult(await _queryEngine.ExecuteAsync(context), (FindRequestContext)context);
+                case Operation.Insert:
+                case Operation.Delete:
+                case Operation.Update:
+                case Operation.UpdateIncremental:
+                case Operation.Upsert:
+                case Operation.UpsertIncremental:
+                    return await _mutationEngine.ExecuteAsync(context);
+                default:
+                    throw new NotSupportedException("This operation is not yet supported.");
+            };
         }
 
         /// <summary>
@@ -196,8 +185,10 @@ namespace Azure.DataGateway.Service.Services
                                element: rootEnumerated.Last(),
                                orderByColumns: context.OrderByClauseInUrl,
                                primaryKey: _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey,
+                               entityName: context.EntityName,
                                schemaName: context.DatabaseObject.SchemaName,
-                               tableName: context.DatabaseObject.Name);
+                               tableName: context.DatabaseObject.Name,
+                               sqlMetadataProvider: _sqlMetadataProvider);
 
             // nextLink is the URL needed to get the next page of records using the same query options
             // with $after base64 encoded for opaqueness
@@ -262,6 +253,39 @@ namespace Azure.DataGateway.Service.Services
                     return HttpRestVerbs.GET;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
+            }
+        }
+
+        /// <summary>
+        /// Performs authorization check for REST with a single requirement.
+        /// Called when the relevant metadata has been parsed from the request.
+        /// </summary>
+        /// <param name="resource">Request metadata object (RestRequestContext, DatabaseObject, or null)</param>
+        /// <param name="requirement">The authorization check to perform.</param>
+        /// <returns>No return value. If this method succeeds, the request is authorized for the requirement.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when the resource is null
+        /// for requirements which need one.</exception>
+        /// <exception cref="DataGatewayException">Thrown when authorization fails.
+        /// Results in server returning 403 Unauthorized.</exception>
+        public async Task AuthorizationCheckForRequirementAsync(object? resource, IAuthorizationRequirement requirement)
+        {
+            if (requirement is not RoleContextPermissionsRequirement && resource is null)
+            {
+                throw new ArgumentNullException(paramName: "resource", message: $"Resource can't be null for the requirement: {requirement.GetType}");
+            }
+
+            AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
+                user: GetHttpContext().User,
+                resource: resource,
+                requirements: new[] { requirement });
+
+            if (!authorizationResult.Succeeded)
+            {
+                // Authorization failed so the request terminates.
+                throw new DataGatewayException(
+                    message: "Authorization Failure: Access Not Allowed.",
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed);
             }
         }
     }

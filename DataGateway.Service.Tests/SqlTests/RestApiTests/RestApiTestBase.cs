@@ -40,6 +40,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _integrationMappingTable = "trees";
         protected static readonly string _integrationMappingDifferentEntity = "Shrub";
         protected static readonly string _integrationBrokenMappingEntity = "Fungus";
+        protected static readonly string _nonExistentEntityName = "!@#$%^&*()_+definitely_nonexistent_entity!@#$%^&*()_+";
         protected static readonly string _simple_all_books = "books_view_all";
         protected static readonly string _simple_subset_stocks = "stocks_view_selected";
         protected static readonly string _composite_subset_bookPub = "books_publishers_view_composite";
@@ -2469,15 +2470,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         [TestMethod]
         public async Task FindNonExistentEntity()
         {
-            const string NonExistentEntityName = "!@#$%^&*()_+definitely_nonexistent_entity!@#$%^&*()_+";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: NonExistentEntityName,
+                entity: _nonExistentEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: $"{NonExistentEntityName} is not a valid entity.",
+                expectedErrorMessage: $"{_nonExistentEntityName} is not a valid entity.",
                 expectedStatusCode: HttpStatusCode.NotFound,
                 expectedSubStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound.ToString()
             );

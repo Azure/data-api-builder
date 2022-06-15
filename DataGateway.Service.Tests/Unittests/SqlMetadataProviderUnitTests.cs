@@ -9,7 +9,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
     /// Units testing for our connection string parser
     /// to retreive schema.
     /// </summary>
-    [TestClass]
+    [TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class SqlMetadataProviderUnitTests : SqlTestBase
     {
         /// <summary>
@@ -38,11 +38,11 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         /// for all the tables based on the entities relationship.
         /// <code>Check: </code> Making sure no exception is thrown if there are no Foriegn Keys.
         /// </summary>
-
-        public static async Task CheckNoExceptionForNoForiegnKey(string testCategory)
+        [TestMethod]
+        public static async Task CheckNoExceptionForNoForiegnKey()
         {
-            _testCategory = testCategory;
-            _runtimeConfigPath = SqlTestHelper.LoadConfig(testCategory);
+            _testCategory = TestCategory.POSTGRESQL;
+            _runtimeConfigPath = SqlTestHelper.LoadConfig(_testCategory);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfigPath);
             SetUpSQLMetadataProvider();
             await ResetDbStateAsync();

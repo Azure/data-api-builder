@@ -105,7 +105,11 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
                 PrimaryKey = new(primaryKeys)
             };
 
+            string outParam;
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            _mockMetadataStore.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out outParam))
+                              .Callback(new metaDataCallback((string entity, string exposedField, out string backingColumn) => _ = _defaultMapping[entity].TryGetValue(exposedField, out backingColumn)))
+                              .Returns((string entity, string exposedField, string backingColumn) => _defaultMapping[entity].TryGetValue(exposedField, out backingColumn));
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME, GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME), isList: false);
             string primaryKeyRoute = "isbn/12345/id/2";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);

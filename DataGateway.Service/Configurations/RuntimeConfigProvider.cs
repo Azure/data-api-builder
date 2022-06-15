@@ -16,6 +16,11 @@ namespace Azure.DataGateway.Service.Configurations
 
         protected virtual RuntimeConfig? RuntimeConfiguration { get; set; }
 
+        public string? RestPath
+        {
+            get { return RuntimeConfiguration is not null ? RuntimeConfiguration.RestGlobalSettings.Path : null; }
+        }
+
         public RuntimeConfigProvider() { }
 
         public RuntimeConfigProvider(IOptions<RuntimeConfigPath>? runtimeConfigPath)
@@ -88,16 +93,6 @@ namespace Azure.DataGateway.Service.Configurations
         public virtual bool IsDeveloperMode()
         {
             return RuntimeConfiguration?.HostGlobalSettings.Mode is HostModeType.Development;
-        }
-
-        /// <summary>
-        /// Get the path for REST from the runtimeconfig
-        /// if one exists, and null otherwise.
-        /// </summary>
-        /// <returns></returns>
-        public string? GetRestPath()
-        {
-            return RuntimeConfiguration is not null ? RuntimeConfiguration.RestGlobalSettings.Path : null;
         }
     }
 }

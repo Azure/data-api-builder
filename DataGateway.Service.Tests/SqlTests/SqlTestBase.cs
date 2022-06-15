@@ -286,14 +286,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         expectedErrorMessage,
                         expectedStatusCode).Value,
                         options);
-                } else
+                }
+                else
                 {
                     string dbResult = await GetDatabaseResultAsync(sqlQuery);
                     // For FIND requests, null result signifies an empty result set
                     dbResult = (operationType == Operation.Find && dbResult is null) ? "[]" : dbResult;
                     expected = $"{{\"value\":{FormatExpectedValue(dbResult)}{ExpectedNextLinkIfAny(paginated, EncodeQueryString(baseUrl), $"{expectedAfterQueryString}")}}}";
                 }
-                
             }
 
             SqlTestHelper.VerifyResult(

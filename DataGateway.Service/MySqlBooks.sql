@@ -16,6 +16,7 @@ DROP TABLE IF EXISTS brokers;
 DROP TABLE IF EXISTS type_table;
 DROP TABLE IF EXISTS trees;
 DROP TABLE IF EXISTS fungi;
+DROP TABLE IF EXISTS empty_table;
 
 
 
@@ -116,6 +117,10 @@ CREATE TABLE trees (
 CREATE TABLE fungi (
     speciesid int PRIMARY KEY,
     region text
+);
+
+CREATE TABLE empty_table (
+    id int PRIMARY KEY
 );
 
 ALTER TABLE books

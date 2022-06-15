@@ -260,6 +260,11 @@
       "mappings": {
         "spores": "hazards"
       }
+    },
+    "Empty": {
+      "source": "empty_table",
+      "rest": true,
+      "permissions": []
     }
   }
 }

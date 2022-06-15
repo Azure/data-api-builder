@@ -402,9 +402,9 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <summary>
-        /// Helper function to return the claim value alongwith the required additonal
-        /// quotes if required. This makes sure we adhere to JSON specifications where
-        /// strings are enclosed in single quotes while int,bool,double etc are not.
+        /// Helper function to return the claim value enclosed within a parenthesis alongwith the required additonal
+        /// quotes if required. This makes sure we adhere to JSON specifications where strings are enclosed in
+        /// single quotes while int,bool,double etc are not.
         /// </summary>
         /// <param name="claim">The claim whose value is to be returned.</param>
         /// <returns>Processed claim value based on its data type.</returns>

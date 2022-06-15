@@ -1,10 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Net;
 using System.Text.Json;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Models.Authorization;
+using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Action = Azure.DataGateway.Config.Action;
@@ -17,16 +22,29 @@ namespace Azure.DataGateway.Service.Authorization
     /// </summary>
     public class AuthorizationResolver : IAuthorizationResolver
     {
+        private ISqlMetadataProvider _metadataProvider;
         private Dictionary<string, EntityMetadata> _entityPermissionMap = new();
         private const string WILDCARD = "*";
-        private static readonly HashSet<string> _validActions = new() { "Create", "Read", "Update", "Delete" };
+        private static readonly HashSet<string> _validActions = new() { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE };
 
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
 
-        public AuthorizationResolver(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
+        public AuthorizationResolver(
+            RuntimeConfigProvider runtimeConfigProvider,
+            ISqlMetadataProvider sqlMetadataProvider
+            )
         {
-            // Datastructure constructor will pull required properties from metadataprovider.
-            SetEntityPermissionMap(runtimeConfigPath.CurrentValue.ConfigValue!);
+            _metadataProvider = sqlMetadataProvider;
+            if (runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
+            {
+                // Datastructure constructor will pull required properties from metadataprovider.
+                SetEntityPermissionMap(runtimeConfig);
+            }
+            else
+            {
+                runtimeConfigProvider.RuntimeConfigLoaded +=
+                    (object? sender, RuntimeConfig config) => SetEntityPermissionMap(config);
+            }
         }
 
         /// <summary>
@@ -94,8 +112,11 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <inheritdoc />
-        public bool AreColumnsAllowedForAction(string entityName, string roleName, string actionName, List<string> columns)
+        public bool AreColumnsAllowedForAction(string entityName, string roleName, string actionName, IEnumerable<string> columns)
         {
+            // Columns.Count() will never be zero because this method is called after a check ensures Count() > 0
+            Assert.IsFalse(columns.Count() == 0, message: "columns.Count() should be greater than 0.");
+
             ActionMetadata actionToColumnMap;
             RoleMetadata roleInEntity = _entityPermissionMap[entityName].RoleToActionMap[roleName];
 
@@ -108,15 +129,32 @@ namespace Azure.DataGateway.Service.Authorization
                 actionToColumnMap = roleInEntity.ActionToColumnMap[actionName];
             }
 
-            foreach (string column in columns)
+            // Each column present in the request is an "exposedColumn".
+            // Authorization permissions reference "backingColumns"
+            // Resolve backingColumn name to check authorization.
+            // Failure indicates that request contain invalid exposedColumn for entity.
+            foreach (string exposedColumn in columns)
             {
-                if (actionToColumnMap.excluded.Contains(column) || actionToColumnMap.excluded.Contains(WILDCARD) ||
-                    !(actionToColumnMap.included.Contains(WILDCARD) || actionToColumnMap.included.Contains(column)))
+                if (_metadataProvider.TryGetBackingColumn(entityName, field: exposedColumn, out string? backingColumn))
                 {
-                    // If column is present in excluded OR excluded='*'
-                    // If column is absent from included and included!=*
-                    // return false
-                    return false;
+                    // backingColumn will not be null when TryGetBackingColumn() is true.
+                    if (actionToColumnMap.excluded.Contains(backingColumn!) || actionToColumnMap.excluded.Contains(WILDCARD) ||
+                    !(actionToColumnMap.included.Contains(WILDCARD) || actionToColumnMap.included.Contains(backingColumn!)))
+                    {
+                        // If column is present in excluded OR excluded='*'
+                        // If column is absent from included and included!=*
+                        // return false
+                        return false;
+                    }
+                }
+                else
+                {
+                    // This check will not be needed once exposedName mapping validation is added.
+                    throw new DataGatewayException(
+                        message: "Invalid field name provided.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.ExposedColumnNameMappingError
+                        );
                 }
             }
 
@@ -154,7 +192,7 @@ namespace Azure.DataGateway.Service.Authorization
                         if (actionElement.ValueKind == JsonValueKind.String)
                         {
                             actionName = actionElement.ToString();
-                            actionToColumn.included.Add(WILDCARD);
+                            actionToColumn.included.UnionWith(ResolveTableDefinitionColumns(entityName));
                         }
                         else if (actionElement.ValueKind == JsonValueKind.Object)
                         {
@@ -168,12 +206,32 @@ namespace Azure.DataGateway.Service.Authorization
 
                                 if (actionObj.Fields!.Include is not null)
                                 {
-                                    actionToColumn.included = new(actionObj.Fields.Include);
+                                    // When a wildcard (*) is defined for Included columns, all of the table's
+                                    // columns must be resolved and placed in the actionToColumn Key/Value store.
+                                    // This is especially relevant for find requests, where actual column names must be
+                                    // resolved when no columns were included in a request.
+                                    if (actionObj.Fields.Include.Length == 1 && actionObj.Fields.Include[0] == WILDCARD)
+                                    {
+                                        actionToColumn.included.UnionWith(ResolveTableDefinitionColumns(entityName));
+                                    }
+                                    else
+                                    {
+                                        actionToColumn.included = new(actionObj.Fields.Include);
+                                    }
                                 }
 
                                 if (actionObj.Fields!.Exclude is not null)
                                 {
-                                    actionToColumn.excluded = new(actionObj.Fields.Exclude);
+                                    // When a wildcard (*) is defined for Excluded columns, all of the table's
+                                    // columns must be resolved and placed in the actionToColumn Key/Value store.
+                                    if (actionObj.Fields.Exclude.Length == 1 && actionObj.Fields.Exclude[0] == WILDCARD)
+                                    {
+                                        actionToColumn.excluded.UnionWith(ResolveTableDefinitionColumns(entityName));
+                                    }
+                                    else
+                                    {
+                                        actionToColumn.excluded = new(actionObj.Fields.Exclude);
+                                    }
                                 }
                             }
                         }
@@ -188,6 +246,31 @@ namespace Azure.DataGateway.Service.Authorization
             }
         }
 
+        /// <inheritdoc />
+        public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, string action)
+        {
+            ActionMetadata actionMetadata = _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action];
+            IEnumerable<string> allowedDBColumns = actionMetadata.included.Except(actionMetadata.excluded);
+            List<string> allowedExposedColumns = new();
+
+            foreach (string dbColumn in allowedDBColumns)
+            {
+                if (_metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: dbColumn, out string? exposedName))
+                {
+                    allowedExposedColumns.Append(exposedName);
+                }
+            }
+
+            return allowedExposedColumns;
+        }
+
+        /// <summary>
+        /// Returns whether the actionName is a valid
+        /// - Create, Read, Update, Delete (CRUD) operation
+        /// - Wildcard (*)
+        /// </summary>
+        /// <param name="actionName"></param>
+        /// <returns></returns>
         private static bool IsValidActionName(string actionName)
         {
             if (actionName.Equals(WILDCARD) || _validActions.Contains(actionName))
@@ -196,6 +279,17 @@ namespace Azure.DataGateway.Service.Authorization
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// For a given entityName, retrieve the column names on the associated table
+        /// from the metadataProvider.
+        /// </summary>
+        /// <param name="entityName">Used to lookup table definition of specific entity</param>
+        /// <returns>Collection of columns in table definition.</returns>
+        private IEnumerable<string> ResolveTableDefinitionColumns(string entityName)
+        {
+            return _metadataProvider.GetTableDefinition(entityName).Columns.Keys;
         }
         #endregion
     }

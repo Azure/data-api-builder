@@ -1,6 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Linq;
+using System.Net;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Parsers;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.OData.UriParser;
 
@@ -91,5 +96,76 @@ namespace Azure.DataGateway.Service.Models
         /// The database engine operation type this request is.
         /// </summary>
         public Operation OperationType { get; set; }
+
+        /// <summary>
+        /// A collection of all unique column names present in the request.
+        /// </summary>
+        public ISet<string> CumulativeColumns { get; } = new HashSet<string>();
+
+        /// <summary>
+        /// Populates the CumulativeColumns property with a unique list
+        /// of all columns present in a request. Primarily used
+        /// for authorization purposes.
+        /// # URL Route Components: PrimaryKey Key/Value Pairs
+        /// # Query String components: $f (Column filter), $filter (FilterClause /row filter), $orderby clause
+        /// # Request Body: FieldValuePairs in body
+        /// </summary>
+        /// <returns>
+        /// Returns true on success, false on failure.
+        /// </returns>
+        public void CalculateCumulativeColumns()
+        {
+            try
+            {
+                if (PrimaryKeyValuePairs.Count > 0)
+                {
+                    CumulativeColumns.UnionWith(PrimaryKeyValuePairs.Keys);
+                }
+
+                if (FieldsToBeReturned.Count > 0)
+                {
+                    CumulativeColumns.UnionWith(FieldsToBeReturned);
+                }
+
+                if (FilterClauseInUrl is not null)
+                {
+                    ODataASTFieldVisitor visitor = new();
+                    FilterClauseInUrl.Expression.Accept(visitor);
+                    CumulativeColumns.UnionWith(visitor.CumulativeColumns);
+                }
+
+                if (OrderByClauseInUrl is not null)
+                {
+                    CumulativeColumns.UnionWith(OrderByClauseInUrl.Select(col => col.ColumnName));
+                }
+
+                if (FieldValuePairsInBody.Count > 0)
+                {
+                    CumulativeColumns.UnionWith(FieldValuePairsInBody.Keys);
+                }
+            }
+            catch (Exception e)
+            {
+                // Exception not rethrown as returning false here is gracefully handled by caller,
+                // which will result in a 403 Unauthorized response to the client.
+                Console.Error.WriteLine("ERROR IN ODATA_AST_COLUMN_VISITOR TRAVERSAL");
+                Console.Error.WriteLine(e.Message);
+                Console.Error.WriteLine(e.StackTrace);
+                throw new DataGatewayException(
+                    message: "Request content invalid.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCumulativeColumnCheckFailed);
+            }
+        }
+
+        /// <summary>
+        /// Modifies the contents of FieldsToBeReturned.
+        /// This method is only called when FieldsToBeReturned is empty.
+        /// </summary>
+        /// <param name="fields">Collection of fields to be returned.</param>
+        public void UpdateReturnFields(IEnumerable<string> fields)
+        {
+            FieldsToBeReturned = fields.ToList();
+        }
     }
 }

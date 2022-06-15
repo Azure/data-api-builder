@@ -153,6 +153,42 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
+        /// Tries to get the Entity name and primary key route
+        /// from the provided string that starts with the REST
+        /// path. If the provided string does not start with
+        /// the given REST path, we throw an exception. We then
+        /// return the entity name as the string up unti the next
+        /// '/' if one exists, and the primary key as the substring
+        /// following the '/'.
+        /// </summary>
+        /// <param name="path">String containing path + entity name.</param>
+        /// <returns>entity name after path.</returns>
+        /// <exception cref="DataGatewayException"></exception>
+        public (string, string) TryGetEntityAndPrimaryKeyRouteNameFromPath(string path)
+        {
+            if (!path.StartsWith(_sqlMetadataProvider.GetRestPath()))
+            {
+                throw new DataGatewayException(message: $"Invalid Path: {path}.",
+                                               statusCode: HttpStatusCode.BadRequest,
+                                               subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+            }
+
+            // get substring from end of REST path to end of string
+            string entityName = path.Substring(_sqlMetadataProvider.GetRestPath().Length + 1);
+            string primaryKeyRoute = string.Empty;
+            // a '/' remaining in this substring means we have a primary key route
+            if (entityName.IndexOf('/') >= 0)
+            {
+                // primary key route is what follows the first '/'
+                primaryKeyRoute = entityName.Substring(entityName.IndexOf('/') + 1);
+                // save entity name as string up until first '/'
+                entityName = entityName[..entityName.IndexOf('/')];
+            }
+
+            return (entityName, primaryKeyRoute);
+        }
+
+        /// <summary>
         /// Format the results from a Find operation. Check if there is a requirement
         /// for a nextLink, and if so, add this value to the array of JsonElements to
         /// be used later to format the response in the RestController.

@@ -220,6 +220,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string sqlQuery,
             RestController controller,
             Operation operationType = Operation.Find,
+            string path = "api",
             IHeaderDictionary headers = null,
             string requestBody = null,
             bool exception = false,
@@ -246,6 +247,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             IActionResult actionResult = await SqlTestHelper.PerformApiTest(
                         controller,
+                        path,
                         entity,
                         primaryKeyRoute,
                         operationType);

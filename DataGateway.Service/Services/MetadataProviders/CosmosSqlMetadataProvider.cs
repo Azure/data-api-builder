@@ -135,5 +135,10 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
         {
             throw new NotImplementedException();
         }
+
+        public string GetRestPath()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

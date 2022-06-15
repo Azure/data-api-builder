@@ -41,6 +41,8 @@ namespace Azure.DataGateway.Service.Services
 
         private const int NUMBER_OF_RESTRICTIONS = 4;
 
+        private string? _restPath;
+
         protected string ConnectionString { get; init; }
 
         protected IQueryBuilder SqlQueryBuilder { get; init; }
@@ -71,6 +73,8 @@ namespace Azure.DataGateway.Service.Services
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;
+            _restPath = runtimeConfigPath.CurrentValue.GetRestPath();
+
         }
 
         /// <inheritdoc />
@@ -125,6 +129,12 @@ namespace Azure.DataGateway.Service.Services
             }
 
             return databaseObject!.TableDefinition;
+        }
+
+        /// <inheritdoc />
+        public string GetRestPath()
+        {
+            return _restPath[1..];
         }
 
         /// <inheritdoc />

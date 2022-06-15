@@ -145,6 +145,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="operationType">The operation type to be tested.</param>
         public static async Task<IActionResult> PerformApiTest(
             RestController controller,
+            string path,
             string entityName,
             string primaryKeyRoute,
             Operation operationType = Operation.Find)
@@ -154,21 +155,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             switch (operationType)
             {
                 case Operation.Find:
-                    actionResult = await controller.Find(entityName, primaryKeyRoute);
+                    actionResult = await controller.Find($"{path}/{entityName}/{primaryKeyRoute}");
                     break;
                 case Operation.Insert:
-                    actionResult = await controller.Insert(entityName);
+                    actionResult = await controller.Insert($"{path}/{entityName}");
                     break;
                 case Operation.Delete:
-                    actionResult = await controller.Delete(entityName, primaryKeyRoute);
+                    actionResult = await controller.Delete($"{path}/{entityName}/{primaryKeyRoute}");
                     break;
                 case Operation.Update:
                 case Operation.Upsert:
-                    actionResult = await controller.Upsert(entityName, primaryKeyRoute);
+                    actionResult = await controller.Upsert($"{path}/{entityName}/{primaryKeyRoute}");
                     break;
                 case Operation.UpdateIncremental:
                 case Operation.UpsertIncremental:
-                    actionResult = await controller.UpsertIncremental(entityName, primaryKeyRoute);
+                    actionResult = await controller.UpsertIncremental($"{path}/{entityName}/{primaryKeyRoute}");
                     break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");

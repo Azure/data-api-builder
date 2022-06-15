@@ -72,6 +72,12 @@ namespace Azure.DataGateway.Service.Services
         IQueryBuilder GetQueryBuilder();
 
         /// <summary>
+        /// Obtains the underlying path for REST.
+        /// </summary>
+        /// <returns></returns>
+        string GetRestPath();
+
+        /// <summary>
         /// Returns a collection of (EntityName, DatabaseObject) without
         /// exposing the internal representation.
         /// </summary>

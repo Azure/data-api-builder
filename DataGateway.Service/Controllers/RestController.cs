@@ -19,7 +19,7 @@ namespace Azure.DataGateway.Service.Controllers
     /// <see href="https://github.com/Microsoft/api-guidelines/blob/vNext/Guidelines.md">Microsoft REST API Guidelines</see>.
     /// </summary>
     [ApiController]
-    [Route("{entityName}")]
+    [Route("{*route}")]
     public class RestController : ControllerBase
     {
         /// <summary>
@@ -107,34 +107,27 @@ namespace Azure.DataGateway.Service.Controllers
         /// <summary>
         /// Find action serving the HttpGet verb.
         /// </summary>
-        /// <param name="entityName">The name of the entity.</param>
-        /// <param name="primaryKeyRoute">The string representing the primary key route
-        /// which gets its content from the route attribute {*primaryKeyRoute}.
-        /// asterisk(*) here is a wild-card/catch all i.e it matches the rest of the route after {entityName}.
-        /// primary_key = [shard_value/]id_key_value
-        /// primaryKeyRoute will be empty for FindOne or FindMany
+        /// <param name="route">The entire route which gets
+        /// its content from the route attribute {*path},
+        /// asterisk(*) here is a wild-card/catch all.
         /// Expected URL template is of the following form:
-        /// CosmosDb: URL template: /<entityName>/[<shard_key>/<shard_value>]/[<id_key>/]<id_key_value>
         /// MsSql/PgSql: URL template: /<entityName>/[<primary_key_column_name>/<primary_key_value>
-        /// URL may also contain a queryString
-        /// URL example: /SalesOrders/customerName/Xyz/saleOrderId/123 </param>
+        /// URL MUST NOT contain a queryString
+        /// URL example: /Books </param>
         [HttpGet]
-        [Route("{*primaryKeyRoute}")]
         [Produces("application/json")]
         public async Task<IActionResult> Find(
-            string entityName,
-            string? primaryKeyRoute)
+            string route)
         {
             return await HandleOperation(
-                entityName,
-                Operation.Find,
-                primaryKeyRoute);
+                route,
+                Operation.Find);
         }
 
         /// <summary>
         /// Insert action serving the HttpPost verb.
         /// </summary>
-        /// <param name="entityName">The name of the entity.</param>
+        /// <param name="route">Path and entity.</param>
         /// Expected URL template is of the following form:
         /// CosmosDb/MsSql/PgSql: URL template: /<entityName>
         /// URL MUST NOT contain a queryString
@@ -142,103 +135,85 @@ namespace Azure.DataGateway.Service.Controllers
         [HttpPost]
         [Produces("application/json")]
         public async Task<IActionResult> Insert(
-            string entityName)
+            string route)
         {
             return await HandleOperation(
-                entityName,
-                Operation.Insert,
-                primaryKeyRoute: string.Empty);
+                route,
+                Operation.Insert);
         }
 
         /// <summary>
         /// Delete action serving the HttpDelete verb.
         /// </summary>
-        /// <param name="entityName">The name of the entity.</param>
-        /// <param name="primaryKeyRoute">The string representing the primary key route
-        /// which gets its content from the route attribute {*primaryKeyRoute}.
-        /// asterisk(*) here is a wild-card/catch all i.e it matches the rest of the route after {entityName}.
-        /// primary_key = [shard_value/]id_key_value
+        /// <param name="route">The entire route which gets
+        /// its content from the route attribute {*path},
+        /// asterisk(*) here is a wild-card/catch all.
         /// Expected URL template is of the following form:
         /// MsSql/PgSql: URL template: /<entityName>/[<primary_key_column_name>/<primary_key_value>
         /// URL MUST NOT contain a queryString
         /// URL example: /Books </param>
         [HttpDelete]
-        [Route("{*primaryKeyRoute}")]
         [Produces("application/json")]
         public async Task<IActionResult> Delete(
-            string entityName,
-            string? primaryKeyRoute)
+            string route)
         {
             return await HandleOperation(
-                entityName,
-                Operation.Delete,
-                primaryKeyRoute);
+                route,
+                Operation.Delete);
         }
 
         /// <summary>
         /// Replacement Update/Insert action serving the HttpPut verb
         /// </summary>
-        /// <param name="entityName">The name of the entity.</param>
-        /// <param name="primaryKeyRoute">The string representing the primary key route
-        /// which gets its content from the route attribute {*primaryKeyRoute}.
-        /// asterisk(*) here is a wild-card/catch all i.e it matches the rest of the route after {entityName}.
-        /// primary_key = [shard_value/]id_key_value
+        /// <param name="route">The entire route which gets
+        /// its content from the route attribute {*path},
+        /// asterisk(*) here is a wild-card/catch all.
         /// Expected URL template is of the following form:
-        /// MsSql: URL template: /<entityName>/[<primary_key_column_name>/<primary_key_value>
+        /// MsSql/PgSql: URL template: /<entityName>/[<primary_key_column_name>/<primary_key_value>
         /// URL MUST NOT contain a queryString
         /// URL example: /Books </param>
         [HttpPut]
-        [Route("{*primaryKeyRoute}")]
         [Produces("application/json")]
         public async Task<IActionResult> Upsert(
-            string entityName,
-            string? primaryKeyRoute)
+            string route)
         {
             return await HandleOperation(
-                entityName,
-                DeterminePatchPutSemantics(Operation.Upsert),
-                primaryKeyRoute);
+                route,
+                DeterminePatchPutSemantics(Operation.Upsert));
         }
 
         /// <summary>
         /// Incremental Update/Insert action serving the HttpPatch verb
         /// </summary>
-        /// <param name="entityName">The name of the entity.</param>
-        /// <param name="primaryKeyRoute">The string representing the primary key route
-        /// which gets its content from the route attribute {*primaryKeyRoute}.
-        /// asterisk(*) here is a wild-card/catch all i.e it matches the rest of the route after {entityName}.
-        /// primary_key = [shard_value/]id_key_value
+        /// <param name="route">The entire route which gets
+        /// its content from the route attribute {*path},
+        /// asterisk(*) here is a wild-card/catch all.
         /// Expected URL template is of the following form:
-        /// MsSql: URL template: /<entityName>/[<primary_key_column_name>/<primary_key_value>
+        /// MsSql/PgSql: URL template: /<entityName>/[<primary_key_column_name>/<primary_key_value>
         /// URL MUST NOT contain a queryString
         /// URL example: /Books </param>
         [HttpPatch]
-        [Route("{*primaryKeyRoute}")]
         [Produces("application/json")]
         public async Task<IActionResult> UpsertIncremental(
-            string entityName,
-            string? primaryKeyRoute)
+            string route)
         {
             return await HandleOperation(
-                entityName,
-                DeterminePatchPutSemantics(Operation.UpsertIncremental),
-                primaryKeyRoute);
+                route,
+                DeterminePatchPutSemantics(Operation.UpsertIncremental));
         }
 
         /// <summary>
         /// Handle the given operation.
         /// </summary>
-        /// <param name="entityName">The name of the entity.</param>
+        /// <param name="path">The entire route.</param>
         /// <param name="operationType">The kind of operation to handle.</param>
-        /// <param name="primaryKeyRoute">The string identifying the primary key route
-        /// Its value could be null depending on the kind of operation.</param>
         private async Task<IActionResult> HandleOperation(
-            string entityName,
-            Operation operationType,
-            string? primaryKeyRoute)
+            string route,
+            Operation operationType)
         {
             try
             {
+                (string entityName, string primaryKeyRoute) = _restService.TryGetEntityAndPrimaryKeyRouteNameFromPath(route);
                 // Utilizes C#8 using syntax which does not require brackets.
                 using JsonDocument? result
                     = await _restService.ExecuteAsync(

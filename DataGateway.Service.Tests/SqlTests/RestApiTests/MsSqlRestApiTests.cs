@@ -692,13 +692,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
 
             // Setup params to invoke function with
             // Must use valid entity name
+            string path = "api";
             string entityName = "Book";
             Operation operationType = Operation.None;
             string primaryKeyRoute = string.Empty;
 
             // Reflection to invoke a private method to unit test all code paths
             PrivateObject testObject = new(_restController);
-            IActionResult actionResult = await testObject.Invoke("HandleOperation", new object[] { entityName, operationType, primaryKeyRoute });
+            IActionResult actionResult = await testObject.Invoke("HandleOperation", new object[] { $"{path}/{entityName}/{primaryKeyRoute}", operationType});
             SqlTestHelper.VerifyResult(actionResult, expected, System.Net.HttpStatusCode.BadRequest, string.Empty);
         }
 

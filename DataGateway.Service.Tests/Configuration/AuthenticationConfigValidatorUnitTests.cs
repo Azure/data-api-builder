@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO.Abstractions.TestingHelpers;
 using System.Text.Json;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Azure.DataGateway.Service.Tests.Configuration
@@ -20,7 +22,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         {
             RuntimeConfig config =
                 CreateRuntimeConfigWithAuthN(new AuthenticationConfig());
-            RuntimeConfigValidator configValidator = new(config);
+
+            RuntimeConfigValidator configValidator = GetMockConfigValidator(ref config);
 
             try
             {
@@ -44,7 +47,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 Jwt: jwt);
             RuntimeConfig config = CreateRuntimeConfigWithAuthN(authNConfig);
 
-            RuntimeConfigValidator configValidator = new(config);
+            RuntimeConfigValidator configValidator = GetMockConfigValidator(ref config);
 
             try
             {
@@ -72,7 +75,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
             RuntimeConfig config = CreateRuntimeConfigWithAuthN(authNConfig);
 
-            RuntimeConfigValidator configValidator = new(config);
+            RuntimeConfigValidator configValidator = GetMockConfigValidator(ref config);
+
             Assert.ThrowsException<NotSupportedException>(() =>
             {
                 configValidator.ValidateConfig();
@@ -102,7 +106,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 IssuerKey: string.Empty);
             AuthenticationConfig authNConfig = new(Provider: "EasyAuth", Jwt: jwt);
             RuntimeConfig config = CreateRuntimeConfigWithAuthN(authNConfig);
-            RuntimeConfigValidator configValidator = new(config);
+
+            RuntimeConfigValidator configValidator = GetMockConfigValidator(ref config);
 
             Assert.ThrowsException<NotSupportedException>(() =>
             {
@@ -122,6 +127,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             });
         }
         #endregion
+
         #region Helper Functions
         private static RuntimeConfig CreateRuntimeConfigWithAuthN(AuthenticationConfig authNConfig)
         {
@@ -148,6 +154,17 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
             config.DetermineGlobalSettings();
             return config;
+        }
+
+        private static RuntimeConfigValidator GetMockConfigValidator(ref RuntimeConfig config)
+        {
+            RuntimeConfig conf = config;
+            Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new();
+            mockRuntimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out conf)).Returns(true);
+            mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(config);
+            RuntimeConfigProvider runtimeConfigProvider = mockRuntimeConfigProvider.Object;
+            RuntimeConfigValidator configValidator = new(runtimeConfigProvider, new MockFileSystem());
+            return configValidator;
         }
         #endregion
     }

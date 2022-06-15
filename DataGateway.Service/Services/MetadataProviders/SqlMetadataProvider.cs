@@ -72,7 +72,7 @@ namespace Azure.DataGateway.Service.Services
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;
-            _restPath = runtimeConfigProvider.GetRestPath();
+            _restPath = runtimeConfigProvider.RestPath;
 
         }
 

@@ -699,7 +699,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
 
             // Reflection to invoke a private method to unit test all code paths
             PrivateObject testObject = new(_restController);
-            IActionResult actionResult = await testObject.Invoke("HandleOperation", new object[] { $"{path}/{entityName}/{primaryKeyRoute}", operationType});
+            IActionResult actionResult = await testObject.Invoke("HandleOperation", new object[] { $"{path}/{entityName}/{primaryKeyRoute}", operationType });
             SqlTestHelper.VerifyResult(actionResult, expected, System.Net.HttpStatusCode.BadRequest, string.Empty);
         }
 

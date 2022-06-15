@@ -136,7 +136,7 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
             throw new NotImplementedException();
         }
 
-        public string GetRestPath()
+        public bool TryGetRestPath(out string path)
         {
             throw new NotImplementedException();
         }

@@ -72,7 +72,9 @@ namespace Azure.DataGateway.Service.Services
         IQueryBuilder GetQueryBuilder();
 
         /// <summary>
-        /// Obtains the underlying path for REST.
+        /// Obtains the underlying path for REST and returns
+        /// through out param, returning true if path was
+        /// not null and false otherwise.
         /// </summary>
         /// <returns></returns>
         bool TryGetRestPath(out string path);

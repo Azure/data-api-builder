@@ -15,9 +15,9 @@ namespace Azure.DataGateway.Service.Resolvers
         public const string GENERIC_DB_EXCEPTION_MESSAGE = "While processing your request the database ran into an error.";
         private readonly bool _developerMode;
 
-        public DbExceptionParser(IOptionsMonitor<RuntimeConfigPath> config)
+        public DbExceptionParser(RuntimeConfigProvider config)
         {
-            _developerMode = configProvider.IsDeveloperMode();
+            _developerMode = config.IsDeveloperMode();
         }
 
         public virtual Exception Parse(DbException e)

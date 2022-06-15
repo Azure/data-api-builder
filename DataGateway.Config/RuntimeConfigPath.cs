@@ -54,16 +54,6 @@ namespace Azure.DataGateway.Config
         }
 
         /// <summary>
-        /// Get the path for REST from the runtimeconfig
-        /// if one exists, and null otherwise.
-        /// </summary>
-        /// <returns></returns>
-        public string? GetRestPath()
-        {
-            return ConfigValue is not null ? ConfigValue.RestGlobalSettings.Path : null;
-        }
-
-        /// <summary>
         /// Precedence of environments is
         /// 1) Value of HAWAII_ENVIRONMENT.
         /// 2) Value of ASPNETCORE_ENVIRONMENT.

@@ -89,5 +89,15 @@ namespace Azure.DataGateway.Service.Configurations
         {
             return RuntimeConfiguration?.HostGlobalSettings.Mode is HostModeType.Development;
         }
+
+        /// <summary>
+        /// Get the path for REST from the runtimeconfig
+        /// if one exists, and null otherwise.
+        /// </summary>
+        /// <returns></returns>
+        public string? GetRestPath()
+        {
+            return RuntimeConfiguration is not null ? RuntimeConfiguration.RestGlobalSettings.Path : null;
+        }
     }
 }

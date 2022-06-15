@@ -134,7 +134,7 @@ namespace Azure.DataGateway.Service.Services
         public bool TryGetRestPath(out string path)
         {
             path = _restPath is null ? string.Empty : _restPath;
-            return _restPath is not null; 
+            return _restPath is not null;
         }
 
         /// <inheritdoc />

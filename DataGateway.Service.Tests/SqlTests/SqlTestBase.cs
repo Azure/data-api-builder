@@ -278,13 +278,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 {
                     Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
                 };
-                expected = exception ?
-                    JsonSerializer.Serialize(RestController.ErrorResponse(
+
+                if (exception)
+                {
+                    expected = JsonSerializer.Serialize(RestController.ErrorResponse(
                         expectedSubStatusCode.ToString(),
                         expectedErrorMessage,
                         expectedStatusCode).Value,
-                        options) :
-                    $"{{\"value\":{FormatExpectedValue(await GetDatabaseResultAsync(sqlQuery))}{ExpectedNextLinkIfAny(paginated, EncodeQueryString(baseUrl), $"{expectedAfterQueryString}")}}}";
+                        options);
+                } else
+                {
+                    string dbResult = await GetDatabaseResultAsync(sqlQuery);
+                    // For FIND requests, null result signifies an empty result set
+                    dbResult = (operationType == Operation.Find && dbResult is null) ? "[]" : dbResult;
+                    expected = $"{{\"value\":{FormatExpectedValue(dbResult)}{ExpectedNextLinkIfAny(paginated, EncodeQueryString(baseUrl), $"{expectedAfterQueryString}")}}}";
+                }
+                
             }
 
             SqlTestHelper.VerifyResult(

@@ -379,34 +379,12 @@ namespace Azure.DataGateway.Service.Authorization
             string claimCharsRgx = @"@claims\.[a-zA-Z0-9_\.]*";
 
             // Find all the claimTypes from the policy
-            MatchCollection claimTypes = Regex.Matches(policy, claimCharsRgx);
-
-            // Initialising resultant parsed policy with length equal to that of policy string.
-            StringBuilder policyWithClaims = new(policy.Length);
-
-            // parsedIdx indicates the last index in the policy string from which we need to append to the
-            // resulting policy.
-            int parsedIdx = 0;
-
-            foreach (Match claimType in claimTypes)
+            string processesPolicy = Regex.Replace(policy, claimCharsRgx, new MatchEvaluator((Match claimTypeMatch) =>
             {
-                // Remove the prefix @claims. from the claimType
-                string typeOfClaim = claimType.Value.Substring("@claims.".Length);
-
-                if (claimsInRequestContext.TryGetValue(typeOfClaim, out Claim? claim))
+                string claimType = claimTypeMatch.Value.ToString().Substring("@claims.".Length);
+                if (claimsInRequestContext.TryGetValue(claimType, out Claim? claim))
                 {
-                    // The index in the policy string where an instance of @claims.xyz was found.
-                    int claimIdx = claimType.Index;
-
-                    // Append the portion of policy string from [parsedIdx,claimIdx).
-                    policyWithClaims.Append(policy.Substring(parsedIdx, claimIdx - parsedIdx));
-
-                    // Append the claimValue to the resulting policy string. This is the substitution
-                    // of the claimType starting from claimIdx in the policy string.
-                    policyWithClaims.Append($"({GetClaimValueByDataType(claim)})");
-
-                    // Move the parsedIdx to the index following a claimType in the policy string
-                    parsedIdx = claimIdx + claimType.Value.Length;
+                    return GetClaimValueByDataType(claim);
                 }
                 else
                 {
@@ -417,20 +395,11 @@ namespace Azure.DataGateway.Service.Authorization
                         subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
                         );
                 }
-            }
+            }));
 
-            if (parsedIdx < policy.Length)
-            {
-                // After the last substitution of @claims.xyz with its value, we might still have policy string to append.
-                // For eg. "@claims.xyz eq @item.abc", after replacing @claims.xyz with its value,
-                // we still need to append " eq @item.abc".
-                policyWithClaims.Append(policy.Substring(parsedIdx));
-            }
-
-            //Remove @item. occurences from the policy string
-            policyWithClaims.Replace("@item.", "");
-
-            return policyWithClaims.ToString();
+            //Remove occurences of @item. directives
+            processesPolicy = processesPolicy.Replace("@item.", "");
+            return processesPolicy;
         }
 
         /// <summary>
@@ -452,12 +421,12 @@ namespace Azure.DataGateway.Service.Authorization
             switch (claim.ValueType)
             {
                 case ClaimValueTypes.String:
-                    return $"'{claim.Value}'";
+                    return $"('{claim.Value}')";
                 case ClaimValueTypes.Boolean:
                 case ClaimValueTypes.Integer32:
                 case ClaimValueTypes.Integer64:
                 case ClaimValueTypes.Double:
-                    return claim.Value;
+                    return $"({claim.Value})";
                 default:
                     // One of the claims in the request had unsupported data type.
                     throw new DataGatewayException(

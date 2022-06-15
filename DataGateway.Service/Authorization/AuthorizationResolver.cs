@@ -279,6 +279,30 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <summary>
+        /// Get list of roles defined for entity within runtime configuration.. This is applicable for GraphQL when creating authorization
+        /// directive on Object type.
+        /// </summary>
+        /// <param name="entityName">Name of entity.</param>
+        /// <returns>Collection of role names.</returns>
+        public IEnumerable<string> GetRolesForEntity(string entityName)
+        {
+            return _entityPermissionMap[entityName].RoleToActionMap.Keys;
+        }
+
+        /// <summary>
+        /// Returns the collection of roles which can READ the provided field.
+        /// Applicable to GraphQL field directive @authorize on ObjectType fields.
+        /// </summary>
+        /// <param name="entityName"></param>
+        /// <param name="actionName"></param>
+        /// <param name="field"></param>
+        /// <returns></returns>
+        public IEnumerable<string> GetRolesForField(string entityName, string actionName, string field)
+        {
+            return _entityPermissionMap[entityName].FieldToRolesMap[actionName][field];
+        }
+
+        /// <summary>
         /// For a given entityName, retrieve the column names on the associated table
         /// from the metadataProvider.
         /// </summary>

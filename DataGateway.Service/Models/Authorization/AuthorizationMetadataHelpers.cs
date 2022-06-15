@@ -11,8 +11,13 @@ namespace Azure.DataGateway.Service.Models.Authorization
     {
         /// <summary>
         /// Given the key (roleName) returns the associated RoleDS object.
+        /// To retrieve all roles associated with an entity -> RoleToActionMap.Keys()
         /// </summary>
         public Dictionary<string, RoleMetadata> RoleToActionMap = new();
+        /// <summary>
+        /// Given the key (actionName) returns a key/value collection of fieldName to Roles
+        /// </summary>
+        public Dictionary<string, Dictionary<string, IEnumerable<string>>> FieldToRolesMap = new();
     }
 
     /// <summary>

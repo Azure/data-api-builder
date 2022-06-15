@@ -61,5 +61,13 @@ namespace Azure.DataGateway.Service.Authorization
         /// <param name="action">Action type: Create, Read, Update, Delete</param>
         /// <returns></returns>
         public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, string action);
+
+        /// <summary>
+        /// Get list of roles defined for entity within runtime configuration.. This is applicable for GraphQL when creating authorization
+        /// directive on Object type.
+        /// </summary>
+        /// <param name="entityName">Name of entity.</param>
+        /// <returns>Collection of role names.</returns>
+        public IEnumerable<string> GetRolesForEntity(string entityName);
     }
 }

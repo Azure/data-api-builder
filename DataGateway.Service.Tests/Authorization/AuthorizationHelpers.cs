@@ -6,7 +6,6 @@ using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
-using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Action = Azure.DataGateway.Config.Action;

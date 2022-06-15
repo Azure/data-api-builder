@@ -60,7 +60,7 @@ namespace Azure.DataGateway.Config
 
         /// <summary>
         /// Parse Json and replace @env('ENVIRONMENT_VARIABLE_NAME') with
-        /// the environment variable that corresponds to ENVIRONMENT_VARIABLE_NAME.
+        /// the environment variable's value that corresponds to ENVIRONMENT_VARIABLE_NAME.
         /// If no environment variable is found with that name, throw exception.
         /// </summary>
         /// <param name="json">Json string representing the runtime config file.</param>
@@ -68,6 +68,8 @@ namespace Azure.DataGateway.Config
         public static string? ParseConfigJsonAndReplaceEnvVariables(string json)
         {
             StringBuilder stringBuilder = new();
+            // string writer will modify string builder allowing
+            // us to return the string builder toString().
             StringWriter stringWriter = new(stringBuilder);
             using JsonTextReader reader = new(new StringReader(json));
             using JsonTextWriter writer = new(stringWriter)
@@ -75,7 +77,7 @@ namespace Azure.DataGateway.Config
                 Formatting = Formatting.Indented
             };
 
-            // @env     : match @env('
+            // @env\('  : match @env('
             // .*?      : lazy match any character except newline 0 or more times
             // (?='\))  : look ahead for ') which will combine with our lazy match
             //            ie: in @env('hello')goodbye') we match @env('hello')
@@ -98,7 +100,7 @@ namespace Azure.DataGateway.Config
                             writer.WritePropertyName(reader.Value.ToString()!);
                             break;
                         case JsonToken.String:
-                            string valueToWrite = Regex.Replace(reader.Value.ToString()!, envPattern, new MatchEvaluator(ReplaceWithEnvVariable));
+                            string valueToWrite = Regex.Replace(reader.Value.ToString()!, envPattern, new MatchEvaluator(ReplaceMatchWithEnvVariable));
                             writer.WriteValue(valueToWrite);
                             break;
                         default:
@@ -122,6 +124,7 @@ namespace Azure.DataGateway.Config
                         case JsonToken.EndObject:
                             writer.WriteEndObject();
                             break;
+                        // ie: "path" : null
                         case JsonToken.Null:
                             writer.WriteNull();
                             break;
@@ -140,7 +143,7 @@ namespace Azure.DataGateway.Config
         /// <param name="match">The match holding the environment variable name.</param>
         /// <returns>The environment variable associated with the provided name.</returns>
         /// <exception cref="DataGatewayException"></exception>
-        private static string ReplaceWithEnvVariable(Match match)
+        private static string ReplaceMatchWithEnvVariable(Match match)
         {
             // [^@env\(]   :  any substring that is not @env(
             // .*          :  any char except newline any number of times

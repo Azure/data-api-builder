@@ -75,7 +75,7 @@ namespace Azure.DataGateway.Service.Services
         /// Obtains the underlying path for REST.
         /// </summary>
         /// <returns></returns>
-        string GetRestPath();
+        bool TryGetRestPath(out string path);
 
         /// <summary>
         /// Returns a collection of (EntityName, DatabaseObject) without

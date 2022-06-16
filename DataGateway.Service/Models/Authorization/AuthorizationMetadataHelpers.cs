@@ -35,6 +35,7 @@ namespace Azure.DataGateway.Service.Models.Authorization
     /// </summary>
     class ActionMetadata
     {
+        public string? databasePolicy;
         public HashSet<string> included = new();
         public HashSet<string> excluded = new();
     }

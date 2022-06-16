@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using Azure.DataGateway.Config;
@@ -76,7 +75,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 Actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
 
             Entity sampleEntity = new(
-                Source: new String("SQL"),
+                Source: TEST_ENTITY,
                 Rest: null,
                 GraphQL: null,
                 Permissions: new PermissionSetting[] { permissionForEntity },

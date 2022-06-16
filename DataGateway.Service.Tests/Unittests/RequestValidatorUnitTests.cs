@@ -249,7 +249,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
 
             _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME,
-                                                        dbo:GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME),
+                                                        dbo: GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME),
                                                         isList: false);
             string primaryKeyRoute = "id/12345/isbn/2/name/TwoTowers";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);

@@ -6,9 +6,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.Extensions.Options;
 using Npgsql;
 
@@ -56,16 +58,15 @@ namespace Azure.DataGateway.Service.Services
             new(StringComparer.InvariantCultureIgnoreCase);
 
         public SqlMetadataProvider(
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,
+            RuntimeConfigProvider runtimeConfigProvider,
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder)
         {
-            runtimeConfigPath.CurrentValue.
-                ExtractConfigValues(
-                    out _databaseType,
-                    out string connectionString,
-                    out _entities);
-            ConnectionString = connectionString;
+            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
+
+            _databaseType = runtimeConfig.DatabaseType;
+            _entities = runtimeConfig.Entities;
+            ConnectionString = runtimeConfig.ConnectionString;
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;

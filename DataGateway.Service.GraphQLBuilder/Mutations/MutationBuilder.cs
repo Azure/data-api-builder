@@ -39,7 +39,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
         /// <summary>
         /// Creates the DocumentNode with the provided mutationFields and inputs.
         /// </summary>
-        /// <param name="mutationFields">such as createBook(){}</param>
+        /// <param name="mutationFields">such as <c>createBook(){}</c></param>
         /// <param name="inputs">Such as CreateBookInput</param>
         /// <returns></returns>
         public static DocumentNode BuildDocumentNode(List<FieldDefinitionNode> mutationFields, Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs)

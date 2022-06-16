@@ -39,15 +39,14 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         /// <code>Check: </code> Making sure no exception is thrown if there are no Foriegn Keys.
         /// </summary>
         [TestMethod]
-        public static async Task CheckNoExceptionForNoForiegnKey()
+        public async Task CheckNoExceptionForNoForiegnKey()
         {
             _testCategory = TestCategory.POSTGRESQL;
             _runtimeConfig = SqlTestHelper.LoadConfig(_testCategory).CurrentValue;
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
-            SetUpSQLMetadataProvider();
+            SqlTestBase.SetUpSQLMetadataProvider();
             await ResetDbStateAsync();
             await _sqlMetadataProvider.InitializeAsync();
-            Assert.Fail();
         }
     }
 }

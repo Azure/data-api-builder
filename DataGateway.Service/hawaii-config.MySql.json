@@ -288,7 +288,12 @@
     "Empty": {
       "source": "empty_table",
       "rest": true,
-      "permissions": []
+      "permissions": [
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
     },
     "books_view_all": {
       "source": "books_view_all",

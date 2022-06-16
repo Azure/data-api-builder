@@ -82,7 +82,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
         /// Typically used to lock down Object/Field types to users who are members of the roles allowed
         /// </summary>
         /// <param name="roles">Collection of roles to set on the directive </param>
-        /// <returns>DirectiveNode such as: @authorize(roles: [“role1”, ..., “roleN”]) </returns>
+        /// <returns>DirectiveNode such as: @authorize(roles: ["role1", ..., "roleN"]) </returns>
         public static DirectiveNode CreateAuthorizationDirective(IEnumerable<string> roles)
         {
             List<IValueNode> roleList = new();

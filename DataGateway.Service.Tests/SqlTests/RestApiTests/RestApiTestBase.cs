@@ -70,7 +70,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         }
 
         /// <summary>
-        /// Tests the REST Api for Find operation on an entity with no rows (empty table)
+        /// Tests the REST Api for Find operations on empty result sets
+        /// 1. GET an entity with no rows (empty table)
+        /// 2. GET an entity with rows, filtered to none by query parameter
         /// Should be a 200 response with an empty array
         /// </summary>
         [TestMethod]
@@ -84,7 +86,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 controller: _restController
             );
 
-            //TODO: add find tests on non-empty tables that are filtered to empty result sets
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=1 ne 1",
+                entity: _integrationEntityName,
+                sqlQuery: GetQuery("FindEmptyResultSetWithQueryFilter"),
+                controller: _restController
+            );
         }
 
         ///<summary>

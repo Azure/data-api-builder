@@ -31,7 +31,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
             },
             {
                 "FindEmptyTable",
-                $"SELECT * FROM {_emptyTableTableName}"
+                $"SELECT * FROM { _emptyTableTableName } " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindEmptyResultSetWithQueryFilter",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE 1 != 1 FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindViewAll",

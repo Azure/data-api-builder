@@ -8,6 +8,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
@@ -66,8 +67,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                       },
                       {
                         ""role"": ""authenticated"",
-                        ""actions"": [ ""create"", ""read"", ""delete"" ]
-                      }
+                        ""actions"": [" + $" \"{ActionType.CREATE}\", \"{ActionType.READ}\", \"{ActionType.DELETE}\", \"{ActionType.UPDATE}\" ]" +
+                      @"}
                     ]
                 }";
 

@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Services;
@@ -11,6 +13,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
     public abstract class GraphQLSupportedTypesTestBase : SqlTestBase
     {
         protected const string TYPE_TABLE = "TypeTable";
+        protected const string BYTE_TYPE = "byte";
+        protected const string SHORT_TYPE = "short";
+        protected const string INT_TYPE = "int";
+        protected const string LONG_TYPE = "long";
+        protected const string SINGLE_TYPE = "single";
+        protected const string FLOAT_TYPE = "float";
+        protected const string DECIMAL_TYPE = "decimal";
+        protected const string STRING_TYPE = "string";
+        protected const string BOOLEAN_TYPE = "boolean";
+        protected const string DATETIME_TYPE = "datetime";
+        protected const string BYTEARRAY_TYPE = "bytearray";
 
         #region Test Fixture Setup
         protected static GraphQLService _graphQLService;
@@ -21,24 +34,57 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         #region Tests
 
         [DataTestMethod]
-        [DataRow("int", 1)]
-        [DataRow("int", 2)]
-        [DataRow("int", 3)]
-        [DataRow("int", 4)]
-        [DataRow("string", 1)]
-        [DataRow("string", 2)]
-        [DataRow("string", 3)]
-        [DataRow("string", 4)]
-        [DataRow("float", 1)]
-        [DataRow("float", 2)]
-        [DataRow("float", 3)]
-        [DataRow("float", 4)]
-        [DataRow("boolean", 1)]
-        [DataRow("boolean", 2)]
-        [DataRow("boolean", 3)]
-        [DataRow("boolean", 4)]
+        [DataRow(BYTE_TYPE, 1)]
+        [DataRow(BYTE_TYPE, 2)]
+        [DataRow(BYTE_TYPE, 3)]
+        [DataRow(BYTE_TYPE, 4)]
+        [DataRow(SHORT_TYPE, 1)]
+        [DataRow(SHORT_TYPE, 2)]
+        [DataRow(SHORT_TYPE, 3)]
+        [DataRow(SHORT_TYPE, 4)]
+        [DataRow(INT_TYPE, 1)]
+        [DataRow(INT_TYPE, 2)]
+        [DataRow(INT_TYPE, 3)]
+        [DataRow(INT_TYPE, 4)]
+        [DataRow(LONG_TYPE, 1)]
+        [DataRow(LONG_TYPE, 2)]
+        [DataRow(LONG_TYPE, 3)]
+        [DataRow(LONG_TYPE, 4)]
+        [DataRow(SINGLE_TYPE, 1)]
+        [DataRow(SINGLE_TYPE, 2)]
+        [DataRow(SINGLE_TYPE, 3)]
+        [DataRow(SINGLE_TYPE, 4)]
+        [DataRow(FLOAT_TYPE, 1)]
+        [DataRow(FLOAT_TYPE, 2)]
+        [DataRow(FLOAT_TYPE, 3)]
+        [DataRow(FLOAT_TYPE, 4)]
+        [DataRow(DECIMAL_TYPE, 1)]
+        [DataRow(DECIMAL_TYPE, 2)]
+        [DataRow(DECIMAL_TYPE, 3)]
+        [DataRow(DECIMAL_TYPE, 4)]
+        [DataRow(STRING_TYPE, 1)]
+        [DataRow(STRING_TYPE, 2)]
+        [DataRow(STRING_TYPE, 3)]
+        [DataRow(STRING_TYPE, 4)]
+        [DataRow(BOOLEAN_TYPE, 1)]
+        [DataRow(BOOLEAN_TYPE, 2)]
+        [DataRow(BOOLEAN_TYPE, 3)]
+        [DataRow(BOOLEAN_TYPE, 4)]
+        [DataRow(DATETIME_TYPE, 1)]
+        [DataRow(DATETIME_TYPE, 2)]
+        [DataRow(DATETIME_TYPE, 3)]
+        [DataRow(DATETIME_TYPE, 4)]
+        [DataRow(BYTEARRAY_TYPE, 1)]
+        [DataRow(BYTEARRAY_TYPE, 2)]
+        [DataRow(BYTEARRAY_TYPE, 3)]
+        [DataRow(BYTEARRAY_TYPE, 4)]
         public async Task QueryTypeColumn(string type, int id)
         {
+            if (!IsSupportedType(type))
+            {
+                Assert.Inconclusive("Type not supported");
+            }
+
             string graphQLQueryName = "supportedType_by_pk";
             string gqlQuery = "{ supportedType_by_pk(id: " + id + ") { " + type + "_types } }";
 
@@ -46,54 +92,136 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+
+            if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)
+            {
+                CompareFloatResults(type, actual, expected);
+            }
+            else if (type == DATETIME_TYPE)
+            {
+                CompareDateTimeResults(actual, expected);
+            }
+            else
+            {
+                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            }
         }
 
         [DataTestMethod]
-        [DataRow("int", "9999")]
-        [DataRow("int", "0")]
-        [DataRow("int", "-9999")]
-        [DataRow("int", "null")]
-        [DataRow("string", "\"aaaaaaaaaa\"")]
-        [DataRow("string", "\"\"")]
-        [DataRow("string", "null")]
-        [DataRow("float", "-3.33")]
-        [DataRow("float", "100000.5")]
-        [DataRow("float", "null")]
-        [DataRow("boolean", "true")]
-        [DataRow("boolean", "false")]
-        [DataRow("boolean", "null")]
+        [DataRow(BYTE_TYPE, "255")]
+        [DataRow(BYTE_TYPE, "0")]
+        [DataRow(BYTE_TYPE, "null")]
+        [DataRow(SHORT_TYPE, "0")]
+        [DataRow(SHORT_TYPE, "30000")]
+        [DataRow(SHORT_TYPE, "-30000")]
+        [DataRow(SHORT_TYPE, "null")]
+        [DataRow(INT_TYPE, "9999")]
+        [DataRow(INT_TYPE, "0")]
+        [DataRow(INT_TYPE, "-9999")]
+        [DataRow(INT_TYPE, "null")]
+        [DataRow(LONG_TYPE, "0")]
+        [DataRow(LONG_TYPE, "9000000000000000000")]
+        [DataRow(LONG_TYPE, "-9000000000000000000")]
+        [DataRow(LONG_TYPE, "null")]
+        [DataRow(STRING_TYPE, "\"aaaaaaaaaa\"")]
+        [DataRow(STRING_TYPE, "\"\"")]
+        [DataRow(STRING_TYPE, "null")]
+        [DataRow(SINGLE_TYPE, "-3.33")]
+        [DataRow(SINGLE_TYPE, "2E35")]
+        [DataRow(SINGLE_TYPE, "null")]
+        [DataRow(FLOAT_TYPE, "-3.33")]
+        [DataRow(FLOAT_TYPE, "2E150")]
+        [DataRow(FLOAT_TYPE, "null")]
+        [DataRow(DECIMAL_TYPE, "-3.333333")]
+        [DataRow(DECIMAL_TYPE, "1222222.00000929292")]
+        [DataRow(DECIMAL_TYPE, "null")]
+        [DataRow(BOOLEAN_TYPE, "true")]
+        [DataRow(BOOLEAN_TYPE, "false")]
+        [DataRow(BOOLEAN_TYPE, "null")]
+        [DataRow(DATETIME_TYPE, "\"1999-01-08 10:23:54+8:00\"")]
+        [DataRow(DATETIME_TYPE, "\"1999-01-08 09:20:00\"")]
+        [DataRow(DATETIME_TYPE, "\"1999-01-08\"")]
+        [DataRow(DATETIME_TYPE, "null")]
+        [DataRow(BYTEARRAY_TYPE, "\"U3RyaW5neQ==\"")]
+        [DataRow(BYTEARRAY_TYPE, "\"V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=\"")]
+        [DataRow(BYTEARRAY_TYPE, "null")]
         public async Task InsertIntoTypeColumn(string type, string value)
         {
+            if (!IsSupportedType(type, value))
+            {
+                Assert.Inconclusive("Type not supported");
+            }
+
             string field = $"{type}_types";
             string graphQLQueryName = "createSupportedType";
             string gqlQuery = "mutation{ createSupportedType (item: {" + field + ": " + value + " }){ " + field + " } }";
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 5001);
 
-            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController, new() { { "value", value } });
+            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+
+            if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)
+            {
+                CompareFloatResults(type, actual, expected);
+            }
+            else if (type == DATETIME_TYPE)
+            {
+                CompareDateTimeResults(actual, expected);
+            }
+            else
+            {
+                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            }
 
             await ResetDbStateAsync();
         }
 
         [DataTestMethod]
-        [DataRow("int", "9999")]
-        [DataRow("int", "0")]
-        [DataRow("int", "-9999")]
-        [DataRow("int", "null")]
-        [DataRow("string", "\"aaaaaaaaaa\"")]
-        [DataRow("string", "\"\"")]
-        [DataRow("string", "null")]
-        [DataRow("float", "-3.33")]
-        [DataRow("float", "100000.5")]
-        [DataRow("float", "null")]
-        [DataRow("boolean", "true")]
-        [DataRow("boolean", "false")]
-        [DataRow("boolean", "null")]
+        [DataRow(BYTE_TYPE, "255")]
+        [DataRow(BYTE_TYPE, "0")]
+        [DataRow(BYTE_TYPE, "null")]
+        [DataRow(SHORT_TYPE, "0")]
+        [DataRow(SHORT_TYPE, "30000")]
+        [DataRow(SHORT_TYPE, "-30000")]
+        [DataRow(SHORT_TYPE, "null")]
+        [DataRow(INT_TYPE, "9999")]
+        [DataRow(INT_TYPE, "0")]
+        [DataRow(INT_TYPE, "-9999")]
+        [DataRow(INT_TYPE, "null")]
+        [DataRow(LONG_TYPE, "0")]
+        [DataRow(LONG_TYPE, "9000000000000000000")]
+        [DataRow(LONG_TYPE, "-9000000000000000000")]
+        [DataRow(LONG_TYPE, "null")]
+        [DataRow(STRING_TYPE, "\"aaaaaaaaaa\"")]
+        [DataRow(STRING_TYPE, "\"\"")]
+        [DataRow(STRING_TYPE, "null")]
+        [DataRow(SINGLE_TYPE, "-3.33")]
+        [DataRow(SINGLE_TYPE, "2E35")]
+        [DataRow(SINGLE_TYPE, "null")]
+        [DataRow(FLOAT_TYPE, "-3.33")]
+        [DataRow(FLOAT_TYPE, "2E150")]
+        [DataRow(FLOAT_TYPE, "null")]
+        [DataRow(DECIMAL_TYPE, "-3.333333")]
+        [DataRow(DECIMAL_TYPE, "1222222.00000929292")]
+        [DataRow(DECIMAL_TYPE, "null")]
+        [DataRow(BOOLEAN_TYPE, "true")]
+        [DataRow(BOOLEAN_TYPE, "false")]
+        [DataRow(BOOLEAN_TYPE, "null")]
+        [DataRow(DATETIME_TYPE, "\"1999-01-08 10:23:54+8:00\"")]
+        [DataRow(DATETIME_TYPE, "\"1999-01-08 09:20:00\"")]
+        [DataRow(DATETIME_TYPE, "\"1999-01-08\"")]
+        [DataRow(DATETIME_TYPE, "null")]
+        [DataRow(BYTEARRAY_TYPE, "\"U3RyaW5neQ==\"")]
+        [DataRow(BYTEARRAY_TYPE, "\"V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=\"")]
+        [DataRow(BYTEARRAY_TYPE, "null")]
         public async Task UpdateTypeColumn(string type, string value)
         {
+            if (!IsSupportedType(type, value))
+            {
+                Assert.Inconclusive("Type not supported");
+            }
+
             string field = $"{type}_types";
             string graphQLQueryName = "updateSupportedType";
             string gqlQuery = "mutation{ updateSupportedType (id: 1, item: {" + field + ": " + value + " }){ " + field + " } }";
@@ -102,13 +230,94 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+
+            if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)
+            {
+                CompareFloatResults(type, actual, expected);
+            }
+            else if (type == DATETIME_TYPE)
+            {
+                CompareDateTimeResults(actual, expected);
+            }
+            else
+            {
+                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            }
 
             await ResetDbStateAsync();
         }
 
         #endregion
 
+        /// <summary>
+        /// HotChocolate will parse large floats to exponential notation
+        /// while the db will return the number fully printed out. Because
+        /// the json deep compare function we are using does not account for such scenario
+        /// a special comparison is needed to test floats
+        /// </summary>
+        private static void CompareFloatResults(string floatType, string actual, string expected)
+        {
+            string fieldName = $"{floatType}_types";
+
+            using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
+            using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
+
+            string actualFloat = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
+            string expectedFloat = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
+
+            // handles cases when one of the values is null
+            if (string.IsNullOrEmpty(actualFloat) || string.IsNullOrEmpty(expectedFloat))
+            {
+                Assert.AreEqual(expectedFloat, actualFloat);
+                return;
+            }
+
+            switch (floatType)
+            {
+                case SINGLE_TYPE:
+                    Assert.AreEqual(float.Parse(expectedFloat), float.Parse(actualFloat));
+                    break;
+                case FLOAT_TYPE:
+                    Assert.AreEqual(double.Parse(expectedFloat), double.Parse(actualFloat));
+                    break;
+                case DECIMAL_TYPE:
+                    Assert.AreEqual(decimal.Parse(expectedFloat), decimal.Parse(actualFloat));
+                    break;
+                default:
+                    Assert.Fail($"Calling compare on unrecognized float type {floatType}");
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Required due to different format between mysql datetime and HotChocolate datetime
+        /// result
+        /// </summary>
+        private static void CompareDateTimeResults(string actual, string expected)
+        {
+            string fieldName = "datetime_types";
+
+            using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
+            using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
+
+            string actualDateTime = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
+            string expectedDateTime = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
+
+            // handles cases when one of the values is null
+            if (string.IsNullOrEmpty(actualDateTime) || string.IsNullOrEmpty(expectedDateTime))
+            {
+                Assert.AreEqual(expectedDateTime, actualDateTime);
+            }
+            else
+            {
+                Assert.AreEqual(DateTimeOffset.Parse(expectedDateTime), DateTimeOffset.Parse(actualDateTime));
+            }
+        }
+
         protected abstract string MakeQueryOnTypeTable(List<string> columnsToQuery, int id);
+        protected virtual bool IsSupportedType(string type, string value = null)
+        {
+            return true;
+        }
     }
 }

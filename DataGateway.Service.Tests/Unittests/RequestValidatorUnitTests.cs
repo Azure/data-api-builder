@@ -24,7 +24,9 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         private const string DEFAULT_SCHEMA = "dbo";
         private static Dictionary<string, Dictionary<string, string>> _defaultMapping = new()
         {
-            { "entity", new()
+            {
+                "entity",
+                new()
                 {
                     { "id", "id" },
                     { "title", "title" },

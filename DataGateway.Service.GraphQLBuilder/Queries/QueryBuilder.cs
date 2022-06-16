@@ -56,7 +56,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         /// <summary>
         /// Creates the DocumentNode with the provided queryFields and returnTypes.
         /// </summary>
-        /// <param name="queryFields">Such as books_by_pk() {}</param>
+        /// <param name="queryFields">Such as <c>books_by_pk() {}</c></param>
         /// <param name="returnTypes">Such as pagination token or Connection</param>
         /// <returns></returns>
         public static DocumentNode BuildDocumentNode(List<FieldDefinitionNode> queryFields, List<ObjectTypeDefinitionNode> returnTypes)
@@ -98,7 +98,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 new StringValueNode($"Get a {name} from the database by its ID/primary key"),
                 inputValues,
                 new NamedTypeNode(name),
-                directives: fieldDefinitionNodeDirectives
+                fieldDefinitionNodeDirectives
             );
         }
 
@@ -139,7 +139,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                 new StringValueNode($"Get a list of all the {name} items from the database"),
                 QueryArgumentsForField(filterInputName, orderByInputName),
                 new NonNullTypeNode(new NamedTypeNode(returnType.Name)),
-                directives: fieldDefinitionNodeDirectives
+                fieldDefinitionNodeDirectives
             );
         }
 

@@ -46,7 +46,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                 new StringValueNode($"Delete a {name}"),
                 inputValues,
                 new NamedTypeNode(FormatNameForObject(name, configEntity)),
-                directives: fieldDefinitionNodeDirectives
+                fieldDefinitionNodeDirectives
             );
         }
     }

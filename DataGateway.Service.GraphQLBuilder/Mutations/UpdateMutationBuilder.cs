@@ -203,7 +203,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                 new StringValueNode($"Updates a {name}"),
                 inputValues,
                 new NamedTypeNode(FormatNameForObject(name, entity)),
-                directives: fieldDefinitionNodeDirectives
+                fieldDefinitionNodeDirectives
             );
         }
     }

@@ -219,6 +219,8 @@ namespace Azure.DataGateway.Service.Authorization
                         }
                         else
                         {
+                            // If not a string, the actionObj is expected to be an object that can be deserialised into Action object.
+                            // We will put validation checks later to make sure this is the case.
                             Action? actionObj = JsonSerializer.Deserialize<Action>(actionElement.ToString(), RuntimeConfig.GetDeserializationOptions());
                             if (actionObj is not null)
                             {

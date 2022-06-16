@@ -80,9 +80,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BYTEARRAY_TYPE, 4)]
         public async Task QueryTypeColumn(string type, int id)
         {
-            if (!IsTypeSupportedType(type))
+            if (!IsSupportedType(type))
             {
-                return;
+                Assert.Inconclusive("Type not supported");
             }
 
             string graphQLQueryName = "supportedType_by_pk";
@@ -147,9 +147,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BYTEARRAY_TYPE, "null")]
         public async Task InsertIntoTypeColumn(string type, string value)
         {
-            if (!IsTypeSupportedType(type, value))
+            if (!IsSupportedType(type, value))
             {
-                return;
+                Assert.Inconclusive("Type not supported");
             }
 
             string field = $"{type}_types";
@@ -217,9 +217,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BYTEARRAY_TYPE, "null")]
         public async Task UpdateTypeColumn(string type, string value)
         {
-            if (!IsTypeSupportedType(type, value))
+            if (!IsSupportedType(type, value))
             {
-                return;
+                Assert.Inconclusive("Type not supported");
             }
 
             string field = $"{type}_types";
@@ -290,7 +290,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         }
 
         /// <summary>
-        /// Required due to different format between mysql datatime and HotChocolate datetime
+        /// Required due to different format between mysql datetime and HotChocolate datetime
         /// result
         /// </summary>
         private static void CompareDateTimeResults(string actual, string expected)
@@ -315,7 +315,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         }
 
         protected abstract string MakeQueryOnTypeTable(List<string> columnsToQuery, int id);
-        protected virtual bool IsTypeSupportedType(string type, string value = null)
+        protected virtual bool IsSupportedType(string type, string value = null)
         {
             return true;
         }

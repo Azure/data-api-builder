@@ -8,7 +8,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
     {
         public static InputObjectTypeDefinitionNode IdInputType() =>
             new(
-                null,
+                location: null,
                 new NameNode("IdFilterInput"),
                 new StringValueNode("Input type for adding ID filters"),
                 new List<DirectiveNode>(),
@@ -21,7 +21,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
         public static InputObjectTypeDefinitionNode BooleanInputType() =>
             new(
-                null,
+                location: null,
                 new NameNode("BooleanFilterInput"),
                 new StringValueNode("Input type for adding Boolean filters"),
                 new List<DirectiveNode>(),
@@ -34,7 +34,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
         public static InputObjectTypeDefinitionNode ByteInputType() =>
             new(
-                null,
+                location: null,
                 new NameNode("ByteFilterInput"),
                 new StringValueNode("Input type for adding Byte filters"),
                 new List<DirectiveNode>(),
@@ -51,7 +51,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
         public static InputObjectTypeDefinitionNode ShortInputType() =>
             new(
-                null,
+                location: null,
                 new NameNode("ShortFilterInput"),
                 new StringValueNode("Input type for adding Short filters"),
                 new List<DirectiveNode>(),
@@ -68,7 +68,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
         public static InputObjectTypeDefinitionNode IntInputType() =>
             new(
-                null,
+                location: null,
                 new NameNode("IntFilterInput"),
                 new StringValueNode("Input type for adding Int filters"),
                 new List<DirectiveNode>(),
@@ -85,7 +85,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
         public static InputObjectTypeDefinitionNode LongInputType() =>
             new(
-                null,
+                location: null,
                 new NameNode("LongFilterInput"),
                 new StringValueNode("Input type for adding Long filters"),
                 new List<DirectiveNode>(),
@@ -102,7 +102,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
         public static InputObjectTypeDefinitionNode SingleInputType() =>
             new(
-                null,
+                location: null,
                 new NameNode("SingleFilterInput"),
                 new StringValueNode("Input type for adding Single filters"),
                 new List<DirectiveNode>(),
@@ -119,7 +119,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
         public static InputObjectTypeDefinitionNode FloatInputType() =>
             new(
-                null,
+                location: null,
                 new NameNode("FloatFilterInput"),
                 new StringValueNode("Input type for adding Float filters"),
                 new List<DirectiveNode>(),
@@ -136,7 +136,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
         public static InputObjectTypeDefinitionNode DecimalInputType() =>
             new(
-                null,
+                location: null,
                 new NameNode("DecimalFilterInput"),
                 new StringValueNode("Input type for adding Decimal filters"),
                 new List<DirectiveNode>(),
@@ -153,7 +153,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
         public static InputObjectTypeDefinitionNode StringInputType() =>
             new(
-                null,
+                location: null,
                 new NameNode("StringFilterInput"),
                 new StringValueNode("Input type for adding String filters"),
                 new List<DirectiveNode>(),
@@ -171,7 +171,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
         public static InputObjectTypeDefinitionNode DateTimeInputType() =>
             new(
-                null,
+                location: null,
                 new NameNode("DateTimeFilterInput"),
                 new StringValueNode("Input type for adding DateTime filters"),
                 new List<DirectiveNode>(),
@@ -188,7 +188,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
         public static InputObjectTypeDefinitionNode ByteArrayInputType() =>
             new(
-                null,
+                location: null,
                 new NameNode("ByteArrayFilterInput"),
                 new StringValueNode("Input type for adding ByteArray filters"),
                 new List<DirectiveNode>(),

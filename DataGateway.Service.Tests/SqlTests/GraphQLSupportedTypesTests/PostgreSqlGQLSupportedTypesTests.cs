@@ -46,7 +46,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             ";
         }
 
-        protected override bool IsTypeSupportedType(string type, string value = null)
+        protected override bool IsSupportedType(string type, string value = null)
         {
             return type switch
             {

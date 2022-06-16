@@ -107,7 +107,7 @@ namespace Azure.DataGateway.Service.Services
         /// later
         /// </summary>
         /// <remarks>
-        /// e.g. "1" despite being a valid byte value is parsed properly by HotChocolate so we preparse it
+        /// e.g. "1" despite being a valid byte value is parsed improperly by HotChocolate so we preparse it
         /// to an actual byte value then feed the result to HotChocolate
         /// </remarks>
         private static object PreParseLeaf(IMiddlewareContext context, string leafJson)

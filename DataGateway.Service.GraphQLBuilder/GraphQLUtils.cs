@@ -1,4 +1,5 @@
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
 using HotChocolate.Types;
@@ -30,7 +31,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
                 "Short",
                 "Int",
                 "Long",
-                "Single",
+                SingleType.TypeName,
                 "Float",
                 "Decimal",
                 "String",

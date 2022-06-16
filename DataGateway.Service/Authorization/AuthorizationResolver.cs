@@ -212,12 +212,12 @@ namespace Azure.DataGateway.Service.Authorization
                     {
                         string actionName = string.Empty;
                         ActionMetadata actionToColumn = new();
-                        if (actionElement.ValueKind == JsonValueKind.String)
+                        if (actionElement.ValueKind is JsonValueKind.String)
                         {
                             actionName = actionElement.ToString();
                             actionToColumn.included.UnionWith(ResolveTableDefinitionColumns(entityName));
                         }
-                        else if (actionElement.ValueKind == JsonValueKind.Object)
+                        else
                         {
                             Action? actionObj = JsonSerializer.Deserialize<Action>(actionElement.ToString(), RuntimeConfig.GetDeserializationOptions());
                             if (actionObj is not null)

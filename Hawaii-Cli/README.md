@@ -22,6 +22,12 @@ Else, you can go to the root directory of the project and create your own nuget 
 dotnet pack
 dotnet tool install -g --add-source ./nupkg hawaii-cli --version <<version_number>>
 ```
+### Mac Issue:
+Sometimes, On macOS when a .Net tool is installed globally, it will not be found in the PATH. It might give an error saying, **"hawaii not found"**.
+To Fix execute the below command:
+```
+export PATH=$PATH:~/.dotnet/tools
+```
 
 ## Usage / Initialization
 

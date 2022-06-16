@@ -33,7 +33,7 @@ query ($first: Int!, $after: String) {
 }";
         public static readonly string PlanetsWithOrderBy = @"
 query{
-    getPlanetsWithOrderBy (first: 10, after: null, orderBy: {id: Asc, name: null }) {
+    planets (first: 10, after: null, orderBy: {id: ASC, name: null }) {
         items {
             id
             name
@@ -197,11 +197,10 @@ query {{
             Assert.AreEqual(id, response.GetProperty("id").GetString());
         }
 
-        [Ignore]
         [TestMethod]
         public async Task GetWithOrderBy()
         {
-            JsonElement response = await ExecuteGraphQLRequestAsync("getPlanetsWithOrderBy", PlanetsWithOrderBy);
+            JsonElement response = await ExecuteGraphQLRequestAsync("planets", PlanetsWithOrderBy);
 
             int i = 0;
             // Check order matches

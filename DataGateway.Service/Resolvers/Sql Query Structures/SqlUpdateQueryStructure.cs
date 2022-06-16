@@ -34,19 +34,19 @@ namespace Azure.DataGateway.Service.Resolvers
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
                 Predicate predicate = CreatePredicateForParam(param);
-
+                SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
                 // primary keys used as predicates
-                if (primaryKeys.Contains(param.Key))
+                if (primaryKeys.Contains(backingColumn!))
                 {
                     Predicates.Add(predicate);
                 }
                 // use columns to determine values to edit
-                else if (columns.Contains(param.Key))
+                else if (columns.Contains(backingColumn!))
                 {
                     UpdateOperations.Add(predicate);
                 }
 
-                columns.Remove(param.Key);
+                columns.Remove(backingColumn!);
             }
 
             if (!isIncrementalUpdate)
@@ -112,7 +112,8 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
             Predicate predicate;
-            if (param.Value == null && !tableDefinition.Columns[param.Key].IsNullable)
+            SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
+            if (param.Value is null && !tableDefinition.Columns[backingColumn!].IsNullable)
             {
                 throw new DataGatewayException(
                     message: $"Cannot set argument {param.Key} to null.",
@@ -123,7 +124,7 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 predicate = new(
                     new PredicateOperand(
-                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, param.Key)),
+                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, backingColumn)),
                     PredicateOperation.Equal,
                     new PredicateOperand($"@{MakeParamWithValue(null)}")
                 );

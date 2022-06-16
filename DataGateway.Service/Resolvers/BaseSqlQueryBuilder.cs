@@ -316,6 +316,23 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
+        /// Quote and join list of strings with a ", " separator
+        /// </summary>
+        protected string Build(List<MutationColumn> columns)
+        {
+            return string.Join(", ", columns.Select(c => Build(c)));
+        }
+
+        /// <summary>
+        /// Build a labelled column as a column and attach
+        /// ... AS {Label} to it
+        /// </summary>
+        protected string Build(MutationColumn column)
+        {
+            return QuoteIdentifier(column.ColumnName) + " AS " + QuoteIdentifier(column.Label);
+        }
+
+        /// <summary>
         /// Join predicate strings while ignoring empty or null predicates
         /// </summary>
         /// <returns>returns "1 = 1" if no valid predicates</returns>

@@ -89,6 +89,23 @@ namespace Azure.DataGateway.Service.Models
     }
 
     /// <summary>
+    /// Mutation columns contains a column name which
+    /// represents the backing column in the table,
+    /// and a label which is the exposed name.
+    /// </summary>
+    public class MutationColumn
+    {
+        public string ColumnName { get; }
+        public string Label { get; }
+
+        public MutationColumn(string columnName, string label)
+        {
+            ColumnName = columnName;
+            Label = label;
+        }
+    }
+
+    /// <summary>
     /// Represents the comparison operations a predicate can have
     /// </summary>
     public enum PredicateOperation

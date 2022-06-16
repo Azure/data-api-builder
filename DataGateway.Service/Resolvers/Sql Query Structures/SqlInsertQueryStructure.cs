@@ -5,6 +5,7 @@ using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -17,7 +18,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Column names to insert into the given columns
         /// </summary>
-        public List<string> InsertColumns { get; }
+        public List<MutationColumn> InsertColumns { get; }
 
         /// <summary>
         /// Values to insert into the given columns
@@ -59,7 +60,8 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="value">The value of the column.</param>
         private void PopulateColumnsAndParams(string columnName, object? value)
         {
-            InsertColumns.Add(columnName);
+            SqlMetadataProvider.TryGetExposedColumnName(EntityName, columnName, out string? exposedName);
+            InsertColumns.Add(new (columnName, exposedName!));
             string paramName;
 
             try

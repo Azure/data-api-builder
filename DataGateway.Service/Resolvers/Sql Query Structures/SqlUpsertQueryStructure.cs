@@ -17,7 +17,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Names of columns that will be populated with values during the insert operation.
         /// </summary>
-        public List<string> InsertColumns { get; }
+        public List<MutationColumn> InsertColumns { get; }
 
         /// <summary>
         /// Values to insert into the given columns
@@ -104,11 +104,12 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 foreach (KeyValuePair<string, object?> param in mutationParams)
                 {
+                    SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
                     // Create Parameter and map it to column for downstream logic to utilize.
                     string paramIdentifier;
                     if (param.Value != null)
                     {
-                        paramIdentifier = MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, param.Key));
+                        paramIdentifier = MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, backingColumn));
                     }
                     else
                     {
@@ -119,7 +120,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     // Create a predicate for UPDATE Operation.
                     Predicate predicate = new(
-                        new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, columnName: param.Key)),
+                        new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, columnName: backingColumn)),
                         PredicateOperation.Equal,
                         new PredicateOperand($"@{paramIdentifier}")
                     );
@@ -127,26 +128,26 @@ namespace Azure.DataGateway.Service.Resolvers
                     // We are guaranteed by the RequestValidator, that a primary key column is in the URL, not body.
                     // That means we must add the PK as predicate for the update request,
                     // as Update request uses Where clause to target item by PK.
-                    if (primaryKeys.Contains(param.Key))
+                    if (primaryKeys.Contains(backingColumn))
                     {
-                        PopulateColumnsAndParams(param.Key);
+                        PopulateColumnsAndParams(backingColumn, param.Key);
 
                         // PK added as predicate for Update Operation
                         Predicates.Add(predicate);
 
                         // Track which columns we've acted upon,
                         // so we can add nullified remainder columns later.
-                        schemaColumns.Remove(param.Key);
+                        schemaColumns.Remove(backingColumn);
                     }
                     // No need to check param.key exists in schema as invalid columns are caught in RequestValidation.
                     else
                     {
                         // Update Operation. Add since mutation param is not a PK.
                         UpdateOperations.Add(predicate);
-                        schemaColumns.Remove(param.Key);
+                        schemaColumns.Remove(backingColumn);
 
                         // Insert Operation, create record with request specified value.
-                        PopulateColumnsAndParams(param.Key);
+                        PopulateColumnsAndParams(backingColumn, exposedName: param.Key);
                     }
                 }
 
@@ -177,11 +178,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         /// <param name="columnName">The name of the column.</param>
         /// <param name="value">The value of the column.</param>
-        private void PopulateColumnsAndParams(string columnName)
+        private void PopulateColumnsAndParams(string backingColumn, string exposedName)
         {
-            InsertColumns.Add(columnName);
+            InsertColumns.Add(new (backingColumn, exposedName));
             string paramName;
-            paramName = ColumnToParam[columnName];
+            paramName = ColumnToParam[backingColumn];
             Values.Add($"@{paramName}");
         }
 

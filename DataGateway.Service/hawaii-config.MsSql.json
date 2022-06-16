@@ -62,11 +62,11 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update" ]
         },
         {
           "role": "authenticated",
-          "actions": [ "create", "read", "update" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {
@@ -87,7 +87,7 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "create", "update", "delete" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {
@@ -158,6 +158,10 @@
         {
           "role": "anonymous",
           "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {
@@ -175,6 +179,10 @@
         {
           "role": "anonymous",
           "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {
@@ -195,7 +203,7 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "create", "read", "delete" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ]
     },
@@ -206,6 +214,10 @@
         {
           "role": "anonymous",
           "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ]
     },
@@ -231,6 +243,10 @@
         {
           "role": "anonymous",
           "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "mappings": {
@@ -245,6 +261,10 @@
         {
           "role": "anonymous",
           "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "mappings": {
@@ -257,6 +277,10 @@
       "permissions": [
         {
           "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
         }
       ],
@@ -280,7 +304,7 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {
@@ -297,7 +321,7 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {
@@ -314,7 +338,7 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {

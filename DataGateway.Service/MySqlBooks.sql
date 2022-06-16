@@ -101,10 +101,17 @@ CREATE TABLE brokers(
 
 CREATE TABLE type_table(
     id int AUTO_INCREMENT PRIMARY KEY,
+    byte_types tinyint unsigned,
+    short_types smallint,
     int_types int,
+    long_types bigint,
     string_types text,
+    single_types float,
     float_types double,
-    boolean_types boolean
+    decimal_types decimal,
+    boolean_types boolean,
+    datetime_types datetime,
+    bytearray_types blob
 );
 
 CREATE TABLE trees (
@@ -177,7 +184,12 @@ INSERT INTO comics(id, title, categoryName) VALUES (1, 'Star Trek', 'SciFi'), (2
 INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2, 1, 'FairyTales'),(0,1,''),(100, 99, 'Historical');
 INSERT INTO brokers(`ID Number`, `First Name`, `Last Name`) VALUES (1, 'Michael', 'Burry'), (2, 'Jordan', 'Belfort');
 INSERT INTO stocks_price(categoryid, pieceid, instant, price, is_wholesale_price) VALUES (2, 1, 'instant1', 100.57, true), (1, 1, 'instant2', 42.75, false);
-INSERT INTO type_table(id, int_types, string_types, float_types, boolean_types) VALUES (1, 1, '', 0.33, true), (2, -1, 'lksa;jdflasdf;alsdflksdfkldj', -9.2, false), (3, 123456, 'null', 1555.99, true), (4, NULL, NULL, NULL, NULL);
+INSERT INTO type_table(id, byte_types, short_types, int_types, long_types, string_types, single_types, float_types, decimal_types, boolean_types, datetime_types, bytearray_types) VALUES
+    (1, 1, 1, 1, 1, '', 0.33, 0.33, 0.333333, true, '1999-01-08 10:23:54', 0xABCDEF0123),
+    (2, 0, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', -9.2, -9.2, -9.292929, false, '1999-01-08 10:23:00', 0x98AB7511AABB1234),
+    (3, 0, -32768, -2147483648, -9223372036854775808, '', -3.4E38, -1.7E308, 2.929292E-100, true, '1999-01-08 10:23:00', 0xFFFFFFFF),
+    (4, 255, 32767, 2147483647, 9223372036854775807, 'null', 3.4E38, 1.7E308, 2.929292E-100, true, '1999-01-08 10:23:00', 0xFFFFFFFF),
+    (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO trees(treeId, species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
 INSERT INTO fungi(speciesid, region) VALUES (1, 'northeast'), (2, 'southwest');
 -- Starting with id > 5000 is chosen arbitrarily so that the incremented id-s won't conflict with the manually inserted ids in this script

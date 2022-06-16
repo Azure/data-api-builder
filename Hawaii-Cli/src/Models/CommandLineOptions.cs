@@ -1,4 +1,4 @@
-﻿using Azure.DataGateway.Config;
+using Azure.DataGateway.Config;
 using CommandLine;
 
 namespace Hawaii.Cli.Models
@@ -71,13 +71,6 @@ namespace Hawaii.Cli.Models
             string? graphQLType,
             string? fieldsToInclude,
             string? fieldsToExclude,
-            string? relationship,
-            string? cardinality,
-            string? targetEntity,
-            string? linkingObject,
-            string? linkingSourceFields,
-            string? linkingTargetFields,
-            string? mappingFields,
             string name)
             : base(name)
         {
@@ -86,13 +79,6 @@ namespace Hawaii.Cli.Models
             this.GraphQLType = graphQLType;
             this.FieldsToInclude = fieldsToInclude;
             this.FieldsToExclude = fieldsToExclude;
-            this.Relationship = relationship;
-            this.Cardinality = cardinality;
-            this.TargetEntity = targetEntity;
-            this.LinkingObject = linkingObject;
-            this.LinkingSourceFields = linkingSourceFields;
-            this.LinkingTargetFields = linkingTargetFields;
-            this.MappingFields = mappingFields;
         }
 
         [Value(0, MetaName = "Entity", Required = true, HelpText = "Name of the entity.")]
@@ -109,27 +95,6 @@ namespace Hawaii.Cli.Models
 
         [Option("fields.exclude", Required = false, HelpText = "Fields that are excluded from the action lists.")]
         public string? FieldsToExclude { get; }
-
-        [Option("relationship", Required = false, HelpText = "Specify relationship between two entities.")]
-        public string? Relationship { get; }
-
-        [Option("cardinality", Required = false, HelpText = "Specify cardinality between two entities.")]
-        public string? Cardinality { get; }
-
-        [Option("target.entity", Required = false, HelpText = "Another exposed entity to which the source entity relates to.")]
-        public string? TargetEntity { get; }
-
-        [Option("linking.object", Required = false, HelpText = "Database object that is used to support an M:N relationship.")]
-        public string? LinkingObject { get; }
-
-        [Option("linking.source.fields", Required = false, HelpText = "Database fields in the linking object to connect to the related item in the source entity.")]
-        public string? LinkingSourceFields { get; }
-
-        [Option("linking.target.fields", Required = false, HelpText = "Database fields in the linking object to connect to the related item in the target entity.")]
-        public string? LinkingTargetFields { get; }
-
-        [Option("mapping.fields", Required = false, HelpText = "Specify fields to be used for mapping the entities.")]
-        public string? MappingFields { get; }
     }
 
     /// <summary>
@@ -146,26 +111,12 @@ namespace Hawaii.Cli.Models
             string? graphQLType,
             string? fieldsToInclude,
             string? fieldsToExclude,
-            string? relationship,
-            string? cardinality,
-            string? targetEntity,
-            string? linkingObject,
-            string? linkingSourceFields,
-            string? linkingTargetFields,
-            string? mappingFields,
             string name)
             : base(entity,
                   restRoute,
                   graphQLType,
                   fieldsToInclude,
                   fieldsToExclude,
-                  relationship,
-                  cardinality,
-                  targetEntity,
-                  linkingObject,
-                  linkingSourceFields,
-                  linkingTargetFields,
-                  mappingFields,
                   name)
         {
             this.Source = source;
@@ -206,17 +157,17 @@ namespace Hawaii.Cli.Models
                   graphQLType,
                   fieldsToInclude,
                   fieldsToExclude,
-                  relationship,
-                  cardinality,
-                  targetEntity,
-                  linkingObject,
-                  linkingSourceFields,
-                  linkingTargetFields,
-                  mappingFields,
                   name)
         {
             this.Source = source;
             this.Permissions = permissions;
+            this.Relationship = relationship;
+            this.Cardinality = cardinality;
+            this.TargetEntity = targetEntity;
+            this.LinkingObject = linkingObject;
+            this.LinkingSourceFields = linkingSourceFields;
+            this.LinkingTargetFields = linkingTargetFields;
+            this.MappingFields = mappingFields;
         }
 
         [Option('s', "source", Required = false, HelpText = "Name of the source table or container.")]
@@ -224,5 +175,26 @@ namespace Hawaii.Cli.Models
 
         [Option("permissions", Required = false, HelpText = "Permissions required to access the source table or container.")]
         public string? Permissions { get; }
+
+        [Option("relationship", Required = false, HelpText = "Specify relationship between two entities.")]
+        public string? Relationship { get; }
+
+        [Option("cardinality", Required = false, HelpText = "Specify cardinality between two entities.")]
+        public string? Cardinality { get; }
+
+        [Option("target.entity", Required = false, HelpText = "Another exposed entity to which the source entity relates to.")]
+        public string? TargetEntity { get; }
+
+        [Option("linking.object", Required = false, HelpText = "Database object that is used to support an M:N relationship.")]
+        public string? LinkingObject { get; }
+
+        [Option("linking.source.fields", Required = false, HelpText = "Database fields in the linking object to connect to the related item in the source entity.")]
+        public string? LinkingSourceFields { get; }
+
+        [Option("linking.target.fields", Required = false, HelpText = "Database fields in the linking object to connect to the related item in the target entity.")]
+        public string? LinkingTargetFields { get; }
+
+        [Option("mapping.fields", Required = false, HelpText = "Specify fields to be used for mapping the entities.")]
+        public string? MappingFields { get; }
     }
 }

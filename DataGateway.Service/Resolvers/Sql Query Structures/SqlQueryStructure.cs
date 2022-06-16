@@ -12,6 +12,7 @@ using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using Microsoft.OData.UriParser;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -182,13 +183,30 @@ namespace Azure.DataGateway.Service.Resolvers
                 ODataASTVisitor visitor = new(this, sqlMetadataProvider);
                 try
                 {
-                    FilterPredicates = context.FilterClauseInUrl.Expression.Accept<string>(visitor);
+                    FilterPredicates = GetFilterPredicatesFromFilterClause(context.FilterClauseInUrl, visitor);
                 }
                 catch
                 {
                     throw new DataGatewayException(message: "$filter query parameter is not well formed.",
                                                    statusCode: HttpStatusCode.BadRequest,
                                                    subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                }
+            }
+
+            if (context.DbPolicyClause is not null)
+            {
+                // Similar to how we have added FilterPredicates above,
+                // we will add DbPolicyPredicates here.
+                ODataASTVisitor visitor = new(this, sqlMetadataProvider);
+                try
+                {
+                    DbPolicyPredicates = GetFilterPredicatesFromFilterClause(context.DbPolicyClause, visitor);
+                }
+                catch
+                {
+                    throw new DataGatewayException(message: "Policy query parameter is not well formed.",
+                                                   statusCode: HttpStatusCode.Forbidden,
+                                                   subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed);
                 }
             }
 
@@ -202,6 +220,11 @@ namespace Azure.DataGateway.Service.Resolvers
 
             _limit = context.First is not null ? context.First + 1 : DEFAULT_LIST_LIMIT + 1;
             ParametrizeColumns();
+        }
+
+        private static string? GetFilterPredicatesFromFilterClause(FilterClause filterClause, ODataASTVisitor visitor)
+        {
+            return filterClause.Expression.Accept<string>(visitor);
         }
 
         /// <summary>

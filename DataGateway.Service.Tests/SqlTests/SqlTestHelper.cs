@@ -9,6 +9,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
@@ -20,7 +21,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 {
     public class SqlTestHelper
     {
-        public static IOptionsMonitor<RuntimeConfigPath> LoadConfig(string environment)
+        public static IOptionsMonitor<RuntimeConfig> LoadConfig(string environment)
         {
             string configFileName = RuntimeConfigPath.GetFileNameForEnvironment(environment);
 
@@ -38,23 +39,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 .Build();
 
             RuntimeConfigPath configPath = config.Get<RuntimeConfigPath>();
-            configPath.SetRuntimeConfigValue();
-            AddMissingEntitiesToConfig(configPath);
-            return Mock.Of<IOptionsMonitor<RuntimeConfigPath>>(_ => _.CurrentValue == configPath);
-        }
-
-        public static void RemoveAllRelationshipBetweenEntities(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
-        {
-            RuntimeConfig runtimeConfig = runtimeConfigPath.CurrentValue.ConfigValue;
-
-            foreach ((string entityName, Entity entity) in runtimeConfig.Entities.ToList())
-            {
-                Entity updatedEntity = new(entity.Source, entity.Rest,
-                                           entity.GraphQL, entity.Permissions,
-                                           Relationships: null, Mappings: null);
-                runtimeConfig.Entities.Remove(entityName);
-                runtimeConfig.Entities.Add(entityName, updatedEntity);
-            }
+            RuntimeConfig runtimeConfig = configPath.LoadRuntimeConfigValue();
+            AddMissingEntitiesToConfig(runtimeConfig);
+            return Mock.Of<IOptionsMonitor<RuntimeConfig>>(_ => _.CurrentValue == runtimeConfig);
         }
 
         /// <summary>
@@ -67,9 +54,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// customized for testing purposes.
         /// </summary>
         /// <param name="configPath"></param>
-        private static void AddMissingEntitiesToConfig(RuntimeConfigPath configPath)
+        private static void AddMissingEntitiesToConfig(RuntimeConfig config)
         {
-            string magazineSource = configPath.ConfigValue.DatabaseType is DatabaseType.mysql ? "\"magazines\"" : "\"foo.magazines\"";
+            string magazineSource = config.DatabaseType is DatabaseType.mysql ? "\"magazines\"" : "\"foo.magazines\"";
             string magazineEntityJsonString =
               @"{
                     ""source"":  " + magazineSource + @",
@@ -81,8 +68,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                       },
                       {
                         ""role"": ""authenticated"",
-                        ""actions"": [ ""create"", ""read"", ""delete"" ]
-                      }
+                        ""actions"": [" + $" \"{ActionType.CREATE}\", \"{ActionType.READ}\", \"{ActionType.DELETE}\", \"{ActionType.UPDATE}\" ]" +
+                      @"}
                     ]
                 }";
 
@@ -96,7 +83,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             };
 
             Entity magazineEntity = JsonSerializer.Deserialize<Entity>(magazineEntityJsonString, options);
-            configPath.ConfigValue.Entities.Add("Magazine", magazineEntity);
+            config.Entities.Add("Magazine", magazineEntity);
         }
 
         /// <summary>

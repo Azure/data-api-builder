@@ -345,11 +345,7 @@ namespace Azure.DataGateway.Service.Authorization
                  */
                 string type = claim.Type;
 
-                if (!claimsInRequestContext.ContainsKey(type))
-                {
-                    claimsInRequestContext.Add(type, claim);
-                }
-                else
+                if (!claimsInRequestContext.TryAdd(type,claim))
                 {
                     // If there are duplicate claims present in the request, return an exception.
                     throw new DataGatewayException(
@@ -364,8 +360,8 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <summary>
-        /// Helper method to substitute all the claimTypes in the policy string with their corresponding
-        /// claimValues.
+        /// Helper method to substitute all the claimTypes(denoted with @claims.claimType) in
+        /// the policy string with their corresponding claimValues.
         /// </summary>
         /// <param name="policy">The policy to be processed.</param>
         /// <param name="claimsInRequestContext">Dictionary holding all the claims available in the request.</param>
@@ -378,27 +374,37 @@ namespace Azure.DataGateway.Service.Authorization
             string claimCharsRgx = @"@claims\.[a-zA-Z0-9_\.]*";
 
             // Find all the claimTypes from the policy
-            string processesPolicy = Regex.Replace(policy, claimCharsRgx, new MatchEvaluator((Match claimTypeMatch) =>
-            {
-                string claimType = claimTypeMatch.Value.ToString().Substring("@claims.".Length);
-                if (claimsInRequestContext.TryGetValue(claimType, out Claim? claim))
-                {
-                    return GetClaimValueByDataType(claim);
-                }
-                else
-                {
-                    // User lacks a claim which is required to perform the action.
-                    throw new DataGatewayException(
-                        message: "User does not possess all the claims required to perform this action.",
-                        statusCode: System.Net.HttpStatusCode.Forbidden,
-                        subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
-                        );
-                }
-            }));
+            string processedPolicy = Regex.Replace(policy, claimCharsRgx,
+                (claimTypeMatch) => GetClaimValueFromClaim(claimTypeMatch, claimsInRequestContext));
 
             //Remove occurences of @item. directives
-            processesPolicy = processesPolicy.Replace("@item.", "");
-            return processesPolicy;
+            processedPolicy = processedPolicy.Replace("@item.", "");
+            return processedPolicy;
+        }
+
+        /// <summary>
+        /// Helper function used to retrieve the claim value for the given claim type from the user's claims.
+        /// </summary>
+        /// <param name="claimTypeMatch">The claimType present in policy with a prefix of @claims..</param>
+        /// <param name="claimsInRequestContext">Dictionary populated with all the user claims.</param>
+        /// <returns>The claim value for the given claimTypeMatch.</returns>
+        /// <exception cref="DataGatewayException"> Throws exception when the user does not possess the given claim.</exception>
+        private static string GetClaimValueFromClaim(Match claimTypeMatch, Dictionary<string, Claim> claimsInRequestContext)
+        {
+            string claimType = claimTypeMatch.Value.ToString().Substring("@claims.".Length);
+            if (claimsInRequestContext.TryGetValue(claimType, out Claim? claim))
+            {
+                return GetClaimValueByDataType(claim);
+            }
+            else
+            {
+                // User lacks a claim which is required to perform the action.
+                throw new DataGatewayException(
+                    message: "User does not possess all the claims required to perform this action.",
+                    statusCode: System.Net.HttpStatusCode.Forbidden,
+                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
+                    );
+            }
         }
 
         /// <summary>

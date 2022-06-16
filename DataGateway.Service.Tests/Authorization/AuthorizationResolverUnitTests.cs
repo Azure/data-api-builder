@@ -20,7 +20,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
     {
         private const string TEST_ENTITY = "SampleEntity";
         private const string TEST_ROLE = "Writer";
-        private const string TEST_ACTION = "create";
+        private const string TEST_ACTION = ActionType.CREATE;
         private const string TEST_AUTHENTICATION_TYPE = "TestAuth";
         private const string TEST_CLAIMTYPE_NAME = "TestName";
         private const string TEST_ROLE_TYPE = "TestRole";
@@ -356,8 +356,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         [DataRow("@claims.user_email ne @item.col1 and @claims.contact_no eq @item.col2 and not(@claims.name eq @item.col3)",
             "('xyz@microsoft.com') ne col1 and (1234) eq col2 and not(('Aaron') eq col3)", DisplayName = "Valid policy parsing test 1")]
         [DataRow("(@claims.isemployee eq @item.col1 and @item.col2 ne @claims.user_email) or" +
-            " ('David' ne @item.col3 and @claims.contact_no ne 4321)", "((true) eq col1 and col2 ne ('xyz@microsoft.com')) or" +
-            " ('David' ne col3 and (1234) ne 4321)", DisplayName = "Valid policy parsing test 2")]
+            " ('David' ne @item.col3 and @claims.contact_no ne @item.col3)", "((true) eq col1 and col2 ne ('xyz@microsoft.com')) or" +
+            " ('David' ne col3 and (1234) ne col3)", DisplayName = "Valid policy parsing test 2")]
         [DataRow("(@item.rating gt @claims.emprating) and (@claims.isemployee eq true)",
             "(rating gt (4.2)) and ((true) eq true)", DisplayName = "Valid policy parsing test 3")]
         [DataRow("@item.rating eq @claims.emprating)", "rating eq (4.2))", DisplayName = "Valid policy parsing test 4")]
@@ -433,7 +433,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         public static RuntimeConfig InitRuntimeConfig(
             string entityName = "SampleEntity",
             string roleName = "Reader",
-            string actionName = "create",
+            string actionName = ActionType.CREATE,
             string[] includedCols = null,
             string[] excludedCols = null,
             string requestPolicy = null,
@@ -458,7 +458,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 Actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
 
             Entity sampleEntity = new(
-                Source: new String(DatabaseType.mssql.ToString()),
+                Source: TEST_ENTITY     ,
                 Rest: null,
                 GraphQL: null,
                 Permissions: new PermissionSetting[] { permissionForEntity },

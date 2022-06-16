@@ -44,6 +44,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             return Mock.Of<IOptionsMonitor<RuntimeConfig>>(_ => _.CurrentValue == runtimeConfig);
         }
 
+        public static void RemoveAllRelationshipBetweenEntities(RuntimeConfig runtimeConfig)
+        {
+            foreach ((string entityName, Entity entity) in runtimeConfig.Entities.ToList())
+            {
+                Entity updatedEntity = new(entity.Source, entity.Rest,
+                                           entity.GraphQL, entity.Permissions,
+                                           Relationships: null, Mappings: null);
+                runtimeConfig.Entities.Remove(entityName);
+                runtimeConfig.Entities.Add(entityName, updatedEntity);
+            }
+        }
+
         /// <summary>
         /// Temporary Helper function to ensure that in testing we have an entity
         /// that can have a custom schema. We create a new entity of 'Magazine' with

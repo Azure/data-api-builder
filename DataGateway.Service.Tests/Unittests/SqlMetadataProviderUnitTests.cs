@@ -42,11 +42,12 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         public static async Task CheckNoExceptionForNoForiegnKey()
         {
             _testCategory = TestCategory.POSTGRESQL;
-            _runtimeConfigPath = SqlTestHelper.LoadConfig(_testCategory);
-            SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfigPath);
+            _runtimeConfig = SqlTestHelper.LoadConfig(_testCategory).CurrentValue;
+            SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
             SetUpSQLMetadataProvider();
             await ResetDbStateAsync();
             await _sqlMetadataProvider.InitializeAsync();
+            Assert.Fail();
         }
     }
 }

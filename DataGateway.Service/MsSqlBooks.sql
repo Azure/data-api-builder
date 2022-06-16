@@ -199,8 +199,9 @@ SET IDENTITY_INSERT type_table ON
 INSERT INTO type_table(id, byte_types, short_types, int_types, long_types, string_types, single_types, float_types, decimal_types, boolean_types, datetime_types, bytearray_types) VALUES
     (1, 1, 1, 1, 1, '', 0.33, 0.33, 0.333333, 1, '1999-01-08 10:23:54', 0xABCDEF0123),
     (2, 0, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', -9.2, -9.2, -9.292929, 0, '1999-01-08 10:23:00', 0x98AB7511AABB1234),
-    (3, 255, 32767, 2147483647, 9223372036854775807, 'null', 2E35, 2E150, 2.929292E-100, 1, '1999-01-08 10:23:00', 0xFFFFFFFF),
-    (4, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    (3, 0, -32768, -2147483648, -9223372036854775808, 'null', -3.4E38, -1.7E308, 2.929292E-100, 1, '1999-01-08 10:23:00', 0xFFFFFFFF),
+    (4, 255, 32767, 2147483647, 9223372036854775807, 'null', -3.4E38, 1.7E308, 2.929292E-100, 1, '1999-01-08 10:23:00', 0xFFFFFFFF),
+    (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT type_table OFF
 
 INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95'), (5, 'null');

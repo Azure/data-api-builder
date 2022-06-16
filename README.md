@@ -14,7 +14,7 @@ DataGateway provides a consistent, productive abstraction for building GraphQL a
 Clone the repository with your preferred method or locally navigate to where you'd like the repository to be and clone with the following command, make sure you replace `<directory name>`
 
 ```bash
-git clone https://github.com/Azure/hawaii-gql.git <directory name>
+git clone https://github.com/Azure/hawaii-engine.git <directory name>
 ```
 
 **CLI-tool**:

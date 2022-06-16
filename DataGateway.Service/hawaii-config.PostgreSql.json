@@ -284,6 +284,16 @@
       "mappings": {
         "spores": "hazards"
       }
+    },
+    "Empty": {
+      "source": "empty_table",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
     }
   }
 }

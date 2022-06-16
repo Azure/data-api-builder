@@ -30,6 +30,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                   ) AS subq"
             },
             {
+                "FindEmptyTable",
+                @"
+                    SELECT JSON_OBJECT('id', id) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _emptyTableTableName + @"
+                    ) AS subq"
+            },
+            {
+                "FindEmptyResultSetWithQueryFilter",
+                @"
+                    SELECT JSON_OBJECT('id', id) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE 1 != 1
+                    ) AS subq"
+            },
+            {
                 "FindViewAll",
                 @"
                   SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data

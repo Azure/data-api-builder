@@ -104,7 +104,10 @@ namespace Azure.DataGateway.Service.Resolvers
         public async Task<JsonDocument> ExecuteAsync(RestRequestContext context)
         {
             SqlQueryStructure structure = new(context, _sqlMetadataProvider);
-            return await ExecuteAsync(structure);
+            JsonDocument queryJson = await ExecuteAsync(structure);
+            // queryJson is null if dbreader had no rows to return
+            // If no rows/empty table, return an empty json array
+            return queryJson is null ? JsonDocument.Parse("[]") : queryJson;
         }
 
         /// <inheritdoc />

@@ -345,7 +345,7 @@ namespace Azure.DataGateway.Service.Authorization
                  */
                 string type = claim.Type;
 
-                if (!claimsInRequestContext.TryAdd(type,claim))
+                if (!claimsInRequestContext.TryAdd(type, claim))
                 {
                     // If there are duplicate claims present in the request, return an exception.
                     throw new DataGatewayException(

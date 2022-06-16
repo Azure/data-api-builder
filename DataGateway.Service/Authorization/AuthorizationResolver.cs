@@ -97,10 +97,10 @@ namespace Azure.DataGateway.Service.Authorization
         /// <inheritdoc />
         public bool AreRoleAndActionDefinedForEntity(string entityName, string roleName, string action)
         {
-            // return exception if the roleName is null. This indicates the absence of the
-            // X-MS-API-ROLE header in the http request.
             if (roleName is null)
             {
+                // return exception if the roleName is null. This indicates the absence of the
+                // X-MS-API-ROLE header in the http request.
                 throw new DataGatewayException(
                         message: $"X-MS-API-ROLE header cannot be null",
                         statusCode: System.Net.HttpStatusCode.Forbidden,

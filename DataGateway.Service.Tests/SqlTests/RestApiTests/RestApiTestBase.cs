@@ -2475,9 +2475,29 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: RestController.SERVER_ERROR,
-                expectedStatusCode: HttpStatusCode.InternalServerError,
-                expectedSubStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError.ToString()
+                expectedErrorMessage: "Invalid Field name: null or white space",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with a query string that has $select
+        /// with no parameters.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithEmptySelectFields()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=",
+                entity: _integrationEntityName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "Invalid Field name: null or white space",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
             );
         }
 

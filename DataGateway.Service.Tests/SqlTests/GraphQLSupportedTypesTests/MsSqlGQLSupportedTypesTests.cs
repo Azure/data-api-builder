@@ -44,5 +44,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                     INCLUDE_NULL_VALUES
             ";
         }
+
+        /// <summary>
+        /// Explicitly declaring a parameter for a bytearray type is not possible due to:
+        /// https://stackoverflow.com/questions/29254690/why-does-dbnull-value-require-a-proper-sqldbtype
+        /// </summary>
+        protected override bool IsSupportedType(string type, string value = null)
+        {
+            if (type.Equals(BYTEARRAY_TYPE))
+            {
+                return false;
+            }
+
+            return true;
+        }
     }
 }

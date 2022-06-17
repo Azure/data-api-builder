@@ -184,9 +184,10 @@ namespace Azure.DataGateway.Service.Authorization
             // _entityPermissionMap[entityName] finds the entityMetaData for the current entityName
             // entityMetaData.RoleToActionMap[roleName] finds the roleMetaData for the current roleName
             // roleMetaData.ActionToColumnMap[action] finds the actionMetaData for the current action
-            // actionMetaData.database finds the required database policy
-
-            string? dbPolicy = _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action].databasePolicy;
+            // actionMetaData.databasePolicy finds the required database policy
+            ActionMetadata? wildcard = _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[WILDCARD];
+            // If wildcard is the action, use its policy (should be null), else use specified action's policy
+            string? dbPolicy = wildcard is not null ? wildcard.databasePolicy : _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action].databasePolicy;
             return dbPolicy is not null ? dbPolicy : string.Empty;
         }
 

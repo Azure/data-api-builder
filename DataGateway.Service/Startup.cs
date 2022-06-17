@@ -172,7 +172,6 @@ namespace Azure.DataGateway.Service
 
             ConfigureAuthentication(services);
             services.AddAuthorization();
-            services.AddSingleton<IAuthorizationHandler, RequestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
 

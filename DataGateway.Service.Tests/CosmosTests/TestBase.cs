@@ -8,10 +8,12 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Services.MetadataProviders;
+using Azure.DataGateway.Service.Tests.Authorization;
 using HotChocolate.Language;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.Cosmos;
@@ -56,6 +58,9 @@ type Planet @model {
             });
 
             CosmosSqlMetadataProvider _metadataStoreProvider = new(TestHelper.ConfigProvider, fileSystem);
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig();
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
             _graphQLService = new GraphQLService(
@@ -64,7 +69,8 @@ type Planet @model {
                 _mutationEngine,
                 new DocumentCache(),
                 new Sha256DocumentHashProvider(),
-                _metadataStoreProvider);
+                _metadataStoreProvider,
+                authZResolver);
             _controller = new GraphQLController(_graphQLService);
             Client = _clientProvider.Client;
         }

@@ -9,12 +9,14 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
+using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using Azure.DataGateway.Service.Tests.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -47,7 +49,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static string _defaultSchemaName;
         protected static string _defaultSchemaVersion;
         protected static RuntimeConfigProvider _runtimeConfigProvider;
-        protected static IAuthorizationResolver _authZResolver;
+        protected static IAuthorizationResolver _authorizationResolver;
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run.
@@ -64,6 +66,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             mockRuntimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out _runtimeConfig)).Returns(true);
             mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(_runtimeConfig);
             _runtimeConfigProvider = mockRuntimeConfigProvider.Object;
+            //_authorizationResolver = AuthorizationHelpers.InitAuthorizationResolver(_runtimeConfig);
 
             switch (_testCategory)
             {
@@ -125,7 +128,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await _sqlMetadataProvider.InitializeAsync();
 
             //Initialize the authorization resolver object
-            _authZResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
+            _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
         }
 
         protected static async Task ResetDbStateAsync()

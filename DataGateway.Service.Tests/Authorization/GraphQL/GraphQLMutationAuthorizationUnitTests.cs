@@ -1,8 +1,5 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.GraphQLBuilder;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;

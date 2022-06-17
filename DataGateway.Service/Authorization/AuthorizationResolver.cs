@@ -200,7 +200,8 @@ namespace Azure.DataGateway.Service.Authorization
             {
                 roleMetadata.ActionToColumnMap.TryGetValue(WILDCARD, out ActionMetadata? wildcardMetadata);
                 dbPolicy = wildcardMetadata is not null ? wildcardMetadata.databasePolicy : null;
-            } 
+            }
+
             return dbPolicy is not null ? dbPolicy : string.Empty;
         }
 

@@ -214,7 +214,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private async Task<string> GetPartitionKeyPath(Container container)
         {
             string partitionKeyPath = _metadataStoreProvider.GetPartitionKeyPath(container.Database.Id, container.Id);
-            if (partitionKeyPath != null)
+            if (partitionKeyPath is not null)
             {
                 return partitionKeyPath;
             }

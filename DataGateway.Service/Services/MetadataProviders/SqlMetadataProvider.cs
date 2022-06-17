@@ -151,7 +151,6 @@ namespace Azure.DataGateway.Service.Services
             GenerateDatabaseObjectForEntities();
             await PopulateTableDefinitionForEntities();
             GenerateExposedToBackingColumnMapsForEntities();
-            ProcessEntityPermissions();
             InitFilterParser();
             timer.Stop();
             Console.WriteLine($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");

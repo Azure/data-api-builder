@@ -27,7 +27,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataGateway.Config", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataGateway.Service.GraphQLBuilder", "DataGateway.Service.GraphQLBuilder\Azure.DataGateway.Service.GraphQLBuilder.csproj", "{E0B51C8F-493D-4C69-8B27-C114D3874176}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Azure.DataGateway.Auth", "Azure.DataGateway.Auth\Azure.DataGateway.Auth.csproj", "{3C99E0B4-FCAF-43E1-9D02-4AB07C42BB37}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataGateway.Auth", "DataGateway.Auth\Azure.DataGateway.Auth.csproj", "{F8A215AB-5BB5-4A30-9350-70584B8D1B21}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -51,10 +51,10 @@ Global
 		{E0B51C8F-493D-4C69-8B27-C114D3874176}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E0B51C8F-493D-4C69-8B27-C114D3874176}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E0B51C8F-493D-4C69-8B27-C114D3874176}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3C99E0B4-FCAF-43E1-9D02-4AB07C42BB37}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3C99E0B4-FCAF-43E1-9D02-4AB07C42BB37}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3C99E0B4-FCAF-43E1-9D02-4AB07C42BB37}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3C99E0B4-FCAF-43E1-9D02-4AB07C42BB37}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F8A215AB-5BB5-4A30-9350-70584B8D1B21}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F8A215AB-5BB5-4A30-9350-70584B8D1B21}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F8A215AB-5BB5-4A30-9350-70584B8D1B21}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F8A215AB-5BB5-4A30-9350-70584B8D1B21}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

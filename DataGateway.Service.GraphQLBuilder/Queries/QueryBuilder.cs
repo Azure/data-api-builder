@@ -26,12 +26,13 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         /// <param name="root"></param>
         /// <param name="entities"></param>
         /// <param name="inputTypes"></param>
+        /// <param name="entityPermissionsMap">Collection of permissions defined in runtime config.</param>
         /// <returns></returns>
         public static DocumentNode Build(
             DocumentNode root,
             IDictionary<string, Entity> entities,
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes,
-            Dictionary<string, EntityMetadata> entityPermissionsMap)
+            Dictionary<string, EntityMetadata>? entityPermissionsMap = null)
         {
             List<FieldDefinitionNode> queryFields = new();
             List<ObjectTypeDefinitionNode> returnTypes = new();

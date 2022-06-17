@@ -19,7 +19,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             DocumentNode root,
             DatabaseType databaseType,
             IDictionary<string, Entity> entities,
-            Dictionary<string, EntityMetadata> entityPermissionsMap)
+            Dictionary<string, EntityMetadata>? entityPermissionsMap = null)
         {
             List<FieldDefinitionNode> mutationFields = new();
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs = new();
@@ -32,7 +32,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                     string dbEntityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
                     Entity entity = entities[dbEntityName];
 
-                    // Get Roles for mutation actionType on Entity
+                    // Get Roles for mutation actionType on Entity, number of roles could be zero.
                     IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForAction(dbEntityName, actionName: "create", entityPermissionsMap);
                     mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entity, rolesAllowedForMutation));
 

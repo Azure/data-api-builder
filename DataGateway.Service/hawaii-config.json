@@ -59,11 +59,11 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update" ]
         },
         {
           "role": "authenticated",
-          "actions": [ "create", "read", "update" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {
@@ -84,7 +84,7 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "create", "update", "delete" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {
@@ -107,8 +107,13 @@
           "linking.source.fields": [ "book_id" ],
           "linking.target.fields": [ "author_id" ]
         }
+      },
+      "mappings": {
+        "id": "id",
+        "title": "title"
       }
-    },
+    }
+  },
     "BookWebsitePlacement": {
       "source": "book_website_placements",
       "rest": true,
@@ -151,6 +156,10 @@
         {
           "role": "anonymous",
           "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {

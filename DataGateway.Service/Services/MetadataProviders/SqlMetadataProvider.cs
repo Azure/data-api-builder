@@ -55,7 +55,7 @@ namespace Azure.DataGateway.Service.Services
         /// Maps an entity name to a DatabaseObject.
         /// </summary>
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } =
-            new(StringComparer.InvariantCultureIgnoreCase);
+            new(StringComparer.InvariantCulture);
 
         public SqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,

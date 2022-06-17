@@ -123,11 +123,11 @@ namespace Azure.DataGateway.Service.Authorization
 
             try
             {
-                actionToColumnMap = roleInEntity.ActionToColumnMap[WILDCARD];
+                actionToColumnMap = roleInEntity.ActionToColumnMap[actionName];
             }
             catch (KeyNotFoundException)
             {
-                actionToColumnMap = roleInEntity.ActionToColumnMap[actionName];
+                actionToColumnMap = roleInEntity.ActionToColumnMap[WILDCARD];
             }
 
             // Each column present in the request is an "exposedColumn".
@@ -188,9 +188,19 @@ namespace Azure.DataGateway.Service.Authorization
             RoleMetadata roleMetadata = _entityPermissionMap[entityName].RoleToActionMap[roleName];
             roleMetadata.ActionToColumnMap.TryGetValue(action, out ActionMetadata? actionMetadata);
 
-            // If action exists, use its policy, if not return empty policy
+            // If action exists in map (explicitly specified in config), use its policy
             // action should only be absent in roleMetadata if WILDCARD is in the map instead of specific actions, as authorization happens before policy parsing (would have already returned forbidden)
-            string? dbPolicy = actionMetadata is not null ? actionMetadata.databasePolicy : null;
+            string? dbPolicy;
+            if (actionMetadata is not null)
+            {
+                dbPolicy = actionMetadata.databasePolicy;
+
+            } // else check if wildcard exists in action map, if so use its policy, else null
+            else
+            {
+                roleMetadata.ActionToColumnMap.TryGetValue(WILDCARD, out ActionMetadata? wildcardMetadata);
+                dbPolicy = wildcardMetadata is not null ? wildcardMetadata.databasePolicy : null;
+            } 
             return dbPolicy is not null ? dbPolicy : string.Empty;
         }
 

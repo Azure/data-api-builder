@@ -134,6 +134,44 @@ When we do `hawaii init`, it will automatically generate the default Host settin
     }
 ```
 
+#### Setting up Role and Actions
+
+Hawaii-cli allows us to specify role and actions for every entity using the --permission option. permissions can only be specified with add/update command.
+```
+hawaii add <<enity_name>> --source <<xxx>> --permissions "<<role>>:<<actions>>" --fields.include <<a,b,c>> --fields.exclude <<x,y,z>>
+```
+**NOTE:**
+`<<role>>` here can be **anonymous/authenticated**.
+`<<action>>` here can be any CRUD operations.(for multiple use ',' seperated values. Use "*" to specify all CRUD actions).
+
+Example:
+```
+hawaii add MY_ENTITY -s "my_source" --permissions "anonymous:read"
+hawaii update MY_ENTITY --permissions "authenticated:create,update"
+hawaii update MY_ENTITY --permissions "authenticated:delete" --fields.include "*" --fields.exclude "id,date" 
+```
+**Generated Config:**
+```
+"permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "update",
+            {
+              "action": "delete",
+              "fields": {
+                "include": [ "*" ],
+                "exclude": [ "id", "date" ]
+              }
+            }
+          ]
+```
+
 #### Easy Auth
 
 The runtime supports authentication through Static Web Apps/App Service's EasyAuth feature.

@@ -37,7 +37,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     [TestClass]
     public abstract class SqlTestBase
     {
-        private static string _testCategory;
+        protected static string _testCategory;
         protected static IQueryExecutor _queryExecutor;
         protected static IQueryBuilder _queryBuilder;
         protected static IQueryEngine _queryEngine;
@@ -50,6 +50,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static string _defaultSchemaVersion;
         protected static RuntimeConfigProvider _runtimeConfigProvider;
         protected static IAuthorizationResolver _authorizationResolver;
+        protected static RuntimeConfig _runtimeConfig;
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run.
@@ -60,7 +61,40 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static async Task InitializeTestFixture(TestContext context, string testCategory)
         {
             _testCategory = testCategory;
-            RuntimeConfig _runtimeConfig = SqlTestHelper.LoadConfig($"{_testCategory}").CurrentValue;
+            _runtimeConfig = SqlTestHelper.LoadConfig($"{_testCategory}").CurrentValue;
+
+            SetUpSQLMetadataProvider();
+            // Setup AuthorizationService to always return Authorized.
+            _authorizationService = new Mock<IAuthorizationService>();
+            _authorizationService.Setup(x => x.AuthorizeAsync(
+                It.IsAny<ClaimsPrincipal>(),
+                It.IsAny<object>(),
+                It.IsAny<IEnumerable<IAuthorizationRequirement>>()
+                ).Result).Returns(AuthorizationResult.Success);
+
+            // Setup Mock HttpContextAccess to return user as required when calling AuthorizationService.AuthorizeAsync
+            _httpContextAccessor = new Mock<IHttpContextAccessor>();
+            _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
+
+            _queryEngine = new SqlQueryEngine(
+                _queryExecutor,
+                _queryBuilder,
+                _sqlMetadataProvider);
+            _mutationEngine =
+                new SqlMutationEngine(
+                _queryEngine,
+                _queryExecutor,
+                _queryBuilder,
+                _sqlMetadataProvider);
+            await ResetDbStateAsync();
+            await _sqlMetadataProvider.InitializeAsync();
+
+            //Initialize the authorization resolver object
+            _authZResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
+        }
+
+        protected static void SetUpSQLMetadataProvider()
+        {
             Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new();
             mockRuntimeConfigProvider.Setup(x => x.IsDeveloperMode()).Returns(true);
             mockRuntimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out _runtimeConfig)).Returns(true);
@@ -101,33 +135,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                              _queryBuilder);
                     break;
             }
-            // Setup AuthorizationService to always return Authorized.
-            _authorizationService = new Mock<IAuthorizationService>();
-            _authorizationService.Setup(x => x.AuthorizeAsync(
-                It.IsAny<ClaimsPrincipal>(),
-                It.IsAny<object>(),
-                It.IsAny<IEnumerable<IAuthorizationRequirement>>()
-                ).Result).Returns(AuthorizationResult.Success);
-
-            // Setup Mock HttpContextAccess to return user as required when calling AuthorizationService.AuthorizeAsync
-            _httpContextAccessor = new Mock<IHttpContextAccessor>();
-            _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
-
-            _queryEngine = new SqlQueryEngine(
-                _queryExecutor,
-                _queryBuilder,
-                _sqlMetadataProvider);
-            _mutationEngine =
-                new SqlMutationEngine(
-                _queryEngine,
-                _queryExecutor,
-                _queryBuilder,
-                _sqlMetadataProvider);
-            await ResetDbStateAsync();
-            await _sqlMetadataProvider.InitializeAsync();
-
-            //Initialize the authorization resolver object
-            _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
         }
 
         protected static async Task ResetDbStateAsync()

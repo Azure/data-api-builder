@@ -708,6 +708,12 @@ namespace Azure.DataGateway.Service.Services
             IEnumerable<TableDefinition> tablesToBePopulatedWithFK =
                 FindAllTablesWhoseForeignKeyIsToBeRetrieved(schemaNames, tableNames);
 
+            // No need to do any further work if there are no FK to be retrieved
+            if (tablesToBePopulatedWithFK.Count() == 0)
+            {
+                return;
+            }
+
             // Build the query required to get the foreign key information.
             string queryForForeignKeyInfo =
                 ((BaseSqlQueryBuilder)SqlQueryBuilder).BuildForeignKeyInfoQuery(tableNames.Count());

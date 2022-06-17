@@ -66,7 +66,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             mockRuntimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out _runtimeConfig)).Returns(true);
             mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(_runtimeConfig);
             _runtimeConfigProvider = mockRuntimeConfigProvider.Object;
-            //_authorizationResolver = AuthorizationHelpers.InitAuthorizationResolver(_runtimeConfig);
 
             switch (_testCategory)
             {
@@ -174,6 +173,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 httpContext.Request.Body = stream;
                 httpContext.Request.ContentLength = stream.Length;
             }
+
+            //Add identity object to the Mock context object.
+            ClaimsIdentity identity = new(authenticationType: "Bearer");
+            identity.AddClaim(new Claim(ClaimTypes.Role, "anonymous"));
+            identity.AddClaim(new Claim(ClaimTypes.Role, "authenticated"));
+
+            ClaimsPrincipal user = new(identity);
+            httpContext.User = user;
 
             // Set the user role as authenticated to allow tests to execute with all privileges.
             httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = "authenticated";

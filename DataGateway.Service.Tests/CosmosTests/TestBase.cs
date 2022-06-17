@@ -104,7 +104,13 @@ type Planet @model {
             HttpRequestMessage request = new();
             MemoryStream stream = new(Encoding.UTF8.GetBytes(data));
             request.Method = HttpMethod.Post;
-            ClaimsPrincipal user = new(new ClaimsIdentity(authenticationType: "Bearer"));
+
+            //Add identity object to the Mock context object.
+            ClaimsIdentity identity = new(authenticationType: "Bearer");
+            identity.AddClaim(new Claim(ClaimTypes.Role, "anonymous"));
+            identity.AddClaim(new Claim(ClaimTypes.Role, "authenticated"));
+
+            ClaimsPrincipal user = new(identity);
             DefaultHttpContext httpContext = new()
             {
                 Request = { Body = stream, ContentLength = stream.Length },

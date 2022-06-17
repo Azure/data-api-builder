@@ -224,7 +224,16 @@
     "WebsiteUser": {
       "source": "website_users",
       "rest": false,
-      "permissions": []
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
     },
     "SupportedType": {
       "source": "type_table",

@@ -40,6 +40,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _integrationMappingTable = "trees";
         protected static readonly string _integrationMappingDifferentEntity = "Shrub";
         protected static readonly string _integrationBrokenMappingEntity = "Fungus";
+        protected static readonly string _nonExistentEntityName = "!@#$%^&*()_+definitely_nonexistent_entity!@#$%^&*()_+";
+        protected static readonly string _emptyTableEntityName = "Empty";
+        protected static readonly string _emptyTableTableName = "empty_table";
         protected static readonly string _simple_all_books = "books_view_all";
         protected static readonly string _simple_subset_stocks = "stocks_view_selected";
         protected static readonly string _composite_subset_bookPub = "books_publishers_view_composite";
@@ -62,6 +65,32 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 queryString: string.Empty,
                 entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindByIdTest)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operations on empty result sets
+        /// 1. GET an entity with no rows (empty table)
+        /// 2. GET an entity with rows, filtered to none by query parameter
+        /// Should be a 200 response with an empty array
+        /// </summary>
+        [TestMethod]
+        public async Task FindEmptyResultSet()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _emptyTableEntityName,
+                sqlQuery: GetQuery("FindEmptyTable"),
+                controller: _restController
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=1 ne 1",
+                entity: _integrationEntityName,
+                sqlQuery: GetQuery("FindEmptyResultSetWithQueryFilter"),
                 controller: _restController
             );
         }
@@ -2462,6 +2491,27 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         }
 
         /// <summary>
+        /// Tests the REST Api for Find operation on an entity that does not exist
+        /// No sqlQuery provided as error should be thrown prior to database query
+        /// Expects a 404 Not Found error
+        /// </summary>
+        [TestMethod]
+        public async Task FindNonExistentEntity()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _nonExistentEntityName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: $"{_nonExistentEntityName} is not a valid entity.",
+                expectedStatusCode: HttpStatusCode.NotFound,
+                expectedSubStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound.ToString()
+            );
+        }
+
+        /// <summary>
         /// Tests the REST Api for Find operation with a query string that has an invalid field
         /// having invalid field names.
         /// </summary>
@@ -2532,6 +2582,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 controller: _restController,
                 exception: true,
                 expectedErrorMessage: $"Invalid orderby column requested: Large Pinecone.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
+        /// Regression test to verify we have the correct exception when an invalid
+        /// query param is used.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestInvalidQueryParam()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?orderby=id",
+                entity: _integrationEntityName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: $"Invalid Query Parameter: orderby",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

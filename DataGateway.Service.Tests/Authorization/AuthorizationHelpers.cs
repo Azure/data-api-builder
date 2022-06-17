@@ -1,11 +1,10 @@
-using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
-using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Action = Azure.DataGateway.Config.Action;
@@ -27,13 +26,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// <returns>AuthorizationResolver object</returns>
         public static AuthorizationResolver InitAuthorizationResolver(RuntimeConfig runtimeConfig)
         {
-            RuntimeConfigPath configPath = new()
-            {
-                ConfigValue = runtimeConfig
-            };
-
-            Mock<IOptionsMonitor<RuntimeConfigPath>> runtimeConfigProvider = new();
-            runtimeConfigProvider.Setup(x => x.CurrentValue).Returns(configPath);
+            Mock<RuntimeConfigProvider> runtimeConfigProvider = new();
+            runtimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(runtimeConfig);
+            runtimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out runtimeConfig)).Returns(true);
 
             Mock<ISqlMetadataProvider> metadataProvider = new();
             TableDefinition sampleTable = CreateSampleTable();
@@ -80,7 +75,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 Actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
 
             Entity sampleEntity = new(
-                Source: new String("SQL"),
+                Source: TEST_ENTITY,
                 Rest: null,
                 GraphQL: null,
                 Permissions: new PermissionSetting[] { permissionForEntity },

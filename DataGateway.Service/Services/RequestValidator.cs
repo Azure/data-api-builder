@@ -16,7 +16,7 @@ namespace Azure.DataGateway.Service.Services
     {
         /// <summary>
         /// Validates the given request by ensuring:
-        /// - each field to be returned is one of the columns in the table.
+        /// - each field to be returned is one of the exposed names for the entity.
         /// - extra fields specified in the body, will be discarded.
         /// </summary>
         /// <param name="context">Request context containing the REST operation fields and their values.</param>
@@ -26,14 +26,14 @@ namespace Azure.DataGateway.Service.Services
             RestRequestContext context,
             ISqlMetadataProvider sqlMetadataProvider)
         {
-            TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, sqlMetadataProvider);
-
             foreach (string field in context.FieldsToBeReturned)
             {
-                if (!tableDefinition.Columns.ContainsKey(field))
+                // Get backing column and check that column is valid
+                if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, field, out string? backingColumn) ||
+                    !sqlMetadataProvider.GetTableDefinition(context.EntityName).Columns.ContainsKey(backingColumn!))
                 {
                     throw new DataGatewayException(
-                        message: "Invalid Column name requested: " + field,
+                        message: "Invalid field to be returned requested: " + field,
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
@@ -64,8 +64,21 @@ namespace Azure.DataGateway.Service.Services
                     subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
 
+            List<string> primaryKeysInRequest = new();
+            foreach (string pk in context.PrimaryKeyValuePairs.Keys)
+            {
+                if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, pk, out string? backingColumn))
+                {
+                    throw new DataGatewayException(
+                    message: $"Primary key column: {pk} not found in the entity definition.",
+                    statusCode: HttpStatusCode.NotFound,
+                    subStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound);
+                }
+
+                primaryKeysInRequest.Add(backingColumn!);
+            }
+
             // Verify each primary key is present in the table definition.
-            List<string> primaryKeysInRequest = new(context.PrimaryKeyValuePairs.Keys);
             IEnumerable<string> missingKeys = primaryKeysInRequest.Except(tableDefinition.PrimaryKey);
 
             if (missingKeys.Any())
@@ -190,7 +203,6 @@ namespace Azure.DataGateway.Service.Services
                     unvalidatedFields.Remove(column.Key);
                 }
             }
-
             // TO DO: If the request header contains x-ms-must-match custom header with value of "ignore"
             // this should not throw any error. Tracked by issue #158.
             if (unvalidatedFields.Any())
@@ -247,7 +259,6 @@ namespace Azure.DataGateway.Service.Services
                 }
 
                 bool isReplacementUpdate = (upsertRequestCtx.OperationType == Operation.Upsert) ? true : false;
-
                 if (ValidateColumn(column, fieldsInRequestBody, isReplacementUpdate))
                 {
                     unValidatedFields.Remove(column.Key);

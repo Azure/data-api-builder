@@ -115,9 +115,9 @@ namespace Azure.DataGateway.Service.Resolvers
             if (param.Value == null && !tableDefinition.Columns[param.Key].IsNullable)
             {
                 throw new DataGatewayException(
-                    $"Cannot set argument {param.Key} to null.",
-                    HttpStatusCode.BadRequest,
-                    DataGatewayException.SubStatusCodes.BadRequest);
+                    message: $"Cannot set argument {param.Key} to null.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
             else if (param.Value == null)
             {

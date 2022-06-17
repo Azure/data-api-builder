@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Services;
 using Microsoft.OData.Edm;
 
 namespace Azure.DataGateway.Service.Parsers
@@ -25,30 +26,37 @@ namespace Azure.DataGateway.Service.Parsers
         /// <summary>
         /// Build the model from the provided schema.
         /// </summary>
-        /// <param name="databaseObjects">All the database objects to build the model for.</param>
+        /// <param name="sqlMetadataProvider">The SqlMetadataProvider holds the objects needed
+        /// to build the correct model.</param>
         /// <returns>An EdmModelBuilder that can be used to get a model.</returns>
-        public EdmModelBuilder BuildModel(IEnumerable<DatabaseObject> databaseObjects)
+        public EdmModelBuilder BuildModel(ISqlMetadataProvider sqlMetadataProvider)
         {
-            return BuildEntityTypes(databaseObjects)
-                .BuildEntitySets(databaseObjects);
+            return BuildEntityTypes(sqlMetadataProvider)
+                .BuildEntitySets(sqlMetadataProvider);
         }
 
         /// <summary>
         /// Add the entity types found in the schema to the model
         /// </summary>
-        /// <param name="databaseEntities">All the exposed sql database entities
-        /// with their table definitions.</param>
+        /// <param name="sqlMetadataProvider">The SqlMetadataProvider holds the objects needed
+        /// to build the correct model.</param>
         /// <returns>this model builder</returns>
-        private EdmModelBuilder BuildEntityTypes(
-            IEnumerable<DatabaseObject> databaseObjects)
+        private EdmModelBuilder BuildEntityTypes(ISqlMetadataProvider sqlMetadataProvider)
         {
-            foreach (DatabaseObject dbObject in databaseObjects)
+            // since we allow for aliases to be used in place of the names of the actual
+            // columns of the database object (such as table's columns), we need to
+            // account for these potential aliases in our EDM Model.
+            foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in sqlMetadataProvider.GetEntityNamesAndDbObjects())
             {
-                string entitySourceName = $"{dbObject.FullName}";
-                TableDefinition tableDefinition = dbObject.TableDefinition;
-                EdmEntityType newEntity = new(DEFAULT_NAMESPACE, entitySourceName);
-                string newEntityKey = $"{DEFAULT_NAMESPACE}.{entitySourceName}";
+                // given an entity Publisher with schema.table of dbo.publishers
+                // entitySourceName = dbo.publishers
+                // newEntityKey = Publisher.dbo.publishers
+                string entitySourceName = $"{entityAndDbObject.Value.FullName}";
+                string newEntityKey = $"{entityAndDbObject.Key}.{entitySourceName}";
+                EdmEntityType newEntity = new(DEFAULT_NAMESPACE, newEntityKey);
                 _entities.Add(newEntityKey, newEntity);
+
+                TableDefinition tableDefinition = entityAndDbObject.Value.TableDefinition;
 
                 // each column represents a property of the current entity we are adding
                 foreach (string column in
@@ -67,6 +75,15 @@ namespace Azure.DataGateway.Service.Parsers
                         case TypeCode.String:
                             type = EdmPrimitiveTypeKind.String;
                             break;
+                        case TypeCode.Byte:
+                            type = EdmPrimitiveTypeKind.Byte;
+                            break;
+                        case TypeCode.Int16:
+                            type = EdmPrimitiveTypeKind.Int16;
+                            break;
+                        case TypeCode.Int32:
+                            type = EdmPrimitiveTypeKind.Int32;
+                            break;
                         case TypeCode.Int64:
                             type = EdmPrimitiveTypeKind.Int64;
                             break;
@@ -76,20 +93,38 @@ namespace Azure.DataGateway.Service.Parsers
                         case TypeCode.Double:
                             type = EdmPrimitiveTypeKind.Double;
                             break;
+                        case TypeCode.Decimal:
+                            type = EdmPrimitiveTypeKind.Decimal;
+                            break;
+                        case TypeCode.Boolean:
+                            type = EdmPrimitiveTypeKind.Boolean;
+                            break;
+                        case TypeCode.DateTime:
+                            type = EdmPrimitiveTypeKind.Date;
+                            break;
                         default:
                             throw new ArgumentException($"Column type" +
                                 $" {columnSystemType.Name} not yet supported.");
                     }
 
+                    // here we must use the correct aliasing for the column name
+                    // which is on a per entity basis.
                     // if column is in our list of keys we add as a key to entity
+                    string exposedColumnName;
                     if (tableDefinition.PrimaryKey.Contains(column))
                     {
-                        newEntity.AddKeys(newEntity.AddStructuralProperty(column, type, isNullable: false));
+                        sqlMetadataProvider.TryGetExposedColumnName(entityAndDbObject.Key, column, out exposedColumnName!);
+                        newEntity.AddKeys(newEntity.AddStructuralProperty(name: exposedColumnName,
+                                                                          type,
+                                                                          isNullable: false));
                     }
                     else
                     {
                         // not a key just add the property
-                        newEntity.AddStructuralProperty(column, type, isNullable: true);
+                        sqlMetadataProvider.TryGetExposedColumnName(entityAndDbObject.Key, column, out exposedColumnName!);
+                        newEntity.AddStructuralProperty(name: exposedColumnName,
+                                                        type,
+                                                        isNullable: true);
                     }
                 }
 
@@ -104,19 +139,20 @@ namespace Azure.DataGateway.Service.Parsers
         /// <summary>
         /// Add the entity sets contained within the schema to container.
         /// </summary>
-        /// <param name="sqlEntities">All the sql entities with their table definitions.</param>
+        /// <param name="sqlMetadataProvider">The SqlMetadataProvider holds the objects needed
+        /// to build the correct model.</param>
         /// <returns>this model builder</returns>
-        private EdmModelBuilder BuildEntitySets(IEnumerable<DatabaseObject> databaseObjects)
+        private EdmModelBuilder BuildEntitySets(ISqlMetadataProvider sqlMetadataProvider)
         {
             EdmEntityContainer container = new(DEFAULT_NAMESPACE, DEFAULT_CONTAINER_NAME);
             _model.AddElement(container);
 
             // Entity set is a collection of the same entity, if we think of an entity as a row of data
-            // that has a key, then an entity set can be thought of as a table made up of those rows
-            foreach (DatabaseObject dbObject in databaseObjects)
+            // that has a key, then an entity set can be thought of as a table made up of those rows.
+            foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in sqlMetadataProvider.GetEntityNamesAndDbObjects())
             {
-                string entityName = $"{dbObject.FullName}";
-                container.AddEntitySet(name: entityName, _entities[$"{DEFAULT_NAMESPACE}.{entityName}"]);
+                string entityName = $"{entityAndDbObject.Value.FullName}";
+                container.AddEntitySet(name: $"{entityAndDbObject.Key}.{entityName}", _entities[$"{entityAndDbObject.Key}.{entityName}"]);
             }
 
             return this;

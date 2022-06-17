@@ -18,47 +18,39 @@ namespace Azure.DataGateway.Config
 
         public string? CONNSTRING { get; set; }
 
-        public RuntimeConfig? ConfigValue { get; set; }
-
         /// <summary>
         /// Reads the contents of the json config file if it exists,
         /// and sets the deserialized RuntimeConfig object.
         /// </summary>
-        public void SetRuntimeConfigValue()
+        public RuntimeConfig? LoadRuntimeConfigValue()
         {
             string? runtimeConfigJson = null;
-            if (!string.IsNullOrEmpty(ConfigFileName) && File.Exists(ConfigFileName))
+            if (!string.IsNullOrEmpty(ConfigFileName))
             {
-                runtimeConfigJson = File.ReadAllText(ConfigFileName);
+                if (File.Exists(ConfigFileName))
+                {
+                    runtimeConfigJson = File.ReadAllText(ConfigFileName);
+                }
+                else
+                {
+                    throw new FileNotFoundException($"Requested configuration file {ConfigFileName} does not exist.");
+                }
             }
 
             if (!string.IsNullOrEmpty(runtimeConfigJson))
             {
-                ConfigValue = RuntimeConfig.GetDeserializedConfig<RuntimeConfig>(runtimeConfigJson);
-                ConfigValue.DetermineGlobalSettings();
+                RuntimeConfig configValue = RuntimeConfig.GetDeserializedConfig<RuntimeConfig>(runtimeConfigJson);
+                configValue.DetermineGlobalSettings();
 
                 if (!string.IsNullOrWhiteSpace(CONNSTRING))
                 {
-                    ConfigValue.ConnectionString = CONNSTRING;
+                    configValue.ConnectionString = CONNSTRING;
                 }
-            }
-        }
 
-        /// <summary>
-        /// Extract the values from the config file.
-        /// Assumes the config value is set and non-null.
-        /// </summary>
-        /// <param name="databaseType"></param>
-        /// <param name="connectionString"></param>
-        /// <param name="entities"></param>
-        public void ExtractConfigValues(
-            out DatabaseType databaseType,
-            out string connectionString,
-            out Dictionary<string, Entity> entities)
-        {
-            databaseType = ConfigValue!.DatabaseType;
-            connectionString = ConfigValue!.ConnectionString;
-            entities = ConfigValue!.Entities;
+                return configValue;
+            }
+
+            return null;
         }
 
         /// <summary>

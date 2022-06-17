@@ -32,6 +32,7 @@ namespace Azure.DataGateway.Service.Resolvers
             fromSql += string.Join("", structure.JoinQueries.Select(x => $" LEFT OUTER JOIN LATERAL ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)} ON TRUE"));
 
             string predicates = JoinPredicateStrings(
+                                    structure.DbPolicyPredicates,
                                     structure.FilterPredicates,
                                     Build(structure.Predicates),
                                     Build(structure.PaginationMetadata.PaginationPredicate));
@@ -136,7 +137,7 @@ namespace Azure.DataGateway.Service.Resolvers
             // we don't need this column for MySql since the connection string already
             // has the database name. We still select it to conform with other dbs.
             string foreignKeyQuery = $@"
-SELECT 
+SELECT
     CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))},
     TABLE_SCHEMA {QuoteIdentifier($"Referencing{nameof(DatabaseObject.SchemaName)}")},
     TABLE_NAME {QuoteIdentifier($"Referencing{nameof(TableDefinition)}")},
@@ -144,9 +145,9 @@ SELECT
     REFERENCED_TABLE_SCHEMA {QuoteIdentifier($"Referenced{nameof(DatabaseObject.SchemaName)}")},
     REFERENCED_TABLE_NAME {QuoteIdentifier($"Referenced{nameof(TableDefinition)}")},
     REFERENCED_COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))}
-FROM 
+FROM
     INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-WHERE 
+WHERE
     (TABLE_SCHEMA IN (@{tableSchemaParamsForInClause})
     AND TABLE_NAME IN (@{tableNameParamsForInClause})
     AND REFERENCED_TABLE_NAME IS NOT NULL
@@ -190,7 +191,27 @@ WHERE
             {
                 string cLabel = column.Label;
                 string parametrizedCLabel = structure.ColumnLabelToParam[cLabel];
-                jsonColumns.Add($"{parametrizedCLabel}, {subqueryName}.{QuoteIdentifier(cLabel)}");
+
+                // columns which contain the json of a nested type are called SqlQueryStructure.DATA_IDENT
+                // and they are not actual columns of the underlying table so don't check for column type
+                // in that scenario
+                if (column.ColumnName != SqlQueryStructure.DATA_IDENT &&
+                    structure.GetColumnSystemType(column.ColumnName) == typeof(bool))
+                {
+                    // mysql does not resolve the boolean columns to true/false when converting to json, but to 1/0.
+                    // In order to account for that, explicit casting is used.
+                    // For more refer to: https://stackoverflow.com/questions/49131832/how-to-create-a-json-object-in-mysql-with-a-boolean-value
+                    jsonColumns.Add($"{parametrizedCLabel}, CAST({subqueryName}.{QuoteIdentifier(cLabel)} is true as json)");
+                }
+                else if (column.ColumnName != SqlQueryStructure.DATA_IDENT &&
+                    structure.GetColumnSystemType(column.ColumnName) == typeof(byte[]))
+                {
+                    jsonColumns.Add($"{parametrizedCLabel}, TO_BASE64({subqueryName}.{QuoteIdentifier(cLabel)})");
+                }
+                else
+                {
+                    jsonColumns.Add($"{parametrizedCLabel}, {subqueryName}.{QuoteIdentifier(cLabel)}");
+                }
             }
 
             return string.Join(", ", jsonColumns);
@@ -198,7 +219,7 @@ WHERE
 
         /// <summary>
         /// Make the SELECT arguments to select the primary key of the last inserted element
-        /// The SELECT clause looks for the inserted columns first, then Primary Key and then the Columns with Default values. 
+        /// The SELECT clause looks for the inserted columns first, then Primary Key and then the Columns with Default values.
         /// For Example:book_id is the inserted column (book_id, id) are primary key, content has default value
         /// SELECT @param1 as `book_id`, last_insert_id() as `id`, @param0 as `content` WHERE @ROWCOUNT > 0;
         /// </summary>

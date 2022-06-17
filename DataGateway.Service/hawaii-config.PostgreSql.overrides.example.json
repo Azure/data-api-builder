@@ -4,8 +4,6 @@
     "database-type": "postgresql",
     "connection-string": "Host=localhost;Database=datagatewaytest;username=REPLACEME;password=REPLACEME"
   },
-  "postgresql": {
-  },
   "runtime": {
     "rest": {
       "enabled": true,
@@ -19,8 +17,8 @@
     "host": {
       "mode": "Development",
       "cors": {
-        "origins": [ "1", "2" ],
-        "allow-credentials": true
+        "origins": [ "http://localhost:3000" ],
+        "allow-credentials": false
       },
       "authentication": {
         "provider": "EasyAuth",
@@ -33,7 +31,7 @@
     }
   },
   "entities": {
-    "publishers": {
+    "Publisher": {
       "source": "publishers",
       "rest": true,
       "graphql": true,
@@ -50,11 +48,11 @@
       "relationships": {
         "books": {
           "cardinality": "many",
-          "target.entity": "books"
+          "target.entity": "Book"
         }
       }
     },
-    "stocks": {
+    "Stock": {
       "source": "stocks",
       "rest": true,
       "graphql": true,
@@ -65,19 +63,19 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "create", "read", "update" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {
         "comics": {
           "cardinality": "many",
-          "target.entity": "comics",
+          "target.entity": "Comic",
           "source.fields": [ "categoryName" ],
           "target.fields": [ "categoryName" ]
         }
       }
     },
-    "books": {
+    "Book": {
       "source": "books",
       "permissions": [
         {
@@ -86,32 +84,36 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "create", "update", "delete" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {
-        "publisher": {
+        "publishers": {
           "cardinality": "one",
-          "target.entity": "publisher"
+          "target.entity": "Publisher"
         },
         "websiteplacement": {
           "cardinality": "one",
-          "target.entity": "book_website_placements"
+          "target.entity": "BookWebsitePlacement"
         },
         "reviews": {
           "cardinality": "many",
-          "target.entity": "reviews"
+          "target.entity": "Review"
         },
         "authors": {
           "cardinality": "many",
-          "target.entity": "authors",
+          "target.entity": "Author",
           "linking.object": "book_author_link",
           "linking.source.fields": [ "book_id" ],
           "linking.target.fields": [ "author_id" ]
         }
+      },
+      "mappings": {
+        "id": "id",
+        "title": "title"
       }
     },
-    "book_website_placements": {
+    "BookWebsitePlacement": {
       "source": "book_website_placements",
       "rest": true,
       "graphql": true,
@@ -139,48 +141,15 @@
         }
       ],
       "relationships": {
-        "book_website_placements": {
+        "books": {
           "cardinality": "one",
-          "target.entity": "books"
+          "target.entity": "Book"
         }
       }
     },
-    "authors": {
+    "Author": {
       "source": "authors",
       "rest": true,
-      "graphql": true,
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [ "read" ]
-        }
-      ],
-      "relationships": {
-        "books": {
-          "cardinality": "many",
-          "target.entity": "books",
-          "linking.object": "book_author_link"
-        }
-      }
-    },
-    "reviews": {
-      "source": "reviews",
-      "rest": true,
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [ "read" ]
-        }
-      ],
-      "relationships": {
-        "books": {
-          "cardinality": "one",
-          "target.entity": "books"
-        }
-      }
-    },
-    "magazines": {
-      "source": "magazines",
       "graphql": true,
       "permissions": [
         {
@@ -189,19 +158,38 @@
         },
         {
           "role": "authenticated",
-          "actions": [
-            {
-              "action": "*",
-              "fields": {
-                "include": [ "*" ],
-                "exclude": [ "issue_number" ]
-              }
-            }
-          ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
-      ]
+      ],
+      "relationships": {
+        "books": {
+          "cardinality": "many",
+          "target.entity": "Book",
+          "linking.object": "book_author_link"
+        }
+      }
     },
-    "comics": {
+    "Review": {
+      "source": "reviews",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "relationships": {
+        "books": {
+          "cardinality": "one",
+          "target.entity": "Book"
+        }
+      }
+    },
+    "Comic": {
       "source": "comics",
       "rest": true,
       "graphql": false,
@@ -212,24 +200,90 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "create", "read", "delete" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ]
     },
-    "brokers": {
+    "Broker": {
       "source": "brokers",
       "graphql": false,
       "permissions": [
         {
           "role": "anonymous",
           "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ]
     },
-    "website_users": {
+    "WebsiteUser": {
       "source": "website_users",
       "rest": false,
       "permissions": []
+    },
+    "stocks_price": {
+      "source": "stocks_price",
+      "rest": false,
+      "permissions": []
+    },
+    "SupportedType": {
+      "source": "type_table",
+      "rest": false,
+      "permissions": []
+    },
+    "Tree": {
+      "source": "trees",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "mappings": {
+        "species": "Scientific Name",
+        "region": "United State's Region"
+      }
+    },
+    "Shrub": {
+      "source": "trees",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "mappings": {
+        "species": "fancyName"
+      }
+    },
+    "Fungus": {
+      "source": "fungi",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "mappings": {
+        "spores": "hazards"
+      }
     }
   }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -8,6 +9,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
@@ -42,6 +44,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             return Mock.Of<IOptionsMonitor<RuntimeConfig>>(_ => _.CurrentValue == runtimeConfig);
         }
 
+        public static void RemoveAllRelationshipBetweenEntities(RuntimeConfig runtimeConfig)
+        {
+            foreach ((string entityName, Entity entity) in runtimeConfig.Entities.ToList())
+            {
+                Entity updatedEntity = new(entity.Source, entity.Rest,
+                                           entity.GraphQL, entity.Permissions,
+                                           Relationships: null, Mappings: null);
+                runtimeConfig.Entities.Remove(entityName);
+                runtimeConfig.Entities.Add(entityName, updatedEntity);
+            }
+        }
+
         /// <summary>
         /// Temporary Helper function to ensure that in testing we have an entity
         /// that can have a custom schema. We create a new entity of 'Magazine' with
@@ -56,7 +70,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string magazineSource = config.DatabaseType is DatabaseType.mysql ? "\"magazines\"" : "\"foo.magazines\"";
             string magazineEntityJsonString =
-              @"{ 
+              @"{
                     ""source"":  " + magazineSource + @",
                     ""graphql"": true,
                     ""permissions"": [
@@ -66,8 +80,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                       },
                       {
                         ""role"": ""authenticated"",
-                        ""actions"": [ ""create"", ""read"", ""delete"" ]
-                      }
+                        ""actions"": [" + $" \"{ActionType.CREATE}\", \"{ActionType.READ}\", \"{ActionType.DELETE}\", \"{ActionType.UPDATE}\" ]" +
+                      @"}
                     ]
                 }";
 

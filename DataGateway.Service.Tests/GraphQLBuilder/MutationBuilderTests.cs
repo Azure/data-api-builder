@@ -595,7 +595,7 @@ type Foo @model {{
             Assert.AreEqual(defaultValue.ToString(), createFooInput.Fields[0].DefaultValue.Value);
         }
 
-        private static ObjectTypeDefinitionNode GetMutationNode(DocumentNode mutationRoot)
+        public static ObjectTypeDefinitionNode GetMutationNode(DocumentNode mutationRoot)
         {
             return (ObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is ObjectTypeDefinitionNode node && node.Name.Value == "Mutation");
 

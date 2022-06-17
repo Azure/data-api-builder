@@ -247,7 +247,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                     new List<DirectiveNode>())
                 },
                 new NamedTypeNode(FormatNameForObject(name, entity)),
-                directives: fieldDefinitionNodeDirectives
+                fieldDefinitionNodeDirectives
             );
         }
     }

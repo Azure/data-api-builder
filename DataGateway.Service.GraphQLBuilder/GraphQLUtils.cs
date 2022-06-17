@@ -9,6 +9,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
     public static class GraphQLUtils
     {
         public const string DEFAULT_PRIMARY_KEY_NAME = "id";
+        public const string AUTHORIZE_DIRECTIVE = "authorize";
+        public const string AUTHORIZE_DIRECTIVE_ARGUMENT_ROLES = "roles";
 
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
@@ -103,7 +105,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             }
 
             ListValueNode roleListNode = new(items: roleList);
-            return new(name: "authorize", new ArgumentNode(name: "roles", roleListNode));
+            return new(name: AUTHORIZE_DIRECTIVE, new ArgumentNode(name: AUTHORIZE_DIRECTIVE_ARGUMENT_ROLES, roleListNode));
         }
     }
 }

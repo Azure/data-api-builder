@@ -34,7 +34,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Helper method which fills the table definition with information of the foreign keys
+        /// <code>Do: </code> Fills the table definition with information of the foreign keys
         /// for all the tables based on the entities relationship.
         /// <code>Check: </code> Making sure no exception is thrown if there are no Foriegn Keys.
         /// </summary>

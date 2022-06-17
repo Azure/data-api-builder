@@ -33,6 +33,8 @@ namespace Azure.DataGateway.Service.Services
 
         Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; }
 
+        string RestPath { get; }
+
         /// <summary>
         /// Obtains the underlying OData filter parser.
         /// </summary>
@@ -70,14 +72,6 @@ namespace Azure.DataGateway.Service.Services
         DatabaseType GetDatabaseType();
 
         IQueryBuilder GetQueryBuilder();
-
-        /// <summary>
-        /// Obtains the underlying path for REST and returns
-        /// through out param, returning true if path was
-        /// not null and false otherwise.
-        /// </summary>
-        /// <returns></returns>
-        bool TryGetRestPath(out string path);
 
         /// <summary>
         /// Returns a collection of (EntityName, DatabaseObject) without

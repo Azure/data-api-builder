@@ -151,24 +151,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         {
             IActionResult actionResult;
+            string pathAndEntityName = $"{path}/{entityName}";
             switch (operationType)
             {
                 case Operation.Find:
-                    actionResult = await controller.Find($"{path}/{entityName}/{primaryKeyRoute}");
+                    actionResult = await controller.Find($"{pathAndEntityName}/{primaryKeyRoute}");
                     break;
                 case Operation.Insert:
-                    actionResult = await controller.Insert($"{path}/{entityName}");
+                    actionResult = await controller.Insert($"{pathAndEntityName}");
                     break;
                 case Operation.Delete:
-                    actionResult = await controller.Delete($"{path}/{entityName}/{primaryKeyRoute}");
+                    actionResult = await controller.Delete($"{pathAndEntityName}/{primaryKeyRoute}");
                     break;
                 case Operation.Update:
                 case Operation.Upsert:
-                    actionResult = await controller.Upsert($"{path}/{entityName}/{primaryKeyRoute}");
+                    actionResult = await controller.Upsert($"{pathAndEntityName}/{primaryKeyRoute}");
                     break;
                 case Operation.UpdateIncremental:
                 case Operation.UpsertIncremental:
-                    actionResult = await controller.UpsertIncremental($"{path}/{entityName}/{primaryKeyRoute}");
+                    actionResult = await controller.UpsertIncremental($"{pathAndEntityName}/{primaryKeyRoute}");
                     break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");

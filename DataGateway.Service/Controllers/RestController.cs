@@ -111,7 +111,7 @@ namespace Azure.DataGateway.Service.Controllers
         /// its content from the route attribute {*route} defined
         /// for the class, asterisk(*) here is a wild-card/catch all.
         /// Expected URL template is of the following form:
-        /// MsSql/PgSql: URL template: <path>/<entityName>/[<primary_key_column_name>/<primary_key_value>
+        /// MsSql/PgSql: URL template: <path>/<entityName>/<primary_key_column_name>/<primary_key_value>
         /// URL MUST NOT contain a queryString
         /// URL example: api/Books </param>
         [HttpGet]
@@ -149,7 +149,7 @@ namespace Azure.DataGateway.Service.Controllers
         /// its content from the route attribute {*route} defined
         /// for the class, asterisk(*) here is a wild-card/catch all.
         /// Expected URL template is of the following form:
-        /// MsSql/PgSql: URL template: <path>/<entityName>/[<primary_key_column_name>/<primary_key_value>
+        /// MsSql/PgSql: URL template: <path>/<entityName>/<primary_key_column_name>/<primary_key_value>
         /// URL MUST NOT contain a queryString
         /// URL example: api/Books </param>
         [HttpDelete]
@@ -169,7 +169,7 @@ namespace Azure.DataGateway.Service.Controllers
         /// its content from the route attribute {*route} defined
         /// for the class, asterisk(*) here is a wild-card/catch all.
         /// Expected URL template is of the following form:
-        /// MsSql/PgSql: URL template: <path>/<entityName>/[<primary_key_column_name>/<primary_key_value>
+        /// MsSql/PgSql: URL template: <path>/<entityName>/<primary_key_column_name>/<primary_key_value>
         /// URL MUST NOT contain a queryString
         /// URL example: api/Books </param>
         [HttpPut]
@@ -189,7 +189,7 @@ namespace Azure.DataGateway.Service.Controllers
         /// its content from the route attribute {*route} defined
         /// for the class, asterisk(*) here is a wild-card/catch all.
         /// Expected URL template is of the following form:
-        /// MsSql/PgSql: URL template: <path>/<entityName>/[<primary_key_column_name>/<primary_key_value>
+        /// MsSql/PgSql: URL template: <path>/<entityName>/<primary_key_column_name>/<primary_key_value>
         /// URL MUST NOT contain a queryString
         /// URL example: api/Books </param>
         [HttpPatch]
@@ -213,7 +213,8 @@ namespace Azure.DataGateway.Service.Controllers
         {
             try
             {
-                (string entityName, string primaryKeyRoute) = _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(route);
+                (string entityName, string primaryKeyRoute) =
+                    _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(route);
                 // Utilizes C#8 using syntax which does not require brackets.
                 using JsonDocument? result
                     = await _restService.ExecuteAsync(

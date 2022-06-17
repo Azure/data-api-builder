@@ -157,24 +157,27 @@ namespace Azure.DataGateway.Service.Services
         /// from the provided string that starts with the REST
         /// path. If the provided string does not start with
         /// the given REST path, we throw an exception. We then
-        /// return the entity name as the string up unti the next
+        /// return the entity name as the string up until the next
         /// '/' if one exists, and the primary key as the substring
         /// following the '/'.
         /// </summary>
-        /// <param name="path">String containing path + entity name.</param>
+        /// <param name="route">String containing path + entity name.</param>
         /// <returns>entity name after path.</returns>
         /// <exception cref="DataGatewayException"></exception>
         public (string, string) GetEntityNameAndPrimaryKeyRouteFromRoute(string route)
         {
-            if (_sqlMetadataProvider.TryGetRestPath(out string path) && !route.StartsWith(path.TrimStart('/')))
+            string path = _sqlMetadataProvider.RestPath.TrimStart('/');
+            if (!route.StartsWith(path))
             {
-                throw new DataGatewayException(message: $"Invalid Path: {route}.",
+                throw new DataGatewayException(message: $"Invalid Path for route: {route}.",
                                                statusCode: HttpStatusCode.BadRequest,
                                                subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
 
-            // get substring from after the end of path to the end of string
-            string entityName = string.IsNullOrEmpty(path) ? route : route.Substring(path.Length);
+            // entity name comes after the path, so get substring starting from
+            // the end of path. If path is not empty we add +1 to length of path
+            // to account for the '/' following the path.
+            string entityName = string.IsNullOrEmpty(path) ? route : route.Substring(path.Length + 1);
             string primaryKeyRoute = string.Empty;
             // a '/' remaining in this substring means we have a primary key route
             if (entityName.Contains('/'))

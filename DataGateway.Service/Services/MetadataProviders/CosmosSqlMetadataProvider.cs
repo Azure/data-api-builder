@@ -22,6 +22,8 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
         /// <inheritdoc />
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } = new(StringComparer.InvariantCultureIgnoreCase);
 
+        public string RestPath => throw new NotImplementedException();
+
         public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem)
         {
             _fileSystem = fileSystem;
@@ -142,11 +144,6 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
         }
 
         public IEnumerable<KeyValuePair<string, DatabaseObject>> GetEntityNamesAndDbObjects()
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool TryGetRestPath(out string path)
         {
             throw new NotImplementedException();
         }

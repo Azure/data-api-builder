@@ -50,8 +50,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
                     IEnumerable<string> rolesAllowedForRead = IAuthorizationResolver.GetRolesForAction(entityName, actionName: "read", entityPermissionsMap);
 
-                    queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, returnType, inputTypes, entity, rolesAllowedForRead));
-                    queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, rolesAllowedForRead));
+                    if (rolesAllowedForRead.Count() > 0)
+                    {
+                        queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, returnType, inputTypes, entity, rolesAllowedForRead));
+                        queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, rolesAllowedForRead));
+                    }
                 }
             }
 

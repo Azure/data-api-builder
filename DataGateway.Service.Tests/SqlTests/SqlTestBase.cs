@@ -90,7 +90,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await _sqlMetadataProvider.InitializeAsync();
 
             //Initialize the authorization resolver object
-            _authZResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
+            _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
         }
 
         protected static void SetUpSQLMetadataProvider()

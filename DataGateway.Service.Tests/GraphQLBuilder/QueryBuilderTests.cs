@@ -186,7 +186,7 @@ type Table @model(name: ""table"") {
             Assert.AreEqual(0, field.Arguments.Count, "No query fields on cardinality of One relationshop");
         }
 
-        private static ObjectTypeDefinitionNode GetQueryNode(DocumentNode queryRoot)
+        public static ObjectTypeDefinitionNode GetQueryNode(DocumentNode queryRoot)
         {
             return (ObjectTypeDefinitionNode)queryRoot.Definitions.First(d => d is ObjectTypeDefinitionNode node && node.Name.Value == "Query");
         }

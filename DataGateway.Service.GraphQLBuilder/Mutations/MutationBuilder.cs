@@ -34,13 +34,22 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
                     // Get Roles for mutation actionType on Entity, number of roles could be zero.
                     IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForAction(dbEntityName, actionName: "create", entityPermissionsMap);
-                    mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entity, rolesAllowedForMutation));
+                    if (rolesAllowedForMutation.Count() > 0)
+                    {
+                        mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entity, rolesAllowedForMutation));
+                    }
 
                     rolesAllowedForMutation = IAuthorizationResolver.GetRolesForAction(dbEntityName, actionName: "update", entityPermissionsMap);
-                    mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entity, databaseType, rolesAllowedForMutation));
+                    if (rolesAllowedForMutation.Count() > 0)
+                    {
+                        mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entity, databaseType, rolesAllowedForMutation));
+                    }
 
                     rolesAllowedForMutation = IAuthorizationResolver.GetRolesForAction(dbEntityName, actionName: "delete", entityPermissionsMap);
-                    mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entity, rolesAllowedForMutation));
+                    if (rolesAllowedForMutation.Count() > 0)
+                    {
+                        mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entity, rolesAllowedForMutation));
+                    }
                 }
             }
 

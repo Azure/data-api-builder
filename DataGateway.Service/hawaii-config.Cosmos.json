@@ -1,12 +1,13 @@
 {
-  "$schema": "../../project-hawaii/playground/hawaii.draft-01.schema.json",
+  "$schema": "../schemas/hawaii.draft-01.schema.json",
   "data-source": {
     "database-type": "cosmos",
     "connection-string": "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=="
   },
   "cosmos": {
     "database": "graphqldb",
-    "resolver-config-file": "cosmos-config.json"
+    "container": "planet",
+    "schema": "schema.gql"
   },
   "runtime": {
     "rest": {
@@ -18,10 +19,10 @@
       "allow-introspection": true
     },
     "host": {
-      "mode": "Development",
+      "mode": "development",
       "cors": {
-        "origins": [ "1", "2" ],
-        "allow-credentials": true
+        "origins": [ "http://localhost:3000" ],
+        "allow-credentials": false
       },
       "authentication": {
         "provider": "EasyAuth"
@@ -30,10 +31,22 @@
   },
   "entities": {
     "Planet": {
-      "source": "planet"
+      "source": "planet",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
+        }
+      ]
     },
     "Character": {
-      "source": "character"
-     }
+      "source": "planet",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
+        }
+      ]
+    }
   }
 }

@@ -33,8 +33,7 @@ namespace Azure.DataGateway.Config
             "$schema": "",
             "data-source": {
                 "database-type": "mssql",
-                "connection-string": "",
-                "resolver-config-file": ""
+                "connection-string": ""
             },
             "mssql": {},
             "runtime": {
@@ -181,5 +180,8 @@ namespace Azure.DataGateway.Config
                 return HostGlobalSettings.Authentication;
             }
         }
+
+        [JsonIgnore]
+        public string DatabaseTypeNotSupportedMessage => $"The provided database-type value: {DatabaseType} is currently not supported. Please check the configuration file.";
     }
 }

@@ -6,8 +6,10 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -114,8 +116,10 @@ namespace Azure.DataGateway.Service.Resolvers
         public static string MakeCursorFromJsonElement(JsonElement element,
                                                         List<string> primaryKey,
                                                         List<OrderByColumn>? orderByColumns,
+                                                        string entityName = "",
                                                         string schemaName = "",
-                                                        string tableName = "")
+                                                        string tableName = "",
+                                                        ISqlMetadataProvider? sqlMetadataProvider = null)
         {
             List<PaginationColumn> cursorJson = new();
             JsonSerializerOptions options = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
@@ -134,10 +138,11 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 foreach (OrderByColumn column in orderByColumns)
                 {
-                    object value = ResolveJsonElementToScalarVariable(element.GetProperty(column.ColumnName));
+                    string? exposedColumnName = GetExposedColumnName(entityName, column.ColumnName, sqlMetadataProvider);
+                    object value = ResolveJsonElementToScalarVariable(element.GetProperty(exposedColumnName));
                     cursorJson.Add(new PaginationColumn(tableSchema: schemaName,
                                                         tableName: tableName,
-                                                        column.ColumnName,
+                                                        exposedColumnName,
                                                         value,
                                                         tableAlias: null,
                                                         direction: column.Direction));
@@ -159,14 +164,14 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 if (remainingKeys.Contains(column))
                 {
+                    string? exposedColumnName = GetExposedColumnName(entityName, column, sqlMetadataProvider);
                     cursorJson.Add(new PaginationColumn(tableSchema: schemaName,
                                                         tableName: tableName,
-                                                        column,
+                                                        exposedColumnName,
                                                         ResolveJsonElementToScalarVariable(element.GetProperty(column)),
-                                                        direction: OrderByDir.Asc));
+                                                        direction: OrderBy.ASC));
                     remainingKeys.Remove(column);
                 }
-
             }
 
             return Base64Encode(JsonSerializer.Serialize(cursorJson, options));
@@ -193,7 +198,10 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Validate the value associated with $after, and return list of orderby columns
         /// it represents.
         /// </summary>
-        public static IEnumerable<PaginationColumn> ParseAfterFromJsonString(string afterJsonString, PaginationMetadata paginationMetadata)
+        public static IEnumerable<PaginationColumn> ParseAfterFromJsonString(string afterJsonString,
+                                                                             PaginationMetadata paginationMetadata,
+                                                                             string entityName = "",
+                                                                             ISqlMetadataProvider? sqlMetadataProvider = null)
         {
             IEnumerable<PaginationColumn>? after;
             try
@@ -209,7 +217,24 @@ namespace Azure.DataGateway.Service.Resolvers
                 Dictionary<string, PaginationColumn> afterDict = new();
                 foreach (PaginationColumn column in after)
                 {
+                    // REST calls this function with a non null sqlMetadataProvider
+                    // which will get the exposed name for safe messaging in the response.
+                    // Since we are looking for pagination columns from the $after query
+                    // param, we expect this column to exist as the $after query param
+                    // was formed from a previous response with a nextLink. If the nextLink
+                    // has been modified and backingColumn is null we throw exception.
+                    string backingColumnName = GetBackingColumnName(entityName, column.ColumnName, sqlMetadataProvider);
+                    if (backingColumnName is null)
+                    {
+                        throw new DataGatewayException(message: $"Cursor for Pagination Predicates is not well formed, {column.ColumnName} is not valid.",
+                                                       statusCode: HttpStatusCode.BadRequest,
+                                                       subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                    }
+
+                    // holds exposed name mapped to exposed pagination column
                     afterDict.Add(column.ColumnName, column);
+                    // overwrite with backing column's name for query generation
+                    column.ColumnName = backingColumnName;
                 }
 
                 // verify that primary keys is a sub set of after's column names
@@ -218,9 +243,16 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 foreach (string pk in primaryKeys)
                 {
-                    if (!afterDict.ContainsKey(pk))
+                    // REST calls this function with a non null sqlMetadataProvider
+                    // which will get the exposed name for safe messaging in the response.
+                    // Since we are looking for primary keys we expect these columns to
+                    // exist.
+                    string safePK = GetExposedColumnName(entityName, pk, sqlMetadataProvider);
+                    if (!afterDict.ContainsKey(safePK))
                     {
-                        throw new ArgumentException($"Cursor for Pagination Predicates is not well formed, missing primary key column: {pk}");
+                        throw new DataGatewayException(message: $"Cursor for Pagination Predicates is not well formed, missing primary key column: {safePK}",
+                                                       statusCode: HttpStatusCode.BadRequest,
+                                                       subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }
                 }
 
@@ -230,13 +262,20 @@ namespace Azure.DataGateway.Service.Resolvers
                 SqlQueryStructure structure = paginationMetadata.Structure!;
                 foreach (OrderByColumn column in structure.OrderByColumns)
                 {
-                    string columnName = column.ColumnName;
+                    string columnName = GetExposedColumnName(entityName, column.ColumnName, sqlMetadataProvider);
 
                     if (!afterDict.ContainsKey(columnName) ||
                         afterDict[columnName].Direction != column.Direction)
                     {
-                        throw new ArgumentException(
-                            $"Could not match order by column {columnName} with a column in the pagination token with the same name and direction.");
+                        // REST calls this function with a non null sqlMetadataProvider
+                        // which will get the exposed name for safe messaging in the response.
+                        // Since we are looking for valid orderby columns we expect
+                        // these columns to exist.
+                        string safeColumnName = GetExposedColumnName(entityName, columnName, sqlMetadataProvider);
+                        throw new DataGatewayException(
+                                    message: $"Could not match order by column {safeColumnName} with a column in the pagination token with the same name and direction.",
+                                    statusCode: HttpStatusCode.BadRequest,
+                                    subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }
 
                     orderByColumnCount++;
@@ -273,7 +312,10 @@ namespace Azure.DataGateway.Service.Resolvers
                     // consistency in using the pagination token opaquely
                     Console.Error.WriteLine(e);
                     string notValidString = $"{afterJsonString} is not a valid pagination token.";
-                    throw new DataGatewayException(notValidString, HttpStatusCode.BadRequest, DataGatewayException.SubStatusCodes.BadRequest);
+                    throw new DataGatewayException(
+                        message: notValidString,
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
                 else
                 {
@@ -282,6 +324,46 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return after;
+        }
+
+        /// <summary>
+        /// Helper function will return the backing column name, which is
+        /// what is used to form pagination columns in the query.
+        /// </summary>
+        /// <param name="entityName">String holds the name of the entity.</param>
+        /// <param name="exposedColumnName">String holds the name of the exposed column.</param>
+        /// <param name="sqlMetadataProvider">Holds the sqlmetadataprovider for REST requests,
+        /// which provides mechanisms to resolve exposedName -> backingColumnName and
+        /// backingColumnName -> exposedName.</param>
+        /// <returns>the backing column name.</returns>
+        /// <returns></returns>
+        private static string GetBackingColumnName(string entityName, string exposedColumnName, ISqlMetadataProvider? sqlMetadataProvider)
+        {
+            if (sqlMetadataProvider is not null)
+            {
+                sqlMetadataProvider.TryGetBackingColumn(entityName, exposedColumnName, out exposedColumnName!);
+            }
+
+            return exposedColumnName;
+        }
+
+        /// <summary>
+        /// Helper function will return the exposed column name, which is
+        /// what is used to return a cursor in the response, since we only
+        /// use the exposed names in requests and responses.
+        /// </summary>
+        /// <param name="entityName">String holds the name of the entity.</param>
+        /// <param name="backingColumn">String holds the name of the backing column.</param>
+        /// <param name="sqlMetadataProvider">Holds the sqlmetadataprovider for REST requests.</param>
+        /// <returns>the exposed name</returns>
+        private static string GetExposedColumnName(string entityName, string backingColumn, ISqlMetadataProvider? sqlMetadataProvider)
+        {
+            if (sqlMetadataProvider is not null)
+            {
+                sqlMetadataProvider.TryGetExposedColumnName(entityName, backingColumn, out backingColumn!);
+            }
+
+            return backingColumn;
         }
 
         /// <summary>

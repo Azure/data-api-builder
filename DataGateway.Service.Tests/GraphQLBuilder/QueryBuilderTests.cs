@@ -11,6 +11,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder
     [TestClass]
     public class QueryBuilderTests
     {
+        private const int NUMBER_OF_ARGUMENTS = 4;
         private static Entity GenerateEmptyEntity()
         {
             return new Entity("dbo.entity", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
@@ -30,7 +31,7 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode queryRoot = QueryBuilder.Build(root, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
+            DocumentNode queryRoot = QueryBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"foo_by_pk"));
@@ -50,16 +51,17 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode queryRoot = QueryBuilder.Build(root, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
+            DocumentNode queryRoot = QueryBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"foo_by_pk");
             IReadOnlyList<InputValueDefinitionNode> args = field.Arguments;
 
-            Assert.AreEqual(1, args.Count);
-            Assert.IsTrue(args.All(a => a.Name.Value == "id"));
+            Assert.AreEqual(2, args.Count);
+            Assert.IsTrue(args.Any(a => a.Name.Value == "id"));
             Assert.AreEqual("ID", args.First(a => a.Name.Value == "id").Type.InnerType().NamedType().Name.Value);
-            Assert.IsTrue(args.First(a => a.Name.Value == "id").Type.IsNonNullType());
+            Assert.IsTrue(args.Any(a => a.Name.Value == "_partitionKeyValue"));
+            Assert.AreEqual("String", args.First(a => a.Name.Value == "_partitionKeyValue").Type.InnerType().NamedType().Name.Value);
         }
 
         [TestMethod]
@@ -76,7 +78,7 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode queryRoot = QueryBuilder.Build(root, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
+            DocumentNode queryRoot = QueryBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"foos"));
@@ -96,7 +98,7 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode queryRoot = QueryBuilder.Build(root, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
+            DocumentNode queryRoot = QueryBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             string returnTypeName = query.Fields.First(f => f.Name.Value == $"foos").Type.NamedType().Name.Value;
@@ -122,11 +124,31 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode queryRoot = QueryBuilder.Build(root, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
+            DocumentNode queryRoot = QueryBuilder.Build(root, DatabaseType.mssql, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             FieldDefinitionNode byIdQuery = query.Fields.First(f => f.Name.Value == $"foo_by_pk");
             Assert.AreEqual("foo_id", byIdQuery.Arguments[0].Name.Value);
+        }
+
+        [TestMethod]
+        public void PrimaryKeyFieldAsQueryInputCosmos()
+        {
+            string gql =
+                @"
+type Foo @model {
+    foo_id: Int!
+}
+";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
+            DocumentNode queryRoot = QueryBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
+
+            ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
+            FieldDefinitionNode byIdQuery = query.Fields.First(f => f.Name.Value == $"foo_by_pk");
+            Assert.AreEqual("id", byIdQuery.Arguments[0].Name.Value);
+            Assert.AreEqual("_partitionKeyValue", byIdQuery.Arguments[1].Name.Value);
         }
 
         [TestMethod]
@@ -151,12 +173,13 @@ type Table @model(name: ""table"") {
             Assert.AreNotEqual(node, updatedNode);
 
             FieldDefinitionNode field = updatedNode.Fields[0];
-            Assert.AreEqual(4, field.Arguments.Count, "Query fields should have 4 arguments");
+            Assert.AreEqual(NUMBER_OF_ARGUMENTS, field.Arguments.Count, $"Query fields should have {NUMBER_OF_ARGUMENTS} arguments");
             Assert.AreEqual(QueryBuilder.PAGE_START_ARGUMENT_NAME, field.Arguments[0].Name.Value, "First argument should be the page start");
             Assert.AreEqual(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME, field.Arguments[1].Name.Value, "Second argument is pagination token");
             Assert.AreEqual(QueryBuilder.FILTER_FIELD_NAME, field.Arguments[2].Name.Value, "Third argument is typed filter field");
-            Assert.AreEqual("FkTableFilter", field.Arguments[2].Type.NamedType().Name.Value, "Typed filter field should be filter type of target object type");
-            Assert.AreEqual(QueryBuilder.ODATA_FILTER_FIELD_NAME, field.Arguments[3].Name.Value, "Forth field is odata query field");
+            Assert.AreEqual("FkTableFilterInput", field.Arguments[2].Type.NamedType().Name.Value, "Typed filter field should be filter type of target object type");
+            Assert.AreEqual(QueryBuilder.ORDER_BY_FIELD_NAME, field.Arguments[3].Name.Value, "Fourth argument is typed order by field");
+            Assert.AreEqual("FkTableOrderByInput", field.Arguments[3].Type.NamedType().Name.Value, "Typed order by field should be order by type of target object type");
         }
 
         [TestMethod]

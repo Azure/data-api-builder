@@ -1,7 +1,7 @@
 using Azure.DataGateway.Config;
 using HotChocolate.Language;
 using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLNaming;
-using static Azure.DataGateway.Service.GraphQLBuilder.Utils;
+using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLUtils;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 {
@@ -22,7 +22,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
                     mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entity));
                     mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entity, databaseType));
-                    mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entity));
+                    mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entity, databaseType));
                 }
             }
 

@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -35,6 +37,28 @@ type Foo @model {
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"createFoo"));
+        }
+
+        [TestMethod]
+        [TestCategory("Mutation Builder - Create")]
+        public void WillFailToCreateMutationWhenUnrecognisedTypeProvided()
+        {
+            string gql =
+                @"
+type Foo @model {
+    id: ID!
+    bar: Date!
+}
+                ";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
+            DataGatewayException ex = Assert.ThrowsException<DataGatewayException>(
+                () => MutationBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }),
+                "The type Date is not a known GraphQL type, and cannot be used in this schema."
+            );
+            Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+            Assert.AreEqual(DataGatewayException.SubStatusCodes.GraphQLMapping, ex.SubStatusCode);
         }
 
         [TestMethod]
@@ -463,10 +487,13 @@ type Foo @model {
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"deleteFoo");
-            Assert.AreEqual(1, field.Arguments.Count);
+            Assert.AreEqual(2, field.Arguments.Count);
             Assert.AreEqual("id", field.Arguments[0].Name.Value);
             Assert.AreEqual("ID", field.Arguments[0].Type.NamedType().Name.Value);
             Assert.IsTrue(field.Arguments[0].Type.IsNonNullType());
+            Assert.AreEqual("_partitionKeyValue", field.Arguments[1].Name.Value);
+            Assert.AreEqual("String", field.Arguments[1].Type.NamedType().Name.Value);
+            Assert.IsTrue(field.Arguments[1].Type.IsNonNullType());
         }
 
         [TestMethod]
@@ -509,11 +536,12 @@ type Foo @model {
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"updateFoo");
-            Assert.AreEqual(2, field.Arguments.Count);
+            Assert.AreEqual(3, field.Arguments.Count);
 
-            InputObjectTypeDefinitionNode argType = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is INamedSyntaxNode node && node.Name == field.Arguments[1].Type.NamedType().Name);
-            Assert.AreEqual(1, argType.Fields.Count);
-            Assert.AreEqual("bar", argType.Fields[0].Name.Value);
+            InputObjectTypeDefinitionNode argType = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is INamedSyntaxNode node && node.Name == field.Arguments[2].Type.NamedType().Name);
+            Assert.AreEqual(2, argType.Fields.Count);
+            Assert.AreEqual("id", argType.Fields[0].Name.Value);
+            Assert.AreEqual("bar", argType.Fields[1].Name.Value);
         }
 
         [TestMethod]
@@ -535,10 +563,13 @@ type Foo @model {
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"updateFoo");
-            Assert.AreEqual(2, field.Arguments.Count);
+            Assert.AreEqual(3, field.Arguments.Count);
             Assert.AreEqual("id", field.Arguments[0].Name.Value);
             Assert.AreEqual("ID", field.Arguments[0].Type.NamedType().Name.Value);
             Assert.IsTrue(field.Arguments[0].Type.IsNonNullType());
+            Assert.AreEqual("_partitionKeyValue", field.Arguments[1].Name.Value);
+            Assert.AreEqual("String", field.Arguments[1].Type.NamedType().Name.Value);
+            Assert.IsTrue(field.Arguments[1].Type.IsNonNullType());
         }
 
         [TestMethod]

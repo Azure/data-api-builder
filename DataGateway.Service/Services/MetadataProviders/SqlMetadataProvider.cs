@@ -7,11 +7,11 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
-using Microsoft.Extensions.Options;
 using Npgsql;
 
 namespace Azure.DataGateway.Service.Services
@@ -25,7 +25,9 @@ namespace Azure.DataGateway.Service.Services
         where DataAdapterT : DbDataAdapter, new()
         where CommandT : DbCommand, new()
     {
-        public FilterParser ODataFilterParser { get; } = new();
+        // use for more than just filter parsing
+        // rename to _oDataParser
+        // tracked in https://github.com/Azure/hawaii-gql/issues/486
         private FilterParser _oDataFilterParser = new();
 
         private readonly DatabaseType _databaseType;
@@ -45,40 +47,54 @@ namespace Azure.DataGateway.Service.Services
 
         protected DataSet EntitiesDataSet { get; init; }
 
+        private Dictionary<string, Dictionary<string, string>> EntityBackingColumnsToExposedNames { get; } = new();
+
+        private Dictionary<string, Dictionary<string, string>> EntityExposedNamesToBackingColumnNames { get; } = new();
+
         /// <summary>
         /// Maps an entity name to a DatabaseObject.
         /// </summary>
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } =
-            new(StringComparer.InvariantCultureIgnoreCase);
+            new(StringComparer.InvariantCulture);
 
         public SqlMetadataProvider(
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,
+            RuntimeConfigProvider runtimeConfigProvider,
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder)
         {
-            runtimeConfigPath.CurrentValue.
-                ExtractConfigValues(
-                    out _databaseType,
-                    out string connectionString,
-                    out _entities);
-            ConnectionString = connectionString;
+            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
+
+            _databaseType = runtimeConfig.DatabaseType;
+            _entities = runtimeConfig.Entities;
+            ConnectionString = runtimeConfig.ConnectionString;
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;
+
         }
 
-        /// <summary>
-        /// Obtains the underlying database type.
-        /// </summary>
-        /// <returns></returns>
+        /// <inheritdoc />
+        public FilterParser GetODataFilterParser()
+        {
+            return _oDataFilterParser;
+        }
+
+        /// <inheritdoc />
         public DatabaseType GetDatabaseType()
         {
             return _databaseType;
         }
 
         /// <summary>
-        /// Obtains the underlying source object's schema name.
+        /// Obtains the underlying query builder.
         /// </summary>
+        /// <returns></returns>
+        public IQueryBuilder GetQueryBuilder()
+        {
+            return SqlQueryBuilder;
+        }
+
+        /// <inheritdoc />
         public virtual string GetSchemaName(string entityName)
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
@@ -89,9 +105,7 @@ namespace Azure.DataGateway.Service.Services
             return databaseObject!.SchemaName;
         }
 
-        /// <summary>
-        /// Obtains the underlying source object's name.
-        /// </summary>
+        /// <inheritdoc />
         public string GetDatabaseObjectName(string entityName)
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
@@ -114,11 +128,30 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <inheritdoc />
+        public bool TryGetExposedColumnName(string entityName, string backingFieldName, out string? name)
+        {
+            return EntityBackingColumnsToExposedNames[entityName].TryGetValue(backingFieldName, out name);
+        }
+
+        /// <inheritdoc />
+        public bool TryGetBackingColumn(string entityName, string field, out string? name)
+        {
+            return EntityExposedNamesToBackingColumnNames[entityName].TryGetValue(field, out name);
+        }
+
+        /// <inheritdoc />
+        public IEnumerable<KeyValuePair<string, DatabaseObject>> GetEntityNamesAndDbObjects()
+        {
+            return EntityToDatabaseObject.ToList();
+        }
+
+        /// <inheritdoc />
         public async Task InitializeAsync()
         {
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
             GenerateDatabaseObjectForEntities();
             await PopulateTableDefinitionForEntities();
+            GenerateExposedToBackingColumnMapsForEntities();
             ProcessEntityPermissions();
             InitFilterParser();
             timer.Stop();
@@ -457,6 +490,44 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
+        /// Generate the mappings of exposed names to
+        /// backing columns, and of backing columns to
+        /// exposed names. Used to generate EDM Model using
+        /// the exposed names, and to translate between
+        /// exposed name and backing column (or the reverse)
+        /// when needed while processing the request.
+        /// </summary>
+        private void GenerateExposedToBackingColumnMapsForEntities()
+        {
+            foreach (string entityName in _entities.Keys)
+            {
+                Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
+                EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
+                EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
+                foreach (string column in EntityToDatabaseObject[entityName].TableDefinition.Columns.Keys)
+                {
+                    if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(column) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(column))
+                    {
+                        EntityBackingColumnsToExposedNames[entityName].Add(column, column);
+                        EntityExposedNamesToBackingColumnNames[entityName].Add(column, column);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Obtains the underlying mapping that belongs
+        /// to a given entity.
+        /// </summary>
+        /// <param name="entityName">entity whose map we get.</param>
+        /// <returns>mapping belonging to eneity.</returns>
+        private Dictionary<string, string>? GetMappingForEntity(string entityName)
+        {
+            _entities.TryGetValue(entityName, out Entity? entity);
+            return entity is not null ? entity.Mappings : null;
+        }
+
+        /// <summary>
         /// Processes permissions for all the entities.
         /// </summary>
         private void ProcessEntityPermissions()
@@ -469,7 +540,7 @@ namespace Azure.DataGateway.Service.Services
 
         private void InitFilterParser()
         {
-            ODataFilterParser.BuildModel(EntityToDatabaseObject.Values);
+            _oDataFilterParser.BuildModel(this);
         }
 
         /// <summary>
@@ -692,6 +763,12 @@ namespace Azure.DataGateway.Service.Services
             IEnumerable<TableDefinition> tablesToBePopulatedWithFK =
                 FindAllTablesWhoseForeignKeyIsToBeRetrieved(schemaNames, tableNames);
 
+            // No need to do any further work if there are no FK to be retrieved
+            if (tablesToBePopulatedWithFK.Count() == 0)
+            {
+                return;
+            }
+
             // Build the query required to get the foreign key information.
             string queryForForeignKeyInfo =
                 ((BaseSqlQueryBuilder)SqlQueryBuilder).BuildForeignKeyInfoQuery(tableNames.Count());
@@ -881,6 +958,19 @@ namespace Azure.DataGateway.Service.Services
                 }
             }
         }
+
+        /// <summary>
+        /// Retrieving the partition key path, for Cosmos only
+        /// </summary>
+        public string? GetPartitionKeyPath(string database, string container)
+            => throw new NotImplementedException();
+
+        /// <summary>
+        /// Setting the partition key path, for Cosmos only
+        /// </summary>
+        public void SetPartitionKeyPath(string database, string container, string partitionKeyPath)
+            => throw new NotImplementedException();
+
     }
 }
 

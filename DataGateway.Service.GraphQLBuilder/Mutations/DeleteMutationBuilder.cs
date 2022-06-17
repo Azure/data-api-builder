@@ -2,15 +2,15 @@ using Azure.DataGateway.Config;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLNaming;
-using static Azure.DataGateway.Service.GraphQLBuilder.Utils;
+using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLUtils;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 {
     internal static class DeleteMutationBuilder
     {
-        public static FieldDefinitionNode Build(NameNode name, ObjectTypeDefinitionNode objectTypeDefinitionNode, Entity configEntity)
+        public static FieldDefinitionNode Build(NameNode name, ObjectTypeDefinitionNode objectTypeDefinitionNode, Entity configEntity, DatabaseType databaseType)
         {
-            List<FieldDefinitionNode> idFields = FindPrimaryKeyFields(objectTypeDefinitionNode);
+            List<FieldDefinitionNode> idFields = FindPrimaryKeyFields(objectTypeDefinitionNode, databaseType);
             string description;
             if (idFields.Count > 1)
             {

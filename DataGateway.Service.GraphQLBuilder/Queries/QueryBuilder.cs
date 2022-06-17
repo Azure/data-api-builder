@@ -3,7 +3,7 @@ using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLNaming;
-using static Azure.DataGateway.Service.GraphQLBuilder.Utils;
+using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLUtils;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 {
@@ -16,9 +16,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         public const string PAGE_START_ARGUMENT_NAME = "first";
         public const string PAGINATION_OBJECT_TYPE_SUFFIX = "Connection";
         public const string FILTER_FIELD_NAME = "_filter";
-        public const string ODATA_FILTER_FIELD_NAME = "_filterOData";
+        public const string ORDER_BY_FIELD_NAME = "orderBy";
+        public const string PARTITION_KEY_FIELD_NAME = "_partitionKeyValue";
+        public const string ID_FIELD_NAME = "id";
 
-        public static DocumentNode Build(DocumentNode root, IDictionary<string, Entity> entities, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
+        public static DocumentNode Build(DocumentNode root, DatabaseType databaseType, IDictionary<string, Entity> entities, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
         {
             List<FieldDefinitionNode> queryFields = new();
             List<ObjectTypeDefinitionNode> returnTypes = new();
@@ -35,7 +37,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                     returnTypes.Add(returnType);
 
                     queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, returnType, inputTypes, entity));
-                    queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name));
+                    queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseType));
                 }
             }
 
@@ -47,10 +49,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             return new(definitionNodes);
         }
 
-        private static FieldDefinitionNode GenerateByPKQuery(ObjectTypeDefinitionNode objectTypeDefinitionNode, NameNode name)
+        private static FieldDefinitionNode GenerateByPKQuery(ObjectTypeDefinitionNode objectTypeDefinitionNode, NameNode name, DatabaseType databaseType)
         {
             IEnumerable<FieldDefinitionNode> primaryKeyFields =
-                FindPrimaryKeyFields(objectTypeDefinitionNode);
+                FindPrimaryKeyFields(objectTypeDefinitionNode, databaseType);
             List<InputValueDefinitionNode> inputValues = new();
 
             foreach (FieldDefinitionNode primaryKeyField in primaryKeyFields)
@@ -83,32 +85,39 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         {
             string filterInputName = InputTypeBuilder.GenerateObjectInputFilterName(objectTypeDefinitionNode.Name.Value);
 
-            if (!inputTypes.ContainsKey(objectTypeDefinitionNode.Name.Value))
+            if (!inputTypes.ContainsKey(filterInputName))
             {
-                InputTypeBuilder.GenerateInputTypeForObjectType(objectTypeDefinitionNode, inputTypes);
+                InputTypeBuilder.GenerateFilterInputTypeForObjectType(objectTypeDefinitionNode, inputTypes);
+            }
+
+            string orderByInputName = InputTypeBuilder.GenerateObjectInputOrderByName(objectTypeDefinitionNode.Name.Value);
+
+            if (!inputTypes.ContainsKey(orderByInputName))
+            {
+                InputTypeBuilder.GenerateOrderByInputTypeForObjectType(objectTypeDefinitionNode, inputTypes);
             }
 
             // Query field for the parent object type
             // Generates a file like:
-            //    books(first: Int, after: String, _filter: BooksFilterInput, _filterOData: String): BooksConnection!
+            //    books(first: Int, after: String, _filter: BooksFilterInput, orderBy: BooksOrderByInput): BooksConnection!
             return new(
                 location: null,
                 Pluralize(name, entity),
                 new StringValueNode($"Get a list of all the {name} items from the database"),
-                QueryArgumentsForField(filterInputName),
+                QueryArgumentsForField(filterInputName, orderByInputName),
                 new NonNullTypeNode(new NamedTypeNode(returnType.Name)),
                 new List<DirectiveNode>()
             );
         }
 
-        private static List<InputValueDefinitionNode> QueryArgumentsForField(string filterInputName)
+        private static List<InputValueDefinitionNode> QueryArgumentsForField(string filterInputName, string orderByInputName)
         {
             return new()
             {
                 new(location: null, new NameNode(PAGE_START_ARGUMENT_NAME), description: new StringValueNode("The number of items to return from the page start point"), new IntType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
                 new(location: null, new NameNode(PAGINATION_TOKEN_ARGUMENT_NAME), new StringValueNode("A pagination token from a previous query to continue through a paginated list"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
                 new(location: null, new NameNode(FILTER_FIELD_NAME), new StringValueNode("Filter options for query"), new NamedTypeNode(filterInputName), defaultValue: null, new List<DirectiveNode>()),
-                new(location: null, new NameNode(ODATA_FILTER_FIELD_NAME), new StringValueNode("Filter options for query expressed as OData query language"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>())
+                new(location: null, new NameNode(ORDER_BY_FIELD_NAME), new StringValueNode("Ordering options for query"), new NamedTypeNode(orderByInputName), defaultValue: null, new List<DirectiveNode>()),
             };
         }
 
@@ -126,9 +135,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
                 string target = RelationshipDirectiveType.Target(field);
 
-                InputObjectTypeDefinitionNode input = inputObjects[target];
+                string targetFilterInputName = InputTypeBuilder.GenerateObjectInputFilterName(target);
+                string targetOrderByInputName = InputTypeBuilder.GenerateObjectInputOrderByName(target);
 
-                List<InputValueDefinitionNode> args = QueryArgumentsForField(input.Name.Value);
+                List<InputValueDefinitionNode> args = QueryArgumentsForField(targetFilterInputName, targetOrderByInputName);
 
                 List<FieldDefinitionNode> fields = node.Fields.ToList();
                 fields[fields.FindIndex(f => f.Name == field.Name)] = field.WithArguments(args);

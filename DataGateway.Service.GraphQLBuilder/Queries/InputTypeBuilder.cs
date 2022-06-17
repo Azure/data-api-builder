@@ -1,49 +1,112 @@
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
+using Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes;
 using HotChocolate.Language;
 using HotChocolate.Types;
-using static Azure.DataGateway.Service.GraphQLBuilder.Utils;
+using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLUtils;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 {
     public static class InputTypeBuilder
     {
-        public static void GenerateInputTypeForObjectType(
+        public static void GenerateInputTypesForObjectType(ObjectTypeDefinitionNode node, IDictionary<string, InputObjectTypeDefinitionNode> inputTypes)
+        {
+            GenerateOrderByInputTypeForObjectType(node, inputTypes);
+            GenerateFilterInputTypeForObjectType(node, inputTypes);
+        }
+
+        public static void GenerateFilterInputTypeForObjectType(
             ObjectTypeDefinitionNode node,
             IDictionary<string, InputObjectTypeDefinitionNode> inputTypes
         )
         {
-            List<InputValueDefinitionNode> inputFields = GenerateInputFieldsForBuiltInFields(node, inputTypes);
+            List<InputValueDefinitionNode> inputFields = GenerateFilterInputFieldsForBuiltInFields(node, inputTypes);
             string filterInputName = GenerateObjectInputFilterName(node);
 
-            inputFields.Add(new(
+            GenerateInputTypeFromInputFields(inputTypes, inputFields, filterInputName, $"Filter input for {node.Name} GraphQL type");
+        }
+
+        internal static void GenerateOrderByInputTypeForObjectType(ObjectTypeDefinitionNode node, IDictionary<string, InputObjectTypeDefinitionNode> inputTypes)
+        {
+            List<InputValueDefinitionNode> inputFields = GenerateOrderByInputFieldsForBuiltInFields(node);
+            string orderByInputName = GenerateObjectInputOrderByName(node);
+
+            GenerateInputTypeFromInputFields(inputTypes, inputFields, orderByInputName, $"Order by input for {node.Name} GraphQL type");
+        }
+
+        private static List<InputValueDefinitionNode> GenerateOrderByInputFieldsForBuiltInFields(ObjectTypeDefinitionNode node)
+        {
+            List<InputValueDefinitionNode> inputFields = new();
+            foreach (FieldDefinitionNode field in node.Fields)
+            {
+                if (IsBuiltInType(field.Type))
+                {
+                    inputFields.Add(
+                        new(
+                            location: null,
+                            field.Name,
+                            new StringValueNode($"Order by options for {field.Name}"),
+                            new NamedTypeNode(OrderByType.EnumName),
+                            defaultValue: null,
+                            new List<DirectiveNode>())
+                        );
+                }
+                else
+                {
+                    string targetEntityName = RelationshipDirectiveType.Target(field);
+
+                    inputFields.Add(
+                        new(
+                            location: null,
+                            field.Name,
+                            new StringValueNode($"Order by options for {field.Name}"),
+                            new NamedTypeNode(GenerateObjectInputOrderByName(targetEntityName)),
+                            defaultValue: null,
+                            new List<DirectiveNode>())
+                        );
+                }
+
+            }
+
+            return inputFields;
+        }
+
+        private static void GenerateInputTypeFromInputFields(
+            IDictionary<string, InputObjectTypeDefinitionNode> inputTypes,
+            List<InputValueDefinitionNode> inputFields,
+            string inputTypeName,
+            string inputTypeDescription)
+        {
+            inputFields.Add(
+                new(
                     location: null,
                     new("and"),
                     new("Conditions to be treated as AND operations"),
-                    new ListTypeNode(new NamedTypeNode(filterInputName)),
+                    new ListTypeNode(new NamedTypeNode(inputTypeName)),
                     defaultValue: null,
                     new List<DirectiveNode>()));
 
-            inputFields.Add(new(
-                location: null,
-                new("or"),
-                new("Conditions to be treated as OR operations"),
-                new ListTypeNode(new NamedTypeNode(filterInputName)),
-                defaultValue: null,
-                new List<DirectiveNode>()));
-
-            inputTypes.Add(
-                node.Name.Value,
+            inputFields.Add(
                 new(
                     location: null,
-                    new NameNode(filterInputName),
-                    new StringValueNode($"Filter input for {node.Name} GraphQL type"),
+                    new("or"),
+                    new("Conditions to be treated as OR operations"),
+                    new ListTypeNode(new NamedTypeNode(inputTypeName)),
+                    defaultValue: null,
+                    new List<DirectiveNode>()));
+
+            inputTypes.Add(
+                inputTypeName,
+                new(
+                    location: null,
+                    new NameNode(inputTypeName),
+                    new StringValueNode(inputTypeDescription),
                     new List<DirectiveNode>(),
                     inputFields
                 )
             );
         }
 
-        private static List<InputValueDefinitionNode> GenerateInputFieldsForBuiltInFields(
+        private static List<InputValueDefinitionNode> GenerateFilterInputFieldsForBuiltInFields(
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
             IDictionary<string, InputObjectTypeDefinitionNode> inputTypes)
         {
@@ -90,7 +153,17 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             return inputFields;
         }
 
-        private static string GenerateObjectInputFilterName(INamedSyntaxNode node)
+        internal static string GenerateObjectInputOrderByName(string name)
+        {
+            return $"{name}OrderByInput";
+        }
+
+        private static string GenerateObjectInputOrderByName(ObjectTypeDefinitionNode node)
+        {
+            return GenerateObjectInputOrderByName(node.Name.Value);
+        }
+
+        private static string GenerateObjectInputFilterName(ObjectTypeDefinitionNode node)
         {
             return GenerateObjectInputFilterName(node.Name.Value);
         }

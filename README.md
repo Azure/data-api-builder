@@ -8,11 +8,21 @@ DataGateway provides a consistent, productive abstraction for building GraphQL a
 
 ### 1. Clone Repository
 
+
+**Runtime Engine**:
+
 Clone the repository with your preferred method or locally navigate to where you'd like the repository to be and clone with the following command, make sure you replace `<directory name>`
 
 ```bash
-git clone https://github.com/Azure/hawaii-gql.git <directory name>
+git clone https://github.com/Azure/hawaii-engine.git <directory name>
 ```
+
+**CLI-tool**:
+
+To make any changes to the CLI tool, clone the Hawaii-Cli repository: https://github.com/Azure/hawaii-cli.git
+
+For Installation of CLI tool, Refer [README:HAWAII-CLI](https://github.com/Azure/hawaii-cli#readme)
+
 
 ### 2. Configure Database Engine
 
@@ -25,9 +35,14 @@ The account should have access to all entities that are defined in the runtime c
 
 #### 2.2 Supply a `connection-string` for the respective `database-type`
 
-Project startup requires a connection string to be defined (**Note:** Dynamic config is out of scope of this initial startup guide).
+Project startup requires a config that can be generated using hawaii-cli.
+##### Use Cli-tool to Generate the config
+Below command will let you generate the config file with the required database-type and connection-string (**Note:** --name denotes name of the generated config, do not add extension).
+```
+hawaii init --name hawaii-config.XXX --database-type <<DBTYPE>> --connection-string <<CONNSTRING>>
+```
 
-In your editor of choice, locate template configuration files in the `DataGateway.Service` directory of the form `hawaii-config.XXX.json`.
+In your editor of choice, you can locate template configuration files in the `DataGateway.Service` directory of the form `hawaii-config.XXX.json`.
 
 Supply a value `connection-string` for the project to be able to connect the service to your database. These connection strings will be specific to the instance of the database that you are running. Example connection strings are provided for assistance.
 
@@ -95,7 +110,67 @@ Schema and data population files are included that are necessary for running sam
 - GraphQL schema file is `books.gql`
 - Resolver config: `sql-config.json`
 
-### 3. Configure Authentication
+#### 2.4. Configure Authentication
+
+**Cli-tool**:
+
+When we do `hawaii init`, it will automatically generate the default Host settings with default authentication(**Note:** --host-mode is an optional flag that takes in the environment: Production/Development. Updating other keys are not supported currently). Below is the default Host setting that is generated with host-mode as Development. by Default authentication-provider will be "EasyAuth".
+
+```json
+    "host": {
+      "mode": "development",
+      "cors": {
+        "origins": [],
+        "allow-credentials": true
+      },
+      "authentication": {
+        "provider": "EasyAuth",
+        "jwt": {
+          "audience": "",
+          "issuer": "",
+          "issuerkey": ""
+        }
+      }
+    }
+```
+
+#### Setting up Role and Actions
+
+Hawaii-cli allows us to specify role and actions for every entity using the --permission option. permissions can only be specified with add/update command.
+```
+hawaii add <<enity_name>> --source <<xxx>> --permissions "<<role>>:<<actions>>" --fields.include <<a,b,c>> --fields.exclude <<x,y,z>>
+```
+**NOTE:**
+`<<role>>` here can be **anonymous/authenticated**.
+`<<action>>` here can be any CRUD operations.(for multiple use ',' seperated values. Use "*" to specify all CRUD actions).
+
+Example:
+```
+hawaii add MY_ENTITY -s "my_source" --permissions "anonymous:read"
+hawaii update MY_ENTITY --permissions "authenticated:create,update"
+hawaii update MY_ENTITY --permissions "authenticated:delete" --fields.include "*" --fields.exclude "id,date" 
+```
+**Generated Config:**
+```
+"permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "update",
+            {
+              "action": "delete",
+              "fields": {
+                "include": [ "*" ],
+                "exclude": [ "id", "date" ]
+              }
+            }
+          ]
+```
 
 #### Easy Auth
 
@@ -137,6 +212,8 @@ Configure **Bearer token authentication** with identity providers like Azure AD.
   }
 ```
 
+
+
 HTTP requests must have the `Authorization` HTTP header set with the value `Bearer <JWT TOKEN>`. The token must be issued and signed for the DataGateway runtime.
 
 ### 4. Build and Run
@@ -166,7 +243,7 @@ HTTP requests must have the `Authorization` HTTP header set with the value `Bear
     d. By default, runtime will look for `hawaii-config.json`
 
 3. For any of the configuration file names determined for the environment, if there is another file with the `.overrides` suffix in the current directory, that overridden file name will instead be picked up.
-e.g. if both `hawaii-config.json` and `hawaii-config.overrides.json` are present, precedence will be given to `hawaii-config.overrides.json` - however, the runtime will still follow the above rules of precedence. 
+e.g. if both `hawaii-config.json` and `hawaii-config.overrides.json` are present, precedence will be given to `hawaii-config.overrides.json` - however, the runtime will still follow the above rules of precedence.
 e.g. When HAWAII_ENVIRONMENT is set as `Development` and if all three config files exist- `hawaii-config.Development.json`, `hawaii-config.json`, `hawaii-config.overrides.json`- the runtime will pick `hawaii-config.Development.json`.
 
 #### Command Line

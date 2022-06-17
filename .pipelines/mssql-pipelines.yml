@@ -15,6 +15,12 @@ jobs:
       buildConfiguration: 'Release'
 
   steps:
+  - task: UseDotNet@2
+    displayName: Setup .NET SDK v6.0.x
+    inputs:
+      packageType: sdk
+      version: 6.0.x
+
   - task: NuGetToolInstaller@1
 
   - task: NuGetCommand@2
@@ -77,6 +83,12 @@ jobs:
       SqlVersionCode: '15.0'
 
   steps:
+  - task: UseDotNet@2
+    displayName: Setup .NET SDK v6.0.x
+    inputs:
+      packageType: sdk
+      version: 6.0.x
+
   - task: NuGetToolInstaller@1
 
   - task: NuGetCommand@2
@@ -127,7 +139,7 @@ jobs:
       command: test
       arguments: '--filter "TestCategory=MsSql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
       projects: '**/*Tests/*.csproj'
-  
+
   - task: PublishCodeCoverageResults@1
     displayName: 'Publish code coverage'
     inputs:

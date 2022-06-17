@@ -14,5 +14,7 @@
     <MySQLVersion>2.1.5</MySQLVersion>
     <NetCoreAutorizationVersion>3.1.4</NetCoreAutorizationVersion>
     <HumanizerVersion>2.14.1</HumanizerVersion>
+    <SystemIOAbstractionsVersion>17.0.4</SystemIOAbstractionsVersion>
+    <NewtonsoftJsonVersion>13.0.1</NewtonsoftJsonVersion>
  </PropertyGroup>
 </Project>

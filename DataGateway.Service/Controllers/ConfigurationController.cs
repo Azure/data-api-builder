@@ -1,7 +1,5 @@
-using System.Collections.Generic;
 using Azure.DataGateway.Service.Configurations;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 
 namespace Azure.DataGateway.Service.Controllers
 {
@@ -9,50 +7,45 @@ namespace Azure.DataGateway.Service.Controllers
     [Route("[controller]")]
     public class ConfigurationController : Controller
     {
-        InMemoryUpdateableConfigurationProvider _configurationProvider;
-        IConfiguration _configuration;
-        public ConfigurationController(
-            InMemoryUpdateableConfigurationProvider configurationProvider,
-            IConfiguration configuration)
+        RuntimeConfigProvider _configurationProvider;
+        public ConfigurationController(RuntimeConfigProvider configurationProvider)
         {
-            _configuration = configuration;
             _configurationProvider = configurationProvider;
         }
 
-        [HttpGet]
-        public ActionResult Index([FromQuery] string key)
-        {
-            if (_configurationProvider.TryGet(key, out string value))
-            {
-                return new OkObjectResult(value);
-            }
-            else
-            {
-                return new NotFoundObjectResult(key);
-            }
-        }
-
         /// <summary>
-        /// Takes in KeyValuePairs and sets them all. In case of conflict with an
-        /// existing key, this will return a Conflict result with the conflicting key:value.
+        /// Takes in the runtime configuration, schema, connection string and optionally the
+        /// resolvers and configures the runtime. If the runtime is already configured, it will
+        /// return a conflict result.
         /// </summary>
-        /// <param name="configuration">The list of configurations to set.</param>
+        /// <param name="configuration">Runtime configuration, schema, resolvers and connection string.</param>
         /// <returns>Ok in case of success or Conflict with the key:value.</returns>
         [HttpPost]
-        public ActionResult Index([FromBody] Dictionary<string, string> configuration)
+        public ActionResult Index([FromBody] ConfigurationPostParameters configuration)
         {
-            foreach ((string key, string value) in configuration)
+            if (_configurationProvider.TryGetRuntimeConfiguration(out _))
             {
-                string configValue = _configuration.GetValue<string>(key);
-                if (!string.IsNullOrWhiteSpace(configValue))
-                {
-                    return new ConflictObjectResult($"{key}:{value}");
-                }
+                return new ConflictResult();
             }
 
-            _configurationProvider.SetManyAndReload(configuration);
+            _configurationProvider.Initialize(
+                configuration.Configuration,
+                configuration.Schema,
+                configuration.ConnectionString);
 
             return new OkResult();
         }
     }
+
+    /// <summary>
+    /// The required parameters required to configure the runtime.
+    /// </summary>
+    /// <param name="Configuration">The runtime configuration.</param>
+    /// <param name="Schema">The GraphQL schema. Can be left empty for SQL databases.</param>
+    /// <param name="ConnectionString">The database connection string.</param>
+    public record class ConfigurationPostParameters(
+        string Configuration,
+        string? Schema,
+        string ConnectionString)
+    { }
 }

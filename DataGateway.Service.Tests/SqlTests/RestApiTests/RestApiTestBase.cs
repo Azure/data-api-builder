@@ -2492,15 +2492,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         }
 
         /// <summary>
-        
-        /// </summary>
-        [TestMethod] 
-        public async Task FindEntityWithIncorrectCase()
-        {
-            
-        }
-
-        /// <summary>
         /// Tests the REST Api for Find operation on an entity that does not exist
         /// No sqlQuery provided as error should be thrown prior to database query
         /// Expects a 404 Not Found error

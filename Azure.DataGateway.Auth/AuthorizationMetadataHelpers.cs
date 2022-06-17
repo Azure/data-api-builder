@@ -1,19 +1,17 @@
-using System.Collections.Generic;
-
-namespace Azure.DataGateway.Service.Models.Authorization
+namespace Azure.DataGateway.Auth
 {
     /// <summary>
     /// Represents the permission metadata of an entity.
     /// An entity's top-level permission structure is a collection
     /// of roles.
     /// </summary>
-    class EntityMetadata
+    public class EntityMetadata
     {
         /// <summary>
         /// Given the key (roleName) returns the associated RoleDS object.
         /// To retrieve all roles associated with an entity -> RoleToActionMap.Keys()
         /// </summary>
-        public Dictionary<string, RoleMetadata> RoleToActionMap = new();
+        public Dictionary<string, RoleMetadata> RoleToActionMap { get; set; } = new();
 
         /// <summary>
         /// Given the key (actionName) returns a key/value collection of fieldName to Roles
@@ -21,14 +19,14 @@ namespace Azure.DataGateway.Service.Models.Authorization
         /// Key(field): id -> Value(collection): permitted in {Role1, Role2, ..., RoleN}
         /// Key(field): title -> Value(collection): permitted in {Role1}
         /// </summary>
-        public Dictionary<string, Dictionary<string, IEnumerable<string>>> FieldToRolesMap = new();
+        public Dictionary<string, Dictionary<string, IEnumerable<string>>> FieldToRolesMap { get; set; } = new();
 
         /// <summary>
         /// Given the key (actionName) returns a collection of roles
         /// defining config permissions for the action.
         /// i.e. READ action is permitted in {Role1, Role2, ..., RoleN}
         /// </summary>
-        public Dictionary<string, List<string>> ActionToRolesMap = new();
+        public Dictionary<string, List<string>> ActionToRolesMap { get; set; } = new();
     }
 
     /// <summary>
@@ -36,12 +34,12 @@ namespace Azure.DataGateway.Service.Models.Authorization
     /// A role's top-level permission structure is a collection of
     /// actions allowed for that role: Create, Read, Update, Delete, * (wildcard)
     /// </summary>
-    class RoleMetadata
+    public class RoleMetadata
     {
         /// <summary>
         /// Given the key (actionName) returns the associated ActionDS object.
         /// </summary>
-        public Dictionary<string, ActionMetadata> ActionToColumnMap = new();
+        public Dictionary<string, ActionMetadata> ActionToColumnMap { get; set; } = new();
     }
 
     /// <summary>
@@ -49,11 +47,11 @@ namespace Azure.DataGateway.Service.Models.Authorization
     /// An action lists both columns that are included and/or exluded
     /// for that action.
     /// </summary>
-    class ActionMetadata
+    public class ActionMetadata
     {
-        public string? databasePolicy;
-        public HashSet<string> included = new();
-        public HashSet<string> excluded = new();
-        public HashSet<string> allowed = new();
+        public string? DatabasePolicy { get; set; }
+        public HashSet<string> Included { get; set; } = new();
+        public HashSet<string> Excluded { get; set; } = new();
+        public HashSet<string> Allowed { get; set; } = new();
     }
 }

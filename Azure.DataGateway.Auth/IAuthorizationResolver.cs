@@ -1,7 +1,6 @@
-using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 
-namespace Azure.DataGateway.Service.Authorization
+namespace Azure.DataGateway.Auth
 {
     /// <summary>
     /// Interface for authorization decision-making. Each method performs lookups within a
@@ -9,6 +8,11 @@ namespace Azure.DataGateway.Service.Authorization
     /// </summary>
     public interface IAuthorizationResolver
     {
+        /// <summary>
+        /// Representation of authorization permissions for each entity in the runtime config.
+        /// </summary>
+        public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; }
+
         /// <summary>
         /// Checks for the existence of the client role header in httpContext.Request.Headers
         /// and evaluates that header against the authenticated (httpContext.User)'s roles
@@ -77,6 +81,14 @@ namespace Azure.DataGateway.Service.Authorization
         /// <param name="entityName">Entity to lookup permissions</param>
         /// <param name="actionName">Action to lookup applicable roles</param>
         /// <returns>Collection of roles.</returns>
-        public IEnumerable<string> GetRolesForAction(string entityName, string actionName);
+        public static IEnumerable<string> GetRolesForAction(string entityName, string actionName, Dictionary<string, EntityMetadata> entityPermissionMap)
+        {
+            if (entityPermissionMap[entityName].ActionToRolesMap.TryGetValue(actionName, out List<string>? roleList) && roleList is not null)
+            {
+                return roleList;
+            }
+
+            return new List<string>();
+        }
     }
 }

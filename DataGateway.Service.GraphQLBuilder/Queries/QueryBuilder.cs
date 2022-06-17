@@ -1,3 +1,4 @@
+using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
@@ -29,7 +30,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         public static DocumentNode Build(
             DocumentNode root,
             IDictionary<string, Entity> entities,
-            Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
+            Dictionary<string, InputObjectTypeDefinitionNode> inputTypes,
+            Dictionary<string, EntityMetadata> entityPermissionsMap)
         {
             List<FieldDefinitionNode> queryFields = new();
             List<ObjectTypeDefinitionNode> returnTypes = new();
@@ -45,22 +47,13 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                     ObjectTypeDefinitionNode returnType = GenerateReturnType(name);
                     returnTypes.Add(returnType);
 
-                    queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, returnType, inputTypes, entity));
-                    queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name));
+                    IEnumerable<string> rolesAllowedForRead = IAuthorizationResolver.GetRolesForAction(entityName, actionName: "read", entityPermissionsMap);
+
+                    queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, returnType, inputTypes, entity, rolesAllowedForRead));
+                    queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, rolesAllowedForRead));
                 }
             }
 
-            return BuildDocumentNode(queryFields, returnTypes);
-        }
-
-        /// <summary>
-        /// Creates the DocumentNode with the provided queryFields and returnTypes.
-        /// </summary>
-        /// <param name="queryFields">Such as <c>books_by_pk() {}</c></param>
-        /// <param name="returnTypes">Such as pagination token or Connection</param>
-        /// <returns></returns>
-        public static DocumentNode BuildDocumentNode(List<FieldDefinitionNode> queryFields, List<ObjectTypeDefinitionNode> returnTypes)
-        {
             List<IDefinitionNode> definitionNodes = new()
             {
                 new ObjectTypeDefinitionNode(location: null, new NameNode("Query"), description: null, new List<DirectiveNode>(), new List<NamedTypeNode>(), queryFields),

@@ -5,11 +5,11 @@ using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Service.Models.Authorization;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
@@ -25,10 +25,10 @@ namespace Azure.DataGateway.Service.Authorization
     public class AuthorizationResolver : IAuthorizationResolver
     {
         private ISqlMetadataProvider _metadataProvider;
-        private Dictionary<string, EntityMetadata> _entityPermissionMap = new();
         private const string WILDCARD = "*";
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
         private static readonly HashSet<string> _validActions = new() { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE };
+        public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
 
         public AuthorizationResolver(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -97,7 +97,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// <inheritdoc />
         public bool AreRoleAndActionDefinedForEntity(string entityName, string roleName, string action)
         {
-            if (_entityPermissionMap.TryGetValue(entityName, out EntityMetadata? valueOfEntityToRole))
+            if (EntityPermissionsMap.TryGetValue(entityName, out EntityMetadata? valueOfEntityToRole))
             {
                 if (valueOfEntityToRole.RoleToActionMap.TryGetValue(roleName, out RoleMetadata? valueOfRoleToAction))
                 {
@@ -119,7 +119,7 @@ namespace Azure.DataGateway.Service.Authorization
             Assert.IsFalse(columns.Count() == 0, message: "columns.Count() should be greater than 0.");
 
             ActionMetadata actionToColumnMap;
-            RoleMetadata roleInEntity = _entityPermissionMap[entityName].RoleToActionMap[roleName];
+            RoleMetadata roleInEntity = EntityPermissionsMap[entityName].RoleToActionMap[roleName];
 
             try
             {
@@ -139,8 +139,8 @@ namespace Azure.DataGateway.Service.Authorization
                 if (_metadataProvider.TryGetBackingColumn(entityName, field: exposedColumn, out string? backingColumn))
                 {
                     // backingColumn will not be null when TryGetBackingColumn() is true.
-                    if (actionToColumnMap.excluded.Contains(backingColumn!) || actionToColumnMap.excluded.Contains(WILDCARD) ||
-                    !(actionToColumnMap.included.Contains(WILDCARD) || actionToColumnMap.included.Contains(backingColumn!)))
+                    if (actionToColumnMap.Excluded.Contains(backingColumn!) || actionToColumnMap.Excluded.Contains(WILDCARD) ||
+                    !(actionToColumnMap.Included.Contains(WILDCARD) || actionToColumnMap.Included.Contains(backingColumn!)))
                     {
                         // If column is present in excluded OR excluded='*'
                         // If column is absent from included and included!=*
@@ -186,7 +186,7 @@ namespace Azure.DataGateway.Service.Authorization
             // roleMetaData.ActionToColumnMap[action] finds the actionMetaData for the current action
             // actionMetaData.database finds the required database policy
 
-            string? dbPolicy = _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action].databasePolicy;
+            string? dbPolicy = EntityPermissionsMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action].DatabasePolicy;
             return dbPolicy is not null ? dbPolicy : string.Empty;
         }
 
@@ -216,8 +216,8 @@ namespace Azure.DataGateway.Service.Authorization
                         if (actionElement.ValueKind is JsonValueKind.String)
                         {
                             actionName = actionElement.ToString();
-                            actionToColumn.included.UnionWith(allTableColumns);
-                            actionToColumn.allowed.UnionWith(allTableColumns);
+                            actionToColumn.Included.UnionWith(allTableColumns);
+                            actionToColumn.Allowed.UnionWith(allTableColumns);
                         }
                         else
                         {
@@ -239,11 +239,11 @@ namespace Azure.DataGateway.Service.Authorization
                                     // resolved when no columns were included in a request.
                                     if (actionObj.Fields.Include.Length == 1 && actionObj.Fields.Include[0] == WILDCARD)
                                     {
-                                        actionToColumn.included.UnionWith(ResolveTableDefinitionColumns(entityName));
+                                        actionToColumn.Included.UnionWith(ResolveTableDefinitionColumns(entityName));
                                     }
                                     else
                                     {
-                                        actionToColumn.included = new(actionObj.Fields.Include);
+                                        actionToColumn.Included = new(actionObj.Fields.Include);
                                     }
                                 }
 
@@ -253,21 +253,21 @@ namespace Azure.DataGateway.Service.Authorization
                                     // columns must be resolved and placed in the actionToColumn Key/Value store.
                                     if (actionObj.Fields.Exclude.Length == 1 && actionObj.Fields.Exclude[0] == WILDCARD)
                                     {
-                                        actionToColumn.excluded.UnionWith(ResolveTableDefinitionColumns(entityName));
+                                        actionToColumn.Excluded.UnionWith(ResolveTableDefinitionColumns(entityName));
                                     }
                                     else
                                     {
-                                        actionToColumn.excluded = new(actionObj.Fields.Exclude);
+                                        actionToColumn.Excluded = new(actionObj.Fields.Exclude);
                                     }
                                 }
 
                                 if (actionObj.Policy is not null && actionObj.Policy.Database is not null)
                                 {
-                                    actionToColumn.databasePolicy = actionObj.Policy.Database;
+                                    actionToColumn.DatabasePolicy = actionObj.Policy.Database;
                                 }
 
                                 // Calculate the set of allowed backing column names.
-                                actionToColumn.allowed.UnionWith(actionToColumn.included.Except(actionToColumn.excluded));
+                                actionToColumn.Allowed.UnionWith(actionToColumn.Included.Except(actionToColumn.Excluded));
                             }
                         }
 
@@ -284,15 +284,15 @@ namespace Azure.DataGateway.Service.Authorization
                     entityToRoleMap.RoleToActionMap[role] = roleToAction;
                 }
 
-                _entityPermissionMap[entityName] = entityToRoleMap;
+                EntityPermissionsMap[entityName] = entityToRoleMap;
             }
         }
 
         /// <inheritdoc />
         public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, string action)
         {
-            ActionMetadata actionMetadata = _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action];
-            IEnumerable<string> allowedDBColumns = actionMetadata.allowed;
+            ActionMetadata actionMetadata = EntityPermissionsMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action];
+            IEnumerable<string> allowedDBColumns = actionMetadata.Allowed;
             List<string> allowedExposedColumns = new();
 
             foreach (string dbColumn in allowedDBColumns)
@@ -464,7 +464,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// <returns>Collection of role names.</returns>
         public IEnumerable<string> GetRolesForEntity(string entityName)
         {
-            return _entityPermissionMap[entityName].RoleToActionMap.Keys;
+            return EntityPermissionsMap[entityName].RoleToActionMap.Keys;
         }
 
         /// <summary>
@@ -476,7 +476,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// <returns>Collection of roles.</returns>
         public IEnumerable<string> GetRolesForAction(string entityName, string actionName)
         {
-            if (_entityPermissionMap[entityName].ActionToRolesMap.TryGetValue(actionName, out List<string>? roleList) && roleList is not null)
+            if (EntityPermissionsMap[entityName].ActionToRolesMap.TryGetValue(actionName, out List<string>? roleList) && roleList is not null)
             {
                 return roleList;
             }
@@ -494,7 +494,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// <returns></returns>
         public IEnumerable<string> GetRolesForField(string entityName, string actionName, string field)
         {
-            return _entityPermissionMap[entityName].FieldToRolesMap[actionName][field];
+            return EntityPermissionsMap[entityName].FieldToRolesMap[actionName][field];
         }
 
         /// <summary>
@@ -506,6 +506,12 @@ namespace Azure.DataGateway.Service.Authorization
         private IEnumerable<string> ResolveTableDefinitionColumns(string entityName)
         {
             return _metadataProvider.GetTableDefinition(entityName).Columns.Keys;
+        }
+
+        public static void TestMyAuthorizationStaticMethod(string apple, string orange)
+        {
+            string bucket = apple + orange;
+            bucket.Substring(5);
         }
         #endregion
     }

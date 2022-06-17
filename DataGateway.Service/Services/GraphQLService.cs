@@ -4,17 +4,15 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.GraphQLBuilder;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.GraphQLBuilder.Sql;
-using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services.MetadataProviders;
 using HotChocolate;
@@ -81,8 +79,8 @@ namespace Azure.DataGateway.Service.Services
                 .AddAuthorizeDirectiveType()
                 .AddType<OrderByType>()
                 .AddType<DefaultValueType>()
-                .AddDocument(PrepareQueryBuilder(root, _entities, inputTypes))
-                .AddDocument(PrepareMutationBuilder(root, _databaseType, _entities));
+                .AddDocument(QueryBuilder.Build(root, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap))
+                .AddDocument(MutationBuilder.Build(root, _databaseType, _entities, _authorizationResolver.EntityPermissionsMap));
 
             Schema = sb
                 .ModifyOptions(o => o.EnableOneOf = true)
@@ -90,84 +88,6 @@ namespace Azure.DataGateway.Service.Services
                 .Create();
 
             MakeSchemaExecutable();
-        }
-
-        /// <summary>
-        /// Creates a DocumentNode containing FieldDefinitionNodes representing the FindByPK and FindAll queries
-        /// Also populates the DocumentNode with return types.
-        /// Needed to be moved here from GraphQLBuilder project to avoid circular project dependency.
-        /// </summary>
-        /// <param name="root"></param>
-        /// <param name="entities"></param>
-        /// <param name="inputTypes"></param>
-        /// <returns></returns>
-        private DocumentNode PrepareQueryBuilder(
-            DocumentNode root,
-            IDictionary<string, Entity> entities,
-            Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
-        {
-            List<FieldDefinitionNode> queryFields = new();
-            List<ObjectTypeDefinitionNode> returnTypes = new();
-
-            foreach (IDefinitionNode definition in root.Definitions)
-            {
-                if (definition is ObjectTypeDefinitionNode objectTypeDefinitionNode && GraphQLUtils.IsModelType(objectTypeDefinitionNode))
-                {
-                    NameNode name = objectTypeDefinitionNode.Name;
-                    string entityName = GraphQLNaming.ObjectTypeToEntityName(objectTypeDefinitionNode);
-                    Entity entity = entities[entityName];
-
-                    ObjectTypeDefinitionNode returnType = QueryBuilder.GenerateReturnType(name);
-                    returnTypes.Add(returnType);
-
-                    // Get Roles for READ action on Entity
-                    IEnumerable<string> rolesAllowedForRead = _authorizationResolver.GetRolesForAction(entityName, actionName: ActionType.READ);
-
-                    // If no roles define READ permissions for this entity, then these queries should not be added to the schema.
-                    if (rolesAllowedForRead.Any())
-                    {
-                        queryFields.Add(QueryBuilder.GenerateGetAllQuery(objectTypeDefinitionNode, name, returnType, inputTypes, entity, rolesAllowedForRead));
-                        queryFields.Add(QueryBuilder.GenerateByPKQuery(objectTypeDefinitionNode, name, rolesAllowedForRead));
-                    }
-                }
-            }
-
-            return QueryBuilder.BuildDocumentNode(queryFields, returnTypes);
-        }
-
-        /// <summary>
-        /// Creates a DocumentNode containing FieldDefinitionNodes representing mutations
-        /// </summary>
-        /// <param name="root">Root of GraphQL schema</param>
-        /// <param name="databaseType">i.e. MSSQL, MySQL, Postgres, Cosmos</param>
-        /// <param name="entities">Map of entityName -> EntityMetadata</param>
-        /// <returns></returns>
-        private DocumentNode PrepareMutationBuilder(DocumentNode root, DatabaseType databaseType, IDictionary<string, Entity> entities)
-        {
-            List<FieldDefinitionNode> mutationFields = new();
-            Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs = new();
-
-            foreach (IDefinitionNode definition in root.Definitions)
-            {
-                if (definition is ObjectTypeDefinitionNode objectTypeDefinitionNode && GraphQLUtils.IsModelType(objectTypeDefinitionNode))
-                {
-                    NameNode name = objectTypeDefinitionNode.Name;
-                    string dbEntityName = GraphQLNaming.ObjectTypeToEntityName(objectTypeDefinitionNode);
-                    Entity entity = entities[dbEntityName];
-
-                    // Get Roles for mutation actionType on Entity
-                    IEnumerable<string> rolesAllowedForMutation = _authorizationResolver.GetRolesForAction(dbEntityName, actionName: ActionType.CREATE);
-                    mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entity, rolesAllowedForMutation));
-
-                    rolesAllowedForMutation = _authorizationResolver.GetRolesForAction(dbEntityName, actionName: ActionType.UPDATE);
-                    mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entity, databaseType, rolesAllowedForMutation));
-
-                    rolesAllowedForMutation = _authorizationResolver.GetRolesForAction(dbEntityName, actionName: ActionType.DELETE);
-                    mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entity, rolesAllowedForMutation));
-                }
-            }
-
-            return MutationBuilder.BuildDocumentNode(mutationFields, inputs);
         }
 
         private void MakeSchemaExecutable()

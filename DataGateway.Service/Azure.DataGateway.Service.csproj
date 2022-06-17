@@ -85,10 +85,8 @@
     <ProjectCapability Include="CSharp;Managed;ClassDesigner" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Azure.DataGateway.Auth\Azure.DataGateway.Auth.csproj" />
     <ProjectReference Include="..\DataGateway.Config\Azure.DataGateway.Config.csproj" />
     <ProjectReference Include="..\DataGateway.Service.GraphQLBuilder\Azure.DataGateway.Service.GraphQLBuilder.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Models\Authorization\" />
   </ItemGroup>
 </Project>

@@ -1,3 +1,4 @@
+using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using HotChocolate.Language;
 using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLNaming;
@@ -14,7 +15,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
         /// <param name="databaseType">i.e. MSSQL, MySQL, Postgres, Cosmos</param>
         /// <param name="entities">Map of entityName -> EntityMetadata</param>
         /// <returns></returns>
-        public static DocumentNode Build(DocumentNode root, DatabaseType databaseType, IDictionary<string, Entity> entities)
+        public static DocumentNode Build(
+            DocumentNode root,
+            DatabaseType databaseType,
+            IDictionary<string, Entity> entities,
+            Dictionary<string, EntityMetadata> entityPermissionsMap)
         {
             List<FieldDefinitionNode> mutationFields = new();
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs = new();
@@ -27,23 +32,18 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                     string dbEntityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
                     Entity entity = entities[dbEntityName];
 
-                    mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entity));
-                    mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entity, databaseType));
-                    mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entity));
+                    // Get Roles for mutation actionType on Entity
+                    IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForAction(dbEntityName, actionName: "create", entityPermissionsMap);
+                    mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entity, rolesAllowedForMutation));
+
+                    rolesAllowedForMutation = IAuthorizationResolver.GetRolesForAction(dbEntityName, actionName: "update", entityPermissionsMap);
+                    mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entity, databaseType, rolesAllowedForMutation));
+
+                    rolesAllowedForMutation = IAuthorizationResolver.GetRolesForAction(dbEntityName, actionName: "delete", entityPermissionsMap);
+                    mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entity, rolesAllowedForMutation));
                 }
             }
 
-            return BuildDocumentNode(mutationFields, inputs);
-        }
-
-        /// <summary>
-        /// Creates the DocumentNode with the provided mutationFields and inputs.
-        /// </summary>
-        /// <param name="mutationFields">such as <c>createBook(){}</c></param>
-        /// <param name="inputs">Such as CreateBookInput</param>
-        /// <returns></returns>
-        public static DocumentNode BuildDocumentNode(List<FieldDefinitionNode> mutationFields, Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs)
-        {
             List<IDefinitionNode> definitionNodes = new()
             {
                 new ObjectTypeDefinitionNode(null, new NameNode("Mutation"), null, new List<DirectiveNode>(), new List<NamedTypeNode>(), mutationFields),

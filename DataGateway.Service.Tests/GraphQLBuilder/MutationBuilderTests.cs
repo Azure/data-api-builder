@@ -41,7 +41,6 @@ type Foo @model {
 
         [TestMethod]
         [TestCategory("Mutation Builder - Create")]
-        [TestCategory("Schema Builder - Simple Type")]
         public void WillFailToCreateMutationWhenUnrecognisedTypeProvided()
         {
             string gql =

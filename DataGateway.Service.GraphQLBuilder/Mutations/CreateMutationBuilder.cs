@@ -1,4 +1,6 @@
+using System.Net;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
@@ -45,7 +47,13 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                     if (!IsBuiltInType(f.Type))
                     {
                         string typeName = RelationshipDirectiveType.Target(f);
-                        HotChocolate.Language.IHasName def = definitions.First(d => d.Name.Value == typeName);
+                        HotChocolate.Language.IHasName? def = definitions.FirstOrDefault(d => d.Name.Value == typeName);
+
+                        if (def is null)
+                        {
+                            throw new DataGatewayException($"The type {typeName} is not a known GraphQL type, and cannot be used in this schema.", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.GraphQLMapping);
+                        }
+
                         if (def is ObjectTypeDefinitionNode otdn)
                         {
                             return GetComplexInputType(inputs, definitions, f, typeName, otdn, databaseType, entity);

@@ -275,11 +275,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             // Initial DELETE request results in 204 no content, no exception thrown.
             // Subsequent DELETE requests result in 404, which result in an exception.
             string expected;
-            if ((operationType == Operation.Delete ||
-                 operationType == Operation.Upsert ||
-                 operationType == Operation.UpsertIncremental ||
-                 operationType == Operation.Update ||
-                 operationType == Operation.UpdateIncremental)
+            if ((operationType is Operation.Delete ||
+                 operationType is Operation.Upsert ||
+                 operationType is Operation.UpsertIncremental ||
+                 operationType is Operation.Update ||
+                 operationType is Operation.UpdateIncremental)
                 && actionResult is NoContentResult)
             {
                 expected = null;
@@ -290,13 +290,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 {
                     Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
                 };
-                expected = exception ?
-                    JsonSerializer.Serialize(RestController.ErrorResponse(
+
+                if (exception)
+                {
+                    expected = JsonSerializer.Serialize(RestController.ErrorResponse(
                         expectedSubStatusCode.ToString(),
                         expectedErrorMessage,
                         expectedStatusCode).Value,
-                        options) :
-                    $"{{\"value\":{FormatExpectedValue(await GetDatabaseResultAsync(sqlQuery))}{ExpectedNextLinkIfAny(paginated, EncodeQueryString(baseUrl), $"{expectedAfterQueryString}")}}}";
+                        options);
+                }
+                else
+                {
+                    string dbResult = await GetDatabaseResultAsync(sqlQuery);
+                    // For FIND requests, null result signifies an empty result set
+                    dbResult = (operationType is Operation.Find && dbResult is null) ? "[]" : dbResult;
+                    expected = $"{{\"value\":{FormatExpectedValue(dbResult)}{ExpectedNextLinkIfAny(paginated, EncodeQueryString(baseUrl), $"{expectedAfterQueryString}")}}}";
+                }
             }
 
             SqlTestHelper.VerifyResult(

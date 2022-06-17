@@ -13,6 +13,7 @@
     <PackageReference Include="MSTest.TestAdapter" Version="2.2.8" />
     <PackageReference Include="MSTest.TestFramework" Version="2.2.8" />
     <PackageReference Include="coverlet.collector" Version="3.1.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
 
   <ItemGroup>

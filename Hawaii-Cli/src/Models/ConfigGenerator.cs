@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Azure.DataGateway.Config;
 using static Hawaii.Cli.Models.Utils;
-using ConfigAction = Azure.DataGateway.Config.Action;
+using Action = Azure.DataGateway.Config.Action;
 
 namespace Hawaii.Cli.Models
 {
@@ -13,20 +13,44 @@ namespace Hawaii.Cli.Models
         /// <summary>
         /// This method will generate the initial config with databaseType and connection-string.
         /// </summary>
-        public static bool GenerateConfig(InitOptions options)
+        public static bool TryGenerateConfig(InitOptions options)
         {
-            string connectionString = options.ConnectionString;
-
-            DatabaseType dbType = options.DatabaseType;
-
-            DataSource dataSource = new(dbType)
+            string runtimeConfigJson;
+            if (!TryCreateRuntimeConfig(options, out runtimeConfigJson))
             {
-                ConnectionString = connectionString
-            };
+                return false;
+            }
 
             string file = $"{options.Name}.json";
 
-            string schema = RuntimeConfig.SCHEMA;
+            try
+            {
+                File.WriteAllText(file, runtimeConfigJson);
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine($"Failed to Generate the config file, operation failed with exception:{e}.");
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Create a runtime config json string.
+        /// </summary>
+        /// <param name="options">Init options</param>
+        /// <param name="runtimeConfigJson">Output runtime config json.</param>
+        /// <returns>True on success. False otherwise.</returns>
+        public static bool TryCreateRuntimeConfig(InitOptions options, out string runtimeConfigJson)
+        {
+            runtimeConfigJson = string.Empty;
+
+            DatabaseType dbType = options.DatabaseType;
+            DataSource dataSource = new(dbType)
+            {
+                ConnectionString = options.ConnectionString
+            };
 
             CosmosDbOptions? cosmosDbOptions = null;
             MsSqlOptions? msSqlOptions = null;
@@ -45,7 +69,7 @@ namespace Hawaii.Cli.Models
                         return false;
                     }
 
-                    cosmosDbOptions = new CosmosDbOptions(cosmosDatabase, cosmosContainer, graphQLSchemaPath);
+                    cosmosDbOptions = new CosmosDbOptions(cosmosDatabase, cosmosContainer, graphQLSchemaPath, GraphQLSchema: null);
                     break;
 
                 case DatabaseType.mssql:
@@ -68,9 +92,15 @@ namespace Hawaii.Cli.Models
             RuntimeConfig runtimeConfig;
             try
             {
-                runtimeConfig = new RuntimeConfig(schema, dataSource, CosmosDb: cosmosDbOptions, MsSql: msSqlOptions,
-                                                    PostgreSql: postgreSqlOptions, MySql: mySqlOptions,
-                                                    GetDefaultGlobalSettings(dbType, options.HostMode), new Dictionary<string, Entity>());
+                runtimeConfig = new RuntimeConfig(
+                    Schema: RuntimeConfig.SCHEMA,
+                    DataSource: dataSource,
+                    CosmosDb: cosmosDbOptions,
+                    MsSql: msSqlOptions,
+                    PostgreSql: postgreSqlOptions,
+                    MySql: mySqlOptions,
+                    RuntimeSettings: GetDefaultGlobalSettings(dbType, options.HostMode),
+                    Entities: new Dictionary<string, Entity>());
             }
             catch (NotSupportedException e)
             {
@@ -78,14 +108,7 @@ namespace Hawaii.Cli.Models
                 return false;
             }
 
-            string JSONresult = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
-
-            if (File.Exists(file))
-            {
-                File.Delete(file);
-            }
-
-            File.WriteAllText(file, JSONresult);
+            runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
             return true;
         }
 
@@ -93,60 +116,116 @@ namespace Hawaii.Cli.Models
         /// This method will add a new Entity with the given REST and GraphQL endpoints, source, and permissions.
         /// It also supports fields that needs to be included or excluded for a given role and action.
         /// </summary>
-        public static bool AddEntitiesToConfig(AddOptions options)
+        public static bool TryAddEntityToConfigWithOptions(AddOptions options)
         {
-            string source = options.Source;
-            string? rest = options.RestRoute;
-            string? graphQL = options.GraphQLType;
-            string permissions = options.Permissions;
-            string? fieldsToInclude = options.FieldsToInclude;
-            string? fieldsToExclude = options.FieldsToExclude;
-
             string file = $"{options.Name}.json";
 
-            if (!File.Exists(file))
+            string runtimeConfigJson;
+            if (!TryReadRuntimeConfig(file, out runtimeConfigJson))
             {
-                Console.WriteLine($"ERROR: Couldn't find config  file: {file}.");
-                Console.WriteLine($"Please do hawaii init <options> to create a new config file.");
                 return false;
             }
 
-            string[] permission_array = permissions.Split(":");
-            if (permission_array.Length is not 2)
+            if (!TryAddNewEntity(options, ref runtimeConfigJson))
             {
-                Console.WriteLine("Please add permission in the following format. --permission \"<<role>>:<<actions>>\"");
                 return false;
             }
 
-            string role = permission_array[0];
-            string actions = permission_array[1];
-            PermissionSetting[] permissionSettings = new PermissionSetting[] { CreatePermissions(role, actions, fieldsToInclude, fieldsToExclude) };
-            Entity entity_details = new(source, GetRestDetails(rest), GetGraphQLDetails(graphQL), permissionSettings, Relationships: null, Mappings: null);
+            try
+            {
+                File.WriteAllText(file, runtimeConfigJson);
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine($"Failed to Generate the config file, operation failed with exception:{e}.");
+                return false;
+            }
 
-            string jsonString = File.ReadAllText(file);
-            JsonSerializerOptions jsonOption = GetSerializationOptions();
+            return true;
+        }
 
-            RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(jsonString, jsonOption);
+        /// <summary>
+        /// Add new entity to runtime config json. The function will add new entity to runtimeConfigJson string.
+        /// On sucessful return of the function, runtimeConfigJson will be modified.
+        /// </summary>
+        /// <param name="options">AddOptions.</param>
+        /// <param name="runtimeConfigJson">Json string of existing runtime config. This will be modified on successful return.</param>
+        /// <returns>True on success. False otherwise.</returns>
+        public static bool TryAddNewEntity(AddOptions options, ref string runtimeConfigJson)
+        {
+            // Deserialize the content to RuntimeConfig.
+            //
+            RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigJson, GetSerializationOptions());
 
-            if (runtimeConfig.Entities.ContainsKey(options.Entity))
+            // If entity exist, we cannot add. Just exit.
+            //
+            if (runtimeConfig!.Entities.ContainsKey(options.Entity))
             {
                 Console.WriteLine($"WARNING: Entity-{options.Entity} is already present. No new changes are added to Config.");
                 return false;
             }
 
-            runtimeConfig.Entities.Add(options.Entity, entity_details);
-            string JSONresult = JsonSerializer.Serialize(runtimeConfig, jsonOption);
-            File.WriteAllText(file, JSONresult);
+            PermissionSetting[]? permissionSettings = ParsePermission(options.Permissions, options.FieldsToInclude, options.FieldsToExclude);
+            if (permissionSettings is null)
+            {
+                Console.Error.WriteLine("Please add permission in the following format. --permission \"<<role>>:<<actions>>\"");
+                return false;
+            }
+
+            // Create new entity.
+            //
+            Entity entity = new(
+                options.Source,
+                GetRestDetails(options.RestRoute),
+                GetGraphQLDetails(options.GraphQLType),
+                permissionSettings,
+                Relationships: null,
+                Mappings: null);
+
+            // Add entity to existing runtime config.
+            //
+            runtimeConfig.Entities.Add(options.Entity, entity);
+
+            // Serialize runtime config to json string
+            //
+            runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
+
             return true;
+        }
+
+        /// <summary>
+        /// Parse permission string to create PermissionSetting array.
+        /// </summary>
+        /// <param name="permissions">Permission string input.</param>
+        /// <param name="fieldsToInclude">fields to include for this permission.</param>
+        /// <param name="fieldsToExclude">fields to exclude for this permission.</param>
+        /// <returns></returns>
+        public static PermissionSetting[]? ParsePermission(string permissions, string? fieldsToInclude, string? fieldsToExclude)
+        {
+            // Split permission to role and actions
+            //
+            string[] permission_array = permissions.Split(":");
+            if (permission_array.Length != 2)
+            {
+                return null;
+            }
+
+            string role = permission_array[0];
+            string actions = permission_array[1];
+            PermissionSetting[] permissionSettings = new PermissionSetting[]
+            {
+                CreatePermissions(role, actions, fieldsToInclude, fieldsToExclude)
+            };
+
+            return permissionSettings;
         }
 
         /// <summary>
         /// This method will update an existing Entity with the given REST and GraphQL endpoints, source, and permissions.
         /// It also supports adding a new relationship as well as updating an existing one.
         /// </summary>
-        public static bool UpdateEntity(UpdateOptions options)
+        public static bool TryUpdateEntityWithOptions(UpdateOptions options)
         {
-
             string? source = options.Source;
             string? rest = options.RestRoute;
             string? graphQL = options.GraphQLType;
@@ -162,18 +241,17 @@ namespace Hawaii.Cli.Models
             string? mappingFields = options.MappingFields;
 
             string file = $"{options.Name}.json";
-            string jsonString = File.ReadAllText(file);
-
-            JsonSerializerOptions jsonOptions = GetSerializationOptions();
-
-            RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(jsonString, jsonOptions);
-            if (!runtimeConfig.Entities.ContainsKey(options.Entity))
+            string runtimeConfigJson;
+            if (!TryReadRuntimeConfig(file, out runtimeConfigJson))
             {
-                Console.WriteLine($"Entity:{options.Entity} is not present. No new changes are added to Config.");
                 return false;
             }
 
-            Entity updatedEntity = runtimeConfig.Entities[options.Entity];
+            // Deserialize the content to RuntimeConfig.
+            //
+            RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigJson, GetSerializationOptions());
+
+            Entity updatedEntity = runtimeConfig!.Entities[options.Entity];
             if (source is not null)
             {
                 updatedEntity = new Entity(source, updatedEntity.Rest, updatedEntity.GraphQL, updatedEntity.Permissions, updatedEntity.Relationships, updatedEntity.Mappings);
@@ -230,10 +308,10 @@ namespace Hawaii.Cli.Models
                                 }
                                 else
                                 { // if the new action is other than "*"
-                                    List<ConfigAction> action_list = new();
-                                    foreach (object crud in Enum.GetValues(typeof(CRUD)))
-                                    {      //looping through all the CRUD operations and updating the one which is asked
-                                        string op = crud.ToString();
+                                    List<Action> action_list = new();
+                                    //looping through all the CRUD operations and updating the one which is asked
+                                    foreach (string op in Enum.GetNames(typeof(CRUD)))
+                                    {
                                         if (op.Equals(new_action_element))
                                         { //if the current crud operation is equal to the asked crud operation
                                             action_list.Add(GetAction(op, fieldsToInclude, fieldsToExclude));
@@ -242,11 +320,12 @@ namespace Hawaii.Cli.Models
                                         {    // else we just create a new node and add it with existing properties
                                             if (!JsonValueKind.String.Equals(((JsonElement)permission.Actions[0]).ValueKind))
                                             {
-                                                Field fields_dict = (ToActionObject((JsonElement)permission.Actions[0])).Fields;
-                                                action_list.Add(new ConfigAction(op, Policy: null, Fields: new Field(fields_dict.Include, fields_dict.Exclude)));
+                                                Field? fields_dict = ToActionObject((JsonElement)permission.Actions[0])!.Fields;
+                                                action_list.Add(new Action(op, Policy: null, Fields: new Field(fields_dict!.Include, fields_dict!.Exclude)));
                                             }
-                                            else {
-                                                action_list.Add(new ConfigAction(op, Policy: null, Fields: null));
+                                            else
+                                            {
+                                                action_list.Add(new Action(op, Policy: null, Fields: null));
                                             }
                                         }
                                     }
@@ -395,7 +474,7 @@ namespace Hawaii.Cli.Models
                     sourceFields = sourceAndTargetFields[0].Split(",");
                     targetFields = sourceAndTargetFields[1].Split(",");
 
-                    Relationship updatedRelationship = updatedEntity.Relationships[relationship];
+                    Relationship updatedRelationship = updatedEntity.Relationships![relationship];
                     updatedRelationship = new Relationship(updatedRelationship.Cardinality, updatedRelationship.TargetEntity,
                                                             sourceFields, targetFields, updatedRelationship.LinkingObject,
                                                             updatedRelationship.LinkingSourceFields, updatedRelationship.LinkingTargetFields);
@@ -408,7 +487,7 @@ namespace Hawaii.Cli.Models
                     string[] linkingSourceFieldsArray = linkingSourceFields.Split(",");
                     string[] linkingTargetFieldsArray = linkingTargetFields.Split(",");
 
-                    Relationship updatedRelationship = updatedEntity.Relationships[relationship];
+                    Relationship updatedRelationship = updatedEntity.Relationships![relationship];
                     updatedRelationship = new Relationship(updatedRelationship.Cardinality, updatedRelationship.TargetEntity,
                                                             updatedRelationship.SourceFields, updatedRelationship.TargetFields,
                                                             linkingObject, linkingSourceFieldsArray, linkingTargetFieldsArray);
@@ -424,10 +503,35 @@ namespace Hawaii.Cli.Models
             }
 
             runtimeConfig.Entities[options.Entity] = updatedEntity;
-            string JSONresult = JsonSerializer.Serialize(runtimeConfig, jsonOptions);
-            File.WriteAllText(file, JSONresult);
+
+            runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
+            File.WriteAllText(file, runtimeConfigJson);
+
             return true;
         }
 
+        /// <summary>
+        /// Try to read and deserialize runtime config from a file.
+        /// </summary>
+        /// <param name="file">File path.</param>
+        /// <param name="runtimeConfig">Runtime config output. On failure, this will be null.</param>
+        /// <returns>True on success. On failure, return false and runtimeConfig will be set to null.</returns>
+        private static bool TryReadRuntimeConfig(string file, out string runtimeConfigJson)
+        {
+            runtimeConfigJson = string.Empty;
+
+            if (!File.Exists(file))
+            {
+                Console.WriteLine($"ERROR: Couldn't find config  file: {file}.");
+                Console.WriteLine($"Please run: hawaii init <options> to create a new config file.");
+
+                return false;
+            }
+
+            // Read existing config file content.
+            //
+            runtimeConfigJson = File.ReadAllText(file);
+            return true;
+        }
     }
 }

@@ -1,7 +1,7 @@
-namespace tests;
+namespace Hawaii.Cli;
 
 [TestClass]
-public class UnitTest
+public class EndToEndTests
 {
     [TestMethod]
     public void TestInitForCosmosDB()
@@ -31,5 +31,4 @@ public class UnitTest
         Assert.AreEqual(HostModeType.Production, runtimeConfig.HostGlobalSettings.Mode);
 
     }
-
 }

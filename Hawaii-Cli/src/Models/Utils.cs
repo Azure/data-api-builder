@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataGateway.Config;
 using Humanizer;
-using ConfigAction = Azure.DataGateway.Config.Action;
+using Action = Azure.DataGateway.Config.Action;
 
 /// <summary>
 /// Contains the methods for transforming objects, serialization options.
@@ -19,30 +19,20 @@ namespace Hawaii.Cli.Models
     public class Utils
     {
         /// <summary>
-        /// checks if the string value is either true or false
-        /// </summary>
-        public static bool IsBooleanValue(string str)
-        {
-            return str.Equals("true", StringComparison.OrdinalIgnoreCase)
-                || str.Equals("false", StringComparison.OrdinalIgnoreCase);
-        }
-
-        /// <summary>
         /// creates the rest object which can be either a boolean value
-        /// or a dictionary containing api route based on the input
+        /// or a RestEntitySettings object containing api route based on the input
         /// </summary>
         public static object? GetRestDetails(string? rest)
         {
             object? rest_detail;
-            if (rest is null || Utils.IsBooleanValue(rest))
+            if (rest is null || bool.TryParse(rest, out _))
             {
                 rest_detail = rest;
             }
             else
             {
-                Dictionary<string, string>? route_details = new();
-                route_details.Add("route", "/" + rest);
-                rest_detail = route_details;
+                RestEntitySettings restEntitySettings = new("/" + rest);
+                rest_detail = restEntitySettings;
             }
 
             return rest_detail;
@@ -50,41 +40,39 @@ namespace Hawaii.Cli.Models
 
         /// <summary>
         /// creates the graphql object which can be either a boolean value
-        /// or a dictionary containing graphql type {singular, plural} based on the input
+        /// or a GraphQLEntitySettings object containing graphql type {singular, plural} based on the input
         /// </summary>
         public static object? GetGraphQLDetails(string? graphQL)
         {
             object? graphQL_detail;
-            if (graphQL is null || Utils.IsBooleanValue(graphQL))
+            if (graphQL is null || bool.TryParse(graphQL, out _))
             {
                 graphQL_detail = graphQL;
             }
             else
             {
-                Dictionary<string, object>? type_details = new();
-                Dictionary<string, string>? singular_plural = new();
-                string? graphQLType = graphQL.ToString();
-                singular_plural.Add("singular", graphQLType.Singularize(inputIsKnownToBePlural: false));
-                singular_plural.Add("plural", graphQLType.Pluralize(inputIsKnownToBeSingular: false));
-                type_details.Add("type", singular_plural);
-                graphQL_detail = type_details;
+                SingularPlural singularPlural = new(
+                    graphQL.Singularize(inputIsKnownToBePlural: false),
+                    graphQL.Pluralize(inputIsKnownToBeSingular: false));
+                GraphQLEntitySettings graphQLEntitySettings = new(singularPlural);
+                graphQL_detail = graphQLEntitySettings;
             }
 
             return graphQL_detail;
         }
 
         /// <summary>
-        /// creates an Action element which contains one of the CRUD operation and 
+        /// creates an Action element which contains one of the CRUD operation and
         /// fields to which this action is allowed as permission setting.
         /// </summary>
-        public static ConfigAction GetAction(string action, string? fieldsToInclude, string? fieldsToExclude)
+        public static Action GetAction(string action, string? fieldsToInclude, string? fieldsToExclude)
         {
-            ConfigAction? actionObject = new(action, Policy: null, Fields: null);
+            Action? actionObject = new(action, Policy: null, Fields: null);
             if (fieldsToInclude is not null || fieldsToExclude is not null)
             {
                 string[]? fieldsToIncludeArray = fieldsToInclude is not null ? fieldsToInclude.Split(",") : null;
                 string[]? fieldsToExcludeArray = fieldsToExclude is not null ? fieldsToExclude.Split(",") : null;
-                actionObject = new ConfigAction(action, Policy: null, Fields: new Field(fieldsToIncludeArray, fieldsToExcludeArray));
+                actionObject = new Action(action, Policy: null, Fields: new Field(fieldsToIncludeArray, fieldsToExcludeArray));
             }
 
             return actionObject;
@@ -93,14 +81,14 @@ namespace Hawaii.Cli.Models
         /// <summary>
         /// translates the JsonElement to the Action Object
         /// </summary>
-        public static ConfigAction ToActionObject(JsonElement element)
+        public static Action? ToActionObject(JsonElement element)
         {
             string json = element.GetRawText();
-            return JsonSerializer.Deserialize<ConfigAction>(json);
+            return JsonSerializer.Deserialize<Action>(json);
         }
 
         /// <summary>
-        /// creates an array of Action element which contains one of the CRUD operation and 
+        /// creates an array of Action element which contains one of the CRUD operation and
         /// fields to which this action is allowed as permission setting based on the given input.
         /// </summary>
         public static object[] CreateActions(string actions, string? fieldsToInclude, string? fieldsToExclude)
@@ -123,7 +111,7 @@ namespace Hawaii.Cli.Models
                     List<object>? action_list = new();
                     foreach (string? action_element in action_elements)
                     {
-                        ConfigAction? action_item = GetAction(action_element, fieldsToInclude, fieldsToExclude);
+                        Action? action_item = GetAction(action_element, fieldsToInclude, fieldsToExclude);
                         action_list.Add(action_item);
                     }
 
@@ -197,7 +185,7 @@ namespace Hawaii.Cli.Models
                 return op.ToString();
             }
 
-            return (ToActionObject(op)).Name;
+            return ToActionObject(op)!.Name;
         }
 
         /// <summary>

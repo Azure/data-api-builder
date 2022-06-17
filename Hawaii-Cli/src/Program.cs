@@ -18,7 +18,7 @@ namespace Hawaii.Cli
             ParserResult<object>? result = Parser.Default.ParseArguments<InitOptions, AddOptions, UpdateOptions>(args)
                 .WithParsed<InitOptions>(options =>
                 {
-                    bool isSuccess = ConfigGenerator.GenerateConfig(options);
+                    bool isSuccess = ConfigGenerator.TryGenerateConfig(options);
                     if (isSuccess)
                     {
                         Console.WriteLine($"Config generated with file name: {options.Name}, database type: {options.DatabaseType}, and connectionString: {options.ConnectionString}");
@@ -31,7 +31,7 @@ namespace Hawaii.Cli
                 })
                 .WithParsed<AddOptions>(options =>
                 {
-                    bool isSuccess = ConfigGenerator.AddEntitiesToConfig(options);
+                    bool isSuccess = ConfigGenerator.TryAddEntityToConfigWithOptions(options);
                     if (isSuccess)
                     {
                         Console.WriteLine($"Added new entity:{options.Entity} with source: {options.Source} to config: {options.Name} with permissions: {options.Permissions}.");
@@ -44,7 +44,7 @@ namespace Hawaii.Cli
                 })
                 .WithParsed<UpdateOptions>(options =>
                 {
-                    bool isSuccess = ConfigGenerator.UpdateEntity(options);
+                    bool isSuccess = ConfigGenerator.TryUpdateEntityWithOptions(options);
 
                     if (isSuccess)
                     {

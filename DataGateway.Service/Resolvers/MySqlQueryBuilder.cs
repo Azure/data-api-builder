@@ -32,6 +32,7 @@ namespace Azure.DataGateway.Service.Resolvers
             fromSql += string.Join("", structure.JoinQueries.Select(x => $" LEFT OUTER JOIN LATERAL ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)} ON TRUE"));
 
             string predicates = JoinPredicateStrings(
+                                    structure.DbPolicyPredicates,
                                     structure.FilterPredicates,
                                     Build(structure.Predicates),
                                     Build(structure.PaginationMetadata.PaginationPredicate));
@@ -201,6 +202,11 @@ WHERE
                     // In order to account for that, explicit casting is used.
                     // For more refer to: https://stackoverflow.com/questions/49131832/how-to-create-a-json-object-in-mysql-with-a-boolean-value
                     jsonColumns.Add($"{parametrizedCLabel}, CAST({subqueryName}.{QuoteIdentifier(cLabel)} is true as json)");
+                }
+                else if (column.ColumnName != SqlQueryStructure.DATA_IDENT &&
+                    structure.GetColumnSystemType(column.ColumnName) == typeof(byte[]))
+                {
+                    jsonColumns.Add($"{parametrizedCLabel}, TO_BASE64({subqueryName}.{QuoteIdentifier(cLabel)})");
                 }
                 else
                 {

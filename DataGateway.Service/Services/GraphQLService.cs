@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes;
@@ -19,7 +20,6 @@ using HotChocolate.Execution.Configuration;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -37,19 +37,17 @@ namespace Azure.DataGateway.Service.Services
         public IRequestExecutor? Executor { private set; get; }
 
         public GraphQLService(
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,
+            RuntimeConfigProvider runtimeConfigProvider,
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
             IDocumentCache documentCache,
             IDocumentHashProvider documentHashProvider,
             ISqlMetadataProvider sqlMetadataProvider)
         {
+            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
 
-            runtimeConfigPath.CurrentValue.
-                ExtractConfigValues(
-                    out _databaseType,
-                    out _,
-                    out _entities);
+            _databaseType = runtimeConfig.DatabaseType;
+            _entities = runtimeConfig.Entities;
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
             _sqlMetadataProvider = sqlMetadataProvider;

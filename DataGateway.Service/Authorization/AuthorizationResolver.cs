@@ -485,13 +485,13 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <summary>
-        /// Returns the collection of roles which can READ the provided field.
+        /// Returns the collection of roles which can perform {actionName} the provided field.
         /// Applicable to GraphQL field directive @authorize on ObjectType fields.
         /// </summary>
-        /// <param name="entityName"></param>
-        /// <param name="actionName"></param>
-        /// <param name="field"></param>
-        /// <returns></returns>
+        /// <param name="entityName">EntityName whose actionMetadata will be searched.</param>
+        /// <param name="actionName">ActionName to lookup field permissions</param>
+        /// <param name="field">Specific field to get collection of roles</param>
+        /// <returns>Collection of role names allowed to perform actionType on Entity's field.</returns>
         public IEnumerable<string> GetRolesForField(string entityName, string actionName, string field)
         {
             return EntityPermissionsMap[entityName].FieldToRolesMap[actionName][field];
@@ -506,12 +506,6 @@ namespace Azure.DataGateway.Service.Authorization
         private IEnumerable<string> ResolveTableDefinitionColumns(string entityName)
         {
             return _metadataProvider.GetTableDefinition(entityName).Columns.Keys;
-        }
-
-        public static void TestMyAuthorizationStaticMethod(string apple, string orange)
-        {
-            string bucket = apple + orange;
-            bucket.Substring(5);
         }
         #endregion
     }

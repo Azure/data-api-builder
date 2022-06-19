@@ -18,5 +18,4 @@ WIP - The Tour of Super Heroes App uses Azure Cosmosdb as a storage with many of
 
 ## [e-Commerce App](./cms)
 
-WIP - e-Commerce App is a reference app that showcases how to leveage
-Hawaii with Cosmos DB to build modern apps with business logic.
+WIP - e-Commerce App is a reference app that showcases how to leverage Hawaii with Cosmos DB to build modern apps with business logic.

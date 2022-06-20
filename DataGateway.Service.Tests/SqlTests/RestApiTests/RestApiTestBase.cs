@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using System.Web;
@@ -2494,6 +2495,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         /// Tests the REST Api for Find operation on an entity that does not exist
         /// No sqlQuery provided as error should be thrown prior to database query
         /// Expects a 404 Not Found error
+        ///
+        /// Also tests on an entity with a case mismatch (nonexistent since entities are case-sensitive)
+        /// I.e. the case of the entity defined in config does not match the case of the entity requested
+        /// EX: entity defined as `Book` in config but `book` resource requested (GET https://localhost:5001/book)
         /// </summary>
         [TestMethod]
         public async Task FindNonExistentEntity()
@@ -2509,6 +2514,23 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 expectedStatusCode: HttpStatusCode.NotFound,
                 expectedSubStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound.ToString()
             );
+
+            // Case sensitive test
+            string integrationEntityNameIncorrectCase = _integrationEntityName.Any(char.IsUpper) ?
+                _integrationEntityName.ToLowerInvariant() : _integrationEntityName.ToUpperInvariant();
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: integrationEntityNameIncorrectCase,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: $"{integrationEntityNameIncorrectCase} is not a valid entity.",
+                expectedStatusCode: HttpStatusCode.NotFound,
+                expectedSubStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound.ToString()
+            );
+
         }
 
         /// <summary>

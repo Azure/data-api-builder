@@ -953,13 +953,13 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
-        /// Populates the partition key path, for Cosmos only
+        /// Retrieving the partition key path, for Cosmos only
         /// </summary>
         public string? GetPartitionKeyPath(string database, string container)
             => throw new NotImplementedException();
 
         /// <summary>
-        /// Populates the partition key path, for Cosmos only
+        /// Setting the partition key path, for Cosmos only
         /// </summary>
         public void SetPartitionKeyPath(string database, string container, string partitionKeyPath)
             => throw new NotImplementedException();

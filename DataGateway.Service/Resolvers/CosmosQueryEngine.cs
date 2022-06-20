@@ -74,11 +74,13 @@ namespace Azure.DataGateway.Service.Resolvers
                 requestContinuation = Base64Decode(structure.Continuation);
             }
 
+            // If both partition key value and id value are provided, will execute single partition query
             if (!string.IsNullOrEmpty(partitionKeyValue) && !string.IsNullOrEmpty(idValue))
             {
                 return await QueryByIdAndPartitionKey(container, idValue, partitionKeyValue, structure.IsPaginated);
             }
 
+            // If partition key value or id values are not provided, will execute cross partition query
             using (FeedIterator<JObject> query = container.GetItemQueryIterator<JObject>(querySpec, requestContinuation, queryRequestOptions))
             {
                 do
@@ -225,6 +227,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             return partitionKeyPath;
         }
+
 #nullable enable
         private async Task<(string? idValue, string? partitionKeyValue)> GetIdAndPartitionKey(IDictionary<string, object?> parameters, Container container, CosmosQueryStructure structure)
         {
@@ -265,7 +268,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="parameter"></param>
         /// <returns></returns>
 #nullable enable
-        private string? GetPartitionKeyValue(string partitionKeyPath, object? parameter)
+        private string? GetPartitionKeyValue(string? partitionKeyPath, object? parameter)
         {
             if (parameter is null || partitionKeyPath is null)
             {

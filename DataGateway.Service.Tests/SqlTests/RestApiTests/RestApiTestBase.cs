@@ -2496,7 +2496,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         /// No sqlQuery provided as error should be thrown prior to database query
         /// Expects a 404 Not Found error
         ///
-        /// As a subset of a nonexistent entity, also tests on an entity that is defined with an incorrect case
+        /// Also tests on an entity with a case mismatch (nonexistent since entities are case-sensitive)
         /// I.e. the case of the entity defined in config does not match the case of the entity requested
         /// EX: entity defined as `Book` in config but `book` resource requested (GET https://localhost:5001/book)
         /// </summary>
@@ -2516,7 +2516,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
             );
 
             // Case sensitive test
-            string integrationEntityNameIncorrectCase = _integrationEntityName.Any(char.IsUpper) ? _integrationEntityName.ToLowerInvariant() : _integrationEntityName.ToUpperInvariant();
+            string integrationEntityNameIncorrectCase = _integrationEntityName.Any(char.IsUpper) ?
+                _integrationEntityName.ToLowerInvariant() : _integrationEntityName.ToUpperInvariant();
+
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,

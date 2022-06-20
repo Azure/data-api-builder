@@ -64,9 +64,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
         [TestMethod]
         public async Task TestWildcardResolvesAsAllActions(string httpMethod)
         {
-            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                entityName: AuthorizationHelpers.TEST_ENTITY, roleName: "admin", actionName: "*");
-            AuthorizationResolver authorizationResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+            AuthorizationResolver authorizationResolver = SetupAuthResolverWithWildcardActions();
             HttpContext httpContext = CreateHttpContext(httpMethod: httpMethod, clientRole: "admin");
 
             bool authorizationResult = await IsAuthorizationSuccessfulAsync(
@@ -92,9 +90,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
         [TestMethod]
         public void TestWildcardPolicyResolvesToEmpty(string httpMethod)
         {
-            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                entityName: AuthorizationHelpers.TEST_ENTITY, roleName: "admin", actionName: "*");
-            AuthorizationResolver authorizationResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+            AuthorizationResolver authorizationResolver = SetupAuthResolverWithWildcardActions();
             HttpContext httpContext = CreateHttpContext(httpMethod: httpMethod, clientRole: "admin");
 
             Assert.AreEqual(expected: string.Empty, actual: authorizationResolver.TryProcessDBPolicy(
@@ -346,6 +342,20 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
             stubRestContext.CumulativeColumns.UnionWith(columnsRequested);
 
             return stubRestContext;
+        }
+
+        /// <summary>
+        /// Sets up an authorization resolver with a config that specifies the wildcard ("*") as the test entity's actions
+        /// </summary>
+        private static AuthorizationResolver SetupAuthResolverWithWildcardActions()
+        {
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: "admin",
+                actionName: "*"
+                );
+
+            return AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
         }
         #endregion
     }

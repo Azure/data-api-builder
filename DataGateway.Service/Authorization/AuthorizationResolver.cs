@@ -189,7 +189,8 @@ namespace Azure.DataGateway.Service.Authorization
             roleMetadata.ActionToColumnMap.TryGetValue(action, out ActionMetadata? actionMetadata);
 
             // If action exists in map (explicitly specified in config), use its policy
-            // action should only be absent in roleMetadata if WILDCARD is in the map instead of specific actions, as authorization happens before policy parsing (would have already returned forbidden)
+            // action should only be absent in roleMetadata if WILDCARD is in the map instead of specific actions,
+            // as authorization happens before policy parsing (would have already returned forbidden)
             string? dbPolicy;
             if (actionMetadata is not null)
             {

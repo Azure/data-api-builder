@@ -123,11 +123,11 @@ namespace Azure.DataGateway.Service.Authorization
 
             try
             {
-                actionToColumnMap = roleInEntity.ActionToColumnMap[WILDCARD];
+                actionToColumnMap = roleInEntity.ActionToColumnMap[actionName];
             }
             catch (KeyNotFoundException)
             {
-                actionToColumnMap = roleInEntity.ActionToColumnMap[actionName];
+                actionToColumnMap = roleInEntity.ActionToColumnMap[WILDCARD];
             }
 
             // Each column present in the request is an "exposedColumn".
@@ -184,9 +184,25 @@ namespace Azure.DataGateway.Service.Authorization
             // _entityPermissionMap[entityName] finds the entityMetaData for the current entityName
             // entityMetaData.RoleToActionMap[roleName] finds the roleMetaData for the current roleName
             // roleMetaData.ActionToColumnMap[action] finds the actionMetaData for the current action
-            // actionMetaData.database finds the required database policy
+            // actionMetaData.databasePolicy finds the required database policy
+            RoleMetadata roleMetadata = _entityPermissionMap[entityName].RoleToActionMap[roleName];
+            roleMetadata.ActionToColumnMap.TryGetValue(action, out ActionMetadata? actionMetadata);
 
-            string? dbPolicy = _entityPermissionMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action].databasePolicy;
+            // If action exists in map (explicitly specified in config), use its policy
+            // action should only be absent in roleMetadata if WILDCARD is in the map instead of specific actions,
+            // as authorization happens before policy parsing (would have already returned forbidden)
+            string? dbPolicy;
+            if (actionMetadata is not null)
+            {
+                dbPolicy = actionMetadata.databasePolicy;
+
+            } // else check if wildcard exists in action map, if so use its policy, else null
+            else
+            {
+                roleMetadata.ActionToColumnMap.TryGetValue(WILDCARD, out ActionMetadata? wildcardMetadata);
+                dbPolicy = wildcardMetadata is not null ? wildcardMetadata.databasePolicy : null;
+            }
+
             return dbPolicy is not null ? dbPolicy : string.Empty;
         }
 

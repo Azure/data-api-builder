@@ -31,10 +31,22 @@
   },
   "entities": {
     "Planet": {
-      "source": "planet"
+      "source": "planet",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
+        }
+      ]
     },
     "Character": {
-      "source": "character"
+      "source": "planet",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
+        }
+      ]
     }
   }
 }

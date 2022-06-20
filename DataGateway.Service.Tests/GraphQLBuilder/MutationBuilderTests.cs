@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -35,6 +37,28 @@ type Foo @model {
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"createFoo"));
+        }
+
+        [TestMethod]
+        [TestCategory("Mutation Builder - Create")]
+        public void WillFailToCreateMutationWhenUnrecognisedTypeProvided()
+        {
+            string gql =
+                @"
+type Foo @model {
+    id: ID!
+    bar: Date!
+}
+                ";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
+            DataGatewayException ex = Assert.ThrowsException<DataGatewayException>(
+                () => MutationBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }),
+                "The type Date is not a known GraphQL type, and cannot be used in this schema."
+            );
+            Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+            Assert.AreEqual(DataGatewayException.SubStatusCodes.GraphQLMapping, ex.SubStatusCode);
         }
 
         [TestMethod]

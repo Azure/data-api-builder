@@ -10,7 +10,7 @@
       "type": "object",
       "properties": {
         "database-type": {
-          "description": "Database used in the backed",
+          "description": "Database used in the backend",
           "type": "string",
           "enum": [
             "mssql",
@@ -120,9 +120,6 @@
                       "type": "string"
                     },
                     "issuer": {
-                      "type": "string"
-                    },
-                    "issuer-key": {
                       "type": "string"
                     }
                   }

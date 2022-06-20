@@ -1,6 +1,7 @@
 using System;
 using System.Data.Common;
 using System.Net;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -11,6 +12,10 @@ namespace Azure.DataGateway.Service.Resolvers
         public const string FK_VIOLATION_CODE = "23503";
         public const string UNQIUE_VIOLATION_MESSAGE = "PostgreSql Error 23505: Unique Constraint Violation.";
         public const string UNQIUE_VIOLATION_CODE = "23505";
+
+        public PostgresDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider)
+        {
+        }
 
         public override Exception Parse(DbException e)
         {

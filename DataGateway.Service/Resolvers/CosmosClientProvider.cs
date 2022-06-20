@@ -1,8 +1,8 @@
 using System;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Fluent;
-using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -10,15 +10,19 @@ namespace Azure.DataGateway.Service.Resolvers
     {
         private string? _connectionString;
         public CosmosClient? Client { get; private set; }
-        public CosmosClientProvider(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath)
+        public CosmosClientProvider(RuntimeConfigProvider runtimeConfigProvider)
         {
-            runtimeConfigPath.OnChange((newValue) =>
+            if (runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
             {
-                newValue.SetRuntimeConfigValue();
-                InitializeClient(runtimeConfigPath.CurrentValue.ConfigValue);
-            });
-
-            InitializeClient(runtimeConfigPath.CurrentValue.ConfigValue);
+                InitializeClient(runtimeConfig);
+            }
+            else
+            {
+                runtimeConfigProvider.RuntimeConfigLoaded += (sender, newValue) =>
+                {
+                    InitializeClient(newValue);
+                };
+            }
         }
 
         private void InitializeClient(RuntimeConfig? configuration)

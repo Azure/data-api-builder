@@ -15,7 +15,6 @@ using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using Microsoft.Azure.Cosmos;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -23,16 +22,13 @@ namespace Azure.DataGateway.Service.Resolvers
     public class CosmosMutationEngine : IMutationEngine
     {
         private readonly CosmosClientProvider _clientProvider;
-        private readonly IOptionsMonitor<RuntimeConfigPath> _runtimeConfigPath;
         private readonly ISqlMetadataProvider _metadataProvider;
 
         public CosmosMutationEngine(
             CosmosClientProvider clientProvider,
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,
             ISqlMetadataProvider metadataProvider)
         {
             _clientProvider = clientProvider;
-            _runtimeConfigPath = runtimeConfigPath;
             _metadataProvider = metadataProvider;
         }
 
@@ -51,9 +47,9 @@ namespace Azure.DataGateway.Service.Resolvers
             if (client == null)
             {
                 throw new DataGatewayException(
-                    "Cosmos DB has not been properly initialized",
-                    HttpStatusCode.InternalServerError,
-                    DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
+                    message: "Cosmos DB has not been properly initialized",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
             }
 
             Container container = client.GetDatabase(resolver.DatabaseName)
@@ -186,11 +182,6 @@ namespace Azure.DataGateway.Service.Resolvers
             IDictionary<string, object?> parameters)
         {
             string entityName = context.Selection.Field.Type.NamedType().Name.Value;
-            RuntimeConfig? configValue = _runtimeConfigPath.CurrentValue.ConfigValue;
-            if (configValue is null)
-            {
-                throw new DataGatewayException("Runtime config isn't setup.", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.ErrorInInitialization);
-            }
 
             string databaseName = _metadataProvider.GetSchemaName(entityName);
             string containerName = _metadataProvider.GetDatabaseObjectName(entityName);

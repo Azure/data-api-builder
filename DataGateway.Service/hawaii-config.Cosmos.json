@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/hawaii.draft-01.schema.json",
   "data-source": {
-    "database-type": "cosmosdb",
+    "database-type": "cosmos",
     "connection-string": "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=="
   },
   "cosmos": {
@@ -21,8 +21,8 @@
     "host": {
       "mode": "development",
       "cors": {
-        "origins": ["1", "2"],
-        "allow-credentials": true
+        "origins": [ "http://localhost:3000" ],
+        "allow-credentials": false
       },
       "authentication": {
         "provider": "EasyAuth"
@@ -30,8 +30,10 @@
     }
   },
   "entities": {
-    "planet": {},
-    "character": {
+    "Planet": {
+      "source": "planet"
+    },
+    "Character": {
       "source": "character"
     }
   }

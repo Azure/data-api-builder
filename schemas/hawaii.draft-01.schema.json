@@ -17,7 +17,7 @@
             "postgres",
             "mysql",
             "mariadb",
-            "cosmosdb"
+            "cosmos"
           ]
         },
         "connection-string": {

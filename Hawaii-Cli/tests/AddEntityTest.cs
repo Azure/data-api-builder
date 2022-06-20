@@ -19,13 +19,6 @@ namespace Hawaii.Cli.Tests
                 graphQLType: null,
                 fieldsToInclude: null,
                 fieldsToExclude: null,
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: null,
-                linkingTargetFields: null,
-                mappingFields: null,
                 name: "outputfile");
 
             string initialConfig =
@@ -42,12 +35,12 @@ namespace Hawaii.Cli.Tests
   ""runtime"": {
     ""rest"": {
       ""enabled"": true,
-      ""path"": ""/api""
+      ""path"": ""/""
     },
     ""graphql"": {
       ""allow-introspection"": true,
       ""enabled"": true,
-      ""path"": ""/api/graphql""
+      ""path"": ""/graphql""
     },
     ""host"": {
       ""mode"": ""development"",
@@ -68,59 +61,7 @@ namespace Hawaii.Cli.Tests
   ""entities"": {}
 }
 ";
-            string expectedConfig =
-            @"
-{
-  ""$schema"": ""hawaii.draft-01.schema.json"",
-  ""data-source"": {
-    ""database-type"": ""mssql"",
-    ""connection-string"": ""testconnectionstring""
-  },
-  ""mssql"": {
-    ""set-session-context"": true
-  },
-  ""runtime"": {
-    ""rest"": {
-      ""enabled"": true,
-      ""path"": ""/api""
-    },
-    ""graphql"": {
-      ""allow-introspection"": true,
-      ""enabled"": true,
-      ""path"": ""/api/graphql""
-    },
-    ""host"": {
-      ""mode"": ""development"",
-      ""cors"": {
-        ""origins"": [],
-        ""allow-credentials"": true
-      },
-      ""authentication"": {
-        ""provider"": ""EasyAuth"",
-        ""jwt"": {
-          ""audience"": """",
-          ""issuer"": """",
-          ""issuerkey"": """"
-        }
-      }
-    }
-  },
-  ""entities"": {
-    ""MyEntity"": {
-      ""source"": ""MyTable"",
-      ""permissions"": [
-        {
-          ""role"": ""anonymous"",
-          ""actions"": [
-            ""read"",
-            ""update""
-          ]
-        }
-      ]
-    }
-  }
-}
-";
+            string expectedConfig = GetGeneratedConfigWithOneEntity();
 
             RunTest(options, initialConfig, expectedConfig);
         }
@@ -139,68 +80,9 @@ namespace Hawaii.Cli.Tests
                 graphQLType: null,
                 fieldsToInclude: null,
                 fieldsToExclude: null,
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: null,
-                linkingTargetFields: null,
-                mappingFields: null,
                 name: "outputfile");
 
-            string initialConfig =
-            @"
-{
-  ""$schema"": ""hawaii.draft-01.schema.json"",
-  ""data-source"": {
-    ""database-type"": ""mssql"",
-    ""connection-string"": ""testconnectionstring""
-  },
-  ""mssql"": {
-    ""set-session-context"": true
-  },
-  ""runtime"": {
-    ""rest"": {
-      ""enabled"": true,
-      ""path"": ""/api""
-    },
-    ""graphql"": {
-      ""allow-introspection"": true,
-      ""enabled"": true,
-      ""path"": ""/api/graphql""
-    },
-    ""host"": {
-      ""mode"": ""development"",
-      ""cors"": {
-        ""origins"": [],
-        ""allow-credentials"": true
-      },
-      ""authentication"": {
-        ""provider"": ""EasyAuth"",
-        ""jwt"": {
-          ""audience"": """",
-          ""issuer"": """",
-          ""issuerkey"": """"
-        }
-      }
-    }
-  },
-  ""entities"": {
-    ""MyEntity"": {
-      ""source"": ""MyTable"",
-      ""permissions"": [
-        {
-          ""role"": ""anonymous"",
-          ""actions"": [
-            ""read"",
-            ""update""
-          ]
-        }
-      ]
-    }
-  }
-}
-";
+            string initialConfig = GetGeneratedConfigWithOneEntity();
             string expectedConfig =
             @"
 {
@@ -215,12 +97,12 @@ namespace Hawaii.Cli.Tests
   ""runtime"": {
     ""rest"": {
       ""enabled"": true,
-      ""path"": ""/api""
+      ""path"": ""/""
     },
     ""graphql"": {
       ""allow-introspection"": true,
       ""enabled"": true,
-      ""path"": ""/api/graphql""
+      ""path"": ""/graphql""
     },
     ""host"": {
       ""mode"": ""development"",
@@ -281,68 +163,9 @@ namespace Hawaii.Cli.Tests
                 graphQLType: null,
                 fieldsToInclude: null,
                 fieldsToExclude: null,
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: null,
-                linkingTargetFields: null,
-                mappingFields: null,
                 name: "outputfile");
 
-            string initialConfig =
-            @"
-{
-  ""$schema"": ""hawaii.draft-01.schema.json"",
-  ""data-source"": {
-    ""database-type"": ""mssql"",
-    ""connection-string"": ""testconnectionstring""
-  },
-  ""mssql"": {
-    ""set-session-context"": true
-  },
-  ""runtime"": {
-    ""rest"": {
-      ""enabled"": true,
-      ""path"": ""/api""
-    },
-    ""graphql"": {
-      ""allow-introspection"": true,
-      ""enabled"": true,
-      ""path"": ""/api/graphql""
-    },
-    ""host"": {
-      ""mode"": ""development"",
-      ""cors"": {
-        ""origins"": [],
-        ""allow-credentials"": true
-      },
-      ""authentication"": {
-        ""provider"": ""EasyAuth"",
-        ""jwt"": {
-          ""audience"": """",
-          ""issuer"": """",
-          ""issuerkey"": """"
-        }
-      }
-    }
-  },
-  ""entities"": {
-    ""MyEntity"": {
-      ""source"": ""MyTable"",
-      ""permissions"": [
-        {
-          ""role"": ""anonymous"",
-          ""actions"": [
-            ""read"",
-            ""update""
-          ]
-        }
-      ]
-    }
-  }
-}
-";
+            string initialConfig = GetGeneratedConfigWithOneEntity();
 
             Assert.IsFalse(ConfigGenerator.TryAddNewEntity(options, ref initialConfig));
         }
@@ -361,6 +184,62 @@ namespace Hawaii.Cli.Tests
             JObject actualJson = JObject.Parse(initialConfig);
 
             Assert.IsTrue(JToken.DeepEquals(expectedJson, actualJson));
+        }
+
+        private static string GetGeneratedConfigWithOneEntity()
+        {
+            return @"
+                {
+                ""$schema"": ""hawaii.draft-01.schema.json"",
+                ""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""testconnectionstring""
+                },
+                ""mssql"": {
+                    ""set-session-context"": true
+                },
+                ""runtime"": {
+                    ""rest"": {
+                    ""enabled"": true,
+                    ""path"": ""/""
+                    },
+                    ""graphql"": {
+                    ""allow-introspection"": true,
+                    ""enabled"": true,
+                    ""path"": ""/graphql""
+                    },
+                    ""host"": {
+                    ""mode"": ""development"",
+                    ""cors"": {
+                        ""origins"": [],
+                        ""allow-credentials"": true
+                    },
+                    ""authentication"": {
+                        ""provider"": ""EasyAuth"",
+                        ""jwt"": {
+                        ""audience"": """",
+                        ""issuer"": """",
+                        ""issuerkey"": """"
+                        }
+                    }
+                    }
+                },
+                ""entities"": {
+                    ""MyEntity"": {
+                    ""source"": ""MyTable"",
+                    ""permissions"": [
+                        {
+                        ""role"": ""anonymous"",
+                        ""actions"": [
+                            ""read"",
+                            ""update""
+                        ]
+                        }
+                    ]
+                    }
+                }
+                }
+            ";
         }
     }
 }

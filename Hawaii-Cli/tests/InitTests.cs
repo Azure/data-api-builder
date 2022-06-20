@@ -38,12 +38,12 @@ namespace Hawaii.Cli.Tests
   ""runtime"": {
     ""rest"": {
       ""enabled"": true,
-      ""path"": ""/api""
+      ""path"": ""/""
     },
     ""graphql"": {
       ""allow-introspection"": true,
       ""enabled"": true,
-      ""path"": ""/api/graphql""
+      ""path"": ""/graphql""
     },
     ""host"": {
       ""mode"": ""development"",
@@ -98,12 +98,12 @@ namespace Hawaii.Cli.Tests
   ""runtime"": {
     ""rest"": {
       ""enabled"": false,
-      ""path"": ""/api""
+      ""path"": ""/""
     },
     ""graphql"": {
       ""allow-introspection"": true,
       ""enabled"": true,
-      ""path"": ""/api/graphql""
+      ""path"": ""/graphql""
     },
     ""host"": {
       ""mode"": ""production"",

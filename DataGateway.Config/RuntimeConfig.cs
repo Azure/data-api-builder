@@ -181,6 +181,7 @@ namespace Azure.DataGateway.Config
             }
         }
 
+        [JsonIgnore]
         public string DatabaseTypeNotSupportedMessage => $"The provided database-type value: {DatabaseType} is currently not supported. Please check the configuration file.";
     }
 }

@@ -313,7 +313,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="httpVerb"></param>
         /// <returns>The CRUD operation for the given httpverb.</returns>
-        private static string HttpVerbToActions(string httpVerbName)
+        public static string HttpVerbToActions(string httpVerbName)
         {
             switch (httpVerbName)
             {

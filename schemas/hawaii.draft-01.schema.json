@@ -14,7 +14,7 @@
           "type": "string",
           "enum": [
             "mssql",
-            "postgres",
+            "postgresql",
             "mysql",
             "mariadb",
             "cosmos"
@@ -100,9 +100,9 @@
                   },
                   "default": []
                 },
-                "credentials": {
+                "allow-credentials": {
                   "type": "boolean",
-                  "default": "true",
+                  "default": "false",
                   "description": "Set value for Access-Control-Allow-Credentials header"
                 }
               }
@@ -114,9 +114,6 @@
                   "type": "object",
                   "properties": {
                     "audience": {
-                      "type": "string"
-                    },
-                    "authority": {
                       "type": "string"
                     },
                     "issuer": {

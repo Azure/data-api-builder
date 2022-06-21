@@ -45,6 +45,11 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
                 new string[] { "envVarValue", "@env(envVarValue)", "@enenvVarValue", "@env'()@env'envVarValue')')" }
             },
             DisplayName = "Replacement strings that match.")]
+        //  the following are envionrment variable names set to the
+        //  associated values:
+        // 'envVarName  -> _envVarName
+        //  envVarName' ->  envVarName_
+        // 'envVarName' -> _envVarName_
         [DataRow(new string[] { "@env(')", "@env()", "@env('envVarName')", "@env(''envVarName')", "@env('envVarName'')", "@env(''envVarName'')" },
             new object[]
             {

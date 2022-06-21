@@ -177,15 +177,16 @@ namespace Azure.DataGateway.Service.Services
             // entity name comes after the path, so get substring starting from
             // the end of path. If path is not empty we add +1 to length of path
             // to account for the '/' following the path.
-            string entityName = string.IsNullOrEmpty(path) ? route : route.Substring(path.Length + 1);
+            string routeAfterPath = string.IsNullOrEmpty(path) ? route : route.Substring(path.Length + 1);
+            string entityName = string.Empty;
             string primaryKeyRoute = string.Empty;
             // a '/' remaining in this substring means we have a primary key route
-            if (entityName.Contains('/'))
+            if (routeAfterPath.Contains('/'))
             {
                 // primary key route is what follows the first '/'
-                primaryKeyRoute = entityName.Substring(entityName.IndexOf('/') + 1);
+                primaryKeyRoute = routeAfterPath.Substring(routeAfterPath.IndexOf('/') + 1);
                 // save entity name as string up until first '/'
-                entityName = entityName[..entityName.IndexOf('/')];
+                entityName = routeAfterPath[..routeAfterPath.IndexOf('/')];
             }
 
             return (entityName, primaryKeyRoute);

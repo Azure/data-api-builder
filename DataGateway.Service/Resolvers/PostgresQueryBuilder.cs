@@ -38,7 +38,7 @@ namespace Azure.DataGateway.Service.Resolvers
                                     Build(structure.Predicates),
                                     Build(structure.PaginationMetadata.PaginationPredicate));
 
-            string query = $"SELECT {Build(structure.Columns)}"
+            string query = $"SELECT {MakeSelectColumns(structure)}"
                 + $" FROM {fromSql}"
                 + $" WHERE {predicates}"
                 + $" ORDER BY {Build(structure.OrderByColumns)}"
@@ -155,6 +155,36 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             throw new ArgumentException($"Invalid {UPSERT_IDENTIFIER_COLUMN_NAME} column value.");
+        }
+
+        /// <summary>
+        /// Encode byte array columns to base64 strings instead of hex strings
+        /// when parsing the results into json
+        /// </summary>
+        private string MakeSelectColumns(SqlQueryStructure structure)
+        {
+            List<string> builtColumns = new();
+
+            // go through columns to find columns with type byte[]
+            foreach (LabelledColumn column in structure.Columns)
+            {
+                // columns which contain the json of a nested type are called SqlQueryStructure.DATA_IDENT
+                // and they are not actual columns of the underlying table so don't check for column type
+                // in that scenario
+                if (column.ColumnName != SqlQueryStructure.DATA_IDENT &&
+                    structure.GetColumnSystemType(column.ColumnName) == typeof(byte[]))
+                {
+                    // postgres bytea is not stored as base64 so a convertion is made before
+                    // producing the json result since HotChocolate handles ByteArray as base64
+                    builtColumns.Add($"encode({Build(column as Column)}, 'base64') AS {QuoteIdentifier(column.Label)}");
+                }
+                else
+                {
+                    builtColumns.Add(Build(column));
+                }
+            }
+
+            return string.Join(", ", builtColumns);
         }
     }
 }

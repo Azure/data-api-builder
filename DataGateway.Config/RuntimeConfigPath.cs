@@ -84,6 +84,11 @@ namespace Azure.DataGateway.Config
             // '\)      : consume the ') into the match (look ahead doesn't capture)
             // This pattern lazy matches any string that starts with @env(' and ends with ')
             // ie: fooBAR@env('hello-world')bash)FOO')  match: @env('hello-world')
+            // This matching pattern allows for the @env('<match>') to be safely nested
+            // within strings that contain ') after our match.
+            // ie: if the environment variable "Baz" has the value of "Bar"
+            // fooBarBaz: "('foo@env('Baz')Baz')" would parse into
+            // fooBarBaz: "('fooBarBaz')"
             string envPattern = @"@env\('.*?(?='\))'\)";
 
             // The approach for parsing is to re-write the Json to a new string

@@ -27,8 +27,7 @@
         "provider": "EasyAuth",
         "jwt": {
           "audience": "",
-          "issuer": "",
-          "issuer-key": ""
+          "issuer": ""
         }
       }
     }

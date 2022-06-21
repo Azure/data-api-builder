@@ -1,5 +1,5 @@
 {
-  "$schema": "../../project-hawaii/playground/hawaii.draft-01.schema.json",
+  "$schema": "../schemas/hawaii.draft-01.schema.json",
   "data-source": {
     "database-type": "mysql",
     "connection-string": "server=localhost;database=datagatewaytest;Allow User Variables=true;uid=root;pwd=REPLACEME"
@@ -15,7 +15,7 @@
       "allow-introspection": true
     },
     "host": {
-      "mode": "Development",
+      "mode": "development",
       "cors": {
         "origins": [ "http://localhost:3000" ],
         "allow-credentials": false
@@ -24,8 +24,7 @@
         "provider": "EasyAuth",
         "jwt": {
           "audience": "",
-          "issuer": "",
-          "issuer-key": ""
+          "issuer": ""
         }
       }
     }

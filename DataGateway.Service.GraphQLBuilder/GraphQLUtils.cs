@@ -61,7 +61,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
                     new FieldDefinitionNode(
                         location: null,
                         new NameNode(DEFAULT_PRIMARY_KEY_NAME),
-                        new StringValueNode("Id value to provide to populate a cosmos db record"),
+                        new StringValueNode("Id value to provide to identify a cosmos db record"),
                         new List<InputValueDefinitionNode>(),
                         new IdType().ToTypeNode(),
                         new List<DirectiveNode>()));
@@ -70,7 +70,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
                     new FieldDefinitionNode(
                         location: null,
                         new NameNode(DEFAULT_PARTITION_KEY_NAME),
-                        new StringValueNode("Partition key value to provide to populate a cosmos db record"),
+                        new StringValueNode("Partition key value to provide to identify a cosmos db record"),
                         new List<InputValueDefinitionNode>(),
                         new StringType().ToTypeNode(),
                         new List<DirectiveNode>()));

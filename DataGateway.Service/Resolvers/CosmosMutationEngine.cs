@@ -202,7 +202,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// The method is for parsing the mutation input object with nested nested inner objects when input is pasing inline.
+        /// The method is for parsing the mutation input object with nested inner objects when input is passing inline.
         /// </summary>
         /// <param name="item"> In the form of ObjectFieldNode, or List<ObjectFieldNode></param>
         /// <returns>In the form of JObject</returns>

@@ -62,7 +62,7 @@ Once we have the schema name correctly parsed and stored in our mapping, we will
 >The method `GetPartitionKeyValue` is using `PartitionKeyPath` to find the partition key value from query input parameters, using recursion. Example of `PartitionKeyPath` is `/character/id`.
 
 ### CosmosMutationEngine.cs
->For Cosmos, if the nested object field has the same name with an existing model, it will assume it's that model. We are assuming that it's not possible the child nested model has the same name with an other entity, but different json objects.
+>For Cosmos, if the nested object field has the same name with an existing model, it will assume it's that model. We are assuming that it's not possible the child nested model has the same name with any other entity, but different json objects.
 
 
 ## Testing

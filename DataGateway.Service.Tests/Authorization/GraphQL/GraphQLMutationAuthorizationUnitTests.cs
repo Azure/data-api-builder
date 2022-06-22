@@ -40,7 +40,11 @@ type Foo @model(name: ""Foo""){
                 root,
                 DatabaseType.mssql,
                 entities: new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
-                entityPermissionsMap: GraphQLTestHelpers.CreateStubEntityPermissionsMap("Foo", new string[] { operationType }, rolesDefinedInPermissions));
+                entityPermissionsMap: GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                    entityNames: new string[] { "Foo" },
+                    actionNames: new string[] { operationType },
+                    roles: rolesDefinedInPermissions)
+                );
 
             ObjectTypeDefinitionNode mutation = MutationBuilderTests.GetMutationNode(mutationRoot);
 

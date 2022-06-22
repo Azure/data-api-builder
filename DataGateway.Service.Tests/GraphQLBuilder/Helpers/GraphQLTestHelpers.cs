@@ -19,7 +19,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers
         /// <param name="actionName">Name of action performed on entity to resolve authorization permissions.</param>
         /// <param name="roles">Collection of role names allowed to perform action on entity.</param>
         /// <returns>EntityPermissionsMap Key/Value collection.</returns>
-        public static Dictionary<string, EntityMetadata> CreateStubEntityPermissionsMap(string entityName, IEnumerable<string> actionNames, IEnumerable<string> roles)
+        public static Dictionary<string, EntityMetadata> CreateStubEntityPermissionsMap(string[] entityNames, IEnumerable<string> actionNames, IEnumerable<string> roles)
         {
             EntityMetadata entityMetadata = new()
             {
@@ -32,7 +32,11 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers
             }
 
             Dictionary<string, EntityMetadata> entityPermissionsMap = new();
-            entityPermissionsMap.Add(entityName, entityMetadata);
+
+            foreach (string entityName in entityNames)
+            {
+                entityPermissionsMap.Add(entityName, entityMetadata);
+            }
 
             return entityPermissionsMap;
         }

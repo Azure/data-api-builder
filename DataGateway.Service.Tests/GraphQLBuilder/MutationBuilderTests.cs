@@ -2,9 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
+using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -13,6 +16,25 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder
     [TestClass]
     public class MutationBuilderTests
     {
+        private Dictionary<string, EntityMetadata> _entityPermissions;
+
+        /// <summary>
+        /// Create stub entityPermissions to enable MutationBuilder to create
+        /// mutations in GraphQL schema. Without permissions present
+        /// (i.e. no roles defined for action on entity), then mutation
+        /// will not be created in schema since it is inaccessible
+        /// as stated by permissions configuration.
+        /// </summary>
+        [TestInitialize]
+        public void SetupEntityPermissionsMap()
+        {
+            _entityPermissions = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                    "Foo",
+                    new string[] { ActionType.CREATE, ActionType.UPDATE, ActionType.DELETE},
+                    new string[] { "anonymous", "authenticated" }
+                    );
+        }
+
         private static Entity GenerateEmptyEntity()
         {
             return new Entity("dbo.entity", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
@@ -33,7 +55,11 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } });
+            DocumentNode mutationRoot = MutationBuilder.Build(root,
+                DatabaseType.cosmos,
+                new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } },
+                entityPermissionsMap: _entityPermissions
+                );
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"createFoo"));
@@ -54,7 +80,11 @@ type Foo @model {
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
             DataGatewayException ex = Assert.ThrowsException<DataGatewayException>(
-                () => MutationBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }),
+                () => MutationBuilder.Build(root,
+                    DatabaseType.cosmos,
+                    new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } },
+                    entityPermissionsMap: _entityPermissions
+                    ),
                 "The type Date is not a known GraphQL type, and cannot be used in this schema."
             );
             Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
@@ -151,7 +181,12 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } });
+            DocumentNode mutationRoot = MutationBuilder.Build(
+                root,
+                DatabaseType.cosmos,
+                new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } },
+                entityPermissionsMap: _entityPermissions
+                );
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"createFoo"));
@@ -173,7 +208,12 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } });
+            DocumentNode mutationRoot = MutationBuilder.Build(
+                root,
+                DatabaseType.cosmos,
+                new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } },
+                entityPermissionsMap: _entityPermissions
+                );
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");
@@ -201,7 +241,12 @@ type Bar {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } });
+            DocumentNode mutationRoot = MutationBuilder.Build(
+                root,
+                DatabaseType.cosmos,
+                new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } },
+                entityPermissionsMap: _entityPermissions
+                );
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"createFoo"));
@@ -226,7 +271,11 @@ type Bar {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } });
+            DocumentNode mutationRoot = MutationBuilder.Build(root,
+                DatabaseType.cosmos,
+                new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } },
+                entityPermissionsMap: _entityPermissions
+                );
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");
@@ -461,7 +510,11 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } });
+            DocumentNode mutationRoot = MutationBuilder.Build(root,
+                DatabaseType.cosmos,
+                new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } },
+                entityPermissionsMap: _entityPermissions
+                );
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"deleteFoo"));
@@ -612,7 +665,11 @@ type Foo @model {{
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } });
+            DocumentNode mutationRoot = MutationBuilder.Build(root,
+                DatabaseType.cosmos,
+                new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } },
+                entityPermissionsMap: _entityPermissions
+                );
             InputObjectTypeDefinitionNode createFooInput = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is InputObjectTypeDefinitionNode node && node.Name.Value == "CreateFooInput");
 
             // Serialization has them as strings, so we'll just do string compares

@@ -237,12 +237,30 @@
     "SupportedType": {
       "source": "type_table",
       "rest": false,
-      "permissions": []
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
     },
     "stocks_price": {
       "source": "stocks_price",
       "rest": false,
-      "permissions": []
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
     },
     "Tree": {
       "source": "trees",

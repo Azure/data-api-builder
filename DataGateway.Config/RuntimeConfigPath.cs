@@ -96,41 +96,41 @@ namespace Azure.DataGateway.Config
             // getting the environment variable for replacement.
             while (reader.Read())
             {
-                    switch (reader.TokenType)
-                    {
-                        case JsonTokenType.PropertyName:
-                            writer.WritePropertyName(reader.GetString()!);
-                            break;
-                        case JsonTokenType.String:
-                            string valueToWrite = Regex.Replace(reader.GetString()!, envPattern, new MatchEvaluator(ReplaceMatchWithEnvVariable));
-                            writer.WriteStringValue(valueToWrite);
-                            break;
-                        case JsonTokenType.Number:
-                            writer.WriteNumberValue(reader.GetDecimal());
-                            break;
-                        case JsonTokenType.True:
-                        case JsonTokenType.False:
-                            writer.WriteBooleanValue(reader.GetBoolean());
-                            break;
+                switch (reader.TokenType)
+                {
+                    case JsonTokenType.PropertyName:
+                        writer.WritePropertyName(reader.GetString()!);
+                        break;
+                    case JsonTokenType.String:
+                        string valueToWrite = Regex.Replace(reader.GetString()!, envPattern, new MatchEvaluator(ReplaceMatchWithEnvVariable));
+                        writer.WriteStringValue(valueToWrite);
+                        break;
+                    case JsonTokenType.Number:
+                        writer.WriteNumberValue(reader.GetDecimal());
+                        break;
+                    case JsonTokenType.True:
+                    case JsonTokenType.False:
+                        writer.WriteBooleanValue(reader.GetBoolean());
+                        break;
                     case JsonTokenType.StartObject:
-                            writer.WriteStartObject();
-                            break;
-                        case JsonTokenType.StartArray:
-                            writer.WriteStartArray();
-                            break;
-                        case JsonTokenType.EndArray:
-                            writer.WriteEndArray();
-                            break;
-                        case JsonTokenType.EndObject:
-                            writer.WriteEndObject();
-                            break;
-                        // ie: "path" : null
-                        case JsonTokenType.Null:
-                            writer.WriteNullValue();
-                            break;
-                        default:
-                            writer.WriteRawValue(reader.GetString()!);
-                            break;
+                        writer.WriteStartObject();
+                        break;
+                    case JsonTokenType.StartArray:
+                        writer.WriteStartArray();
+                        break;
+                    case JsonTokenType.EndArray:
+                        writer.WriteEndArray();
+                        break;
+                    case JsonTokenType.EndObject:
+                        writer.WriteEndObject();
+                        break;
+                    // ie: "path" : null
+                    case JsonTokenType.Null:
+                        writer.WriteNullValue();
+                        break;
+                    default:
+                        writer.WriteRawValue(reader.GetString()!);
+                        break;
                 }
             }
 

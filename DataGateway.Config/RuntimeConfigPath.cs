@@ -71,7 +71,7 @@ namespace Azure.DataGateway.Config
                                         isFinalBlock: true,
                                         state: new());
             MemoryStream stream = new();
-            Utf8JsonWriter writer = new(stream, options: new(){ Indented = true });
+            Utf8JsonWriter writer = new(stream, options: new() { Indented = true });
 
             // @env\('  : match @env('
             // .*?      : lazy match any character except newline 0 or more times
@@ -192,10 +192,10 @@ namespace Azure.DataGateway.Config
                 index++)
             {
                 if (!string.IsNullOrWhiteSpace(environmentPrecedence[index])
-                    // The last index is for the default case - the last fallback option
-                    // where environmentPrecedence[index] is string.Empty
-                    // for that case, we still need to get the file name considering overrides
-                    // so need to do an OR on the last index here
+                // The last index is for the default case - the last fallback option
+                // where environmentPrecedence[index] is string.Empty
+                // for that case, we still need to get the file name considering overrides
+                // so need to do an OR on the last index here
                     || index == environmentPrecedence.Length - 1)
                 {
                     configFileNameWithExtension =

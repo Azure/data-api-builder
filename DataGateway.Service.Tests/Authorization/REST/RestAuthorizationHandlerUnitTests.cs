@@ -7,6 +7,7 @@ using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -49,6 +50,56 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
                 httpContext: httpContext);
 
             Assert.AreEqual(expectedAuthorizationResult, actualAuthorizationResult);
+        }
+
+        /// <summary>
+        /// Tests that a user role with actions specified as ["*"] will be authorized for all http methods
+        /// </summary>
+        /// <param name="httpMethod"> the http method that we are checking if the client is authorized to use </param>
+        [DataTestMethod]
+        [DataRow(HttpConstants.GET)]
+        [DataRow(HttpConstants.POST)]
+        [DataRow(HttpConstants.PUT)]
+        [DataRow(HttpConstants.PATCH)]
+        [DataRow(HttpConstants.DELETE)]
+        [TestMethod]
+        public async Task TestWildcardResolvesAsAllActions(string httpMethod)
+        {
+            AuthorizationResolver authorizationResolver = SetupAuthResolverWithWildcardActions();
+            HttpContext httpContext = CreateHttpContext(httpMethod: httpMethod, clientRole: "admin");
+
+            bool authorizationResult = await IsAuthorizationSuccessfulAsync(
+                requirement: new EntityRoleActionPermissionsRequirement(),
+                resource: AuthorizationHelpers.TEST_ENTITY,
+                resolver: authorizationResolver,
+                httpContext: httpContext);
+
+            Assert.IsTrue(authorizationResult);
+        }
+
+        /// <summary>
+        /// Ensure that passing a wildcard action does not break policy parsing
+        /// (ensure we bypass dictionary lookup ActionToColumnMap[action] for the passed in CRUD action)
+        /// Expect an empty string to be returned as the policy associated with a wildcard
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(HttpConstants.GET)]
+        [DataRow(HttpConstants.POST)]
+        [DataRow(HttpConstants.PUT)]
+        [DataRow(HttpConstants.PATCH)]
+        [DataRow(HttpConstants.DELETE)]
+        [TestMethod]
+        public void TestWildcardPolicyResolvesToEmpty(string httpMethod)
+        {
+            AuthorizationResolver authorizationResolver = SetupAuthResolverWithWildcardActions();
+            HttpContext httpContext = CreateHttpContext(httpMethod: httpMethod, clientRole: "admin");
+
+            Assert.AreEqual(expected: string.Empty, actual: authorizationResolver.TryProcessDBPolicy(
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: "admin",
+                action: RestService.HttpVerbToActions(httpVerbName: httpMethod),
+                httpContext: httpContext)
+            );
         }
 
         /// <summary>
@@ -292,6 +343,20 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
             stubRestContext.CumulativeColumns.UnionWith(columnsRequested);
 
             return stubRestContext;
+        }
+
+        /// <summary>
+        /// Sets up an authorization resolver with a config that specifies the wildcard ("*") as the test entity's actions
+        /// </summary>
+        private static AuthorizationResolver SetupAuthResolverWithWildcardActions()
+        {
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: "admin",
+                actionName: "*"
+                );
+
+            return AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
         }
         #endregion
     }

@@ -8,8 +8,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataGateway.Service.T
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Configs", "Configs", "{EFA9C661-D8FD-469A-9372-284387C4BEFC}"
 	ProjectSection(SolutionItems) = preProject
-		DataGateway.Service\books.gql = DataGateway.Service\books.gql
-		DataGateway.Service\cosmos-config.json = DataGateway.Service\cosmos-config.json
 		DataGateway.Service\hawaii-config.Cosmos.json = DataGateway.Service\hawaii-config.Cosmos.json
 		DataGateway.Service\hawaii-config.Cosmos.overrides.example.json = DataGateway.Service\hawaii-config.Cosmos.overrides.example.json
 		DataGateway.Service\hawaii-config.json = DataGateway.Service\hawaii-config.json
@@ -19,8 +17,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Configs", "Configs", "{EFA9
 		DataGateway.Service\hawaii-config.MySql.overrides.example.json = DataGateway.Service\hawaii-config.MySql.overrides.example.json
 		DataGateway.Service\hawaii-config.PostgreSql.json = DataGateway.Service\hawaii-config.PostgreSql.json
 		DataGateway.Service\hawaii-config.PostgreSql.overrides.example.json = DataGateway.Service\hawaii-config.PostgreSql.overrides.example.json
+		schemas\hawaii.draft-01.schema.json = schemas\hawaii.draft-01.schema.json
 		DataGateway.Service\schema.gql = DataGateway.Service\schema.gql
-		DataGateway.Service\sql-config.json = DataGateway.Service\sql-config.json
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataGateway.Config", "DataGateway.Config\Azure.DataGateway.Config.csproj", "{F55CC05C-EA9A-4B50-93A8-79294482FD7F}"

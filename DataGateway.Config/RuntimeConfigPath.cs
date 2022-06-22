@@ -1,4 +1,6 @@
+using System.Buffers;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataGateway.Service.Exceptions;
 using Newtonsoft.Json;
@@ -67,15 +69,11 @@ namespace Azure.DataGateway.Config
         /// <returns>Parsed json string.</returns>
         public static string? ParseConfigJsonAndReplaceEnvVariables(string json)
         {
-            StringBuilder stringBuilder = new();
-            // string writer will modify string builder allowing
-            // us to return the string builder toString().
-            StringWriter stringWriter = new(stringBuilder);
-            using JsonTextReader reader = new(new StringReader(json));
-            using JsonTextWriter writer = new(stringWriter)
-            {
-                Formatting = Formatting.Indented
-            };
+            Utf8JsonReader reader = new(jsonData: Encoding.UTF8.GetBytes(json),
+                                        isFinalBlock: true,
+                                        state: new());
+            MemoryStream stream = new();
+            Utf8JsonWriter writer = new(stream, options: new(){ Indented = true });
 
             // @env\('  : match @env('
             // .*?      : lazy match any character except newline 0 or more times
@@ -89,6 +87,9 @@ namespace Azure.DataGateway.Config
             // ie: if the environment variable "Baz" has the value of "Bar"
             // fooBarBaz: "('foo@env('Baz')Baz')" would parse into
             // fooBarBaz: "('fooBarBaz')"
+            // Note that there is no escape character currently for ') to exist
+            // within the name of the environment variable, but that ') is not
+            // a valid environment variable name in certain shells.
             string envPattern = @"@env\('.*?(?='\))'\)";
 
             // The approach for parsing is to re-write the Json to a new string
@@ -97,47 +98,46 @@ namespace Azure.DataGateway.Config
             // getting the environment variable for replacement.
             while (reader.Read())
             {
-                if (reader.Value is not null)
-                {
                     switch (reader.TokenType)
                     {
-                        case JsonToken.PropertyName:
-                            writer.WritePropertyName(reader.Value.ToString()!);
+                        case JsonTokenType.PropertyName:
+                            writer.WritePropertyName(reader.GetString()!);
                             break;
-                        case JsonToken.String:
-                            string valueToWrite = Regex.Replace(reader.Value.ToString()!, envPattern, new MatchEvaluator(ReplaceMatchWithEnvVariable));
-                            writer.WriteValue(valueToWrite);
+                        case JsonTokenType.String:
+                            string valueToWrite = Regex.Replace(reader.GetString()!, envPattern, new MatchEvaluator(ReplaceMatchWithEnvVariable));
+                            writer.WriteStringValue(valueToWrite);
                             break;
-                        default:
-                            writer.WriteValue(reader.Value);
+                        case JsonTokenType.Number:
+                            writer.WriteNumberValue(reader.GetDecimal());
                             break;
-                    }
-                }
-                else
-                {
-                    switch (reader.TokenType)
-                    {
-                        case JsonToken.StartObject:
+                        case JsonTokenType.True:
+                        case JsonTokenType.False:
+                            writer.WriteBooleanValue(reader.GetBoolean());
+                            break;
+                    case JsonTokenType.StartObject:
                             writer.WriteStartObject();
                             break;
-                        case JsonToken.StartArray:
+                        case JsonTokenType.StartArray:
                             writer.WriteStartArray();
                             break;
-                        case JsonToken.EndArray:
+                        case JsonTokenType.EndArray:
                             writer.WriteEndArray();
                             break;
-                        case JsonToken.EndObject:
+                        case JsonTokenType.EndObject:
                             writer.WriteEndObject();
                             break;
                         // ie: "path" : null
-                        case JsonToken.Null:
-                            writer.WriteNull();
+                        case JsonTokenType.Null:
+                            writer.WriteNullValue();
                             break;
-                    }
+                        default:
+                            writer.WriteRawValue(reader.GetString()!);
+                            break;
                 }
             }
 
-            return stringBuilder.ToString();
+            writer.Flush();
+            return Encoding.UTF8.GetString(stream.ToArray());
         }
 
         /// <summary>

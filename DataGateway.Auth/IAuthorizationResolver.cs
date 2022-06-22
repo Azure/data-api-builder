@@ -75,6 +75,11 @@ namespace Azure.DataGateway.Auth
         /// <returns>Collection of roles. Empty list if entityPermissionsMap is null.</returns>
         public static IEnumerable<string> GetRolesForAction(string entityName, string actionName, Dictionary<string, EntityMetadata>? entityPermissionsMap)
         {
+            if (entityName is null)
+            {
+                throw new ArgumentNullException(paramName: "entityName");
+            }
+
             if (entityPermissionsMap is not null && entityPermissionsMap[entityName].ActionToRolesMap.TryGetValue(actionName, out List<string>? roleList) && roleList is not null)
             {
                 return roleList;

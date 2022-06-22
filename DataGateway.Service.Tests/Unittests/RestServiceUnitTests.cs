@@ -36,6 +36,7 @@ namespace Azure.DataGateway.Service.Tests.Unittests
         [DataRow("foo", "", "foo", "")]
         [DataRow("foo/", "", "foo", "")]
         [DataRow("foo", "/", "foo", "")]
+        [DataRow("foo", "foo", "", "")]
         [DataRow("foo/bar", "", "foo", "bar")]
         [DataRow("foo/bar", "/foo", "bar", "")]
         [DataRow("foo/bar", "foo/", "bar", "")]

@@ -185,7 +185,7 @@ namespace Azure.DataGateway.Service.Authorization
             // entityMetaData.RoleToActionMap[roleName] finds the roleMetaData for the current roleName
             // roleMetaData.ActionToColumnMap[action] finds the actionMetaData for the current action
             // actionMetaData.databasePolicy finds the required database policy
-            RoleMetadata roleMetadata = _entityPermissionMap[entityName].RoleToActionMap[roleName];
+            RoleMetadata roleMetadata = EntityPermissionsMap[entityName].RoleToActionMap[roleName];
             roleMetadata.ActionToColumnMap.TryGetValue(action, out ActionMetadata? actionMetadata);
 
             // If action exists in map (explicitly specified in config), use its policy
@@ -194,16 +194,14 @@ namespace Azure.DataGateway.Service.Authorization
             string? dbPolicy;
             if (actionMetadata is not null)
             {
-                dbPolicy = actionMetadata.databasePolicy;
+                dbPolicy = actionMetadata.DatabasePolicy;
 
             } // else check if wildcard exists in action map, if so use its policy, else null
             else
             {
                 roleMetadata.ActionToColumnMap.TryGetValue(WILDCARD, out ActionMetadata? wildcardMetadata);
-                dbPolicy = wildcardMetadata is not null ? wildcardMetadata.databasePolicy : null;
+                dbPolicy = wildcardMetadata is not null ? wildcardMetadata.DatabasePolicy : null;
             }
-
-            string? dbPolicy = EntityPermissionsMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action].DatabasePolicy;
 
             return dbPolicy is not null ? dbPolicy : string.Empty;
         }

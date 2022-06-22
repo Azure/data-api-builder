@@ -30,7 +30,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder
         {
             _entityPermissions = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "Foo", "Baz" },
-                    new string[] { ActionType.CREATE, ActionType.UPDATE, ActionType.DELETE},
+                    new string[] { ActionType.CREATE, ActionType.UPDATE, ActionType.DELETE },
                     new string[] { "anonymous", "authenticated" }
                     );
         }
